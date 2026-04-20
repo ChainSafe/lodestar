@@ -237,8 +237,10 @@ export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
 /** Gloas+ state fields — use isStatePostGloas() guard */
 export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   forkName: ForkPostGloas;
-  /** The execution block hash on the BeaconState (EIP-7732 dedicated field, replaces header-based access). */
-  latestBlockHash: Bytes32;
+  /** Removed from BeaconState in gloas (EIP-7732). Use latestExecutionPayloadBid.blockHash instead. */
+  latestExecutionPayloadHeader: never;
+  /** Removed from BeaconState in gloas (EIP-7732). */
+  payloadBlockNumber: never;
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
@@ -257,7 +259,14 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
  * forkName as ForkName since the class wraps any fork's state.
  * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
  */
-export type IBeaconStateViewLatestFork = Omit<IBeaconStateViewGloas, "forkName"> & {forkName: ForkName};
+export type IBeaconStateViewLatestFork = Omit<
+  IBeaconStateViewGloas,
+  "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
+> & {
+  forkName: ForkName;
+  latestExecutionPayloadHeader: ExecutionPayloadHeader;
+  payloadBlockNumber: number;
+};
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
   return isForkPostAltair(state.forkName);
 }

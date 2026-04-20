@@ -219,7 +219,7 @@ export async function produceBlockBody<T extends BlockType>(
     });
 
     // Get execution payload from EL
-    const parentHash = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
+    const parentBlockHash = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
       ? currentState.latestExecutionPayloadBid.blockHash
       : currentState.latestExecutionPayloadBid.parentBlockHash;
     const prepareRes = await prepareExecutionPayload(
@@ -227,7 +227,7 @@ export async function produceBlockBody<T extends BlockType>(
       this.logger,
       fork,
       parentBlockRoot,
-      parentHash,
+      parentBlockHash,
       safeBlockHash,
       finalizedBlockHash ?? ZERO_HASH_HEX,
       currentState,
@@ -264,8 +264,8 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Create self-build execution payload bid
     const bid: gloas.ExecutionPayloadBid = {
-      parentBlockHash: parentHash,
-      parentBlockRoot: parentBlockRoot,
+      parentBlockHash,
+      parentBlockRoot,
       blockHash: executionPayload.blockHash,
       prevRandao: currentState.getRandaoMix(currentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
@@ -614,12 +614,11 @@ export async function prepareExecutionPayload(
   chain: {
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
-    forkChoice: IForkChoice;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
   parentBlockRoot: Root,
-  parentHash: Bytes32,
+  parentBlockHash: Bytes32,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
   state: IBeaconStateViewBellatrix,
@@ -629,7 +628,7 @@ export async function prepareExecutionPayload(
   const prevRandao = state.getRandaoMix(state.epoch);
 
   const payloadIdCached = chain.executionEngine.payloadIdCache.get({
-    headBlockHash: toRootHex(parentHash),
+    headBlockHash: toRootHex(parentBlockHash),
     finalizedBlockHash,
     timestamp: numToQuantity(timestamp),
     prevRandao: toHex(prevRandao),
@@ -658,13 +657,13 @@ export async function prepareExecutionPayload(
       prepareState: state,
       prepareSlot: state.slot,
       parentBlockRoot,
-      parentHash,
+      parentBlockHash,
       feeRecipient: suggestedFeeRecipient,
     });
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
-      toRootHex(parentHash),
+      toRootHex(parentBlockHash),
       safeBlockHash,
       finalizedBlockHash,
       attributes
@@ -716,27 +715,30 @@ export function getPayloadAttributesForSSE(
     prepareState,
     prepareSlot,
     parentBlockRoot,
+    parentBlockHash,
     feeRecipient,
-    parentHash,
   }: {
     prepareState: IBeaconStateViewBellatrix;
     prepareSlot: Slot;
     parentBlockRoot: Root;
+    parentBlockHash: Bytes32;
     feeRecipient: string;
-    parentHash: Bytes32;
   }
 ): SSEPayloadAttributes {
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
     prepareState,
     prepareSlot,
     parentBlockRoot,
-    parentHash,
+    parentBlockHash,
     feeRecipient,
   });
 
   let parentBlockNumber: number;
   if (isForkPostGloas(fork)) {
-    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(toRootHex(parentBlockRoot), toRootHex(parentHash));
+    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(
+      toRootHex(parentBlockRoot),
+      toRootHex(parentBlockHash)
+    );
     if (parentBlock?.executionPayloadBlockHash == null) {
       throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
     }
@@ -750,7 +752,7 @@ export function getPayloadAttributesForSSE(
     proposalSlot: prepareSlot,
     parentBlockNumber,
     parentBlockRoot,
-    parentBlockHash: parentHash,
+    parentBlockHash,
     payloadAttributes,
   };
   return ssePayloadAttributes;
@@ -765,13 +767,13 @@ function preparePayloadAttributes(
     prepareState,
     prepareSlot,
     parentBlockRoot,
-    parentHash,
+    parentBlockHash,
     feeRecipient,
   }: {
     prepareState: IBeaconStateViewBellatrix;
     prepareSlot: Slot;
     parentBlockRoot: Root;
-    parentHash: Bytes32;
+    parentBlockHash: Bytes32;
     feeRecipient: string;
   }
 ): SSEPayloadAttributes["payloadAttributes"] {
@@ -789,7 +791,7 @@ function preparePayloadAttributes(
     }
 
     if (isStatePostGloas(prepareState)) {
-      const isExtendingPayload = byteArrayEquals(parentHash, prepareState.latestExecutionPayloadBid.blockHash);
+      const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
       // When the parent block is empty, state.payloadExpectedWithdrawals holds a batch
       // already deducted from CL balances but never credited on the EL (the envelope
       // was not delivered). The next payload must carry those same withdrawals to

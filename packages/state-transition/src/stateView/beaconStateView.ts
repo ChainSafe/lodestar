@@ -216,8 +216,12 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   // bellatrix
 
   get latestExecutionPayloadHeader(): ExecutionPayloadHeader {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.bellatrix) {
+    const forkSeq = this.config.getForkSeq(this.cachedState.slot);
+    if (forkSeq < ForkSeq.bellatrix) {
       throw new Error("latestExecutionPayloadHeader is not available before Bellatrix");
+    }
+    if (forkSeq >= ForkSeq.gloas) {
+      throw new Error("latestExecutionPayloadHeader is not available after Gloas");
     }
 
     if (this._latestExecutionPayloadHeader === null) {
@@ -338,13 +342,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   // gloas
-
-  get latestBlockHash(): Bytes32 {
-    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
-      throw new Error("latestBlockHash is only available from Gloas onwards");
-    }
-    return (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
-  }
 
   get executionPayloadAvailability(): BitArray {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {

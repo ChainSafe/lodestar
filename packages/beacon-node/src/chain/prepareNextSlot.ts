@@ -163,16 +163,14 @@ export class PrepareNextSlotScheduler {
           throw new Error("Expected Bellatrix state for payload attributes");
         }
 
-        // Compute parentHash once — used by both prepareExecutionPayload and SSE
         const parentBlockRoot = fromHex(updatedHeadRoot);
-        let parentHash: Bytes32;
+        let parentBlockHash: Bytes32;
         if (isStatePostGloas(updatedPrepareState)) {
-          const bid = updatedPrepareState.latestExecutionPayloadBid;
-          parentHash = this.chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
-            ? bid.blockHash
-            : bid.parentBlockHash;
+          parentBlockHash = this.chain.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot))
+            ? updatedPrepareState.latestExecutionPayloadBid.blockHash
+            : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
         } else {
-          parentHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
+          parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
 
         if (feeRecipient) {
@@ -192,7 +190,7 @@ export class PrepareNextSlotScheduler {
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
             parentBlockRoot,
-            parentHash,
+            parentBlockHash,
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
@@ -216,7 +214,7 @@ export class PrepareNextSlotScheduler {
             prepareState: updatedPrepareState,
             prepareSlot,
             parentBlockRoot,
-            parentHash,
+            parentBlockHash,
             // The likely consumers of this API are builders and will anyway ignore the
             // feeRecipient, so just pass zero hash for now till a real use case arises
             feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
