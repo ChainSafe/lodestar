@@ -332,11 +332,6 @@ async function processSlotsByCheckpoint(
  * emitting "checkpoint" events after every epoch processed.
  *
  * Stops processing after no more full epochs can be processed.
- *
- * Output state variant:
- * - Post-Gloas: If slots are processed, returns block state (payloadPresent=false).
- *               If no slots processed, returns preState as-is (preserves variant).
- * - Pre-Gloas: Always payloadPresent=true (no block/payload distinction).
  */
 export async function processSlotsToNearestCheckpoint(
   modules: {
@@ -380,9 +375,6 @@ export async function processSlotsToNearestCheckpoint(
     // This may becomes the "official" checkpoint state if the 1st block of epoch is skipped
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    // processSlots() only does epoch transitions, never processes payloads
-    // Pre-Gloas: payloadPresent is always true (execution payload embedded in block)
-    // Post-Gloas: result is a block state (payloadPresent=false)
     checkpointStateCache.add(cp, checkpointState);
     // consumers should not mutate state ever
     emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
