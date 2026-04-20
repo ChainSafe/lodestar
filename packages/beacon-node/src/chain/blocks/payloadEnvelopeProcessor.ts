@@ -16,6 +16,11 @@ enum PayloadEnvelopeImportStatus {
 
 /**
  * PayloadEnvelopeProcessor processes payload envelope jobs in a queued fashion, one after the other.
+ *
+ * Jobs are enqueued only on envelope arrival (gossip or API). The envelope may reach us before
+ * the sampled data columns; importExecutionPayload awaits `verifyPayloadsDataAvailability`
+ * internally, so a queued job can pend for up to `PAYLOAD_DATA_AVAILABILITY_TIMEOUT` while
+ * waiting for columns. Duplicate triggers for the same payloadInput are deduped via `importStatus`.
  */
 export class PayloadEnvelopeProcessor {
   readonly jobQueue: JobItemQueue<[PayloadEnvelopeInput, ImportPayloadOpts], void>;
@@ -25,7 +30,7 @@ export class PayloadEnvelopeProcessor {
     this.jobQueue = new JobItemQueue<[PayloadEnvelopeInput, ImportPayloadOpts], void>(
       (payloadInput, opts) => {
         this.importStatus.set(payloadInput, PayloadEnvelopeImportStatus.importing);
-        return importExecutionPayload.call(chain, payloadInput, opts);
+        return importExecutionPayload.call(chain, payloadInput, signal, opts);
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.payloadEnvelopeProcessorQueue ?? undefined
@@ -33,10 +38,6 @@ export class PayloadEnvelopeProcessor {
   }
 
   async processPayloadEnvelopeJob(payloadInput: PayloadEnvelopeInput, opts: ImportPayloadOpts = {}): Promise<void> {
-    if (!payloadInput.isComplete()) {
-      return;
-    }
-
     if (this.importStatus.get(payloadInput) !== undefined) {
       return;
     }

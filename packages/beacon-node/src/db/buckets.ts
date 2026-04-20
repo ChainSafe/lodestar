@@ -67,8 +67,8 @@ export enum Bucket {
   // lightClient_bestLightClientUpdate = 55, // SyncPeriod -> LightClientUpdate // DEPRECATED on v1.5.0
   lightClient_bestLightClientUpdate = 56, // SyncPeriod -> [Slot, LightClientUpdate]
 
-  fulu_dataColumnSidecars = 57, // FULU BeaconBlockRoot -> DataColumnSidecars
-  fulu_dataColumnSidecarsArchive = 58, // FULU BeaconBlockSlot -> DataColumnSidecars
+  allForks_dataColumnSidecars = 57, // BeaconBlockRoot -> DataColumnSidecars
+  allForks_dataColumnSidecarsArchive = 58, // BeaconBlockSlot -> DataColumnSidecars
 
   gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
   gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope

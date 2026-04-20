@@ -1,5 +1,7 @@
+import {BeaconConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
+import {BLSPubkey, Bytes32, PubkeyHex, UintNum64, electra, ssz} from "@lodestar/types";
+import {toPubkeyHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {computeEpochAtSlot, isValidatorKnown} from "../util/index.js";
@@ -74,16 +76,24 @@ function addBuilderToRegistry(
   }
 }
 
+// TODO GLOAS: pendingValidatorPubkeys cache is currently naive and has room for improvement.
+// Currently the cache lives in process_block, but we should put it in epochCache or elsewhere that has longer
+// lifetime to avoid duplicated deposit signature computation
+// See https://github.com/ChainSafe/lodestar/issues/9181
 export function processDepositRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
-  depositRequest: electra.DepositRequest
+  depositRequest: electra.DepositRequest,
+  pendingValidatorPubkeysCache?: Set<PubkeyHex>
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
   // Check if this is a builder or validator deposit
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
+    const pendingValidatorPubkeys =
+      pendingValidatorPubkeysCache ?? getPendingValidatorPubkeys(state.config, stateGloas);
+    const pubkeyHex = toPubkeyHex(pubkey);
     const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
     const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
 
@@ -91,13 +101,23 @@ export function processDepositRequest(
     // already exists with this pubkey, apply the deposit to their balance
     const isBuilder = builderIndex !== null;
     const isValidator = isValidatorKnown(state, validatorIndex);
-    const isBuilderPrefix = isBuilderWithdrawalCredential(withdrawalCredentials);
+    const isPendingValidator = pendingValidatorPubkeys.has(pubkeyHex);
 
-    // Route to builder if it's an existing builder OR has builder prefix and is not a validator
-    if (isBuilder || (isBuilderPrefix && !isValidator)) {
+    if (isBuilder || (isBuilderWithdrawalCredential(withdrawalCredentials) && !isValidator && !isPendingValidator)) {
       // Apply builder deposits immediately
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
+    }
+
+    // Keep the shared cache in sync: if this deposit has a valid signature, subsequent
+    // deposit requests for the same pubkey in this envelope must see it as a pending validator
+    if (
+      pendingValidatorPubkeysCache &&
+      !isValidator &&
+      !isPendingValidator &&
+      isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
+    ) {
+      pendingValidatorPubkeys.add(pubkeyHex);
     }
   }
 
@@ -115,4 +135,29 @@ export function processDepositRequest(
     slot: state.slot,
   });
   state.pendingDeposits.push(pendingDeposit);
+}
+
+/**
+ * Build a set of pubkeys (hex-encoded) from pending deposits that have valid signatures.
+ * This is computed once and passed to each processDepositRequest call to avoid
+ * repeatedly iterating state.pendingDeposits.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/beacon-chain.md#new-is_pending_validator
+ */
+export function getPendingValidatorPubkeys(config: BeaconConfig, state: CachedBeaconStateGloas): Set<PubkeyHex> {
+  const result = new Set<PubkeyHex>();
+  for (const pendingDeposit of state.pendingDeposits.getAllReadonly()) {
+    if (
+      isValidDepositSignature(
+        config,
+        pendingDeposit.pubkey,
+        pendingDeposit.withdrawalCredentials,
+        pendingDeposit.amount,
+        pendingDeposit.signature
+      )
+    ) {
+      result.add(toPubkeyHex(pendingDeposit.pubkey));
+    }
+  }
+  return result;
 }

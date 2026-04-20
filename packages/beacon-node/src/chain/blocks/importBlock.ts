@@ -3,11 +3,11 @@ import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
   EpochDifference,
+  ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
   getSafeExecutionBlockHash,
-  isGloasBlock,
 } from "@lodestar/fork-choice";
 import {
   ForkPostAltair,
@@ -24,6 +24,8 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   isStartSlotOfEpoch,
+  isStatePostAltair,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -45,7 +47,7 @@ import type {BeaconChain} from "../chain.js";
 import {ChainEvent, ReorgEventData} from "../emitter.js";
 import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
-import {toCheckpointHexPayload} from "../stateCache/persistentCheckpointsCache.js";
+import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
@@ -125,23 +127,20 @@ export async function importBlock(
     postState,
     blockDelaySec,
     currentSlot,
-    executionStatus,
+    fork >= ForkSeq.gloas ? ExecutionStatus.PayloadSeparated : executionStatus,
     dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
-  // Pre-Gloas: blockSummary.payloadStatus is always FULL, payloadPresent = true
-  // Post-Gloas: blockSummary.payloadStatus is always PENDING, so payloadPresent = false (block state only, no payload processing yet)
-  const payloadPresent = !isGloasBlock(blockSummary);
-  // processState manages both block state and payload state variants together for memory/disk management
-  this.regen.processBlockState(blockRootHex, postState);
+  this.regen.processState(blockRootHex, postState);
 
   // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
   if (fork >= ForkSeq.gloas) {
-    this.seenPayloadEnvelopeInputCache.add({
+    const payloadInput = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
       sampledColumns: this.custodyConfig.sampledColumns,
       custodyColumns: this.custodyConfig.custodyColumns,
       timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
@@ -152,6 +151,14 @@ export async function importBlock(
       source: source.source,
       ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
     });
+
+    // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
+    // which is all the information we need so there is no reason to delay until execution payload arrives
+    // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
+    // (for example later in the slot). Do not couple retries to incoming gossip columns.
+    // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
+    // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+    this.getBlobsTracker.triggerGetBlobs(payloadInput);
   }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
@@ -370,11 +377,13 @@ export async function importBlock(
       // we want to import block asap so do this in the next event loop
       callInNextEventLoop(() => {
         try {
-          this.lightClientServer?.onImportBlockHead(
-            block.message as BeaconBlock<ForkPostAltair>,
-            postState,
-            parentBlockSlot
-          );
+          if (isStatePostAltair(postState)) {
+            this.lightClientServer?.onImportBlockHead(
+              block.message as BeaconBlock<ForkPostAltair>,
+              postState,
+              parentBlockSlot
+            );
+          }
         } catch (e) {
           this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
         }
@@ -393,7 +402,7 @@ export async function importBlock(
   // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
 
-  if (blockSlot >= currentSlot && postState.isExecutionStateType) {
+  if (blockSlot >= currentSlot && isStatePostBellatrix(postState) && postState.isExecutionStateType) {
     let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
@@ -492,12 +501,12 @@ export async function importBlock(
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
-    this.regen.addCheckpointState(cp, checkpointState, payloadPresent);
+    this.regen.addCheckpointState(cp, checkpointState);
     // consumers should not mutate state ever
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
-    this.logger.verbose("Checkpoint processed", toCheckpointHexPayload(cp, payloadPresent));
+    this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
     const activeValidatorsCount = checkpointState.activeValidatorCount;
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
@@ -515,7 +524,7 @@ export async function importBlock(
       const justifiedEpoch = justifiedCheckpoint.epoch;
       const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
       if (justifiedEpoch > preJustifiedEpoch) {
-        this.logger.verbose("Checkpoint justified", toCheckpointHexPayload(justifiedCheckpoint, payloadPresent));
+        this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
         this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
         this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
       }
@@ -529,7 +538,7 @@ export async function importBlock(
           state: toRootHex(checkpointState.hashTreeRoot()),
           executionOptimistic: false,
         });
-        this.logger.verbose("Checkpoint finalized", toCheckpointHexPayload(finalizedCheckpoint, payloadPresent));
+        this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
         this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
       }
     }
@@ -580,7 +589,7 @@ export async function importBlock(
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
-  if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
+  if (isStatePostAltair(fullyVerifiedBlock.postState)) {
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,

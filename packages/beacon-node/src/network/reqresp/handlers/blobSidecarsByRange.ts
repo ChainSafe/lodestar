@@ -2,7 +2,7 @@ import {ChainConfig} from "@lodestar/config";
 import {BLOB_SIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Slot, deneb} from "@lodestar/types";
+import {Epoch, Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -14,7 +14,7 @@ export async function* onBlobSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
-  const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, request);
+  const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);
   const endSlot = startSlot + count;
 
   const finalized = db.blobSidecarsArchive;
@@ -94,6 +94,7 @@ export function* iterateBlobBytesFromWrapper(
 
 export function validateBlobSidecarsByRangeRequest(
   config: ChainConfig,
+  currentEpoch: Epoch,
   request: deneb.BlobSidecarsByRangeRequest
 ): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
@@ -102,9 +103,20 @@ export function validateBlobSidecarsByRangeRequest(
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
+  }
+
+  // Spec: [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
+  const minimumRequestEpoch = Math.max(
+    currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS,
+    config.DENEB_FORK_EPOCH
+  );
+  if (computeEpochAtSlot(startSlot) < minimumRequestEpoch) {
+    throw new ResponseError(
+      RespStatus.RESOURCE_UNAVAILABLE,
+      "startSlot is before MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS"
+    );
   }
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {

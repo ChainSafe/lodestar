@@ -1,8 +1,9 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
 import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {
+  BlockExecutionStatus,
   LVHExecResponse,
-  MaybeValidExecutionStatus,
+  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
@@ -143,7 +144,7 @@ export interface IForkChoice {
     state: IBeaconStateView,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus,
+    executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock;
   /**
@@ -203,7 +204,8 @@ export interface IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex
+    executionPayloadStateRoot: RootHex,
+    executionStatus: PayloadExecutionStatus
   ): void;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
@@ -224,6 +226,12 @@ export interface IForkChoice {
    */
   hasBlockUnsafe(blockRoot: Root): boolean;
   hasBlockHexUnsafe(blockRoot: RootHex): boolean;
+  /**
+   * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
+   * without checking if the block is a descendant of the finalized root.
+   */
+  hasPayloadUnsafe(blockRoot: Root): boolean;
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.

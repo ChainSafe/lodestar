@@ -1,14 +1,14 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {
+  BlockExecutionStatus,
   ExecutionStatus,
   IForkChoice,
   LVHInvalidResponse,
   LVHValidResponse,
-  MaybeValidExecutionStatus,
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -33,7 +33,7 @@ type ExecAbortType = {blockIndex: number; execError: BlockError};
 export type SegmentExecStatus =
   | {
       execAborted: null;
-      executionStatuses: MaybeValidExecutionStatus[];
+      executionStatuses: BlockExecutionStatus[];
       executionTime: number;
     }
   | {execAborted: ExecAbortType; invalidSegmentLVH?: LVHInvalidResponse};
@@ -62,7 +62,7 @@ export async function verifyBlocksExecutionPayload(
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
-  const executionStatuses: MaybeValidExecutionStatus[] = [];
+  const executionStatuses: BlockExecutionStatus[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
   const lastBlock = blockInputs.at(-1);
 
@@ -103,7 +103,7 @@ export async function verifyBlocksExecutionPayload(
       return getSegmentErrorResponse({verifyResponse, blockIndex}, parentBlock, blockInputs);
     }
 
-    // If we are here then its because executionStatus is one of MaybeValidExecutionStatus
+    // If we are here then its because executionStatus is one of BlockExecutionStatus
     const {executionStatus} = verifyResponse;
     executionStatuses.push(executionStatus);
   }
@@ -152,6 +152,7 @@ export async function verifyBlockExecutionPayload(
 
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
+    isStatePostBellatrix(preState0) &&
     preState0.isExecutionStateType &&
     isExecutionBlockBodyType(block.message.body) &&
     preState0.isExecutionEnabled(block.message)

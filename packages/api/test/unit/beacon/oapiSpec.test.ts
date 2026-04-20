@@ -20,7 +20,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v5.0.0-alpha.0";
+const version = "v5.0.0-alpha.1";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
@@ -55,9 +55,8 @@ const ignoredOperations = [
   /* missing route */
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
-  // TODO GLOAS: required by v5.0.0-alpha.0
+  // TODO GLOAS: required by v5.0.0-alpha.1
   "publishExecutionPayloadBid",
-  "getSignedExecutionPayloadEnvelope",
   "getPoolPayloadAttestations",
   "submitPayloadAttestationMessages",
   "getPtcDuties",
@@ -77,8 +76,7 @@ const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
 const ignoredTopics: string[] = [
-  // TODO GLOAS: required by v5.0.0-alpha.0
-  "execution_payload_bid",
+  // TODO GLOAS: required by v5.0.0-alpha.1
   "payload_attestation_message",
 ];
 

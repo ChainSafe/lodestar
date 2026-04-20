@@ -7,7 +7,7 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {BeaconStateView, createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
+import {createBeaconStateView, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -71,24 +71,18 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
 
   // BeaconNode setup
   try {
-    const {anchorState, isFinalized, wsCheckpoint} = await initBeaconState(
-      args,
-      beaconPaths.dataDir,
-      config,
-      db,
-      logger
-    );
+    const {
+      anchorState,
+      stateBytes: anchorStateBytes,
+      isFinalized,
+      wsCheckpoint,
+    } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const pubkeyCache = createPubkeyCache();
     syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
-    const cachedState = createCachedBeaconState(
-      anchorState,
-      {
-        config: beaconConfig,
-        pubkeyCache,
-      },
-      {skipSyncPubkeys: true}
-    );
+    const anchorStateView = args["chain.nativeStateView"]
+      ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
+      : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
 
     const node = await BeaconNode.init({
       opts: options,
@@ -100,7 +94,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       privateKey,
       dataDir: beaconPaths.dataDir,
       peerStoreDir: beaconPaths.peerStoreDir,
-      anchorState: new BeaconStateView(cachedState),
+      anchorState: anchorStateView,
       isAnchorStateFinalized: isFinalized,
       wsCheckpoint,
     });

@@ -9,6 +9,7 @@ import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
@@ -107,6 +108,31 @@ export class ProtoArray {
       currentSlot,
       null
     );
+
+    // Anchor block PTC votes must be all-true per spec get_forkchoice_store:
+    // payload_timeliness_vote={anchor_root: Vector[boolean, PTC_SIZE](True for _ in range(PTC_SIZE))}
+    // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#modified-get_forkchoice_store
+    if (protoArray.ptcVotes.has(block.blockRoot)) {
+      protoArray.ptcVotes.set(block.blockRoot, BitArray.fromBoolArray(Array.from({length: PTC_SIZE}, () => true)));
+
+      // In the spec, we have payload_states = {anchor_root: anchor_state.copy()}
+      // which means the anchor's "payload" is considered received
+      // Without FULL, blocks extending FULL from the anchor would be orphaned.
+      // TODO GLOAS: This is a bug in the spec. Keep this to pass the current spec test
+      // for now. Need to remove this when we work on v1.7.0-alpha.5
+      if (block.executionPayloadBlockHash !== null) {
+        protoArray.onExecutionPayload(
+          block.blockRoot,
+          currentSlot,
+          block.executionPayloadBlockHash,
+          (block as {executionPayloadNumber?: number}).executionPayloadNumber ?? 0,
+          block.stateRoot,
+          null,
+          ExecutionStatus.Valid
+        );
+      }
+    }
+
     return protoArray;
   }
 
@@ -353,9 +379,15 @@ export class ProtoArray {
         continue;
       }
 
-      const currentBoost = proposerBoost && proposerBoost.root === node.blockRoot ? proposerBoost.score : 0;
+      // For Gloas blocks, PENDING/EMPTY/FULL all share the same blockRoot.
+      // Only apply proposer boost to PENDING (for Gloas) or FULL (for pre-Gloas) — to avoid
+      // double-counting the boost across variants during delta back-propagation, and to keep
+      // the boost neutral with respect to EMPTY vs FULL selection.
+      const isBoostVariant = isGloasBlock(node) ? node.payloadStatus === PayloadStatus.PENDING : true; // pre-Gloas has only FULL, always boost
+      const currentBoost =
+        proposerBoost && proposerBoost.root === node.blockRoot && isBoostVariant ? proposerBoost.score : 0;
       const previousBoost =
-        this.previousProposerBoost && this.previousProposerBoost.root === node.blockRoot
+        this.previousProposerBoost && this.previousProposerBoost.root === node.blockRoot && isBoostVariant
           ? this.previousProposerBoost.score
           : 0;
 
@@ -541,7 +573,8 @@ export class ProtoArray {
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
     executionPayloadStateRoot: RootHex,
-    proposerBoostRoot: RootHex | null
+    proposerBoostRoot: RootHex | null,
+    executionStatus: PayloadExecutionStatus
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
@@ -591,7 +624,8 @@ export class ProtoArray {
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
-      executionStatus: ExecutionStatus.Valid,
+      // TODO GLOAS: handle optimistic sync
+      executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
       stateRoot: executionPayloadStateRoot,
@@ -650,9 +684,7 @@ export class ProtoArray {
     }
 
     // If payload is not locally available, it's not timely
-    // In our implementation, payload is locally available if proto array has FULL variant of the block
-    const fullNodeIndex = this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL);
-    if (fullNodeIndex === undefined) {
+    if (!this.hasPayload(blockRoot)) {
       return false;
     }
 
@@ -1477,9 +1509,16 @@ export class ProtoArray {
    */
   private getParentNodeIndex(node: ProtoNode): number | undefined {
     if (isGloasBlock(node)) {
-      // Use getParentPayloadStatus for Gloas blocks to get correct EMPTY/FULL variant
-      const parentPayloadStatus = this.getParentPayloadStatus(node);
-      return this.getNodeIndexByRootAndStatus(node.parentRoot, parentPayloadStatus);
+      // Traversal may reach the finalized ProtoBlock, should not throw error in that case
+      try {
+        const parentPayloadStatus = this.getParentPayloadStatus(node);
+        return this.getNodeIndexByRootAndStatus(node.parentRoot, parentPayloadStatus);
+      } catch (e) {
+        if (e instanceof ProtoArrayError && e.type.code === ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK) {
+          return undefined;
+        }
+        throw e;
+      }
     }
     // Simple parent traversal for pre-Gloas blocks (includes fork transition)
     return node.parent;
@@ -1668,6 +1707,16 @@ export class ProtoArray {
    */
   hasBlock(blockRoot: RootHex): boolean {
     return this.getDefaultNodeIndex(blockRoot) !== undefined;
+  }
+
+  /**
+   * Check if a FULL payload variant (execution payload envelope) exists for this block root.
+   * Returns true once the SignedExecutionPayloadEnvelope for this block has been received and processed.
+   */
+  hasPayload(blockRoot: RootHex): boolean {
+    // we should also make sure this blockRoot is a gloas block, however we only call this function
+    // starting from GLOAS_FORK_EPOCH, so we can assume the blockRoot is from gloas block
+    return this.getNodeIndexByRootAndStatus(blockRoot, PayloadStatus.FULL) !== undefined;
   }
 
   /**

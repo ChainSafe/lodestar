@@ -25,6 +25,7 @@ import {
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  isStatePostAltair,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -69,7 +70,7 @@ import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {getPrepareNextSlotMs} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {CheckpointHexPayload} from "../../../chain/stateCache/types.js";
+import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -300,7 +301,7 @@ export function getValidatorApi(
    *                    |
    *              prepareNextSlot (4s before next slot)
    */
-  async function waitForCheckpointState(cpHex: CheckpointHexPayload): Promise<IBeaconStateView | null> {
+  async function waitForCheckpointState(cpHex: CheckpointHex): Promise<IBeaconStateView | null> {
     const cpState = chain.regen.getCheckpointStateSync(cpHex);
     if (cpState) {
       return cpState;
@@ -1111,7 +1112,6 @@ export function getValidatorApi(
         const cpState = await waitForCheckpointState({
           rootHex: head.blockRoot,
           epoch,
-          payloadPresent: head.payloadStatus === PayloadStatus.FULL,
         });
         if (cpState) {
           state = cpState;
@@ -1281,6 +1281,9 @@ export function getValidatorApi(
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
       }
+      if (epoch < config.ALTAIR_FORK_EPOCH) {
+        throw new ApiError(400, "Sync committee duties are not supported before Altair");
+      }
 
       // May request for an epoch that's in the future
       await waitForNextClosestEpoch();
@@ -1290,6 +1293,9 @@ export function getValidatorApi(
       // Note: does not support requesting past duties
       const head = chain.forkChoice.getHead();
       const state = chain.getHeadState();
+      if (!isStatePostAltair(state)) {
+        throw new ApiError(400, "Sync committee duties are not available before Altair");
+      }
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state, indices);
@@ -1634,7 +1640,7 @@ export function getValidatorApi(
         throw Error("Cached block production result is not full block");
       }
 
-      const {executionPayload, executionRequests, envelopeStateRoot} = produceResult as ProduceFullGloas;
+      const {executionPayload, executionRequests} = produceResult as ProduceFullGloas;
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: executionPayload,
@@ -1642,7 +1648,9 @@ export function getValidatorApi(
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
         slot,
-        stateRoot: envelopeStateRoot,
+        // TODO GLOAS: stateRoot is no longer computed during block production.
+        // This field will be removed when we implement defer payload processing
+        stateRoot: ZERO_HASH,
       };
 
       logger.info("Produced execution payload envelope", {

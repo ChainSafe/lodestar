@@ -1,5 +1,9 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {computeStartSlotAtEpoch, getExecutionPayloadEnvelopeSignatureSet} from "@lodestar/state-transition";
+import {
+  computeStartSlotAtEpoch,
+  getExecutionPayloadEnvelopeSignatureSet,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
@@ -28,7 +32,7 @@ async function validateExecutionPayloadEnvelope(
   const {payload} = envelope;
   const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
-  // [IGNORE] The envelope's block root `envelope.block_root` has been seen (via
+  // [IGNORE] The envelope's block root `envelope.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
   // TODO GLOAS: Need to review this, we should queue the envelope for later
@@ -103,7 +107,7 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // Get the post block state which is the pre-payload state to verify the builder's signature.
+  // Get the block state to verify the builder's signature.
   const blockState = await chain.regen
     .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
     .catch(() => {
@@ -113,7 +117,12 @@ async function validateExecutionPayloadEnvelope(
         slot: envelope.slot,
       });
     });
+  if (!isStatePostGloas(blockState)) {
+    throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
+  }
 
+  // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified
+  // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
     chain.config,
     chain.pubkeyCache,
