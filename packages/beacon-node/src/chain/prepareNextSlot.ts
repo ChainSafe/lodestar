@@ -82,6 +82,8 @@ export class PrepareNextSlotScheduler {
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
       const {slot: headSlot, blockRoot: headRoot} = headBlock;
+      // may be updated below if we predict a proposer-boost-reorg
+      let updatedHeadRoot = headRoot;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -124,7 +126,6 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         let updatedPrepareState = prepareState;
-        let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
@@ -230,7 +231,7 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(updatedHeadRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
