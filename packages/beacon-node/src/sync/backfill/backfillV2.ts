@@ -280,6 +280,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
         if (this.status === BackfillSyncStatus.aborted) break;
       }
+      if (this.signal.aborted) break;
       this.processor.trigger();
     }
 
