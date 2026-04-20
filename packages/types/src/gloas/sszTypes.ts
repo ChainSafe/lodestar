@@ -161,13 +161,20 @@ export const SignedExecutionPayloadBid = new ContainerType(
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
 );
 
+export const ExecutionPayload = new ContainerType(
+  {
+    ...denebSsz.ExecutionPayload.fields,
+    slotNumber: UintNum64, // [New in Gloas:EIP7843]
+  },
+  {typeName: "ExecutionPayload", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadEnvelope = new ContainerType(
   {
-    payload: electraSsz.ExecutionPayload,
+    payload: ExecutionPayload,
     executionRequests: electraSsz.ExecutionRequests,
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
-    slot: Slot,
   },
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
 );

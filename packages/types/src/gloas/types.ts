@@ -12,6 +12,7 @@ export type PayloadAttestationMessage = ValueOf<typeof ssz.PayloadAttestationMes
 export type IndexedPayloadAttestation = ValueOf<typeof ssz.IndexedPayloadAttestation>;
 export type ProposerPreferences = ValueOf<typeof ssz.ProposerPreferences>;
 export type SignedProposerPreferences = ValueOf<typeof ssz.SignedProposerPreferences>;
+export type ExecutionPayload = ValueOf<typeof ssz.ExecutionPayload>;
 export type ExecutionPayloadBid = ValueOf<typeof ssz.ExecutionPayloadBid>;
 export type SignedExecutionPayloadBid = ValueOf<typeof ssz.SignedExecutionPayloadBid>;
 export type ExecutionPayloadEnvelope = ValueOf<typeof ssz.ExecutionPayloadEnvelope>;

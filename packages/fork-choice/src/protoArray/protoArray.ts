@@ -127,7 +127,6 @@ export class ProtoArray {
           block.executionPayloadBlockHash,
           (block as {executionPayloadNumber?: number}).executionPayloadNumber ?? 0,
           block.stateRoot,
-          null,
           ExecutionStatus.Valid
         );
       }

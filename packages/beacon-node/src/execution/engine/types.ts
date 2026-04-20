@@ -19,6 +19,7 @@ import {
   capella,
   deneb,
   electra,
+  gloas,
   ssz,
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -180,6 +181,7 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
+  slotNumber?: QUANTITY; // Gloas EIP-7843
 };
 
 export type WithdrawalRpc = {
@@ -228,6 +230,8 @@ export type PayloadAttributesRpc = {
   withdrawals?: WithdrawalRpc[];
   /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
   parentBeaconBlockRoot?: DATA;
+  /** QUANTITY, 64 Bits - slot number for SLOTNUM opcode [EIP-7843] */
+  slotNumber?: QUANTITY;
 };
 
 export type ClientVersionRpc = {
@@ -279,6 +283,12 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
   }
 
   // No changes in Electra
+
+  // Gloas adds slotNumber to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {slotNumber} = data as gloas.ExecutionPayload;
+    payload.slotNumber = numToQuantity(slotNumber);
+  }
 
   return payload;
 }
@@ -375,6 +385,17 @@ export function parseExecutionPayload(
 
   // No changes in Electra
 
+  // Gloas adds slotNumber to the ExecutionPayload
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {slotNumber} = data;
+    if (slotNumber == null) {
+      throw Error(
+        `slotNumber missing for ${fork} >= gloas executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    (executionPayload as gloas.ExecutionPayload).slotNumber = quantityToNum(slotNumber);
+  }
+
   return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }
 
@@ -385,6 +406,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
+    slotNumber: data.slotNumber != null ? numToQuantity(data.slotNumber) : undefined,
   };
 }
 
@@ -401,6 +423,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
+    slotNumber: data.slotNumber != null ? quantityToNum(data.slotNumber) : undefined,
   };
 }
 

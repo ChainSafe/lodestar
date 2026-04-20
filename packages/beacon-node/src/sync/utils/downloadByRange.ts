@@ -1075,7 +1075,7 @@ export function validateEnvelopesByRangeResponse(
   const payloadEnvelopeMap = new Map<Slot, gloas.SignedExecutionPayloadEnvelope>();
 
   for (const payloadEnvelope of payloadEnvelopes) {
-    const slot = payloadEnvelope.message.slot;
+    const slot = payloadEnvelope.message.payload.slotNumber;
     const batchBlockRoot = batchBlockRoots.get(slot);
 
     // Envelopes for slots not in the batch are silently ignored (orphaned payloads)

@@ -651,7 +651,7 @@ export function getBeaconBlockApi({
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
-      const slot = envelope.slot;
+      const slot = envelope.payload.slotNumber;
       const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
       const blockHashHex = toRootHex(envelope.payload.blockHash);
