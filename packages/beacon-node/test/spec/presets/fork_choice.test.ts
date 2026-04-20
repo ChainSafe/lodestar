@@ -20,6 +20,7 @@ import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
   BeaconStateView,
+  IBeaconStateViewGloas,
   createCachedBeaconState,
   createPubkeyCache,
   isExecutionStateType,
@@ -47,8 +48,13 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {
+  verifyExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
@@ -382,6 +388,32 @@ const forkChoiceTest =
                 const blockHash = toHex(envelope.message.payload.blockHash);
                 const blockNumber = envelope.message.payload.blockNumber;
 
+                // Verify envelope against the post-block state (spec: verify_execution_payload_envelope)
+                const protoBlock = (chain.forkChoice as ForkChoice).getBlockHexDefaultStatus(beaconBlockRoot);
+                if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
+                const envelopeState = await chain.regen.getBlockSlotState(
+                  protoBlock,
+                  protoBlock.slot,
+                  {dontTransferCache: true},
+                  RegenCaller.restApi
+                );
+                verifyExecutionPayloadEnvelope(
+                  beaconConfig,
+                  envelopeState as IBeaconStateViewGloas,
+                  envelope.message
+                );
+
+                // Verify signature
+                const sigValid = await verifyExecutionPayloadEnvelopeSignature(
+                  beaconConfig,
+                  envelopeState as IBeaconStateViewGloas,
+                  pubkeyCache,
+                  envelope,
+                  envelopeState.latestBlockHeader.proposerIndex,
+                  chain.bls
+                );
+                if (!sigValid) throw Error("Invalid execution payload envelope signature");
+
                 // Add predefined VALID status for the payload's block hash so the EL mock accepts it
                 executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
                   status: ExecutionPayloadStatus.VALID,
@@ -586,17 +618,9 @@ const forkChoiceTest =
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
           name.includes("justified_update_not_realized_finality") ||
-          // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
-          (name.includes("gloas") &&
-            (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
-              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
-              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
-          // TODO GLOAS: These two tests are affected by the wrong proposer boost cutoff time from the
-          // consensus-specs and thus have wrong expectation of proposer boost. Our implementation
-          // should pass these two tests after https://github.com/ethereum/consensus-specs/pull/5095
-          // is included the spec release.
-          (name.includes("gloas/fork_choice/on_block") &&
-            (name.endsWith("proposer_boost") || name.endsWith("proposer_boost_is_first_block"))),
+          // Spec test fixture bug in v1.7.0-alpha.5: wrong_withdrawals envelope SSZ data is
+          // byte-for-byte identical to the valid envelope, making it impossible to reject
+          name.endsWith("on_execution_payload_envelope__wrong_withdrawals"),
       },
     };
   };
