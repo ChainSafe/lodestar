@@ -9277,7 +9277,7 @@
 
 - name: process_ptc_window#gloas
   sources:
-    - file: packages/state-transition/epoch/processPtcWindow.ts
+    - file: packages/state-transition/src/epoch/processPtcWindow.ts
       search: export function processPtcWindow(
   spec: |
     <spec fn="process_ptc_window" fork="gloas" hash="7be3d509">
