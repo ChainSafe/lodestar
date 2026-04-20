@@ -150,9 +150,6 @@ export function initializeForkChoiceFromFinalizedState(
 
         ...(isStatePostBellatrix(state) && state.isExecutionStateType && state.isMergeTransitionComplete
           ? {
-              // For a PENDING gloas ProtoBlock we don't know the payload hash until the envelope is
-              // imported; use the bid's parent_block_hash as the placeholder, matching how onBlock
-              // initializes the field (see forkChoice.ts::onBlock).
               executionPayloadBlockHash: isStatePostGloas(state)
                 ? toRootHex(state.latestExecutionPayloadBid.parentBlockHash)
                 : toRootHex(state.latestExecutionPayloadHeader.blockHash),
@@ -252,8 +249,6 @@ export function initializeForkChoiceFromUnfinalizedState(
     unfinalizedState.isExecutionStateType &&
     unfinalizedState.isMergeTransitionComplete
       ? {
-          // See note in initializeForkChoiceFromFinalizedState: PENDING gloas ProtoBlock uses
-          // bid.parentBlockHash as the placeholder for the unknown payload hash.
           executionPayloadBlockHash: isStatePostGloas(unfinalizedState)
             ? toRootHex(unfinalizedState.latestExecutionPayloadBid.parentBlockHash)
             : toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
