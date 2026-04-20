@@ -6,6 +6,7 @@ import {
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {getOrRecoverPayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -48,8 +49,7 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
   const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
-  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-  if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
+  if (envelopeBlock) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
@@ -57,11 +57,20 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  const payloadInput = await getOrRecoverPayloadEnvelopeInput(chain, blockRootHex);
   if (!payloadInput) {
-    // PayloadEnvelopeInput should have been created during block import
+    // PayloadEnvelopeInput should be recoverable from a known block.
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
       blockRoot: blockRootHex,
+    });
+  }
+
+  if (payloadInput.hasPayloadEnvelope()) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
+      blockRoot: blockRootHex,
+      slot: envelope.slot,
     });
   }
 

@@ -35,7 +35,10 @@ import {
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
-import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
+import {
+  PayloadEnvelopeInputSource,
+  getOrRecoverPayloadEnvelopeInput,
+} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
@@ -311,7 +314,10 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            if (
+              e instanceof BlockError &&
+              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+            ) {
               chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,
                 peer: IDENTITY_PEER_ID,
@@ -713,7 +719,7 @@ export function getBeaconBlockApi({
 
       // TODO GLOAS: if block and payload are submitted in parallel, payloadInput may not yet exist.
       // A queuing mechanism is needed to handle this case. See https://github.com/ChainSafe/lodestar/issues/8915
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      const payloadInput = await getOrRecoverPayloadEnvelopeInput(chain, blockRootHex);
       if (!payloadInput) {
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }

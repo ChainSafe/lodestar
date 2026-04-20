@@ -4,7 +4,8 @@ import {RootHex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {SerializedCache} from "../../util/serializedCache.js";
-import {CreateFromBlockProps, PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
+import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {CreateFromBlockProps} from "../blocks/payloadEnvelopeInput/types.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 export type {PayloadEnvelopeInputState} from "../blocks/payloadEnvelopeInput/index.js";

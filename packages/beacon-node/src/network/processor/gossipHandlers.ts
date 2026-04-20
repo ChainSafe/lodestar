@@ -35,7 +35,11 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
-import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {
+  PayloadEnvelopeInput,
+  PayloadEnvelopeInputSource,
+  getOrRecoverPayloadEnvelopeInput,
+} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -198,7 +202,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     } catch (e) {
       if (e instanceof BlockGossipError) {
         logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
+        if (
+          (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) &&
+          blockInput
+        ) {
           chain.emitter.emit(ChainEvent.blockUnknownParent, {
             blockInput,
             peer: peerIdStr,
@@ -439,11 +446,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
     }
 
-    const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    const payloadInput = await getOrRecoverPayloadEnvelopeInput(chain, blockRootHex);
 
     if (!payloadInput) {
-      // This should not happen for gossip because the network processor queues `data_column_sidecar`
-      // until block import creates the corresponding PayloadEnvelopeInput.
+      // This should not happen for gossip because the block should already be known by the time
+      // payload columns are processed, and the PayloadEnvelopeInput is recoverable from that block.
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
         slot,
@@ -1094,10 +1101,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      const payloadInput = await getOrRecoverPayloadEnvelopeInput(chain, blockRootHex);
 
       if (!payloadInput) {
-        // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
+        // This shouldn't happen because the block should already be known and its payload input is recoverable.
         throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
           code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
           blockRoot: blockRootHex,
