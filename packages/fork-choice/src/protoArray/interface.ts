@@ -135,6 +135,13 @@ export type ProtoBlock = BlockExtraMeta & {
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
 
+  // Indicate whether block arrives before the PTC deadline
+  // Spec: gloas/fork-choice.md#record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
+  ptcTimeliness: boolean;
+
+  // The index of the block proposer
+  proposerIndex: number;
+
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
 
