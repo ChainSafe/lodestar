@@ -1082,7 +1082,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
-          const {slot, beaconBlockRoot} = signedEnvelope.message;
+          const {beaconBlockRoot} = signedEnvelope.message;
+          const slot = signedEnvelope.message.payload.slotNumber;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
           if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
             // TODO GLOAS: UnknownBlockSync to handle this
@@ -1105,7 +1106,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      const slot = envelope.slot;
+      const slot = envelope.payload.slotNumber;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);

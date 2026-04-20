@@ -424,7 +424,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
-    slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
+    slotNumber: data.slotNumber != null ? numToQuantity(data.slotNumber) : undefined,
   };
 }
 
@@ -441,7 +441,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
-    slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
+    slotNumber: data.slotNumber != null ? quantityToNum(data.slotNumber) : undefined,
   };
 }
 

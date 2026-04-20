@@ -1648,7 +1648,6 @@ export function getValidatorApi(
         executionRequests: executionRequests,
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
-        slot,
       };
 
       logger.info("Produced execution payload envelope", {

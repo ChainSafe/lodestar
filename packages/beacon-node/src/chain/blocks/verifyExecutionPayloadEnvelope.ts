@@ -42,8 +42,8 @@ export function verifyExecutionPayloadEnvelope(
     );
   }
 
-  if (envelope.slot !== state.slot) {
-    throw new Error(`Slot mismatch between envelope and state envelope=${envelope.slot} state=${state.slot}`);
+  if (payload.slotNumber !== state.slot) {
+    throw new Error(`Slot mismatch between payload and state payload=${payload.slotNumber} state=${state.slot}`);
   }
 
   // Verify consistency with the committed bid

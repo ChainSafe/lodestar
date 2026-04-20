@@ -53,7 +53,7 @@ async function validateExecutionPayloadEnvelope(
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
-      slot: envelope.slot,
+      slot: payload.slotNumber,
     });
   }
 
@@ -65,13 +65,13 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `envelope.slot >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
+  // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `payload.slotNumber >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
-  if (envelope.slot < finalizedSlot) {
+  if (payload.slotNumber < finalizedSlot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BELONG_TO_FINALIZED_BLOCK,
-      envelopeSlot: envelope.slot,
+      envelopeSlot: payload.slotNumber,
       finalizedSlot,
     });
   }
@@ -80,11 +80,11 @@ async function validateExecutionPayloadEnvelope(
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
-  // [REJECT] `block.slot` equals `envelope.slot`.
-  if (block.slot !== envelope.slot) {
+  // [REJECT] `block.slot` equals `payload.slotNumber`.
+  if (block.slot !== payload.slotNumber) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.SLOT_MISMATCH,
-      envelopeSlot: envelope.slot,
+      envelopeSlot: payload.slotNumber,
       blockSlot: block.slot,
     });
   }
@@ -124,7 +124,7 @@ async function validateExecutionPayloadEnvelope(
       throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
         code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
         blockRoot: blockRootHex,
-        slot: envelope.slot,
+        slot: payload.slotNumber,
       });
     });
   if (!isStatePostGloas(blockState)) {
