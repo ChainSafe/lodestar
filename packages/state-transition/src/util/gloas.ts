@@ -6,16 +6,20 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   MIN_DEPOSIT_AMOUNT,
+  MIN_SEED_LOOKAHEAD,
+  PTC_SIZE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
-import {IBeaconStateViewGloas} from "../stateView/interface.js";
-import {CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
+import {computeEpochShuffling} from "./epochShuffling.js";
 import {RootCache} from "./rootCache.js";
+import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
+import {getActiveValidatorIndices} from "./validator.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
@@ -168,6 +172,48 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
 
-export function isParentBlockFull(state: CachedBeaconStateGloas | IBeaconStateViewGloas): boolean {
+export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
   return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
+}
+
+export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[] {
+  const ptcWindow: Uint32Array[] = Array.from({length: SLOTS_PER_EPOCH}, () => new Uint32Array(PTC_SIZE));
+  const currentEpoch = state.epochCtx.epoch;
+
+  for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
+    const epoch = currentEpoch + epochOffset;
+    const shuffling =
+      state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
+      computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+
+    ptcWindow.push(
+      ...computePayloadTimelinessCommitteesForEpoch(
+        state,
+        epoch,
+        shuffling.committees,
+        state.epochCtx.effectiveBalanceIncrements
+      )
+    );
+  }
+
+  return ptcWindow;
+}
+
+export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
+  previousPayloadTimelinessCommittees: Uint32Array[];
+  payloadTimelinessCommittees: Uint32Array[];
+  nextPayloadTimelinessCommittees: Uint32Array[];
+} {
+  const toUint32Arrays = (views: ReturnType<typeof state.ptcWindow.getReadonlyByRange>) =>
+    views.map((v) => Uint32Array.from(v.getAll()));
+
+  const previousPtcWindow = state.ptcWindow.getReadonlyByRange(0, SLOTS_PER_EPOCH);
+  const currentPtcWindow = state.ptcWindow.getReadonlyByRange(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
+  const nextPtcWindow = state.ptcWindow.getReadonlyByRange(2 * SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
+
+  return {
+    previousPayloadTimelinessCommittees: toUint32Arrays(previousPtcWindow),
+    payloadTimelinessCommittees: toUint32Arrays(currentPtcWindow),
+    nextPayloadTimelinessCommittees: toUint32Arrays(nextPtcWindow),
+  };
 }

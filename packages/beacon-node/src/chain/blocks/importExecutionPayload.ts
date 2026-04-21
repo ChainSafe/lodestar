@@ -9,6 +9,7 @@ import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
+import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -84,6 +85,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
+  signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
@@ -112,11 +114,15 @@ export async function importExecutionPayload(
     });
   }
 
-  // 3. Apply backpressure from the write queue early, before doing verification work.
+  // 3. Wait for data columns to be available before claiming a write-queue slot.
+  // The helper is shared with future gloas sync services; take the single-item batch form here.
+  await verifyPayloadsDataAvailability([payloadInput], signal);
+
+  // 4. Apply backpressure from the write queue, before doing verification work.
   // The actual DB write is deferred until after verification succeeds.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
 
-  // 4. Get pre-state for processExecutionPayloadEnvelope
+  // 5. Get pre-state for processExecutionPayloadEnvelope
   // We need the block state (post-block, pre-payload) to process the envelope
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
@@ -131,9 +137,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 5. Run verification steps in parallel
-  // Note: No data availability check needed here - importExecutionPayload is only
-  // called when payloadInput.isComplete() is true, so all data is already available.
+  // 6. Run verification steps in parallel
   const [execResult, signatureValid, postPayloadResult] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,

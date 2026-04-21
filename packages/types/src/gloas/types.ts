@@ -4,6 +4,8 @@ import * as ssz from "./sszTypes.js";
 export type Builder = ValueOf<typeof ssz.Builder>;
 export type BuilderPendingWithdrawal = ValueOf<typeof ssz.BuilderPendingWithdrawal>;
 export type BuilderPendingPayment = ValueOf<typeof ssz.BuilderPendingPayment>;
+export type PayloadTimelinessCommittee = ValueOf<typeof ssz.PayloadTimelinessCommittee>;
+export type PtcWindow = ValueOf<typeof ssz.PtcWindow>;
 export type PayloadAttestationData = ValueOf<typeof ssz.PayloadAttestationData>;
 export type PayloadAttestation = ValueOf<typeof ssz.PayloadAttestation>;
 export type PayloadAttestationMessage = ValueOf<typeof ssz.PayloadAttestationMessage>;
