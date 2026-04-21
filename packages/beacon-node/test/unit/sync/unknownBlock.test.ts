@@ -973,6 +973,52 @@ describe("UnknownBlockSync", () => {
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
     });
 
+    it("reuses a queued envelope when incomplete payload input arrives for the same root", async () => {
+      const peer = await getRandPeerIdStr();
+      const {payloadInput, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn();
+      const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockReturnValue(undefined),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+      });
+
+      emitter.emit(ChainEvent.envelopeUnknownBlock, {
+        envelope,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(20);
+
+      expect(processExecutionPayload).not.toHaveBeenCalled();
+
+      emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+        payloadInput,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(20);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
+      expect(processExecutionPayload).toHaveBeenCalledTimes(1);
+      expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
+      expect(payloadInput.hasPayloadEnvelope()).toBe(true);
+      expect(payloadInput.getPayloadEnvelope()).toBe(envelope);
+    });
+
     it("refetches by root if a queued envelope fails validation after block import", async () => {
       const peer = await getRandPeerIdStr();
       const {blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({

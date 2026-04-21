@@ -545,9 +545,12 @@ export class BlockInputSync {
   ): PendingPayloadInput {
     // Normalize every payload recovery path into the same cache shape while preserving first-seen
     // timing and peer provenance from any earlier by-root or envelope-only entry.
-    if (envelope && !payloadInput.hasPayloadEnvelope()) {
+    const recoveredEnvelope =
+      envelope ?? (previous && isPendingPayloadEnvelope(previous) ? previous.envelope : undefined);
+
+    if (recoveredEnvelope && !payloadInput.hasPayloadEnvelope()) {
       payloadInput.addPayloadEnvelope({
-        envelope,
+        envelope: recoveredEnvelope,
         source: PayloadEnvelopeInputSource.byRoot,
         seenTimestampSec: Date.now() / 1000,
       });
