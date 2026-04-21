@@ -325,7 +325,9 @@
     </spec>
 
 - name: PayloadAttributes#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const PayloadAttributes =
   spec: |
     <spec dataclass="PayloadAttributes" fork="gloas" hash="db78dd94">
     class PayloadAttributes(object):

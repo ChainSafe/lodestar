@@ -35,7 +35,9 @@
     </spec>
 
 - name: BlockAccessList#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const BlockAccessList =
   spec: |
     <spec custom_type="BlockAccessList" fork="gloas" hash="82183152">
     BlockAccessList = ByteList[MAX_BYTES_PER_TRANSACTION]

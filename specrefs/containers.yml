@@ -987,7 +987,9 @@
     </spec>
 
 - name: ExecutionPayload#gloas
-  sources: []
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const ExecutionPayload =
   spec: |
     <spec container="ExecutionPayload" fork="gloas" hash="d399d858">
     class ExecutionPayload(Container):
