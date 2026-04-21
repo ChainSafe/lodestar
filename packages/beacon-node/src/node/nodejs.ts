@@ -6,7 +6,7 @@ import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {IBeaconStateView, PubkeyCache, isStatePostBellatrix} from "@lodestar/state-transition";
+import {IBeaconStateView, PubkeyCache, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -223,7 +223,9 @@ export class BeaconNode {
     if (opts.executionEngine.mode === "mock") {
       const eth1BlockHash =
         isStatePostBellatrix(anchorState) && anchorState.isExecutionStateType
-          ? toRootHex(anchorState.latestBlockHash)
+          ? isStatePostGloas(anchorState)
+            ? toRootHex(anchorState.latestBlockHash)
+            : toRootHex(anchorState.latestExecutionPayloadHeader.blockHash)
           : undefined;
       executionEngineOpts = {
         ...opts.executionEngine,
