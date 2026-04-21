@@ -4,6 +4,8 @@ import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
+import {capella} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
@@ -143,5 +145,212 @@ describe("PrepareNextSlot scheduler", () => {
     expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledOnce();
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("gloas - should prepare payload using latestExecutionPayloadBid.blockHash when shouldExtendPayload is true", async () => {
+    const payloadAttributesSpy = vi.fn();
+    const freshWithdrawals: capella.Withdrawal[] = [
+      {index: 1, validatorIndex: 2, address: new Uint8Array(20).fill(0x11), amount: 3n},
+    ];
+    const staleWithdrawals: capella.Withdrawal[] = [
+      {index: 9, validatorIndex: 8, address: new Uint8Array(20).fill(0x22), amount: 7n},
+    ];
+
+    chainStub.emitter.on(routes.events.EventType.payloadAttributes, payloadAttributesSpy);
+    getForkStub.mockReturnValue(ForkName.gloas);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getJustifiedBlock.mockReturnValue({
+      executionPayloadBlockHash: zeroProtoBlock.blockRoot,
+    } as ProtoBlock);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({
+      executionPayloadBlockHash: zeroProtoBlock.blockRoot,
+    } as ProtoBlock);
+    forkChoiceStub.getBlockHexAndBlockHash.mockReturnValue({
+      executionPayloadBlockHash: toRootHex(new Uint8Array(32).fill(0xaa)),
+      executionPayloadNumber: 99,
+    } as ProtoBlock);
+    (forkChoiceStub as MockedBeaconChain["forkChoice"] & {shouldExtendPayload: Mock}).shouldExtendPayload = vi
+      .fn()
+      .mockReturnValue(true);
+    updateBuilderStatus.mockReturnValue(void 0);
+
+    const blockHash = new Uint8Array(32).fill(0xaa);
+    const parentBlockHash = new Uint8Array(32).fill(0xbb);
+    const state = {
+      forkName: ForkName.gloas,
+      slot: SLOTS_PER_EPOCH - 1,
+      genesisTime: 0,
+      epoch: 0,
+      latestExecutionPayloadBid: {blockHash, parentBlockHash},
+      payloadExpectedWithdrawals: staleWithdrawals,
+      getExpectedWithdrawals: vi.fn().mockReturnValue({expectedWithdrawals: freshWithdrawals}),
+      getRandaoMix: vi.fn().mockReturnValue(new Uint8Array(32).fill(0xdd)),
+      getBeaconProposer: vi.fn().mockReturnValue(proposerIndex),
+      hashTreeRoot: vi.fn().mockReturnValue(new Uint8Array(32)),
+    };
+
+    regenStub.getBlockSlotState.mockResolvedValue(state as never);
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue("0x");
+
+    await Promise.all([
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+    ]);
+
+    expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
+      ForkName.gloas,
+      toRootHex(blockHash),
+      zeroProtoBlock.blockRoot,
+      zeroProtoBlock.blockRoot,
+      expect.any(Object)
+    );
+    expect(payloadAttributesSpy).toHaveBeenCalledOnce();
+    expect(payloadAttributesSpy).toHaveBeenCalledWith({
+      version: ForkName.gloas,
+      data: expect.objectContaining({
+        parentBlockHash: blockHash,
+        parentBlockNumber: 99,
+        payloadAttributes: expect.objectContaining({withdrawals: freshWithdrawals}),
+      }),
+    });
+    expect(state.getExpectedWithdrawals).toHaveBeenCalledTimes(2);
+  });
+
+  it("gloas - should emit payloadAttributes with parentBeaconBlockRoot aligned to updatedHeadRoot", async () => {
+    const spy = vi.fn();
+    chainStub.emitter.on(routes.events.EventType.payloadAttributes, spy);
+    getForkStub.mockReturnValue(ForkName.gloas);
+
+    const headRoot = toRootHex(new Uint8Array(32).fill(0x11));
+    const proposerHeadRoot = toRootHex(new Uint8Array(32).fill(0x22));
+
+    chainStub.recomputeForkChoiceHead.mockReturnValue({
+      ...zeroProtoBlock,
+      slot: SLOTS_PER_EPOCH - 3,
+      blockRoot: headRoot,
+    } as ProtoBlock);
+    chainStub.predictProposerHead.mockReturnValue({
+      ...zeroProtoBlock,
+      slot: SLOTS_PER_EPOCH - 3,
+      blockRoot: proposerHeadRoot,
+    } as ProtoBlock);
+    forkChoiceStub.getJustifiedBlock.mockReturnValue({
+      executionPayloadBlockHash: zeroProtoBlock.blockRoot,
+    } as ProtoBlock);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({
+      executionPayloadBlockHash: zeroProtoBlock.blockRoot,
+    } as ProtoBlock);
+    (forkChoiceStub as MockedBeaconChain["forkChoice"] & {shouldExtendPayload: Mock}).shouldExtendPayload = vi
+      .fn()
+      .mockReturnValue(true);
+    updateBuilderStatus.mockReturnValue(void 0);
+
+    const blockHash = new Uint8Array(32).fill(0xaa);
+    const parentBlockHash = new Uint8Array(32).fill(0xbb);
+    (forkChoiceStub as MockedBeaconChain["forkChoice"] & {getBlockHexAndBlockHash: Mock}).getBlockHexAndBlockHash = vi
+      .fn()
+      .mockReturnValue({executionPayloadBlockHash: toRootHex(blockHash), executionPayloadNumber: 99});
+    const state = {
+      forkName: ForkName.gloas,
+      slot: SLOTS_PER_EPOCH - 1,
+      genesisTime: 0,
+      epoch: 0,
+      latestExecutionPayloadBid: {blockHash, parentBlockHash},
+      payloadExpectedWithdrawals: [],
+      getExpectedWithdrawals: vi.fn().mockReturnValue({expectedWithdrawals: []}),
+      getRandaoMix: vi.fn().mockReturnValue(new Uint8Array(32).fill(0xdd)),
+      getBeaconProposer: vi.fn().mockReturnValue(proposerIndex),
+      hashTreeRoot: vi.fn().mockReturnValue(new Uint8Array(32)),
+    };
+
+    regenStub.getBlockSlotState.mockResolvedValue(state as never);
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue("0x");
+
+    await Promise.all([
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+    ]);
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    const event = spy.mock.calls[0][0];
+    expect(event.data.parentBlockRoot).toEqual(new Uint8Array(32).fill(0x22));
+    expect(event.data.payloadAttributes.parentBeaconBlockRoot).toEqual(new Uint8Array(32).fill(0x22));
+  });
+
+  it("gloas - should prepare payload using latestExecutionPayloadBid.parentBlockHash when shouldExtendPayload is false", async () => {
+    const payloadAttributesSpy = vi.fn();
+    const freshWithdrawals: capella.Withdrawal[] = [
+      {index: 1, validatorIndex: 2, address: new Uint8Array(20).fill(0x11), amount: 3n},
+    ];
+    const staleWithdrawals: capella.Withdrawal[] = [
+      {index: 9, validatorIndex: 8, address: new Uint8Array(20).fill(0x22), amount: 7n},
+    ];
+
+    chainStub.emitter.on(routes.events.EventType.payloadAttributes, payloadAttributesSpy);
+    getForkStub.mockReturnValue(ForkName.gloas);
+    chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getJustifiedBlock.mockReturnValue({
+      executionPayloadBlockHash: zeroProtoBlock.blockRoot,
+    } as ProtoBlock);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({
+      executionPayloadBlockHash: zeroProtoBlock.blockRoot,
+    } as ProtoBlock);
+    forkChoiceStub.getBlockHexAndBlockHash.mockReturnValue({
+      executionPayloadBlockHash: toRootHex(new Uint8Array(32).fill(0xbb)),
+      executionPayloadNumber: 99,
+    } as ProtoBlock);
+    (forkChoiceStub as MockedBeaconChain["forkChoice"] & {shouldExtendPayload: Mock}).shouldExtendPayload = vi
+      .fn()
+      .mockReturnValue(false);
+    updateBuilderStatus.mockReturnValue(void 0);
+
+    const blockHash = new Uint8Array(32).fill(0xaa);
+    const parentBlockHash = new Uint8Array(32).fill(0xbb);
+    const state = {
+      forkName: ForkName.gloas,
+      slot: SLOTS_PER_EPOCH - 1,
+      genesisTime: 0,
+      epoch: 0,
+      latestExecutionPayloadBid: {blockHash, parentBlockHash},
+      payloadExpectedWithdrawals: staleWithdrawals,
+      getExpectedWithdrawals: vi.fn().mockReturnValue({expectedWithdrawals: freshWithdrawals}),
+      getRandaoMix: vi.fn().mockReturnValue(new Uint8Array(32).fill(0xdd)),
+      getBeaconProposer: vi.fn().mockReturnValue(proposerIndex),
+      hashTreeRoot: vi.fn().mockReturnValue(new Uint8Array(32)),
+    };
+
+    regenStub.getBlockSlotState.mockResolvedValue(state as never);
+    beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
+    (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
+    executionEngineStub.notifyForkchoiceUpdate.mockResolvedValue("0x");
+
+    await Promise.all([
+      scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 2),
+      vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
+    ]);
+
+    expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledWith(
+      ForkName.gloas,
+      toRootHex(parentBlockHash),
+      zeroProtoBlock.blockRoot,
+      zeroProtoBlock.blockRoot,
+      expect.any(Object)
+    );
+    expect(payloadAttributesSpy).toHaveBeenCalledOnce();
+    expect(payloadAttributesSpy).toHaveBeenCalledWith({
+      version: ForkName.gloas,
+      data: expect.objectContaining({
+        parentBlockHash,
+        parentBlockNumber: 99,
+        payloadAttributes: expect.objectContaining({withdrawals: staleWithdrawals}),
+      }),
+    });
+    expect(state.getExpectedWithdrawals).not.toHaveBeenCalled();
   });
 });
