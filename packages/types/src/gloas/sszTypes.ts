@@ -210,7 +210,7 @@ export const BeaconBlockBody = new ContainerType(
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadAttestations: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
-    parentExecutionRequests: electraSsz.ExecutionRequests,
+    parentExecutionRequests: electraSsz.ExecutionRequests, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -268,7 +268,7 @@ export const BeaconState = new ContainerType(
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
     // latestExecutionPayloadHeader: ExecutionPayloadHeader, // Removed in GLOAS:EIP7732
-    latestBlockHash: Bytes32,
+    latestBlockHash: Bytes32, // New in GLOAS:EIP7732
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
@@ -289,12 +289,12 @@ export const BeaconState = new ContainerType(
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
     builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
     builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
-    latestExecutionPayloadBid: ExecutionPayloadBid,
+    latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: capellaSsz.Withdrawals, // New in GLOAS:EIP7732
     ptcWindow: PtcWindow, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
-);
+); // New in GLOAS:EIP7732
 
 export const DataColumnSidecar = new ContainerType(
   {

@@ -142,7 +142,6 @@ exceptions:
     - max_compressed_len#phase0
     - max_message_size#phase0
     - record_block_timeliness#phase0
-    - saturating_sub#phase0
     - seconds_to_milliseconds#phase0
     - store_target_checkpoint_state#phase0
     - update_proposer_boost_root#phase0
@@ -281,7 +280,6 @@ exceptions:
     # gloas
     - add_builder_to_registry#gloas
     - apply_withdrawals#gloas
-    - compute_balance_weighted_acceptance#gloas
     - compute_balance_weighted_selection#gloas
     - compute_fork_version#gloas
     - compute_proposer_indices#gloas
@@ -317,7 +315,6 @@ exceptions:
     - is_valid_proposal_slot#gloas
     - notify_ptc_messages#gloas
     - on_block#gloas
-    - on_execution_payload#gloas
     - on_payload_attestation_message#gloas
     - prepare_execution_payload#gloas
     - process_attestation#gloas
@@ -364,7 +361,6 @@ exceptions:
     - is_inclusion_list_bits_inclusive#heze
     - is_payload_inclusion_list_satisfied#heze
     - is_valid_inclusion_list_signature#heze
-    - on_execution_payload#heze
     - on_inclusion_list#heze
     - prepare_execution_payload#heze
     - process_inclusion_list#heze
