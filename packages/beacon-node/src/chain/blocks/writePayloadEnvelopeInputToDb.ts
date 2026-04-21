@@ -44,12 +44,5 @@ export async function persistPayloadEnvelopeInput(
         },
         e
       );
-    })
-    .finally(() => {
-      this.seenPayloadEnvelopeInputCache.prune(payloadInput.blockRootHex);
-      this.logger.debug("Pruned payload envelope input", {
-        slot: payloadInput.slot,
-        root: payloadInput.blockRootHex,
-      });
     });
 }

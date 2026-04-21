@@ -203,6 +203,20 @@ export class PrepareNextSlotScheduler {
           });
         }
 
+        if (ForkSeq[fork] >= ForkSeq.gloas) {
+          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
+          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
+          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
+          const finalHead = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHeadRoot);
+          const finalHeadParent = finalHead && this.chain.forkChoice.getBlockHexDefaultStatus(finalHead.parentRoot);
+          if (finalHeadParent) {
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(finalHeadParent.slot);
+          }
+        }
+
+        if (!isStatePostBellatrix(updatedPrepareState)) {
+          throw new Error("Expected Bellatrix state for payload attributes");
+        }
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event
