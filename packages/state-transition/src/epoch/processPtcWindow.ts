@@ -13,25 +13,26 @@ import {computePayloadTimelinessCommitteesForEpoch} from "../util/seed.js";
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/beacon-chain.md#new-process_ptc_window
  */
 export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTransitionCache): void {
-  const epoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
-  const nextShuffling = cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, epoch);
-  cache.nextShuffling = nextShuffling;
+  const nextEpoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
+  const nextEpochShuffling =
+    cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, nextEpoch);
+  cache.nextShuffling = nextEpochShuffling;
 
-  const lastEpochPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
+  const newNextPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
     state,
-    epoch,
-    nextShuffling.committees,
+    nextEpoch,
+    nextEpochShuffling.committees,
     state.epochCtx.effectiveBalanceIncrements
   );
 
   // Stash for finalProcessEpoch to shift into epoch cache
-  cache.nextEpochPayloadTimelinessCommittees = lastEpochPayloadTimelinessCommittees;
+  cache.nextEpochPayloadTimelinessCommittees = newNextPayloadTimelinessCommittees;
 
   // Write shifted window to state: current(N) + next(N+1) + newlyComputed(N+2)
   // From the perspective of upcoming epoch N+1, this is previous + current + next
   state.ptcWindow = ssz.gloas.PtcWindow.toViewDU([
     ...state.epochCtx.payloadTimelinessCommittees,
     ...state.epochCtx.nextPayloadTimelinessCommittees,
-    ...lastEpochPayloadTimelinessCommittees,
+    ...newNextPayloadTimelinessCommittees,
   ]);
 }
