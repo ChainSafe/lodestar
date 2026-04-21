@@ -212,7 +212,7 @@ importers:
         version: 8.18.0
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
 
   packages/beacon-node:
     dependencies:
@@ -350,7 +350,7 @@ importers:
         version: 4.3.1
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
       interface-datastore:
         specifier: ^9.0.2
         version: 9.0.2
@@ -565,7 +565,7 @@ importers:
         version: 2.2.1
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
       tmp:
         specifier: ^0.2.4
         version: 0.2.4
@@ -745,7 +745,7 @@ importers:
         version: 6.9.7
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
       qs:
         specifier: ^6.11.1
         version: 6.14.1
@@ -4371,8 +4371,8 @@ packages:
   fastify-plugin@5.0.1:
     resolution: {integrity: sha512-HCxs+YnRaWzCl+cWRYFnHmeRFyR5GVnJTAaCJQiYzQSDwK9MgJdyAsuL3nh0EWRCYMgQ5MeziymvmAhUHYHDUQ==}
 
-  fastify@5.8.3:
-    resolution: {integrity: sha512-XJXpRQ41+rsJ/GLeP9vyDC+fBXilcTlEXokMSexkdEkla4uf7ZQNaI5xl3el+kW5TZQulqYxLr659ey/KX7XmQ==}
+  fastify@5.8.5:
+    resolution: {integrity: sha512-Yqptv59pQzPgQUSIm87hMqHJmdkb1+GPxdE6vW6FRyVE9G86mt7rOghitiU4JHRaTyDUk9pfeKmDeu70lAwM4Q==}
 
   fastq@1.17.1:
     resolution: {integrity: sha512-sRVD3lWVIXWg6By68ZN7vho9a1pQcN/WBFaAAsDDFzlJjvoGx0P8z7V1t72grFJfJhu3YPZBuu25f7Kaw2jN1w==}
@@ -6015,8 +6015,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.58.2:
-    resolution: {integrity: sha512-yZkEtftgwS8CsfYo7nm0KE8jsvm6i/PTgVtB8DL726wNf6H2IMsDuxCpJj59KDaxCtSnrWan2AeDqM7JBaultg==}
+  playwright-core@1.59.1:
+    resolution: {integrity: sha512-HBV/RJg81z5BiiZ9yPzIiClYV/QMsDCKUyogwH9p3MCP6IYjUFu/MActgYAvK0oWyV9NlwM3GLBjADyWgydVyg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -6025,8 +6025,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.58.2:
-    resolution: {integrity: sha512-vA30H8Nvkq/cPBnNw4Q8TWz1EJyqgpuinBcHET0YVJVFldr8JDNiU9LaWAE1KqSkRYazuaBhTpB5ZzShOezQ6A==}
+  playwright@1.59.1:
+    resolution: {integrity: sha512-C8oWjPR3F81yljW9o5OxcWzfh6avkVwDD2VYdwIGqTkl+OGFISgypqzfu7dOe4QNLL2aqcWBmI3PMtLIK233lw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -6353,8 +6353,8 @@ packages:
   safe-regex-test@1.0.0:
     resolution: {integrity: sha512-JBUUzyOgEwXQY1NuPtvcj/qcBDbDmEvWufhlnXZIm75DEHp+afM1r1ujJpJsV/gSM4t59tpDyPi1sd6ZaPFfsA==}
 
-  safe-regex2@5.1.0:
-    resolution: {integrity: sha512-pNHAuBW7TrcleFHsxBr5QMi/Iyp0ENjUKz7GCcX1UO7cMh+NmVK6HxQckNL1tJp1XAJVjG6B8OKIPqodqj9rtw==}
+  safe-regex2@5.1.1:
+    resolution: {integrity: sha512-mOSBvHGDZMuIEZMdOz/aCEYDCv0E7nfcNsIhUF+/P+xC7Hyf3FkvymqgPbg9D1EdSGu+uKbJgy09K/RKKc7kJA==}
     hasBin: true
 
   safe-stable-stringify@2.4.2:
@@ -10175,11 +10175,11 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.58.2)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser-playwright@4.0.7(playwright@1.59.1)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
       '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
       '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
-      playwright: 1.58.2
+      playwright: 1.59.1
       tinyrainbow: 3.0.3
       vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
     transitivePeerDependencies:
@@ -11548,7 +11548,7 @@ snapshots:
 
   fastify-plugin@5.0.1: {}
 
-  fastify@5.8.3:
+  fastify@5.8.5:
     dependencies:
       '@fastify/ajv-compiler': 4.0.5
       '@fastify/error': 4.2.0
@@ -11609,7 +11609,7 @@ snapshots:
     dependencies:
       fast-deep-equal: 3.1.3
       fast-querystring: 1.1.2
-      safe-regex2: 5.1.0
+      safe-regex2: 5.1.1
 
   find-up@4.1.0:
     dependencies:
@@ -13405,7 +13405,7 @@ snapshots:
 
   playwright-core@1.56.1: {}
 
-  playwright-core@1.58.2:
+  playwright-core@1.59.1:
     optional: true
 
   playwright@1.56.1:
@@ -13414,9 +13414,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  playwright@1.58.2:
+  playwright@1.59.1:
     dependencies:
-      playwright-core: 1.58.2
+      playwright-core: 1.59.1
     optionalDependencies:
       fsevents: 2.3.2
     optional: true
@@ -13754,7 +13754,7 @@ snapshots:
       get-intrinsic: 1.2.2
       is-regex: 1.1.4
 
-  safe-regex2@5.1.0:
+  safe-regex2@5.1.1:
     dependencies:
       ret: 0.5.0
 
@@ -14590,7 +14590,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.4.0
-      '@vitest/browser-playwright': 4.0.7(playwright@1.58.2)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser-playwright': 4.0.7(playwright@1.59.1)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
       jsdom: 23.0.1
     transitivePeerDependencies:
       - jiti
