@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {getExecutionPayloadEnvelopeSignatureSet, isStatePostGloas} from "@lodestar/state-transition";
-import {byteArrayEquals, fromHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -213,15 +213,9 @@ export async function importExecutionPayload(
       });
   }
 
-  // 5c. Verify envelope state root matches post-state
+  // 5c. Compute post-payload state root
   const postPayloadState = postPayloadResult.postPayloadState;
   const postPayloadStateRoot = postPayloadState.hashTreeRoot();
-  if (!byteArrayEquals(envelope.stateRoot, postPayloadStateRoot)) {
-    throw new PayloadError({
-      code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-      message: `Envelope state root mismatch expected=${toRootHex(envelope.stateRoot)} actual=${toRootHex(postPayloadStateRoot)}`,
-    });
-  }
 
   // 6. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
@@ -256,8 +250,6 @@ export async function importExecutionPayload(
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
-  const stateRootHex = toRootHex(envelope.stateRoot);
-
   // 10. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
   if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
@@ -265,7 +257,6 @@ export async function importExecutionPayload(
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
-      stateRoot: stateRootHex,
       // TODO GLOAS: revisit once we support optimistic import
       executionOptimistic: false,
     });
@@ -276,6 +267,5 @@ export async function importExecutionPayload(
     builderIndex: envelope.builderIndex,
     blockRoot: blockRootHex,
     blockHash: blockHashHex,
-    stateRoot: stateRootHex,
   });
 }

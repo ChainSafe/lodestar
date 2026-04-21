@@ -46,6 +46,7 @@ import {
   electra,
   fulu,
   gloas,
+  ssz,
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
@@ -269,6 +270,7 @@ export async function produceBlockBody<T extends BlockType>(
       value: 0,
       executionPayment: 0,
       blobKzgCommitments: blobsBundle.commitments,
+      executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
     };
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
