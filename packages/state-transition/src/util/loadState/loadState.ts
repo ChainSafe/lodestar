@@ -110,8 +110,14 @@ function loadInactivityScores(
   seedState: BeaconStateAltair,
   inactivityScoresBytes: Uint8Array
 ): void {
-  // migratedState starts with the same inactivityScores to seed state
-  migratedState.inactivityScores = seedState.inactivityScores.clone();
+  // migratedState starts with the same inactivityScores as seed state.
+  // `dontTransferCache=true` is REQUIRED: the default transfer-cache clone would alias the
+  // seed subview's internal `nodes[]` / `caches[]` arrays, and a subsequent
+  // `migratedState.commit()` would write the modified score nodes into those shared arrays,
+  // silently corrupting the seed container's cache snapshot. That corruption only surfaces
+  // on the next `seedState.clone({dontTransferCache: false})` read, producing a
+  // "Withdrawal mismatch at index=0"-style divergence downstream.
+  migratedState.inactivityScores = seedState.inactivityScores.clone(true);
   const oldValidator = migratedState.inactivityScores.length;
   // UintNum64 = 8 bytes
   const newValidator = inactivityScoresBytes.length / 8;
@@ -187,8 +193,14 @@ function loadValidators(
   const newValidatorCount = Math.floor(newValidatorsBytes.length / VALIDATOR_BYTES_SIZE);
   const isMoreValidator = newValidatorCount >= seedValidatorCount;
   const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
-  // migrated state starts with the same validators to seed state
-  migratedState.validators = seedState.validators.clone();
+  // migrated state starts with the same validators as seed state.
+  // `dontTransferCache=true` is REQUIRED: the default transfer-cache clone would alias the
+  // seed subview's internal `nodes[]` / `caches[]` arrays, and a subsequent
+  // `migratedState.commit()` would write the modified validator nodes into those shared
+  // arrays, silently corrupting the seed container's cache snapshot. That corruption only
+  // surfaces on the next `seedState.clone({dontTransferCache: false})` read, producing a
+  // "Withdrawal mismatch at index=0"-style divergence downstream.
+  migratedState.validators = seedState.validators.clone(true);
   // 80% of validators serialization time comes from memory allocation
   // seedStateValidatorsBytes is an optimization at beacon-node side to avoid memory allocation here
   const seedValidatorsBytes = seedStateValidatorsBytes ?? seedState.validators.serialize();
