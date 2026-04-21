@@ -24,7 +24,7 @@ export function processExecutionPayloadEnvelope(
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   opts?: ProcessExecutionPayloadEnvelopeOpts
 ): CachedBeaconStateGloas {
-  const {verifySignature = true, verifyStateRoot = true} = opts ?? {};
+  const {verifySignature = true} = opts ?? {};
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
   const fork = state.config.getForkSeq(payload.slotNumber);
@@ -73,7 +73,6 @@ export function processExecutionPayloadEnvelope(
   postState.latestBlockHash = payload.blockHash;
 
   postState.commit();
-
 
   return postState;
 }
