@@ -23,6 +23,7 @@ import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposer
 import {SeenBlockInput} from "../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGloasBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validation/executionPayloadEnvelope.js";
+import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
@@ -539,6 +540,89 @@ describe("UnknownBlockSync", () => {
       {...minimalConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0},
       Buffer.alloc(32, 0)
     );
+    type PayloadSyncTestPeer = {
+      peerId: PeerIdStr;
+      client?: string;
+      custodyColumns?: number[];
+      earliestAvailableSlot?: number;
+    };
+
+    function setupPayloadSyncTest({
+      chainOverrides,
+      custodyConfig = {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
+      networkOverrides,
+      peers = [],
+    }: {
+      chainOverrides?: Partial<IBeaconChain>;
+      custodyConfig?: CustodyConfig;
+      networkOverrides?: Partial<INetwork>;
+      peers?: PayloadSyncTestPeer[];
+    }): {
+      chain: IBeaconChain;
+      emitter: ChainEventEmitter;
+      network: INetwork;
+      networkEvents: NetworkEventBus;
+    } {
+      const emitter = new ChainEventEmitter();
+      const networkEvents = new NetworkEventBus();
+      const peersById = new Map(peers.map((peer) => [peer.peerId, peer]));
+
+      const chain = {
+        emitter,
+        clock: new ClockStopped(0),
+        config: gloasConfig,
+        genesisTime: 0,
+        metrics: null,
+        getBlockByRoot: vi.fn().mockResolvedValue(null),
+        processExecutionPayload: vi.fn().mockResolvedValue(undefined),
+        seenPayloadEnvelopeInputCache: {
+          get: vi.fn().mockReturnValue(undefined),
+          prune: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
+        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
+        forkChoice: {
+          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+          hasBlockHex: vi.fn().mockReturnValue(true),
+          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+        } as unknown as IForkChoice,
+        ...chainOverrides,
+      } as IBeaconChain;
+
+      const network = {
+        events: networkEvents,
+        getConnectedPeers: () => peers.map(({peerId}) => peerId),
+        getConnectedPeerSyncMeta: (peerId: string) => {
+          const peer = peersById.get(peerId);
+          if (!peer) {
+            throw new Error(`Unknown peer ${peerId}`);
+          }
+
+          return {
+            peerId,
+            client: peer.client ?? "payload-test-client",
+            custodyColumns: peer.custodyColumns ?? [],
+            earliestAvailableSlot: peer.earliestAvailableSlot ?? 0,
+          };
+        },
+        custodyConfig,
+        ...networkOverrides,
+      } as INetwork;
+
+      service = new BlockInputSync(gloasConfig, network, chain, logger, null, defaultSyncOptions);
+      service.subscribeToNetwork();
+
+      for (const peer of peers) {
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer: peer.peerId,
+          status: {} as never,
+          custodyColumns: peer.custodyColumns ?? [],
+          clientAgent: peer.client ?? "payload-test-client",
+        });
+      }
+
+      return {chain, emitter, network, networkEvents};
+    }
 
     beforeEach(() => {
       vi.useFakeTimers({shouldAdvanceTime: true});
@@ -554,60 +638,23 @@ describe("UnknownBlockSync", () => {
         slot: 1,
       });
 
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
       const sendDataColumnSidecarsByRoot = vi.fn().mockResolvedValue(columnSidecars);
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peer],
-        getConnectedPeerSyncMeta: () => ({
-          peerId: peer,
-          client: "payload-test-client",
-          custodyColumns: [0],
-          earliestAvailableSlot: 0,
-        }),
-        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-        sendDataColumnSidecarsByRoot,
-      };
-
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-          prune: vi.fn(),
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockReturnValue(true),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      networkEvents.emit(NetworkEvent.peerConnected, {
-        peer,
-        status: {} as never,
-        custodyColumns: [0],
-        clientAgent: "payload-test-client",
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendDataColumnSidecarsByRoot,
+        },
+        peers: [{peerId: peer, custodyColumns: [0]}],
       });
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
@@ -639,7 +686,6 @@ describe("UnknownBlockSync", () => {
         slot: 1,
       });
 
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
       const sendDataColumnSidecarsByRoot = vi
         .fn()
@@ -659,59 +705,24 @@ describe("UnknownBlockSync", () => {
         });
 
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
-          prune: vi.fn(),
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockReturnValue(true),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peerA, peerB],
-        getConnectedPeerSyncMeta: (peerId: string) => ({
-          peerId,
-          client: `payload-test-client-${peerId === peerA ? "a" : "b"}`,
-          custodyColumns: peerId === peerA ? [0] : [1],
-          earliestAvailableSlot: 0,
-        }),
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
         custodyConfig: {sampledColumns: [0, 1], sampleGroups: [[0], [1]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-        sendDataColumnSidecarsByRoot,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      for (const peer of [peerA, peerB]) {
-        networkEvents.emit(NetworkEvent.peerConnected, {
-          peer,
-          status: {} as never,
-          custodyColumns: peer === peerA ? [0] : [1],
-          clientAgent: `payload-test-client-${peer === peerA ? "a" : "b"}`,
-        });
-      }
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendDataColumnSidecarsByRoot,
+        },
+        peers: [
+          {peerId: peerA, client: "payload-test-client-a", custodyColumns: [0]},
+          {peerId: peerB, client: "payload-test-client-b", custodyColumns: [1]},
+        ],
+      });
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
@@ -744,97 +755,63 @@ describe("UnknownBlockSync", () => {
       let cachedPayloadInput: PayloadEnvelopeInput | undefined;
       const knownRoots = new Set([parentRootHex]);
 
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
       const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-      const emitter = new ChainEventEmitter();
       const processBlock = vi.fn().mockImplementation(async () => {
         cachedPayloadInput = payloadInput;
         knownRoots.add(blockRootHex);
         emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
       });
-
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processBlock,
-        processExecutionPayload,
-        getBlockByRoot: vi.fn().mockResolvedValue(null),
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
-          prune: vi.fn(),
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {
-          getByBlock: ({
-            block,
-            blockRootHex,
-            seenTimestampSec,
-            source,
-          }: {
-            block: SignedBeaconBlock;
-            blockRootHex: string;
-            seenTimestampSec: number;
-            source: BlockInputSource;
-          }) =>
-            BlockInputPreData.createFromBlock({
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processBlock,
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          seenBlockInputCache: {
+            getByBlock: ({
               block,
               blockRootHex,
-              forkName: gloasConfig.getForkName(block.message.slot),
-              daOutOfRange: false,
               seenTimestampSec,
               source,
-            }),
-          prune: vi.fn(),
-        } as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
-          getBlockHexAndBlockHash: vi
-            .fn()
-            .mockImplementation((root: string, hash: string) =>
-              root === parentRootHex &&
-              hash === toHexString(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
-                ? ({slot: 0} as ProtoBlock)
-                : null
-            ),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peer],
-        getConnectedPeerSyncMeta: () => ({
-          peerId: peer,
-          client: "payload-test-client",
-          custodyColumns: [],
-          earliestAvailableSlot: 0,
-        }),
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-        sendBeaconBlocksByRoot,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      networkEvents.emit(NetworkEvent.peerConnected, {
-        peer,
-        status: {} as never,
-        custodyColumns: [],
-        clientAgent: "payload-test-client",
+            }: {
+              block: SignedBeaconBlock;
+              blockRootHex: string;
+              seenTimestampSec: number;
+              source: BlockInputSource;
+            }) =>
+              BlockInputPreData.createFromBlock({
+                block,
+                blockRootHex,
+                forkName: gloasConfig.getForkName(block.message.slot),
+                daOutOfRange: false,
+                seenTimestampSec,
+                source,
+              }),
+            prune: vi.fn(),
+          } as unknown as SeenBlockInput,
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexAndBlockHash: vi
+              .fn()
+              .mockImplementation((root: string, hash: string) =>
+                root === parentRootHex &&
+                hash === toHexString(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+                  ? ({slot: 0} as ProtoBlock)
+                  : null
+              ),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendBeaconBlocksByRoot,
+        },
+        peers: [{peerId: peer}],
       });
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
@@ -854,6 +831,103 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
     });
 
+    it("downloads the block and retries payload import when EL reports block not in fork choice", async () => {
+      const peer = await getRandPeerIdStr();
+      const {block, blockRoot, blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+      const parentRootHex = toRootHex(block.message.parentRoot);
+      const knownRoots = new Set([parentRootHex]);
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+      const processExecutionPayload = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new PayloadError({
+            code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
+            blockRootHex,
+          })
+        )
+        .mockResolvedValueOnce(undefined);
+
+      let emitter!: ChainEventEmitter;
+      const processBlock = vi.fn().mockImplementation(async () => {
+        knownRoots.add(blockRootHex);
+        emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+      });
+
+      ({emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processBlock,
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          seenBlockInputCache: {
+            getByBlock: ({
+              block,
+              blockRootHex,
+              seenTimestampSec,
+              source,
+            }: {
+              block: SignedBeaconBlock;
+              blockRootHex: string;
+              seenTimestampSec: number;
+              source: BlockInputSource;
+            }) =>
+              BlockInputPreData.createFromBlock({
+                block,
+                blockRootHex,
+                forkName: gloasConfig.getForkName(block.message.slot),
+                daOutOfRange: false,
+                seenTimestampSec,
+                source,
+              }),
+            prune: vi.fn(),
+          } as unknown as SeenBlockInput,
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexAndBlockHash: vi
+              .fn()
+              .mockImplementation((root: string, hash: string) =>
+                root === parentRootHex &&
+                hash === toHexString(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+                  ? ({slot: 0} as ProtoBlock)
+                  : null
+              ),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendBeaconBlocksByRoot,
+        },
+        peers: [{peerId: peer}],
+      }));
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(80);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
+      expect(sendBeaconBlocksByRoot).toHaveBeenCalledTimes(1);
+      expect(sendBeaconBlocksByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
+      expect(processBlock).toHaveBeenCalledTimes(1);
+      expect(processExecutionPayload).toHaveBeenCalledTimes(2);
+      expect(processExecutionPayload).toHaveBeenNthCalledWith(1, payloadInput);
+      expect(processExecutionPayload).toHaveBeenNthCalledWith(2, payloadInput);
+    });
+
     it("waits for block after envelopeUnknownBlock and processes payload on block import", async () => {
       const peer = await getRandPeerIdStr();
       const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
@@ -864,43 +938,20 @@ describe("UnknownBlockSync", () => {
 
       let cachedPayloadInput: PayloadEnvelopeInput | undefined;
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        getBlockByRoot: vi.fn().mockResolvedValue(null),
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
-          prune: vi.fn(),
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockReturnValue(false),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      const network: Partial<INetwork> = {
-        events: new NetworkEventBus(),
-        getConnectedPeers: () => [],
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+      });
 
       emitter.emit(ChainEvent.envelopeUnknownBlock, {
         envelope,
@@ -942,61 +993,20 @@ describe("UnknownBlockSync", () => {
 
       let cachedPayloadInput: PayloadEnvelopeInput | undefined;
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        getBlockByRoot: vi.fn().mockResolvedValue(null),
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
-          prune: vi.fn(),
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockReturnValue(true),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi
         .fn()
         .mockResolvedValueOnce([invalidEnvelope])
         .mockResolvedValueOnce([envelope]);
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peer],
-        getConnectedPeerSyncMeta: () => ({
-          peerId: peer,
-          client: "payload-test-client",
-          custodyColumns: [],
-          earliestAvailableSlot: 0,
-        }),
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      networkEvents.emit(NetworkEvent.peerConnected, {
-        peer,
-        status: {} as never,
-        custodyColumns: [],
-        clientAgent: "payload-test-client",
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
       });
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
@@ -1061,63 +1071,23 @@ describe("UnknownBlockSync", () => {
         cachedPayloadInput = PayloadEnvelopeInput.createFromBlock(props);
         return cachedPayloadInput;
       });
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
-        getBlockByRoot: vi.fn().mockResolvedValue({block, executionOptimistic: false, finalized: false}),
-        seenPayloadEnvelopeInputCache: {
-          add: addPayloadInput,
-          get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
-          prune: prunePayloadInput,
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockReturnValue(true),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi
         .fn()
         .mockResolvedValueOnce([invalidEnvelope])
         .mockResolvedValueOnce([recoveryEnvelope]);
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peer],
-        getConnectedPeerSyncMeta: () => ({
-          peerId: peer,
-          client: "payload-test-client",
-          custodyColumns: [],
-          earliestAvailableSlot: 0,
-        }),
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      networkEvents.emit(NetworkEvent.peerConnected, {
-        peer,
-        status: {} as never,
-        custodyColumns: [],
-        clientAgent: "payload-test-client",
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+          getBlockByRoot: vi.fn().mockResolvedValue({block, executionOptimistic: false, finalized: false}),
+          seenPayloadEnvelopeInputCache: {
+            add: addPayloadInput,
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
+            prune: prunePayloadInput,
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
       });
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
@@ -1150,6 +1120,100 @@ describe("UnknownBlockSync", () => {
       expect(cachedPayloadInput?.getPayloadEnvelope()).toBe(recoveryEnvelope);
     });
 
+    it("retries payload processing on a later scheduler pass after an execution engine error", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, payloadInput, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
+      const processExecutionPayload = vi
+        .fn()
+        .mockRejectedValueOnce(
+          new PayloadError({
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.ELERROR,
+            errorMessage: "execution engine offline",
+          })
+        )
+        .mockResolvedValueOnce(undefined);
+
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
+      });
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(20);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      expect(processExecutionPayload).toHaveBeenCalledTimes(1);
+
+      emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+
+      await sleep(20);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      expect(processExecutionPayload).toHaveBeenCalledTimes(2);
+      expect(processExecutionPayload).toHaveBeenNthCalledWith(1, payloadInput);
+      expect(processExecutionPayload).toHaveBeenNthCalledWith(2, payloadInput);
+    });
+
+    it("ignores a fetched payload envelope whose block root does not match the requested root", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRoot, blockRootHex, payloadInput} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 1,
+      });
+      const {envelope: mismatchedEnvelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: 2,
+      });
+
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([mismatchedEnvelope]);
+      const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
+      });
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledWith(peer, [blockRoot]);
+      expect(validateGossipExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(processExecutionPayload).not.toHaveBeenCalled();
+    });
+
     it("processes incomplete payload envelope input without network fetch", async () => {
       const peer = await getRandPeerIdStr();
       const {payloadInput, envelope} = buildPayloadFixture({blobCount: 0, sampledColumns: [], slot: 1});
@@ -1159,42 +1223,16 @@ describe("UnknownBlockSync", () => {
         seenTimestampSec: Date.now() / 1000,
       });
 
-      const network: Partial<INetwork> = {
-        events: new NetworkEventBus(),
-        getConnectedPeers: () => [],
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-      };
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockReturnValue(payloadInput),
-          prune: vi.fn(),
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockReturnValue(true),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockReturnValue(payloadInput),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        },
+      });
 
       emitter.emit(ChainEvent.incompletePayloadEnvelope, {
         payloadInput,
@@ -1239,75 +1277,43 @@ describe("UnknownBlockSync", () => {
       });
 
       let hasParentPayload = false;
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
       const sendBeaconBlocksByRoot = vi.fn();
       const processExecutionPayload = vi.fn().mockImplementation(async () => {
         hasParentPayload = true;
       });
       const processBlock = vi.fn().mockResolvedValue(undefined);
-
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peer],
-        getConnectedPeerSyncMeta: () => ({
-          peerId: peer,
-          client: "payload-test-client",
-          custodyColumns: [],
-          earliestAvailableSlot: 0,
-        }),
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-        sendBeaconBlocksByRoot,
-      };
-
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        processBlock,
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
-          prune: vi.fn(),
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockImplementation((root: string) => root === parentRootHex && hasParentPayload),
-          hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
-          getBlockHexDefaultStatus: vi
-            .fn()
-            .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 1} as ProtoBlock) : null)),
-          getBlockHexAndBlockHash: vi
-            .fn()
-            .mockImplementation((root: string, hash: string) =>
-              root === parentRootHex && hash === toHexString(parentPayloadHash) && hasParentPayload
-                ? ({slot: 1} as ProtoBlock)
-                : null
-            ),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      networkEvents.emit(NetworkEvent.peerConnected, {
-        peer,
-        status: {} as never,
-        custodyColumns: [],
-        clientAgent: "payload-test-client",
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          processBlock,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi
+              .fn()
+              .mockImplementation((root: string) => root === parentRootHex && hasParentPayload),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 1} as ProtoBlock) : null)),
+            getBlockHexAndBlockHash: vi
+              .fn()
+              .mockImplementation((root: string, hash: string) =>
+                root === parentRootHex && hash === toHexString(parentPayloadHash) && hasParentPayload
+                  ? ({slot: 1} as ProtoBlock)
+                  : null
+              ),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendBeaconBlocksByRoot,
+        },
+        peers: [{peerId: peer}],
       });
 
       emitter.emit(ChainEvent.blockUnknownParent, {
@@ -1363,62 +1369,29 @@ describe("UnknownBlockSync", () => {
         source: BlockInputSource.gossip,
       });
 
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi.fn();
       const processBlock = vi.fn();
       const seenBlockInputPrune = vi.fn();
       const seenPayloadPrune = vi.fn();
-
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peer],
-        getConnectedPeerSyncMeta: () => ({
-          peerId: peer,
-          client: "payload-test-client",
-          custodyColumns: [],
-          earliestAvailableSlot: 0,
-        }),
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-      };
-
-      const emitter = new ChainEventEmitter();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processBlock,
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? parentPayloadInput : undefined)),
-          prune: seenPayloadPrune,
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: seenBlockInputPrune} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
-          getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      networkEvents.emit(NetworkEvent.peerConnected, {
-        peer,
-        status: {} as never,
-        custodyColumns: [],
-        clientAgent: "payload-test-client",
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processBlock,
+          seenPayloadEnvelopeInputCache: {
+            get: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? parentPayloadInput : undefined)),
+            prune: seenPayloadPrune,
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          seenBlockInputCache: {prune: seenBlockInputPrune} as unknown as SeenBlockInput,
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
       });
 
       emitter.emit(ChainEvent.blockUnknownParent, {
@@ -1465,68 +1438,32 @@ describe("UnknownBlockSync", () => {
         source: BlockInputSource.gossip,
       });
 
-      const networkEvents = new NetworkEventBus();
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
       const processExecutionPayload = vi
         .fn()
         .mockRejectedValue(new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE}));
       const processBlock = vi.fn().mockResolvedValue(undefined);
-
-      const network: Partial<INetwork> = {
-        events: networkEvents,
-        getConnectedPeers: () => [peer],
-        getConnectedPeerSyncMeta: () => ({
-          peerId: peer,
-          client: "payload-test-client",
-          custodyColumns: [],
-          earliestAvailableSlot: 0,
-        }),
-        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
-        sendExecutionPayloadEnvelopesByRoot,
-      };
-
-      const emitter = new ChainEventEmitter();
       const seenPayloadPrune = vi.fn();
-      const chain: Partial<IBeaconChain> = {
-        emitter,
-        clock: new ClockStopped(0),
-        config: gloasConfig,
-        genesisTime: 0,
-        metrics: null,
-        processExecutionPayload,
-        processBlock,
-        seenPayloadEnvelopeInputCache: {
-          get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
-          prune: seenPayloadPrune,
-        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
-        forkChoice: {
-          hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
-          getBlockHexDefaultStatus: vi
-            .fn()
-            .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 1} as ProtoBlock) : null)),
-          getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
-          getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
-        } as unknown as IForkChoice,
-      };
-
-      service = new BlockInputSync(
-        gloasConfig,
-        network as INetwork,
-        chain as IBeaconChain,
-        logger,
-        null,
-        defaultSyncOptions
-      );
-      service.subscribeToNetwork();
-
-      networkEvents.emit(NetworkEvent.peerConnected, {
-        peer,
-        status: {} as never,
-        custodyColumns: [],
-        clientAgent: "payload-test-client",
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          processBlock,
+          seenPayloadEnvelopeInputCache: {
+            get: vi.fn().mockImplementation((root: string) => (root === parentRootHex ? payloadInput : undefined)),
+            prune: seenPayloadPrune,
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 1} as ProtoBlock) : null)),
+            getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        peers: [{peerId: peer}],
       });
 
       emitter.emit(ChainEvent.blockUnknownParent, {
