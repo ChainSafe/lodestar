@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.3
+version: v1.7.0-alpha.4
 style: full
 
 specrefs:
@@ -54,6 +54,12 @@ exceptions:
   containers:
     # gloas
     - ForkChoiceNode#gloas
+    - PartialDataColumnHeader#gloas
+
+    # fulu (not implemented yet)
+    - PartialDataColumnHeader#fulu
+    - PartialDataColumnPartsMetadata#fulu
+    - PartialDataColumnSidecar#fulu
 
     # heze (not implemented)
     - BeaconState#heze
@@ -65,6 +71,7 @@ exceptions:
   dataclasses:
     # phase0
     - LatestMessage#phase0
+    - Seen#phase0
 
     # bellatrix
     - OptimisticStore#bellatrix
@@ -93,6 +100,15 @@ exceptions:
   functions:
     # phase0
     - bytes_to_uint64#phase0
+    - compute_time_at_slot_ms#phase0
+    - is_not_from_future_slot#phase0
+    - is_within_slot_range#phase0
+    - validate_attester_slashing_gossip#phase0
+    - validate_beacon_aggregate_and_proof_gossip#phase0
+    - validate_beacon_attestation_gossip#phase0
+    - validate_beacon_block_gossip#phase0
+    - validate_proposer_slashing_gossip#phase0
+    - validate_voluntary_exit_gossip#phase0
     - compute_fork_version#phase0
     - compute_proposer_score#phase0
     - get_aggregate_signature#phase0
@@ -259,6 +275,8 @@ exceptions:
     - vanishing_polynomialcoeff#fulu
     - verify_cell_kzg_proof_batch#fulu
     - verify_cell_kzg_proof_batch_impl#fulu
+    - verify_partial_data_column_header_inclusion_proof#fulu
+    - verify_partial_data_column_sidecar_kzg_proofs#fulu
 
     # gloas
     - add_builder_to_registry#gloas
