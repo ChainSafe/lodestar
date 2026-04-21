@@ -226,7 +226,7 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.cpStateCache.stateReloadDuration.startTimer();
-      // CP state will drive block replay — preload pays off.
+      // preload validators and balances for faster state transition
       const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes, {
         preloadValidatorsAndBalances: true,
       });

@@ -139,7 +139,7 @@ export interface IBeaconStateView {
 
   // Serialization
   /** Set `preloadValidatorsAndBalances` only when the whole state will be consumed
-   *  immediately (e.g. CP reload before block replay). Costs hundreds of MB per call. */
+   *  immediately (e.g. CP reload before block replay). */
   loadOtherState(
     stateBytes: Uint8Array,
     seedValidatorsBytes?: Uint8Array,
