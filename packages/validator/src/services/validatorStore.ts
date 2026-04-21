@@ -497,7 +497,9 @@ export class ValidatorStore {
   ): Promise<gloas.SignedExecutionPayloadEnvelope> {
     // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
     if (envelope.payload.slotNumber > currentSlot) {
-      throw Error(`Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`);
+      throw Error(
+        `Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`
+      );
     }
 
     const signingSlot = envelope.payload.slotNumber;
