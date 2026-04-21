@@ -28,7 +28,7 @@ describe("validator / slashingProtection", () => {
     expect(genesisValidatorsRoot).toEqual(fromHex(mainnetGenesisValidatorsRoot));
   });
 
-  describe("ephemery", () => {
+  describe("without a cached genesis validators root", () => {
     let server: FastifyInstance;
     let baseUrl: string;
 
@@ -62,16 +62,25 @@ describe("validator / slashingProtection", () => {
       }
     });
 
-    it("fetches genesis validators root from the beacon api when the network metadata root is unknown", async () => {
+    it("fetches genesis validators root from the beacon api", async () => {
       const genesisValidatorsRoot = await getGenesisValidatorsRoot({
         beaconNodes: [baseUrl],
-        network: "ephemery",
         preset: defaultChainConfig.PRESET_BASE,
       });
 
       expect(genesisValidatorsRoot).toEqual(
         fromHex("0x1111111111111111111111111111111111111111111111111111111111111111")
       );
+    });
+
+    it("falls back to zero root with force when fetching genesis fails", async () => {
+      const genesisValidatorsRoot = await getGenesisValidatorsRoot({
+        beaconNodes: ["http://127.0.0.1:1"],
+        force: true,
+        preset: defaultChainConfig.PRESET_BASE,
+      });
+
+      expect(Array.from(genesisValidatorsRoot)).toEqual(Array(32).fill(0));
     });
   });
 });

@@ -41,16 +41,15 @@ export async function getGenesisValidatorsRoot(args: GlobalArgs & ISlashingProte
 
   const {config} = getBeaconConfigFromArgs(args);
   const api = getClient({baseUrl: server}, {config});
-  const genesis = await api.beacon.getGenesis();
 
   try {
+    const genesis = await api.beacon.getGenesis();
     genesis.assertOk();
+    return genesis.value().genesisValidatorsRoot;
   } catch (e) {
     if (args.force) {
       return Buffer.alloc(32, 0);
     }
     throw e;
   }
-
-  return genesis.value().genesisValidatorsRoot;
 }
