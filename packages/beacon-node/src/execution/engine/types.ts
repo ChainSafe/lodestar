@@ -87,12 +87,14 @@ export type EngineApiRpcParamTypes = {
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
    *  */
   engine_getPayloadBodiesByHashV1: DATA[][];
+  engine_getPayloadBodiesByHashV2: DATA[][];
 
   /**
    *  1. start: QUANTITY, 64 bits - Starting block number
    *  2. count: QUANTITY, 64 bits - Number of blocks to return
    */
   engine_getPayloadBodiesByRangeV1: [start: QUANTITY, count: QUANTITY];
+  engine_getPayloadBodiesByRangeV2: [start: QUANTITY, count: QUANTITY];
 
   /**
    * Object - Instance of ClientVersion
@@ -146,8 +148,10 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV6: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByHashV2: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getPayloadBodiesByRangeV1: (ExecutionPayloadBodyRpc | null)[];
+  engine_getPayloadBodiesByRangeV2: (ExecutionPayloadBodyRpc | null)[];
 
   engine_getClientVersionV1: ClientVersionRpc[];
 
@@ -168,11 +172,13 @@ type ExecutionPayloadResponse = ExecutionPayloadRpcWithValue;
 export type ExecutionPayloadBodyRpc = {
   transactions: DATA[];
   withdrawals: WithdrawalV1[] | null | undefined;
+  blockAccessList?: DATA | null; // GLOAS:EIP-7928
 };
 
 export type ExecutionPayloadBody = {
   transactions: bellatrix.Transaction[];
   withdrawals: capella.Withdrawals | null;
+  blockAccessList?: Uint8Array | null; // GLOAS:EIP-7928
 };
 
 export type ExecutionPayloadRpc = {
@@ -605,21 +611,27 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
 }
 
 export function deserializeExecutionPayloadBody(data: ExecutionPayloadBodyRpc | null): ExecutionPayloadBody | null {
-  return data
-    ? {
-        transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
-        withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
-      }
-    : null;
+  if (data == null) return null;
+  const body: ExecutionPayloadBody = {
+    transactions: data.transactions.map((tran) => dataToBytes(tran, null)),
+    withdrawals: data.withdrawals ? data.withdrawals.map(deserializeWithdrawal) : null,
+  };
+  if (data.blockAccessList != null) {
+    body.blockAccessList = dataToBytes(data.blockAccessList, null);
+  }
+  return body;
 }
 
 export function serializeExecutionPayloadBody(data: ExecutionPayloadBody | null): ExecutionPayloadBodyRpc | null {
-  return data
-    ? {
-        transactions: data.transactions.map((tran) => bytesToData(tran)),
-        withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
-      }
-    : null;
+  if (data == null) return null;
+  const body: ExecutionPayloadBodyRpc = {
+    transactions: data.transactions.map((tran) => bytesToData(tran)),
+    withdrawals: data.withdrawals ? data.withdrawals.map(serializeWithdrawal) : null,
+  };
+  if (data.blockAccessList != null) {
+    body.blockAccessList = bytesToData(data.blockAccessList);
+  }
+  return body;
 }
 
 export function deserializeBlobAndProofs(data: BlobAndProofRpc | null): BlobAndProof | null {
