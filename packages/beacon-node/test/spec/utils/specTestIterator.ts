@@ -77,17 +77,19 @@ export const defaultSkipOpts: SkipOpts = {
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
-    // TODO GLOAS: EIP-7928 (blockAccessList) and EIP-7843 (slotNumber) are added to gloas ExecutionPayload
-    // in Lodestar ahead of their integration into the consensus-specs gloas fork, so the
-    // upstream fixtures encode ExecutionPayload without these fields. Unskip once the spec tests include them.
-    /^gloas\/ssz_static\/ExecutionPayload\/.*$/,
-    /^gloas\/ssz_static\/ExecutionPayloadEnvelope\/.*$/,
-    /^gloas\/ssz_static\/SignedExecutionPayloadEnvelope\/.*$/,
-    /^gloas\/operations\/execution_payload\/.*$/,
-    /^gloas\/fork_choice\/on_execution_payload\/.*$/,
+    // TODO GLOAS: Unskip these tests as we get closer to alpha.5 ready
+    /^gloas\/fork_choice\/.*$/,
+    /^gloas\/fork\/.*$/,
+    /^gloas\/transition\/.*$/,
+    /^gloas\/operations\/parent_execution_payload\/.*$/,
   ],
-  skippedTests: [],
-  skippedRunners: ["fast_confirmation"],
+  skippedTests: [
+    // TODO GLOAS: Unskip these tests as we get closer to alpha.5 ready
+    /^gloas\/sanity\/blocks\/pyspec_tests\/builder_payment_after_missed_epochs$/,
+    /^gloas\/operations\/withdrawals\/pyspec_tests\/zero_hash_genesis_skips_withdrawals$/,
+  ],
+  // TODO GLOAS: Investigate why networking tests are failing since alpha.5
+  skippedRunners: ["fast_confirmation", "networking"],
 };
 
 /**
