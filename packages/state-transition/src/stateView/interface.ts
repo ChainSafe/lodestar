@@ -138,7 +138,13 @@ export interface IBeaconStateView {
   isStateValidatorsNodesPopulated(): boolean;
 
   // Serialization
-  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
+  /** Set `preloadValidatorsAndBalances` only when the whole state will be consumed
+   *  immediately (e.g. CP reload before block replay). Costs hundreds of MB per call. */
+  loadOtherState(
+    stateBytes: Uint8Array,
+    seedValidatorsBytes?: Uint8Array,
+    opts?: {preloadValidatorsAndBalances?: boolean}
+  ): IBeaconStateView;
   toValue(): BeaconState;
   serialize(): Uint8Array;
   serializedSize(): number;
