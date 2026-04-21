@@ -10,7 +10,7 @@ import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
-import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
+import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {
@@ -27,6 +27,7 @@ import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/inde
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
 import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
+import {BlockInputSyncCacheItem, PendingBlockInputStatus} from "../../../src/sync/types.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
@@ -96,6 +97,102 @@ function buildPayloadFixture({
   });
 
   return {block, blockRootHex, blockRoot, payloadInput, envelope, columnSidecars};
+}
+
+function buildIncompleteGloasBlockInput({
+  parentRoot,
+  parentBlockHash,
+  slot,
+}: {
+  parentRoot: Uint8Array;
+  parentBlockHash: Uint8Array;
+  slot: number;
+}): {
+  block: gloas.SignedBeaconBlock;
+  blockRootHex: string;
+  parentBlockHashHex: string;
+  parentRootHex: string;
+  blockInput: IBlockInput<typeof ForkName.gloas, null>;
+} {
+  const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+  block.message.slot = slot;
+  block.message.parentRoot = parentRoot;
+  block.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentBlockHash;
+
+  const blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
+  const parentRootHex = toRootHex(parentRoot);
+  const parentBlockHashHex = toRootHex(parentBlockHash);
+
+  let currentBlock: SignedBeaconBlock<typeof ForkName.gloas> | undefined;
+  let timeCompleteSec = 0;
+  let blockSource = {
+    source: BlockInputSource.byRoot,
+    seenTimestampSec: 0,
+    peerIdStr: undefined as string | undefined,
+  };
+
+  const blockInput: IBlockInput<typeof ForkName.gloas, null> = {
+    type: DAType.NoData,
+    daOutOfRange: false,
+    timeCreatedSec: 0,
+    forkName: ForkName.gloas,
+    slot,
+    blockRootHex,
+    parentRootHex,
+    addBlock(props): void {
+      currentBlock = props.block;
+      timeCompleteSec = props.seenTimestampSec;
+      blockSource = {
+        source: props.source,
+        seenTimestampSec: props.seenTimestampSec,
+        peerIdStr: props.peerIdStr,
+      };
+    },
+    hasBlock(): boolean {
+      return currentBlock !== undefined;
+    },
+    getBlock(): SignedBeaconBlock<typeof ForkName.gloas> {
+      if (!currentBlock) {
+        throw new Error("Missing block");
+      }
+      return currentBlock;
+    },
+    getBlockSource() {
+      if (!currentBlock) {
+        throw new Error("Missing block source");
+      }
+      return blockSource;
+    },
+    hasAllData(): boolean {
+      return true;
+    },
+    hasBlockAndAllData(): boolean {
+      return currentBlock !== undefined;
+    },
+    getLogMeta() {
+      return {slot, blockRoot: blockRootHex, timeCreatedSec: 0};
+    },
+    getTimeComplete(): number {
+      if (!currentBlock) {
+        throw new Error("Missing completion time");
+      }
+      return timeCompleteSec;
+    },
+    getSerializedCacheKeys(): object[] {
+      return currentBlock ? [currentBlock] : [];
+    },
+    waitForBlock(): Promise<SignedBeaconBlock<typeof ForkName.gloas>> {
+      return currentBlock ? Promise.resolve(currentBlock) : Promise.reject(new Error("Missing block"));
+    },
+    waitForAllData(): Promise<null> {
+      return Promise.resolve(null);
+    },
+    waitForBlockAndAllData(): Promise<IBlockInput<typeof ForkName.gloas, null>> {
+      return currentBlock ? Promise.resolve(blockInput) : Promise.reject(new Error("Missing block"));
+    },
+  };
+
+  return {block, blockRootHex, parentBlockHashHex, parentRootHex, blockInput};
 }
 
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
@@ -1460,6 +1557,92 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processBlock).not.toHaveBeenCalled();
     });
+  });
+
+  it("re-queues downloaded gloas ancestors that are still missing the block body", async () => {
+    const gloasConfig = createBeaconConfig(
+      {...minimalConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0},
+      Buffer.alloc(32, 0)
+    );
+    const peer = await getRandPeerIdStr();
+    const parentRoot = Buffer.alloc(32, 0x11);
+    const parentBlockHash = Buffer.alloc(32, 0x22);
+    const {block, blockInput, blockRootHex, parentBlockHashHex, parentRootHex} = buildIncompleteGloasBlockInput({
+      parentRoot,
+      parentBlockHash,
+      slot: 1,
+    });
+
+    const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
+
+    const processBlock = vi.fn().mockResolvedValue(undefined);
+    const networkEvents = new NetworkEventBus();
+    network = {
+      events: networkEvents,
+      getConnectedPeers: () => [peer],
+      getConnectedPeerSyncMeta: () => ({
+        peerId: peer,
+        client: "gloas-test-client",
+        custodyColumns: [],
+        earliestAvailableSlot: 0,
+      }),
+      custodyConfig: {
+        sampledColumns: [],
+        sampleGroups: Array.from({length: gloasConfig.SAMPLES_PER_SLOT}, () => []),
+      } as unknown as CustodyConfig,
+      sendBeaconBlocksByRoot,
+    } as Partial<INetwork> as INetwork;
+
+    const chainForTest: Partial<IBeaconChain> = {
+      emitter: new ChainEventEmitter(),
+      config: gloasConfig,
+      clock: new ClockStopped(0),
+      genesisTime: 0,
+      metrics: null,
+      processBlock,
+      forkChoice: {
+        getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+        hasBlockHex: vi.fn().mockImplementation((rootHex: string) => rootHex === parentRootHex),
+        getBlockHexAndBlockHash: vi.fn().mockImplementation((rootHex: string, blockHashHex: string) =>
+          rootHex === parentRootHex && blockHashHex === parentBlockHashHex ? ({} as ProtoBlock) : null
+        ),
+        hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+      } as unknown as IForkChoice,
+      seenPayloadEnvelopeInputCache: {
+        get: vi.fn(),
+        prune: vi.fn(),
+      } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+      seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
+      seenBlockProposers: {
+        isKnown: vi.fn().mockReturnValue(false),
+      } as unknown as SeenBlockProposers,
+    };
+
+    service = new BlockInputSync(gloasConfig, network, chainForTest as IBeaconChain, logger, null, defaultSyncOptions);
+    service.subscribeToNetwork();
+
+    const pendingBlocks = (service as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+    pendingBlocks.set(blockRootHex, {
+      status: PendingBlockInputStatus.downloaded,
+      blockInput,
+      timeAddedSec: 0,
+      peerIdStrings: new Set([peer]),
+    });
+
+    networkEvents.emit(NetworkEvent.peerConnected, {
+      peer,
+      status: {} as never,
+      custodyColumns: [],
+      clientAgent: "gloas-test-client",
+    });
+
+    await sleep(20);
+
+    expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+    expect(processBlock).toHaveBeenCalledOnce();
+    expect(pendingBlocks.has(blockRootHex)).toBe(false);
+
+    service.close();
   });
 });
 

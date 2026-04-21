@@ -51,7 +51,13 @@ const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
 
-type AdvancePendingBlockResult = "ready" | "queued_parent_block" | "queued_parent_payload" | "blocked" | "removed";
+type AdvancePendingBlockResult =
+  | "ready"
+  | "queued_block"
+  | "queued_parent_block"
+  | "queued_parent_payload"
+  | "blocked"
+  | "removed";
 
 enum FetchResult {
   SuccessResolved = "success_resolved",
@@ -451,7 +457,7 @@ export class BlockInputSync {
     blockInput: IBlockInput
   ):
     | {kind: "ready"}
-    | {kind: "parentBlock" | "parentPayload"; rootHex: RootHex}
+    | {kind: "block" | "parentBlock" | "parentPayload"; rootHex: RootHex}
     | {kind: "invalidParentPayload"; parentRootHex: RootHex; parentBlockHashHex: RootHex} {
     const parentRootHex = blockInput.parentRootHex;
     if (!this.chain.forkChoice.hasBlockHex(parentRootHex)) {
@@ -463,7 +469,7 @@ export class BlockInputSync {
     }
 
     if (!blockInput.hasBlock()) {
-      throw new Error(`Expected blockInput with block for post-gloas dependency check root=${blockInput.blockRootHex}`);
+      return {kind: "block", rootHex: blockInput.blockRootHex};
     }
 
     const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
@@ -494,6 +500,10 @@ export class BlockInputSync {
     switch (missingDependency.kind) {
       case "ready":
         return "ready";
+
+      case "block":
+        pendingBlock.status = PendingBlockInputStatus.pending;
+        return "queued_block";
 
       case "parentBlock": {
         let added = this.addByRootHex(missingDependency.rootHex);
@@ -569,7 +579,7 @@ export class BlockInputSync {
         this.processReadyBlock(block).catch((e) => {
           this.logger.debug("Unexpected error - process old downloaded block", {}, e);
         });
-      } else if (advanceResult === "queued_parent_block") {
+      } else if (advanceResult === "queued_block" || advanceResult === "queued_parent_block") {
         shouldRerunBlockSearch = true;
       }
     }
@@ -670,7 +680,11 @@ export class BlockInputSync {
           this.processReadyBlock(pending).catch((e) => {
             this.logger.debug("Unexpected error - process newly downloaded block", logCtx2, e);
           });
-        } else if (advanceResult === "queued_parent_block" || advanceResult === "queued_parent_payload") {
+        } else if (
+          advanceResult === "queued_block" ||
+          advanceResult === "queued_parent_block" ||
+          advanceResult === "queued_parent_payload"
+        ) {
           this.triggerUnknownBlockSearch();
         }
       } else if (blockSlot <= finalizedSlot) {
@@ -775,6 +789,17 @@ export class BlockInputSync {
                 res.err
               );
               this.removeAndDownScoreAllDescendants(pendingBlock);
+              break;
+            }
+
+            if (missingDependency.kind === "block") {
+              this.logger.debug(
+                "Attempted to process block before its full body was available",
+                errorData,
+                res.err
+              );
+              pendingBlock.status = PendingBlockInputStatus.pending;
+              this.triggerUnknownBlockSearch();
               break;
             }
 
