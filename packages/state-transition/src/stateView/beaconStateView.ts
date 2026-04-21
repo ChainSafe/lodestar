@@ -704,7 +704,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   // Serialization
 
-  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView {
+  loadOtherState(
+    stateBytes: Uint8Array,
+    seedValidatorsBytes?: Uint8Array,
+    opts?: {preloadValidatorsAndBalances?: boolean}
+  ): IBeaconStateView {
     const {state} = loadState(this.config, this.cachedState, stateBytes, seedValidatorsBytes);
 
     const cachedState = createCachedBeaconState(
@@ -719,9 +723,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       }
     );
 
-    // load all cache in order for consumers (usually regen.getState()) to process blocks faster
-    cachedState.validators.getAllReadonlyValues();
-    cachedState.balances.getAll();
+    if (opts?.preloadValidatorsAndBalances) {
+      cachedState.validators.getAllReadonlyValues();
+      cachedState.balances.getAll();
+    }
 
     return new BeaconStateView(cachedState);
   }
