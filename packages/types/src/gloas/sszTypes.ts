@@ -1,9 +1,17 @@
-import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  BitVectorType,
+  ContainerType,
+  ListBasicType,
+  ListCompositeType,
+  VectorBasicType,
+  VectorCompositeType,
+} from "@chainsafe/ssz";
 import {
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
   BUILDER_REGISTRY_LIMIT,
   HISTORICAL_ROOTS_LIMIT,
   MAX_PAYLOAD_ATTESTATIONS,
+  MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
@@ -64,6 +72,12 @@ export const BuilderPendingPayment = new ContainerType(
     withdrawal: BuilderPendingWithdrawal,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
+);
+
+export const PayloadTimelinessCommittee = new VectorBasicType(ValidatorIndex, PTC_SIZE);
+export const PtcWindow = new VectorCompositeType(
+  PayloadTimelinessCommittee,
+  (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH
 );
 
 export const PayloadAttestationData = new ContainerType(
@@ -263,6 +277,7 @@ export const BeaconState = new ContainerType(
     builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
     latestBlockHash: Bytes32, // New in GLOAS:EIP7732
     payloadExpectedWithdrawals: capellaSsz.Withdrawals, // New in GLOAS:EIP7732
+    ptcWindow: PtcWindow, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
