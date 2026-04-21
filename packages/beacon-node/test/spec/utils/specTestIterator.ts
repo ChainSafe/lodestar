@@ -77,6 +77,14 @@ export const defaultSkipOpts: SkipOpts = {
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    // TODO GLOAS: EIP-7928 (blockAccessList) and EIP-7843 (slotNumber) are added to gloas ExecutionPayload
+    // in Lodestar ahead of their integration into the consensus-specs gloas fork, so the
+    // upstream fixtures encode ExecutionPayload without these fields. Unskip once the spec tests include them.
+    /^gloas\/ssz_static\/ExecutionPayload\/.*$/,
+    /^gloas\/ssz_static\/ExecutionPayloadEnvelope\/.*$/,
+    /^gloas\/ssz_static\/SignedExecutionPayloadEnvelope\/.*$/,
+    /^gloas\/operations\/execution_payload\/.*$/,
+    /^gloas\/fork_choice\/on_execution_payload\/.*$/,
   ],
   skippedTests: [],
   skippedRunners: [],
