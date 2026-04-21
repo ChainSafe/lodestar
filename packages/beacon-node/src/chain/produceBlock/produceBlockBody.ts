@@ -256,8 +256,15 @@ export async function produceBlockBody<T extends BlockType>(
     }
 
     // Create self-build execution payload bid
+    // IMPORTANT: bid.parentBlockHash must match the EL-block that the payload was built on (i.e.
+    // executionPayload.parentHash). Using currentState.latestBlockHash would always yield the
+    // EMPTY-parent hash (state.latestBlockHash is only advanced on the FULL path once the next
+    // block applies parent envelope in process_parent_execution_payload), so FULL-parent
+    // self-builds would be mis-encoded as EMPTY and the canonical chain would never pick up
+    // envelope variants. See gloas/beacon-chain.md::process_execution_payload_bid which checks
+    // bid.parent_block_hash against the selected parent payload.
     const bid: gloas.ExecutionPayloadBid = {
-      parentBlockHash: currentState.latestBlockHash,
+      parentBlockHash: executionPayload.parentHash,
       parentBlockRoot: parentBlockRoot,
       blockHash: executionPayload.blockHash,
       prevRandao: currentState.getRandaoMix(currentState.epoch),
@@ -611,7 +618,11 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
     forkChoice?: IForkChoice;
-    seenPayloadEnvelopeInputCache?: {get(rootHex: string): {hasPayloadEnvelope(): boolean; getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope} | undefined};
+    seenPayloadEnvelopeInputCache?: {
+      get(
+        rootHex: string
+      ): {hasPayloadEnvelope(): boolean; getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope} | undefined;
+    };
   },
   logger: Logger,
   fork: ForkPostBellatrix,

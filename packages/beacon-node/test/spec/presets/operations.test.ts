@@ -10,8 +10,8 @@ import {
   CachedBeaconStateElectra,
   CachedBeaconStateGloas,
   ExecutionPayloadStatus,
-  processSlots,
   getBlockRootAtSlot,
+  processSlots,
 } from "@lodestar/state-transition";
 import * as blockFns from "@lodestar/state-transition/block";
 import {AttesterSlashing, altair, bellatrix, capella, electra, gloas, phase0, ssz, sszTypesFor} from "@lodestar/types";

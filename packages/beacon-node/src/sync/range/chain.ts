@@ -1,9 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot, gloas} from "@lodestar/types";
+import {Epoch, Root, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -46,7 +47,7 @@ export type SyncChainFns = {
    */
   processChainSegment: (
     blocks: IBlockInput[],
-    payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null,
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
     syncType: RangeSyncType
   ) => Promise<void>;
   /** Must download blocks, and validate their range */
@@ -55,7 +56,7 @@ export type SyncChainFns = {
     batch: Batch,
     syncType: RangeSyncType
   ) => Promise<
-    WarnResult<{blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null}, DownloadByRangeError>
+    WarnResult<{blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null}, DownloadByRangeError>
   >;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;

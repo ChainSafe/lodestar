@@ -1,12 +1,12 @@
 import {BeaconConfig} from "@lodestar/config";
-import {gloas, ssz} from "@lodestar/types";
-import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {
   type IBeaconStateViewGloas,
   type PubkeyCache,
   computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
+import {gloas, ssz} from "@lodestar/types";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {IBlsVerifier} from "../bls/index.js";
 
 export type VerifyExecutionPayloadEnvelopeOpts = {

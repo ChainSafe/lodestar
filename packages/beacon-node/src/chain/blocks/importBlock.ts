@@ -128,6 +128,7 @@ export async function importBlock(
     blockDelaySec,
     currentSlot,
     fork >= ForkSeq.gloas ? ExecutionStatus.PayloadSeparated : executionStatus,
+    // TODO GLOAS: this is not useful post-gloas, may need to remove it?
     dataAvailabilityStatus
   );
 
@@ -135,8 +136,13 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
-  // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
-  if (fork >= ForkSeq.gloas) {
+  // For Gloas blocks arriving via gossip / API: create the PayloadEnvelopeInput now so the
+  // envelope import can find it when it arrives later. Range sync takes a different path —
+  // cacheByRangeResponses has already seeded the cache for blocks whose envelope was also
+  // delivered, and for tail blocks without a delivered envelope we simply skip creating an
+  // entry here; the envelope will be handled on the next range-sync batch or after sync catches
+  // up to the gossip network.
+  if (fork >= ForkSeq.gloas && !opts.fromRangeSync) {
     const payloadInput = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,
@@ -152,12 +158,10 @@ export async function importBlock(
       ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
     });
 
-    // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
-    // which is all the information we need so there is no reason to delay until execution payload arrives
-    // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
-    // (for example later in the slot). Do not couple retries to incoming gossip columns.
-    // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
-    // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+    // Gossip path: immediately attempt fetch of data columns from execution engine. The bid
+    // contains kzg commitments, which is all we need — no reason to delay until the execution
+    // payload arrives. Columns fetched here feed payloadInput.addColumn, which resolves
+    // waitForAllData for any in-flight importExecutionPayload.
     this.getBlobsTracker.triggerGetBlobs(payloadInput);
   }
 

@@ -1,12 +1,14 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import {IndexedAttestation, deneb} from "@lodestar/types";
+import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
+import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {RegenCaller} from "../regen/index.js";
 import {DAType, IBlockInput} from "./blockInput/index.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
@@ -16,6 +18,7 @@ import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
 import {verifyBlocksSignatures} from "./verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "./verifyBlocksStateTransitionOnly.js";
+import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 /**
  * Verifies 1 or more blocks are fully valid; from a linear sequence of blocks.
@@ -32,6 +35,7 @@ export async function verifyBlocksInEpoch(
   this: BeaconChain,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{
   postStates: IBeaconStateView[];
@@ -110,6 +114,31 @@ export async function verifyBlocksInEpoch(
       });
     }
 
+    // Pick the data-availability source by fork:
+    // - Pre-Gloas: blob/Fulu-column data lives in IBlockInput → verifyBlocksDataAvailability.
+    // - Post-Gloas: data columns live in PayloadEnvelopeInput. Collect the present payload
+    //   inputs (may be empty on the gossip / API path where `payloadEnvelopes` is null, or may
+    //   omit range-sync tail blocks whose envelope was not delivered), await DA for them, then
+    //   synthesise a block-aligned status array. For gloas blocks the block itself has no blob
+    //   data (envelope import is separate), so every status is NotRequired — fork-choice does
+    //   not act on DA status post-gloas and the metric that would consume availableTime is
+    //   gated on DAType !== NoData (which gloas always fails), so synthesised values are safe.
+    const daAvailabilityPromise =
+      fork >= ForkSeq.gloas
+        ? (async () => {
+            const payloadInputsForDa: PayloadEnvelopeInput[] = [];
+            for (const input of blockInputs) {
+              const pi = payloadEnvelopes?.get(input.slot);
+              if (pi !== undefined) payloadInputsForDa.push(pi);
+            }
+            await verifyPayloadsDataAvailability(payloadInputsForDa, abortController.signal);
+            return {
+              dataAvailabilityStatuses: blockInputs.map(() => DataAvailabilityStatus.NotRequired),
+              availableTime: Date.now(),
+            };
+          })()
+        : verifyBlocksDataAvailability(blockInputs, abortController.signal);
+
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
@@ -119,8 +148,8 @@ export async function verifyBlocksInEpoch(
     ] = await Promise.all([
       verifyExecutionPayloadsPromise,
 
-      // data availability for the blobs
-      verifyBlocksDataAvailability(blockInputs, abortController.signal),
+      // data availability (fork-specific; see daAvailabilityPromise above)
+      daAvailabilityPromise,
 
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
@@ -200,7 +229,9 @@ export async function verifyBlocksInEpoch(
         blockInputs.length === 1 &&
         // gossip blocks have seenTimestampSec
         opts.seenTimestampSec !== undefined &&
+        // PreData (pre-deneb) and NoData (gloas) carry no blob data on the block — skip metric
         blockInputs[0].type !== DAType.PreData &&
+        blockInputs[0].type !== DAType.NoData &&
         executionStatuses[0] === ExecutionStatus.Valid
       ) {
         // Find the max time when the block was actually verified
@@ -209,8 +240,8 @@ export async function verifyBlocksInEpoch(
         this.metrics?.gossipBlock.receivedToFullyVerifiedTime.observe(recvTofullyVerifedTime);
 
         const verifiedToBlobsAvailabiltyTime = Math.max(availableTime - fullyVerifiedTime, 0) / 1000;
-        const block = blockInputs[0].getBlock() as deneb.SignedBeaconBlock;
-        const numBlobs = block.message.body.blobKzgCommitments.length;
+        const block = blockInputs[0].getBlock();
+        const numBlobs = getBlobKzgCommitments(blockInputs[0].forkName, block as deneb.SignedBeaconBlock).length;
 
         this.metrics?.gossipBlock.verifiedToBlobsAvailabiltyTime.observe({numBlobs}, verifiedToBlobsAvailabiltyTime);
         this.logger.verbose("Verified blockInput fully with blobs availability", {

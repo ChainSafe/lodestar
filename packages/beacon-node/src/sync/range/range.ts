@@ -172,11 +172,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   }
 
   /** Convenience method for `SyncChain` */
-  private processChainSegment: SyncChainFns["processChainSegment"] = async (
-    blocks,
-    payloadEnvelopes,
-    syncType
-  ) => {
+  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, payloadEnvelopes, syncType) => {
     // Not trusted, verify signatures
     const flags: ImportBlockOpts = {
       // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
@@ -213,12 +209,17 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       peerDasMetrics: this.chain.metrics?.peerDas,
       ...batch.getRequestsForPeer(peer),
     });
-    const {responses, payloadEnvelopes} = result;
-    const blocks = cacheByRangeResponses({
+    const {responses, payloadEnvelopes: downloadedPayloadEnvelopes} = result;
+    const {blocks, payloadEnvelopes} = cacheByRangeResponses({
       cache: this.chain.seenBlockInputCache,
+      seenPayloadEnvelopeInputCache: this.chain.seenPayloadEnvelopeInputCache,
       peerIdStr: peer.peerId,
       responses,
       batchBlocks,
+      downloadedPayloadEnvelopes,
+      existingPayloadEnvelopes: batch.getPayloadEnvelopes(),
+      custodyConfig: this.chain.custodyConfig,
+      seenTimestampSec: Date.now() / 1000,
     });
     return {result: {blocks, payloadEnvelopes}, warnings};
   };

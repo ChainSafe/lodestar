@@ -1,6 +1,22 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
-import {DataColumnSidecar, SignedBeaconBlock, Slot, deneb, fulu, gloas, isGloasDataColumnSidecar, phase0} from "@lodestar/types";
+import {
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreFulu,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
+import {
+  DataColumnSidecar,
+  SignedBeaconBlock,
+  Slot,
+  deneb,
+  fulu,
+  gloas,
+  isGloasDataColumnSidecar,
+  phase0,
+} from "@lodestar/types";
 import {LodestarError, Logger, byteArrayEquals, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {
   BlockInputSource,
@@ -9,12 +25,18 @@ import {
   isBlockInputBlobs,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/types.js";
 import {SeenBlockInput} from "../../chain/seenCache/seenGossipBlockInput.js";
+import {SeenPayloadEnvelopeInput} from "../../chain/seenCache/seenPayloadEnvelopeInput.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
-import {validateFuluBlockDataColumnSidecars, validateGloasBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {
+  validateFuluBlockDataColumnSidecars,
+  validateGloasBlockDataColumnSidecars,
+} from "../../chain/validation/dataColumnSidecar.js";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {INetwork} from "../../network/index.js";
-import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {CustodyConfig, getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult} from "../../util/wrapError.js";
 
@@ -43,9 +65,17 @@ export type DownloadAndCacheByRangeProps = DownloadByRangeRequests & {
 
 export type CacheByRangeResponsesProps = {
   cache: SeenBlockInput;
+  seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   peerIdStr: string;
   responses: ValidatedResponses;
   batchBlocks: IBlockInput[];
+  /** Raw envelopes downloaded in this batch, keyed by slot (from downloadByRange return) */
+  downloadedPayloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
+  /** Envelopes already wrapped from previous partial downloads on this batch */
+  existingPayloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  /** Sampled/custody column indices for building PayloadEnvelopeInputs */
+  custodyConfig: Pick<CustodyConfig, "sampledColumns" | "custodyColumns">;
+  seenTimestampSec: number;
 };
 
 export type ValidatedBlock = {
@@ -74,12 +104,16 @@ export type ValidatedResponses = {
  */
 export function cacheByRangeResponses({
   cache,
+  seenPayloadEnvelopeInputCache,
   peerIdStr,
   responses,
   batchBlocks,
-}: CacheByRangeResponsesProps): IBlockInput[] {
+  downloadedPayloadEnvelopes,
+  existingPayloadEnvelopes,
+  custodyConfig,
+  seenTimestampSec,
+}: CacheByRangeResponsesProps): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
   const source = BlockInputSource.byRange;
-  const seenTimestampSec = Date.now() / 1000;
   const updatedBatchBlocks = new Map<Slot, IBlockInput>(batchBlocks.map((block) => [block.slot, block]));
 
   const blocks = responses.validatedBlocks ?? [];
@@ -151,6 +185,48 @@ export function cacheByRangeResponses({
     }
   }
 
+  // Build payloadEnvelopes map for gloas: start from existing (partial download) state.
+  // The entries are wrappers around (block + envelope + sampled columns) and also seeded into
+  // seenPayloadEnvelopeInputCache so importBlock can find them without creating a duplicate.
+  let payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null = null;
+  if (downloadedPayloadEnvelopes !== null) {
+    payloadEnvelopes = new Map(existingPayloadEnvelopes ?? []);
+
+    for (const [slot, envelope] of downloadedPayloadEnvelopes) {
+      const blockInput = updatedBatchBlocks.get(slot);
+      if (!blockInput?.hasBlock() || !isForkPostGloas(blockInput.forkName)) {
+        // No block to pair this envelope with; drop silently
+        continue;
+      }
+      const {blockRootHex} = blockInput;
+
+      // Reuse any existing PayloadEnvelopeInput (e.g. gossip arrived first) to avoid
+      // duplicate cache entries. If missing, create a fresh one from the block's bid.
+      let payloadInput = seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (payloadInput === undefined) {
+        payloadInput = seenPayloadEnvelopeInputCache.add({
+          blockRootHex,
+          block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+          forkName: blockInput.forkName,
+          sampledColumns: custodyConfig.sampledColumns,
+          custodyColumns: custodyConfig.custodyColumns,
+          timeCreatedSec: seenTimestampSec,
+        });
+      }
+
+      if (!payloadInput.hasPayloadEnvelope()) {
+        payloadInput.addPayloadEnvelope({
+          envelope,
+          source: PayloadEnvelopeInputSource.byRange,
+          seenTimestampSec,
+          peerIdStr,
+        });
+      }
+
+      payloadEnvelopes.set(slot, payloadInput);
+    }
+  }
+
   for (const {blockRoot, columnSidecars} of responses.validatedColumnSidecars ?? []) {
     const firstColumn = columnSidecars[0];
     if (!firstColumn) {
@@ -158,13 +234,32 @@ export function cacheByRangeResponses({
         `Coding Error: empty columnSidecars returned for blockRoot=${toRootHex(blockRoot)} from validation functions`
       );
     }
-    // Gloas columns are added to PayloadEnvelopeInput by the caller, not to IBlockInput
-    if (isGloasDataColumnSidecar(firstColumn)) continue;
+
+    const blockRootHex = toRootHex(blockRoot);
+
+    if (isGloasDataColumnSidecar(firstColumn)) {
+      // Gloas columns are attached to the matching PayloadEnvelopeInput, NOT to IBlockInput.
+      // Gloas DataColumnSidecar has `slot` directly (no signedBlockHeader).
+      const dataSlot = firstColumn.slot;
+      const payloadInput = payloadEnvelopes?.get(dataSlot);
+      if (!payloadInput) {
+        // Should not happen: we built payloadInputs for all gloas blocks above
+        continue;
+      }
+      for (const columnSidecar of columnSidecars as gloas.DataColumnSidecar[]) {
+        payloadInput.addColumn({
+          columnSidecar,
+          seenTimestampSec,
+          peerIdStr,
+          source: PayloadEnvelopeInputSource.byRange,
+        });
+      }
+      continue;
+    }
 
     const fuluColumns = columnSidecars as fulu.DataColumnSidecar[];
-    const dataSlot = firstColumn.signedBlockHeader.message.slot;
+    const dataSlot = fuluColumns[0].signedBlockHeader.message.slot;
     const existing = updatedBatchBlocks.get(dataSlot);
-    const blockRootHex = toRootHex(blockRoot);
 
     if (!existing) {
       throw new Error("Coding error: blockInput must exist when adding columns");
@@ -194,7 +289,7 @@ export function cacheByRangeResponses({
     }
   }
 
-  return Array.from(updatedBatchBlocks.values());
+  return {blocks: Array.from(updatedBatchBlocks.values()), payloadEnvelopes};
 }
 
 export async function downloadByRange({

@@ -1483,7 +1483,12 @@ export class ForkChoice implements IForkChoice {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
     });
-    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, PayloadStatus.PENDING);
+    // Parent may be pre-gloas (FULL) when boosting the first gloas block at a fork boundary;
+    // getNode with the wrong payloadStatus would throw INVALID_NODE_INDEX.
+    const parentNode = this.protoArray.getNode(
+      parentBlock.blockRoot,
+      isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL
+    );
     if (parentNode === undefined || parentNode.weight >= reorgThreshold) {
       // Parent is not weak
       return true;

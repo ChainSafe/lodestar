@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {isStatePostGloas} from "@lodestar/state-transition";
-import {verifyExecutionPayloadEnvelope, verifyExecutionPayloadEnvelopeSignature} from "./verifyExecutionPayloadEnvelope.js";
 import {fromHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -9,6 +8,10 @@ import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
+import {
+  verifyExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "./verifyExecutionPayloadEnvelope.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
@@ -67,11 +70,13 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 }
 
 /**
- * Import an execution payload envelope after all data is available.
+ * Import an execution payload envelope. Assumes payloadInput.hasAllData() is already true —
+ * the DA wait must have run upstream (either in the range-sync path via verifyBlocksInEpoch's
+ * verifyPayloadsDataAvailability, or in processExecutionPayload below for the gossip / API
+ * queue path).
  *
- * With deferred processing (consensus-specs#5094), the envelope is purely verified
- * here — no state mutation. State effects are applied in the next block via
- * processParentExecutionPayload.
+ * With deferred processing (consensus-specs#5094), the envelope is purely verified here — no
+ * state mutation. State effects are applied in the next block via processParentExecutionPayload.
  *
  * Steps:
  * 1. Emit `execution_payload_available` for payload attestation
@@ -87,7 +92,6 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
-  signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
@@ -113,11 +117,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 3. Wait for data columns to be available before claiming a write-queue slot.
-  // The helper is shared with future gloas sync services; take the single-item batch form here.
-  await verifyPayloadsDataAvailability([payloadInput], signal);
-
-  // 4. Apply backpressure from the write queue, before doing verification work.
+  // 3. Apply backpressure from the write queue, before doing verification work.
   // The actual DB write is deferred until after verification succeeds.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
 
@@ -245,4 +245,22 @@ export async function importExecutionPayload(
     blockRoot: blockRootHex,
     blockHash: blockHashHex,
   });
+}
+
+/**
+ * Process an execution payload envelope end-to-end: wait for DA, then import.
+ *
+ * Used by the PayloadEnvelopeProcessor queue (gossip / API / unknown-payload sync) — i.e.
+ * callers that have NOT already awaited DA themselves. Range-sync's inline dispatch in
+ * processBlocks skips this wrapper and calls importExecutionPayload directly, since
+ * verifyBlocksInEpoch already awaited DA for the segment.
+ */
+export async function processExecutionPayload(
+  this: BeaconChain,
+  payloadInput: PayloadEnvelopeInput,
+  signal: AbortSignal,
+  opts: ImportPayloadOpts = {}
+): Promise<void> {
+  await verifyPayloadsDataAvailability([payloadInput], signal);
+  await importExecutionPayload.call(this, payloadInput, opts);
 }

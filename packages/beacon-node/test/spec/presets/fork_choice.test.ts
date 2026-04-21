@@ -48,14 +48,14 @@ import {
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
+import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
-import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
+import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
@@ -397,11 +397,7 @@ const forkChoiceTest =
                   {dontTransferCache: true},
                   RegenCaller.restApi
                 );
-                verifyExecutionPayloadEnvelope(
-                  beaconConfig,
-                  envelopeState as IBeaconStateViewGloas,
-                  envelope.message
-                );
+                verifyExecutionPayloadEnvelope(beaconConfig, envelopeState as IBeaconStateViewGloas, envelope.message);
 
                 // Verify signature
                 const sigValid = await verifyExecutionPayloadEnvelopeSignature(

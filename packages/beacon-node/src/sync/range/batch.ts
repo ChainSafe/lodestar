@@ -1,10 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
-import {Epoch, RootHex, Slot, gloas, phase0} from "@lodestar/types";
+import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
+import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {IClock} from "../../util/clock.js";
@@ -46,21 +47,36 @@ export type Attempt = {
 export type AwaitingDownloadState = {
   status: BatchStatus.AwaitingDownload;
   blocks: IBlockInput[];
-  payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
 };
 
 export type DownloadSuccessState = {
   status: BatchStatus.AwaitingProcessing;
   blocks: IBlockInput[];
-  payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null;
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
 };
 
 export type BatchState =
   | AwaitingDownloadState
-  | {status: BatchStatus.Downloading; peer: PeerIdStr; blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null}
+  | {
+      status: BatchStatus.Downloading;
+      peer: PeerIdStr;
+      blocks: IBlockInput[];
+      payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+    }
   | DownloadSuccessState
-  | {status: BatchStatus.Processing; blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null; attempt: Attempt}
-  | {status: BatchStatus.AwaitingValidation; blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null; attempt: Attempt};
+  | {
+      status: BatchStatus.Processing;
+      blocks: IBlockInput[];
+      payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+      attempt: Attempt;
+    }
+  | {
+      status: BatchStatus.AwaitingValidation;
+      blocks: IBlockInput[];
+      payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+      attempt: Attempt;
+    };
 
 export type BatchMetadata = {
   startEpoch: Epoch;
@@ -131,42 +147,33 @@ export class Batch {
         count: this.count,
         step: 1,
       };
-      const envelopesRequest: gloas.ExecutionPayloadEnvelopesByRangeRequest | undefined = isForkPostGloas(this.forkName)
-        ? {startSlot: this.startSlot, count: this.count}
-        : undefined;
+      const requests: DownloadByRangeRequests = {blocksRequest};
+
+      // Post-Gloas envelopes are required for block processing, independent of DA retention window.
+      if (isForkPostGloas(this.forkName)) {
+        requests.envelopesRequest = {startSlot: this.startSlot, count: this.count};
+      }
 
       if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
-        return {
-          blocksRequest,
-          columnsRequest: {
-            startSlot: this.startSlot,
-            count: this.count,
-            columns: this.custodyConfig.sampledColumns,
-          },
-          envelopesRequest,
+        requests.columnsRequest = {
+          startSlot: this.startSlot,
+          count: this.count,
+          columns: this.custodyConfig.sampledColumns,
         };
+      } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
+        requests.blobsRequest = {startSlot: this.startSlot, count: this.count};
       }
-      if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
-        return {
-          blocksRequest,
-          blobsRequest: {
-            startSlot: this.startSlot,
-            count: this.count,
-          },
-          envelopesRequest,
-        };
-      }
-      return {
-        blocksRequest,
-        envelopesRequest,
-      };
+
+      return requests;
     }
 
     // subsequent request where part of the epoch has already been downloaded. Need to figure out what is the beginning
     // of the range where download needs to resume
     let blockStartSlot = this.startSlot;
     let dataStartSlot = this.startSlot;
+    let envelopeStartSlot = this.startSlot;
     const neededColumns = new Set<number>();
+    const envelopesBySlot = this.state.payloadEnvelopes ?? new Map<Slot, PayloadEnvelopeInput>();
 
     // ensure blocks are in slot-wise order
     for (const blockInput of blocks) {
@@ -184,6 +191,9 @@ export class Batch {
       if (blockInput.hasBlock() && blockStartSlot === blockSlot) {
         blockStartSlot = blockSlot + 1;
       }
+      if (blockInput.hasBlock() && envelopeStartSlot === blockSlot && envelopesBySlot.has(blockSlot)) {
+        envelopeStartSlot = blockSlot + 1;
+      }
       if (!blockInput.hasAllData()) {
         if (isBlockInputColumns(blockInput)) {
           for (const index of blockInput.getMissingSampledColumnMeta().missing) {
@@ -192,18 +202,6 @@ export class Batch {
         }
       } else if (dataStartSlot === blockSlot) {
         dataStartSlot = blockSlot + 1;
-      }
-    }
-
-    // Track envelope start slot for post-Gloas forks
-    let envelopeStartSlot = this.startSlot;
-    if (isForkPostGloas(this.forkName)) {
-      for (const blockInput of blocks) {
-        const blockSlot = blockInput.slot;
-        // Envelopes track separately - advance start slot for contiguous downloaded envelopes
-        if (envelopeStartSlot === blockSlot) {
-          envelopeStartSlot = blockSlot + 1;
-        }
       }
     }
 
@@ -291,7 +289,7 @@ export class Batch {
     return this.state.blocks;
   }
 
-  getPayloadEnvelopes(): Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null {
+  getPayloadEnvelopes(): Map<Slot, PayloadEnvelopeInput> | null {
     return this.state.payloadEnvelopes;
   }
 
@@ -303,13 +301,22 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
-    this.state = {status: BatchStatus.Downloading, peer, blocks: this.state.blocks, payloadEnvelopes: this.state.payloadEnvelopes};
+    this.state = {
+      status: BatchStatus.Downloading,
+      peer,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+    };
   }
 
   /**
    * Downloading -> AwaitingProcessing
    */
-  downloadingSuccess(peer: PeerIdStr, blocks: IBlockInput[], payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null): DownloadSuccessState {
+  downloadingSuccess(
+    peer: PeerIdStr,
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null
+  ): DownloadSuccessState {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
@@ -362,13 +369,17 @@ export class Batch {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks, payloadEnvelopes: this.state.payloadEnvelopes};
+    this.state = {
+      status: BatchStatus.AwaitingDownload,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+    };
   }
 
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, gloas.SignedExecutionPayloadEnvelope> | null} {
+  startProcessing(): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
@@ -392,7 +403,12 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    this.state = {status: BatchStatus.AwaitingValidation, blocks: this.state.blocks, payloadEnvelopes: this.state.payloadEnvelopes, attempt: this.state.attempt};
+    this.state = {
+      status: BatchStatus.AwaitingValidation,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+      attempt: this.state.attempt,
+    };
   }
 
   /**
