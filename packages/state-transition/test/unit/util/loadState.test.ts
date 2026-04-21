@@ -48,8 +48,8 @@ describe("loadState does not poison seed state's cache", () => {
   // `migratedState.commit()` writes modified validator nodes into that shared array, silently
   // corrupting the seed container's child-view cache snapshot. The corruption is only
   // observed when the seed is later cloned with transfer-cache (the path verifyBlock takes
-  // via `preState.clone({dontTransferCache: false})`) and the new clone reads a modified
-  // index, at which point it returns the migrated state's validator instead of the seed's.
+  // via the default `preState.clone()`) and the new clone reads a modified index, at which
+  // point it returns the migrated state's validator instead of the seed's.
   //
   // Fix: clone the seed's validators/inactivityScores subviews with `clone(true)` so the
   // migrated subview gets a fresh (empty) cache and its commit cannot reach into the seed's
