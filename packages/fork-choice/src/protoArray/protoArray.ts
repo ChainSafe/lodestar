@@ -109,21 +109,6 @@ export class ProtoArray {
       null
     );
 
-    // Gloas: seed the anchor's FULL variant so `shouldExtendPayload(anchor)` is true
-    // for block production; otherwise bids after restart use `bid.parentBlockHash`
-    // and fail `processExecutionPayloadBid`'s parent-hash check.
-    if (isGloasBlock(block as ProtoBlock) && block.executionPayloadBlockHash !== null) {
-      protoArray.onExecutionPayload(
-        block.blockRoot,
-        currentSlot,
-        block.executionPayloadBlockHash,
-        (block as {executionPayloadNumber?: number}).executionPayloadNumber ?? 0,
-        block.stateRoot,
-        null,
-        ExecutionStatus.Valid
-      );
-    }
-
     return protoArray;
   }
 
