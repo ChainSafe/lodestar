@@ -10,30 +10,28 @@ import {computePayloadTimelinessCommitteesForEpoch} from "../util/seed.js";
  * Stashes the computed PTCs in the transition cache for finalProcessEpoch to shift
  * into the epoch cache without reading from state.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/beacon-chain.md#process_ptc_window
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/beacon-chain.md#new-process_ptc_window
  */
 export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTransitionCache): void {
-  const nextEpoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
-  const nextShuffling =
-    cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, nextEpoch);
+  const epoch = state.epochCtx.epoch + MIN_SEED_LOOKAHEAD + 1;
+  const nextShuffling = cache.nextShuffling ?? computeEpochShuffling(state, cache.nextShufflingActiveIndices, epoch);
   cache.nextShuffling = nextShuffling;
 
-  const nextEpochPtcs = computePayloadTimelinessCommitteesForEpoch(
+  const lastEpochPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
     state,
-    nextEpoch,
+    epoch,
     nextShuffling.committees,
     state.epochCtx.effectiveBalanceIncrements
   );
 
   // Stash for finalProcessEpoch to shift into epoch cache
-  cache.nextEpochPayloadTimelinessCommittees = nextEpochPtcs;
+  cache.nextEpochPayloadTimelinessCommittees = lastEpochPayloadTimelinessCommittees;
 
   // Write shifted window to state: current(N) + next(N+1) + newlyComputed(N+2)
   // From the perspective of upcoming epoch N+1, this is previous + current + next
-  // TODO: Remove Array.from() once @chainsafe/ssz is upgraded to v1.3.1+ (accepts Uint32Array directly)
   state.ptcWindow = ssz.gloas.PtcWindow.toViewDU([
-    ...state.epochCtx.payloadTimelinessCommittees.map((c) => Array.from(c)),
-    ...state.epochCtx.nextPayloadTimelinessCommittees.map((c) => Array.from(c)),
-    ...nextEpochPtcs.map((c) => Array.from(c)),
+    ...state.epochCtx.payloadTimelinessCommittees,
+    ...state.epochCtx.nextPayloadTimelinessCommittees,
+    ...lastEpochPayloadTimelinessCommittees,
   ]);
 }

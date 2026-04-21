@@ -780,7 +780,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                     (data as BlockContents).block as BeaconBlock<ForkPreDeneb> // <- tranformation
                   );
           },
-          deserialize(data, {executionPayloadBlinded, version}) {
+          deserialize(data, meta) {
+            const {executionPayloadBlinded, version} = meta as ProduceBlockV3Meta;
             return executionPayloadBlinded
               ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.deserialize(data)
               : isForkPostDeneb(version)

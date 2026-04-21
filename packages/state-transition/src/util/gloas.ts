@@ -177,8 +177,8 @@ export function isParentBlockFull(state: CachedBeaconStateGloas | IBeaconStateVi
   return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
 }
 
-export function initializePtcWindow(state: CachedBeaconStateFulu): number[][] {
-  const ptcWindow = Array.from({length: SLOTS_PER_EPOCH}, () => Array.from(new Uint32Array(PTC_SIZE)));
+export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[] {
+  const ptcWindow: Uint32Array[] = Array.from({length: SLOTS_PER_EPOCH}, () => new Uint32Array(PTC_SIZE));
   const currentEpoch = state.epochCtx.epoch;
 
   for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
@@ -193,8 +193,7 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): number[][] {
         epoch,
         shuffling.committees,
         state.epochCtx.effectiveBalanceIncrements
-        // TODO: Remove Array.from() once @chainsafe/ssz is upgraded to v1.3.1+ (accepts Uint32Array directly)
-      ).map((committee) => Array.from(committee))
+      )
     );
   }
 
