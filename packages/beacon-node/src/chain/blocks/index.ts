@@ -122,22 +122,13 @@ export async function processBlocks(
       // TODO: Consider batching importBlock too if it takes significant time
       await importBlock.call(this, fullyVerifiedBlock, opts);
 
-      // Post-Gloas: if range sync pre-delivered a complete PayloadEnvelopeInput (envelope + all
-      // sampled columns), import the envelope now, inline with block import.
-      //
       const slot = fullyVerifiedBlock.blockInput.getBlock().message.slot;
       const payloadInput = payloadEnvelopes?.get(slot);
       if (payloadInput?.hasPayloadEnvelope() && payloadInput.isComplete()) {
-        try {
-          // we already awaited DA in verifyBlocksInEpoch for this segment
-          await importExecutionPayload.call(this, payloadInput, {validSignature: false});
-        } catch (e) {
-          this.logger.debug(
-            "Error importing execution payload envelope inline with block import",
-            {slot, root: payloadInput.blockRootHex},
-            e as Error
-          );
-        }
+        // we already awaited DA in verifyBlocksInEpoch for this segment
+        // TODO GLOAS: may need FullyVerifiedPayload here with DatAvailabilityStatus added from here
+        // the current flow use that data from the forkchoice pending node which is not correct
+        await importExecutionPayload.call(this, payloadInput, {validSignature: false});
       }
 
       await nextEventLoop();

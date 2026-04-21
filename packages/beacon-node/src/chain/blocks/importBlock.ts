@@ -136,12 +136,8 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
-  // For Gloas blocks arriving via gossip / API: create the PayloadEnvelopeInput now so the
-  // envelope import can find it when it arrives later. Range sync takes a different path —
-  // cacheByRangeResponses has already seeded the cache for blocks whose envelope was also
-  // delivered, and for tail blocks without a delivered envelope we simply skip creating an
-  // entry here; the envelope will be handled on the next range-sync batch or after sync catches
-  // up to the gossip network.
+  // For range sync, PayloadEnvelope is created before reaching this
+  // we also don't need to trigger getBlobs() in that case
   if (fork >= ForkSeq.gloas && !opts.fromRangeSync) {
     const payloadInput = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,

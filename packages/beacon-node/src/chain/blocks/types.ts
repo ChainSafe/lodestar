@@ -90,14 +90,6 @@ export type ImportBlockOpts = {
 
 /**
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
- *
- * Under the deferred-payload-processing spec (specs#5094), the envelope is verified separately by
- * `importExecutionPayload` and does not produce a post-payload state at block-import time, so this
- * type no longer needs a discriminated union.
- *
- * `executionStatus` may come from either the block-import layer (`BlockExecutionStatus`) or the
- * payload-import layer (`PayloadExecutionStatus = Valid | Syncing`). `PayloadExecutionStatus` is
- * already a subset of `BlockExecutionStatus`; the union just documents that either may appear.
  */
 export type FullyVerifiedBlock = {
   blockInput: IBlockInput;

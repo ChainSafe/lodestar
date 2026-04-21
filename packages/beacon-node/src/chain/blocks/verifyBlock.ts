@@ -116,13 +116,7 @@ export async function verifyBlocksInEpoch(
 
     // Pick the data-availability source by fork:
     // - Pre-Gloas: blob/Fulu-column data lives in IBlockInput → verifyBlocksDataAvailability.
-    // - Post-Gloas: data columns live in PayloadEnvelopeInput. Collect the present payload
-    //   inputs (may be empty on the gossip / API path where `payloadEnvelopes` is null, or may
-    //   omit range-sync tail blocks whose envelope was not delivered), await DA for them, then
-    //   synthesise a block-aligned status array. For gloas blocks the block itself has no blob
-    //   data (envelope import is separate), so every status is NotRequired — fork-choice does
-    //   not act on DA status post-gloas and the metric that would consume availableTime is
-    //   gated on DAType !== NoData (which gloas always fails), so synthesised values are safe.
+    // - Post-Gloas: verifyPayloadsDataAvailability
     const daAvailabilityPromise =
       fork >= ForkSeq.gloas
         ? (async () => {
@@ -133,6 +127,7 @@ export async function verifyBlocksInEpoch(
             }
             await verifyPayloadsDataAvailability(payloadInputsForDa, abortController.signal);
             return {
+              // post-gloas, DataAvailabilityStatus is NotRequired for forkChoice.onBlock() ProtoBlock
               dataAvailabilityStatuses: blockInputs.map(() => DataAvailabilityStatus.NotRequired),
               availableTime: Date.now(),
             };
