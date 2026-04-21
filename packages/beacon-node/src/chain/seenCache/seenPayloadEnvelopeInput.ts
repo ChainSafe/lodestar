@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {SerializedCache} from "../../util/serializedCache.js";
@@ -21,21 +21,20 @@ export type SeenPayloadEnvelopeInputModules = {
 /**
  * Cache for tracking PayloadEnvelopeInput instances, keyed by beacon block root.
  *
- * Created during block import when a block is processed.
- * Pruned on finalization only — entries below the finalized slot are evicted in `onFinalized`.
- * (Per-block pruning after DB persist is intentionally NOT done; synchronous consumers like
- * `produceBlockBody.prepareExecutionPayload` and `chain.getParentExecutionRequests` still
- * read the envelope from here. See `writePayloadEnvelopeInputToDb.persistPayloadEnvelopeInput`
- * for the full rationale.)
+ * Created during block import when a block is processed. Two pruning paths:
+ *   - `prepareNextSlot` calls `pruneBelow(headParentSlot)` every slot once the head we'll build
+ *     on is known.
+ *   - `onFinalized` calls `pruneBelow(finalizedSlot)` on every finalization for bulk cleanup.
  *
- * TODO GLOAS: the cache is currently unbounded between finalizations. During non-finality it
- * can grow without limit (one entry per unfinalized block, dominated by the ~128 sampled data
- * columns per entry). Cap to a max size (e.g. slot-ordered LRU of a few hundred entries) and
- * evict oldest-first when the cap is exceeded. Consumers that miss the cache must then fall
- * back to DB reads (`chain.getExecutionPayloadEnvelope` already does this for serialised bytes;
- * the block-producer code paths would need an async variant). The authoritative view of "does
- * this block / payload exist in the canonical chain" is `forkChoice` — this cache is a latency
- * optimisation for the synchronous callers, not a source of truth.
+ * Steady state (linear chain, healthy progression): the cache holds ~2 entries — the head
+ * (parent for next-slot production) and its parent (proposer-boost-reorg fallback). It can
+ * transiently hold more during forks, range-sync bursts, or when `prepareNextSlot` skips
+ * ticks; subsequent ticks settle it back.
+ *
+ * Consumers that miss the cache fall back to DB (`chain.getParentExecutionRequests` /
+ * `getExecutionPayloadEnvelope`). The authoritative view of "does this block / payload exist
+ * in the canonical chain" is `forkChoice` — this cache is a latency optimisation for the
+ * synchronous fast path, not a source of truth.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
@@ -71,16 +70,7 @@ export class SeenPayloadEnvelopeInput {
   }
 
   private onFinalized = (checkpoint: CheckpointWithHex): void => {
-    // Prune all entries with slot < finalized slot
-    const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    let deletedCount = 0;
-    for (const [, input] of this.payloadInputs) {
-      if (input.slot < finalizedSlot) {
-        this.evictPayloadInput(input);
-        deletedCount++;
-      }
-    }
-    this.logger?.debug("SeenPayloadEnvelopeInput.onFinalized deleted cached entries", {deletedCount});
+    this.pruneBelow(computeStartSlotAtEpoch(checkpoint.epoch));
   };
 
   add(props: CreateFromBlockProps): PayloadEnvelopeInput {
@@ -103,6 +93,17 @@ export class SeenPayloadEnvelopeInput {
 
   size(): number {
     return this.payloadInputs.size;
+  }
+
+  pruneBelow(slot: Slot): void {
+    let deletedCount = 0;
+    for (const [, input] of this.payloadInputs) {
+      if (input.slot < slot) {
+        this.evictPayloadInput(input);
+        deletedCount++;
+      }
+    }
+    this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelow deleted entries", {slot, deletedCount});
   }
 
   private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {

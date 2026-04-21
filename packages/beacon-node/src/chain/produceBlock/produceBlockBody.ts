@@ -290,7 +290,7 @@ export async function produceBlockBody<T extends BlockType>(
     // Determine parent execution requests for deferred processing (consensus-specs#5094)
     // If parent was FULL: include execution requests from its envelope
     // If parent was EMPTY: include empty execution requests
-    gloasBody.parentExecutionRequests = this.getParentExecutionRequests(parentBlock.blockRoot);
+    gloasBody.parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.blockRoot);
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -618,11 +618,7 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
     forkChoice?: IForkChoice;
-    seenPayloadEnvelopeInputCache?: {
-      get(
-        rootHex: string
-      ): {hasPayloadEnvelope(): boolean; getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope} | undefined;
-    };
+    getParentExecutionRequests?: (parentBlockRootHex: RootHex) => Promise<electra.ExecutionRequests>;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -638,7 +634,7 @@ export async function prepareExecutionPayload(
   // For Gloas: determine FULL vs EMPTY parent per spec's prepare_execution_payload
   // If extending FULL parent: apply parent payload to get correct withdrawals and use bid.blockHash
   // If EMPTY parent: use state.payloadExpectedWithdrawals and bid.parentBlockHash
-  if (isForkPostGloas(fork) && chain.forkChoice && chain.seenPayloadEnvelopeInputCache) {
+  if (isForkPostGloas(fork) && chain.forkChoice && chain.getParentExecutionRequests) {
     const gloasState = state as unknown as {
       latestExecutionPayloadBid: {
         slot: number;
@@ -652,14 +648,13 @@ export async function prepareExecutionPayload(
     const parentRootHex = toRootHex(parentBlockRoot);
 
     if (chain.forkChoice.shouldExtendPayload(parentRootHex)) {
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(parentRootHex);
-      if (payloadInput?.hasPayloadEnvelope()) {
-        // Build on FULL variant: apply parent payload to compute correct withdrawals,
-        // use bid.blockHash as EL head (per spec's prepare_execution_payload)
-        const gloasView = state as unknown as IBeaconStateViewGloas;
-        withdrawalsOverride = gloasView.getExpectedWithdrawalsForFullParent(payloadInput.getPayloadEnvelope());
-        parentHash = gloasState.latestExecutionPayloadBid.blockHash;
-      }
+      // Build on FULL variant: fetch parent execution requests (cache → DB fallback),
+      // apply parent payload to compute correct withdrawals, use bid.blockHash as EL head
+      // (per spec's prepare_execution_payload)
+      const executionRequests = await chain.getParentExecutionRequests(parentRootHex);
+      const gloasView = state as unknown as IBeaconStateViewGloas;
+      withdrawalsOverride = gloasView.getExpectedWithdrawalsForFullParent(executionRequests);
+      parentHash = gloasState.latestExecutionPayloadBid.blockHash;
     } else {
       // EMPTY parent: use bid.parentBlockHash as the EL head
       parentHash = gloasState.latestExecutionPayloadBid.parentBlockHash;

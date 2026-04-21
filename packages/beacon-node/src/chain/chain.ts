@@ -2,7 +2,13 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithPayloadStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithPayloadStatus,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -874,21 +880,42 @@ export class BeaconChain implements IBeaconChain {
   /**
    * Get execution requests from parent's payload envelope for block production.
    * Uses is_payload_verified AND should_extend_payload per spec's prepare_execution_payload.
-   * If parent was FULL and PTC voted timely, returns execution requests from the cached envelope.
-   * Otherwise returns empty execution requests (build on EMPTY variant).
+   * If parent was FULL and PTC voted timely, returns execution requests from the cached envelope
+   * (with DB fallback if the entry was pruned). Otherwise returns empty execution requests
+   * (build on EMPTY variant).
    */
-  getParentExecutionRequests(parentBlockRootHex: RootHex): electra.ExecutionRequests {
+  async getParentExecutionRequests(parentBlockRootHex: RootHex): Promise<electra.ExecutionRequests> {
     if (
-      this.forkChoice.hasPayloadHexUnsafe(parentBlockRootHex) &&
-      this.forkChoice.shouldExtendPayload(parentBlockRootHex)
+      !this.forkChoice.hasPayloadHexUnsafe(parentBlockRootHex) ||
+      !this.forkChoice.shouldExtendPayload(parentBlockRootHex)
     ) {
-      const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
-      if (payloadInput?.hasPayloadEnvelope()) {
-        return payloadInput.getPayloadEnvelope().message.executionRequests;
-      }
+      // Parent was EMPTY, payload not verified, or PTC didn't vote timely — return empty requests
+      return ssz.electra.ExecutionRequests.defaultValue();
     }
-    // Parent was EMPTY, payload not verified, or PTC didn't vote timely — return empty requests
-    return ssz.electra.ExecutionRequests.defaultValue();
+
+    // Pre-gloas parents are stored as `PayloadStatus.FULL` by default in fork choice but have no
+    // execution payload envelope (their payload is inlined in the block). For the fork-boundary
+    // case (first gloas block built on the last pre-gloas block), fall back to empty requests.
+    const parentBlock = this.forkChoice.getBlockHex(parentBlockRootHex, PayloadStatus.FULL);
+    if (parentBlock && !isForkPostGloas(this.config.getForkName(parentBlock.slot))) {
+      return ssz.electra.ExecutionRequests.defaultValue();
+    }
+
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope().message.executionRequests;
+    }
+
+    // Cache miss (e.g., entry pruned in prepareNextSlot). Fall back to DB.
+    const envelopeFromDb = await this.db.executionPayloadEnvelope.get(fromHex(parentBlockRootHex));
+    if (envelopeFromDb) {
+      return envelopeFromDb.message.executionRequests;
+    }
+
+    // Invariant: fork choice says parent is FULL gloas, so envelope must exist in cache or DB.
+    throw new Error(
+      `getParentExecutionRequests: fork choice reports FULL parent ${parentBlockRootHex} but envelope is missing in cache and DB`
+    );
   }
 
   async getExecutionPayloadEnvelope(
