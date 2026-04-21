@@ -793,11 +793,7 @@ export class BlockInputSync {
             }
 
             if (missingDependency.kind === "block") {
-              this.logger.debug(
-                "Attempted to process block before its full body was available",
-                errorData,
-                res.err
-              );
+              this.logger.debug("Attempted to process block before its full body was available", errorData, res.err);
               pendingBlock.status = PendingBlockInputStatus.pending;
               this.triggerUnknownBlockSearch();
               break;

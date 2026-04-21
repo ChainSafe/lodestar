@@ -26,8 +26,8 @@ import {validateGossipExecutionPayloadEnvelope} from "../../../src/chain/validat
 import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
-import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
 import {BlockInputSyncCacheItem, PendingBlockInputStatus} from "../../../src/sync/types.js";
+import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
 import {ClockStopped} from "../../mocks/clock.js";
@@ -1603,9 +1603,11 @@ describe("UnknownBlockSync", () => {
       forkChoice: {
         getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         hasBlockHex: vi.fn().mockImplementation((rootHex: string) => rootHex === parentRootHex),
-        getBlockHexAndBlockHash: vi.fn().mockImplementation((rootHex: string, blockHashHex: string) =>
-          rootHex === parentRootHex && blockHashHex === parentBlockHashHex ? ({} as ProtoBlock) : null
-        ),
+        getBlockHexAndBlockHash: vi
+          .fn()
+          .mockImplementation((rootHex: string, blockHashHex: string) =>
+            rootHex === parentRootHex && blockHashHex === parentBlockHashHex ? ({} as ProtoBlock) : null
+          ),
         hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
       } as unknown as IForkChoice,
       seenPayloadEnvelopeInputCache: {
