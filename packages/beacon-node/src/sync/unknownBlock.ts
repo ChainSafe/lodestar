@@ -104,6 +104,7 @@ export class BlockInputSync {
    * block RootHex -> PendingBlock. To avoid finding same root at the same time
    */
   private readonly pendingBlocks = new Map<RootHex, BlockInputSyncCacheItem>();
+  // Payload recovery is keyed by beacon block root as well, so block and payload queues can unblock each other.
   private readonly pendingPayloads = new Map<RootHex, PayloadSyncCacheItem>();
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly maxPendingBlocks;
@@ -453,6 +454,10 @@ export class BlockInputSync {
     this.peerBalancer.onPeerDisconnected(peerId);
   };
 
+  /**
+   * Post-gloas, a locally complete block can still be blocked on its parent's execution payload lineage.
+   * Distinguish which dependency is missing so the scheduler can enqueue the right follow-up work.
+   */
   private getMissingBlockDependency(
     blockInput: IBlockInput
   ):
@@ -538,6 +543,8 @@ export class BlockInputSync {
     previous?: PayloadSyncCacheItem,
     envelope?: gloas.SignedExecutionPayloadEnvelope
   ): PendingPayloadInput {
+    // Normalize every payload recovery path into the same cache shape while preserving first-seen
+    // timing and peer provenance from any earlier by-root or envelope-only entry.
     if (envelope && !payloadInput.hasPayloadEnvelope()) {
       payloadInput.addPayloadEnvelope({
         envelope,
@@ -605,6 +612,7 @@ export class BlockInputSync {
       });
     }
 
+    // Blocks can unblock payloads and payloads can unblock blocks, so every scheduler pass services both queues.
     for (const payload of Array.from(this.pendingPayloads.values())) {
       if (isPendingPayloadInput(payload) && payload.status === PendingPayloadInputStatus.downloaded) {
         this.processPayload(payload).catch((e) => {
@@ -838,6 +846,11 @@ export class BlockInputSync {
     }
   }
 
+  /**
+   * Reconcile an envelope-first payload entry once enough local block context exists to rebuild
+   * a PayloadEnvelopeInput. This may queue block recovery, validate the speculative envelope, or
+   * downgrade back to by-root fetching when the cached envelope does not match the recovered block.
+   */
   private async reconcilePayloadEnvelope(pendingPayload: PendingPayloadEnvelope): Promise<void> {
     const rootHex = getPayloadSyncCacheItemRootHex(pendingPayload);
     if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
@@ -848,6 +861,7 @@ export class BlockInputSync {
     const payloadInput = await getOrRecoverPayloadEnvelopeInput(this.chain, rootHex);
     if (!payloadInput) {
       if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+        // Column commitments live on the block body, so an envelope-only entry has to pull the block first.
         if (!this.pendingBlocks.has(rootHex)) {
           this.addByRootHex(rootHex);
         }
@@ -977,6 +991,8 @@ export class BlockInputSync {
     if (res.err instanceof PayloadError) {
       switch (res.err.type.code) {
         case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
+          // Payload recovery discovered the block dependency before the block queue did. Re-enqueue the
+          // block and keep the payload ready so the scheduler can retry once the block reaches fork choice.
           this.addByRootHex(rootHex);
           pendingPayload.status = PendingPayloadInputStatus.downloaded;
           this.triggerUnknownBlockSearch();
@@ -1005,6 +1021,11 @@ export class BlockInputSync {
     pendingPayload.status = PendingPayloadInputStatus.downloaded;
   }
 
+  /**
+   * Download payload material keyed by beacon block root. Unlike block recovery, payload recovery may
+   * already have a locally cached envelope or partial columns, so each attempt starts from local state
+   * and only asks peers for the remaining pieces.
+   */
   private async fetchPayloadInput(
     cacheItem: PayloadSyncCacheItem
   ): Promise<PendingPayloadInput | PendingPayloadEnvelope> {
@@ -1045,6 +1066,7 @@ export class BlockInputSync {
 
         payloadInput ??= await getOrRecoverPayloadEnvelopeInput(this.chain, rootHex);
         if (!payloadInput) {
+          // Keep the validated envelope around, but wait for the block body before turning it into a full payload input.
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
             envelope,
@@ -1363,6 +1385,7 @@ export class BlockInputSync {
     pruneSetToMax(this.knownBadBlocks, MAX_KNOWN_BAD_BLOCKS);
   }
 
+  // Once a parent payload is invalid, every descendant waiting on that payload lineage becomes unrecoverable too.
   private removePendingPayloadAndDescendants(rootHex: RootHex): void {
     this.chain.seenPayloadEnvelopeInputCache.prune(rootHex);
     this.pendingPayloads.delete(rootHex);
