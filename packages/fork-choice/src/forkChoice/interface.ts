@@ -241,6 +241,7 @@ export interface IForkChoice {
   getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
+  shouldExtendPayload(blockRoot: RootHex): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;
