@@ -213,7 +213,7 @@ export class PrepareNextSlotScheduler {
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
-            parentBlockRoot: fromHex(updatedHeadRoot),
+            parentBlockRoot: fromHex(headRoot),
             parentBlockHash,
             // The likely consumers of this API are builders and will anyway ignore the
             // feeRecipient, so just pass zero hash for now till a real use case arises
