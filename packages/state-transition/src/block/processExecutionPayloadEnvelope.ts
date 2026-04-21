@@ -7,7 +7,7 @@ import {CachedBeaconStateGloas} from "../types.js";
 import {computeTimeAtSlot} from "../util/index.js";
 import {verifySignatureSet} from "../util/signatureSets.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
-import {getPendingValidatorPubkeys, processDepositRequest} from "./processDepositRequest.js";
+import {ensurePendingDepositPubkeyIndex, processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 export type ProcessExecutionPayloadEnvelopeOpts = {
@@ -33,19 +33,20 @@ export function processExecutionPayloadEnvelope(
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
   }
 
+  const requests = envelope.executionRequests;
+
+  if (requests.deposits.length > 0) {
+    ensurePendingDepositPubkeyIndex(state);
+  }
+
   // .clone() before mutating state, similar to stateTransition()
   const postState = state.clone(opts?.dontTransferCache) as CachedBeaconStateGloas;
 
   validateExecutionPayloadEnvelope(postState, envelope);
 
-  const requests = envelope.executionRequests;
-
   if (requests.deposits.length > 0) {
-    // Build cache of pending validator pubkeys once, shared across all deposit requests
-    const pendingValidatorPubkeys = getPendingValidatorPubkeys(postState.config, postState);
-
     for (const deposit of requests.deposits) {
-      processDepositRequest(fork, postState, deposit, pendingValidatorPubkeys);
+      processDepositRequest(fork, postState, deposit);
     }
   }
 

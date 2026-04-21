@@ -17,6 +17,7 @@ import {
   CommitteeIndex,
   Epoch,
   IndexedAttestation,
+  PubkeyHex,
   RootHex,
   Slot,
   SubnetID,
@@ -78,6 +79,9 @@ export type EpochCacheOpts = {
   skipSyncPubkeys?: boolean;
   shufflingGetter?: ShufflingGetter;
 };
+
+export type PendingDepositPubkeyIndex = Map<PubkeyHex, number[]>;
+export type PendingValidatorVerifiedCount = Map<PubkeyHex, number>;
 
 /** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
 type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; indexes: ValidatorIndex[]};
@@ -226,6 +230,19 @@ export class EpochCache {
   /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
+  /**
+   * Maps each pending-deposit pubkey to the indices where it appears in `state.pendingDeposits`.
+   * Starts as `null` on states created from bytes and is built when needed.
+   */
+  pendingDepositPubkeyIndex: PendingDepositPubkeyIndex | null;
+
+  /**
+   * Caches the number of signature-valid pending deposits for each pubkey.
+   * Starts as `null` on states created from bytes and is built when needed. a missing map entry means
+   * that pubkey has not been checked for the current state yet.
+   */
+  pendingValidatorVerifiedCount: PendingValidatorVerifiedCount | null;
+
   // TODO GLOAS: See if we need to cache PTC for next epoch
   // PTC for previous epoch, required for slot N block validating slot N-1 attestations
   previousPayloadTimelinessCommittees: Uint32Array[];
@@ -268,6 +285,8 @@ export class EpochCache {
     previousTargetUnslashedBalanceIncrements: number;
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
+    pendingDepositPubkeyIndex: PendingDepositPubkeyIndex | null;
+    pendingValidatorVerifiedCount: PendingValidatorVerifiedCount | null;
     previousPayloadTimelinessCommittees: Uint32Array[];
     payloadTimelinessCommittees: Uint32Array[];
     epoch: Epoch;
@@ -299,6 +318,8 @@ export class EpochCache {
     this.previousTargetUnslashedBalanceIncrements = data.previousTargetUnslashedBalanceIncrements;
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
+    this.pendingDepositPubkeyIndex = data.pendingDepositPubkeyIndex;
+    this.pendingValidatorVerifiedCount = data.pendingValidatorVerifiedCount;
     this.previousPayloadTimelinessCommittees = data.previousPayloadTimelinessCommittees;
     this.payloadTimelinessCommittees = data.payloadTimelinessCommittees;
     this.epoch = data.epoch;
@@ -544,6 +565,8 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
+      pendingDepositPubkeyIndex: null,
+      pendingValidatorVerifiedCount: null,
       previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees,
       epoch: currentEpoch,
@@ -590,6 +613,14 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
+      pendingDepositPubkeyIndex:
+        this.pendingDepositPubkeyIndex !== null
+          ? new Map(
+              Array.from(this.pendingDepositPubkeyIndex, ([pubkeyHex, indexes]) => [pubkeyHex, [...indexes]] as const)
+            )
+          : null,
+      pendingValidatorVerifiedCount:
+        this.pendingValidatorVerifiedCount !== null ? new Map(this.pendingValidatorVerifiedCount) : null,
       previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees: this.payloadTimelinessCommittees,
       epoch: this.epoch,

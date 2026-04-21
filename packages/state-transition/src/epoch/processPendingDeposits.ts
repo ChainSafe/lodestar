@@ -96,6 +96,9 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
     state.pendingDeposits.push(deposit);
   }
 
+  state.epochCtx.pendingDepositPubkeyIndex = null;
+  state.epochCtx.pendingValidatorVerifiedCount = null;
+
   // Accumulate churn only if the churn limit has been hit.
   if (isChurnLimitReached) {
     state.depositBalanceToConsume = availableForProcessing - BigInt(processedAmount);

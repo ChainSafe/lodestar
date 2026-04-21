@@ -2,6 +2,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {BLSPubkey, Bytes32, PubkeyHex, UintNum64, electra, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
+import {type PendingDepositPubkeyIndex, type PendingValidatorVerifiedCount} from "../cache/epochCache.js";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {computeEpochAtSlot, isValidatorKnown} from "../util/index.js";
@@ -76,23 +77,16 @@ function addBuilderToRegistry(
   }
 }
 
-// TODO GLOAS: pendingValidatorPubkeys cache is currently naive and has room for improvement.
-// Currently the cache lives in process_block, but we should put it in epochCache or elsewhere that has longer
-// lifetime to avoid duplicated deposit signature computation
-// See https://github.com/ChainSafe/lodestar/issues/9181
 export function processDepositRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
-  depositRequest: electra.DepositRequest,
-  pendingValidatorPubkeysCache?: Set<PubkeyHex>
+  depositRequest: electra.DepositRequest
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
   // Check if this is a builder or validator deposit
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
-    const pendingValidatorPubkeys =
-      pendingValidatorPubkeysCache ?? getPendingValidatorPubkeys(state.config, stateGloas);
     const pubkeyHex = toPubkeyHex(pubkey);
     const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
     const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
@@ -101,23 +95,12 @@ export function processDepositRequest(
     // already exists with this pubkey, apply the deposit to their balance
     const isBuilder = builderIndex !== null;
     const isValidator = isValidatorKnown(state, validatorIndex);
-    const isPendingValidator = pendingValidatorPubkeys.has(pubkeyHex);
+    const isPendingValidator = getVerifiedPendingValidatorCountForPubkey(stateGloas, pubkeyHex) > 0;
 
     if (isBuilder || (isBuilderWithdrawalCredential(withdrawalCredentials) && !isValidator && !isPendingValidator)) {
       // Apply builder deposits immediately
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
-    }
-
-    // Keep the shared cache in sync: if this deposit has a valid signature, subsequent
-    // deposit requests for the same pubkey in this envelope must see it as a pending validator
-    if (
-      pendingValidatorPubkeysCache &&
-      !isValidator &&
-      !isPendingValidator &&
-      isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
-    ) {
-      pendingValidatorPubkeys.add(pubkeyHex);
     }
   }
 
@@ -135,6 +118,95 @@ export function processDepositRequest(
     slot: state.slot,
   });
   state.pendingDeposits.push(pendingDeposit);
+
+  if (fork >= ForkSeq.gloas) {
+    const stateGloas = state as CachedBeaconStateGloas;
+    const pubkeyHex = toPubkeyHex(pubkey);
+    const pendingDepositPubkeyIndex = ensurePendingDepositPubkeyIndex(stateGloas);
+    const newPendingDepositIndex = state.pendingDeposits.length - 1;
+    const bucket = pendingDepositPubkeyIndex.get(pubkeyHex);
+
+    if (bucket) {
+      bucket.push(newPendingDepositIndex);
+    } else {
+      pendingDepositPubkeyIndex.set(pubkeyHex, [newPendingDepositIndex]);
+    }
+
+    const verifiedPendingValidatorCount = getPendingValidatorVerifiedCount(stateGloas);
+    const cachedCount = verifiedPendingValidatorCount.get(pubkeyHex);
+    if (
+      cachedCount !== undefined &&
+      isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
+    ) {
+      verifiedPendingValidatorCount.set(pubkeyHex, cachedCount + 1);
+    }
+  }
+}
+
+export function ensurePendingDepositPubkeyIndex(state: CachedBeaconStateGloas): PendingDepositPubkeyIndex {
+  if (state.epochCtx.pendingDepositPubkeyIndex !== null) {
+    return state.epochCtx.pendingDepositPubkeyIndex;
+  }
+
+  const pendingDepositPubkeyIndex: PendingDepositPubkeyIndex = new Map();
+  for (let i = 0; i < state.pendingDeposits.length; i++) {
+    const pubkeyHex = toPubkeyHex(state.pendingDeposits.getReadonly(i).pubkey);
+    const bucket = pendingDepositPubkeyIndex.get(pubkeyHex);
+
+    if (bucket) {
+      bucket.push(i);
+    } else {
+      pendingDepositPubkeyIndex.set(pubkeyHex, [i]);
+    }
+  }
+
+  state.epochCtx.pendingDepositPubkeyIndex = pendingDepositPubkeyIndex;
+  if (state.epochCtx.pendingValidatorVerifiedCount === null) {
+    state.epochCtx.pendingValidatorVerifiedCount = new Map();
+  }
+
+  return pendingDepositPubkeyIndex;
+}
+
+function getPendingValidatorVerifiedCount(state: CachedBeaconStateGloas): PendingValidatorVerifiedCount {
+  if (state.epochCtx.pendingValidatorVerifiedCount === null) {
+    state.epochCtx.pendingValidatorVerifiedCount = new Map();
+  }
+
+  return state.epochCtx.pendingValidatorVerifiedCount;
+}
+
+function getVerifiedPendingValidatorCountForPubkey(state: CachedBeaconStateGloas, pubkeyHex: PubkeyHex): number {
+  const verifiedPendingValidatorCount = getPendingValidatorVerifiedCount(state);
+  const cachedCount = verifiedPendingValidatorCount.get(pubkeyHex);
+  if (cachedCount !== undefined) {
+    return cachedCount;
+  }
+
+  const bucket = ensurePendingDepositPubkeyIndex(state).get(pubkeyHex);
+  if (!bucket) {
+    verifiedPendingValidatorCount.set(pubkeyHex, 0);
+    return 0;
+  }
+
+  let validCount = 0;
+  for (const pendingDepositIndex of bucket) {
+    const pendingDeposit = state.pendingDeposits.getReadonly(pendingDepositIndex);
+    if (
+      isValidDepositSignature(
+        state.config,
+        pendingDeposit.pubkey,
+        pendingDeposit.withdrawalCredentials,
+        pendingDeposit.amount,
+        pendingDeposit.signature
+      )
+    ) {
+      validCount++;
+    }
+  }
+
+  verifiedPendingValidatorCount.set(pubkeyHex, validCount);
+  return validCount;
 }
 
 /**
