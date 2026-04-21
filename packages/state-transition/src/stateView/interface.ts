@@ -254,7 +254,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
    * Clones the state, applies parent payload effects, then computes withdrawals.
    * Used by prepare_execution_payload when building on FULL parent.
    */
-  getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[];
+  getExpectedWithdrawalsForFullParent(executionRequests: electra.ExecutionRequests): capella.Withdrawal[];
 }
 
 /**

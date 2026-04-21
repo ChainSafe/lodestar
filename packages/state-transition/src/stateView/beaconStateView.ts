@@ -793,13 +793,13 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return new BeaconStateView(newState);
   }
 
-  getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[] {
+  getExpectedWithdrawalsForFullParent(executionRequests: electra.ExecutionRequests): capella.Withdrawal[] {
     const fork = this.config.getForkSeq(this.cachedState.slot);
     if (!isForkPostGloas(this.config.getForkName(this.cachedState.slot))) {
       throw Error("getExpectedWithdrawalsForFullParent is only available for gloas+ forks");
     }
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
-    applyParentExecutionPayload(stateCopy, stateCopy.latestExecutionPayloadBid, envelope.message.executionRequests);
+    applyParentExecutionPayload(stateCopy, stateCopy.latestExecutionPayloadBid, executionRequests);
     const {expectedWithdrawals} = getExpectedWithdrawals(fork, stateCopy);
     return expectedWithdrawals;
   }
