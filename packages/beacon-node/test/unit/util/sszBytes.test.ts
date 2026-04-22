@@ -581,8 +581,8 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
   }
 
   it("getSlotFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
-    // slotNumber is at offset 676 within the serialized payload, need at least 684 bytes
-    const invalidSizes = [0, 50, 100, 683];
+    // slotNumber is at offset 680 within the serialized payload, need at least 688 bytes
+    const invalidSizes = [0, 50, 100, 687];
     for (const size of invalidSizes) {
       expect(getSlotFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
     }
