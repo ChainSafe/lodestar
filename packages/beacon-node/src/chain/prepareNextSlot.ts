@@ -206,8 +206,7 @@ export class PrepareNextSlotScheduler {
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
-        // every slot.
-        // Without the flag, emit the event if we are proposing in the next slot.
+        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
         if (
           (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
