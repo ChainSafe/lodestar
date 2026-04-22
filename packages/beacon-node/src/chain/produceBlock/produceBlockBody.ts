@@ -110,6 +110,7 @@ export type ProduceFullGloas = {
   executionRequests: electra.ExecutionRequests;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
+  stateRoot: Root;
 };
 export type ProduceFullFulu = {
   type: BlockType.Full;

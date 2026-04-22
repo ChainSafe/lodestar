@@ -92,7 +92,7 @@ import {
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
+import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -1072,6 +1072,9 @@ export class BeaconChain implements IBeaconChain {
     // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
     if (isForkPostGloas(fork) && produceResult.type !== BlockType.Full) {
       throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
+    }
+    if (isForkPostGloas(fork)) {
+      (produceResult as ProduceFullGloas).stateRoot = newStateRoot;
     }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.
