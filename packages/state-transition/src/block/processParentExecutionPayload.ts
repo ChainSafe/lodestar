@@ -8,20 +8,18 @@ import {getPendingValidatorPubkeys, processDepositRequest} from "./processDeposi
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 /**
- * Process parent execution payload effects as first step of processBlock.
+ * Process parent execution payload effects as the first step of processBlock.
  *
- * Spec: consensus-specs#5094
- * https://github.com/ethereum/consensus-specs/blob/26ed32e/specs/gloas/beacon-chain.md
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-process_parent_execution_payload
  */
 export function processParentExecutionPayload(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const bid = block.body.signedExecutionPayloadBid.message;
   const parentBid = state.latestExecutionPayloadBid;
   const requests = block.body.parentExecutionRequests;
 
-  // True if this block built on the parent's full payload
-  const isParentFull = byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
-
-  if (!isParentFull) {
+  const isGenesisBlock = byteArrayEquals(parentBid.blockHash, ssz.Root.defaultValue());
+  const isParentBlockEmpty = !byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
+  if (isGenesisBlock || isParentBlockEmpty) {
     // Parent was EMPTY -- no execution requests expected
     assertEmptyExecutionRequests(requests);
     return;
@@ -39,22 +37,14 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
 }
 
 /**
- * Apply parent execution payload effects to state.
+ * Process the parent's execution requests, queue the builder payment, update payload availability,
+ * and update the latest block hash.
  *
- * Spec: apply_parent_execution_payload
+ * Called from processParentExecutionPayload during block processing, and from the validator during
+ * block production before computing withdrawals.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
-/**
- * Settle a builder payment at the given index.
- * Spec: settle_builder_payment
- */
-function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: number): void {
-  const payment = state.builderPendingPayments.get(paymentIndex).clone();
-  if (payment.withdrawal.amount > 0) {
-    state.builderPendingWithdrawals.push(payment.withdrawal);
-  }
-  state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
-}
-
 export function applyParentExecutionPayload(
   state: CachedBeaconStateGloas,
   parentBid: {slot: number; blockHash: Uint8Array; builderIndex: number; value: number; feeRecipient: Uint8Array},
@@ -65,8 +55,8 @@ export function applyParentExecutionPayload(
   const parentEpoch = computeEpochAtSlot(parentSlot);
   const currentEpoch = computeEpochAtSlot(state.slot);
 
-  // Process execution requests from parent's payload
-  // Execution requests are processed at state.slot (child's slot), not parent's slot
+  // Process execution requests from parent's payload. The execution
+  // requests are processed at state.slot (child's slot), not the parent's slot.
   if (requests.deposits.length > 0) {
     const pendingValidatorPubkeys = getPendingValidatorPubkeys(state.config, state);
     for (const deposit of requests.deposits) {
@@ -88,8 +78,8 @@ export function applyParentExecutionPayload(
   } else if (parentEpoch === currentEpoch - 1) {
     settleBuilderPayment(state, parentSlot % SLOTS_PER_EPOCH);
   } else if (parentBid.value > 0) {
-    // Parent is older than previous epoch — payment entry already settled/evicted.
-    // Directly append the withdrawal to ensure the builder gets paid.
+    // Parent is older than the previous epoch, its payment entry has already been settled or
+    // evicted, so append the withdrawal directly to ensure the builder still gets paid
     state.builderPendingWithdrawals.push(
       ssz.gloas.BuilderPendingWithdrawal.toViewDU({
         feeRecipient: parentBid.feeRecipient,
@@ -102,6 +92,20 @@ export function applyParentExecutionPayload(
   // Update parent payload availability and latest block hash
   state.executionPayloadAvailability.set(parentSlot % SLOTS_PER_HISTORICAL_ROOT, true);
   state.latestBlockHash = parentBid.blockHash;
+}
+
+/**
+ * Settle a builder payment at the given index: move its withdrawal (if any) to the
+ * pending withdrawals list and clear the payment slot.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-settle_builder_payment
+ */
+function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: number): void {
+  const payment = state.builderPendingPayments.get(paymentIndex).clone();
+  if (payment.withdrawal.amount > 0) {
+    state.builderPendingWithdrawals.push(payment.withdrawal);
+  }
+  state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
 }
 
 function assertEmptyExecutionRequests(requests: electra.ExecutionRequests): void {

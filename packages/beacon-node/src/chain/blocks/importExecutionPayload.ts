@@ -72,9 +72,8 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 /**
  * Import an execution payload envelope after all data is available.
  *
- * With deferred processing (consensus-specs#5094), the envelope is purely verified
- * here — no state mutation. State effects are applied in the next block via
- * processParentExecutionPayload.
+ * The envelope is purely verified here, no state mutation. State effects from the
+ * payload are applied on the next block via processParentExecutionPayload.
  *
  * Steps:
  * 1. Emit `execution_payload_available` for payload attestation
@@ -83,7 +82,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 4. Regenerate block state for envelope field validation
  * 5. Run EL verification and signature verification in parallel, plus pure envelope verification
  * 6. Persist verified payload envelope to hot DB
- * 7. Update fork choice (no stateRoot — FULL shares PENDING's stateRoot)
+ * 7. Update fork choice (transitions PENDING -> FULL)
  * 8. Record metrics
  * 9. Emit `execution_payload` event
  */
@@ -164,7 +163,7 @@ export async function importExecutionPayload(
   // 5a. Verify envelope fields against state (spec: verify_execution_payload_envelope)
   try {
     // When validSignature is true, the envelope came from gossip/API where both
-    // signature and executionRequestsRoot were already verified — skip re-hashing
+    // signature and executionRequestsRoot were already verified, skip re-hashing
     verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
       verifyExecutionRequestsRoot: !opts.validSignature,
     });
@@ -220,7 +219,7 @@ export async function importExecutionPayload(
     }
   });
 
-  // 7. Update fork choice — no separate stateRoot since envelope doesn't produce post-state
+  // 7. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
 

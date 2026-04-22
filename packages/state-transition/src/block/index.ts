@@ -51,8 +51,8 @@ export function processBlock(
 ): void {
   const {verifySignatures = true} = opts ?? {};
 
-  // Process parent execution payload effects first (consensus-specs#5094)
-  // Must run before processBlockHeader and processExecutionPayloadBid
+  // Apply the parent's deferred payload effects before everything else. Must run before
+  // processBlockHeader and processExecutionPayloadBid so subsequent steps see the updated state.
   if (fork >= ForkSeq.gloas) {
     processParentExecutionPayload(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
   }
@@ -60,7 +60,7 @@ export function processBlock(
   processBlockHeader(state, block);
 
   if (fork >= ForkSeq.gloas) {
-    // After consensus-specs#5094, processParentExecutionPayload has already handled parent effects
+    // Parent payload's execution requests were already applied by processParentExecutionPayload above
     processWithdrawals(fork, state as CachedBeaconStateGloas);
   } else if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
@@ -73,7 +73,9 @@ export function processBlock(
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  // TODO GLOAS: We call processExecutionPayload somewhere else post-gloas
+  // Post-gloas: process_execution_payload is not part of block processing. The parent's payload
+  // effects are applied earlier via processParentExecutionPayload, and each envelope is verified
+  // out-of-band via verifyExecutionPayloadEnvelope when it arrives.
   if (
     fork < ForkSeq.gloas &&
     fork >= ForkSeq.bellatrix &&

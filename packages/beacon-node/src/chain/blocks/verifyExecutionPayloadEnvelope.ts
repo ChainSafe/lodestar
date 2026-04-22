@@ -15,9 +15,12 @@ export type VerifyExecutionPayloadEnvelopeOpts = {
 
 /**
  * Verify execution payload envelope fields against the post-block state.
- * Does NOT verify signature (done separately) or call the execution engine.
  *
- * Spec: gloas/fork-choice.md — verify_execution_payload_envelope
+ * Signature verification and the execution engine call (`verify_and_notify_new_payload`) are
+ * performed outside this function, see `verifyExecutionPayloadEnvelopeSignature` and
+ * `importExecutionPayload` which run both in parallel with this check.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope
  */
 export function verifyExecutionPayloadEnvelope(
   config: BeaconConfig,
@@ -28,22 +31,16 @@ export function verifyExecutionPayloadEnvelope(
   const {verifyExecutionRequestsRoot = true} = opts ?? {};
   const payload = envelope.payload;
 
-  // Compute header root without mutating state
+  // Verify consistency with the beacon block
   const headerValue = {...state.latestBlockHeader};
   if (byteArrayEquals(headerValue.stateRoot, ssz.Root.defaultValue())) {
     headerValue.stateRoot = state.hashTreeRoot();
   }
   const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(headerValue);
-
-  // Verify consistency with the beacon block
   if (!byteArrayEquals(envelope.beaconBlockRoot, headerRoot)) {
     throw new Error(
       `Envelope's block is not the latest block header envelope=${toRootHex(envelope.beaconBlockRoot)} latestBlockHeader=${toRootHex(headerRoot)}`
     );
-  }
-
-  if (payload.slotNumber !== state.slot) {
-    throw new Error(`Slot mismatch between payload and state payload=${payload.slotNumber} state=${state.slot}`);
   }
 
   // Verify consistency with the committed bid
@@ -53,26 +50,21 @@ export function verifyExecutionPayloadEnvelope(
       `Builder index mismatch between envelope and committed bid envelope=${envelope.builderIndex} bid=${bid.builderIndex}`
     );
   }
-
   if (!byteArrayEquals(bid.prevRandao, payload.prevRandao)) {
     throw new Error(
       `Prev randao mismatch between bid and payload bid=${toHex(bid.prevRandao)} payload=${toHex(payload.prevRandao)}`
     );
   }
-
   if (Number(bid.gasLimit) !== payload.gasLimit) {
     throw new Error(
       `Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${Number(bid.gasLimit)}`
     );
   }
-
   if (!byteArrayEquals(bid.blockHash, payload.blockHash)) {
     throw new Error(
       `Block hash mismatch between payload and bid payload=${toRootHex(payload.blockHash)} bid=${toRootHex(bid.blockHash)}`
     );
   }
-
-  // Verify execution_requests_root matches bid commitment
   // Can be skipped if already verified during gossip validation
   if (verifyExecutionRequestsRoot) {
     const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
@@ -84,19 +76,19 @@ export function verifyExecutionPayloadEnvelope(
   }
 
   // Verify the execution payload is valid
+  if (payload.slotNumber !== state.slot) {
+    throw new Error(`Slot mismatch between payload and state payload=${payload.slotNumber} state=${state.slot}`);
+  }
   if (!byteArrayEquals(payload.parentHash, state.latestBlockHash)) {
     throw new Error(
       `Parent hash mismatch between payload and state payload=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)}`
     );
   }
-
   if (payload.timestamp !== computeTimeAtSlot(config, state.slot, state.genesisTime)) {
     throw new Error(
       `Timestamp mismatch between payload and state payload=${payload.timestamp} state=${computeTimeAtSlot(config, state.slot, state.genesisTime)}`
     );
   }
-
-  // Verify consistency with expected withdrawals
   const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
   const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
   if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
@@ -104,14 +96,12 @@ export function verifyExecutionPayloadEnvelope(
       `Withdrawals mismatch between payload and expected payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
     );
   }
-
-  // Execution engine verification (verify_and_notify_new_payload) is done externally
 }
 
 /**
  * Verify the BLS signature of an execution payload envelope.
  *
- * Spec: gloas/fork-choice.md — verify_execution_payload_envelope_signature
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope_signature
  */
 export async function verifyExecutionPayloadEnvelopeSignature(
   config: BeaconConfig,

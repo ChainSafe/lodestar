@@ -282,7 +282,8 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.signedExecutionPayloadBid = signedBid;
     // TODO GLOAS: Get payload attestations from pool for previous slot
     gloasBody.payloadAttestations = [];
-    // Determine parent execution requests for deferred processing (consensus-specs#5094)
+    // Parent's execution requests are applied when this block is processed (via
+    // processParentExecutionPayload), so the proposer must commit to them here.
     // If parent was FULL: include execution requests from its envelope
     // If parent was EMPTY: include empty execution requests
     gloasBody.parentExecutionRequests = this.getParentExecutionRequests(parentBlock.blockRoot);

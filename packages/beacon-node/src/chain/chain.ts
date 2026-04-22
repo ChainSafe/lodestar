@@ -887,7 +887,7 @@ export class BeaconChain implements IBeaconChain {
         return payloadInput.getPayloadEnvelope().message.executionRequests;
       }
     }
-    // Parent was EMPTY, payload not verified, or PTC didn't vote timely — return empty requests
+    // Parent was EMPTY, payload not verified, or PTC didn't vote timely, return empty requests
     return ssz.electra.ExecutionRequests.defaultValue();
   }
 
