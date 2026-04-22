@@ -627,7 +627,7 @@ export async function prepareExecutionPayload(
   state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  let parentHash = state.latestBlockHash;
+  let parentHash = parentBlockHash;
   let withdrawalsOverride: capella.Withdrawal[] | undefined;
 
   // For Gloas: determine FULL vs EMPTY parent per spec's prepare_execution_payload

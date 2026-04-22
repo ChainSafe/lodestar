@@ -561,7 +561,7 @@ export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Arr
  *    ├─ 8 bytes: builderIndex        (offset 108-115)
  *    ├─ 32 bytes: beaconBlockRoot    (offset 116-147)
  *    └─ variable: payload data (starts at envelope + 48)
- *       └─ ExecutionPayload fixed portion includes slotNumber at offset 528
+ *       └─ ExecutionPayload fixed portion includes slotNumber at offset 532
  */
 const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET = 4;
 const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE = 96;
@@ -587,18 +587,15 @@ const EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE =
 // parentHash(32) + feeRecipient(20) + stateRoot(32) + receiptsRoot(32) + logsBloom(256) +
 // prevRandao(32) + blockNumber(8) + gasLimit(8) + gasUsed(8) + timestamp(8) +
 // extraData_offset(4) + baseFeePerGas(32) + blockHash(32) + transactions_offset(4) +
-// withdrawals_offset(4) + blobGasUsed(8) + excessBlobGas(8) = 528
-const SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD = 528;
+// withdrawals_offset(4) + blobGasUsed(8) + excessBlobGas(8) + blockAccessList_offset(4) = 532
+const SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD = 532;
 
 // Payload data starts right after the envelope's fixed portion
 const ENVELOPE_START_IN_SIGNED =
-  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET +
-  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE; // 100
+  SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET + SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE; // 100
 
 const SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
-  ENVELOPE_START_IN_SIGNED +
-  EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE +
-  SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 100 + 48 + 528 = 676
+  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE + SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 100 + 48 + 532 = 680
 
 export function getSlotFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + SLOT_SIZE) {

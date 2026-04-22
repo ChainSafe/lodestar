@@ -151,6 +151,7 @@ export const ExecutionPayloadBid = new ContainerType(
     value: UintNum64,
     executionPayment: UintNum64,
     blobKzgCommitments: denebSsz.BlobKzgCommitments,
+    executionRequestsRoot: Root, // New in consensus-specs#5094
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
@@ -209,6 +210,7 @@ export const BeaconBlockBody = new ContainerType(
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadAttestations: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
+    parentExecutionRequests: electraSsz.ExecutionRequests, // New in consensus-specs#5094
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );

@@ -387,7 +387,6 @@ const forkChoiceTest =
                 const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
                 const blockHash = toHex(envelope.message.payload.blockHash);
                 const blockNumber = envelope.message.payload.blockNumber;
-                const stateRoot = toHex(envelope.message.stateRoot);
 
                 // Verify envelope against the post-block state (spec: verify_execution_payload_envelope)
                 const protoBlock = (chain.forkChoice as ForkChoice).getBlockHexDefaultStatus(beaconBlockRoot);
@@ -426,7 +425,6 @@ const forkChoiceTest =
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
-                  stateRoot,
                   ExecutionStatus.Valid
                 );
                 if (!isValid) throw Error("Expect error since this is a negative test");
