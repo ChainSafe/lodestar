@@ -97,7 +97,9 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   }
 
   state.epochCtx.pendingDepositPubkeyIndex = null;
+  state.epochCtx.pendingDepositPubkeyIndexShared = false;
   state.epochCtx.pendingValidatorVerifiedCount = null;
+  state.epochCtx.pendingValidatorVerifiedCountShared = false;
 
   // Accumulate churn only if the churn limit has been hit.
   if (isChurnLimitReached) {

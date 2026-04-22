@@ -83,11 +83,11 @@ export function processDepositRequest(
   depositRequest: electra.DepositRequest
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
+  const stateGloas = fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas) : null;
+  const pubkeyHex = stateGloas !== null ? toPubkeyHex(pubkey) : null;
 
   // Check if this is a builder or validator deposit
-  if (fork >= ForkSeq.gloas) {
-    const stateGloas = state as CachedBeaconStateGloas;
-    const pubkeyHex = toPubkeyHex(pubkey);
+  if (stateGloas !== null && pubkeyHex !== null) {
     const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
     const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
 
@@ -119,15 +119,13 @@ export function processDepositRequest(
   });
   state.pendingDeposits.push(pendingDeposit);
 
-  if (fork >= ForkSeq.gloas) {
-    const stateGloas = state as CachedBeaconStateGloas;
-    const pubkeyHex = toPubkeyHex(pubkey);
-    const pendingDepositPubkeyIndex = ensurePendingDepositPubkeyIndex(stateGloas);
+  if (stateGloas !== null && pubkeyHex !== null) {
+    const pendingDepositPubkeyIndex = ensurePendingDepositPubkeyIndexWritable(stateGloas);
     const newPendingDepositIndex = state.pendingDeposits.length - 1;
     const bucket = pendingDepositPubkeyIndex.get(pubkeyHex);
 
     if (bucket) {
-      bucket.push(newPendingDepositIndex);
+      pendingDepositPubkeyIndex.set(pubkeyHex, [...bucket, newPendingDepositIndex]);
     } else {
       pendingDepositPubkeyIndex.set(pubkeyHex, [newPendingDepositIndex]);
     }
@@ -138,7 +136,7 @@ export function processDepositRequest(
       cachedCount !== undefined &&
       isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
     ) {
-      verifiedPendingValidatorCount.set(pubkeyHex, cachedCount + 1);
+      ensurePendingValidatorVerifiedCountWritable(stateGloas).set(pubkeyHex, cachedCount + 1);
     }
   }
 }
@@ -161,8 +159,22 @@ export function ensurePendingDepositPubkeyIndex(state: CachedBeaconStateGloas): 
   }
 
   state.epochCtx.pendingDepositPubkeyIndex = pendingDepositPubkeyIndex;
+  state.epochCtx.pendingDepositPubkeyIndexShared = false;
   if (state.epochCtx.pendingValidatorVerifiedCount === null) {
     state.epochCtx.pendingValidatorVerifiedCount = new Map();
+    state.epochCtx.pendingValidatorVerifiedCountShared = false;
+  }
+
+  return pendingDepositPubkeyIndex;
+}
+
+function ensurePendingDepositPubkeyIndexWritable(state: CachedBeaconStateGloas): PendingDepositPubkeyIndex {
+  let pendingDepositPubkeyIndex = ensurePendingDepositPubkeyIndex(state);
+
+  if (state.epochCtx.pendingDepositPubkeyIndexShared) {
+    pendingDepositPubkeyIndex = new Map(pendingDepositPubkeyIndex);
+    state.epochCtx.pendingDepositPubkeyIndex = pendingDepositPubkeyIndex;
+    state.epochCtx.pendingDepositPubkeyIndexShared = false;
   }
 
   return pendingDepositPubkeyIndex;
@@ -171,9 +183,22 @@ export function ensurePendingDepositPubkeyIndex(state: CachedBeaconStateGloas): 
 function getPendingValidatorVerifiedCount(state: CachedBeaconStateGloas): PendingValidatorVerifiedCount {
   if (state.epochCtx.pendingValidatorVerifiedCount === null) {
     state.epochCtx.pendingValidatorVerifiedCount = new Map();
+    state.epochCtx.pendingValidatorVerifiedCountShared = false;
   }
 
   return state.epochCtx.pendingValidatorVerifiedCount;
+}
+
+function ensurePendingValidatorVerifiedCountWritable(state: CachedBeaconStateGloas): PendingValidatorVerifiedCount {
+  let verifiedPendingValidatorCount = getPendingValidatorVerifiedCount(state);
+
+  if (state.epochCtx.pendingValidatorVerifiedCountShared) {
+    verifiedPendingValidatorCount = new Map(verifiedPendingValidatorCount);
+    state.epochCtx.pendingValidatorVerifiedCount = verifiedPendingValidatorCount;
+    state.epochCtx.pendingValidatorVerifiedCountShared = false;
+  }
+
+  return verifiedPendingValidatorCount;
 }
 
 function getVerifiedPendingValidatorCountForPubkey(state: CachedBeaconStateGloas, pubkeyHex: PubkeyHex): number {
@@ -185,7 +210,7 @@ function getVerifiedPendingValidatorCountForPubkey(state: CachedBeaconStateGloas
 
   const bucket = ensurePendingDepositPubkeyIndex(state).get(pubkeyHex);
   if (!bucket) {
-    verifiedPendingValidatorCount.set(pubkeyHex, 0);
+    ensurePendingValidatorVerifiedCountWritable(state).set(pubkeyHex, 0);
     return 0;
   }
 
@@ -205,7 +230,7 @@ function getVerifiedPendingValidatorCountForPubkey(state: CachedBeaconStateGloas
     }
   }
 
-  verifiedPendingValidatorCount.set(pubkeyHex, validCount);
+  ensurePendingValidatorVerifiedCountWritable(state).set(pubkeyHex, validCount);
   return validCount;
 }
 

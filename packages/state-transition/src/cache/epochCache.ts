@@ -235,6 +235,11 @@ export class EpochCache {
    * Starts as `null` on states created from bytes and is built when needed.
    */
   pendingDepositPubkeyIndex: PendingDepositPubkeyIndex | null;
+  /**
+   * True when `pendingDepositPubkeyIndex` is shared with another cloned state and must be detached
+   * before mutating the map itself.
+   */
+  pendingDepositPubkeyIndexShared: boolean;
 
   /**
    * Caches the number of signature-valid pending deposits for each pubkey.
@@ -242,6 +247,11 @@ export class EpochCache {
    * that pubkey has not been checked for the current state yet.
    */
   pendingValidatorVerifiedCount: PendingValidatorVerifiedCount | null;
+  /**
+   * True when `pendingValidatorVerifiedCount` is shared with another cloned state and must be detached
+   * before mutating the map itself.
+   */
+  pendingValidatorVerifiedCountShared: boolean;
 
   // TODO GLOAS: See if we need to cache PTC for next epoch
   // PTC for previous epoch, required for slot N block validating slot N-1 attestations
@@ -286,7 +296,9 @@ export class EpochCache {
     currentSyncCommitteeIndexed: SyncCommitteeCache;
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     pendingDepositPubkeyIndex: PendingDepositPubkeyIndex | null;
+    pendingDepositPubkeyIndexShared: boolean;
     pendingValidatorVerifiedCount: PendingValidatorVerifiedCount | null;
+    pendingValidatorVerifiedCountShared: boolean;
     previousPayloadTimelinessCommittees: Uint32Array[];
     payloadTimelinessCommittees: Uint32Array[];
     epoch: Epoch;
@@ -319,7 +331,9 @@ export class EpochCache {
     this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.pendingDepositPubkeyIndex = data.pendingDepositPubkeyIndex;
+    this.pendingDepositPubkeyIndexShared = data.pendingDepositPubkeyIndexShared;
     this.pendingValidatorVerifiedCount = data.pendingValidatorVerifiedCount;
+    this.pendingValidatorVerifiedCountShared = data.pendingValidatorVerifiedCountShared;
     this.previousPayloadTimelinessCommittees = data.previousPayloadTimelinessCommittees;
     this.payloadTimelinessCommittees = data.payloadTimelinessCommittees;
     this.epoch = data.epoch;
@@ -566,7 +580,9 @@ export class EpochCache {
       currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed,
       pendingDepositPubkeyIndex: null,
+      pendingDepositPubkeyIndexShared: false,
       pendingValidatorVerifiedCount: null,
+      pendingValidatorVerifiedCountShared: false,
       previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees,
       epoch: currentEpoch,
@@ -581,6 +597,13 @@ export class EpochCache {
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     // Shallow copy all data from current epoch context to the next
     // All data is completely replaced, or only-appended
+    if (this.pendingDepositPubkeyIndex !== null) {
+      this.pendingDepositPubkeyIndexShared = true;
+    }
+    if (this.pendingValidatorVerifiedCount !== null) {
+      this.pendingValidatorVerifiedCountShared = true;
+    }
+
     return new EpochCache({
       config: this.config,
       // Common append-only structures shared with all states, no need to clone
@@ -613,14 +636,10 @@ export class EpochCache {
       currentTargetUnslashedBalanceIncrements: this.currentTargetUnslashedBalanceIncrements,
       currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
-      pendingDepositPubkeyIndex:
-        this.pendingDepositPubkeyIndex !== null
-          ? new Map(
-              Array.from(this.pendingDepositPubkeyIndex, ([pubkeyHex, indexes]) => [pubkeyHex, [...indexes]] as const)
-            )
-          : null,
-      pendingValidatorVerifiedCount:
-        this.pendingValidatorVerifiedCount !== null ? new Map(this.pendingValidatorVerifiedCount) : null,
+      pendingDepositPubkeyIndex: this.pendingDepositPubkeyIndex,
+      pendingDepositPubkeyIndexShared: this.pendingDepositPubkeyIndex !== null,
+      pendingValidatorVerifiedCount: this.pendingValidatorVerifiedCount,
+      pendingValidatorVerifiedCountShared: this.pendingValidatorVerifiedCount !== null,
       previousPayloadTimelinessCommittees: this.previousPayloadTimelinessCommittees,
       payloadTimelinessCommittees: this.payloadTimelinessCommittees,
       epoch: this.epoch,
