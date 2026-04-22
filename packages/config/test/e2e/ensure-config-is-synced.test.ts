@@ -28,6 +28,8 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // Future spec params not yet in Lodestar
   "EPOCHS_PER_SHUFFLING_PHASE" as keyof ChainConfig,
   "PROPOSER_SELECTION_GAP" as keyof ChainConfig,
+  // FCR params - not yet implemented in Lodestar
+  "CONFIRMATION_BYZANTINE_THRESHOLD" as keyof ChainConfig,
   // Future forks not yet implemented in Lodestar
   "HEZE_FORK_VERSION" as keyof ChainConfig,
   "HEZE_FORK_EPOCH" as keyof ChainConfig,

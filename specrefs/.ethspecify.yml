@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.4
+version: v1.7.0-alpha.5
 style: full
 
 specrefs:
@@ -51,6 +51,9 @@ exceptions:
     # heze (not implemented)
     - DOMAIN_INCLUSION_LIST_COMMITTEE#heze
 
+    # phase0 fast confirmation / not implemented
+    - COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
+
   containers:
     # gloas
     - ForkChoiceNode#gloas
@@ -86,6 +89,9 @@ exceptions:
     - ExpectedWithdrawals#gloas
     - LatestMessage#gloas
     - Store#gloas
+
+    # phase0 fast confirmation / not implemented
+    - FastConfirmationStore#phase0
 
     # heze (not implemented)
     - GetInclusionListResponse#heze
@@ -142,7 +148,6 @@ exceptions:
     - max_compressed_len#phase0
     - max_message_size#phase0
     - record_block_timeliness#phase0
-    - saturating_sub#phase0
     - seconds_to_milliseconds#phase0
     - store_target_checkpoint_state#phase0
     - update_proposer_boost_root#phase0
@@ -281,7 +286,6 @@ exceptions:
     # gloas
     - add_builder_to_registry#gloas
     - apply_withdrawals#gloas
-    - compute_balance_weighted_acceptance#gloas
     - compute_balance_weighted_selection#gloas
     - compute_fork_version#gloas
     - compute_proposer_indices#gloas
@@ -317,7 +321,6 @@ exceptions:
     - is_valid_proposal_slot#gloas
     - notify_ptc_messages#gloas
     - on_block#gloas
-    - on_execution_payload#gloas
     - on_payload_attestation_message#gloas
     - prepare_execution_payload#gloas
     - process_attestation#gloas
@@ -364,7 +367,6 @@ exceptions:
     - is_inclusion_list_bits_inclusive#heze
     - is_payload_inclusion_list_satisfied#heze
     - is_valid_inclusion_list_signature#heze
-    - on_execution_payload#heze
     - on_inclusion_list#heze
     - prepare_execution_payload#heze
     - process_inclusion_list#heze
@@ -372,7 +374,56 @@ exceptions:
     - should_extend_payload#heze
     - upgrade_to_heze#heze
 
+    # phase0 fast confirmation / not implemented
+    - adjust_committee_weight_estimate_to_ensure_safety#phase0
+    - compute_adversarial_weight#phase0
+    - compute_empty_slot_support_discount#phase0
+    - compute_honest_ffg_support_for_current_target#phase0
+    - compute_safety_threshold#phase0
+    - compute_shuffled_permutation#phase0
+    - estimate_committee_weight_between_slots#phase0
+    - find_latest_confirmed_descendant#phase0
+    - get_adversarial_weight#phase0
+    - get_ancestor_roots#phase0
+    - get_block_epoch#phase0
+    - get_block_slot#phase0
+    - get_block_support_between_slots#phase0
+    - get_checkpoint_for_block#phase0
+    - get_current_balance_source#phase0
+    - get_current_target#phase0
+    - get_current_target_score#phase0
+    - get_equivocation_score#phase0
+    - get_fast_confirmation_store#phase0
+    - get_latest_confirmed#phase0
+    - get_latest_message_epoch#phase0
+    - get_latest_message_epoch#gloas
+    - get_previous_balance_source#phase0
+    - get_pulled_up_head_state#phase0
+    - get_slot_committee#phase0
+    - get_support_discount#phase0
+    - is_ancestor#phase0
+    - is_confirmed_chain_safe#phase0
+    - is_full_validator_set_covered#phase0
+    - is_one_confirmed#phase0
+    - is_start_slot_at_epoch#phase0
+    - on_fast_confirmation#phase0
+    - update_fast_confirmation_variables#phase0
+    - will_current_target_be_justified#phase0
+    - will_no_conflicting_checkpoint_be_justified#phase0
+
+    # gloas / heze empty sources to skip
+    - apply_parent_execution_payload#gloas
+    - is_payload_verified#gloas
+    - on_execution_payload_envelope#gloas
+    - on_execution_payload_envelope#heze
+    - process_parent_execution_payload#gloas
+    - settle_builder_payment#gloas
+    - verify_execution_payload_envelope#gloas
+
   configs:
+    # phase0 fast confirmation / not implemented
+    - CONFIRMATION_BYZANTINE_THRESHOLD#phase0
+
     # heze (not implemented)
     - HEZE_FORK_EPOCH#heze
     - HEZE_FORK_VERSION#heze
