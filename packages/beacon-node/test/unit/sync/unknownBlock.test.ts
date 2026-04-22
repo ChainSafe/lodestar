@@ -13,10 +13,7 @@ import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {
-  CreateFromBlockProps,
-  PayloadEnvelopeInputSource,
-} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {PayloadEnvelopeInputSource} from "../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../src/chain/seenCache/seenBlockProposers.js";
@@ -87,7 +84,7 @@ function buildPayloadFixture({
 
   const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
   envelope.message.beaconBlockRoot = blockRoot;
-  envelope.message.slot = slot;
+  envelope.message.payload.slotNumber = slot;
 
   const columnSidecars = sampledColumns.map((index) => {
     const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
@@ -573,6 +570,7 @@ describe("UnknownBlockSync", () => {
         config: gloasConfig,
         genesisTime: 0,
         metrics: null,
+        serializedCache: {delete: vi.fn()} as unknown as IBeaconChain["serializedCache"],
         getBlockByRoot: vi.fn().mockResolvedValue(null),
         processExecutionPayload: vi.fn().mockResolvedValue(undefined),
         seenPayloadEnvelopeInputCache: {
@@ -583,7 +581,7 @@ describe("UnknownBlockSync", () => {
         seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
         forkChoice: {
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-          hasBlockHex: vi.fn().mockReturnValue(true),
+          hasBlockHex: vi.fn().mockReturnValue(false),
           getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         } as unknown as IForkChoice,
         ...chainOverrides,
@@ -1029,7 +1027,7 @@ describe("UnknownBlockSync", () => {
 
       const invalidEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
       invalidEnvelope.message.beaconBlockRoot = blockRoot;
-      invalidEnvelope.message.slot = 1;
+      invalidEnvelope.message.payload.slotNumber = 1;
 
       vi.mocked(validateGossipExecutionPayloadEnvelope).mockImplementationOnce(async (_chain, signedEnvelope) => {
         if (signedEnvelope === invalidEnvelope) {
@@ -1037,12 +1035,10 @@ describe("UnknownBlockSync", () => {
         }
       });
 
+      let connected = false;
       let cachedPayloadInput: PayloadEnvelopeInput | undefined;
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
-      const sendExecutionPayloadEnvelopesByRoot = vi
-        .fn()
-        .mockResolvedValueOnce([invalidEnvelope])
-        .mockResolvedValueOnce([envelope]);
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValueOnce([envelope]);
       const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           processExecutionPayload,
@@ -1051,119 +1047,36 @@ describe("UnknownBlockSync", () => {
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         },
-        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
+        networkOverrides: {
+          getConnectedPeers: () => (connected ? [peer] : []),
+          sendExecutionPayloadEnvelopesByRoot,
+        },
         peers: [{peerId: peer}],
       });
 
-      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
-        rootHex: blockRootHex,
+      emitter.emit(ChainEvent.envelopeUnknownBlock, {
+        envelope: invalidEnvelope,
         peer,
         source: BlockInputSource.gossip,
       });
 
       await sleep(20);
 
-      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
       expect(processExecutionPayload).not.toHaveBeenCalled();
 
+      connected = true;
       cachedPayloadInput = payloadInput;
       emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
 
       await sleep(50);
 
-      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
       expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(1, peer, [blockRoot]);
-      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenNthCalledWith(2, peer, [blockRoot]);
       expect(validateGossipExecutionPayloadEnvelope).toHaveBeenCalledTimes(2);
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
       expect(payloadInput.hasPayloadEnvelope()).toBe(true);
-    });
-
-    it("refetches a replacement envelope after payload import rejects the cached one", async () => {
-      const peer = await getRandPeerIdStr();
-      const {
-        block,
-        blockRoot,
-        blockRootHex,
-        payloadInput,
-        envelope: invalidEnvelope,
-      } = buildPayloadFixture({
-        blobCount: 0,
-        sampledColumns: [],
-        slot: 1,
-      });
-
-      const recoveryEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      recoveryEnvelope.message.beaconBlockRoot = blockRoot;
-      recoveryEnvelope.message.slot = 1;
-
-      const processExecutionPayload = vi
-        .fn()
-        .mockRejectedValueOnce(
-          new PayloadError({
-            code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-            message: "bad payload envelope",
-          })
-        )
-        .mockResolvedValueOnce(undefined);
-      let cachedPayloadInput: PayloadEnvelopeInput | undefined = payloadInput;
-      const prunePayloadInput = vi.fn().mockImplementation((root: string) => {
-        if (root === blockRootHex) {
-          cachedPayloadInput = undefined;
-        }
-      });
-      const addPayloadInput = vi.fn().mockImplementation((props: CreateFromBlockProps) => {
-        cachedPayloadInput = PayloadEnvelopeInput.createFromBlock(props);
-        return cachedPayloadInput;
-      });
-      const sendExecutionPayloadEnvelopesByRoot = vi
-        .fn()
-        .mockResolvedValueOnce([invalidEnvelope])
-        .mockResolvedValueOnce([recoveryEnvelope]);
-      const {emitter} = setupPayloadSyncTest({
-        chainOverrides: {
-          processExecutionPayload,
-          custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
-          getBlockByRoot: vi.fn().mockResolvedValue({block, executionOptimistic: false, finalized: false}),
-          seenPayloadEnvelopeInputCache: {
-            add: addPayloadInput,
-            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
-            prune: prunePayloadInput,
-          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
-        },
-        networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
-        peers: [{peerId: peer}],
-      });
-
-      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
-        rootHex: blockRootHex,
-        peer,
-        source: BlockInputSource.gossip,
-      });
-
-      await sleep(20);
-
-      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
-      expect(processExecutionPayload).toHaveBeenCalledTimes(1);
-      expect(prunePayloadInput).toHaveBeenCalledWith(blockRootHex);
-      expect(cachedPayloadInput).toBeUndefined();
-
-      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
-        rootHex: blockRootHex,
-        peer,
-        source: BlockInputSource.gossip,
-      });
-
-      await sleep(50);
-
-      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(2);
-      expect(processExecutionPayload).toHaveBeenCalledTimes(2);
-      expect(addPayloadInput).toHaveBeenCalledTimes(1);
-      expect(cachedPayloadInput).toBeDefined();
-      expect(processExecutionPayload).toHaveBeenNthCalledWith(2, cachedPayloadInput);
-      expect(cachedPayloadInput?.hasPayloadEnvelope()).toBe(true);
-      expect(cachedPayloadInput?.getPayloadEnvelope()).toBe(recoveryEnvelope);
     });
 
     it("retries payload processing on a later scheduler pass after an execution engine error", async () => {
@@ -1292,7 +1205,7 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).toHaveBeenCalledWith(payloadInput);
     });
 
-    it("recovers parent payload for unknown parent block when parent block is already known", async () => {
+    it("downloads parent payload for unknown parent block when parent block is already known", async () => {
       const peer = await getRandPeerIdStr();
       const parentPayloadHash = Buffer.alloc(32, 0x33);
       const {
@@ -1451,7 +1364,7 @@ describe("UnknownBlockSync", () => {
       expect(sendExecutionPayloadEnvelopesByRoot).not.toHaveBeenCalled();
       expect(processBlock).not.toHaveBeenCalled();
       expect(seenBlockInputPrune).toHaveBeenCalledWith(childBlockRootHex);
-      expect(seenPayloadPrune).toHaveBeenCalledWith(childBlockRootHex);
+      expect(seenPayloadPrune).not.toHaveBeenCalled();
     });
 
     it("removes pending descendants after invalid parent payload", async () => {
@@ -1523,14 +1436,13 @@ describe("UnknownBlockSync", () => {
       expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
       expect(processExecutionPayload).toHaveBeenCalledTimes(1);
       expect(processBlock).not.toHaveBeenCalled();
-      expect(seenPayloadPrune).toHaveBeenCalledWith(parentRootHex);
+      expect(seenPayloadPrune).not.toHaveBeenCalled();
 
       emitter.emit(routes.events.EventType.executionPayload, {
         slot: 99,
         builderIndex: 0,
         blockHash: toRootHex(Buffer.alloc(32, 0x44)),
         blockRoot: toRootHex(Buffer.alloc(32, 0x55)),
-        stateRoot: toRootHex(Buffer.alloc(32, 0x66)),
         executionOptimistic: false,
       });
 

@@ -33,23 +33,14 @@ export async function persistPayloadEnvelopeInput(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput
 ): Promise<void> {
-  await writePayloadEnvelopeInputToDb
-    .call(this, payloadInput)
-    .catch((e) => {
-      this.logger.error(
-        "Error persisting payload envelope in hot db",
-        {
-          slot: payloadInput.slot,
-          root: payloadInput.blockRootHex,
-        },
-        e
-      );
-    })
-    .finally(() => {
-      this.seenPayloadEnvelopeInputCache.prune(payloadInput.blockRootHex);
-      this.logger.debug("Pruned payload envelope input", {
+  await writePayloadEnvelopeInputToDb.call(this, payloadInput).catch((e) => {
+    this.logger.error(
+      "Error persisting payload envelope in hot db",
+      {
         slot: payloadInput.slot,
         root: payloadInput.blockRootHex,
-      });
-    });
+      },
+      e
+    );
+  });
 }

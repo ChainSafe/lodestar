@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {SerializedCache} from "../../util/serializedCache.js";
@@ -15,6 +15,7 @@ export type SeenPayloadEnvelopeInputModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   serializedCache: SerializedCache;
+  hasValidatedPayload: (blockRootHex: RootHex) => boolean;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -22,21 +23,32 @@ export type SeenPayloadEnvelopeInputModules = {
 /**
  * Cache for tracking PayloadEnvelopeInput instances, keyed by beacon block root.
  *
- * Created during block import when a block is processed.
- * Pruned on finalization and after payload is written to DB.
+ * Created during block import when a Gloas block is processed. Entries stay resident until the
+ * block's payload is validated in fork choice, so later envelope / column validation can reuse
+ * the same PayloadEnvelopeInput created by importBlock(). Once a payload is validated, older
+ * entries can be evicted on finalization.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
+  private readonly hasValidatedPayload: (blockRootHex: RootHex) => boolean;
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
 
-  constructor({chainEvents, signal, serializedCache, metrics, logger}: SeenPayloadEnvelopeInputModules) {
+  constructor({
+    chainEvents,
+    signal,
+    serializedCache,
+    hasValidatedPayload,
+    metrics,
+    logger,
+  }: SeenPayloadEnvelopeInputModules) {
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
+    this.hasValidatedPayload = hasValidatedPayload;
     this.metrics = metrics;
     this.logger = logger;
 
@@ -59,16 +71,7 @@ export class SeenPayloadEnvelopeInput {
   }
 
   private onFinalized = (checkpoint: CheckpointWithHex): void => {
-    // Prune all entries with slot < finalized slot
-    const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    let deletedCount = 0;
-    for (const [, input] of this.payloadInputs) {
-      if (input.slot < finalizedSlot) {
-        this.evictPayloadInput(input);
-        deletedCount++;
-      }
-    }
-    this.logger?.debug("SeenPayloadEnvelopeInput.onFinalized deleted cached entries", {deletedCount});
+    this.pruneBelow(computeStartSlotAtEpoch(checkpoint.epoch));
   };
 
   add(props: CreateFromBlockProps): PayloadEnvelopeInput {
@@ -98,6 +101,29 @@ export class SeenPayloadEnvelopeInput {
 
   size(): number {
     return this.payloadInputs.size;
+  }
+
+  pruneBelow(slot: Slot): void {
+    let deletedCount = 0;
+    let retainedUnvalidatedCount = 0;
+    for (const [, input] of this.payloadInputs) {
+      if (input.slot >= slot) {
+        continue;
+      }
+
+      if (!this.hasValidatedPayload(input.blockRootHex)) {
+        retainedUnvalidatedCount++;
+        continue;
+      }
+
+      this.evictPayloadInput(input);
+      deletedCount++;
+    }
+    this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelow deleted entries", {
+      slot,
+      deletedCount,
+      retainedUnvalidatedCount,
+    });
   }
 
   private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {

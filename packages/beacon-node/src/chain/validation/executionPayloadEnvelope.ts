@@ -6,7 +6,6 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {getOrRecoverPayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -57,9 +56,9 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  const payloadInput = await getOrRecoverPayloadEnvelopeInput(chain, blockRootHex);
+  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
   if (!payloadInput) {
-    // PayloadEnvelopeInput should be recoverable from a known block.
+    // importBlock() is the only place that creates PayloadEnvelopeInput for a known Gloas block.
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
       blockRoot: blockRootHex,
@@ -70,7 +69,7 @@ async function validateExecutionPayloadEnvelope(
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
-      slot: envelope.slot,
+      slot: payload.slotNumber,
     });
   }
 

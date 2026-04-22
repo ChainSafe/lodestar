@@ -122,7 +122,7 @@ export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot
   }
 
   if (isPendingPayloadEnvelope(payload)) {
-    return payload.envelope.message.slot;
+    return payload.envelope.message.payload.slotNumber;
   }
 
   return "unknown";

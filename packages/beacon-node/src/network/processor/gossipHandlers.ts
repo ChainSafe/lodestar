@@ -35,11 +35,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
-import {
-  PayloadEnvelopeInput,
-  PayloadEnvelopeInputSource,
-  getOrRecoverPayloadEnvelopeInput,
-} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
@@ -446,11 +442,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
     }
 
-    const payloadInput = await getOrRecoverPayloadEnvelopeInput(chain, blockRootHex);
+    const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
 
     if (!payloadInput) {
       // This should not happen for gossip because the block should already be known by the time
-      // payload columns are processed, and the PayloadEnvelopeInput is recoverable from that block.
+      // payload columns are processed.
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
         code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
         slot,
@@ -1102,10 +1098,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
-      const payloadInput = await getOrRecoverPayloadEnvelopeInput(chain, blockRootHex);
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
 
       if (!payloadInput) {
-        // This shouldn't happen because the block should already be known and its payload input is recoverable.
         throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
           code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
           blockRoot: blockRootHex,

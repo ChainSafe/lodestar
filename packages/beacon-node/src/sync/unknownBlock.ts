@@ -8,11 +8,7 @@ import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} fr
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
-import {
-  PayloadEnvelopeInput,
-  PayloadEnvelopeInputSource,
-  getOrRecoverPayloadEnvelopeInput,
-} from "../chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
@@ -104,7 +100,7 @@ export class BlockInputSync {
    * block RootHex -> PendingBlock. To avoid finding same root at the same time
    */
   private readonly pendingBlocks = new Map<RootHex, BlockInputSyncCacheItem>();
-  // Payload recovery is keyed by beacon block root as well, so block and payload queues can unblock each other.
+  // Payload sync is keyed by beacon block root as well, so block and payload queues can unblock each other.
   private readonly pendingPayloads = new Map<RootHex, PayloadSyncCacheItem>();
   private readonly knownBadBlocks = new Set<RootHex>();
   private readonly maxPendingBlocks;
@@ -399,10 +395,14 @@ export class BlockInputSync {
       this.pendingPayloads.set(rootHex, pendingPayload);
 
       this.logger.verbose("Added payload envelope to BlockInputSync.pendingPayloads", {
-        slot: envelope.message.slot,
+        slot: envelope.message.payload.slotNumber,
         root: rootHex,
       });
     } else {
+      this.logger.debug("Overwriting pending payload envelope for root already waiting for block", {
+        slot: envelope.message.payload.slotNumber,
+        root: rootHex,
+      });
       pendingPayload.envelope = envelope;
     }
 
@@ -469,12 +469,12 @@ export class BlockInputSync {
       return {kind: "parentBlock", rootHex: parentRootHex};
     }
 
-    if (this.config.getForkSeq(blockInput.slot) < ForkSeq.gloas) {
-      return {kind: "ready"};
-    }
-
     if (!blockInput.hasBlock()) {
       return {kind: "block", rootHex: blockInput.blockRootHex};
+    }
+
+    if (this.config.getForkSeq(blockInput.slot) < ForkSeq.gloas) {
+      return {kind: "ready"};
     }
 
     const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
@@ -543,14 +543,13 @@ export class BlockInputSync {
     previous?: PayloadSyncCacheItem,
     envelope?: gloas.SignedExecutionPayloadEnvelope
   ): PendingPayloadInput {
-    // Normalize every payload recovery path into the same cache shape while preserving first-seen
+    // Normalize every payload queueing path into the same cache shape while preserving first-seen
     // timing and peer provenance from any earlier by-root or envelope-only entry.
-    const recoveredEnvelope =
-      envelope ?? (previous && isPendingPayloadEnvelope(previous) ? previous.envelope : undefined);
+    const queuedEnvelope = envelope ?? (previous && isPendingPayloadEnvelope(previous) ? previous.envelope : undefined);
 
-    if (recoveredEnvelope && !payloadInput.hasPayloadEnvelope()) {
+    if (queuedEnvelope && !payloadInput.hasPayloadEnvelope()) {
       payloadInput.addPayloadEnvelope({
-        envelope: recoveredEnvelope,
+        envelope: queuedEnvelope,
         source: PayloadEnvelopeInputSource.byRoot,
         seenTimestampSec: Date.now() / 1000,
       });
@@ -584,13 +583,23 @@ export class BlockInputSync {
 
     for (const block of ancestors) {
       const advanceResult = this.advancePendingBlock(block);
-      if (advanceResult === "ready") {
-        processedBlocks++;
-        this.processReadyBlock(block).catch((e) => {
-          this.logger.debug("Unexpected error - process old downloaded block", {}, e);
-        });
-      } else if (advanceResult === "queued_block" || advanceResult === "queued_parent_block") {
-        shouldRerunBlockSearch = true;
+      switch (advanceResult) {
+        case "ready":
+          processedBlocks++;
+          this.processReadyBlock(block).catch((e) => {
+            this.logger.debug("Unexpected error - process old downloaded block", {}, e);
+          });
+          break;
+
+        case "queued_block":
+        case "queued_parent_block":
+          shouldRerunBlockSearch = true;
+          break;
+
+        case "queued_parent_payload":
+        case "blocked":
+        case "removed":
+          break;
       }
     }
 
@@ -685,18 +694,24 @@ export class BlockInputSync {
 
       if (parentInForkChoice) {
         // If the direct parent is already in fork choice, let the block state machine decide if
-        // the next step is block import, parent payload recovery, or branch removal.
+        // the next step is block import, parent payload download, or branch removal.
         const advanceResult = this.advancePendingBlock(pending);
-        if (advanceResult === "ready") {
-          this.processReadyBlock(pending).catch((e) => {
-            this.logger.debug("Unexpected error - process newly downloaded block", logCtx2, e);
-          });
-        } else if (
-          advanceResult === "queued_block" ||
-          advanceResult === "queued_parent_block" ||
-          advanceResult === "queued_parent_payload"
-        ) {
-          this.triggerUnknownBlockSearch();
+        switch (advanceResult) {
+          case "ready":
+            this.processReadyBlock(pending).catch((e) => {
+              this.logger.debug("Unexpected error - process newly downloaded block", logCtx2, e);
+            });
+            break;
+
+          case "queued_block":
+          case "queued_parent_block":
+          case "queued_parent_payload":
+            this.triggerUnknownBlockSearch();
+            break;
+
+          case "blocked":
+          case "removed":
+            break;
         }
       } else if (blockSlot <= finalizedSlot) {
         // the common ancestor of the downloading chain and canonical chain should be at least the finalized slot and
@@ -787,46 +802,18 @@ export class BlockInputSync {
             pendingBlock.status = PendingBlockInputStatus.downloaded;
             break;
 
-          case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN: {
-            const missingDependency = this.getMissingBlockDependency(pendingBlock.blockInput);
-            if (missingDependency.kind === "invalidParentPayload") {
-              this.logger.debug(
-                "Attempted to process block with conflicting parent payload hash",
-                {
-                  ...errorData,
-                  parentRoot: missingDependency.parentRootHex,
-                  parentBlockHash: missingDependency.parentBlockHashHex,
-                },
-                res.err
-              );
-              this.removeAndDownScoreAllDescendants(pendingBlock);
-              break;
-            }
-
-            if (missingDependency.kind === "block") {
-              this.logger.debug("Attempted to process block before its full body was available", errorData, res.err);
-              pendingBlock.status = PendingBlockInputStatus.pending;
-              this.triggerUnknownBlockSearch();
-              break;
-            }
-
-            this.logger.debug(
-              "Attempted to process block but its parent payload was still unknown",
-              errorData,
+          case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
+            this.logger.error(
+              "processReadyBlock() hit unexpected parent payload dependency after readiness checks",
+              {
+                ...errorData,
+                parentRoot: pendingBlock.blockInput.parentRootHex,
+                parentBlockHash: res.err.type.parentBlockHash,
+              },
               res.err
             );
-            for (const peerIdStr of pendingBlock.peerIdStrings) {
-              this.addByPayloadRootHex(
-                missingDependency.kind === "parentPayload"
-                  ? missingDependency.rootHex
-                  : pendingBlock.blockInput.parentRootHex,
-                peerIdStr
-              );
-            }
             pendingBlock.status = PendingBlockInputStatus.downloaded;
-            this.triggerUnknownBlockSearch();
             break;
-          }
 
           case BlockErrorCode.EXECUTION_ENGINE_ERROR:
             // Removing the block(s) without penalizing the peers, hoping for EL to
@@ -850,9 +837,9 @@ export class BlockInputSync {
   }
 
   /**
-   * Reconcile an envelope-first payload entry once enough local block context exists to rebuild
-   * a PayloadEnvelopeInput. This may queue block recovery, validate the speculative envelope, or
-   * downgrade back to by-root fetching when the cached envelope does not match the recovered block.
+   * Reconcile an envelope-first payload entry once the block import path has seeded its
+   * PayloadEnvelopeInput. This may queue block download, validate the speculative envelope, or
+   * downgrade back to by-root fetching when the cached envelope does not match the imported block.
    */
   private async reconcilePayloadEnvelope(pendingPayload: PendingPayloadEnvelope): Promise<void> {
     const rootHex = getPayloadSyncCacheItemRootHex(pendingPayload);
@@ -861,7 +848,7 @@ export class BlockInputSync {
       return;
     }
 
-    const payloadInput = await getOrRecoverPayloadEnvelopeInput(this.chain, rootHex);
+    const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
     if (!payloadInput) {
       if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
         // Column commitments live on the block body, so an envelope-only entry has to pull the block first.
@@ -873,6 +860,10 @@ export class BlockInputSync {
         if (pendingBlock && this.network.getConnectedPeers().length > 0) {
           await this.downloadBlock(pendingBlock);
         }
+      } else {
+        this.logger.debug("Missing PayloadEnvelopeInput for known block while reconciling payload envelope", {
+          root: rootHex,
+        });
       }
       return;
     }
@@ -884,7 +875,7 @@ export class BlockInputSync {
       if (validationResult.err) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
-          {slot: pendingPayload.envelope.message.slot, root: rootHex},
+          {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
           validationResult.err
         );
 
@@ -994,7 +985,7 @@ export class BlockInputSync {
     if (res.err instanceof PayloadError) {
       switch (res.err.type.code) {
         case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
-          // Payload recovery discovered the block dependency before the block queue did. Re-enqueue the
+          // Payload sync discovered the block dependency before the block queue did. Re-enqueue the
           // block and keep the payload ready so the scheduler can retry once the block reaches fork choice.
           this.addByRootHex(rootHex);
           pendingPayload.status = PendingPayloadInputStatus.downloaded;
@@ -1009,6 +1000,8 @@ export class BlockInputSync {
         case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
         case PayloadErrorCode.INVALID_SIGNATURE:
         case PayloadErrorCode.STATE_TRANSITION_ERROR:
+          // TODO GLOAS: Decide how invalid payload inputs should eventually leave memory without
+          // reintroducing envelope replacement / recreation flows.
           this.logger.debug("Error processing payload from unknown sync", errorData, res.err);
           this.removePendingPayloadAndDescendants(rootHex);
           break;
@@ -1025,7 +1018,7 @@ export class BlockInputSync {
   }
 
   /**
-   * Download payload material keyed by beacon block root. Unlike block recovery, payload recovery may
+   * Download payload material keyed by beacon block root. Unlike block download, payload sync may
    * already have a locally cached envelope or partial columns, so each attempt starts from local state
    * and only asks peers for the remaining pieces.
    */
@@ -1039,7 +1032,7 @@ export class BlockInputSync {
     let slot = getPayloadSyncCacheItemSlot(cacheItem);
     let payloadInput = isPendingPayloadInput(cacheItem)
       ? cacheItem.payloadInput
-      : await getOrRecoverPayloadEnvelopeInput(this.chain, rootHex);
+      : this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
     let envelope = isPendingPayloadEnvelope(cacheItem)
       ? cacheItem.envelope
       : payloadInput?.hasPayloadEnvelope()
@@ -1064,11 +1057,14 @@ export class BlockInputSync {
       try {
         if (!envelope) {
           envelope = await this.fetchExecutionPayloadEnvelope(peerId, blockRoot, rootHex);
-          slot = envelope.message.slot;
+          slot = envelope.message.payload.slotNumber;
         }
 
-        payloadInput ??= await getOrRecoverPayloadEnvelopeInput(this.chain, rootHex);
+        payloadInput ??= this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
         if (!payloadInput) {
+          if (this.chain.forkChoice.hasBlockHex(rootHex)) {
+            throw new Error(`Missing PayloadEnvelopeInput for known block ${rootHex}`);
+          }
           // Keep the validated envelope around, but wait for the block body before turning it into a full payload input.
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
@@ -1390,7 +1386,8 @@ export class BlockInputSync {
 
   // Once a parent payload is invalid, every descendant waiting on that payload lineage becomes unrecoverable too.
   private removePendingPayloadAndDescendants(rootHex: RootHex): void {
-    this.chain.seenPayloadEnvelopeInputCache.prune(rootHex);
+    // Keep PayloadEnvelopeInput resident in the seen cache. importBlock() owns that object and
+    // later validation/finalization logic decides when it can leave memory.
     this.pendingPayloads.delete(rootHex);
 
     const badPendingBlocks = getAllDescendantBlocks(rootHex, this.pendingBlocks);
@@ -1401,7 +1398,6 @@ export class BlockInputSync {
       this.pendingBlocks.delete(descendantRootHex);
       this.pendingPayloads.delete(descendantRootHex);
       this.chain.seenBlockInputCache.prune(descendantRootHex);
-      this.chain.seenPayloadEnvelopeInputCache.prune(descendantRootHex);
       this.logger.debug("Removing pending descendant after invalid parent payload", {
         slot: getBlockInputSyncCacheItemSlot(block),
         blockRoot: descendantRootHex,
@@ -1423,7 +1419,8 @@ export class BlockInputSync {
       this.pendingBlocks.delete(rootHex);
       this.pendingPayloads.delete(rootHex);
       this.chain.seenBlockInputCache.prune(rootHex);
-      this.chain.seenPayloadEnvelopeInputCache.prune(rootHex);
+      // Keep PayloadEnvelopeInput resident in the seen cache for consistency with the
+      // importBlock()-owned lifecycle.
       this.logger.debug("Removing bad/unknown/incomplete BlockInputSyncCacheItem", {
         slot,
         blockRoot: rootHex,
