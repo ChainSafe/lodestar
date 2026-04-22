@@ -393,7 +393,7 @@ const forkChoiceTest =
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
-                  "0x",
+                  ZERO_HASH_HEX,
                   ExecutionStatus.Valid
                 );
                 if (!isValid) throw Error("Expect error since this is a negative test");
