@@ -42,7 +42,8 @@ export const logOptions: CliCommandOptions<LogArgs> = {
   },
 
   logFileDirMaxSize: {
-    description: "Maximum reachable size of all output logs in MB. Only applies when log file daily rotation is enabled",
+    description:
+      "Maximum reachable size of all output logs in MB. Only applies when log file daily rotation is enabled",
     default: 2048,
     type: "number",
   },
