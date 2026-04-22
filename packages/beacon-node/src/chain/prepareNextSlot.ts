@@ -205,19 +205,19 @@ export class PrepareNextSlotScheduler {
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
+        // every slot.
+        // Without the flag, emit the event if we are proposing in the next slot.
         if (
-          this.chain.opts.emitPayloadAttributes === true &&
+          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
         ) {
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
-            parentBlockRoot: fromHex(headRoot),
+            parentBlockRoot: fromHex(updatedHeadRoot),
             parentBlockHash,
-            // The likely consumers of this API are builders and will anyway ignore the
-            // feeRecipient, so just pass zero hash for now till a real use case arises
-            feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
