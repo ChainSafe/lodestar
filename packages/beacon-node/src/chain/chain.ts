@@ -5,6 +5,7 @@ import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithPayloadStatus, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
+  BUILDER_INDEX_SELF_BUILD,
   EFFECTIVE_BALANCE_INCREMENT,
   type ForkPostFulu,
   type ForkPostGloas,
@@ -1060,7 +1061,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    const {newStateRoot, proposerReward, postState} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
@@ -1074,7 +1075,21 @@ export class BeaconChain implements IBeaconChain {
       throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
     }
     if (isForkPostGloas(fork)) {
-      (produceResult as ProduceFullGloas).stateRoot = newStateRoot;
+      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      signedEnvelope.message = {
+        payload: (produceResult as ProduceFullGloas).executionPayload,
+        executionRequests: (produceResult as ProduceFullGloas).executionRequests,
+        builderIndex: BUILDER_INDEX_SELF_BUILD,
+        beaconBlockRoot: blockRoot,
+        slot,
+        stateRoot: ZERO_HASH,
+      };
+      const postEnvelopeState = postState.processExecutionPayloadEnvelope(signedEnvelope, {
+        verifySignature: false,
+        verifyStateRoot: false,
+        dontTransferCache: true,
+      });
+      (produceResult as ProduceFullGloas).envelopeStateRoot = postEnvelopeState.hashTreeRoot();
     }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.

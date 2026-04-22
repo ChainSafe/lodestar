@@ -28,7 +28,7 @@ describe("api/validator - getExecutionPayloadEnvelope", () => {
     api = getValidatorApi(defaultApiOptions, {...modules, config});
   });
 
-  it("returns the cached Gloas stateRoot for self-build envelopes", async () => {
+  it("returns the cached Gloas envelopeStateRoot for self-build envelopes", async () => {
     const slot = 2 * SLOTS_PER_EPOCH;
     const beaconBlockRoot = Buffer.alloc(32, 0x11);
     const executionPayload = {
@@ -36,7 +36,7 @@ describe("api/validator - getExecutionPayloadEnvelope", () => {
       blockHash: Buffer.alloc(32, 0x22),
     };
     const executionRequests = ssz.electra.ExecutionRequests.defaultValue();
-    const stateRoot = Buffer.alloc(32, 0x33);
+    const envelopeStateRoot = Buffer.alloc(32, 0x33);
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
@@ -46,7 +46,7 @@ describe("api/validator - getExecutionPayloadEnvelope", () => {
       type: BlockType.Full,
       executionPayload,
       executionRequests,
-      stateRoot,
+      envelopeStateRoot,
     } as never);
 
     const {data, meta} = await api.getExecutionPayloadEnvelope({slot, beaconBlockRoot});
@@ -55,6 +55,6 @@ describe("api/validator - getExecutionPayloadEnvelope", () => {
     expect(toRootHex(data.beaconBlockRoot)).toBe(toRootHex(beaconBlockRoot));
     expect(toRootHex(data.payload.blockHash)).toBe(toRootHex(executionPayload.blockHash));
     expect(data.executionRequests).toEqual(executionRequests);
-    expect(toRootHex(data.stateRoot)).toBe(toRootHex(stateRoot));
+    expect(toRootHex(data.stateRoot)).toBe(toRootHex(envelopeStateRoot));
   });
 });
