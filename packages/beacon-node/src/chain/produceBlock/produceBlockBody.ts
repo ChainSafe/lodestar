@@ -18,7 +18,6 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
-  type IBeaconStateViewGloas,
   computeTimeAtSlot,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -616,7 +615,11 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
     forkChoice?: IForkChoice;
-    seenPayloadEnvelopeInputCache?: {get(rootHex: string): {hasPayloadEnvelope(): boolean; getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope} | undefined};
+    seenPayloadEnvelopeInputCache?: {
+      get(
+        rootHex: string
+      ): {hasPayloadEnvelope(): boolean; getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope} | undefined;
+    };
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -627,7 +630,7 @@ export async function prepareExecutionPayload(
   state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {
-  let parentHash = state.latestBlockHash;
+  let parentHash = parentBlockHash;
   let withdrawalsOverride: capella.Withdrawal[] | undefined;
 
   // For Gloas: determine FULL vs EMPTY parent per spec's prepare_execution_payload
@@ -651,7 +654,9 @@ export async function prepareExecutionPayload(
       if (payloadInput?.hasPayloadEnvelope()) {
         // Build on FULL variant: apply parent payload to compute correct withdrawals,
         // use bid.blockHash as EL head (per spec's prepare_execution_payload)
-        const gloasView = state as unknown as IBeaconStateViewGloas;
+        const gloasView = state as unknown as {
+          getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[];
+        };
         withdrawalsOverride = gloasView.getExpectedWithdrawalsForFullParent(payloadInput.getPayloadEnvelope());
         parentHash = gloasState.latestExecutionPayloadBid.blockHash;
       }

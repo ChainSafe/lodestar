@@ -8,7 +8,10 @@ import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
 import {ImportPayloadOpts} from "./types.js";
-import {verifyExecutionPayloadEnvelope, verifyExecutionPayloadEnvelopeSignature} from "./verifyExecutionPayloadEnvelope.js";
+import {
+  verifyExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "./verifyExecutionPayloadEnvelope.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
@@ -94,12 +97,12 @@ export async function importExecutionPayload(
   const envelope = signedEnvelope.message;
   const blockRootHex = payloadInput.blockRootHex;
   const blockHashHex = payloadInput.getBlockHashHex();
-  const fork = this.config.getForkName(envelope.slot);
+  const fork = this.config.getForkName(envelope.payload.slotNumber);
 
   // 1. Emit `execution_payload_available` event at the start of import
-  if (this.clock.currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+  if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
-      slot: envelope.slot,
+      slot: envelope.payload.slotNumber,
       blockRoot: blockRootHex,
     });
   }
@@ -211,7 +214,7 @@ export async function importExecutionPayload(
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
         "Error pushing payload envelope to unfinalized write queue",
-        {slot: envelope.slot, blockRoot: blockRootHex},
+        {slot: envelope.payload.slotNumber, blockRoot: blockRootHex},
         e as Error
       );
     }
@@ -228,9 +231,9 @@ export async function importExecutionPayload(
   }
 
   // 9. Emit event after payload is fully verified and imported to fork choice
-  if (this.clock.currentSlot - envelope.slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+  if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
-      slot: envelope.slot,
+      slot: envelope.payload.slotNumber,
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
@@ -240,7 +243,7 @@ export async function importExecutionPayload(
   }
 
   this.logger.verbose("Execution payload imported", {
-    slot: envelope.slot,
+    slot: envelope.payload.slotNumber,
     builderIndex: envelope.builderIndex,
     blockRoot: blockRootHex,
     blockHash: blockHashHex,

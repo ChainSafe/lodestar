@@ -13,10 +13,7 @@ import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
  * Spec: consensus-specs#5094
  * https://github.com/ethereum/consensus-specs/blob/26ed32e/specs/gloas/beacon-chain.md
  */
-export function processParentExecutionPayload(
-  state: CachedBeaconStateGloas,
-  block: BeaconBlock<ForkPostGloas>
-): void {
+export function processParentExecutionPayload(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const bid = block.body.signedExecutionPayloadBid.message;
   const parentBid = state.latestExecutionPayloadBid;
   const requests = block.body.parentExecutionRequests;

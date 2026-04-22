@@ -9,17 +9,15 @@ export function computeAnchorCheckpoint(
   anchorState: BeaconStateAllForks
 ): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
   let blockHeader: phase0.BeaconBlockHeader;
-  let root: Uint8Array;
 
   blockHeader = ssz.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
   if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = anchorState.hashTreeRoot();
   }
-  root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
 
   return {
     checkpoint: {
-      root,
+      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
       // the checkpoint epoch = computeEpochAtSlot(anchorState.slot) + 1 if slot is not at epoch boundary
       // this is similar to a process_slots() call
       epoch: computeCheckpointEpochAtStateSlot(anchorState.slot),

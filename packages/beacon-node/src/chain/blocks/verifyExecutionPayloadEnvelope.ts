@@ -1,12 +1,12 @@
 import {BeaconConfig} from "@lodestar/config";
-import {gloas, ssz} from "@lodestar/types";
-import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {
   type IBeaconStateViewGloas,
   type PubkeyCache,
   computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
+import {gloas, ssz} from "@lodestar/types";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {IBlsVerifier} from "../bls/index.js";
 
 export type VerifyExecutionPayloadEnvelopeOpts = {
@@ -42,8 +42,8 @@ export function verifyExecutionPayloadEnvelope(
     );
   }
 
-  if (envelope.slot !== state.slot) {
-    throw new Error(`Slot mismatch between envelope and state envelope=${envelope.slot} state=${state.slot}`);
+  if (payload.slotNumber !== state.slot) {
+    throw new Error(`Slot mismatch between payload and state payload=${payload.slotNumber} state=${state.slot}`);
   }
 
   // Verify consistency with the committed bid
