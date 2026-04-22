@@ -294,7 +294,7 @@ export const BeaconState = new ContainerType(
     ptcWindow: PtcWindow, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
-); // New in GLOAS:EIP7732
+);
 
 export const DataColumnSidecar = new ContainerType(
   {
