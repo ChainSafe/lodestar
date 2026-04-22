@@ -2,7 +2,6 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -59,9 +58,10 @@ describe("block archiver task", () => {
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
     const nonCanonicalBlocks = [blocks[2]];
     const currentEpoch = 8;
-    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocks").mockReturnValue({
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
       ancestors: canonicalBlocks,
       nonAncestors: nonCanonicalBlocks,
+      previousFinalizedFull: undefined,
     });
     await archiveBlocks(
       config,
@@ -69,7 +69,7 @@ describe("block archiver task", () => {
       forkChoiceStub,
       lightclientServer,
       logger,
-      {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX, payloadStatus: PayloadStatus.FULL},
+      {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
       currentEpoch
     );
 
@@ -127,9 +127,10 @@ describe("block archiver task", () => {
 
     const currentEpoch = 2;
 
-    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocks").mockReturnValue({
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
       ancestors: canonicalBlocks,
       nonAncestors: nonCanonicalBlocks,
+      previousFinalizedFull: undefined,
     });
 
     vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue(
@@ -146,7 +147,6 @@ describe("block archiver task", () => {
         epoch: config.FULU_FORK_EPOCH + 1,
         root: fromHexString(ZERO_HASH_HEX),
         rootHex: ZERO_HASH_HEX,
-        payloadStatus: PayloadStatus.FULL,
       },
       currentEpoch
     );
@@ -174,5 +174,94 @@ describe("block archiver task", () => {
     expect(dbStub.dataColumnSidecarArchive.keys).toBeCalledWith({
       lt: {prefix: computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS), id: 0},
     });
+  });
+
+  it("migrates data columns of previousFinalizedFull without re-archiving its block", async () => {
+    // Setup: the previous finalized block (slot 2) had its CL part archived on the prior run but
+    // its data columns were still in hot DB. Now that its FULL variant is present, archiveBlocks
+    // ships the columns. The block itself is not re-written to the archive.
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
+    });
+
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+    const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+    const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
+
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(
+      toAsyncIterable([{id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes}])
+    );
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
+
+    const ancestors = [generateProtoBlock({slot: 4, blockRoot: toHexString(Buffer.alloc(32, 4))})];
+    const previousFinalizedFull = generateProtoBlock({slot: 2, blockRoot: toHexString(Buffer.alloc(32, 2))});
+    const currentEpoch = 1;
+
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors,
+      nonAncestors: [],
+      previousFinalizedFull,
+    });
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+      currentEpoch
+    );
+
+    // Block migration runs ONLY for the new ancestor range — previousFinalizedFull's CL part
+    // already shipped last run.
+    expect(dbStub.blockArchive.batchPutBinary).toHaveBeenCalledTimes(1);
+    const batchedBlocks = (dbStub.blockArchive.batchPutBinary as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(batchedBlocks).toHaveLength(1);
+    expect(batchedBlocks[0].slot).toBe(4);
+
+    // Data-column migration runs for BOTH the new ancestor AND the previousFinalizedFull block.
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(4, [{key: 0, value: dataColumnBytes}]);
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(2, [{key: 0, value: dataColumnBytes}]);
+
+    // Both roots deleted from hot DB to avoid orphans.
+    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith([
+      fromHexString(ancestors[0].blockRoot),
+      fromHexString(previousFinalizedFull.blockRoot),
+    ]);
+  });
+
+  it("is a no-op when previousFinalizedFull is undefined and ancestors is empty", async () => {
+    // Guard: when the previous finalized block's FULL variant is not yet available and there are
+    // no new ancestors to ship, archiveBlocks should make no writes and no deletes.
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
+    });
+
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: [],
+      nonAncestors: [],
+      previousFinalizedFull: undefined,
+    });
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+      1
+    );
+
+    expect(dbStub.blockArchive.batchPutBinary).not.toHaveBeenCalled();
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).not.toHaveBeenCalled();
   });
 });

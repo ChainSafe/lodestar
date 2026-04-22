@@ -1,7 +1,7 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithPayloadStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
@@ -52,16 +52,27 @@ export async function archiveBlocks(
   forkChoice: IForkChoice,
   lightclientServer: LightClientServer | undefined,
   logger: Logger,
-  finalizedCheckpoint: CheckpointWithPayloadStatus,
+  finalizedCheckpoint: CheckpointWithHex,
   currentEpoch: Epoch,
   archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
   persistOrphanedBlocksDir?: string
 ): Promise<void> {
-  // Use fork choice to determine the blocks to archive and delete
-  // getAllAncestorBlocks response includes the finalized block, so it's also moved to the cold db
-  const {ancestors: finalizedCanonicalBlocks, nonAncestors: finalizedNonCanonicalBlocks} =
-    forkChoice.getAllAncestorAndNonAncestorBlocks(finalizedCheckpoint.rootHex, finalizedCheckpoint.payloadStatus);
+  // Use fork choice to determine the blocks to archive and delete.
+  // `ancestors` is the newly-finalized canonical range (exclusive of the previous finalized block,
+  // whose SignedBeaconBlock was archived on the previous run). `previousFinalizedFull` is the FULL
+  // variant of the previous finalized block — present once its execution payload has been received.
+  //
+  // By design, a post-Gloas finalized block is archived across two runs because finalization does
+  // not wait for payload availability:
+  //   - first run: the SignedBeaconBlock is archived (payload may still be PENDING/EMPTY).
+  //   - next run: the execution payload envelope and data column sidecars are archived, once the
+  //     FULL variant is available.
+  const {
+    ancestors: finalizedCanonicalBlocks,
+    nonAncestors: finalizedNonCanonicalBlocks,
+    previousFinalizedFull,
+  } = forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(finalizedCheckpoint.rootHex);
 
   // NOTE: The finalized block will be exactly the first block of `epoch` or previous
   const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
@@ -73,7 +84,32 @@ export async function archiveBlocks(
     root: fromHex(block.blockRoot),
   }));
 
+  // Payload/column migration also covers the previous finalized block (when its FULL variant is
+  // available). That block's SignedBeaconBlock was archived on the previous run; this run archives
+  // its execution payload envelope and data column sidecars — so the boundary block is NOT
+  // included in the block migration set.
+  // previousFinalizedFull is always undefined pre-Gloas.
+  const payloadMigrationBlocks =
+    previousFinalizedFull !== undefined
+      ? [...finalizedCanonicalBlocks, previousFinalizedFull]
+      : finalizedCanonicalBlocks;
+  const payloadMigrationBlockRoots: BlockRootSlot[] =
+    previousFinalizedFull !== undefined
+      ? [
+          ...finalizedCanonicalBlockRoots,
+          {slot: previousFinalizedFull.slot, root: fromHex(previousFinalizedFull.blockRoot)},
+        ]
+      : finalizedCanonicalBlockRoots;
+
   const logCtx = {currentEpoch, finalizedEpoch: finalizedCheckpoint.epoch, finalizedRoot: finalizedCheckpoint.rootHex};
+
+  if (previousFinalizedFull !== undefined) {
+    logger.verbose("Archiving payload/columns of previous finalized block", {
+      ...logCtx,
+      previousFinalizedFullRoot: previousFinalizedFull.blockRoot,
+      previousFinalizedFullSlot: previousFinalizedFull.slot,
+    });
+  }
 
   if (finalizedCanonicalBlockRoots.length > 0) {
     await migrateBlocksFromHotToColdDb(db, finalizedCanonicalBlockRoots);
@@ -85,6 +121,7 @@ export async function archiveBlocks(
     });
 
     if (finalizedPostDeneb) {
+      // Blobs are bundled with the block at import time, so they only need to cover `ancestors`.
       const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
         config,
         db,
@@ -93,16 +130,24 @@ export async function archiveBlocks(
       );
       logger.verbose("Migrated blobSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
     }
+  }
 
+  if (payloadMigrationBlockRoots.length > 0) {
     if (finalizedPostFulu) {
       const migratedEntries = await migrateDataColumnSidecarsFromHotToColdDb(
         config,
         db,
         logger,
-        finalizedCanonicalBlockRoots,
+        payloadMigrationBlockRoots,
         currentEpoch
       );
-      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {...logCtx, migratedEntries});
+      logger.verbose("Migrated dataColumnSidecars from hot DB to cold DB", {
+        ...logCtx,
+        migratedEntries,
+        blocks: payloadMigrationBlockRoots.length,
+        previousFinalizedFullRoot: previousFinalizedFull?.blockRoot ?? "",
+        previousFinalizedFullSlot: previousFinalizedFull?.slot ?? "",
+      });
     }
 
     if (finalizedPostGloas) {
@@ -110,9 +155,15 @@ export async function archiveBlocks(
         config,
         db,
         logger,
-        finalizedCanonicalBlocks
+        payloadMigrationBlocks
       );
-      logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {...logCtx, migratedEntries});
+      logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
+        ...logCtx,
+        migratedEntries,
+        blocks: payloadMigrationBlocks.length,
+        previousFinalizedFullRoot: previousFinalizedFull?.blockRoot ?? "",
+        previousFinalizedFullSlot: previousFinalizedFull?.slot ?? "",
+      });
     }
   }
 
@@ -236,6 +287,8 @@ export async function archiveBlocks(
   logger.verbose("Archiving of finalized blocks complete", {
     ...logCtx,
     totalArchived: finalizedCanonicalBlocks.length,
+    previousFinalizedFullRoot: previousFinalizedFull?.blockRoot ?? "",
+    previousFinalizedFullSlot: previousFinalizedFull?.slot ?? "",
   });
 }
 
