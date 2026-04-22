@@ -39,6 +39,7 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
+  electra,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -868,6 +869,26 @@ export class BeaconChain implements IBeaconChain {
       (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
       null
     );
+  }
+
+  /**
+   * Get execution requests from parent's payload envelope for block production.
+   * Uses is_payload_verified AND should_extend_payload per spec's prepare_execution_payload.
+   * If parent was FULL and PTC voted timely, returns execution requests from the cached envelope.
+   * Otherwise returns empty execution requests (build on EMPTY variant).
+   */
+  getParentExecutionRequests(parentBlockRootHex: RootHex): electra.ExecutionRequests {
+    if (
+      this.forkChoice.hasPayloadHexUnsafe(parentBlockRootHex) &&
+      this.forkChoice.shouldExtendPayload(parentBlockRootHex)
+    ) {
+      const payloadInput = this.seenPayloadEnvelopeInputCache.get(parentBlockRootHex);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        return payloadInput.getPayloadEnvelope().message.executionRequests;
+      }
+    }
+    // Parent was EMPTY, payload not verified, or PTC didn't vote timely, return empty requests
+    return ssz.electra.ExecutionRequests.defaultValue();
   }
 
   async getExecutionPayloadEnvelope(

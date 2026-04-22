@@ -1648,10 +1648,6 @@ export function getValidatorApi(
         executionRequests: executionRequests,
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
-        slot,
-        // TODO GLOAS: stateRoot is no longer computed during block production.
-        // This field will be removed when we implement defer payload processing
-        stateRoot: ZERO_HASH,
       };
 
       logger.info("Produced execution payload envelope", {

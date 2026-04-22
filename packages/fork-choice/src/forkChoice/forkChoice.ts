@@ -312,6 +312,14 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Decides whether to extend an available payload from the previous slot,
+   * corresponding to the beacon block `blockRoot`.
+   */
+  shouldExtendPayload(blockRoot: RootHex): boolean {
+    return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
+  }
+
+  /**
    * To predict the proposer head of the next slot. That is, to predict if proposer-boost-reorg could happen.
    * Reason why we can't be certain is because information of the head block is not fully available yet
    * since the current slot hasn't ended especially the attesters' votes.
@@ -980,7 +988,6 @@ export class ForkChoice implements IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex,
     executionStatus: PayloadExecutionStatus
   ): void {
     this.protoArray.onExecutionPayload(
@@ -988,7 +995,6 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.currentSlot,
       executionPayloadBlockHash,
       executionPayloadNumber,
-      executionPayloadStateRoot,
       this.proposerBoostRoot,
       executionStatus
     );

@@ -34,6 +34,15 @@
     BlobIndex = uint64
     </spec>
 
+- name: BlockAccessList#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const BlockAccessList =
+  spec: |
+    <spec custom_type="BlockAccessList" fork="gloas" hash="82183152">
+    BlockAccessList = ByteList[MAX_BYTES_PER_TRANSACTION]
+    </spec>
+
 - name: BuilderIndex#gloas
   sources:
     - file: packages/types/src/primitive/sszTypes.ts

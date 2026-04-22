@@ -33,7 +33,6 @@ function buildPayloadEnvelopeInput({blobCount, sampledColumns}: {blobCount: numb
 
   const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
   signedEnvelope.message.beaconBlockRoot = blockRoot;
-  signedEnvelope.message.slot = block.message.slot;
 
   payloadInput.addPayloadEnvelope({
     envelope: signedEnvelope,
@@ -177,7 +176,6 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
 
     const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
     signedEnvelope.message.beaconBlockRoot = blockRoot;
-    signedEnvelope.message.slot = block.message.slot;
 
     return {payloadInput, signedEnvelope};
   }

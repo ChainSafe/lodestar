@@ -657,11 +657,10 @@ export function getBeaconBlockApi({
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
-      const slot = envelope.slot;
+      const slot = envelope.payload.slotNumber;
       const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
       const blockHashHex = toRootHex(envelope.payload.blockHash);
-      const stateRootHex = toRootHex(envelope.stateRoot);
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
@@ -746,7 +745,6 @@ export function getBeaconBlockApi({
         slot,
         blockRoot: blockRootHex,
         blockHash: blockHashHex,
-        stateRoot: stateRootHex,
         builderIndex: envelope.builderIndex,
         isSelfBuild,
         dataColumns: dataColumnSidecars.length,
@@ -774,7 +772,6 @@ export function getBeaconBlockApi({
         builderIndex: envelope.builderIndex,
         blockHash: blockHashHex,
         blockRoot: blockRootHex,
-        stateRoot: stateRootHex,
       });
 
       const sentPeersArr = await publishPromise;
