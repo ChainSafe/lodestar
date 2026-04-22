@@ -87,6 +87,7 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
+  slotNumber?: number; // EIP-7843
 };
 
 export type VersionedHashes = Uint8Array[];

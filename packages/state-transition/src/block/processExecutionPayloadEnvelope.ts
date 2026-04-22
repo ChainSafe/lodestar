@@ -24,10 +24,10 @@ export function processExecutionPayloadEnvelope(
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
   opts?: ProcessExecutionPayloadEnvelopeOpts
 ): CachedBeaconStateGloas {
-  const {verifySignature = true, verifyStateRoot = true} = opts ?? {};
+  const {verifySignature = true} = opts ?? {};
   const envelope = signedEnvelope.message;
   const payload = envelope.payload;
-  const fork = state.config.getForkSeq(envelope.slot);
+  const fork = state.config.getForkSeq(payload.slotNumber);
 
   if (verifySignature && !verifyExecutionPayloadEnvelopeSignature(state, signedEnvelope)) {
     throw Error(`Execution payload envelope has invalid signature builderIndex=${envelope.builderIndex}`);
@@ -74,12 +74,6 @@ export function processExecutionPayloadEnvelope(
 
   postState.commit();
 
-  if (verifyStateRoot && !byteArrayEquals(envelope.stateRoot, postState.hashTreeRoot())) {
-    throw new Error(
-      `Envelope's state root does not match state envelope=${toRootHex(envelope.stateRoot)} state=${toRootHex(postState.hashTreeRoot())}`
-    );
-  }
-
   return postState;
 }
 
@@ -102,8 +96,8 @@ function validateExecutionPayloadEnvelope(
     );
   }
 
-  if (envelope.slot !== state.slot) {
-    throw new Error(`Slot mismatch between envelope and state envelope=${envelope.slot} state=${state.slot}`);
+  if (payload.slotNumber !== state.slot) {
+    throw new Error(`Slot mismatch between payload and state payload=${payload.slotNumber} state=${state.slot}`);
   }
 
   // Verify consistency with the committed bid

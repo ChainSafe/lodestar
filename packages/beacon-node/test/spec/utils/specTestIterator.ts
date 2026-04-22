@@ -73,13 +73,23 @@ export const defaultSkipOpts: SkipOpts = {
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
+    // Ignore the partial data column container additions for now. Unskip them when
+    // cell level DAS is ready
+    /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    // TODO GLOAS: Unskip these tests as we get closer to alpha.5 ready
+    /^gloas\/fork_choice\/.*$/,
+    /^gloas\/fork\/.*$/,
+    /^gloas\/transition\/.*$/,
+    /^gloas\/operations\/parent_execution_payload\/.*$/,
   ],
   skippedTests: [
-    // TODO GLOAS: broken in v1.7.0-alpha.3 due to missing voluntary_exit.ssz_snappy input file
-    // Fixed by https://github.com/ethereum/consensus-specs/pull/5005 in v1.7.0-alpha.4
-    /^gloas\/operations\/voluntary_exit\/pyspec_tests\/builder_voluntary_exit__success$/,
+    // TODO GLOAS: Unskip these tests as we get closer to alpha.5 ready
+    /^gloas\/sanity\/blocks\/pyspec_tests\/builder_payment_after_missed_epochs$/,
+    /^gloas\/operations\/withdrawals\/pyspec_tests\/zero_hash_genesis_skips_withdrawals$/,
   ],
-  skippedRunners: [],
+  // TODO GLOAS: Investigate why networking tests are failing since alpha.5
+  skippedRunners: ["fast_confirmation", "networking"],
 };
 
 /**

@@ -381,7 +381,6 @@ const forkChoiceTest =
                 const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
                 const blockHash = toHex(envelope.message.payload.blockHash);
                 const blockNumber = envelope.message.payload.blockNumber;
-                const stateRoot = toHex(envelope.message.stateRoot);
 
                 // Add predefined VALID status for the payload's block hash so the EL mock accepts it
                 executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
@@ -394,7 +393,7 @@ const forkChoiceTest =
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
-                  stateRoot,
+                  ZERO_HASH_HEX,
                   ExecutionStatus.Valid
                 );
                 if (!isValid) throw Error("Expect error since this is a negative test");
@@ -588,11 +587,11 @@ const forkChoiceTest =
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
           name.includes("justified_update_not_realized_finality") ||
-          // TODO GLOAS: Requires should_apply_proposer_boost (gloas/fork-choice.md#new-should_apply_proposer_boost)
-          // which conditionally suppresses proposer boost when the parent is weak and from the previous slot.
-          // Pre-Gloas forks always apply boost; Gloas adds is_head_weak + equivocation checks.
+          // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
           (name.includes("gloas") &&
-            name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch")) ||
+            (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
+              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
+              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
           // TODO GLOAS: These two tests are affected by the wrong proposer boost cutoff time from the
           // consensus-specs and thus have wrong expectation of proposer boost. Our implementation
           // should pass these two tests after https://github.com/ethereum/consensus-specs/pull/5095
