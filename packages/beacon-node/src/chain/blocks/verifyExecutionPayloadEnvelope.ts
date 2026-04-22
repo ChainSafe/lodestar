@@ -31,7 +31,8 @@ export function verifyExecutionPayloadEnvelope(
   const {verifyExecutionRequestsRoot = true} = opts ?? {};
   const payload = envelope.payload;
 
-  // Verify consistency with the beacon block
+  // Verify consistency with the beacon block.
+  // Compute header root on a copy of latestBlockHeader to avoid mutating state.
   const headerValue = {...state.latestBlockHeader};
   if (byteArrayEquals(headerValue.stateRoot, ssz.Root.defaultValue())) {
     headerValue.stateRoot = state.hashTreeRoot();
@@ -65,7 +66,8 @@ export function verifyExecutionPayloadEnvelope(
       `Block hash mismatch between payload and bid payload=${toRootHex(payload.blockHash)} bid=${toRootHex(bid.blockHash)}`
     );
   }
-  // Can be skipped if already verified during gossip validation
+  // Verify execution_requests_root matches bid commitment.
+  // Can be skipped if already verified during gossip validation.
   if (verifyExecutionRequestsRoot) {
     const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
     if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
@@ -89,6 +91,8 @@ export function verifyExecutionPayloadEnvelope(
       `Timestamp mismatch between payload and state payload=${payload.timestamp} state=${computeTimeAtSlot(config, state.slot, state.genesisTime)}`
     );
   }
+
+  // Verify consistency with expected withdrawals
   const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
   const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
   if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
@@ -96,6 +100,8 @@ export function verifyExecutionPayloadEnvelope(
       `Withdrawals mismatch between payload and expected payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
     );
   }
+
+  // Execution engine verification (verify_and_notify_new_payload) is done externally by the caller
 }
 
 /**
