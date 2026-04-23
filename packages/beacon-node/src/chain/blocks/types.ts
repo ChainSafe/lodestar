@@ -1,5 +1,5 @@
 import type {ChainForkConfig} from "@lodestar/config";
-import {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {BlockExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
@@ -43,8 +43,9 @@ export enum BlobSidecarValidation {
 
 export type ImportPayloadOpts = {
   /**
-   * Set to true if envelope signature was already verified (e.g., during gossip/API validation).
-   * When false/undefined, signature will be verified during import.
+   * Set to true when the envelope was already validated upstream (e.g., gossip/API validation):
+   * signature is trusted and execution_requests_root was already verified against the bid.
+   * When false/undefined, both are verified during import.
    */
   validSignature?: boolean;
 };
@@ -88,7 +89,14 @@ export type ImportBlockOpts = {
   seenTimestampSec?: number;
 };
 
-type FullyVerifiedBlockBase = {
+/**
+ * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
+ *
+ * `executionStatus` reflects the outcome of execution payload verification at block-import time:
+ * - pre-gloas: Valid | Syncing | PreMerge (from EL notifyNewPayload against the in-block payload)
+ * - post-gloas: PayloadSeparated (payload arrives separately as an envelope and is imported later)
+ */
+export type FullyVerifiedBlock = {
   blockInput: IBlockInput;
   postState: IBeaconStateView;
   parentBlockSlot: Slot;
@@ -98,25 +106,6 @@ type FullyVerifiedBlockBase = {
   indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;
+  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
+  executionStatus: BlockExecutionStatus;
 };
-
-/**
- * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
- *
- * Discriminated union on `postPayloadState`:
- * - `null`  → block has no pre-verified envelope; `executionStatus` is any `BlockExecutionStatus`
- * - non-null → envelope was pre-verified during state transition; `executionStatus` is narrowed to
- *              `Valid | Syncing` (matching what `forkChoice.onExecutionPayload` expects)
- */
-export type FullyVerifiedBlock = FullyVerifiedBlockBase &
-  (
-    | {
-        postPayloadState: null;
-        /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync or for merge block */
-        executionStatus: BlockExecutionStatus;
-      }
-    | {
-        postPayloadState: IBeaconStateView;
-        executionStatus: PayloadExecutionStatus;
-      }
-  );
