@@ -1,5 +1,4 @@
 import {asyncUnshuffleList, unshuffleList} from "@chainsafe/swap-or-not-shuffle";
-import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_BEACON_ATTESTER,
   GENESIS_SLOT,
@@ -133,12 +132,8 @@ export function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch):
  *   - Special case close to genesis block, return the genesis block root
  *   - This is similar to forkchoice.getDependentRoot() function, otherwise we cannot get cached shuffing in attestation verification when syncing from genesis.
  */
-export function calculateShufflingDecisionRoot(
-  config: BeaconConfig,
-  state: BeaconStateAllForks,
-  epoch: Epoch
-): RootHex {
+export function calculateShufflingDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   return state.slot > GENESIS_SLOT
     ? calculateDecisionRoot(state, epoch)
-    : toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(config, state).blockHeader));
+    : toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(computeAnchorCheckpoint(state).blockHeader));
 }

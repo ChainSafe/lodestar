@@ -201,7 +201,7 @@ export async function initBeaconState(
       logger
     );
 
-    const {checkpoint} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState);
+    const {checkpoint} = computeAnchorCheckpoint(stateAndCp.anchorState);
 
     logger.info("Initialized checkpoint state", {
       slot: stateAndCp.anchorState.slot,
@@ -230,7 +230,7 @@ export async function initBeaconState(
       logger
     );
 
-    const {checkpoint} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState);
+    const {checkpoint} = computeAnchorCheckpoint(stateAndCp.anchorState);
 
     logger.info("Initialized checkpoint state", {
       slot: stateAndCp.anchorState.slot,
@@ -289,7 +289,7 @@ export async function initBeaconState(
       );
 
       const lastProcessedSlot = stateAndCp.anchorState.latestBlockHeader.slot;
-      const {checkpoint} = computeAnchorCheckpoint(chainForkConfig, stateAndCp.anchorState);
+      const {checkpoint} = computeAnchorCheckpoint(stateAndCp.anchorState);
 
       logger.info("Initialized checkpoint state", {
         slot: stateAndCp.anchorState.slot,
