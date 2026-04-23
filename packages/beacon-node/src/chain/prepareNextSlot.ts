@@ -175,7 +175,7 @@ export class PrepareNextSlotScheduler {
           parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
 
-        // Fetched only when we're proposing on a full parent to avoid the cost on followers.
+        // Only needed when proposing on a full parent
         let parentExecutionRequests: electra.ExecutionRequests | undefined;
 
         if (feeRecipient) {

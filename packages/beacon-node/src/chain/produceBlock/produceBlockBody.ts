@@ -803,7 +803,7 @@ function preparePayloadAttributes(
       const isExtendingPayload = byteArrayEquals(parentBlockHash, prepareState.latestExecutionPayloadBid.blockHash);
       if (isExtendingPayload) {
         if (parentExecutionRequests === undefined) {
-          throw new Error("parentExecutionRequests required when extending full parent in gloas");
+          throw new Error("parentExecutionRequests required when extending full parent");
         }
         (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
           prepareState.getExpectedWithdrawalsForFullParent(parentExecutionRequests);

@@ -893,7 +893,7 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<electra.ExecutionRequests> {
     const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
     if (envelope === null) {
-      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot} root=${parentBlockRootHex}`);
+      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
     return envelope.message.executionRequests;
   }
