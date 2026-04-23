@@ -32,7 +32,7 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
   payload?: capella.FullOrBlindedExecutionPayload
 ): void {
-  // Return early if this is genesis block or the parent block is empty.
+  // Return early if this is genesis block or the parent block is empty
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
     const isGenesisBlock = byteArrayEquals(stateGloas.latestBlockHash, ZERO_HASH);
@@ -54,7 +54,9 @@ export function processWithdrawals(
   } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
-  // After gloas, withdrawals are verified later in verifyExecutionPayloadEnvelope
+  // Pre-gloas verifies the payload's withdrawals against expectedWithdrawals here.
+  // Post-gloas, the payload arrives later as an envelope and that consistency check
+  // happens in verifyExecutionPayloadEnvelope against state.payloadExpectedWithdrawals.
   if (fork < ForkSeq.gloas) {
     if (payload === undefined) {
       throw Error("payload is required for pre-gloas processWithdrawals");

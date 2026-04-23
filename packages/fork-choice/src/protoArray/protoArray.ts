@@ -1657,10 +1657,9 @@ export class ProtoArray {
     const ancestors: ProtoNode[] = [];
     const nonAncestors: ProtoNode[] = [];
 
-    // Include starting node if it's not PENDING (i.e., pre-Gloas or EMPTY/FULL variant post-Gloas)
-    if (node.payloadStatus !== PayloadStatus.PENDING) {
-      ancestors.push(node);
-    }
+    // caller of this method may pass default status
+    // this is the only node that we accept PENDING
+    ancestors.push(node);
 
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {

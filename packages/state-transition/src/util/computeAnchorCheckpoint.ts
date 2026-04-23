@@ -8,9 +8,7 @@ export function computeAnchorCheckpoint(
   _config: ChainForkConfig,
   anchorState: BeaconStateAllForks
 ): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
-  let blockHeader: phase0.BeaconBlockHeader;
-
-  blockHeader = ssz.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
+  const blockHeader = ssz.phase0.BeaconBlockHeader.clone(anchorState.latestBlockHeader);
   if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = anchorState.hashTreeRoot();
   }

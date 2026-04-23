@@ -106,6 +106,15 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
+  // [REJECT] `payload.block_hash == bid.block_hash`
+  if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
+      envelopeBlockHash: toRootHex(payload.blockHash),
+      bidBlockHash: payloadInput.getBlockHashHex(),
+    });
+  }
+
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
   const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
@@ -113,15 +122,6 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
-    });
-  }
-
-  // [REJECT] `payload.block_hash == bid.block_hash`
-  if (toRootHex(payload.blockHash) !== payloadInput.getBlockHashHex()) {
-    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
-      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH,
-      envelopeBlockHash: toRootHex(payload.blockHash),
-      bidBlockHash: payloadInput.getBlockHashHex(),
     });
   }
 

@@ -20,7 +20,7 @@ export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
   EXECUTION_ENGINE_ERROR = "PAYLOAD_ERROR_EXECUTION_ENGINE_ERROR",
   BLOCK_NOT_IN_FORK_CHOICE = "PAYLOAD_ERROR_BLOCK_NOT_IN_FORK_CHOICE",
-  STATE_TRANSITION_ERROR = "PAYLOAD_ERROR_STATE_TRANSITION_ERROR",
+  ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
 }
 
@@ -40,7 +40,7 @@ export type PayloadErrorType =
       blockRootHex: string;
     }
   | {
-      code: PayloadErrorCode.STATE_TRANSITION_ERROR;
+      code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR;
       message: string;
     }
   | {
@@ -72,18 +72,18 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 /**
  * Import an execution payload envelope after all data is available.
  *
- * The envelope is purely verified here, no state mutation. State effects from the
- * payload are applied on the next block via processParentExecutionPayload.
+ * The envelope is only verified here, no state mutation. State effects from the payload
+ * are applied on the next block via processParentExecutionPayload.
  *
  * Steps:
- * 1. Emit `execution_payload_available` for payload attestation
+ * 1. Emit `execution_payload_available` event for payload attestation
  * 2. Get the ProtoBlock from fork choice
- * 3. Apply write-queue backpressure
- * 4. Regenerate block state for envelope field validation
- * 5. Run EL verification and signature verification in parallel, plus pure envelope verification
- * 6. Persist verified payload envelope to hot DB
- * 7. Update fork choice (transitions PENDING -> FULL)
- * 8. Record metrics
+ * 3. Wait for data columns to be available
+ * 4. Regenerate state for envelope verification
+ * 5. Verify envelope (fields against state, signature, and EL in parallel where possible)
+ * 6. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
+ * 7. Update fork choice (transitions the block's PENDING variant to FULL)
+ * 8. Record metrics for payload envelope and column sources
  * 9. Emit `execution_payload` event
  */
 export async function importExecutionPayload(
@@ -94,14 +94,18 @@ export async function importExecutionPayload(
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
   const envelope = signedEnvelope.message;
+  const slot = envelope.payload.slotNumber;
   const blockRootHex = payloadInput.blockRootHex;
   const blockHashHex = payloadInput.getBlockHashHex();
-  const fork = this.config.getForkName(envelope.payload.slotNumber);
+  const fork = this.config.getForkName(slot);
 
-  // 1. Emit `execution_payload_available` event at the start of import
-  if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+  // 1. Emit `execution_payload_available` event at the start of import. At this point the
+  // payload input is already complete, so the payload and required data are available for
+  // payload attestation. This event only signals availability (not validity), so we can emit
+  // it before getting a response from the EL on whether the payload is valid or not.
+  if (this.clock.currentSlot - slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayloadAvailable, {
-      slot: envelope.payload.slotNumber,
+      slot,
       blockRoot: blockRootHex,
     });
   }
@@ -115,16 +119,11 @@ export async function importExecutionPayload(
     });
   }
 
-  // 3. Wait for data columns to be available before claiming a write-queue slot.
+  // 3. Wait for data columns to be available.
   // The helper is shared with future gloas sync services; take the single-item batch form here.
   await verifyPayloadsDataAvailability([payloadInput], signal);
 
-  // 4. Apply backpressure from the write queue, before doing verification work.
-  // The actual DB write is deferred until after verification succeeds.
-  await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
-
-  // 5. Get pre-state for envelope verification
-  // We need the block state (post-block, pre-payload) to verify the envelope
+  // 4. Regenerate state for envelope verification
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
     protoBlock.slot,
@@ -133,12 +132,29 @@ export async function importExecutionPayload(
   );
   if (!isStatePostGloas(blockState)) {
     throw new PayloadError({
-      code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-      message: `Expected gloas+ block state for payload import, got fork=${blockState.forkName}`,
+      code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+      message: `Expected gloas+ state for payload import, got fork=${blockState.forkName}`,
     });
   }
 
-  // 6. Run verification steps in parallel
+  // 5. Verify envelope fields against state first to fail fast before the EL + BLS work.
+  // When validSignature is true, gossip/API has already verified both the signature and the
+  // executionRequestsRoot, so we skip those checks here.
+  try {
+    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
+      verifyExecutionRequestsRoot: !opts.validSignature,
+    });
+  } catch (e) {
+    throw new PayloadError(
+      {
+        code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+        message: (e as Error).message,
+      },
+      `Envelope verification error: ${(e as Error).message}`
+    );
+  }
+
+  // 5a. Run EL and signature verification in parallel
   const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,
@@ -159,23 +175,6 @@ export async function importExecutionPayload(
           this.bls
         ),
   ]);
-
-  // 5a. Verify envelope fields against state (spec: verify_execution_payload_envelope)
-  try {
-    // When validSignature is true, the envelope came from gossip/API where both
-    // signature and executionRequestsRoot were already verified, skip re-hashing
-    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
-      verifyExecutionRequestsRoot: !opts.validSignature,
-    });
-  } catch (e) {
-    throw new PayloadError(
-      {
-        code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-        message: (e as Error).message,
-      },
-      `Envelope verification error: ${(e as Error).message}`
-    );
-  }
 
   // 5b. Check signature verification result
   if (!signatureValid) {
@@ -208,12 +207,14 @@ export async function importExecutionPayload(
       });
   }
 
-  // 6. Persist payload envelope to hot DB
+  // 6. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
+  // on the import pipeline during sync, then perform the write asynchronously to avoid blocking.
+  await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
         "Error pushing payload envelope to unfinalized write queue",
-        {slot: envelope.payload.slotNumber, blockRoot: blockRootHex},
+        {slot, blockRoot: blockRootHex},
         e as Error
       );
     }
@@ -229,10 +230,10 @@ export async function importExecutionPayload(
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
-  // 9. Emit event after payload is fully verified and imported to fork choice
-  if (this.clock.currentSlot - envelope.payload.slotNumber < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
+  // 9. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
+  if (this.clock.currentSlot - slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
-      slot: envelope.payload.slotNumber,
+      slot,
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
@@ -242,7 +243,7 @@ export async function importExecutionPayload(
   }
 
   this.logger.verbose("Execution payload imported", {
-    slot: envelope.payload.slotNumber,
+    slot,
     builderIndex: envelope.builderIndex,
     blockRoot: blockRootHex,
     blockHash: blockHashHex,

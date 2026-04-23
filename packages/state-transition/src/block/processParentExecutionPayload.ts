@@ -17,9 +17,8 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   const parentBid = state.latestExecutionPayloadBid;
   const requests = block.body.parentExecutionRequests;
 
-  const isGenesisBlock = byteArrayEquals(parentBid.blockHash, ssz.Root.defaultValue());
-  const isParentBlockEmpty = !byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
-  if (isGenesisBlock || isParentBlockEmpty) {
+  const isParentBlockFull = byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
+  if (!isParentBlockFull) {
     // Parent was EMPTY -- no execution requests expected
     assertEmptyExecutionRequests(requests);
     return;
@@ -33,7 +32,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
     );
   }
 
-  applyParentExecutionPayload(state, parentBid, requests);
+  applyParentExecutionPayload(state, requests);
 }
 
 /**
@@ -45,12 +44,9 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
-export function applyParentExecutionPayload(
-  state: CachedBeaconStateGloas,
-  parentBid: {slot: number; blockHash: Uint8Array; builderIndex: number; value: number; feeRecipient: Uint8Array},
-  requests: electra.ExecutionRequests
-): void {
+export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: electra.ExecutionRequests): void {
   const fork = state.config.getForkSeq(state.slot);
+  const parentBid = state.latestExecutionPayloadBid;
   const parentSlot = parentBid.slot;
   const parentEpoch = computeEpochAtSlot(parentSlot);
   const currentEpoch = computeEpochAtSlot(state.slot);
@@ -78,8 +74,8 @@ export function applyParentExecutionPayload(
   } else if (parentEpoch === currentEpoch - 1) {
     settleBuilderPayment(state, parentSlot % SLOTS_PER_EPOCH);
   } else if (parentBid.value > 0) {
-    // Parent is older than the previous epoch, its payment entry has already been settled or
-    // evicted, so append the withdrawal directly to ensure the builder still gets paid
+    // Parent is older than the previous epoch, its payment entry has been evicted from
+    // builder_pending_payments. Append the withdrawal directly.
     state.builderPendingWithdrawals.push(
       ssz.gloas.BuilderPendingWithdrawal.toViewDU({
         feeRecipient: parentBid.feeRecipient,
@@ -101,6 +97,11 @@ export function applyParentExecutionPayload(
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-settle_builder_payment
  */
 function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: number): void {
+  if (paymentIndex >= state.builderPendingPayments.length) {
+    throw new Error(
+      `Invalid builder payment index paymentIndex=${paymentIndex} limit=${state.builderPendingPayments.length}`
+    );
+  }
   const payment = state.builderPendingPayments.get(paymentIndex).clone();
   if (payment.withdrawal.amount > 0) {
     state.builderPendingWithdrawals.push(payment.withdrawal);

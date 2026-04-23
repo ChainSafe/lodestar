@@ -74,8 +74,8 @@ export function processBlock(
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
   // Post-gloas: process_execution_payload is not part of block processing. The parent's payload
-  // effects are applied earlier via processParentExecutionPayload, and each envelope is verified
-  // out-of-band via verifyExecutionPayloadEnvelope when it arrives.
+  // effects are applied earlier via processParentExecutionPayload, and each execution payload is
+  // verified out-of-band via verifyExecutionPayloadEnvelope when it arrives.
   if (
     fork < ForkSeq.gloas &&
     fork >= ForkSeq.bellatrix &&

@@ -388,24 +388,24 @@ const forkChoiceTest =
                 const blockHash = toHex(envelope.message.payload.blockHash);
                 const blockNumber = envelope.message.payload.blockNumber;
 
-                // Verify envelope against the post-block state (spec: verify_execution_payload_envelope)
-                const protoBlock = (chain.forkChoice as ForkChoice).getBlockHexDefaultStatus(beaconBlockRoot);
+                // Verify envelope against the state
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const envelopeState = await chain.regen.getBlockSlotState(
+                const blockState = await chain.regen.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},
-                  RegenCaller.restApi
+                  RegenCaller.processBlock
                 );
-                verifyExecutionPayloadEnvelope(beaconConfig, envelopeState as IBeaconStateViewGloas, envelope.message);
+                verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope.message);
 
                 // Verify signature
                 const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                   beaconConfig,
-                  envelopeState as IBeaconStateViewGloas,
+                  blockState as IBeaconStateViewGloas,
                   pubkeyCache,
                   envelope,
-                  envelopeState.latestBlockHeader.proposerIndex,
+                  blockState.latestBlockHeader.proposerIndex,
                   chain.bls
                 );
                 if (!sigValid) throw Error("Invalid execution payload envelope signature");
@@ -619,7 +619,7 @@ const forkChoiceTest =
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
               name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
-          // Spec test fixture bug in v1.7.0-alpha.5: wrong_withdrawals envelope SSZ data is
+          // TODO GLOAS: Spec test fixture bug in v1.7.0-alpha.5: wrong_withdrawals envelope SSZ data is
           // byte-for-byte identical to the valid envelope, making it impossible to reject
           name.endsWith("on_execution_payload_envelope__wrong_withdrawals"),
       },

@@ -6,17 +6,12 @@ export {
   type InvalidBlock,
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
-export {
-  ForkChoice,
-  type ForkChoiceOpts,
-  UpdateHeadOpt,
-  getCheckpointPayloadStatus,
-} from "./forkChoice/forkChoice.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,
-  type CheckpointWithPayloadAndBalance,
-  type CheckpointWithPayloadAndTotalBalance,
+  type CheckpointWithBalance,
+  type CheckpointWithTotalBalance,
   EpochDifference,
   type IForkChoice,
   NotReorgedReason,
@@ -24,7 +19,6 @@ export {
 export * from "./forkChoice/safeBlocks.js";
 export {
   type CheckpointWithHex,
-  type CheckpointWithPayloadStatus,
   ForkChoiceStore,
   type IForkChoiceStore,
   type JustifiedBalancesGetter,

@@ -8,7 +8,6 @@ import {
   ProtoArray,
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
-  getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
@@ -104,16 +103,6 @@ export function initializeForkChoiceFromFinalizedState(
 
   const isForkPostGloas = computeEpochAtSlot(state.slot) >= config.GLOAS_FORK_EPOCH;
 
-  // Determine justified checkpoint payload status
-  const justifiedPayloadStatus = isForkPostGloas
-    ? PayloadStatus.PENDING
-    : getCheckpointPayloadStatus(config, state, justifiedCheckpoint.epoch);
-
-  // Determine finalized checkpoint payload status
-  const finalizedPayloadStatus = isForkPostGloas
-    ? PayloadStatus.PENDING
-    : getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
-
   return new forkchoiceConstructor(
     config,
 
@@ -123,8 +112,6 @@ export function initializeForkChoiceFromFinalizedState(
       finalizedCheckpoint,
       justifiedBalances,
       justifiedBalancesGetter,
-      justifiedPayloadStatus,
-      finalizedPayloadStatus,
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
@@ -161,7 +148,7 @@ export function initializeForkChoiceFromFinalizedState(
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        payloadStatus: isForkPostGloas ? PayloadStatus.EMPTY : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+        payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
         parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
       },
       currentSlot
@@ -208,19 +195,12 @@ export function initializeForkChoiceFromUnfinalizedState(
 
   const isForkPostGloas = computeEpochAtSlot(unfinalizedState.slot) >= config.GLOAS_FORK_EPOCH;
 
-  // For unfinalized state, use getCheckpointPayloadStatus to determine the correct status.
-  // It checks state.execution_payload_availability to determine EMPTY vs FULL.
-  const justifiedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, justifiedCheckpoint.epoch);
-  const finalizedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, finalizedCheckpoint.epoch);
-
   const store = new ForkChoiceStore(
     currentSlot,
     justifiedCheckpoint,
     finalizedCheckpoint,
     justifiedBalances,
     justifiedBalancesGetter,
-    justifiedPayloadStatus,
-    finalizedPayloadStatus,
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
@@ -260,7 +240,7 @@ export function initializeForkChoiceFromUnfinalizedState(
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-    payloadStatus: isForkPostGloas ? PayloadStatus.EMPTY : PayloadStatus.FULL, // TODO GLOAS: Post-gloas how do we know if the checkpoint payload is FULL or EMPTY?
+    payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
     parentBlockHash: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestBlockHash) : null,
   };
 
