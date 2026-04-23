@@ -97,6 +97,11 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-settle_builder_payment
  */
 function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: number): void {
+  if (paymentIndex >= state.builderPendingPayments.length) {
+    throw new Error(
+      `Invalid builder payment index paymentIndex=${paymentIndex} limit=${state.builderPendingPayments.length}`
+    );
+  }
   const payment = state.builderPendingPayments.get(paymentIndex).clone();
   if (payment.withdrawal.amount > 0) {
     state.builderPendingWithdrawals.push(payment.withdrawal);
