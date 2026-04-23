@@ -207,10 +207,11 @@ export class PrepareNextSlotScheduler {
           // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
           // Steady state: cache holds just 2 entries — head (parent for next-slot production)
           // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
-          const finalHead = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHeadRoot);
-          const finalHeadParent = finalHead && this.chain.forkChoice.getBlockHexDefaultStatus(finalHead.parentRoot);
-          if (finalHeadParent) {
-            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(finalHeadParent.slot);
+          const updatedHead = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHeadRoot);
+          const updatedHeadParent =
+            updatedHead && this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
+          if (updatedHeadParent) {
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(updatedHeadParent.slot);
           }
         }
 
