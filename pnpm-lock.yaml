@@ -383,8 +383,8 @@ importers:
         version: 1.0.2
     devDependencies:
       '@chainsafe/swap-or-not-shuffle':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: file:../../chainsafe-swap-or-not-shuffle-1.2.1-local.tgz
+        version: file:chainsafe-swap-or-not-shuffle-1.2.1-local.tgz
       '@libp2p/interface-internal':
         specifier: ^3.0.13
         version: 3.0.13
@@ -987,8 +987,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       '@chainsafe/swap-or-not-shuffle':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: file:../../chainsafe-swap-or-not-shuffle-1.2.1-local.tgz
+        version: file:chainsafe-swap-or-not-shuffle-1.2.1-local.tgz
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -1582,60 +1582,42 @@ packages:
   '@chainsafe/ssz@1.4.0':
     resolution: {integrity: sha512-DRje073CIU0lvIdNKmW89jAo4UAidoKpgYco5wvQve8WK1DUk/YS/54c5FX/e/iiKiJ1mo44CNCg4xiKWY3/yQ==}
 
-  '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
-    resolution: {integrity: sha512-kTewLZe1KqMAJ1gHfagOxo0BI4kTcMOAkGJ7pRLFM5ZkL2P7sh3/4ixnjdbtMkO207vMZEZL3fxJSSs14kg9Kg==}
+  '@chainsafe/swap-or-not-shuffle-darwin-arm64@0.0.2':
+    resolution: {integrity: sha512-e2tmpSgGTHFv1g3oEKP/YElDTmxZwuSwVQ+Cf0gTUA8z4YQsJar61293My6JeA7qC5razWjhvcEk13ZbTCqk0w==}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/swap-or-not-shuffle-darwin-x64@1.2.1':
-    resolution: {integrity: sha512-B/f/peQqOLW5Tqib5CqanAlQgoeib75FNszzHwRBwHdRY5ThOcBbARvOtef39zU5lYjj4j3iWobpD7G70kQyUw==}
-    engines: {node: '>= 18'}
-    cpu: [x64]
-    os: [darwin]
-
-  '@chainsafe/swap-or-not-shuffle-linux-arm64-gnu@1.2.1':
-    resolution: {integrity: sha512-sDpuUuo3rStvHMQgLxH1UkkUbo8rcjDI70Fq3xzbNMhfjlrP0+sJistlFJtDpWmKsFk/sgje3PzVU9G3KFXzXA==}
+  '@chainsafe/swap-or-not-shuffle-linux-arm64-gnu@0.0.2':
+    resolution: {integrity: sha512-nGTIRUXt1QRNiWQXZnA8IWiHnAw6FNkU7RkngkoDzjD8pEhrtWs8tv/pdOxRKEhw21HBvKi7z8J+a7/MtxDLTg==}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/swap-or-not-shuffle-linux-arm64-musl@1.2.1':
-    resolution: {integrity: sha512-FFmpDF2dRhhOCT3WBYOoQW9wqhJMfx7iULskBe5cjowVQ15U1TQJ6tC+hPpouUMt3/pKz9tIS9dNWTUuo7kpQg==}
+  '@chainsafe/swap-or-not-shuffle-linux-arm64-musl@0.0.2':
+    resolution: {integrity: sha512-sumwkxQ0Mky+W66Jf43cHUybgHQ4FENj2iRBRw3jGWiZ79Vv/DZ1dMA6I4/LVWCsvZmFUIvMvKNthGHXefh2DQ==}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/swap-or-not-shuffle-linux-x64-gnu@1.2.1':
-    resolution: {integrity: sha512-nGXEnFCqRmCS7ATV7QQ7b7aKHcyET9XEpJylq0sljnkuNRwoQXFUYPMYTn4TMI6g3vgZt/AVK9RdCxp68JKwGQ==}
-    engines: {node: '>= 18'}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/swap-or-not-shuffle-linux-x64-musl@1.2.1':
-    resolution: {integrity: sha512-VMQxE/EZjco4damGrJkkCQ2Y2WYgJcTR/ardTnSctM1/xxwUD1wQr7YW2TQsECfK3UZcW2W6gG7iqWfJgMdGSw==}
+  '@chainsafe/swap-or-not-shuffle-linux-x64-musl@0.0.2':
+    resolution: {integrity: sha512-ClwDMZd768PIaAUQhbyZpqqip0b6Sgjt8IpP5ACYMJr2AHoiG64POZaiFu+zusT4q3s4/dvqaz86jRQaF4vFkw==}
     engines: {node: '>= 18'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@1.2.1':
-    resolution: {integrity: sha512-qV+ps6KSoR8blc3gMse1BOBUGcCtptnMYoqTMwFCIx9LGaeSo3vKu5XBQDwHIfAW73bZ+PHb5YUqkRgtWBiEUw==}
+  '@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@0.0.2':
+    resolution: {integrity: sha512-i9+qj0VSppy2xMChQE38rCmWmmy8SJ0uSaApc0L4KZ+t2aqquYyEUXWGgfdXMZx9MqAUvuigzv34T9qivADFag==}
     engines: {node: '>= 18'}
     cpu: [arm64]
     os: [win32]
 
-  '@chainsafe/swap-or-not-shuffle-win32-x64-msvc@1.2.1':
-    resolution: {integrity: sha512-hsDN4O6PPpF4rEA1tMngMJAOrWTGAu8TAqdEwgdP+U25o8UVlz8W2N9697AMGRnnArN2BgYS0zCeUR9kuZ2XEQ==}
-    engines: {node: '>= 18'}
-    cpu: [x64]
-    os: [win32]
-
-  '@chainsafe/swap-or-not-shuffle@1.2.1':
-    resolution: {integrity: sha512-H8YdEoXXv2Hw17gDWGOJEya4LHlBbpChJP3jDQRfIk9hhwr0c/zbBemBRmjADowZhArL+ymkO+j5hGaYySjdpw==}
+  '@chainsafe/swap-or-not-shuffle@file:chainsafe-swap-or-not-shuffle-1.2.1-local.tgz':
+    resolution: {integrity: sha512-Oi1Ou27Rj+oRBmyYmYe3bVSP6c6q1+jtRX6TRUyx0g6mUjceJ56BSbAAi5rUKYSFsJiA7rRZ7c5KVf9U0fi2XA==, tarball: file:chainsafe-swap-or-not-shuffle-1.2.1-local.tgz}
+    version: 1.2.1
     engines: {node: '>= 18'}
 
   '@chainsafe/threads@1.11.3':
@@ -8003,40 +7985,28 @@ snapshots:
       '@chainsafe/as-sha256': 1.2.0
       '@chainsafe/persistent-merkle-tree': 1.2.5
 
-  '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
+  '@chainsafe/swap-or-not-shuffle-darwin-arm64@0.0.2':
     optional: true
 
-  '@chainsafe/swap-or-not-shuffle-darwin-x64@1.2.1':
+  '@chainsafe/swap-or-not-shuffle-linux-arm64-gnu@0.0.2':
     optional: true
 
-  '@chainsafe/swap-or-not-shuffle-linux-arm64-gnu@1.2.1':
+  '@chainsafe/swap-or-not-shuffle-linux-arm64-musl@0.0.2':
     optional: true
 
-  '@chainsafe/swap-or-not-shuffle-linux-arm64-musl@1.2.1':
+  '@chainsafe/swap-or-not-shuffle-linux-x64-musl@0.0.2':
     optional: true
 
-  '@chainsafe/swap-or-not-shuffle-linux-x64-gnu@1.2.1':
+  '@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@0.0.2':
     optional: true
 
-  '@chainsafe/swap-or-not-shuffle-linux-x64-musl@1.2.1':
-    optional: true
-
-  '@chainsafe/swap-or-not-shuffle-win32-arm64-msvc@1.2.1':
-    optional: true
-
-  '@chainsafe/swap-or-not-shuffle-win32-x64-msvc@1.2.1':
-    optional: true
-
-  '@chainsafe/swap-or-not-shuffle@1.2.1':
+  '@chainsafe/swap-or-not-shuffle@file:chainsafe-swap-or-not-shuffle-1.2.1-local.tgz':
     optionalDependencies:
-      '@chainsafe/swap-or-not-shuffle-darwin-arm64': 1.2.1
-      '@chainsafe/swap-or-not-shuffle-darwin-x64': 1.2.1
-      '@chainsafe/swap-or-not-shuffle-linux-arm64-gnu': 1.2.1
-      '@chainsafe/swap-or-not-shuffle-linux-arm64-musl': 1.2.1
-      '@chainsafe/swap-or-not-shuffle-linux-x64-gnu': 1.2.1
-      '@chainsafe/swap-or-not-shuffle-linux-x64-musl': 1.2.1
-      '@chainsafe/swap-or-not-shuffle-win32-arm64-msvc': 1.2.1
-      '@chainsafe/swap-or-not-shuffle-win32-x64-msvc': 1.2.1
+      '@chainsafe/swap-or-not-shuffle-darwin-arm64': 0.0.2
+      '@chainsafe/swap-or-not-shuffle-linux-arm64-gnu': 0.0.2
+      '@chainsafe/swap-or-not-shuffle-linux-arm64-musl': 0.0.2
+      '@chainsafe/swap-or-not-shuffle-linux-x64-musl': 0.0.2
+      '@chainsafe/swap-or-not-shuffle-win32-arm64-msvc': 0.0.2
 
   '@chainsafe/threads@1.11.3':
     dependencies:

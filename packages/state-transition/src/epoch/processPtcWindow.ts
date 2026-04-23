@@ -21,7 +21,7 @@ export function processPtcWindow(state: CachedBeaconStateGloas, cache: EpochTran
   const newNextPayloadTimelinessCommittees = computePayloadTimelinessCommitteesForEpoch(
     state,
     nextEpoch,
-    nextEpochShuffling.committees,
+    nextEpochShuffling,
     state.epochCtx.effectiveBalanceIncrements
   );
 

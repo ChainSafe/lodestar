@@ -1,5 +1,7 @@
 import {digest} from "@chainsafe/as-sha256";
 import {
+  computePtcIndices,
+  computePtcIndicesForEpoch,
   computeProposerIndex as nativeComputeProposerIndex,
   computeSyncCommitteeIndices as nativeComputeSyncCommitteeIndices,
 } from "@chainsafe/swap-or-not-shuffle";
@@ -23,6 +25,7 @@ import {assert, bytesToBigInt, bytesToInt, intToBytes} from "@lodestar/utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch.js";
+import {EpochShuffling} from "./epochShuffling.js";
 
 /**
  * Compute proposer indices for an epoch
@@ -269,9 +272,12 @@ export function getNextSyncCommitteeIndices(
 }
 
 /**
- * Compute PTC for all slots in an epoch eagerly.
+ * Naive JS version of `computePayloadTimelinessCommitteesForEpoch`.
+ * Used to verify the optimized Rust-backed version. Not for production use.
+ *
+ * SLOW CODE - 🐢
  */
-export function computePayloadTimelinessCommitteesForEpoch(
+export function naiveComputePayloadTimelinessCommitteesForEpoch(
   state: BeaconStateAllForks,
   epoch: number,
   committees: Uint32Array[][],
@@ -293,15 +299,60 @@ export function computePayloadTimelinessCommitteesForEpoch(
     slotSeedView.setUint32(epochSeed.length + 4, 0, true);
     const slotSeed = digest(slotSeedInput);
 
-    result[i] = computePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
+    result[i] = naiveComputePayloadTimelinessCommitteeForSlot(slotSeed, committees[i], effectiveBalanceIncrements);
   }
   return result;
 }
 
 /**
- * Compute PTC for a single slot.
+ * Compute PTC for all slots in an epoch eagerly.
  */
-export function computePayloadTimelinessCommitteeForSlot(
+export function computePayloadTimelinessCommitteesForEpoch(
+  state: BeaconStateAllForks,
+  epoch: number,
+  epochShuffling: EpochShuffling,
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
+): Uint32Array[] {
+  const epochSeed = getSeed(state, epoch, DOMAIN_PTC_ATTESTER);
+  const startSlot = epoch * SLOTS_PER_EPOCH;
+  const {committees, shuffling} = epochShuffling;
+
+  const slotOffsets = new Uint32Array(SLOTS_PER_EPOCH + 1);
+  for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+    let slotLen = 0;
+    for (const c of committees[i]) slotLen += c.length;
+    slotOffsets[i + 1] = slotOffsets[i] + slotLen;
+  }
+  if (shuffling.length === 0) {
+    throw Error("Validator indices must not be empty");
+  }
+
+  const flat = computePtcIndicesForEpoch(
+    epochSeed,
+    startSlot,
+    SLOTS_PER_EPOCH,
+    shuffling,
+    slotOffsets,
+    effectiveBalanceIncrements,
+    PTC_SIZE,
+    MAX_EFFECTIVE_BALANCE_ELECTRA,
+    EFFECTIVE_BALANCE_INCREMENT
+  );
+
+  const result = new Array<Uint32Array>(SLOTS_PER_EPOCH);
+  for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+    result[i] = flat.subarray(i * PTC_SIZE, (i + 1) * PTC_SIZE);
+  }
+  return result;
+}
+
+/**
+ * Naive JS version of `computePayloadTimelinessCommitteeForSlot`.
+ * Used to verify the optimized Rust-backed version. Not for production use.
+ *
+ * SLOW CODE - 🐢
+ */
+export function naiveComputePayloadTimelinessCommitteeForSlot(
   slotSeed: Uint8Array,
   slotCommittees: Uint32Array[],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
@@ -315,6 +366,31 @@ export function computePayloadTimelinessCommitteeForSlot(
     offset += c.length;
   }
   return computePayloadTimelinessCommitteeIndices(effectiveBalanceIncrements, allIndices, slotSeed);
+}
+
+/**
+ * Compute PTC for a single slot.
+ */
+export function computePayloadTimelinessCommitteeForSlot(
+  slotSeed: Uint8Array,
+  slotCommittees: Uint32Array[],
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
+): Uint32Array {
+  const totalLen = slotCommittees.reduce((sum, c) => sum + c.length, 0);
+  const allIndices = new Uint32Array(totalLen);
+  let offset = 0;
+  for (const c of slotCommittees) {
+    allIndices.set(c, offset);
+    offset += c.length;
+  }
+  return computePtcIndices(
+    slotSeed,
+    allIndices,
+    effectiveBalanceIncrements,
+    PTC_SIZE,
+    MAX_EFFECTIVE_BALANCE_ELECTRA,
+    EFFECTIVE_BALANCE_INCREMENT
+  );
 }
 
 /**

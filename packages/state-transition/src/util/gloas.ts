@@ -191,7 +191,7 @@ export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[]
       ...computePayloadTimelinessCommitteesForEpoch(
         state,
         epoch,
-        shuffling.committees,
+        shuffling,
         state.epochCtx.effectiveBalanceIncrements
       )
     );
