@@ -5,7 +5,7 @@ import {isValidDepositSignature} from "../block/processDeposit.js";
 import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 
 /**
@@ -48,6 +48,9 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
+    ssz.electra.ExecutionRequests.defaultValue()
+  );
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
   stateGloasView.historicalSummaries = stateGloasCloned.historicalSummaries;
@@ -61,6 +64,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.pendingPartialWithdrawals = stateGloasCloned.pendingPartialWithdrawals;
   stateGloasView.pendingConsolidations = stateGloasCloned.pendingConsolidations;
   stateGloasView.proposerLookahead = stateGloasCloned.proposerLookahead;
+  stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
 
   for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
     stateGloasView.executionPayloadAvailability.set(i, true);

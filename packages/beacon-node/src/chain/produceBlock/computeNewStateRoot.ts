@@ -1,12 +1,10 @@
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  G2_POINT_AT_INFINITY,
   IBeaconStateView,
-  IBeaconStateViewGloas,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {BeaconBlock, BlindedBeaconBlock, Gwei, Root, gloas} from "@lodestar/types";
+import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
 
@@ -19,11 +17,11 @@ export function computeNewStateRoot(
   metrics: Metrics | null,
   state: IBeaconStateView,
   block: BeaconBlock | BlindedBeaconBlock
-): {newStateRoot: Root; proposerReward: Gwei; postBlockState: IBeaconStateView} {
+): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH};
 
-  const postBlockState = state.stateTransition(
+  const postState = state.stateTransition(
     blockEmptySig,
     {
       // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
@@ -42,49 +40,14 @@ export function computeNewStateRoot(
     {metrics}
   );
 
-  const {attestations, syncAggregate, slashing} = postBlockState.proposerRewards;
+  const {attestations, syncAggregate, slashing} = postState.proposerRewards;
   const proposerReward = BigInt(attestations + syncAggregate + slashing);
 
   const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
     source: StateHashTreeRootSource.computeNewStateRoot,
   });
-  const newStateRoot = postBlockState.hashTreeRoot();
+  const newStateRoot = postState.hashTreeRoot();
   hashTreeRootTimer?.();
 
-  return {newStateRoot, proposerReward, postBlockState};
-}
-
-/**
- * Compute the state root after processing an execution payload envelope.
- * Similar to `computeNewStateRoot` but for payload envelope processing.
- *
- */
-export function computePayloadEnvelopeStateRoot(
-  metrics: Metrics | null,
-  postBlockState: IBeaconStateViewGloas,
-  envelope: gloas.ExecutionPayloadEnvelope
-): Root {
-  const signedEnvelope: gloas.SignedExecutionPayloadEnvelope = {
-    message: envelope,
-    signature: G2_POINT_AT_INFINITY,
-  };
-
-  const processEnvelopeTimer = metrics?.blockPayload.executionPayloadEnvelopeProcessingTime.startTimer();
-  const postPayloadState = postBlockState.processExecutionPayloadEnvelope(signedEnvelope, {
-    // Signature is zero-ed (G2_POINT_AT_INFINITY), skip verification
-    verifySignature: false,
-    // State root is being computed here, the envelope doesn't have it yet
-    verifyStateRoot: false,
-    // Preserve cache in source state, since the resulting state is not added to the state cache
-    dontTransferCache: true,
-  });
-  processEnvelopeTimer?.();
-
-  const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
-    source: StateHashTreeRootSource.computePayloadEnvelopeStateRoot,
-  });
-  const stateRoot = postPayloadState.hashTreeRoot();
-  hashTreeRootTimer?.();
-
-  return stateRoot;
+  return {newStateRoot, proposerReward, postState};
 }

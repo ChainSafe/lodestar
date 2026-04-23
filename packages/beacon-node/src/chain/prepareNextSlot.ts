@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {PayloadStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   IBeaconStateView,
@@ -8,8 +8,9 @@ import {
   computeEpochAtSlot,
   computeTimeAtSlot,
   isStatePostBellatrix,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {Bytes32, Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
@@ -81,6 +82,8 @@ export class PrepareNextSlotScheduler {
       // calling updateHead() here before we produce a block to reduce reorg possibility
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
       const {slot: headSlot, blockRoot: headRoot} = headBlock;
+      // may be updated below if we predict a proposer-boost-reorg
+      let updatedHead = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -123,7 +126,6 @@ export class PrepareNextSlotScheduler {
         const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         let updatedPrepareState = prepareState;
-        let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
@@ -146,7 +148,7 @@ export class PrepareNextSlotScheduler {
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
             );
-            updatedHeadRoot = proposerHeadRoot;
+            updatedHead = proposerHead;
           }
 
           // Update the builder status, if enabled shoot an api call to check status
@@ -156,25 +158,39 @@ export class PrepareNextSlotScheduler {
               this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
             });
           }
+        }
 
+        if (!isStatePostBellatrix(updatedPrepareState)) {
+          throw new Error("Expected Bellatrix state for payload attributes");
+        }
+
+        let parentBlockHash: Bytes32;
+        if (isStatePostGloas(updatedPrepareState)) {
+          parentBlockHash = this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot)
+            ? updatedPrepareState.latestExecutionPayloadBid.blockHash
+            : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
+        } else {
+          parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
+        }
+
+        if (feeRecipient) {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
-          if (!isStatePostBellatrix(updatedPrepareState)) {
-            throw new Error("Expected Bellatrix state for payload preparation");
-          }
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+
           // awaiting here instead of throwing an async call because there is no other task
-          // left for scheduler and this gives nice sematics to catch and log errors in the
+          // left for scheduler and this gives nice semantics to catch and log errors in the
           // try/catch wrapper here.
           await prepareExecutionPayload(
             this.chain,
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
-            fromHex(updatedHeadRoot),
+            fromHex(updatedHead.blockRoot),
+            parentBlockHash,
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
@@ -187,8 +203,14 @@ export class PrepareNextSlotScheduler {
           });
         }
 
-        if (!isStatePostBellatrix(updatedPrepareState)) {
-          throw new Error("Expected Bellatrix state for payload attributes");
+        if (ForkSeq[fork] >= ForkSeq.gloas) {
+          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
+          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
+          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
+          const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
+          if (updatedHeadParent) {
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(updatedHeadParent.slot);
+          }
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
@@ -202,6 +224,7 @@ export class PrepareNextSlotScheduler {
             prepareState: updatedPrepareState,
             prepareSlot,
             parentBlockRoot: fromHex(headRoot),
+            parentBlockHash,
             // The likely consumers of this API are builders and will anyway ignore the
             // feeRecipient, so just pass zero hash for now till a real use case arises
             feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -217,11 +240,7 @@ export class PrepareNextSlotScheduler {
       //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
       if (isEpochTransition) {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        // Determine payloadPresent from head block's payload status
-        // Pre-Gloas: payloadStatus is always FULL → payloadPresent = true
-        // Post-Gloas: FULL → true, EMPTY → false, PENDING → false (conservative, treat as block state)
-        const payloadPresent = headBlock.payloadStatus === PayloadStatus.FULL;
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch, payloadPresent);
+        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }

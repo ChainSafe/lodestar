@@ -745,13 +745,29 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           });
         }
 
-        chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
-          chain.logger.debug(
-            "Error processing execution payload from gossip data column",
-            {slot: dataColumnSlot, root: payloadInput.blockRootHex},
-            e as Error
-          );
-        });
+        // NOTE: we do NOT call chain.processExecutionPayload here. That is triggered only by
+        // envelope arrival (gossip or API). An in-flight importExecutionPayload is awaiting
+        // payloadInput.waitForAllData(); addColumn above will resolve it once hasAllData flips.
+
+        if (!payloadInput.isComplete()) {
+          const cutoffTimeMs = getCutoffTimeMs(chain, dataColumnSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
+          // do not await here to not delay gossip validation
+          payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
+            chain.logger.debug(
+              "Waited for envelope and data after receiving gossip column. Cut-off reached so emitting incompletePayloadEnvelope",
+              {
+                dataColumnIndex: index,
+                ...payloadInputMeta,
+              }
+            );
+            // TODO GLOAS: UnknownBlockSync to handle this event
+            chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+              payloadInput,
+              peer: peerIdStr,
+              source: BlockInputSource.gossip,
+            });
+          });
+        }
       } else {
         if (config.getForkSeq(dataColumnSlot) < ForkSeq.fulu) {
           throw new GossipActionError(GossipAction.REJECT, {code: "PRE_FULU_BLOCK"});
@@ -1049,7 +1065,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
-          const {slot, beaconBlockRoot} = signedEnvelope.message;
+          const {beaconBlockRoot} = signedEnvelope.message;
+          const slot = signedEnvelope.message.payload.slotNumber;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
           if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
             // TODO GLOAS: UnknownBlockSync to handle this
@@ -1072,7 +1089,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      const slot = envelope.slot;
+      const slot = envelope.payload.slotNumber;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
@@ -1102,7 +1119,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         builderIndex: envelope.builderIndex,
         blockHash: toRootHex(envelope.payload.blockHash),
         blockRoot: blockRootHex,
-        stateRoot: toRootHex(envelope.stateRoot),
       });
 
       chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {

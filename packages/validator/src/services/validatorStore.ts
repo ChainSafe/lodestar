@@ -496,11 +496,13 @@ export class ValidatorStore {
     logger?: LoggerVc
   ): Promise<gloas.SignedExecutionPayloadEnvelope> {
     // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
-    if (envelope.slot > currentSlot) {
-      throw Error(`Not signing envelope with slot ${envelope.slot} greater than current slot ${currentSlot}`);
+    if (envelope.payload.slotNumber > currentSlot) {
+      throw Error(
+        `Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`
+      );
     }
 
-    const signingSlot = envelope.slot;
+    const signingSlot = envelope.payload.slotNumber;
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
     const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
 
