@@ -165,7 +165,7 @@
     "xxhash-wasm": "1.0.2"
   },
   "devDependencies": {
-    "@chainsafe/swap-or-not-shuffle": "^1.2.1",
+    "@chainsafe/swap-or-not-shuffle": "file:../../chainsafe-swap-or-not-shuffle-1.2.1-local.tgz",
     "@libp2p/interface-internal": "^3.0.13",
     "@libp2p/logger": "^6.2.2",
     "@libp2p/utils": "^7.0.13",
