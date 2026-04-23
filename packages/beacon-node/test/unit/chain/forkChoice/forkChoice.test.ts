@@ -83,7 +83,7 @@ describe("LodestarForkChoice", () => {
      *                       parent (37) - child (38)
      */
     it.skip("getHead - should not consider orphaned block as head", () => {
-      const {blockHeader} = computeAnchorCheckpoint(anchorState);
+      const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const targetBlock = generateSignedBlockAtSlot(32);
       targetBlock.message.parentRoot = finalizedRoot;
@@ -159,7 +159,7 @@ describe("LodestarForkChoice", () => {
      * finalized - slot 8 (finalized 1) - slot 12 - slot 16 (finalized 2) - slot 20 - slot 24 (finalized 3) - slot 28 - slot 32 (finalized 4)
      */
     it("prune - should prune old blocks", () => {
-      const {blockHeader} = computeAnchorCheckpoint(anchorState);
+      const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const block08 = generateSignedBlockAtSlot(8);
       block08.message.parentRoot = finalizedRoot;
@@ -226,7 +226,7 @@ describe("LodestarForkChoice", () => {
      *                       parent (34) - child (35)
      */
     it("getAllNonAncestorBlocks - should get non ancestor nodes", () => {
-      const {blockHeader} = computeAnchorCheckpoint(anchorState);
+      const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const targetBlock = generateSignedBlockAtSlot(32);
       targetBlock.message.parentRoot = finalizedRoot;
@@ -301,7 +301,7 @@ describe("LodestarForkChoice", () => {
     it.skip("should not filter blocks with unrealized checkpoints = store checkpoints", () => {
       const blockDelaySec = 0;
       // C9 is the justified/finalized block
-      const {blockHeader} = computeAnchorCheckpoint(anchorState);
+      const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       // C10
       const blockW = generateSignedBlockAtSlot(8);

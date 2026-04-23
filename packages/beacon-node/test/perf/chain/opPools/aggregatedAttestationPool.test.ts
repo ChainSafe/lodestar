@@ -35,7 +35,7 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
     () => {
       originalState = generatePerfTestCachedStateElectra({goBackOneSlot: true, vc});
 
-      const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState);
+      const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState.config, originalState);
       // TODO figure out why getBlockRootAtSlot(originalState, justifiedSlot) is not the same to justifiedCheckpoint.root
       const finalizedEpoch = originalState.finalizedCheckpoint.epoch;
       const finalizedCheckpoint = {

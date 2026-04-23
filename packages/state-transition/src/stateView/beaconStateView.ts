@@ -471,7 +471,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
-    return computeAnchorCheckpoint(this.cachedState);
+    return computeAnchorCheckpoint(this.config, this.cachedState);
   }
 
   // Sync committees

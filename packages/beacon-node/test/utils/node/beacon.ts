@@ -77,7 +77,7 @@ export async function getDevBeaconNode(
 
       // derive wsCheckpoint if not provided
       if (!wsCheckpoint) {
-        const {checkpoint} = computeAnchorCheckpoint(anchorState);
+        const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
         wsCheckpoint = {root: checkpoint.root, epoch: checkpoint.epoch};
         logger.debug("Derived wsCheckpoint", {epoch: checkpoint.epoch});
       }

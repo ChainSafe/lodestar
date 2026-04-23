@@ -162,21 +162,21 @@ describe("CachedBeaconState", () => {
         const shufflingGetter = (shufflingEpoch: Epoch, dependentRoot: RootHex): EpochShuffling | null => {
           if (
             shufflingEpoch === seedState.epochCtx.epoch - 1 &&
-            dependentRoot === calculateShufflingDecisionRoot(seedState, shufflingEpoch)
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
           ) {
             return seedState.epochCtx.previousShuffling;
           }
 
           if (
             shufflingEpoch === seedState.epochCtx.epoch &&
-            dependentRoot === calculateShufflingDecisionRoot(seedState, shufflingEpoch)
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
           ) {
             return seedState.epochCtx.currentShuffling;
           }
 
           if (
             shufflingEpoch === seedState.epochCtx.epoch + 1 &&
-            dependentRoot === calculateShufflingDecisionRoot(seedState, shufflingEpoch)
+            dependentRoot === calculateShufflingDecisionRoot(config, seedState, shufflingEpoch)
           ) {
             return seedState.epochCtx.nextShuffling;
           }
