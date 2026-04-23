@@ -109,13 +109,6 @@ export class ProtoArray {
       null
     );
 
-    // Anchor block PTC votes must be all-true per spec get_forkchoice_store:
-    // payload_timeliness_vote={anchor_root: Vector[boolean, PTC_SIZE](True for _ in range(PTC_SIZE))}
-    // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/fork-choice.md#modified-get_forkchoice_store
-    if (protoArray.ptcVotes.has(block.blockRoot)) {
-      protoArray.ptcVotes.set(block.blockRoot, BitArray.fromBoolArray(Array.from({length: PTC_SIZE}, () => true)));
-    }
-
     return protoArray;
   }
 
