@@ -887,7 +887,6 @@ export class BeaconChain implements IBeaconChain {
     );
   }
 
-  /** Caller must ensure parent's payload is FULL (see `shouldExtendPayload`). */
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
