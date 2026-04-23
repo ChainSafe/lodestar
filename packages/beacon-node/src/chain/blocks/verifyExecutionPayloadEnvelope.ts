@@ -86,9 +86,10 @@ export function verifyExecutionPayloadEnvelope(
       `Parent hash mismatch between payload and state payload=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)}`
     );
   }
-  if (payload.timestamp !== computeTimeAtSlot(config, state.slot, state.genesisTime)) {
+  const expectedTimestamp = computeTimeAtSlot(config, state.slot, state.genesisTime);
+  if (payload.timestamp !== expectedTimestamp) {
     throw new Error(
-      `Timestamp mismatch between payload and state payload=${payload.timestamp} state=${computeTimeAtSlot(config, state.slot, state.genesisTime)}`
+      `Timestamp mismatch between payload and state payload=${payload.timestamp} state=${expectedTimestamp}`
     );
   }
 
