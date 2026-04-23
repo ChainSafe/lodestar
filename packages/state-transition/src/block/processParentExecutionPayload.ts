@@ -17,9 +17,8 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   const parentBid = state.latestExecutionPayloadBid;
   const requests = block.body.parentExecutionRequests;
 
-  const isGenesisBlock = byteArrayEquals(parentBid.blockHash, ssz.Root.defaultValue());
-  const isParentBlockEmpty = !byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
-  if (isGenesisBlock || isParentBlockEmpty) {
+  const isParentBlockFull = byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
+  if (!isParentBlockFull) {
     // Parent was EMPTY -- no execution requests expected
     assertEmptyExecutionRequests(requests);
     return;
