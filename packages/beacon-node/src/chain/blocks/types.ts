@@ -106,6 +106,6 @@ export type FullyVerifiedBlock = {
   indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;
-  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync or for merge block */
+  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
   executionStatus: BlockExecutionStatus;
 };
