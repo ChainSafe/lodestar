@@ -713,6 +713,11 @@ describe("UnknownBlockSync", () => {
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
         },
         custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
         networkOverrides: {
@@ -777,6 +782,11 @@ describe("UnknownBlockSync", () => {
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
         },
         custodyConfig: {sampledColumns: [0, 1], sampleGroups: [[0], [1]]} as unknown as CustodyConfig,
         networkOverrides: {
@@ -902,7 +912,7 @@ describe("UnknownBlockSync", () => {
         slot: 1,
       });
       const parentRootHex = toRootHex(block.message.parentRoot);
-      const knownRoots = new Set([parentRootHex]);
+      const knownRoots = new Set([parentRootHex, blockRootHex]);
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
       const sendBeaconBlocksByRoot = vi.fn().mockResolvedValue([block]);
@@ -998,6 +1008,7 @@ describe("UnknownBlockSync", () => {
       });
 
       let cachedPayloadInput: PayloadEnvelopeInput | undefined;
+      let blockKnown = false;
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
       const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
@@ -1008,7 +1019,7 @@ describe("UnknownBlockSync", () => {
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
-            hasBlockHex: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex && blockKnown),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -1024,6 +1035,7 @@ describe("UnknownBlockSync", () => {
       expect(processExecutionPayload).not.toHaveBeenCalled();
 
       cachedPayloadInput = payloadInput;
+      blockKnown = true;
       emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
 
       await sleep(50);
@@ -1051,6 +1063,11 @@ describe("UnknownBlockSync", () => {
             get: vi.fn().mockReturnValue(undefined),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === payloadInput.blockRootHex),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
         },
         networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
       });
@@ -1100,6 +1117,7 @@ describe("UnknownBlockSync", () => {
 
       let connected = false;
       let cachedPayloadInput: PayloadEnvelopeInput | undefined;
+      let blockKnown = false;
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValueOnce([envelope]);
       const {emitter} = setupPayloadSyncTest({
@@ -1109,6 +1127,11 @@ describe("UnknownBlockSync", () => {
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? cachedPayloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex && blockKnown),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
         },
         networkOverrides: {
           getConnectedPeers: () => (connected ? [peer] : []),
@@ -1130,6 +1153,7 @@ describe("UnknownBlockSync", () => {
 
       connected = true;
       cachedPayloadInput = payloadInput;
+      blockKnown = true;
       emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
 
       await sleep(50);
@@ -1169,6 +1193,11 @@ describe("UnknownBlockSync", () => {
             get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
         },
         networkOverrides: {sendExecutionPayloadEnvelopesByRoot},
         peers: [{peerId: peer}],
@@ -1253,6 +1282,11 @@ describe("UnknownBlockSync", () => {
             get: vi.fn().mockReturnValue(payloadInput),
             prune: vi.fn(),
           } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === payloadInput.blockRootHex),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
         },
       });
 

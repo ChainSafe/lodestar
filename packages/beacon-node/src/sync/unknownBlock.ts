@@ -951,24 +951,30 @@ export class BlockInputSync {
   }
 
   private async processPayload(pendingPayload: PendingPayloadInput): Promise<void> {
+    const rootHex = pendingPayload.payloadInput.blockRootHex;
+    const logCtx = {slot: pendingPayload.payloadInput.slot, root: rootHex};
+
     if (pendingPayload.status !== PendingPayloadInputStatus.downloaded) {
-      if (pendingPayload.status === PendingPayloadInputStatus.pending) {
-        const connectedPeers = this.network.getConnectedPeers();
-        if (connectedPeers.length === 0) {
-          this.logger.debug("No connected peers, skipping payload download", {
-            slot: pendingPayload.payloadInput.slot,
-            blockRoot: pendingPayload.payloadInput.blockRootHex,
-          });
-          return;
-        }
-        await this.downloadPayload(pendingPayload);
-      }
+      this.logger.debug("Skipping payload processing before payload input is downloaded", {
+        ...logCtx,
+        status: pendingPayload.status,
+      });
       return;
     }
 
-    const rootHex = pendingPayload.payloadInput.blockRootHex;
     if (this.chain.forkChoice.hasPayloadHexUnsafe(rootHex)) {
+      this.logger.debug("Payload already imported while processing unknown payload", logCtx);
       this.pendingPayloads.delete(rootHex);
+      return;
+    }
+
+    if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+      this.logger.debug("Payload input is ready before its block is in fork choice", logCtx);
+      const added = this.addByRootHex(rootHex);
+      pendingPayload.status = PendingPayloadInputStatus.downloaded;
+      if (added) {
+        this.triggerUnknownBlockSearch();
+      }
       return;
     }
 
@@ -976,24 +982,26 @@ export class BlockInputSync {
 
     const res = await wrapError(this.chain.processExecutionPayload(pendingPayload.payloadInput));
     if (!res.err) {
+      this.logger.debug("Processed payload from unknown sync", logCtx);
       this.pendingPayloads.delete(rootHex);
       this.triggerUnknownBlockSearch();
       return;
     }
 
-    const errorData = {slot: pendingPayload.payloadInput.slot, root: rootHex};
     if (res.err instanceof PayloadError) {
       switch (res.err.type.code) {
         case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
           // Payload sync discovered the block dependency before the block queue did. Re-enqueue the
           // block and keep the payload ready so the scheduler can retry once the block reaches fork choice.
-          this.addByRootHex(rootHex);
+          if (this.addByRootHex(rootHex)) {
+            this.triggerUnknownBlockSearch();
+          }
+          // Keep the payload out of any synchronous requeue pass; a later scheduler pass will retry it.
           pendingPayload.status = PendingPayloadInputStatus.downloaded;
-          this.triggerUnknownBlockSearch();
           break;
 
         case PayloadErrorCode.EXECUTION_ENGINE_ERROR:
-          this.logger.debug("Execution engine error while processing payload from unknown sync", errorData, res.err);
+          this.logger.debug("Execution engine error while processing payload from unknown sync", logCtx, res.err);
           pendingPayload.status = PendingPayloadInputStatus.downloaded;
           break;
 
@@ -1002,18 +1010,18 @@ export class BlockInputSync {
         case PayloadErrorCode.STATE_TRANSITION_ERROR:
           // TODO GLOAS: Decide how invalid payload inputs should eventually leave memory without
           // reintroducing envelope replacement / recreation flows.
-          this.logger.debug("Error processing payload from unknown sync", errorData, res.err);
+          this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
           this.removePendingPayloadAndDescendants(rootHex);
           break;
 
         default:
-          this.logger.debug("Error processing payload from unknown sync", errorData, res.err);
+          this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
           this.pendingPayloads.delete(rootHex);
       }
       return;
     }
 
-    this.logger.debug("Unknown error processing payload from unknown sync", errorData, res.err);
+    this.logger.debug("Unknown error processing payload from unknown sync", logCtx, res.err);
     pendingPayload.status = PendingPayloadInputStatus.downloaded;
   }
 
@@ -1023,7 +1031,7 @@ export class BlockInputSync {
    * and only asks peers for the remaining pieces.
    */
   private async fetchPayloadInput(
-    cacheItem: PayloadSyncCacheItem
+    cacheItem: PendingPayloadInput | PendingPayloadRootHex
   ): Promise<PendingPayloadInput | PendingPayloadEnvelope> {
     const rootHex = getPayloadSyncCacheItemRootHex(cacheItem);
     const blockRoot = fromHex(rootHex);
@@ -1033,11 +1041,7 @@ export class BlockInputSync {
     let payloadInput = isPendingPayloadInput(cacheItem)
       ? cacheItem.payloadInput
       : this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
-    let envelope = isPendingPayloadEnvelope(cacheItem)
-      ? cacheItem.envelope
-      : payloadInput?.hasPayloadEnvelope()
-        ? payloadInput.getPayloadEnvelope()
-        : undefined;
+    let envelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : undefined;
 
     let i = 0;
     while (i++ < this.getMaxDownloadAttempts()) {
