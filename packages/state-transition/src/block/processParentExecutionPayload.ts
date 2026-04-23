@@ -45,8 +45,8 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
 export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: electra.ExecutionRequests): void {
-  const parentBid = state.latestExecutionPayloadBid;
   const fork = state.config.getForkSeq(state.slot);
+  const parentBid = state.latestExecutionPayloadBid;
   const parentSlot = parentBid.slot;
   const parentEpoch = computeEpochAtSlot(parentSlot);
   const currentEpoch = computeEpochAtSlot(state.slot);
@@ -74,8 +74,8 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
   } else if (parentEpoch === currentEpoch - 1) {
     settleBuilderPayment(state, parentSlot % SLOTS_PER_EPOCH);
   } else if (parentBid.value > 0) {
-    // Parent is older than the previous epoch, its payment entry has already been settled or
-    // evicted, so append the withdrawal directly to ensure the builder still gets paid
+    // Parent is older than the previous epoch, its payment entry has been evicted from
+    // builder_pending_payments. Append the withdrawal directly.
     state.builderPendingWithdrawals.push(
       ssz.gloas.BuilderPendingWithdrawal.toViewDU({
         feeRecipient: parentBid.feeRecipient,
