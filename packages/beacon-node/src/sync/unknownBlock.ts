@@ -1006,8 +1006,8 @@ export class BlockInputSync {
           break;
 
         case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
+        case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
         case PayloadErrorCode.INVALID_SIGNATURE:
-        case PayloadErrorCode.STATE_TRANSITION_ERROR:
           // TODO GLOAS: Decide how invalid payload inputs should eventually leave memory without
           // reintroducing envelope replacement / recreation flows.
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
