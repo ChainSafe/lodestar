@@ -505,7 +505,7 @@ export class Network implements INetwork {
   }
 
   async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
-    const epoch = computeEpochAtSlot(signedEnvelope.message.slot);
+    const epoch = computeEpochAtSlot(signedEnvelope.message.payload.slotNumber);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.execution_payload>(

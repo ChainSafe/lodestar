@@ -46,6 +46,7 @@ import {
   electra,
   fulu,
   gloas,
+  ssz,
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
@@ -269,6 +270,7 @@ export async function produceBlockBody<T extends BlockType>(
       value: 0,
       executionPayment: 0,
       blobKzgCommitments: blobsBundle.commitments,
+      executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
     };
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
@@ -280,6 +282,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.signedExecutionPayloadBid = signedBid;
     // TODO GLOAS: Get payload attestations from pool for previous slot
     gloasBody.payloadAttestations = [];
+    // TODO GLOAS: set parentExecutionRequests in the block body
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -802,6 +805,10 @@ function preparePayloadAttributes(
 
   if (ForkSeq[fork] >= ForkSeq.deneb) {
     (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
   }
 
   return payloadAttributes;

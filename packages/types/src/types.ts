@@ -303,11 +303,11 @@ type TypesByFork = {
     BlindedBeaconBlock: electra.BlindedBeaconBlock;
     BlindedBeaconBlockBody: electra.BlindedBeaconBlockBody;
     SignedBlindedBeaconBlock: electra.SignedBlindedBeaconBlock;
-    ExecutionPayload: deneb.ExecutionPayload;
+    ExecutionPayload: gloas.ExecutionPayload;
     ExecutionPayloadHeader: deneb.ExecutionPayloadHeader;
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
-    SSEPayloadAttributes: electra.SSEPayloadAttributes;
+    SSEPayloadAttributes: gloas.SSEPayloadAttributes;
     BlockContents: fulu.BlockContents;
     SignedBlockContents: fulu.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;

@@ -83,7 +83,7 @@ export class PrepareNextSlotScheduler {
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
       const {slot: headSlot, blockRoot: headRoot} = headBlock;
       // may be updated below if we predict a proposer-boost-reorg
-      let updatedHeadRoot = headRoot;
+      let updatedHead = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -148,7 +148,7 @@ export class PrepareNextSlotScheduler {
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
             );
-            updatedHeadRoot = proposerHeadRoot;
+            updatedHead = proposerHead;
           }
 
           // Update the builder status, if enabled shoot an api call to check status
@@ -166,7 +166,7 @@ export class PrepareNextSlotScheduler {
 
         let parentBlockHash: Bytes32;
         if (isStatePostGloas(updatedPrepareState)) {
-          parentBlockHash = this.chain.forkChoice.shouldExtendPayload(updatedHeadRoot)
+          parentBlockHash = this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot)
             ? updatedPrepareState.latestExecutionPayloadBid.blockHash
             : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
         } else {
@@ -189,7 +189,7 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
-            fromHex(updatedHeadRoot),
+            fromHex(updatedHead.blockRoot),
             parentBlockHash,
             safeBlockHash,
             finalizedBlockHash,
@@ -201,6 +201,16 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
+        }
+
+        if (ForkSeq[fork] >= ForkSeq.gloas) {
+          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
+          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
+          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
+          const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
+          if (updatedHeadParent) {
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(updatedHeadParent.slot);
+          }
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
