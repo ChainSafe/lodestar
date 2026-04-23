@@ -39,6 +39,7 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
+  electra,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -884,6 +885,18 @@ export class BeaconChain implements IBeaconChain {
       (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
       null
     );
+  }
+
+  /** Caller must ensure parent's payload is FULL (see `shouldExtendPayload`). */
+  async getParentExecutionRequests(
+    parentBlockSlot: Slot,
+    parentBlockRootHex: RootHex
+  ): Promise<electra.ExecutionRequests> {
+    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
+    if (envelope === null) {
+      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot} root=${parentBlockRootHex}`);
+    }
+    return envelope.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
