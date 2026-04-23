@@ -366,7 +366,9 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   canonicalBlocks: ProtoBlock[],
   currentEpoch: Epoch
 ): Promise<Slot[]> {
-  const columnBlocks = canonicalBlocks.filter((block) => block.payloadStatus === PayloadStatus.FULL);
+  const columnBlocks = canonicalBlocks.filter(
+    (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL
+  );
   if (columnBlocks.length === 0) return [];
   const blocks: BlockRootSlot[] = columnBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
 
@@ -429,7 +431,7 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   canonicalBlocks: ProtoBlock[]
 ): Promise<Slot[]> {
   const payloadBlocks = canonicalBlocks.filter(
-    (block) => config.getForkSeq(block.slot) >= ForkSeq.gloas && block.payloadStatus === PayloadStatus.FULL
+    (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL
   );
   if (payloadBlocks.length === 0) return [];
   const blocks = payloadBlocks.map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
