@@ -154,7 +154,7 @@ export async function importExecutionPayload(
     );
   }
 
-  // 5a. Run EL notifyNewPayload and signature verification in parallel
+  // 5a. Run EL and signature verification in parallel
   const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,
