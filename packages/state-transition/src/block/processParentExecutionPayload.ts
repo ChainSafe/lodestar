@@ -33,7 +33,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
     );
   }
 
-  applyParentExecutionPayload(state, parentBid, requests);
+  applyParentExecutionPayload(state, requests);
 }
 
 /**
@@ -45,11 +45,8 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
-export function applyParentExecutionPayload(
-  state: CachedBeaconStateGloas,
-  parentBid: {slot: number; blockHash: Uint8Array; builderIndex: number; value: number; feeRecipient: Uint8Array},
-  requests: electra.ExecutionRequests
-): void {
+export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: electra.ExecutionRequests): void {
+  const parentBid = state.latestExecutionPayloadBid;
   const fork = state.config.getForkSeq(state.slot);
   const parentSlot = parentBid.slot;
   const parentEpoch = computeEpochAtSlot(parentSlot);

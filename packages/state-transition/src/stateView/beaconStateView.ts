@@ -789,7 +789,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       throw Error("getExpectedWithdrawalsForFullParent is only available for gloas+ forks");
     }
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
-    applyParentExecutionPayload(stateCopy, stateCopy.latestExecutionPayloadBid, envelope.message.executionRequests);
+    applyParentExecutionPayload(stateCopy, envelope.message.executionRequests);
     const {expectedWithdrawals} = getExpectedWithdrawals(fork, stateCopy);
     return expectedWithdrawals;
   }
