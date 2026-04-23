@@ -32,7 +32,7 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
   payload?: capella.FullOrBlindedExecutionPayload
 ): void {
-  // Return early if this is genesis block or the parent block is empty.
+  // Return early if this is genesis block or the parent block is empty
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
     const isGenesisBlock = byteArrayEquals(stateGloas.latestBlockHash, ZERO_HASH);
