@@ -1,7 +1,7 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT, isForkPostGloas} from "@lodestar/params";
+import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   BeaconBlock,
   BeaconState,
@@ -783,14 +783,19 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return new BeaconStateView(newState);
   }
 
+  /**
+   * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
+   */
   getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[] {
     const fork = this.config.getForkSeq(this.cachedState.slot);
-    if (!isForkPostGloas(this.config.getForkName(this.cachedState.slot))) {
-      throw Error("getExpectedWithdrawalsForFullParent is only available for gloas+ forks");
+    if (fork < ForkSeq.gloas) {
+      throw new Error("getExpectedWithdrawalsForFullParent is not available before Gloas");
     }
+    // Make a copy of the state to avoid mutability issues
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
+    // Apply parent payload before computing withdrawals
     applyParentExecutionPayload(stateCopy, envelope.message.executionRequests);
-    const {expectedWithdrawals} = getExpectedWithdrawals(fork, stateCopy);
-    return expectedWithdrawals;
+
+    return getExpectedWithdrawals(fork, stateCopy).expectedWithdrawals;
   }
 }
