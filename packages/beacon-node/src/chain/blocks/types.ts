@@ -43,8 +43,9 @@ export enum BlobSidecarValidation {
 
 export type ImportPayloadOpts = {
   /**
-   * Set to true if envelope signature was already verified (e.g., during gossip/API validation).
-   * When false/undefined, signature will be verified during import.
+   * Set to true when the envelope was already validated upstream (e.g., gossip/API validation):
+   * signature is trusted and execution_requests_root was already verified against the bid.
+   * When false/undefined, both are verified during import.
    */
   validSignature?: boolean;
 };
