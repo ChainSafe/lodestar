@@ -152,25 +152,29 @@ export async function archiveBlocks(
       );
     }
 
-    await db.block.batchDelete(nonCanonicalBlockRoots);
-    logger.verbose("Deleted non canonical blocks from hot DB", {
+    const nonCanonicalSlots = finalizedNonCanonicalBlocks.map((summary) => summary.slot).sort((a, b) => a - b);
+    const nonCanonicalLogCtx = {
       ...logCtx,
-      slots: finalizedNonCanonicalBlocks.map((summary) => summary.slot).join(","),
-    });
+      count: nonCanonicalBlockRoots.length,
+      slotRange: prettyPrintIndices(nonCanonicalSlots),
+    };
+
+    await db.block.batchDelete(nonCanonicalBlockRoots);
+    logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical blobSidecars from hot DB", logCtx);
+      logger.verbose("Deleted non canonical blobSidecars from hot DB", nonCanonicalLogCtx);
     }
 
     if (finalizedPostFulu) {
       await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", logCtx);
+      logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", nonCanonicalLogCtx);
     }
 
     if (finalizedPostGloas) {
       await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", logCtx);
+      logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", nonCanonicalLogCtx);
     }
   }
 
@@ -404,8 +408,16 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
 
       // Here we assume the data column sidecars are already in the hot db
       const dataColumnSidecarBytes = await fromAsync(db.dataColumnSidecar.valuesStreamBinary(block.root));
-      // there could be 0 dataColumnSidecarBytes if block has no blob
-      logger.verbose("migrateDataColumnSidecarsFromHotToColdDb", {
+      if (dataColumnSidecarBytes.length === 0) {
+        // Empty stream: either the block has no blobs, or columns were already archived on a
+        // previous run (boundary block). Nothing to migrate.
+        logger.debug("DataColumnSidecars in forkchoice but missing in hot db, could be already archived", {
+          slot: block.slot,
+          root: toRootHex(block.root),
+        });
+        continue;
+      }
+      logger.verbose("Migrated dataColumnSidecars for block", {
         currentEpoch,
         slot: block.slot,
         root: toRootHex(block.root),
@@ -458,7 +470,10 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
       envelopeEntries.push({key: blocks[i].slot, value: bytes});
       migratedRoots.push(blocks[i].root);
     } else {
-      logger.debug("Payload in forkchoice but missing in db", {slot: blocks[i].slot, root: toRootHex(blocks[i].root)});
+      logger.debug("ExecutionPayloadEnvelope in forkchoice but missing in hot db, could be already archived", {
+        slot: blocks[i].slot,
+        root: toRootHex(blocks[i].root),
+      });
     }
   }
 
