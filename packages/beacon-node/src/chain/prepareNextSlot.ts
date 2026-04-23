@@ -175,7 +175,7 @@ export class PrepareNextSlotScheduler {
           parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
 
-        // Only needed when proposing on a full parent
+        // Reused by the SSE emit below to avoid a second DB lookup on cache miss
         let parentExecutionRequests: electra.ExecutionRequests | undefined;
 
         if (feeRecipient) {
