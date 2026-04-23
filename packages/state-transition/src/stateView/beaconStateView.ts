@@ -786,7 +786,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   /**
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
-  getExpectedWithdrawalsForFullParent(executionRequests: electra.ExecutionRequests): capella.Withdrawal[] {
+  getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[] {
     const fork = this.config.getForkSeq(this.cachedState.slot);
     if (fork < ForkSeq.gloas) {
       throw new Error("getExpectedWithdrawalsForFullParent is not available before Gloas");
@@ -794,7 +794,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     // Make a copy of the state to avoid mutability issues
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
     // Apply parent payload before computing withdrawals
-    applyParentExecutionPayload(stateCopy, executionRequests);
+    applyParentExecutionPayload(stateCopy, envelope.message.executionRequests);
 
     return getExpectedWithdrawals(fork, stateCopy).expectedWithdrawals;
   }

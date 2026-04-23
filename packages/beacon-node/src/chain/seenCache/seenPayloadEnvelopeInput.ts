@@ -30,11 +30,6 @@ export type SeenPayloadEnvelopeInputModules = {
  * (parent for next-slot production) and its parent (proposer-boost-reorg fallback). It can
  * transiently hold more during forks, range-sync bursts, or when `prepareNextSlot` skips
  * ticks; subsequent ticks settle it back.
- *
- * Consumers that miss the cache fall back to DB (`chain.getParentExecutionRequests` /
- * `getExecutionPayloadEnvelope`). The authoritative view of "does this block / payload exist
- * in the canonical chain" is `forkChoice` — this cache is a latency optimisation for the
- * synchronous fast path, not a source of truth.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
