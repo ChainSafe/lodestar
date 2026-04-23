@@ -20,7 +20,7 @@ export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
   EXECUTION_ENGINE_ERROR = "PAYLOAD_ERROR_EXECUTION_ENGINE_ERROR",
   BLOCK_NOT_IN_FORK_CHOICE = "PAYLOAD_ERROR_BLOCK_NOT_IN_FORK_CHOICE",
-  STATE_TRANSITION_ERROR = "PAYLOAD_ERROR_STATE_TRANSITION_ERROR",
+  ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
 }
 
@@ -40,7 +40,7 @@ export type PayloadErrorType =
       blockRootHex: string;
     }
   | {
-      code: PayloadErrorCode.STATE_TRANSITION_ERROR;
+      code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR;
       message: string;
     }
   | {
@@ -80,12 +80,11 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 2. Get the ProtoBlock from fork choice
  * 3. Wait for data columns to be available
  * 4. Apply write-queue backpressure before verification
- * 5. Regenerate block state (post-block, pre-payload) for envelope verification
- * 6. Run EL verification (notifyNewPayload) and BLS signature verification in parallel
- * 7. Verify envelope fields against state (spec: verify_execution_payload_envelope)
- * 8. Persist verified payload envelope to hot DB
- * 9. Update fork choice (transitions the block's PENDING variant to FULL)
- * 10. Record metrics and emit `execution_payload` event
+ * 5. Regenerate state for envelope verification
+ * 6. Verify envelope (fields against state, signature, and EL — parallel where possible)
+ * 7. Persist verified payload envelope to hot DB
+ * 8. Update fork choice (transitions the block's PENDING variant to FULL)
+ * 9. Record metrics and emit `execution_payload` event
  */
 export async function importExecutionPayload(
   this: BeaconChain,
@@ -128,8 +127,7 @@ export async function importExecutionPayload(
   // The actual DB write is deferred until after verification succeeds.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
 
-  // 5. Get pre-state for envelope verification.
-  // We need the block state (post-block, pre-payload) to verify the envelope.
+  // 5. Regenerate state for envelope verification
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
     protoBlock.slot,
@@ -138,12 +136,29 @@ export async function importExecutionPayload(
   );
   if (!isStatePostGloas(blockState)) {
     throw new PayloadError({
-      code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-      message: `Expected gloas+ block state for payload import, got fork=${blockState.forkName}`,
+      code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+      message: `Expected gloas+ state for payload import, got fork=${blockState.forkName}`,
     });
   }
 
-  // 6. Run EL verification and BLS signature verification in parallel
+  // 6. Verify envelope against state (spec: verify_execution_payload_envelope). Run the sync
+  // field checks first to fail fast before starting the EL + BLS work. When validSignature is
+  // true, the envelope came from gossip/API where both the signature and executionRequestsRoot
+  // were already verified, skip re-hashing executionRequestsRoot.
+  try {
+    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
+      verifyExecutionRequestsRoot: !opts.validSignature,
+    });
+  } catch (e) {
+    throw new PayloadError(
+      {
+        code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+        message: (e as Error).message,
+      },
+      `Envelope verification error: ${(e as Error).message}`
+    );
+  }
+
   const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,
@@ -165,29 +180,10 @@ export async function importExecutionPayload(
         ),
   ]);
 
-  // 7. Verify envelope fields against state (spec: verify_execution_payload_envelope)
-  try {
-    // When validSignature is true, the envelope came from gossip/API where both
-    // signature and executionRequestsRoot were already verified, skip re-hashing.
-    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
-      verifyExecutionRequestsRoot: !opts.validSignature,
-    });
-  } catch (e) {
-    throw new PayloadError(
-      {
-        code: PayloadErrorCode.STATE_TRANSITION_ERROR,
-        message: (e as Error).message,
-      },
-      `Envelope verification error: ${(e as Error).message}`
-    );
-  }
-
-  // 7a. Check signature verification result
   if (!signatureValid) {
     throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
-  // 7b. Handle EL response
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
       break;
@@ -213,7 +209,7 @@ export async function importExecutionPayload(
       });
   }
 
-  // 8. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
+  // 7. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
@@ -224,11 +220,11 @@ export async function importExecutionPayload(
     }
   });
 
-  // 9. Update fork choice, transitions the block's PENDING variant to FULL
+  // 8. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
 
-  // 10. Record metrics for payload envelope and column sources, emit `execution_payload`
+  // 9. Record metrics for payload envelope and column sources, emit `execution_payload`
   // event for recent enough payloads after successful import.
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {

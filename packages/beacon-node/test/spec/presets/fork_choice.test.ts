@@ -388,7 +388,7 @@ const forkChoiceTest =
                 const blockHash = toHex(envelope.message.payload.blockHash);
                 const blockNumber = envelope.message.payload.blockNumber;
 
-                // Verify envelope against the post-block state (spec: verify_execution_payload_envelope)
+                // Verify envelope against the state
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
                 const blockState = await chain.regen.getBlockSlotState(
