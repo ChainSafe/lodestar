@@ -58,6 +58,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
       getAllAncestorAndNonAncestorBlocks: vi.fn(),
+      getAllAncestorAndNonAncestorBlocksDefaultStatus: vi.fn(),
       iterateAncestorBlocks: vi.fn(),
       getBlockSummariesByParentRoot: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
