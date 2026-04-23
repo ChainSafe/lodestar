@@ -224,7 +224,7 @@ export class PrepareNextSlotScheduler {
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
-            parentBlockRoot: fromHex(updatedHeadRoot),
+            parentBlockRoot: fromHex(updatedHead.blockRoot),
             parentBlockHash,
             feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
