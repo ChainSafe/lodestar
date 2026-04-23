@@ -391,21 +391,21 @@ const forkChoiceTest =
                 // Verify envelope against the post-block state (spec: verify_execution_payload_envelope)
                 const protoBlock = (chain.forkChoice as ForkChoice).getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const envelopeState = await chain.regen.getBlockSlotState(
+                const blockState = await chain.regen.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},
-                  RegenCaller.restApi
+                  RegenCaller.processBlock
                 );
-                verifyExecutionPayloadEnvelope(beaconConfig, envelopeState as IBeaconStateViewGloas, envelope.message);
+                verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope.message);
 
                 // Verify signature
                 const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                   beaconConfig,
-                  envelopeState as IBeaconStateViewGloas,
+                  blockState as IBeaconStateViewGloas,
                   pubkeyCache,
                   envelope,
-                  envelopeState.latestBlockHeader.proposerIndex,
+                  blockState.latestBlockHeader.proposerIndex,
                   chain.bls
                 );
                 if (!sigValid) throw Error("Invalid execution payload envelope signature");
