@@ -282,6 +282,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.signedExecutionPayloadBid = signedBid;
     // TODO GLOAS: Get payload attestations from pool for previous slot
     gloasBody.payloadAttestations = [];
+    // TODO GLOAS: set parentExecutionRequests in the block body
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later

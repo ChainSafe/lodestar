@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
-import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {DataColumnSidecar, RootHex, deneb, phase0} from "@lodestar/types";
 import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
@@ -110,8 +110,8 @@ export type ChainEventData = {
 export type IChainEvents = ApiEvents & {
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
 
-  [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithPayloadStatus) => void;
-  [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithPayloadStatus) => void;
+  [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
+  [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
