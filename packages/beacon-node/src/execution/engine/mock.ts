@@ -11,7 +11,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
+import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
@@ -380,6 +380,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
 
       if (ForkSeq[fork] >= ForkSeq.capella) {
         (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = ssz.capella.Withdrawals.defaultValue();
+      }
+
+      if (ForkSeq[fork] >= ForkSeq.gloas && payloadAttributes.slotNumber != null) {
+        (executionPayload as gloas.ExecutionPayload).slotNumber = payloadAttributes.slotNumber;
       }
 
       this.preparingPayloads.set(payloadId, {

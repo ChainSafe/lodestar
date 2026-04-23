@@ -172,6 +172,7 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
 
+// TODO GLOAS: This function no longer exists in v1.7.0-alpha.5 specs. Remove it when appropriate to do so
 export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
   return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
 }

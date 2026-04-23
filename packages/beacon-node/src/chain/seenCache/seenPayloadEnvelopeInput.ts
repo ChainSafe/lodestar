@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {SerializedCache} from "../../util/serializedCache.js";
@@ -21,8 +21,15 @@ export type SeenPayloadEnvelopeInputModules = {
 /**
  * Cache for tracking PayloadEnvelopeInput instances, keyed by beacon block root.
  *
- * Created during block import when a block is processed.
- * Pruned on finalization and after payload is written to DB.
+ * Created during block import when a block is processed. Two pruning paths:
+ *   - `prepareNextSlot` calls `pruneBelow(headParentSlot)` every slot once the head we'll build
+ *     on is known.
+ *   - `onFinalized` calls `pruneBelow(finalizedSlot)` on every finalization for bulk cleanup.
+ *
+ * Steady state (linear chain, healthy progression): the cache holds ~2 entries — the head
+ * (parent for next-slot production) and its parent (proposer-boost-reorg fallback). It can
+ * transiently hold more during forks, range-sync bursts, or when `prepareNextSlot` skips
+ * ticks; subsequent ticks settle it back.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
@@ -58,16 +65,7 @@ export class SeenPayloadEnvelopeInput {
   }
 
   private onFinalized = (checkpoint: CheckpointWithHex): void => {
-    // Prune all entries with slot < finalized slot
-    const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    let deletedCount = 0;
-    for (const [, input] of this.payloadInputs) {
-      if (input.slot < finalizedSlot) {
-        this.evictPayloadInput(input);
-        deletedCount++;
-      }
-    }
-    this.logger?.debug("SeenPayloadEnvelopeInput.onFinalized deleted cached entries", {deletedCount});
+    this.pruneBelow(computeStartSlotAtEpoch(checkpoint.epoch));
   };
 
   add(props: CreateFromBlockProps): PayloadEnvelopeInput {
@@ -88,15 +86,19 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.get(blockRootHex)?.hasPayloadEnvelope() ?? false;
   }
 
-  prune(blockRootHex: RootHex): void {
-    const payloadInput = this.payloadInputs.get(blockRootHex);
-    if (payloadInput) {
-      this.evictPayloadInput(payloadInput);
-    }
-  }
-
   size(): number {
     return this.payloadInputs.size;
+  }
+
+  pruneBelow(slot: Slot): void {
+    let deletedCount = 0;
+    for (const [, input] of this.payloadInputs) {
+      if (input.slot < slot) {
+        this.evictPayloadInput(input);
+        deletedCount++;
+      }
+    }
+    this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelow deleted entries", {slot, deletedCount});
   }
 
   private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {

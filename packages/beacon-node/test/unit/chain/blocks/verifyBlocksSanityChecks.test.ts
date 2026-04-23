@@ -29,7 +29,6 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
       epoch: 0,
       root: Buffer.alloc(32),
       rootHex: "",
-      payloadStatus: PayloadStatus.FULL,
     });
     clock = new ClockStopped(currentSlot);
     modules = {config, forkChoice, clock, opts: {} as IChainOptions, blacklistedBlocks: new Map()};
@@ -57,7 +56,6 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
       epoch: 5,
       root: Buffer.alloc(32),
       rootHex: "",
-      payloadStatus: PayloadStatus.FULL,
     });
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks(modules, [block], {}),
