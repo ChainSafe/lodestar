@@ -91,6 +91,7 @@ export async function archiveBlocks(
       const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
         config,
         db,
+        logger,
         finalizedCanonicalBlockRoots,
         currentEpoch
       );
@@ -304,6 +305,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, logger: Logger, block
 async function migrateBlobSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
+  logger: Logger,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
 ): Promise<number> {
@@ -316,29 +318,36 @@ async function migrateBlobSidecarsFromHotToColdDb(
     if (canonicalBlocks.length === 0) break;
 
     // load Buffer instead of ssz deserialized to improve performance
-    const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = await Promise.all(
-      canonicalBlocks
-        .filter((block) => {
-          const blockSlot = block.slot;
-          const blockEpoch = computeEpochAtSlot(blockSlot);
-          const forkSeq = config.getForkSeq(blockSlot);
-          return (
-            forkSeq >= ForkSeq.deneb &&
-            forkSeq < ForkSeq.fulu &&
-            // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
-            blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-          );
-        })
-        .map(async (block) => {
-          // Here we assume the blob sidecars are already in the hot db
-          // instead of checking first the block input cache
-          const bytes = await db.blobSidecars.getBinary(block.root);
-          if (!bytes) {
-            throw Error(`No blobSidecars found for slot ${block.slot} root ${toRootHex(block.root)}`);
-          }
-          return {key: block.slot, value: bytes};
-        })
-    );
+    const canonicalBlobSidecarsEntries: KeyValue<Slot, Uint8Array>[] = (
+      await Promise.all(
+        canonicalBlocks
+          .filter((block) => {
+            const blockSlot = block.slot;
+            const blockEpoch = computeEpochAtSlot(blockSlot);
+            const forkSeq = config.getForkSeq(blockSlot);
+            return (
+              forkSeq >= ForkSeq.deneb &&
+              forkSeq < ForkSeq.fulu &&
+              // if block is out of ${config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS}, skip this step
+              blockEpoch >= currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+            );
+          })
+          .map(async (block): Promise<KeyValue<Slot, Uint8Array> | null> => {
+            // The ancestor walk includes the boundary (previous finalized) block; on first
+            // finalization that boundary is the anchor which has no blob sidecars in hot db.
+            // Treat a null hot-db entry as "nothing to migrate" rather than an error.
+            const bytes = await db.blobSidecars.getBinary(block.root);
+            if (!bytes) {
+              logger.debug("BlobSidecars in forkchoice but missing in hot db, could be already archived", {
+                slot: block.slot,
+                root: toRootHex(block.root),
+              });
+              return null;
+            }
+            return {key: block.slot, value: bytes};
+          })
+      )
+    ).filter((e): e is KeyValue<Slot, Uint8Array> => e !== null);
 
     // put to blockArchive db and delete block db
     await Promise.all([
