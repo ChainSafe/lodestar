@@ -79,12 +79,12 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 1. Emit `execution_payload_available` event for payload attestation
  * 2. Get the ProtoBlock from fork choice
  * 3. Wait for data columns to be available
- * 4. Apply write-queue backpressure before verification
- * 5. Regenerate state for envelope verification
- * 6. Verify envelope (fields against state, signature, and EL — parallel where possible)
- * 7. Persist verified payload envelope to hot DB
- * 8. Update fork choice (transitions the block's PENDING variant to FULL)
- * 9. Record metrics and emit `execution_payload` event
+ * 4. Regenerate state for envelope verification
+ * 5. Verify envelope (fields against state, signature, and EL in parallel where possible)
+ * 6. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
+ * 7. Update fork choice (transitions the block's PENDING variant to FULL)
+ * 8. Record metrics for payload envelope and column sources
+ * 9. Emit `execution_payload` event
  */
 export async function importExecutionPayload(
   this: BeaconChain,
@@ -119,15 +119,11 @@ export async function importExecutionPayload(
     });
   }
 
-  // 3. Wait for data columns to be available before claiming a write-queue slot.
+  // 3. Wait for data columns to be available.
   // The helper is shared with future gloas sync services; take the single-item batch form here.
   await verifyPayloadsDataAvailability([payloadInput], signal);
 
-  // 4. Apply backpressure from the write queue, before doing verification work.
-  // The actual DB write is deferred until after verification succeeds.
-  await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
-
-  // 5. Regenerate state for envelope verification
+  // 4. Regenerate state for envelope verification
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
     protoBlock.slot,
@@ -141,7 +137,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 6. Verify envelope against state (spec: verify_execution_payload_envelope). Run the sync
+  // 5. Verify envelope against state (spec: verify_execution_payload_envelope). Run the sync
   // field checks first to fail fast before starting the EL + BLS work. When validSignature is
   // true, the envelope came from gossip/API where both the signature and executionRequestsRoot
   // were already verified, skip re-hashing executionRequestsRoot.
@@ -209,7 +205,9 @@ export async function importExecutionPayload(
       });
   }
 
-  // 7. Persist payload envelope to hot DB (performed asynchronously to avoid blocking)
+  // 6. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
+  // on the import pipeline during sync, then perform the write asynchronously to avoid blocking.
+  await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error(
@@ -220,17 +218,17 @@ export async function importExecutionPayload(
     }
   });
 
-  // 8. Update fork choice, transitions the block's PENDING variant to FULL
+  // 7. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
 
-  // 9. Record metrics for payload envelope and column sources, emit `execution_payload`
-  // event for recent enough payloads after successful import.
+  // 8. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
+  // 9. Emit `execution_payload` event for recent enough payloads after successful import
   if (this.clock.currentSlot - slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
       slot,
