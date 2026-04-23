@@ -137,10 +137,9 @@ export async function importExecutionPayload(
     });
   }
 
-  // 5. Verify envelope against state (spec: verify_execution_payload_envelope). Run the sync
-  // field checks first to fail fast before starting the EL + BLS work. When validSignature is
-  // true, the envelope came from gossip/API where both the signature and executionRequestsRoot
-  // were already verified, skip re-hashing executionRequestsRoot.
+  // 5. Verify envelope fields against state first to fail fast before the EL + BLS work.
+  // When validSignature is true, gossip/API has already verified both the signature and the
+  // executionRequestsRoot, so we skip those checks here.
   try {
     verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
       verifyExecutionRequestsRoot: !opts.validSignature,
