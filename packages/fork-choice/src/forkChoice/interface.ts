@@ -274,15 +274,13 @@ export interface IForkChoice {
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
    *
-   * `ancestors` excludes the previous finalized block. That block is exposed separately as
-   * `previousFinalizedFull` when its FULL variant exists — the archiver uses it to migrate the
-   * execution payload envelope and data column sidecars of a Gloas block whose SignedBeaconBlock
-   * was archived on the previous run.
+   * `ancestors` is the raw walk and includes the previous finalized block as its last element —
+   * callers that don't want the boundary should slice it off themselves.
    */
   getAllAncestorAndNonAncestorBlocks(
     blockRoot: RootHex,
     payloadStatus: PayloadStatus
-  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]; previousFinalizedFull: ProtoBlock | undefined};
+  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
   /**
    * Same as `getAllAncestorAndNonAncestorBlocks` but resolves the default payload-status variant
    * (FULL pre-Gloas, PENDING for Gloas) for the given root. Use when the caller holds a
@@ -291,7 +289,6 @@ export interface IForkChoice {
   getAllAncestorAndNonAncestorBlocksDefaultStatus(blockRoot: RootHex): {
     ancestors: ProtoBlock[];
     nonAncestors: ProtoBlock[];
-    previousFinalizedFull: ProtoBlock | undefined;
   };
   getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;

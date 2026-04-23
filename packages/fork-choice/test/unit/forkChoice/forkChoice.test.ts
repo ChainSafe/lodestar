@@ -159,7 +159,7 @@ describe("Forkchoice", () => {
     });
   });
 
-  it("getAllAncestorAndNonAncestorBlocks equals getAllAncestorBlocks + getAllNonAncestorBlocks", () => {
+  it("getAllAncestorAndNonAncestorBlocks returns the raw walk (boundary included) + nonAncestors", () => {
     // Create a simple chain: 0 -> 1 -> 2 -> 3
     populateProtoArray(genesisSlot + 3);
 
@@ -172,22 +172,24 @@ describe("Forkchoice", () => {
 
     const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
 
-    // Test with a block from the canonical chain
+    // `getAllAncestorBlocks` slices off the boundary (previous finalized); the combined walker does
+    // not — callers that want the boundary removed should do it themselves.
     const canonicalBlockRoot = getBlockRoot(genesisSlot + 3);
     const canonicalAncestorBlocks = forkchoice.getAllAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
     const canonicalNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
     const canonicalCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(canonicalBlockRoot, PayloadStatus.FULL);
 
-    expect(canonicalCombined.ancestors).toEqual(canonicalAncestorBlocks);
+    expect(canonicalCombined.ancestors.slice(0, -1)).toEqual(canonicalAncestorBlocks);
+    expect(canonicalCombined.ancestors).toHaveLength(canonicalAncestorBlocks.length + 1);
     expect(canonicalCombined.nonAncestors).toEqual(canonicalNonAncestorBlocks);
 
-    // Test with a block from the fork chain
     const forkBlockRoot = getBlockRoot(genesisSlot + 10);
     const forkAncestorBlocks = forkchoice.getAllAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
     const forkNonAncestorBlocks = forkchoice.getAllNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
     const forkCombined = forkchoice.getAllAncestorAndNonAncestorBlocks(forkBlockRoot, PayloadStatus.FULL);
 
-    expect(forkCombined.ancestors).toEqual(forkAncestorBlocks);
+    expect(forkCombined.ancestors.slice(0, -1)).toEqual(forkAncestorBlocks);
+    expect(forkCombined.ancestors).toHaveLength(forkAncestorBlocks.length + 1);
     expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);
   });
 

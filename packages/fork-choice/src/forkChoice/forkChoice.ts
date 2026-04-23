@@ -1193,32 +1193,23 @@ export class ForkChoice implements IForkChoice {
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
    *
-   * `ancestors` excludes the previous finalized block (the last node in the raw walk); that node
-   * is exposed as `previousFinalizedFull` when its FULL variant exists in the proto-array.
-   *
-   * The archiver uses `previousFinalizedFull` for payload/column migration of the old finalized checkpoint
+   * `ancestors` is the raw walk and includes the previous finalized block as its last element —
+   * callers that don't want the boundary should slice it off themselves.
+   * Post-gloas for each block root, it returns exactly one variant of it.
    */
   getAllAncestorAndNonAncestorBlocks(
     blockRoot: RootHex,
     payloadStatus: PayloadStatus
-  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]; previousFinalizedFull: ProtoBlock | undefined} {
-    const {ancestors, nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot, payloadStatus);
-
-    const boundary = ancestors.at(-1);
-    const previousFinalizedFull =
-      boundary?.payloadStatus === PayloadStatus.FULL && isGloasBlock(boundary) ? boundary : undefined;
-
-    return {
-      ancestors: ancestors.slice(0, ancestors.length - 1),
-      nonAncestors,
-      previousFinalizedFull,
-    };
+  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]} {
+    return this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot, payloadStatus);
   }
 
+  /**
+   * Same to getAllAncestorAndNonAncestorBlocks with default variant of ${blockRoot} to start with
+   */
   getAllAncestorAndNonAncestorBlocksDefaultStatus(blockRoot: RootHex): {
     ancestors: ProtoBlock[];
     nonAncestors: ProtoBlock[];
-    previousFinalizedFull: ProtoBlock | undefined;
   } {
     const defaultStatus = this.protoArray.getDefaultVariant(blockRoot);
     if (defaultStatus === undefined) {
