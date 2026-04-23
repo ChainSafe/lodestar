@@ -175,10 +175,12 @@ export async function importExecutionPayload(
         ),
   ]);
 
+  // 5a. Check signature verification result
   if (!signatureValid) {
     throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
+  // 5b. Handle EL response
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
       break;
