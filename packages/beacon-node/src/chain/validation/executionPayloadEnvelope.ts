@@ -47,10 +47,9 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  // Fork choice flips to PayloadStatus.FULL during envelope import, so it is the authoritative
-  // duplicate-detection signal.
   const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
-  if (envelopeBlock) {
+  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,
@@ -58,7 +57,6 @@ async function validateExecutionPayloadEnvelope(
     });
   }
 
-  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
   if (!payloadInput) {
     // PayloadEnvelopeInput should have been created during block import
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
