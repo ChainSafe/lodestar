@@ -1,15 +1,14 @@
 import EventEmitter from "node:events";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
-import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
-import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -95,6 +94,38 @@ function buildPayloadFixture({
   });
 
   return {block, blockRootHex, blockRoot, payloadInput, envelope, columnSidecars};
+}
+
+function createGloasBlockInput({
+  block,
+  blockRootHex,
+  peerIdStr,
+  seenTimestampSec,
+  source,
+}: {
+  block: gloas.SignedBeaconBlock;
+  blockRootHex: string;
+  peerIdStr?: PeerIdStr;
+  seenTimestampSec: number;
+  source: BlockInputSource;
+}): BlockInputNoData {
+  return BlockInputNoData.createFromBlock({
+    block,
+    blockRootHex,
+    forkName: ForkName.gloas,
+    daOutOfRange: false,
+    seenTimestampSec,
+    source,
+    peerIdStr,
+  });
+}
+
+function getGloasBlockRoot(block: gloas.SignedBeaconBlock): Uint8Array {
+  return ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+}
+
+function getGloasBlockHashHex(block: gloas.SignedBeaconBlock): string {
+  return toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash);
 }
 
 function buildIncompleteGloasBlockInput({
@@ -196,10 +227,15 @@ function buildIncompleteGloasBlockInput({
 describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
   const logger = testLogger();
   const slotSec = 0.3;
-  const config = createChainForkConfig({
-    ...minimalConfig,
-    SLOT_DURATION_MS: slotSec * 1000,
-  });
+  const config = createBeaconConfig(
+    {
+      ...minimalConfig,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+      SLOT_DURATION_MS: slotSec * 1000,
+    },
+    Buffer.alloc(32, 0)
+  );
 
   beforeEach(() => {
     vi.useFakeTimers({shouldAdvanceTime: true});
@@ -273,22 +309,36 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
   } of testCases) {
     it(id, async () => {
       const peer = await getRandPeerIdStr();
-      const blockA = ssz.phase0.SignedBeaconBlock.defaultValue();
-      const blockB = ssz.phase0.SignedBeaconBlock.defaultValue();
-      const blockC = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockA = ssz.gloas.SignedBeaconBlock.defaultValue();
+      const blockB = ssz.gloas.SignedBeaconBlock.defaultValue();
+      const blockC = ssz.gloas.SignedBeaconBlock.defaultValue();
       blockA.message.slot = 1;
       blockB.message.slot = 2;
       blockC.message.slot = 3;
       const blockRoot0 = Buffer.alloc(32, 0x00);
-      const blockRootA = ssz.phase0.BeaconBlock.hashTreeRoot(blockA.message);
+      const blockHash0 = Buffer.alloc(32, 0x00);
+      const blockHashA = Buffer.alloc(32, 0xa1);
+      const blockHashB = Buffer.alloc(32, 0xb2);
+      const blockHashC = Buffer.alloc(32, 0xc3);
+      blockA.message.parentRoot = blockRoot0;
+      blockA.message.body.signedExecutionPayloadBid.message.parentBlockRoot = blockRoot0;
+      blockA.message.body.signedExecutionPayloadBid.message.parentBlockHash = blockHash0;
+      blockA.message.body.signedExecutionPayloadBid.message.blockHash = blockHashA;
+      const blockRootA = getGloasBlockRoot(blockA);
       blockB.message.parentRoot = blockRootA;
-      const blockRootB = ssz.phase0.BeaconBlock.hashTreeRoot(blockB.message);
+      blockB.message.body.signedExecutionPayloadBid.message.parentBlockRoot = blockRootA;
+      blockB.message.body.signedExecutionPayloadBid.message.parentBlockHash = blockHashA;
+      blockB.message.body.signedExecutionPayloadBid.message.blockHash = blockHashB;
+      const blockRootB = getGloasBlockRoot(blockB);
       blockC.message.parentRoot = blockRootB;
-      const blockRootC = ssz.phase0.BeaconBlock.hashTreeRoot(blockC.message);
-      const blockRootHex0 = toHexString(blockRoot0);
-      const blockRootHexA = toHexString(blockRootA);
-      const blockRootHexB = toHexString(blockRootB);
-      const blockRootHexC = toHexString(blockRootC);
+      blockC.message.body.signedExecutionPayloadBid.message.parentBlockRoot = blockRootB;
+      blockC.message.body.signedExecutionPayloadBid.message.parentBlockHash = blockHashB;
+      blockC.message.body.signedExecutionPayloadBid.message.blockHash = blockHashC;
+      const blockRootC = getGloasBlockRoot(blockC);
+      const blockRootHex0 = toRootHex(blockRoot0);
+      const blockRootHexA = toRootHex(blockRootA);
+      const blockRootHexB = toRootHex(blockRootB);
+      const blockRootHexC = toRootHex(blockRootC);
 
       const blocksByRoot = new Map([
         [blockRootHexA, blockA],
@@ -311,20 +361,27 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           custodyColumns: [],
           earliestAvailableSlot: 0,
         }),
-        custodyConfig: {sampledColumns: []} as unknown as CustodyConfig,
+        custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
         sendBeaconBlocksByRoot: async (_peerId, roots) => {
           sendBeaconBlocksByRootResolveFn([_peerId, roots]);
           const correctBlocks = Array.from(roots)
-            .map((root) => blocksByRoot.get(toHexString(root)))
+            .map((root) => blocksByRoot.get(toRootHex(root)))
             .filter(notNullish);
-          return wrongBlockRoot ? [ssz.phase0.SignedBeaconBlock.defaultValue()] : correctBlocks;
+          return wrongBlockRoot ? [ssz.gloas.SignedBeaconBlock.defaultValue()] : correctBlocks;
         },
       };
 
       const forkChoiceKnownRoots = new Set([blockRootHex0]);
-      const forkChoice: Pick<IForkChoice, "hasBlock" | "hasBlockHex" | "getFinalizedBlock"> = {
-        hasBlock: (root) => forkChoiceKnownRoots.has(toHexString(root)),
+      const forkChoiceKnownPayloadHashes = new Map([[blockRootHex0, toRootHex(blockHash0)]]);
+      const forkChoice: Pick<
+        IForkChoice,
+        "getBlockHexAndBlockHash" | "getFinalizedBlock" | "hasBlock" | "hasBlockHex" | "hasPayloadHexUnsafe"
+      > = {
+        hasBlock: (root) => forkChoiceKnownRoots.has(toRootHex(root)),
         hasBlockHex: (rootHex) => forkChoiceKnownRoots.has(rootHex),
+        hasPayloadHexUnsafe: (rootHex) => forkChoiceKnownPayloadHashes.has(rootHex),
+        getBlockHexAndBlockHash: (rootHex, blockHashHex) =>
+          forkChoiceKnownPayloadHashes.get(rootHex) === blockHashHex ? ({slot: 0} as ProtoBlock) : null,
         getFinalizedBlock: () =>
           ({
             slot: finalizedSlot,
@@ -349,15 +406,25 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         genesisTime: 0,
         processBlock: async (blockInput, opts) => {
           const block = blockInput.getBlock();
-          if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
+          const parentRootHex = toRootHex(block.message.parentRoot);
+          if (!forkChoice.hasBlockHex(parentRootHex)) throw Error("Unknown parent");
+
+          const parentBlockHash = toRootHex(
+            (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.parentBlockHash
+          );
+          if (!forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHash)) {
+            throw new BlockError(block, {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, parentBlockHash});
+          }
+
           const blockSlot = block.message.slot;
           if (blockSlot <= finalizedSlot && !opts?.ignoreIfFinalized) {
             // same behavior to BeaconChain to reproduce https://github.com/ChainSafe/lodestar/issues/5650
             throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
           }
           // Simulate adding the block to the forkchoice
-          const blockRootHex = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block.message));
+          const blockRootHex = toRootHex(getGloasBlockRoot(block as gloas.SignedBeaconBlock));
           forkChoiceKnownRoots.add(blockRootHex);
+          forkChoiceKnownPayloadHashes.set(blockRootHex, getGloasBlockHashHex(block as gloas.SignedBeaconBlock));
           if (blockRootHex === blockRootHexC) blockCResolver();
           if (blockRootHex === blockRootHexA) blockAResolver();
         },
@@ -369,21 +436,23 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
             seenTimestampSec,
             source,
           }: {
-            block: any;
+            block: gloas.SignedBeaconBlock;
             blockRootHex: string;
             seenTimestampSec: number;
             source: BlockInputSource;
           }) =>
-            BlockInputPreData.createFromBlock({
+            createGloasBlockInput({
               block,
               blockRootHex,
-              forkName: config.getForkName(block.message.slot),
-              daOutOfRange: false,
               seenTimestampSec,
               source,
             }),
           prune: () => {},
         } as unknown as SeenBlockInput,
+        seenPayloadEnvelopeInputCache: {
+          get: vi.fn().mockReturnValue(undefined),
+          prune: vi.fn(),
+        } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       };
 
       const setTimeoutSpy = vi.spyOn(global, "setTimeout");
@@ -397,18 +466,16 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       // Register the peer in the peerBalancer via NetworkEvent.peerConnected
       networkEvents.emit(NetworkEvent.peerConnected, {
         peer,
-        status: {} as any,
+        status: {} as never,
         custodyColumns: [],
         clientAgent: "test-client",
       });
 
       if (event === ChainEvent.blockUnknownParent) {
         emitter.emit(ChainEvent.blockUnknownParent, {
-          blockInput: BlockInputPreData.createFromBlock({
+          blockInput: createGloasBlockInput({
             block: blockC,
             blockRootHex: blockRootHexC,
-            forkName: config.getForkName(blockC.message.slot),
-            daOutOfRange: false,
             seenTimestampSec: Math.floor(Date.now() / 1000),
             source: BlockInputSource.gossip,
           }),
@@ -776,16 +843,14 @@ describe("UnknownBlockSync", () => {
               seenTimestampSec,
               source,
             }: {
-              block: SignedBeaconBlock;
+              block: gloas.SignedBeaconBlock;
               blockRootHex: string;
               seenTimestampSec: number;
               source: BlockInputSource;
             }) =>
-              BlockInputPreData.createFromBlock({
+              createGloasBlockInput({
                 block,
                 blockRootHex,
-                forkName: gloasConfig.getForkName(block.message.slot),
-                daOutOfRange: false,
                 seenTimestampSec,
                 source,
               }),
@@ -798,7 +863,7 @@ describe("UnknownBlockSync", () => {
               .fn()
               .mockImplementation((root: string, hash: string) =>
                 root === parentRootHex &&
-                hash === toHexString(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+                hash === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
                   ? ({slot: 0} as ProtoBlock)
                   : null
               ),
@@ -872,16 +937,14 @@ describe("UnknownBlockSync", () => {
               seenTimestampSec,
               source,
             }: {
-              block: SignedBeaconBlock;
+              block: gloas.SignedBeaconBlock;
               blockRootHex: string;
               seenTimestampSec: number;
               source: BlockInputSource;
             }) =>
-              BlockInputPreData.createFromBlock({
+              createGloasBlockInput({
                 block,
                 blockRootHex,
-                forkName: gloasConfig.getForkName(block.message.slot),
-                daOutOfRange: false,
                 seenTimestampSec,
                 source,
               }),
@@ -894,7 +957,7 @@ describe("UnknownBlockSync", () => {
               .fn()
               .mockImplementation((root: string, hash: string) =>
                 root === parentRootHex &&
-                hash === toHexString(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+                hash === toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
                   ? ({slot: 0} as ProtoBlock)
                   : null
               ),
@@ -1226,11 +1289,9 @@ describe("UnknownBlockSync", () => {
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentPayloadHash;
       const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
-      const childBlockInput = BlockInputPreData.createFromBlock({
+      const childBlockInput = createGloasBlockInput({
         block: childBlock,
         blockRootHex: childBlockRootHex,
-        forkName: gloasConfig.getForkName(childBlock.message.slot),
-        daOutOfRange: false,
         seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.gossip,
       });
@@ -1261,7 +1322,7 @@ describe("UnknownBlockSync", () => {
             getBlockHexAndBlockHash: vi
               .fn()
               .mockImplementation((root: string, hash: string) =>
-                root === parentRootHex && hash === toHexString(parentPayloadHash) && hasParentPayload
+                root === parentRootHex && hash === toRootHex(parentPayloadHash) && hasParentPayload
                   ? ({slot: 1} as ProtoBlock)
                   : null
               ),
@@ -1319,11 +1380,9 @@ describe("UnknownBlockSync", () => {
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = Buffer.alloc(32, 0x33);
       const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
-      const childBlockInput = BlockInputPreData.createFromBlock({
+      const childBlockInput = createGloasBlockInput({
         block: childBlock,
         blockRootHex: childBlockRootHex,
-        forkName: gloasConfig.getForkName(childBlock.message.slot),
-        daOutOfRange: false,
         seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.gossip,
       });
@@ -1388,11 +1447,9 @@ describe("UnknownBlockSync", () => {
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot = parentRoot;
       childBlock.message.body.signedExecutionPayloadBid.message.parentBlockHash = parentPayloadHash;
       const childBlockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(childBlock.message));
-      const childBlockInput = BlockInputPreData.createFromBlock({
+      const childBlockInput = createGloasBlockInput({
         block: childBlock,
         blockRootHex: childBlockRootHex,
-        forkName: gloasConfig.getForkName(childBlock.message.slot),
-        daOutOfRange: false,
         seenTimestampSec: Date.now() / 1000,
         source: BlockInputSource.gossip,
       });
