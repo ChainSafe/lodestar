@@ -891,6 +891,10 @@ export class BeaconChain implements IBeaconChain {
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
   ): Promise<electra.ExecutionRequests> {
+    // Gloas genesis has no payload envelope — treat the parent's requests as empty.
+    if (parentBlockSlot === GENESIS_SLOT) {
+      return ssz.electra.ExecutionRequests.defaultValue();
+    }
     const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
     if (envelope === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);

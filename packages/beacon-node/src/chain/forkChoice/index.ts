@@ -103,6 +103,63 @@ export function initializeForkChoiceFromFinalizedState(
 
   const isForkPostGloas = computeEpochAtSlot(state.slot) >= config.GLOAS_FORK_EPOCH;
 
+  const anchorBlockRoot = toRootHex(checkpoint.root);
+  const protoArray = ProtoArray.initialize(
+    {
+      slot: blockHeader.slot,
+      parentRoot: toRootHex(blockHeader.parentRoot),
+      stateRoot: toRootHex(blockHeader.stateRoot),
+      blockRoot: anchorBlockRoot,
+      timeliness: true, // Optimistically assume is timely
+
+      justifiedEpoch: justifiedCheckpoint.epoch,
+      justifiedRoot: toRootHex(justifiedCheckpoint.root),
+      finalizedEpoch: finalizedCheckpoint.epoch,
+      finalizedRoot: toRootHex(finalizedCheckpoint.root),
+      unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
+      unrealizedJustifiedRoot: toRootHex(justifiedCheckpoint.root),
+      unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
+      unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
+
+      ...(isStatePostBellatrix(state) && state.isExecutionStateType && state.isMergeTransitionComplete
+        ? {
+            executionPayloadBlockHash: isStatePostGloas(state)
+              ? toRootHex(state.latestBlockHash)
+              : toRootHex(state.latestExecutionPayloadHeader.blockHash),
+            // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas (EIP-7732 removed
+            // latestExecutionPayloadHeader). Using 0 as unavailable fallback until a solution is found.
+            executionPayloadNumber: isStatePostGloas(state) ? 0 : state.payloadBlockNumber,
+            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+          }
+        : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
+
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+      payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
+      parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
+    },
+    currentSlot
+  );
+
+  // Gloas anchor whose payload has already been fulfilled (e.g. genesis with EL genesis block,
+  // or a finalized anchor that was FULL at time of finalization) must expose a FULL variant so
+  // `forkChoice.hasPayload(anchorRoot)` returns true and next-slot FCU can extend the EL head.
+  // Spec: gloas/fork-choice.md `is_parent_block_full(state)` equivalent — parent is FULL when
+  // `state.latestBlockHash == state.latestExecutionPayloadBid.blockHash`.
+  if (isStatePostGloas(state) && state.isMergeTransitionComplete) {
+    const latestBlockHashHex = toRootHex(state.latestBlockHash);
+    const bidBlockHashHex = toRootHex(state.latestExecutionPayloadBid.blockHash);
+    if (latestBlockHashHex !== ZERO_HASH_HEX && latestBlockHashHex === bidBlockHashHex) {
+      protoArray.onExecutionPayload(
+        anchorBlockRoot,
+        currentSlot,
+        latestBlockHashHex,
+        0,
+        null,
+        blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing
+      );
+    }
+  }
+
   return new forkchoiceConstructor(
     config,
 
@@ -118,41 +175,7 @@ export function initializeForkChoiceFromFinalizedState(
       }
     ),
 
-    ProtoArray.initialize(
-      {
-        slot: blockHeader.slot,
-        parentRoot: toRootHex(blockHeader.parentRoot),
-        stateRoot: toRootHex(blockHeader.stateRoot),
-        blockRoot: toRootHex(checkpoint.root),
-        timeliness: true, // Optimistically assume is timely
-
-        justifiedEpoch: justifiedCheckpoint.epoch,
-        justifiedRoot: toRootHex(justifiedCheckpoint.root),
-        finalizedEpoch: finalizedCheckpoint.epoch,
-        finalizedRoot: toRootHex(finalizedCheckpoint.root),
-        unrealizedJustifiedEpoch: justifiedCheckpoint.epoch,
-        unrealizedJustifiedRoot: toRootHex(justifiedCheckpoint.root),
-        unrealizedFinalizedEpoch: finalizedCheckpoint.epoch,
-        unrealizedFinalizedRoot: toRootHex(finalizedCheckpoint.root),
-
-        ...(isStatePostBellatrix(state) && state.isExecutionStateType && state.isMergeTransitionComplete
-          ? {
-              executionPayloadBlockHash: isStatePostGloas(state)
-                ? toRootHex(state.latestBlockHash)
-                : toRootHex(state.latestExecutionPayloadHeader.blockHash),
-              // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas (EIP-7732 removed
-              // latestExecutionPayloadHeader). Using 0 as unavailable fallback until a solution is found.
-              executionPayloadNumber: isStatePostGloas(state) ? 0 : state.payloadBlockNumber,
-              executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
-            }
-          : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
-
-        dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
-        parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
-      },
-      currentSlot
-    ),
+    protoArray,
     state.validatorCount,
     metrics,
     opts,

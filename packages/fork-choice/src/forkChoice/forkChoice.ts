@@ -268,6 +268,11 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
+    // Anchor block (e.g. Gloas genesis) has no parent in the proto array — no reorg possible.
+    if (headBlock.parentRoot === HEX_ZERO_HASH) {
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ParentBlockNotAvailable};
+    }
+
     const parentBlock = this.protoArray.getBlock(
       headBlock.parentRoot,
       this.protoArray.getParentPayloadStatus(headBlock)
@@ -386,6 +391,11 @@ export class ForkChoice implements IForkChoice {
         proposerBoostReorg,
       });
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
+    }
+
+    // Anchor block (e.g. Gloas genesis) has no parent in the proto array — no reorg possible.
+    if (headBlock.parentRoot === HEX_ZERO_HASH) {
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
     const parentBlock = this.protoArray.getBlock(
