@@ -22,6 +22,10 @@ async function ghApiFetch<T>(endpoint: string, token: string): Promise<T> {
 async function resolveNightlyRunId(repo: string, token: string, date?: string, branch?: string): Promise<number> {
   const params = new URLSearchParams({status: "success", per_page: "1"});
   if (branch) params.append("branch", branch);
+  // If neither branch nor date narrow the query, restrict to scheduled runs so
+  // a PR's successful run on consensus-specs can't outrank the latest master
+  // nightly. When a date is given, allow manual re-runs on that day too.
+  else if (!date) params.append("event", "schedule");
   if (date) params.append("created", date);
 
   const {workflow_runs} = await ghApiFetch<WorkflowRunsResponse>(

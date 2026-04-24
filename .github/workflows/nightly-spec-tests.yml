@@ -1,0 +1,120 @@
+name: Nightly Spec Tests
+
+# Don't cancel an in-flight run when the next cron fires
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+on:
+  schedule:
+    # 06:00 UTC. ethereum/consensus-specs `tests.yml` cron fires at 00:00 UTC
+    # and takes ~5h to publish all artifacts. Earlier risks falling back to the
+    # previous day's run.
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "'latest' or YYYY-MM-DD"
+        required: false
+        default: "latest"
+      repo:
+        description: "consensus-specs repo (org/name); blank = ethereum/consensus-specs"
+        required: false
+        default: ""
+      branch:
+        description: "Branch in the repo; blank = default branch"
+        required: false
+        default: ""
+
+jobs:
+  spec-tests:
+    name: Nightly Spec Tests
+    # Don't run scheduled copies of this workflow on forks.
+    if: ${{ github.event_name != 'schedule' || github.repository == 'ChainSafe/lodestar' }}
+    runs-on: warp-ubuntu-2204-x64-4x
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
+      - name: Download nightly spec tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NIGHTLY_DATE: ${{ inputs.date || 'latest' }}
+          NIGHTLY_REPO: ${{ inputs.repo }}
+          NIGHTLY_BRANCH: ${{ inputs.branch }}
+        run: pnpm download-spec-tests "$NIGHTLY_DATE" "$NIGHTLY_REPO" "$NIGHTLY_BRANCH"
+
+      # Each suite tees its output so we can upload logs on failure.
+      # GitHub's default bash is `-eo pipefail`, so vitest's exit code
+      # propagates through the pipe and `continue-on-error` still sees it.
+      - name: Spec tests general
+        id: spec_general
+        continue-on-error: true
+        run: pnpm test:spec:general 2>&1 | tee spec-tests-general.log
+        working-directory: packages/beacon-node
+
+      - name: Spec tests bls
+        id: spec_bls
+        continue-on-error: true
+        run: pnpm test:spec:bls 2>&1 | tee spec-tests-bls.log
+        working-directory: packages/beacon-node
+
+      - name: Spec tests minimal
+        id: spec_minimal
+        continue-on-error: true
+        run: pnpm test:spec:minimal 2>&1 | tee spec-tests-minimal.log
+        working-directory: packages/beacon-node
+
+      - name: Spec tests mainnet
+        id: spec_mainnet
+        continue-on-error: true
+        run: NODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:mainnet 2>&1 | tee spec-tests-mainnet.log
+        working-directory: packages/beacon-node
+
+      - name: Spec tests validator
+        id: spec_validator
+        continue-on-error: true
+        run: pnpm test:spec 2>&1 | tee spec-tests-validator.log
+        working-directory: packages/validator
+
+      - name: Upload spec test logs
+        if: >-
+          steps.spec_general.outcome == 'failure' ||
+          steps.spec_bls.outcome == 'failure' ||
+          steps.spec_minimal.outcome == 'failure' ||
+          steps.spec_mainnet.outcome == 'failure' ||
+          steps.spec_validator.outcome == 'failure'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: spec-test-logs
+          path: |
+            packages/beacon-node/spec-tests-*.log
+            packages/validator/spec-tests-*.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Fail if any suite failed
+        if: >-
+          steps.spec_general.outcome == 'failure' ||
+          steps.spec_bls.outcome == 'failure' ||
+          steps.spec_minimal.outcome == 'failure' ||
+          steps.spec_mainnet.outcome == 'failure' ||
+          steps.spec_validator.outcome == 'failure'
+        run: |
+          echo "One or more spec-test suites failed:"
+          echo "  general:   ${{ steps.spec_general.outcome }}"
+          echo "  bls:       ${{ steps.spec_bls.outcome }}"
+          echo "  minimal:   ${{ steps.spec_minimal.outcome }}"
+          echo "  mainnet:   ${{ steps.spec_mainnet.outcome }}"
+          echo "  validator: ${{ steps.spec_validator.outcome }}"
+          exit 1
