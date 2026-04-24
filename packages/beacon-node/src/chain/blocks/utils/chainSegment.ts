@@ -73,7 +73,15 @@ export function assertLinearChainSegment(
       // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
       const bidParentHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
       if (bidParentHash !== currentExecHash) {
-        // The previous slot's envelope was orphaned — fall back to prevExecHash
+        // Maybe the previous slot's FULL envelope was orphaned — try falling back.
+        // If even prevExecHash doesn't match, the segment is non-linear.
+        if (bidParentHash !== prevExecHash) {
+          throw new BlockError(block, {
+            code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+            parentRoot: toRootHex(block.message.parentRoot),
+            parentBlockHash: bidParentHash,
+          });
+        }
         if (lastFullSlot !== null && payloadEnvelopes !== null) {
           const orphanedInput = payloadEnvelopes.get(lastFullSlot);
           if (orphanedInput != null) {
