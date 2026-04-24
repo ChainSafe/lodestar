@@ -102,6 +102,7 @@ export function verifyBlocksSanityChecks(
         if (!parentBlockWithPayload) {
           throw new BlockError(block, {
             code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+            parentRoot,
             parentBlockHash,
           });
         }
