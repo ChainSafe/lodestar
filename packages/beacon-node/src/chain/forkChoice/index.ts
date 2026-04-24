@@ -144,11 +144,13 @@ export function initializeForkChoiceFromFinalizedState(
   // or a finalized anchor that was FULL at time of finalization) must expose a FULL variant so
   // `forkChoice.hasPayload(anchorRoot)` returns true and next-slot FCU can extend the EL head.
   // Spec: gloas/fork-choice.md `is_parent_block_full(state)` equivalent — parent is FULL when
-  // `state.latestBlockHash == state.latestExecutionPayloadBid.blockHash`.
-  if (isStatePostGloas(state) && state.isMergeTransitionComplete) {
+  // `state.latestBlockHash == state.latestExecutionPayloadBid.blockHash` (and non-zero).
+  if (isStatePostGloas(state)) {
     const latestBlockHashHex = toRootHex(state.latestBlockHash);
-    const bidBlockHashHex = toRootHex(state.latestExecutionPayloadBid.blockHash);
-    if (latestBlockHashHex !== ZERO_HASH_HEX && latestBlockHashHex === bidBlockHashHex) {
+    if (
+      latestBlockHashHex !== ZERO_HASH_HEX &&
+      latestBlockHashHex === toRootHex(state.latestExecutionPayloadBid.blockHash)
+    ) {
       protoArray.onExecutionPayload(
         anchorBlockRoot,
         currentSlot,
