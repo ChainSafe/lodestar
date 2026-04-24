@@ -124,7 +124,11 @@ export async function processBlocks(
 
       const slot = fullyVerifiedBlock.blockInput.getBlock().message.slot;
       const payloadInput = payloadEnvelopes?.get(slot);
-      if (payloadInput?.hasPayloadEnvelope() && payloadInput.isComplete()) {
+      if (payloadInput?.hasPayloadEnvelope()) {
+        if (!payloadInput.isComplete()) {
+          // we validated DA before reaching this
+          throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
+        }
         // we already awaited DA in verifyBlocksInEpoch for this segment
         // TODO GLOAS: may need FullyVerifiedPayload here with DatAvailabilityStatus added from here
         // the current flow use that data from the forkchoice pending node which is not correct
