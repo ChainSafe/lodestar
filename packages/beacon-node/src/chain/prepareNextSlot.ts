@@ -10,7 +10,7 @@ import {
   isStatePostBellatrix,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Bytes32, Slot} from "@lodestar/types";
+import {Bytes32, Slot, electra} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
@@ -83,7 +83,7 @@ export class PrepareNextSlotScheduler {
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
       const {slot: headSlot, blockRoot: headRoot} = headBlock;
       // may be updated below if we predict a proposer-boost-reorg
-      let updatedHeadRoot = headRoot;
+      let updatedHead = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -148,7 +148,7 @@ export class PrepareNextSlotScheduler {
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
             );
-            updatedHeadRoot = proposerHeadRoot;
+            updatedHead = proposerHead;
           }
 
           // Update the builder status, if enabled shoot an api call to check status
@@ -165,13 +165,18 @@ export class PrepareNextSlotScheduler {
         }
 
         let parentBlockHash: Bytes32;
+        let isExtendingPayload = false;
         if (isStatePostGloas(updatedPrepareState)) {
-          parentBlockHash = this.chain.forkChoice.shouldExtendPayload(updatedHeadRoot)
+          isExtendingPayload = this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot);
+          parentBlockHash = isExtendingPayload
             ? updatedPrepareState.latestExecutionPayloadBid.blockHash
             : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
         } else {
           parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
+
+        // Reused by the SSE emit below to avoid a second DB lookup on cache miss
+        let parentExecutionRequests: electra.ExecutionRequests | undefined;
 
         if (feeRecipient) {
           const preparationTime =
@@ -182,6 +187,13 @@ export class PrepareNextSlotScheduler {
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 
+          if (isExtendingPayload) {
+            parentExecutionRequests = await this.chain.getParentExecutionRequests(
+              updatedHead.slot,
+              updatedHead.blockRoot
+            );
+          }
+
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the
           // try/catch wrapper here.
@@ -189,12 +201,13 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
-            fromHex(updatedHeadRoot),
+            fromHex(updatedHead.blockRoot),
             parentBlockHash,
             safeBlockHash,
             finalizedBlockHash,
             updatedPrepareState,
-            feeRecipient
+            feeRecipient,
+            parentExecutionRequests
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
             prepareSlot,
@@ -203,21 +216,38 @@ export class PrepareNextSlotScheduler {
           });
         }
 
+        if (ForkSeq[fork] >= ForkSeq.gloas) {
+          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
+          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
+          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
+          const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
+          if (updatedHeadParent) {
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(updatedHeadParent.slot);
+          }
+        }
+
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
+        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
         if (
-          this.chain.opts.emitPayloadAttributes === true &&
+          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
         ) {
+          // if we didn't fetch above (not proposing), SSE still needs it here
+          if (!parentExecutionRequests && isExtendingPayload) {
+            parentExecutionRequests = await this.chain.getParentExecutionRequests(
+              updatedHead.slot,
+              updatedHead.blockRoot
+            );
+          }
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: updatedPrepareState,
             prepareSlot,
-            parentBlockRoot: fromHex(headRoot),
+            parentBlockRoot: fromHex(updatedHead.blockRoot),
             parentBlockHash,
-            // The likely consumers of this API are builders and will anyway ignore the
-            // feeRecipient, so just pass zero hash for now till a real use case arises
-            feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
+            parentExecutionRequests,
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }

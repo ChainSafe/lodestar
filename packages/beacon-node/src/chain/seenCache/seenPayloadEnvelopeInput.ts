@@ -23,10 +23,15 @@ export type SeenPayloadEnvelopeInputModules = {
 /**
  * Cache for tracking PayloadEnvelopeInput instances, keyed by beacon block root.
  *
- * Created during block import when a Gloas block is processed. Entries stay resident until the
- * block's payload is validated in fork choice, so later envelope / column validation can reuse
- * the same PayloadEnvelopeInput created by importBlock(). Once a payload is validated, older
- * entries can be evicted on finalization.
+ * Created during block import when a Gloas block is processed. Two pruning paths:
+ *   - `prepareNextSlot` calls `pruneBelow(headParentSlot)` every slot once the head we'll build
+ *     on is known.
+ *   - `onFinalized` calls `pruneBelow(finalizedSlot)` on every finalization for bulk cleanup.
+ *
+ * Entries below the pruning cutoff stay resident until their payload is validated in fork
+ * choice, so delayed envelope / column validation can still reuse the same PayloadEnvelopeInput
+ * created by importBlock(). Steady state is still ~2 validated entries, but unvalidated older
+ * entries may be retained transiently until payload validation catches up.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
@@ -90,13 +95,6 @@ export class SeenPayloadEnvelopeInput {
 
   hasPayload(blockRootHex: RootHex): boolean {
     return this.payloadInputs.get(blockRootHex)?.hasPayloadEnvelope() ?? false;
-  }
-
-  prune(blockRootHex: RootHex): void {
-    const payloadInput = this.payloadInputs.get(blockRootHex);
-    if (payloadInput) {
-      this.evictPayloadInput(payloadInput);
-    }
   }
 
   size(): number {

@@ -115,7 +115,6 @@ export class ProtoArray {
     if (protoArray.ptcVotes.has(block.blockRoot)) {
       protoArray.ptcVotes.set(block.blockRoot, BitArray.fromBoolArray(Array.from({length: PTC_SIZE}, () => true)));
     }
-
     return protoArray;
   }
 
