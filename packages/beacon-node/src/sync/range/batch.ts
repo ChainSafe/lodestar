@@ -191,7 +191,11 @@ export class Batch {
       if (blockInput.hasBlock() && blockStartSlot === blockSlot) {
         blockStartSlot = blockSlot + 1;
       }
-      if (blockInput.hasBlock() && envelopeStartSlot === blockSlot && envelopesBySlot.has(blockSlot)) {
+      if (
+        blockInput.hasBlock() &&
+        envelopeStartSlot === blockSlot &&
+        envelopesBySlot.get(blockSlot)?.hasPayloadEnvelope()
+      ) {
         envelopeStartSlot = blockSlot + 1;
       }
       if (!blockInput.hasAllData()) {
