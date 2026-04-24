@@ -21,7 +21,7 @@ export type SeenPayloadEnvelopeInputModules = {
 /**
  * Cache for tracking PayloadEnvelopeInput instances, keyed by beacon block root.
  *
- * Created during block import when a Gloas block is processed. Two pruning paths:
+ * Created during block import when a block is processed. Two pruning paths:
  *   - `prepareNextSlot` calls `pruneBelow(headParentSlot)` every slot once the head we'll build
  *     on is known.
  *   - `onFinalized` calls `pruneBelow(finalizedSlot)` on every finalization for bulk cleanup.
