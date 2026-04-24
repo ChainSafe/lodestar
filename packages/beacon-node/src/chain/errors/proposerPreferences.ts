@@ -18,7 +18,7 @@ export type ProposerPreferencesErrorType =
   | {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED;
       proposalSlot: Slot;
-      stateSlot: Slot;
+      currentSlot: Slot;
     }
   | {
       code: ProposerPreferencesErrorCode.INVALID_PROPOSER;

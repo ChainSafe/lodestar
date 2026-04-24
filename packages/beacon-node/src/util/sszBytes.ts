@@ -748,26 +748,6 @@ export function getParentBlockRootFromSignedExecutionPayloadBidSerialized(data: 
 }
 
 /**
- * SignedProposerPreferences: {message: ProposerPreferences (fixed), signature: BLSSignature (96 bytes)}
- *
- * ProposerPreferences fixed fields (in order):
- *   proposalSlot: Slot              (8 bytes)  ← absolute offset 0
- *   validatorIndex: ValidatorIndex  (8 bytes)
- *   feeRecipient: ExecutionAddress  (20 bytes)
- *   gasLimit: uint64                (8 bytes)
- * Since all fields are fixed-size, the message is embedded inline without a variable offset.
- */
-const SIGNED_PROPOSER_PREFERENCES_SLOT_OFFSET = 0;
-const SIGNED_PROPOSER_PREFERENCES_MIN_SIZE = 8 + 8 + 20 + 8 + SIGNATURE_SIZE;
-
-export function getSlotFromSignedProposerPreferencesSerialized(data: Uint8Array): Slot | null {
-  if (data.length < SIGNED_PROPOSER_PREFERENCES_MIN_SIZE) {
-    return null;
-  }
-  return getSlotFromOffset(data, SIGNED_PROPOSER_PREFERENCES_SLOT_OFFSET);
-}
-
-/**
  * Read only the first 4 bytes of Slot, max value is 4,294,967,295 will be reached 1634 years after genesis
  *
  * If the high bytes are not zero, return null

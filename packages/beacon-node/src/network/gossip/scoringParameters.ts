@@ -207,8 +207,10 @@ function getAllTopicsScoreParams(
       })
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: PROPOSER_PREFERENCES_WEIGHT,
-      // One signed preferences message per proposer slot (current + next epoch)
-      expectedMessageRate: 2,
+      // One message per proposer per proposal slot (first-valid dedup), with proposers visible for
+      // current + next epoch: upper bound ~64 messages per epoch. expectedMessageRate is a per-slot
+      // rate (cf. PTC_SIZE used by payload_attestation_message).
+      expectedMessageRate: 64 / SLOTS_PER_EPOCH,
       firstMessageDecayTime: epochDurationMs * 100,
     });
 
