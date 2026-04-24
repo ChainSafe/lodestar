@@ -23,7 +23,6 @@ const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuit
     case "slots":
       return sanitySlots(fork, testName, testSuite);
     case "blocks":
-    case "epoch_boundary":
       return sanityBlocks(fork, testName, testSuite);
     default:
       throw Error(`Unknown sanity test ${testName}`);
