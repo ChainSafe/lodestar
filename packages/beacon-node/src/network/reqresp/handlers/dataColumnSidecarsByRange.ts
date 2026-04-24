@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, fulu} from "@lodestar/types";
@@ -43,10 +43,19 @@ export async function* onDataColumnSidecarsByRange(
 
   const finalized = db.dataColumnSidecarArchive;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // Columns of the last finalized block live in different DBs depending on fork:
+  // - Pre-gloas (fulu): migrated to dataColumnSidecarArchive in the same finalization run.
+  // - Post-gloas: stay in the hot db (db.dataColumnSidecar) until the next finalization run,
+  //   because the migration filter requires payloadStatus === FULL for gloas blocks.
+  // archiveMaxSlot is the last slot whose columns are served by the archive loop below;
+  // anything above it is served by the headChain loop.
+  const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
+  const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
 
   // Finalized range of columns
-  if (startSlot <= finalizedSlot) {
-    for (let slot = startSlot; slot < endSlot; slot++) {
+  if (startSlot <= archiveMaxSlot) {
+    const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
+    for (let slot = startSlot; slot < archiveEnd; slot++) {
       const dataColumnSidecars = await finalized.getManyBinary(slot, availableColumns);
 
       const unavailableColumnIndices: ColumnIndex[] = [];
@@ -81,9 +90,12 @@ export async function* onDataColumnSidecarsByRange(
   }
 
   // Non-finalized range of columns
-  if (endSlot > finalizedSlot) {
+  if (endSlot > archiveMaxSlot) {
     const headBlock = chain.forkChoice.getHead();
     const headRoot = headBlock.blockRoot;
+    // getAllAncestorBlocks includes the last finalized block as its final element.
+    // Skip anything the archive loop above already served via the block.slot > archiveMaxSlot
+    // filter below (pre-gloas this skips finalizedSlot, post-gloas it keeps it).
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
     // Iterate head chain with ascending block numbers
@@ -91,7 +103,7 @@ export async function* onDataColumnSidecarsByRange(
       const block = headChain[i];
 
       // Must include only columns in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request
