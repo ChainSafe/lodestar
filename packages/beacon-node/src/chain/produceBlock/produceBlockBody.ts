@@ -18,6 +18,7 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
+  type IBeaconStateViewGloas,
   computeTimeAtSlot,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -263,9 +264,16 @@ export async function produceBlockBody<T extends BlockType>(
     }
 
     // Create self-build execution payload bid
+    // IMPORTANT: bid.parentBlockHash must match the EL-block that the payload was built on (i.e.
+    // executionPayload.parentHash). Using currentState.latestBlockHash would always yield the
+    // EMPTY-parent hash (state.latestBlockHash is only advanced on the FULL path once the next
+    // block applies parent envelope in process_parent_execution_payload), so FULL-parent
+    // self-builds would be mis-encoded as EMPTY and the canonical chain would never pick up
+    // envelope variants. See gloas/beacon-chain.md::process_execution_payload_bid which checks
+    // bid.parent_block_hash against the selected parent payload.
     const bid: gloas.ExecutionPayloadBid = {
-      parentBlockHash,
-      parentBlockRoot,
+      parentBlockHash: executionPayload.parentHash,
+      parentBlockRoot: parentBlockRoot,
       blockHash: executionPayload.blockHash,
       prevRandao: currentState.getRandaoMix(currentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
@@ -616,6 +624,7 @@ export async function prepareExecutionPayload(
   chain: {
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
+    forkChoice?: IForkChoice;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -731,6 +740,9 @@ export function getPayloadAttributesForSSE(
     parentExecutionRequests?: electra.ExecutionRequests;
   }
 ): SSEPayloadAttributes {
+  const parentHash = isForkPostGloas(fork)
+    ? (prepareState as unknown as IBeaconStateViewGloas).latestBlockHash
+    : prepareState.latestExecutionPayloadHeader.blockHash;
   const payloadAttributes = preparePayloadAttributes(fork, chain, {
     prepareState,
     prepareSlot,
@@ -742,10 +754,7 @@ export function getPayloadAttributesForSSE(
 
   let parentBlockNumber: number;
   if (isForkPostGloas(fork)) {
-    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(
-      toRootHex(parentBlockRoot),
-      toRootHex(parentBlockHash)
-    );
+    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(toRootHex(parentBlockRoot), toRootHex(parentHash));
     if (parentBlock?.executionPayloadBlockHash == null) {
       throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
     }
@@ -759,7 +768,7 @@ export function getPayloadAttributesForSSE(
     proposalSlot: prepareSlot,
     parentBlockNumber,
     parentBlockRoot,
-    parentBlockHash,
+    parentBlockHash: parentHash,
     payloadAttributes,
   };
   return ssePayloadAttributes;
@@ -816,7 +825,7 @@ function preparePayloadAttributes(
           prepareState.payloadExpectedWithdrawals;
       }
     } else {
-      // withdrawals logic is now fork aware as it changes on electra fork post capella
+      // Pre-Gloas or Gloas with full parent but no override (shouldn't happen in normal flow)
       (payloadAttributes as capella.SSEPayloadAttributes["payloadAttributes"]).withdrawals =
         prepareState.getExpectedWithdrawals().expectedWithdrawals;
     }

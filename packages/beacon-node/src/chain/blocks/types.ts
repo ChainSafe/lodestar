@@ -1,5 +1,5 @@
 import type {ChainForkConfig} from "@lodestar/config";
-import {BlockExecutionStatus} from "@lodestar/fork-choice";
+import type {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
@@ -106,6 +106,6 @@ export type FullyVerifiedBlock = {
   indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;
-  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
-  executionStatus: BlockExecutionStatus;
+  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync or for merge block */
+  executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
 };

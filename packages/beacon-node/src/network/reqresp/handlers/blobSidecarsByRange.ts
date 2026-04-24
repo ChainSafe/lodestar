@@ -38,13 +38,14 @@ export async function* onBlobSidecarsByRange(
     const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
 
       // Must include only blobs in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      if (block.slot > finalizedSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request

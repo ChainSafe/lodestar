@@ -172,7 +172,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   }
 
   /** Convenience method for `SyncChain` */
-  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, syncType) => {
+  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, payloadEnvelopes, syncType) => {
     // Not trusted, verify signatures
     const flags: ImportBlockOpts = {
       // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
@@ -194,7 +194,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // Should only be used for debugging or testing
       for (const block of blocks) await this.chain.processBlock(block, flags);
     } else {
-      await this.chain.processChainSegment(blocks, flags);
+      await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
     }
   };
 
@@ -209,13 +209,19 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       peerDasMetrics: this.chain.metrics?.peerDas,
       ...batch.getRequestsForPeer(peer),
     });
-    const cached = cacheByRangeResponses({
+    const {responses, payloadEnvelopes: downloadedPayloadEnvelopes} = result;
+    const {blocks, payloadEnvelopes} = cacheByRangeResponses({
       cache: this.chain.seenBlockInputCache,
+      seenPayloadEnvelopeInputCache: this.chain.seenPayloadEnvelopeInputCache,
       peerIdStr: peer.peerId,
-      responses: result,
+      responses,
       batchBlocks,
+      downloadedPayloadEnvelopes,
+      existingPayloadEnvelopes: batch.getPayloadEnvelopes(),
+      custodyConfig: this.chain.custodyConfig,
+      seenTimestampSec: Date.now() / 1000,
     });
-    return {result: cached, warnings};
+    return {result: {blocks, payloadEnvelopes}, warnings};
   };
 
   private pruneBlockInputs: SyncChainFns["pruneBlockInputs"] = (blocks: IBlockInput[]) => {
