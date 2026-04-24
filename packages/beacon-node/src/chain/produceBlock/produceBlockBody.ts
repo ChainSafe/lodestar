@@ -49,7 +49,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {
   IExecutionBuilder,
@@ -215,9 +215,15 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
-    const parentBlockHash = isExtendingPayload
+    let parentBlockHash = isExtendingPayload
       ? currentState.latestExecutionPayloadBid.blockHash
       : currentState.latestExecutionPayloadBid.parentBlockHash;
+    // At a gloas anchor before any parent payload has been applied (e.g. genesis per spec helper)
+    // bid.parentBlockHash is zero; fall back to bid.blockHash (eth1 genesis at genesis) so the FCU
+    // to the EL carries a valid head.
+    if (isStatePostGloas(currentState) && byteArrayEquals(parentBlockHash, ZERO_HASH)) {
+      parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
+    }
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
       : ssz.electra.ExecutionRequests.defaultValue();
