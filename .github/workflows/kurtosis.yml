@@ -22,6 +22,6 @@ jobs:
             --tag chainsafe/lodestar:kurtosis-ci \
             --build-arg COMMIT=$(git rev-parse HEAD)
       - name: Run test
-        uses: ethpandaops/kurtosis-assertoor-github-action@5932604b244dbd2ddb811516b516a9094f4d2c2f # v1
+        uses: ethpandaops/kurtosis-assertoor-github-action@f64942cbc780df731a731ea9f45765b161d2c8df # v1.0.1
         with:
           ethereum_package_args: ".github/workflows/assets/kurtosis_sim_test_config.yaml"

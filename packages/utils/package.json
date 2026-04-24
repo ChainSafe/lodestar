@@ -53,7 +53,7 @@
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
-    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/ssz": "^1.4.0",
     "@types/js-yaml": "^4.0.5",
     "@types/yargs": "^17.0.24",
     "prom-client": "^15.1.0"

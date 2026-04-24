@@ -1,12 +1,13 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
-import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
 import {DataColumnSidecar, RootHex, deneb, phase0} from "@lodestar/types";
 import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -76,6 +77,11 @@ export enum ChainEvent {
    * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
+  /**
+   * Post-gloas: trigger BlockInputSync for payload envelopes whose envelope and/or sampled columns are partially
+   * received via gossip but are not complete by time the cut-off window passes for waiting on gossip
+   */
+  incompletePayloadEnvelope = "incompletePayloadEnvelope",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -93,14 +99,19 @@ export type ChainEventData = {
   };
   [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.incompletePayloadEnvelope]: {
+    payloadInput: PayloadEnvelopeInput;
+    peer: PeerIdStr;
+    source: BlockInputSource;
+  };
   [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
 
-  [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithPayloadStatus) => void;
-  [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithPayloadStatus) => void;
+  [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
+  [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
@@ -116,6 +127,7 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.envelopeUnknownBlock]: (data: ChainEventData[ChainEvent.envelopeUnknownBlock]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
+  [ChainEvent.incompletePayloadEnvelope]: (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]) => void;
   [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;
 };
 

@@ -70,7 +70,7 @@ import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
-import {CheckpointHexPayload} from "../../../chain/stateCache/types.js";
+import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -301,7 +301,7 @@ export function getValidatorApi(
    *                    |
    *              prepareNextSlot (4s before next slot)
    */
-  async function waitForCheckpointState(cpHex: CheckpointHexPayload): Promise<IBeaconStateView | null> {
+  async function waitForCheckpointState(cpHex: CheckpointHex): Promise<IBeaconStateView | null> {
     const cpState = chain.regen.getCheckpointStateSync(cpHex);
     if (cpState) {
       return cpState;
@@ -1113,7 +1113,6 @@ export function getValidatorApi(
         const cpState = await waitForCheckpointState({
           rootHex: head.blockRoot,
           epoch,
-          payloadPresent: head.payloadStatus === PayloadStatus.FULL,
         });
         if (cpState) {
           state = cpState;
@@ -1642,15 +1641,13 @@ export function getValidatorApi(
         throw Error("Cached block production result is not full block");
       }
 
-      const {executionPayload, executionRequests, payloadEnvelopeStateRoot} = produceResult as ProduceFullGloas;
+      const {executionPayload, executionRequests} = produceResult as ProduceFullGloas;
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: executionPayload,
         executionRequests: executionRequests,
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
-        slot,
-        stateRoot: payloadEnvelopeStateRoot,
       };
 
       logger.info("Produced execution payload envelope", {

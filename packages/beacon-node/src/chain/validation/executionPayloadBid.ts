@@ -1,5 +1,6 @@
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {
+  computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
   isActiveBuilder,
@@ -75,6 +76,19 @@ async function validateExecutionPayloadBid(
   // [REJECT] `bid.gas_limit` matches the `gas_limit` from the proposer's
   // `SignedProposerPreferences` associated with `bid.slot`.
   // TODO GLOAS: Implement this along with proposer preference
+
+  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
+  // consensus layer -- i.e. validate that
+  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      blobKzgCommitmentsLen,
+      commitmentLimit: maxBlobsPerBlock,
+    });
+  }
 
   // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
   if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
