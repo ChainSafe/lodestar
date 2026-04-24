@@ -13,13 +13,6 @@ import {RegenCaller} from "../regen/index.js";
 /**
  * Validates a gossiped `SignedProposerPreferences` per
  * https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/p2p-interface.md#proposer_preferences
- *
- * Spec rules (checked below in a slightly different order for performance):
- *   [IGNORE]  proposal_slot epoch in [current, current+1]
- *   [IGNORE]  proposal_slot > state.slot
- *   [REJECT]  is_valid_proposal_slot(state, preferences)
- *   [IGNORE]  first valid message for (validator_index, proposal_slot)
- *   [REJECT]  signature valid w.r.t. validator pubkey
  */
 export async function validateGossipProposerPreferences(
   chain: IBeaconChain,
@@ -27,16 +20,21 @@ export async function validateGossipProposerPreferences(
 ): Promise<void> {
   const preferences = signedProposerPreferences.message;
   const {proposalSlot, validatorIndex} = preferences;
+  const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
-  // [IGNORE] The `signed_proposer_preferences` is the first valid message received from the validator
-  // with index `preferences.validator_index` and the given slot `preferences.proposal_slot`.
-  // Spec lists this fourth, but checking it first lets us early-exit on duplicate gossip without
-  // paying for the state fetch and signature verification below.
-  if (chain.seenProposerPreferences.isKnown(proposalSlot, validatorIndex)) {
+  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipProposerPreferences);
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for proposer preferences validation, got fork=${state.forkName}`);
+  }
+
+  // [IGNORE] `preferences.proposal_slot` is in the current or next epoch — i.e.
+  // `compute_epoch_at_slot(preferences.proposal_slot)` is in `[current_epoch, current_epoch + 1]`.
+  const epochOffset = proposalEpoch - state.epoch;
+  if (epochOffset < 0 || epochOffset > 1) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
-      code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
+      code: ProposerPreferencesErrorCode.INVALID_EPOCH,
       proposalSlot,
-      validatorIndex,
+      currentEpoch: state.epoch,
     });
   }
 
@@ -53,27 +51,6 @@ export async function validateGossipProposerPreferences(
     });
   }
 
-  // [IGNORE] `preferences.proposal_slot` is in the current or next epoch — i.e.
-  // `compute_epoch_at_slot(proposal_slot)` is in `[current_epoch, current_epoch + 1]`.
-  // The lower bound is already enforced by the slot-passed check above (proposalSlot > currentSlot
-  // implies proposalEpoch >= currentEpoch). The upper bound is checked against state.epoch after the
-  // state fetch below — state is the authoritative source for "current_epoch" in the spec rule.
-  const proposalEpoch = computeEpochAtSlot(proposalSlot);
-
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipProposerPreferences);
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for proposer preferences validation, got fork=${state.forkName}`);
-  }
-
-  const epochOffset = proposalEpoch - state.epoch;
-  if (epochOffset < 0 || epochOffset > 1) {
-    throw new ProposerPreferencesError(GossipAction.IGNORE, {
-      code: ProposerPreferencesErrorCode.INVALID_EPOCH,
-      proposalSlot,
-      currentEpoch: state.epoch,
-    });
-  }
-
   // [REJECT] `preferences.validator_index` is present at the correct slot in the current or next
   // epoch's portion of `state.proposer_lookahead` — i.e. `is_valid_proposal_slot(state, preferences)`
   // returns True.
@@ -82,6 +59,16 @@ export async function validateGossipProposerPreferences(
   if (expectedProposer !== validatorIndex) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_PROPOSER,
+      proposalSlot,
+      validatorIndex,
+    });
+  }
+
+  // [IGNORE] The `signed_proposer_preferences` is the first valid message received from the validator
+  // with index `preferences.validator_index` and the given slot `preferences.proposal_slot`.
+  if (chain.seenProposerPreferences.isKnown(proposalSlot, validatorIndex)) {
+    throw new ProposerPreferencesError(GossipAction.IGNORE, {
+      code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
       proposalSlot,
       validatorIndex,
     });
