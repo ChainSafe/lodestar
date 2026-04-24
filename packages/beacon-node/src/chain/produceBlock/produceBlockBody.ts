@@ -218,9 +218,9 @@ export async function produceBlockBody<T extends BlockType>(
     let parentBlockHash = isExtendingPayload
       ? currentState.latestExecutionPayloadBid.blockHash
       : currentState.latestExecutionPayloadBid.parentBlockHash;
-    // At a gloas anchor before any parent payload has been applied (e.g. genesis per spec helper)
-    // bid.parentBlockHash is zero; fall back to bid.blockHash (eth1 genesis at genesis) so the FCU
-    // to the EL carries a valid head.
+    // At gloas genesis the committed bid has no prior EL block to reference
+    // (`bid.parentBlockHash` is zero). Fall back to `bid.blockHash` (= eth1 genesis hash) so the
+    // FCU to the EL carries a valid head. Post-genesis gloas bids always chain a non-zero parent.
     if (isStatePostGloas(currentState) && byteArrayEquals(parentBlockHash, ZERO_HASH)) {
       parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
     }
