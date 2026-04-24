@@ -13,6 +13,10 @@ import {RegenCaller} from "../regen/index.js";
 /**
  * Validates a gossiped `SignedProposerPreferences` per
  * https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/p2p-interface.md#proposer_preferences
+ *
+ * Per repo convention, freshness checks (epoch and slot) use `chain.clock` rather than the spec-literal
+ * `state.epoch` / `state.slot` — same as `executionPayloadBid` and `payloadAttestationMessage`. State is
+ * only fetched once, after the cheap clock-based gates, for the proposer-lookahead and signature checks.
  */
 export async function validateGossipProposerPreferences(
   chain: IBeaconChain,
@@ -22,26 +26,17 @@ export async function validateGossipProposerPreferences(
   const {proposalSlot, validatorIndex} = preferences;
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipProposerPreferences);
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for proposer preferences validation, got fork=${state.forkName}`);
-  }
-
-  // [IGNORE] `preferences.proposal_slot` is in the current or next epoch — i.e.
-  // `compute_epoch_at_slot(preferences.proposal_slot)` is in `[current_epoch, current_epoch + 1]`.
-  const epochOffset = proposalEpoch - state.epoch;
-  if (epochOffset < 0 || epochOffset > 1) {
+  // [IGNORE] `preferences.proposal_slot` is in the current or next epoch.
+  const currentEpoch = chain.clock.currentEpoch;
+  if (proposalEpoch < currentEpoch || proposalEpoch > currentEpoch + 1) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH,
       proposalSlot,
-      currentEpoch: state.epoch,
+      currentEpoch,
     });
   }
 
-  // [IGNORE] `preferences.proposal_slot` has not already passed — i.e. `proposal_slot > state.slot`.
-  // Spec uses `state.slot`, but `state.slot` can lag the wall clock during skipped slots or while
-  // catching up. Use the node clock for gossip freshness (matches the pattern used by other gossip
-  // validators in this repo, e.g. executionPayloadBid).
+  // [IGNORE] `preferences.proposal_slot` has not already passed.
   const currentSlot = chain.clock.currentSlot;
   if (proposalSlot <= currentSlot) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
@@ -51,12 +46,18 @@ export async function validateGossipProposerPreferences(
     });
   }
 
+  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipProposerPreferences);
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for proposer preferences validation, got fork=${state.forkName}`);
+  }
+
   // [REJECT] `preferences.validator_index` is present at the correct slot in the current or next
   // epoch's portion of `state.proposer_lookahead` — i.e. `is_valid_proposal_slot(state, preferences)`
   // returns True.
+  const epochOffset = proposalEpoch - state.epoch;
   const proposers = epochOffset === 0 ? state.currentProposers : state.nextProposers;
   const expectedProposer = proposers[proposalSlot % SLOTS_PER_EPOCH];
-  if (expectedProposer !== validatorIndex) {
+  if (epochOffset < 0 || epochOffset > 1 || expectedProposer !== validatorIndex) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_PROPOSER,
       proposalSlot,
@@ -75,7 +76,6 @@ export async function validateGossipProposerPreferences(
   }
 
   // [REJECT] `signed_proposer_preferences.signature` is valid with respect to the validator's public key.
-  // The validator is guaranteed to exist: it appears in `state.proposer_lookahead` (checked above).
   const signatureSet = createSingleSignatureSetFromComponents(
     chain.pubkeyCache.getOrThrow(validatorIndex),
     getProposerPreferencesSigningRoot(chain.config, preferences),
