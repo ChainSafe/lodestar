@@ -192,7 +192,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     if (this.opts?.disableProcessAsChainSegment) {
       // Should only be used for debugging or testing
-      for (const block of blocks) await this.chain.processBlock(block, flags);
+      for (const block of blocks) {
+        await this.chain.processBlock(block, flags);
+        const payloadEnvelope = payloadEnvelopes?.get(block.slot);
+        if (payloadEnvelope) {
+          await this.chain.processExecutionPayload(payloadEnvelope);
+        }
+      }
     } else {
       await this.chain.processChainSegment(blocks, payloadEnvelopes, flags);
     }
