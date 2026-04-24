@@ -186,7 +186,7 @@ describe("sync / range / peerBalancer", () => {
         sampledColumns: [0, 1, 2, 3],
       });
       console.log(blockInput.hasAllData());
-      const x = batch0.downloadingSuccess(peer1.peerId, [blockInput]);
+      const x = batch0.downloadingSuccess(peer1.peerId, [blockInput], null);
       console.log("x", x);
 
       // peer2 and peer3 are the same but peer3 has a lower target slot than the previous download

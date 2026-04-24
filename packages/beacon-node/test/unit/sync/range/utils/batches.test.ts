@@ -229,7 +229,7 @@ describe("sync / range / batches", () => {
     batch.startDownloading(peer);
     if (status === BatchStatus.Downloading) return batch;
 
-    batch.downloadingSuccess(peer, []);
+    batch.downloadingSuccess(peer, [], null);
     if (status === BatchStatus.AwaitingProcessing) return batch;
 
     batch.startProcessing();

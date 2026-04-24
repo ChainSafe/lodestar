@@ -1172,13 +1172,12 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Returns all blocks backwards starting from a block root.
-   * Return only the non-finalized blocks.
+   * Raw ancestor walk from `blockRoot` back toward the previous finalized block. Includes both
+   * `blockRoot` and the previous-finalized boundary as last element. Mirrors the semantics of
+   * `getAllAncestorAndNonAncestorBlocks.ancestors`
    */
   getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
-    const blocks = this.protoArray.getAllAncestorNodes(blockRoot, payloadStatus);
-    // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
-    return blocks.slice(0, blocks.length - 1);
+    return this.protoArray.getAllAncestorNodes(blockRoot, payloadStatus);
   }
 
   /**
