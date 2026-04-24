@@ -217,7 +217,7 @@ export async function produceBlockBody<T extends BlockType>(
     const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
     const parentBlockHash = isExtendingPayload
       ? currentState.latestExecutionPayloadBid.blockHash
-      : currentState.latestBlockHash;
+      : currentState.latestExecutionPayloadBid.parentBlockHash;
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
       : ssz.electra.ExecutionRequests.defaultValue();

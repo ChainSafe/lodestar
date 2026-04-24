@@ -170,7 +170,7 @@ export class PrepareNextSlotScheduler {
           isExtendingPayload = this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot);
           parentBlockHash = isExtendingPayload
             ? updatedPrepareState.latestExecutionPayloadBid.blockHash
-            : updatedPrepareState.latestBlockHash;
+            : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
         } else {
           parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
