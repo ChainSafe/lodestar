@@ -105,13 +105,6 @@ describe("sync / finalized sync for gloas", () => {
         routes.events.EventType.head,
         100000,
         // at block slot 32 imported, finalized checkpoint epoch 2 is processed.
-        // TODO GLOAS: head's payloadStatus stays EMPTY for every gloas slot 16+ even though every
-        // envelope is imported successfully (FULL variant exists in fork choice). The validator-
-        // side payload-attestation duty (committee selection, signing, gossip publish, API
-        // endpoint, block-production aggregation) is not yet implemented, so the PTC pool stays
-        // empty and `block.body.payloadAttestations` is always empty. Without PTC quorum,
-        // `shouldExtendPayload` returns false and the canonical chain stays on the EMPTY variant.
-        // Revisit once validator-side PTC duty lands.
         ({slot}) => slot === 32
       ),
     ]);
@@ -151,6 +144,20 @@ describe("sync / finalized sync for gloas", () => {
       loggerNodeB.info("Node B synced to Node A, received gloas head block", {slot: head.message.slot});
     } catch (_e) {
       expect.fail("Failed to sync to other node in time");
+    }
+
+    // Walk Node B's fork-choice from head back through its ancestors. Every gloas block in the
+    // canonical chain below the head MUST have its FULL payload variant in fork-choice
+    const bn2Head = bn2.chain.forkChoice.getHead();
+    const bn2Ancestors = bn2.chain.forkChoice.getAllAncestorBlocks(bn2Head.blockRoot, bn2Head.payloadStatus);
+    const gloasFirstSlot = GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
+    for (const block of bn2Ancestors) {
+      if (block.slot >= gloasFirstSlot && block.slot < bn2Head.slot) {
+        expect(bn2.chain.forkChoice.hasPayloadHexUnsafe(block.blockRoot)).toBeWithMessage(
+          true,
+          `Node B missing FULL payload variant for gloas block slot=${block.slot} root=${block.blockRoot}`
+        );
+      }
     }
   });
 });
