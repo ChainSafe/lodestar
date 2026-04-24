@@ -11,19 +11,16 @@ describe("SeenPayloadEnvelopeInput", () => {
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
   let serializedCache: SerializedCache;
-  let validatedRoots: Set<string>;
 
   beforeEach(() => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
     serializedCache = new SerializedCache();
-    validatedRoots = new Set();
 
     cache = new SeenPayloadEnvelopeInput({
       chainEvents,
       signal: abortController.signal,
       serializedCache,
-      hasValidatedPayload: (blockRootHex) => validatedRoots.has(blockRootHex),
       metrics: null,
       logger: testLogger(),
     });
@@ -42,30 +39,21 @@ describe("SeenPayloadEnvelopeInput", () => {
     return rootHex;
   }
 
-  it("prune removes an explicit payload input", () => {
-    const rootHex = addPayloadInput(1);
-
-    expect(cache.get(rootHex)).toBeDefined();
-
-    cache.prune(rootHex);
-
-    expect(cache.get(rootHex)).toBeUndefined();
-  });
-
-  it("pruneBelow keeps older payload inputs until their payload is validated", () => {
-    const rootHex = addPayloadInput(1);
+  it("pruneBelow removes payload inputs below the cutoff slot", () => {
+    const oldRootHex = addPayloadInput(1);
+    const newRootHex = addPayloadInput(2);
 
     cache.pruneBelow(2);
 
-    expect(cache.get(rootHex)).toBeDefined();
+    expect(cache.get(oldRootHex)).toBeUndefined();
+    expect(cache.get(newRootHex)).toBeDefined();
   });
 
-  it("pruneBelow removes older payload inputs once their payload is validated", () => {
+  it("pruneBelow keeps payload inputs at or above the cutoff slot", () => {
     const rootHex = addPayloadInput(1);
-    validatedRoots.add(rootHex);
 
-    cache.pruneBelow(2);
+    cache.pruneBelow(1);
 
-    expect(cache.get(rootHex)).toBeUndefined();
+    expect(cache.get(rootHex)).toBeDefined();
   });
 });

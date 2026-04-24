@@ -337,7 +337,6 @@ export class BeaconChain implements IBeaconChain {
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
-      hasValidatedPayload: (blockRootHex) => this.forkChoice.hasPayloadHexUnsafe(blockRootHex),
       metrics,
       logger,
     });

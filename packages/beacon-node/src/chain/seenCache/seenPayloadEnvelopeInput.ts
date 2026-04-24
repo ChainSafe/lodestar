@@ -4,8 +4,7 @@ import {RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {SerializedCache} from "../../util/serializedCache.js";
-import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {CreateFromBlockProps} from "../blocks/payloadEnvelopeInput/types.js";
+import {CreateFromBlockProps, PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
 export type {PayloadEnvelopeInputState} from "../blocks/payloadEnvelopeInput/index.js";
@@ -15,7 +14,6 @@ export type SeenPayloadEnvelopeInputModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   serializedCache: SerializedCache;
-  hasValidatedPayload: (blockRootHex: RootHex) => boolean;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -28,32 +26,23 @@ export type SeenPayloadEnvelopeInputModules = {
  *     on is known.
  *   - `onFinalized` calls `pruneBelow(finalizedSlot)` on every finalization for bulk cleanup.
  *
- * Entries below the pruning cutoff stay resident until their payload is validated in fork
- * choice, so delayed envelope / column validation can still reuse the same PayloadEnvelopeInput
- * created by importBlock(). Steady state is still ~2 validated entries, but unvalidated older
- * entries may be retained transiently until payload validation catches up.
+ * Steady state (linear chain, healthy progression): the cache holds ~2 entries — the head
+ * (parent for next-slot production) and its parent (proposer-boost-reorg fallback). It can
+ * transiently hold more during forks, range-sync bursts, or when `prepareNextSlot` skips
+ * ticks; subsequent ticks settle it back.
  */
 export class SeenPayloadEnvelopeInput {
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
-  private readonly hasValidatedPayload: (blockRootHex: RootHex) => boolean;
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
 
-  constructor({
-    chainEvents,
-    signal,
-    serializedCache,
-    hasValidatedPayload,
-    metrics,
-    logger,
-  }: SeenPayloadEnvelopeInputModules) {
+  constructor({chainEvents, signal, serializedCache, metrics, logger}: SeenPayloadEnvelopeInputModules) {
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
-    this.hasValidatedPayload = hasValidatedPayload;
     this.metrics = metrics;
     this.logger = logger;
 
@@ -103,25 +92,13 @@ export class SeenPayloadEnvelopeInput {
 
   pruneBelow(slot: Slot): void {
     let deletedCount = 0;
-    let retainedUnvalidatedCount = 0;
     for (const [, input] of this.payloadInputs) {
-      if (input.slot >= slot) {
-        continue;
+      if (input.slot < slot) {
+        this.evictPayloadInput(input);
+        deletedCount++;
       }
-
-      if (!this.hasValidatedPayload(input.blockRootHex)) {
-        retainedUnvalidatedCount++;
-        continue;
-      }
-
-      this.evictPayloadInput(input);
-      deletedCount++;
     }
-    this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelow deleted entries", {
-      slot,
-      deletedCount,
-      retainedUnvalidatedCount,
-    });
+    this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelow deleted entries", {slot, deletedCount});
   }
 
   private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {
