@@ -215,9 +215,17 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
-    const parentBlockHash = isExtendingPayload
-      ? currentState.latestExecutionPayloadBid.blockHash
-      : currentState.latestExecutionPayloadBid.parentBlockHash;
+    const bid = currentState.latestExecutionPayloadBid;
+    let parentBlockHash: Bytes32;
+    if (isExtendingPayload) {
+      parentBlockHash = bid.blockHash;
+    } else if (toRootHex(bid.parentBlockHash) === ZERO_HASH_HEX) {
+      // Gloas anchor (e.g. genesis): the anchor's bid has no EL parent, so fall back to
+      // `state.latestBlockHash` which holds the last fulfilled EL block hash (EL genesis at anchor).
+      parentBlockHash = currentState.latestBlockHash;
+    } else {
+      parentBlockHash = bid.parentBlockHash;
+    }
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
       : ssz.electra.ExecutionRequests.defaultValue();
