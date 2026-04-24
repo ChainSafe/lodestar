@@ -3,15 +3,6 @@ import {MapDef} from "@lodestar/utils";
 
 /**
  * Tracks signed proposer preferences we've already seen per (proposal_slot, validator_index).
- *
- * Enforces the gossip rule:
- *   [IGNORE] The `signed_proposer_preferences` is the first valid message received
- *   from the validator with index `preferences.validator_index` and the given slot
- *   `preferences.proposal_slot`.
- *
- * Entries are only load-bearing while `proposal_slot > state.slot`. Once the slot
- * has passed, the `[IGNORE] preferences.proposal_slot > state.slot` rule takes over
- * and this cache is no longer consulted for that slot.
  */
 export class SeenProposerPreferences {
   private readonly validatorIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
@@ -25,7 +16,8 @@ export class SeenProposerPreferences {
   }
 
   /**
-   * Drop entries for slots that have already passed. Called on clock slot tick.
+   * Entries are only load-bearing while `proposal_slot > state.slot`. Once the slot has passed the
+   * `[IGNORE] proposal_slot > state.slot` gossip rule takes over, so drop them on each slot tick.
    */
   prune(currentSlot: Slot): void {
     for (const slot of this.validatorIndexesBySlot.keys()) {

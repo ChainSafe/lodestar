@@ -13,10 +13,6 @@ import {RegenCaller} from "../regen/index.js";
 /**
  * Validates a gossiped `SignedProposerPreferences` per
  * https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/p2p-interface.md#proposer_preferences
- *
- * Per repo convention, freshness checks (epoch and slot) use `chain.clock` rather than the spec-literal
- * `state.epoch` / `state.slot` — same as `executionPayloadBid` and `payloadAttestationMessage`. State is
- * only fetched once, after the cheap clock-based gates, for the proposer-lookahead and signature checks.
  */
 export async function validateGossipProposerPreferences(
   chain: IBeaconChain,
