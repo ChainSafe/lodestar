@@ -13,6 +13,7 @@ import {
   getSlotFromSignedAggregateAndProofSerialized,
   getSlotFromSignedBeaconBlockSerialized,
   getSlotFromSignedExecutionPayloadBidSerialized,
+  getSlotFromSignedProposerPreferencesSerialized,
 } from "../../util/sszBytes.js";
 import {GossipType} from "../gossip/index.js";
 import {ExtractSlotRootFns} from "./types.js";
@@ -92,6 +93,15 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
     },
     [GossipType.execution_payload_bid]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromSignedExecutionPayloadBidSerialized(data);
+
+      if (slot === null) {
+        return null;
+      }
+
+      return {slot};
+    },
+    [GossipType.proposer_preferences]: (data: Uint8Array): SlotOptionalRoot | null => {
+      const slot = getSlotFromSignedProposerPreferencesSerialized(data);
 
       if (slot === null) {
         return null;

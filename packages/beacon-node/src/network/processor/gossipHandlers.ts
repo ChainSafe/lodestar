@@ -79,6 +79,7 @@ import {
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipPayloadAttestationMessage} from "../../chain/validation/payloadAttestationMessage.js";
+import {validateGossipProposerPreferences} from "../../chain/validation/proposerPreferences.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -1169,6 +1170,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         version: config.getForkName(executionPayloadBid.message.slot),
         data: executionPayloadBid,
       });
+    },
+    [GossipType.proposer_preferences]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.proposer_preferences>) => {
+      const {serializedData} = gossipData;
+      const signedProposerPreferences = sszDeserialize(topic, serializedData);
+      await validateGossipProposerPreferences(chain, signedProposerPreferences);
     },
   };
 }

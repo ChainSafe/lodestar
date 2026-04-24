@@ -83,6 +83,13 @@ const linearGossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
+  // Upper bound: one message per proposer per (current + next) epoch, so 2 * SLOTS_PER_EPOCH = 64.
+  // Keep some slack for retransmits and late arrivals.
+  [GossipType.proposer_preferences]: {
+    maxLength: 1024,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
 };
 
 const indexedGossipQueueOpts: {
