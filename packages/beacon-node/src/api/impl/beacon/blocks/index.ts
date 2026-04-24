@@ -655,7 +655,6 @@ export function getBeaconBlockApi({
       const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
       const blockHashHex = toRootHex(envelope.payload.blockHash);
-      // stateRoot removed from envelope in consensus-specs#5094
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
