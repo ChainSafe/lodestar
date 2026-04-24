@@ -311,7 +311,10 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            if (
+              e instanceof BlockError &&
+              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+            ) {
               chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,
                 peer: IDENTITY_PEER_ID,
