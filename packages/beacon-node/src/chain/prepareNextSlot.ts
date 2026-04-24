@@ -11,7 +11,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, Slot, electra} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {Metrics} from "../metrics/index.js";
@@ -168,16 +168,9 @@ export class PrepareNextSlotScheduler {
         let isExtendingPayload = false;
         if (isStatePostGloas(updatedPrepareState)) {
           isExtendingPayload = this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot);
-          const bid = updatedPrepareState.latestExecutionPayloadBid;
-          if (isExtendingPayload) {
-            parentBlockHash = bid.blockHash;
-          } else if (toRootHex(bid.parentBlockHash) === ZERO_HASH_HEX) {
-            // Gloas anchor (e.g. genesis): the anchor's bid has no EL parent, so fall back to
-            // `state.latestBlockHash` which holds the last fulfilled EL block hash (EL genesis at anchor).
-            parentBlockHash = updatedPrepareState.latestBlockHash;
-          } else {
-            parentBlockHash = bid.parentBlockHash;
-          }
+          parentBlockHash = isExtendingPayload
+            ? updatedPrepareState.latestExecutionPayloadBid.blockHash
+            : updatedPrepareState.latestBlockHash;
         } else {
           parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
