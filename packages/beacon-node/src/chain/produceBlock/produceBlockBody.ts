@@ -213,14 +213,27 @@ export async function produceBlockBody<T extends BlockType>(
       feeRecipient,
     });
 
-    // Get execution payload from EL
-    const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
-    const parentBlockHash = isExtendingPayload
-      ? currentState.latestExecutionPayloadBid.blockHash
-      : currentState.latestExecutionPayloadBid.parentBlockHash;
-    const parentExecutionRequests = isExtendingPayload
-      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
-      : ssz.electra.ExecutionRequests.defaultValue();
+    // Get execution payload from EL.
+    // Genesis block (parentBlockHash === ZERO_HASH_HEX in fork choice) has no real bid — its
+    // bid is all zeros. Use state.latestBlockHash as the EL head directly.
+    const parentProtoBlock = this.forkChoice.getBlockHexDefaultStatus(toRootHex(parentBlockRoot));
+    const isParentGenesis = parentProtoBlock != null && parentProtoBlock.parentBlockHash === ZERO_HASH_HEX;
+
+    let parentBlockHash: Uint8Array;
+    let parentExecutionRequests: electra.ExecutionRequests;
+
+    if (isParentGenesis) {
+      parentBlockHash = currentState.latestBlockHash;
+      parentExecutionRequests = ssz.electra.ExecutionRequests.defaultValue();
+    } else {
+      const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
+      parentBlockHash = isExtendingPayload
+        ? currentState.latestExecutionPayloadBid.blockHash
+        : currentState.latestExecutionPayloadBid.parentBlockHash;
+      parentExecutionRequests = isExtendingPayload
+        ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
+        : ssz.electra.ExecutionRequests.defaultValue();
+    }
     const prepareRes = await prepareExecutionPayload(
       this,
       this.logger,

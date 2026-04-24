@@ -10,7 +10,7 @@ import {
   isStatePostBellatrix,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Bytes32, Slot, electra} from "@lodestar/types";
+import {Bytes32, Slot, electra, ssz} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
@@ -166,17 +166,30 @@ export class PrepareNextSlotScheduler {
 
         let parentBlockHash: Bytes32;
         let isExtendingPayload = false;
+        // Genesis block (parentBlockHash === ZERO_HASH_HEX in fork choice) has no real bid.
+        const isParentGenesis =
+          isStatePostGloas(updatedPrepareState) && updatedHead.parentBlockHash === ZERO_HASH_HEX;
+
         if (isStatePostGloas(updatedPrepareState)) {
-          isExtendingPayload = this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot);
-          parentBlockHash = isExtendingPayload
-            ? updatedPrepareState.latestExecutionPayloadBid.blockHash
-            : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
+          if (isParentGenesis) {
+            // Use state.latestBlockHash as the EL head directly — genesis bid is all zeros.
+            parentBlockHash = updatedPrepareState.latestBlockHash;
+          } else {
+            isExtendingPayload = this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot);
+            parentBlockHash = isExtendingPayload
+              ? updatedPrepareState.latestExecutionPayloadBid.blockHash
+              : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
+          }
         } else {
           parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
 
-        // Reused by the SSE emit below to avoid a second DB lookup on cache miss
+        // Reused by the SSE emit below to avoid a second DB lookup on cache miss.
+        // Genesis has no real envelope, so provide empty requests directly.
         let parentExecutionRequests: electra.ExecutionRequests | undefined;
+        if (isParentGenesis) {
+          parentExecutionRequests = ssz.electra.ExecutionRequests.defaultValue();
+        }
 
         if (feeRecipient) {
           const preparationTime =

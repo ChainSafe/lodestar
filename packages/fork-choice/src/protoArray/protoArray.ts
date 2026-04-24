@@ -214,6 +214,12 @@ export class ProtoArray {
       return PayloadStatus.FULL;
     }
 
+    // Genesis block has parentRoot = ZERO_HASH — no real parent exists in the proto array.
+    // Return FULL so callers get a safe default and don't attempt a lookup.
+    if (block.parentRoot === HEX_ZERO_HASH) {
+      return PayloadStatus.FULL;
+    }
+
     const parentBlock = this.getBlockHexAndBlockHash(block.parentRoot, parentBlockHash);
     if (parentBlock == null) {
       throw new ProtoArrayError({

@@ -101,7 +101,9 @@ export function initializeForkChoiceFromFinalizedState(
   // production code use ForkChoice constructor directly
   const forkchoiceConstructor = opts.forkchoiceConstructor ?? ForkChoice;
 
-  const isForkPostGloas = computeEpochAtSlot(state.slot) >= config.GLOAS_FORK_EPOCH;
+  // Use the anchor block's epoch (not the state's) to determine if it's a Gloas block.
+  // The state may have advanced past the fork boundary while the anchor block is still Fulu.
+  const isBlockPostGloas = computeEpochAtSlot(blockHeader.slot) >= config.GLOAS_FORK_EPOCH;
 
   return new forkchoiceConstructor(
     config,
@@ -148,8 +150,16 @@ export function initializeForkChoiceFromFinalizedState(
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-        payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
-        parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
+        payloadStatus: isBlockPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
+        // Genesis is a Gloas block but has no real parent — use ZERO_HASH to signal this.
+        // Callers must special-handle parentBlockHash === ZERO_HASH_HEX.
+        parentBlockHash: isBlockPostGloas
+          ? blockHeader.slot === GENESIS_SLOT
+            ? ZERO_HASH_HEX
+            : isStatePostGloas(state)
+              ? toRootHex(state.latestBlockHash)
+              : null
+          : null,
       },
       currentSlot
     ),
@@ -193,7 +203,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   // this is not the justified state, but there is no other ways to get justified balances
   const justifiedBalances = unfinalizedState.getEffectiveBalanceIncrementsZeroInactive();
 
-  const isForkPostGloas = computeEpochAtSlot(unfinalizedState.slot) >= config.GLOAS_FORK_EPOCH;
+  const isBlockPostGloas = computeEpochAtSlot(blockHeader.slot) >= config.GLOAS_FORK_EPOCH;
 
   const store = new ForkChoiceStore(
     currentSlot,
@@ -240,8 +250,14 @@ export function initializeForkChoiceFromUnfinalizedState(
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
 
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-    payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
-    parentBlockHash: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestBlockHash) : null,
+    payloadStatus: isBlockPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
+    parentBlockHash: isBlockPostGloas
+      ? blockHeader.slot === GENESIS_SLOT
+        ? ZERO_HASH_HEX
+        : isStatePostGloas(unfinalizedState)
+          ? toRootHex(unfinalizedState.latestBlockHash)
+          : null
+      : null,
   };
 
   const parentSlot = blockHeader.slot - 1;

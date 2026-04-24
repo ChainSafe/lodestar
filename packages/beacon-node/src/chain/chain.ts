@@ -10,6 +10,7 @@ import {
   type ForkPostGloas,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
+  ZERO_HASH_HEX,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -895,6 +896,14 @@ export class BeaconChain implements IBeaconChain {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.electra.ExecutionRequests.defaultValue();
     }
+
+    // Genesis block (parentBlockHash === ZERO_HASH_HEX) has no execution payload envelope.
+    // Its bid commits to nothing — return empty requests.
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+    if (parentBlock && parentBlock.parentBlockHash === ZERO_HASH_HEX) {
+      return ssz.electra.ExecutionRequests.defaultValue();
+    }
+
     const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
     if (envelope === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);

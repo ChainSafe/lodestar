@@ -1,4 +1,4 @@
-import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT, ZERO_HASH} from "@lodestar/params";
 import {BeaconBlock, electra, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
@@ -17,9 +17,12 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   const parentBid = state.latestExecutionPayloadBid;
   const requests = block.body.parentExecutionRequests;
 
-  const isParentBlockFull = byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
-  if (!isParentBlockFull) {
-    // Parent was EMPTY -- no execution requests expected
+  // Spec: is_genesis_block — parent bid has zero block_hash when the parent is the genesis block.
+  // Genesis never had a real payload, so skip parent payload processing entirely.
+  const isGenesisBlock = byteArrayEquals(parentBid.blockHash, ZERO_HASH);
+  const isParentBlockEmpty = !byteArrayEquals(bid.parentBlockHash, parentBid.blockHash);
+  if (isGenesisBlock || isParentBlockEmpty) {
+    // Parent was genesis or EMPTY -- no execution requests expected
     assertEmptyExecutionRequests(requests);
     return;
   }
