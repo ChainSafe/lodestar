@@ -413,7 +413,11 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
             (block as gloas.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message.parentBlockHash
           );
           if (!forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHash)) {
-            throw new BlockError(block, {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, parentBlockHash});
+            throw new BlockError(block, {
+              code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+              parentRoot: parentRootHex,
+              parentBlockHash,
+            });
           }
 
           const blockSlot = block.message.slot;
