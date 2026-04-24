@@ -158,15 +158,6 @@ describe("sync / unknown block sync thru gloas", () => {
         100000,
         ({block}) => block === headRootHex
       );
-      const maybeWaitForPayloadImported =
-        event === ChainEvent.unknownEnvelopeBlockRoot || event === ChainEvent.incompletePayloadEnvelope
-          ? Promise.resolve()
-          : waitForEvent<routes.events.EventData[routes.events.EventType.executionPayload]>(
-              bn2.chain.emitter,
-              routes.events.EventType.executionPayload,
-              100000,
-              ({blockRoot}) => blockRoot === headRootHex
-            );
 
       const connected = Promise.all([onPeerConnect(bn2.network), onPeerConnect(bn.network)]);
       await connect(bn2.network, bn.network);
@@ -235,22 +226,19 @@ describe("sync / unknown block sync thru gloas", () => {
           throw Error("Unknown event type");
       }
 
-      // Wait for the block root to be processed in node B. Payload-aware entrypoints should also import
-      // the separated payload envelope for the same root.
+      // Wait for the block root to be processed in node B. The unknown-block-sync flow imports
+      // parent payloads as needed to satisfy sanity checks but does not fetch the head block's
+      // own payload envelope (which would normally arrive via gossip on a live network).
       await waitForSynced;
 
       switch (event) {
         case ChainEvent.incompletePayloadEnvelope: {
-          // After it syncs, send an incomplete payload envelope
-          // and assert the payload gets imported
-          const payloadInput = bn2.chain.seenPayloadEnvelopeInputCache.add({
-            blockRootHex: headRootHex,
-            forkName: bn2.config.getForkName(headSlot),
-            block: head,
-            sampledColumns: bn2.chain.custodyConfig.sampledColumns,
-            custodyColumns: bn2.chain.custodyConfig.custodyColumns,
-            timeCreatedSec: Math.floor(Date.now() / 1000),
-          });
+          // After it syncs, retrieve the PayloadEnvelopeInput created during block import
+          // and emit incompletePayloadEnvelope to exercise the sync handler.
+          const payloadInput = bn2.chain.seenPayloadEnvelopeInputCache.get(headRootHex);
+          if (!payloadInput) {
+            throw Error(`Expected PayloadEnvelopeInput for ${headRootHex} after block sync`);
+          }
           bn2.chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
             payloadInput,
             peer: sourcePeerId,
@@ -261,9 +249,6 @@ describe("sync / unknown block sync thru gloas", () => {
         default:
           break;
       }
-
-      // only await payload import for events that imply importing it
-      await maybeWaitForPayloadImported;
     });
   }
 });
