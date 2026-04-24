@@ -891,7 +891,7 @@ export class BeaconChain implements IBeaconChain {
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
   ): Promise<electra.ExecutionRequests> {
-    // handle the fork boundary where parent could be pre-gloas
+    // at the fork boundary, parent is pre-gloas
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.electra.ExecutionRequests.defaultValue();
     }

@@ -173,6 +173,9 @@ export async function verifyBlocksInEpoch(
             opts
           )
         : Promise.resolve({verifySignaturesTime: Date.now()}),
+
+      // TODO GLOAS: can verify payload signatures in batch too
+      // maybe chain with the above verifyBlocksSignatures()
     ]);
 
     if (opts.verifyOnly !== true) {
