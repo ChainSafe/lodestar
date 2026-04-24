@@ -24,7 +24,7 @@ async function resolveNightlyRunId(repo: string, token: string, date?: string, b
   if (branch) params.append("branch", branch);
   if (date) params.append("created", date);
 
-  const { workflow_runs } = await ghApiFetch<WorkflowRunsResponse>(
+  const {workflow_runs} = await ghApiFetch<WorkflowRunsResponse>(
     `/repos/${repo}/actions/workflows/tests.yml/runs?${params}`,
     token
   );
