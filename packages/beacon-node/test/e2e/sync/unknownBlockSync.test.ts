@@ -239,11 +239,20 @@ describe("sync / unknown block sync thru gloas", () => {
           if (!payloadInput) {
             throw Error(`Expected PayloadEnvelopeInput for ${headRootHex} after block sync`);
           }
+          const waitForPayloadImported = waitForEvent<
+            routes.events.EventData[routes.events.EventType.executionPayload]
+          >(
+            bn2.chain.emitter,
+            routes.events.EventType.executionPayload,
+            100000,
+            ({blockRoot}) => blockRoot === headRootHex
+          );
           bn2.chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
             payloadInput,
             peer: sourcePeerId,
             source: BlockInputSource.gossip,
           });
+          await waitForPayloadImported;
           break;
         }
         default:
