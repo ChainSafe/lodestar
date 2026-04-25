@@ -48,34 +48,40 @@ describe("sync / unknown block sync thru gloas", () => {
     }
   });
 
-  const testCases: {id: string; event: ChainEvent}[] = [
+  const testCases: {id: string; event: ChainEvent; expectsPayloadImport: boolean}[] = [
     {
       id: "should do an unknown block parent sync from another BN",
       event: ChainEvent.blockUnknownParent,
+      expectsPayloadImport: false,
     },
     {
       id: "should do an unknown block sync from another BN",
       event: ChainEvent.unknownBlockRoot,
+      expectsPayloadImport: false,
     },
     {
       id: "should do an incompleteBlockInput sync from another BN",
       event: ChainEvent.incompleteBlockInput,
+      expectsPayloadImport: false,
     },
     {
       id: "should do an unknownEnvelopeBlockRoot sync from another BN",
       event: ChainEvent.unknownEnvelopeBlockRoot,
+      expectsPayloadImport: true,
     },
     {
       id: "should do an envelopeUnknownBlock sync from another BN",
       event: ChainEvent.envelopeUnknownBlock,
+      expectsPayloadImport: true,
     },
     {
       id: "should do an incompletePayloadEnvelope sync from another BN",
       event: ChainEvent.incompletePayloadEnvelope,
+      expectsPayloadImport: true,
     },
   ];
 
-  for (const {id, event} of testCases) {
+  for (const {id, event, expectsPayloadImport} of testCases) {
     it(id, async () => {
       // the node needs time to transpile/initialize bls worker threads
       const genesisSlotsDelay = 4;
@@ -177,9 +183,14 @@ describe("sync / unknown block sync thru gloas", () => {
         forkName: bn.chain.config.getForkName(headSlot),
         daOutOfRange: false,
       });
-      let waitForPayloadImported:
-        | Promise<routes.events.EventData[routes.events.EventType.executionPayload]>
-        | undefined;
+      const waitForPayloadImported = expectsPayloadImport
+        ? waitForEvent<routes.events.EventData[routes.events.EventType.executionPayload]>(
+            bn2.chain.emitter,
+            routes.events.EventType.executionPayload,
+            100000,
+            ({blockRoot}) => blockRoot === headRootHex
+          )
+        : undefined;
 
       switch (event) {
         case ChainEvent.blockUnknownParent:
@@ -228,15 +239,6 @@ describe("sync / unknown block sync thru gloas", () => {
           if (!payloadInputOnA?.hasPayloadEnvelope()) {
             throw Error(`Expected node A to have signed envelope for ${headRootHex}`);
           }
-          // Register the waiter BEFORE the emit so the executionPayload event isn't missed.
-          // The handler fetches the unknown block via byRoot, reconciles with the envelope,
-          // and imports it via processExecutionPayload, which fires this event.
-          waitForPayloadImported = waitForEvent<routes.events.EventData[routes.events.EventType.executionPayload]>(
-            bn2.chain.emitter,
-            routes.events.EventType.executionPayload,
-            100000,
-            ({blockRoot}) => blockRoot === headRootHex
-          );
           bn2.chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
             envelope: payloadInputOnA.getPayloadEnvelope(),
             peer: sourcePeerId,
@@ -261,11 +263,6 @@ describe("sync / unknown block sync thru gloas", () => {
       // parent payloads as needed to satisfy sanity checks but does not fetch the head block's
       // own payload envelope (which would normally arrive via gossip on a live network).
       await waitForSynced;
-      // For envelopeUnknownBlock, also wait until the payload itself is imported on node B
-      // (handler fetches the missing block via byRoot, reconciles with the envelope, then imports).
-      if (waitForPayloadImported) {
-        await waitForPayloadImported;
-      }
 
       switch (event) {
         case ChainEvent.incompletePayloadEnvelope: {
@@ -275,24 +272,21 @@ describe("sync / unknown block sync thru gloas", () => {
           if (!payloadInput) {
             throw Error(`Expected PayloadEnvelopeInput for ${headRootHex} after block sync`);
           }
-          const waitForPayloadImported = waitForEvent<
-            routes.events.EventData[routes.events.EventType.executionPayload]
-          >(
-            bn2.chain.emitter,
-            routes.events.EventType.executionPayload,
-            100000,
-            ({blockRoot}) => blockRoot === headRootHex
-          );
           bn2.chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
             payloadInput,
             peer: sourcePeerId,
             source: BlockInputSource.gossip,
           });
-          await waitForPayloadImported;
           break;
         }
         default:
           break;
+      }
+
+      // for incompletePayloadEnvelope the trigger is in the second switch above
+      // so we have to assert payload import at the end
+      if (waitForPayloadImported) {
+        await waitForPayloadImported;
       }
     });
   }
