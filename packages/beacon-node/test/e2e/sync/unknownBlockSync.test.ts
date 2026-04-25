@@ -66,6 +66,10 @@ describe("sync / unknown block sync thru gloas", () => {
       event: ChainEvent.unknownEnvelopeBlockRoot,
     },
     {
+      id: "should do an envelopeUnknownBlock sync from another BN",
+      event: ChainEvent.envelopeUnknownBlock,
+    },
+    {
       id: "should do an incompletePayloadEnvelope sync from another BN",
       event: ChainEvent.incompletePayloadEnvelope,
     },
@@ -173,6 +177,10 @@ describe("sync / unknown block sync thru gloas", () => {
         forkName: bn.chain.config.getForkName(headSlot),
         daOutOfRange: false,
       });
+      let waitForPayloadImported:
+        | Promise<routes.events.EventData[routes.events.EventType.executionPayload]>
+        | undefined;
+
       switch (event) {
         case ChainEvent.blockUnknownParent:
           await bn2.chain.processBlock(headInput).catch((e) => {
@@ -213,6 +221,29 @@ describe("sync / unknown block sync thru gloas", () => {
             source: BlockInputSource.gossip,
           });
           break;
+        case ChainEvent.envelopeUnknownBlock: {
+          // Node A produced the head; its cache has the full signed envelope (populated via
+          // publishExecutionPayloadEnvelope -> payloadInput.addPayloadEnvelope).
+          const payloadInputOnA = bn.chain.seenPayloadEnvelopeInputCache.get(headRootHex);
+          if (!payloadInputOnA?.hasPayloadEnvelope()) {
+            throw Error(`Expected node A to have signed envelope for ${headRootHex}`);
+          }
+          // Register the waiter BEFORE the emit so the executionPayload event isn't missed.
+          // The handler fetches the unknown block via byRoot, reconciles with the envelope,
+          // and imports it via processExecutionPayload, which fires this event.
+          waitForPayloadImported = waitForEvent<routes.events.EventData[routes.events.EventType.executionPayload]>(
+            bn2.chain.emitter,
+            routes.events.EventType.executionPayload,
+            100000,
+            ({blockRoot}) => blockRoot === headRootHex
+          );
+          bn2.chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
+            envelope: payloadInputOnA.getPayloadEnvelope(),
+            peer: sourcePeerId,
+            source: BlockInputSource.gossip,
+          });
+          break;
+        }
         case ChainEvent.incompletePayloadEnvelope: {
           // get the chain started with an unknownBlockRoot
           bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
@@ -230,6 +261,11 @@ describe("sync / unknown block sync thru gloas", () => {
       // parent payloads as needed to satisfy sanity checks but does not fetch the head block's
       // own payload envelope (which would normally arrive via gossip on a live network).
       await waitForSynced;
+      // For envelopeUnknownBlock, also wait until the payload itself is imported on node B
+      // (handler fetches the missing block via byRoot, reconciles with the envelope, then imports).
+      if (waitForPayloadImported) {
+        await waitForPayloadImported;
+      }
 
       switch (event) {
         case ChainEvent.incompletePayloadEnvelope: {
