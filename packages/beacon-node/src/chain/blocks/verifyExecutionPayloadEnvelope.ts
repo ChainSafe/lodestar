@@ -32,8 +32,8 @@ export function verifyExecutionPayloadEnvelope(
   const payload = envelope.payload;
 
   // Verify consistency with the beacon block.
-  // Compute header root on a copy of latestBlockHeader to avoid mutating state.
-  const headerValue = {...state.latestBlockHeader};
+  // Compute header root on a clone of latestBlockHeader to avoid mutating state.
+  const headerValue = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
   if (byteArrayEquals(headerValue.stateRoot, ssz.Root.defaultValue())) {
     headerValue.stateRoot = state.hashTreeRoot();
   }
