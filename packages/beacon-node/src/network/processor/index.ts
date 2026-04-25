@@ -91,6 +91,7 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.execution_payload]: {bypassQueue: true},
   [GossipType.payload_attestation_message]: {},
   [GossipType.execution_payload_bid]: {},
+  [GossipType.proposer_preferences]: {},
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
 
