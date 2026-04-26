@@ -294,7 +294,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.signedExecutionPayloadBid = signedBid;
     gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
       parentBlock.blockRoot,
-      parentBlock.slot,
+      blockSlot - 1,
       MAX_PAYLOAD_ATTESTATIONS
     );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
