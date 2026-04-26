@@ -55,6 +55,7 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
+import {InsertOutcome} from "../../chain/opPools/types.js";
 import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
 import {
   validateGossipFuluDataColumnSidecar,
@@ -1178,6 +1179,31 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
+    },
+    [GossipType.execution_proof]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.execution_proof>) => {
+      const {serializedData} = gossipData;
+      const signedProof = sszDeserialize(topic, serializedData);
+      const proof = signedProof.message;
+      const requestRootHex = toRootHex(proof.publicInput.newPayloadRequestRoot);
+
+      try {
+        const insertOutcome = chain.executionProofPool.add(signedProof);
+        logger.debug("Received execution proof via gossip", {
+          proofType: proof.proofType,
+          requestRoot: requestRootHex,
+          validatorIndex: signedProof.validatorIndex,
+          insertOutcome,
+        });
+
+        if (insertOutcome === InsertOutcome.NewData) {
+          chain.maybeTransitionToValidOnProofArrival(signedProof);
+        }
+      } catch (e) {
+        logger.error("Error adding execution proof to pool", {}, e as Error);
+      }
     },
   };
 }

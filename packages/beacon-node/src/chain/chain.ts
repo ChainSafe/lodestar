@@ -1,8 +1,16 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
-import {Type} from "@chainsafe/ssz";
+import { Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+   CheckpointWithHex,
+   ExecutionStatus,
+   IForkChoice,
+   PayloadStatus,
+   ProtoBlock,
+   UpdateHeadOpt,
+   getCheckpointPayloadStatus,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -33,6 +41,7 @@ import {
   Root,
   RootHex,
   SignedBeaconBlock,
+  SignedExecutionProof,
   Slot,
   Status,
   UintNum64,
@@ -85,6 +94,7 @@ import {
   AggregatedAttestationPool,
   AttestationPool,
   ExecutionPayloadBidPool,
+  ExecutionProofPool,
   OpPool,
   PayloadAttestationPool,
   SyncCommitteeMessagePool,
@@ -120,6 +130,7 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
+import {IZkvmExecutionProofVerifier, defaultZkvmExecutionProofVerifier} from "./validation/executionProofVerifier.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -178,6 +189,15 @@ export class BeaconChain implements IBeaconChain {
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
+  readonly executionProofPool: ExecutionProofPool;
+  /** EIP-8025: When true, skip EL newPayload calls and use execution proofs for validation */
+  readonly activateZkvm: boolean;
+  /** EIP-8025: Minimum distinct proof types required per block in zkvm mode */
+  readonly minProofsRequired: number;
+  /** EIP-8025: Verifier for execution proofs — swap implementation for real zkvm prover */
+  readonly executionProofVerifier: IZkvmExecutionProofVerifier;
+  /** EIP-8025: Maps newPayloadRequestRoot hex → blockRoot hex for proof→block lookup */
+  readonly requestRootToBlockRoot = new Map<string, string>();
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
 
@@ -304,6 +324,10 @@ export class BeaconChain implements IBeaconChain {
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
+    this.executionProofPool = new ExecutionProofPool();
+    this.activateZkvm = opts.activateZkvm ?? false;
+    this.minProofsRequired = opts.minProofsRequired ?? 1;
+    this.executionProofVerifier = opts.executionProofVerifier ?? defaultZkvmExecutionProofVerifier;
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
 
@@ -1438,6 +1462,8 @@ export class BeaconChain implements IBeaconChain {
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
+    // TODO EIP-8025: Implement pruning based on finalized request roots
+    // this.executionProofPool was previously pruned by slot, now needs pruning by request root
     this.seenExecutionPayloadBids.prune(slot);
     this.seenProposerPreferences.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
@@ -1580,6 +1606,52 @@ export class BeaconChain implements IBeaconChain {
       });
       this.emitter.emit(ChainEvent.updateTargetCustodyGroupCount, targetCustodyGroupCount);
     }
+  }
+
+  /**
+   * EIP-8025: Check if enough execution proofs arrived for a block and transition it to Valid in fork choice.
+   * Called from both gossip handler and REST API handler when a new proof is added to the pool.
+   */
+  maybeTransitionToValidOnProofArrival(signedProof: SignedExecutionProof): void {
+    if (!this.activateZkvm) return;
+
+    const requestRoot = signedProof.message.publicInput.newPayloadRequestRoot;
+    if (!this.executionProofPool.hasEnoughProofs(requestRoot, this.minProofsRequired)) return;
+
+    const requestRootHex = toRootHex(requestRoot);
+    const blockRootHex = this.requestRootToBlockRoot.get(requestRootHex);
+    if (blockRootHex == null) {
+      this.logger.debug("Cannot transition block to valid: requestRoot not mapped to blockRoot", {
+        requestRoot: requestRootHex,
+      });
+      return;
+    }
+
+    const block = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+    if (block == null || block.executionPayloadBlockHash == null) {
+      this.logger.debug("Cannot transition block to valid: block not found in fork choice", {
+        blockRoot: blockRootHex,
+        requestRoot: requestRootHex,
+      });
+      return;
+    }
+
+    // Skip if already valid — multiple proofs arriving concurrently can trigger this
+    if (block.executionStatus === ExecutionStatus.Valid) return;
+
+    this.forkChoice.validateLatestHash({
+      executionStatus: ExecutionStatus.Valid,
+      latestValidExecHash: block.executionPayloadBlockHash,
+    });
+    // Refresh the cached fork choice head so API responses reflect the updated execution status.
+    // validateLatestHash updates the proto-array nodes but the cached head is a stale snapshot.
+    this.recomputeForkChoiceHead(ForkchoiceCaller.onExecutionProof);
+    this.logger.info("Execution proofs sufficient, marked block valid (zkvm)", {
+      blockRoot: blockRootHex,
+      execBlockHash: block.executionPayloadBlockHash,
+      proofsAvailable: this.executionProofPool.getByRequestRoot(requestRoot).length,
+      minRequired: this.minProofsRequired,
+    });
   }
 
   updateBuilderStatus(clockSlot: Slot): void {

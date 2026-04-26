@@ -211,6 +211,17 @@ function getAllTopicsScoreParams(
       expectedMessageRate: 64 / SLOTS_PER_EPOCH,
       firstMessageDecayTime: epochDurationMs * 100,
     });
+    // EIP-8025: execution_proof topic scoring
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.execution_proof,
+        boundary,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: 0.5, // Similar weight to voluntary_exit — low frequency, important
+      expectedMessageRate: 8, // Up to EXECUTION_PROOF_TYPE_COUNT per slot
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
 
     // other topics
     topicsParams[

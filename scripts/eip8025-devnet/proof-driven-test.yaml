@@ -1,0 +1,83 @@
+# EIP-8025 Phase E: Proof-Driven Execution Test
+#
+# Tests that a Lodestar node with --chain.activateZkvm=true can sync
+# and validate blocks using execution proofs instead of an EL client.
+#
+# The zkvm Lodestar node still has an EL paired (kurtosis requirement),
+# but it does NOT call engine_newPayload — instead it uses proofs from
+# the gossip network to validate execution payloads.
+#
+# Validation criteria:
+# - Chain finalizes within 5 epochs
+# - Lodestar zkvm node stays in sync (no stalls)
+# - Proofs are delivered and processed successfully
+#
+# Usage:
+#   kurtosis run github.com/ethpandaops/ethereum-package --args-file proof-driven-test.yaml
+
+participants:
+  # Lodestar supernode — normal mode with EL (produces blocks + proofs)
+  - el_type: reth
+    el_image: ghcr.io/paradigmxyz/reth:latest
+    cl_type: lodestar
+    cl_image: lodestar-proof-driven:local
+    cl_extra_params:
+      - --targetPeers=8
+    supernode: true
+    count: 1
+    validator_count: 128
+
+  # Lighthouse supernode — normal mode with EL (produces blocks + proofs)
+  - el_type: geth
+    el_image: ethereum/client-go:latest
+    cl_type: lighthouse
+    cl_image: ethpandaops/lighthouse:eth-act-optional-proofs
+    cl_extra_params:
+      - --target-peers=8
+    supernode: true
+    count: 1
+    validator_count: 128
+
+  # Prysm supernode — normal mode with EL (produces blocks + proofs)
+  - el_type: geth
+    el_image: ethereum/client-go:latest
+    cl_type: prysm
+    cl_image: ethpandaops/prysm-beacon-chain:developeruche-poc-optional-proofs
+    cl_extra_params:
+      - --activate-zkvm
+      - --zkvm-generation-proof-types=0,1
+    vc_image: ethpandaops/prysm-validator:developeruche-poc-optional-proofs
+    supernode: true
+    count: 1
+    validator_count: 128
+
+  # Lodestar zkvm node — PROOF-DRIVEN MODE (the node under test)
+  # Uses execution proofs instead of EL for payload verification
+  - el_type: reth
+    el_image: ghcr.io/paradigmxyz/reth:latest
+    cl_type: lodestar
+    cl_image: lodestar-proof-driven:local
+    cl_extra_params:
+      - --activateZkvm
+      - --chain.minProofsRequired=1
+      - --targetPeers=8
+    count: 1
+    validator_count: 0
+
+network_params:
+  electra_fork_epoch: 0
+  fulu_fork_epoch: 1
+  seconds_per_slot: 6
+
+global_log_level: debug
+
+additional_services:
+  - dora
+
+port_publisher:
+  el:
+    enabled: true
+    public_port_start: 32000
+  cl:
+    enabled: true
+    public_port_start: 33000

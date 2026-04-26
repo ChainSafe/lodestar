@@ -167,7 +167,10 @@ export class NetworkCore implements INetworkCore {
       config,
       custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
     };
-    const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
+    const metadata = new MetadataController(
+      {activateZkvm: opts.activateZkvm},
+      {networkConfig, logger, onSetValue: onMetadataSetValue}
+    );
 
     const reqResp = new ReqRespBeaconNode(
       {
@@ -590,11 +593,12 @@ export class NetworkCore implements INetworkCore {
   private subscribeCoreTopicsAtBoundary(networkConfig: NetworkConfig, boundary: ForkBoundary): void {
     if (this.forkBoundariesByEpoch.has(boundary.epoch)) return;
     this.forkBoundariesByEpoch.set(boundary.epoch, boundary);
-    const {subscribeAllSubnets, disableLightClientServer} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer, activateZkvm} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
+      activateZkvm,
     })) {
       this.gossip.subscribeTopic({...topic, boundary});
     }
@@ -603,11 +607,12 @@ export class NetworkCore implements INetworkCore {
   private unsubscribeCoreTopicsAtBoundary(networkConfig: NetworkConfig, boundary: ForkBoundary): void {
     if (!this.forkBoundariesByEpoch.has(boundary.epoch)) return;
     this.forkBoundariesByEpoch.delete(boundary.epoch);
-    const {subscribeAllSubnets, disableLightClientServer} = this.opts;
+    const {subscribeAllSubnets, disableLightClientServer, activateZkvm} = this.opts;
 
     for (const topic of getCoreTopicsAtFork(networkConfig, boundary.fork, {
       subscribeAllSubnets,
       disableLightClientServer,
+      activateZkvm,
     })) {
       this.gossip.unsubscribeTopic({...topic, boundary});
     }

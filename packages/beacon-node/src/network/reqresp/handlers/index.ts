@@ -1,5 +1,7 @@
 import {ProtocolHandler} from "@lodestar/reqresp";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {
@@ -84,6 +86,34 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     [ReqRespMethod.LightClientFinalityUpdate]: () => onLightClientFinalityUpdate(chain),
     [ReqRespMethod.LightClientOptimisticUpdate]: () => onLightClientOptimisticUpdate(chain),
+
+    // EIP-8025: Execution proof req/resp handlers
+    [ReqRespMethod.ExecutionProofsByRoot]: (req) => {
+      const body = ssz.eip8025.ExecutionProofsByRootRequest.deserialize(req.data);
+      // TODO EIP-8025: ExecutionProofsByRootRequest should use requestRoot per spec
+      const proofs = chain.executionProofPool.getByRequestRootHex(toRootHex(body.blockRoot));
+      return (async function* () {
+        for (const proof of proofs) {
+          yield {
+            data: ssz.eip8025.SignedExecutionProof.serialize(proof),
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(chain.clock.currentSlot)),
+          };
+        }
+      })();
+    },
+    [ReqRespMethod.ExecutionProofsByRange]: (_req) => {
+      // Pool no longer has slot-based indexing; return all proofs
+      // TODO EIP-8025: Add slot-based filtering or update protocol
+      const proofs = chain.executionProofPool.getAll();
+      return (async function* () {
+        for (const proof of proofs) {
+          yield {
+            data: ssz.eip8025.SignedExecutionProof.serialize(proof),
+            boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(chain.clock.currentSlot)),
+          };
+        }
+      })();
+    },
   };
 
   return (method) => handlers[method];

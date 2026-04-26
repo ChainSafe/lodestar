@@ -3,12 +3,14 @@ import {ApplicationMethods} from "@lodestar/api/server";
 import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
   GossipAction,
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
+import {InsertOutcome} from "../../../../chain/opPools/types.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
@@ -313,6 +315,43 @@ export function getBeaconPoolApi({
       if (failures.length > 0) {
         throw new IndexedError("Error processing sync committee signatures", failures);
       }
+    },
+
+    async getPoolExecutionProofs() {
+      // TODO EIP-8025: Route definition still uses old ExecutionProof type; cast until API package is updated
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return {data: chain.executionProofPool.getAll() as any};
+    },
+
+    async submitPoolExecutionProofs({executionProof: _rawProof}) {
+      // TODO EIP-8025: Route definition still uses old ExecutionProof type; cast until API package is updated
+      const signedExecutionProof = _rawProof as unknown as import("@lodestar/types").SignedExecutionProof;
+      const proof = signedExecutionProof.message;
+      const requestRootHex = toRootHex(proof.publicInput.newPayloadRequestRoot);
+
+      if (chain.executionProofPool.has(proof.publicInput.newPayloadRequestRoot, proof.proofType)) {
+        logger.debug("Ignoring known execution proof", {requestRoot: requestRootHex, proofType: proof.proofType});
+        return {};
+      }
+
+      const insertOutcome = chain.executionProofPool.add(signedExecutionProof);
+      logger.info("Execution proof submitted via API", {
+        requestRoot: requestRootHex,
+        proofType: proof.proofType,
+        validatorIndex: signedExecutionProof.validatorIndex,
+        insertOutcome,
+      });
+
+      if (insertOutcome === InsertOutcome.NewData) {
+        try {
+          await network.publishExecutionProof(signedExecutionProof);
+        } catch (e) {
+          logger.debug("Failed to publish execution proof", {proofType: proof.proofType}, e as Error);
+        }
+        chain.maybeTransitionToValidOnProofArrival(signedExecutionProof);
+      }
+
+      return {};
     },
   };
 }

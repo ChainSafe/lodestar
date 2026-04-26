@@ -4,6 +4,8 @@ import {ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
   DataColumnSidecar,
+  ExecutionProofsByRangeRequest,
+  ExecutionProofsByRootRequest,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -11,6 +13,7 @@ import {
   Metadata,
   Root,
   SignedBeaconBlock,
+  SignedExecutionProof,
   Status,
   altair,
   deneb,
@@ -52,6 +55,9 @@ export enum ReqRespMethod {
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
   LightClientOptimisticUpdate = "light_client_optimistic_update",
+  // EIP-8025
+  ExecutionProofsByRoot = "execution_proofs_by_root",
+  ExecutionProofsByRange = "execution_proofs_by_range",
 }
 
 // To typesafe events to network
@@ -72,6 +78,9 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
   [ReqRespMethod.LightClientOptimisticUpdate]: null;
+  // EIP-8025
+  [ReqRespMethod.ExecutionProofsByRoot]: ExecutionProofsByRootRequest;
+  [ReqRespMethod.ExecutionProofsByRange]: ExecutionProofsByRangeRequest;
 };
 
 type ResponseBodyByMethod = {
@@ -93,6 +102,9 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
+  // EIP-8025
+  [ReqRespMethod.ExecutionProofsByRoot]: SignedExecutionProof;
+  [ReqRespMethod.ExecutionProofsByRange]: SignedExecutionProof;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -122,6 +134,9 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
+  // EIP-8025
+  [ReqRespMethod.ExecutionProofsByRoot]: ssz.eip8025.ExecutionProofsByRootRequest,
+  [ReqRespMethod.ExecutionProofsByRange]: ssz.eip8025.ExecutionProofsByRangeRequest,
 });
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
@@ -153,6 +168,9 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
+  // EIP-8025
+  [ReqRespMethod.ExecutionProofsByRoot]: () => ssz.eip8025.SignedExecutionProof,
+  [ReqRespMethod.ExecutionProofsByRange]: () => ssz.eip8025.SignedExecutionProof,
 };
 
 function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
