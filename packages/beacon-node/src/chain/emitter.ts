@@ -38,6 +38,14 @@ export enum ChainEvent {
    */
   forkChoiceFinalized = "forkChoice:finalized",
   /**
+   * This event signals that the PTC quorum for payload timeliness has been reached.
+   */
+  forkChoicePTCQuorumPayloadTimely = "forkChoice:PTCQuorumPayloadTimely",
+  /**
+   * This event signals that the PTC quorum for data availability has been reached.
+   */
+  forkChoicePTCQuorumDataAvailable = "forkChoice:PTCQuorumDataAvailable",
+  /**
    * This event signals that dependent services (e.g. custody sampling) should update to account for the new target group count.
    */
   updateTargetCustodyGroupCount = "updateTargetCustodyGroupCount",
@@ -112,6 +120,9 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
+
+  [ChainEvent.forkChoicePTCQuorumPayloadTimely]: (blockRoot: RootHex, payloadTimely: boolean) => void;
+  [ChainEvent.forkChoicePTCQuorumDataAvailable]: (blockRoot: RootHex, dataAvailable: boolean) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 

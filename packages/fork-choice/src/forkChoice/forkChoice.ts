@@ -944,8 +944,15 @@ export class ForkChoice implements IForkChoice {
    * Updates the PTC votes for multiple validators attesting to a block
    * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
    */
-  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
-    this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent);
+  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean, dataAvailable: boolean): void {
+    const newQuorums = this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, dataAvailable);
+
+    if (newQuorums.payloadTimely !== null) {
+      this.fcStore.setPtcQuorumPayloadTimely(blockRoot, newQuorums.payloadTimely);
+    }
+    if (newQuorums.dataAvailable !== null) {
+      this.fcStore.setPtcQuorumDataAvailable(blockRoot, newQuorums.dataAvailable);
+    }
   }
 
   /**

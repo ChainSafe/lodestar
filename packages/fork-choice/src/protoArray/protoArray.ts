@@ -22,6 +22,21 @@ import {
  */
 const PAYLOAD_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
 
+/**
+ * Threshold for data availability (>50% of PTC must vote)
+ * Spec: gloas/fork-choice.md (DATA_AVAILABILITY_TIMELY_THRESHOLD = PTC_SIZE // 2)
+ */
+const DATA_AVAILABILITY_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
+
+/**
+ * type to track PTC votes
+ *
+ * true means quorum of yea,
+ * false means quorum of nay,
+ * null means not enough votes
+ */
+type Quorum = boolean | null;
+
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
 
@@ -67,9 +82,23 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md#modified-store (line 148)
    *
    * Bit i is set if PTC member i voted payload_present=true
-   * Used by is_payload_timely() to determine if payload is timely
+   * Used by is_payload_timely() and is_payload_data_available()
    */
-  private ptcVotes = new Map<RootHex, BitArray>();
+  private ptcVotes = new Map<
+    RootHex,
+    {
+      payloadTimely: {
+        0: BitArray;
+        1: BitArray;
+        quorum: Quorum;
+      };
+      dataAvailable: {
+        0: BitArray;
+        1: BitArray;
+        quorum: Quorum;
+      };
+    }
+  >();
 
   constructor({
     pruneThreshold,
@@ -506,7 +535,18 @@ export class ProtoArray {
 
       // Initialize PTC votes for this block (all false initially)
       // Spec: gloas/fork-choice.md#modified-on_block (line 645)
-      this.ptcVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
+      this.ptcVotes.set(block.blockRoot, {
+        payloadTimely: {
+          0: BitArray.fromBitLen(PTC_SIZE),
+          1: BitArray.fromBitLen(PTC_SIZE),
+          quorum: null,
+        },
+        dataAvailable: {
+          0: BitArray.fromBitLen(PTC_SIZE),
+          1: BitArray.fromBitLen(PTC_SIZE),
+          quorum: null,
+        },
+      });
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
@@ -622,21 +662,56 @@ export class ProtoArray {
    * @param blockRoot - The beacon block root being attested
    * @param ptcIndices - Array of PTC committee indices that voted (0..PTC_SIZE-1)
    * @param payloadPresent - Whether the validators attest the payload is present
+   * @param dataAvailable - Whether the validators attest the data is available
+   *
+   * @returns An object containing _new_ quorum of payloadTimely and dataAvailable
+   * This will only return a boolean if the quorum has changed.
    */
-  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    dataAvailable: boolean
+  ): {payloadTimely: Quorum; dataAvailable: Quorum} {
     const votes = this.ptcVotes.get(blockRoot);
+    const newQuorums: {
+      payloadTimely: Quorum;
+      dataAvailable: Quorum;
+    } = {
+      payloadTimely: null,
+      dataAvailable: null,
+    };
     if (votes === undefined) {
       // Block not found or not a Gloas block, ignore
-      return;
+      return newQuorums;
     }
+    const payloadPresentKey = payloadPresent ? 1 : 0;
+    const dataAvailableKey = dataAvailable ? 1 : 0;
 
     for (const ptcIndex of ptcIndices) {
       if (ptcIndex < 0 || ptcIndex >= PTC_SIZE) {
         throw new Error(`Invalid PTC index: ${ptcIndex}, must be 0..${PTC_SIZE - 1}`);
       }
 
-      votes.set(ptcIndex, payloadPresent);
+      votes.payloadTimely[payloadPresentKey].set(ptcIndex, true);
+      votes.dataAvailable[dataAvailableKey].set(ptcIndex, true);
     }
+
+    if (
+      votes.payloadTimely.quorum === null &&
+      bitCount(votes.payloadTimely[payloadPresentKey].uint8Array) > PAYLOAD_TIMELY_THRESHOLD
+    ) {
+      votes.payloadTimely.quorum = newQuorums.payloadTimely = payloadPresent;
+    }
+
+    if (
+      votes.dataAvailable.quorum === null &&
+      bitCount(votes.dataAvailable[dataAvailableKey].uint8Array) > DATA_AVAILABILITY_TIMELY_THRESHOLD
+    ) {
+      votes.dataAvailable.quorum = newQuorums.dataAvailable = dataAvailable;
+    }
+
+    return newQuorums;
   }
 
   /**
@@ -663,8 +738,34 @@ export class ProtoArray {
     }
 
     // Count votes for payload_present=true
-    const yesVotes = bitCount(votes.uint8Array);
-    return yesVotes > PAYLOAD_TIMELY_THRESHOLD;
+    return votes.payloadTimely.quorum === true;
+  }
+
+  /**
+   * Check if execution payload for a block has data available
+   * Spec: gloas/fork-choice.md#new-is_payload_data_available
+   *
+   * Returns true if:
+   * 1. Block has PTC votes tracked
+   * 2. Payload is locally available (FULL variant exists in proto array)
+   * 3. More than DATA_AVAILABILITY_TIMELY_THRESHOLD (>50% of PTC) members voted data_available=true
+   *
+   * @param blockRoot - The beacon block root to check
+   */
+  isDataAvailable(blockRoot: RootHex): boolean {
+    const votes = this.ptcVotes.get(blockRoot);
+    if (votes === undefined) {
+      // Block not found or not a Gloas block
+      return false;
+    }
+
+    // If payload is not locally available, the data is not available
+    if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
+    // Count votes for data_available=true
+    return votes.dataAvailable.quorum === true;
   }
 
   /**

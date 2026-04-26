@@ -115,6 +115,10 @@ export function initializeForkChoiceFromFinalizedState(
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+        onPTCQuorumPayloadTimely: (blockRoot, payloadTimely) =>
+          emitter.emit(ChainEvent.forkChoicePTCQuorumPayloadTimely, blockRoot, payloadTimely),
+        onPTCQuorumDataAvailable: (blockRoot, dataAvailable) =>
+          emitter.emit(ChainEvent.forkChoicePTCQuorumDataAvailable, blockRoot, dataAvailable),
       }
     ),
 
@@ -204,6 +208,10 @@ export function initializeForkChoiceFromUnfinalizedState(
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      onPTCQuorumPayloadTimely: (blockRoot, payloadTimely) =>
+        emitter.emit(ChainEvent.forkChoicePTCQuorumPayloadTimely, blockRoot, payloadTimely),
+      onPTCQuorumDataAvailable: (blockRoot, dataAvailable) =>
+        emitter.emit(ChainEvent.forkChoicePTCQuorumDataAvailable, blockRoot, dataAvailable),
     }
   );
 

@@ -44,6 +44,8 @@ export interface IForkChoiceStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
+  setPtcQuorumPayloadTimely(blockRoot: RootHex, payloadTimely: boolean): void;
+  setPtcQuorumDataAvailable(blockRoot: RootHex, dataAvailable: boolean): void;
 }
 
 /**
@@ -67,6 +69,8 @@ export class ForkChoiceStore implements IForkChoiceStore {
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
+      onPTCQuorumPayloadTimely: (blockRoot: RootHex, payloadTimely: boolean) => void;
+      onPTCQuorumDataAvailable: (blockRoot: RootHex, dataAvailable: boolean) => void;
     }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
@@ -97,6 +101,14 @@ export class ForkChoiceStore implements IForkChoiceStore {
     const cp = toCheckpointWithHex(checkpoint);
     this._finalizedCheckpoint = cp;
     this.events?.onFinalized(cp);
+  }
+
+  setPtcQuorumPayloadTimely(blockRoot: RootHex, payloadTimely: boolean) {
+    this.events?.onPTCQuorumPayloadTimely(blockRoot, payloadTimely);
+  }
+
+  setPtcQuorumDataAvailable(blockRoot: RootHex, dataAvailable: boolean) {
+    this.events?.onPTCQuorumDataAvailable(blockRoot, dataAvailable);
   }
 }
 
