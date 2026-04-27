@@ -1,7 +1,8 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {isStatePostGloas} from "@lodestar/state-transition";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -85,8 +86,9 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 4. Verify envelope (fields against state, signature, and EL in parallel where possible)
  * 5. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
  * 6. Update fork choice (transitions the block's PENDING variant to FULL)
- * 7. Record metrics for payload envelope and column sources
- * 8. Emit `execution_payload` event
+ * 7. Queue notifyForkchoiceUpdate to engine api
+ * 8. Record metrics for payload envelope and column sources
+ * 9. Emit `execution_payload` event
  */
 export async function importExecutionPayload(
   this: BeaconChain,
@@ -221,13 +223,25 @@ export async function importExecutionPayload(
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
 
-  // 7. Record metrics for payload envelope and column sources
+  // 7. Queue notifyForkchoiceUpdate to engine api
+  const head = this.forkChoice.getHead();
+  if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+      }
+    });
+  }
+
+  // 8. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
-  // 8. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
+  // 9. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
   if (this.clock.currentSlot - slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
       slot,
