@@ -52,4 +52,15 @@ describe("ShufflingCache", () => {
     // inserting other promise should throw error
     expect(() => shufflingCache.insertPromise(currentEpoch, "0x02")).toThrow();
   });
+
+  it("should reject and remove pending promise via rejectPromise", async () => {
+    const previousEpoch = state.epochCtx.epoch - 1;
+    const previousDecisionRoot = state.epochCtx.previousDecisionRoot;
+    shufflingCache.insertPromise(previousEpoch, previousDecisionRoot);
+    const shufflingRequest = shufflingCache.get(previousEpoch, previousDecisionRoot);
+    shufflingCache.rejectPromise(previousEpoch, previousDecisionRoot, new Error("regen failed"));
+    await expect(shufflingRequest).rejects.toThrow("regen failed");
+    // entry was removed so future requests for the same key can retry
+    expect(await shufflingCache.get(previousEpoch, previousDecisionRoot)).toBeNull();
+  });
 });

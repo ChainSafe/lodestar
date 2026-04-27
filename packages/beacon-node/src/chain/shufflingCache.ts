@@ -39,6 +39,7 @@ type PromiseCacheItem = {
   timeInsertedMs: number;
   promise: Promise<EpochShuffling>;
   resolveFn: (shuffling: EpochShuffling) => void;
+  rejectFn: (reason?: unknown) => void;
 };
 
 type CacheItem = ShufflingCacheItem | PromiseCacheItem;
@@ -98,10 +99,15 @@ export class ShufflingCache {
       );
     }
     let resolveFn: ((shuffling: EpochShuffling) => void) | null = null;
-    const promise = new Promise<EpochShuffling>((resolve) => {
+    let rejectFn: ((reason?: unknown) => void) | null = null;
+    const promise = new Promise<EpochShuffling>((resolve, reject) => {
       resolveFn = resolve;
+      rejectFn = reject;
     });
-    if (resolveFn === null) {
+    // Attach a no-op handler so a rejection without other awaiters is not treated as an
+    // unhandledRejection. Concurrent awaiters still observe the rejection through their own subscription.
+    promise.catch(() => {});
+    if (resolveFn === null || rejectFn === null) {
       throw new Error("Promise Constructor was not executed immediately");
     }
 
@@ -110,9 +116,23 @@ export class ShufflingCache {
       timeInsertedMs: Date.now(),
       promise,
       resolveFn,
+      rejectFn,
     };
     this.itemsByDecisionRootByEpoch.getOrDefault(epoch).set(decisionRoot, cacheItem);
     this.metrics?.shufflingCache.insertPromiseCount.inc();
+  }
+
+  /**
+   * Reject and remove a pending promise so concurrent awaiters fail fast and future requests
+   * for the same key can retry the computation. No-op if the entry is missing or already a shuffling.
+   */
+  rejectPromise(epoch: Epoch, decisionRoot: RootHex, reason: unknown): void {
+    const innerMap = this.itemsByDecisionRootByEpoch.getOrDefault(epoch);
+    const cacheItem = innerMap.get(decisionRoot);
+    if (cacheItem && isPromiseCacheItem(cacheItem)) {
+      cacheItem.rejectFn(reason);
+      innerMap.delete(decisionRoot);
+    }
   }
 
   /**

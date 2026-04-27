@@ -1270,27 +1270,33 @@ export class BeaconChain implements IBeaconChain {
     // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
     // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
     this.shufflingCache.insertPromise(attEpoch, shufflingDependentRoot);
-    const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
+    try {
+      const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
 
-    let state: IBeaconStateView;
-    if (blockEpoch < attEpoch - 1) {
-      // thanks to one epoch look ahead, we don't need to dial up to attEpoch
-      const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
-      this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
-      state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
-    } else if (blockEpoch > attEpoch) {
-      // should not happen, handled inside attestation verification code
-      throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
-    } else {
-      // should use either current or next shuffling of head state
-      // it's not likely to hit this since these shufflings are cached already
-      // so handle just in case
-      this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      let state: IBeaconStateView;
+      if (blockEpoch < attEpoch - 1) {
+        // thanks to one epoch look ahead, we don't need to dial up to attEpoch
+        const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
+        this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
+        state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
+      } else if (blockEpoch > attEpoch) {
+        // should not happen, handled inside attestation verification code
+        throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
+      } else {
+        // should use either current or next shuffling of head state
+        // it's not likely to hit this since these shufflings are cached already
+        // so handle just in case
+        this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
+        state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
+      }
+      // resolve the promise to unblock other calls of the same epoch and dependent root
+      this.shufflingCache.processState(state);
+      return state.getShufflingAtEpoch(attEpoch);
+    } catch (err) {
+      // ensure the cached promise does not hang concurrent awaiters on regen failure
+      this.shufflingCache.rejectPromise(attEpoch, shufflingDependentRoot, err);
+      throw err;
     }
-    // resolve the promise to unblock other calls of the same epoch and dependent root
-    this.shufflingCache.processState(state);
-    return state.getShufflingAtEpoch(attEpoch);
   }
 
   /**
