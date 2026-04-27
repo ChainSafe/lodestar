@@ -230,7 +230,7 @@ export class Validator {
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     emitter.setMaxListeners(Infinity);
 
-    const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
+    const chainHeaderTracker = new ChainHeaderTracker(config, logger, api, emitter);
     const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {

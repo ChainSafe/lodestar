@@ -1,4 +1,5 @@
 import {ApiClient, routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Root, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
@@ -29,6 +30,7 @@ export class ChainHeaderTracker {
   private readonly fns: RunEveryFn[] = [];
 
   constructor(
+    private readonly config: BeaconConfig,
     private readonly logger: Logger,
     private readonly api: ApiClient,
     private readonly emitter: ValidatorEventEmitter
@@ -36,9 +38,17 @@ export class ChainHeaderTracker {
 
   start(signal: AbortSignal): void {
     this.logger.verbose("Subscribing to validator events");
+
+    const topics = [EventType.head];
+    // We wait until the gloas fork is configured to avoid breaking
+    // connections with pre-gloas beacon nodes
+    if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
+      topics.push(EventType.executionPayloadAvailable);
+    }
+
     this.api.events
       .eventstream({
-        topics: [EventType.head, EventType.executionPayloadAvailable],
+        topics,
         signal,
         onEvent: this.onEvent,
         onError: (e) => {
