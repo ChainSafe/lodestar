@@ -10,7 +10,6 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
-  MAX_PAYLOAD_ATTESTATIONS,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -294,8 +293,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasBody.signedExecutionPayloadBid = signedBid;
     gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
       parentBlock.blockRoot,
-      blockSlot - 1,
-      MAX_PAYLOAD_ATTESTATIONS
+      blockSlot - 1
     );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
     blockBody = gloasBody as AssembledBodyType<T>;

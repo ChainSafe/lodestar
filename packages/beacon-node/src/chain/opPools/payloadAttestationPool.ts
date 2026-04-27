@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {MAX_COMMITTEES_PER_SLOT, PTC_SIZE} from "@lodestar/params";
+import {MAX_COMMITTEES_PER_SLOT, MAX_PAYLOAD_ATTESTATIONS, PTC_SIZE} from "@lodestar/params";
 import {RootHex, Slot, gloas} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -95,13 +95,9 @@ export class PayloadAttestationPool {
 
   /**
    * Get payload attestations to be included in a block.
-   * Pick the top `maxAttestation` number of attestations with the most votes
+   * Pick the top `MAX_PAYLOAD_ATTESTATIONS` aggregates with the most votes.
    */
-  getPayloadAttestationsForBlock(
-    beaconBlockRoot: BlockRootHex,
-    slot: Slot,
-    maxAttestation: number
-  ): gloas.PayloadAttestation[] {
+  getPayloadAttestationsForBlock(beaconBlockRoot: BlockRootHex, slot: Slot): gloas.PayloadAttestation[] {
     const aggregateByDataRootByBlockRoot = this.aggregateByDataRootByBlockRootBySlot.get(slot);
 
     if (!aggregateByDataRootByBlockRoot) {
@@ -119,7 +115,7 @@ export class PayloadAttestationPool {
     return Array.from(aggregateByDataRoot.values())
       .slice()
       .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
-      .slice(0, maxAttestation)
+      .slice(0, MAX_PAYLOAD_ATTESTATIONS)
       .map(fastToPayloadAttestation);
   }
 
