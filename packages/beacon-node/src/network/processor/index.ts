@@ -290,17 +290,17 @@ export class NetworkProcessor {
    * In the rare case, if 2 messages on 2 slots search for the same root (for example beacon_attestation) we may emit the same root twice but BlockInputSync should handle it well.
    */
   searchUnknownEnvelope({slot, root}: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
-    const knownBlock = this.chain.forkChoice.getBlockHexDefaultStatus(root);
-    if (
-      !canKnownBlockRequireExecutionPayloadEnvelope((blockSlot) => this.chain.config.getForkSeq(blockSlot), knownBlock)
-    ) {
-      return;
-    }
-
     if (
       this.chain.seenPayloadEnvelope(root) ||
       this.awaitingMessagesByPayloadBlockRoot.has(root) ||
       this.unknownEnvelopesBySlot.getOrDefault(slot).has(root)
+    ) {
+      return;
+    }
+
+    const knownBlock = this.chain.forkChoice.getBlockHexDefaultStatus(root);
+    if (
+      !canKnownBlockRequireExecutionPayloadEnvelope((blockSlot) => this.chain.config.getForkSeq(blockSlot), knownBlock)
     ) {
       return;
     }
