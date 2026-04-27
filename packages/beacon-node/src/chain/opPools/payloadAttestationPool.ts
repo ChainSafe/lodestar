@@ -141,7 +141,6 @@ export class PayloadAttestationPool {
 
     return aggregates
       .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
-      .slice(0, MAX_PAYLOAD_ATTESTATIONS)
       .map(fastToPayloadAttestation);
   }
 
