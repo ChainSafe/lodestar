@@ -641,6 +641,16 @@ export class ProtoArray {
     }
   }
 
+  getPTCVotes(blockRootHex: RootHex): BitArray | null {
+    const votes = this.ptcVotes.get(blockRootHex);
+    if (votes === undefined) {
+      // Block not found or not a Gloas block
+      return null;
+    }
+
+    return votes;
+  }
+
   /**
    * Check if execution payload for a block is timely
    * Spec: gloas/fork-choice.md#new-is_payload_timely

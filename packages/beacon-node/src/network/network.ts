@@ -515,6 +515,17 @@ export class Network implements INetwork {
     );
   }
 
+  async publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number> {
+    const epoch = computeEpochAtSlot(payloadAttestationMessage.data.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.payload_attestation_message>(
+      {type: GossipType.payload_attestation_message, boundary},
+      payloadAttestationMessage,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
   private async publishGossip<K extends GossipType>(
     topic: GossipTopicMap[K],
     object: GossipTypeMap[K],

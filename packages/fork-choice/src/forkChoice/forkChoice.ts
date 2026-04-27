@@ -1053,6 +1053,12 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.hasPayload(blockRoot);
   }
 
+  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    const votes = this.protoArray.getPTCVotes(blockRootHex);
+    if (votes === null) return null;
+    return votes.toBoolArray().map((v) => v ?? null);
+  }
+
   /**
    * Returns a MUTABLE `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
