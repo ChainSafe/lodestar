@@ -133,8 +133,9 @@ export const ProposerDutyType = new ContainerType(
 
 export const PtcDutyType = new ContainerType(
   {
+    /** Public key of the validator in the registry  */
     pubkey: ssz.BLSPubkey,
-    /** Index of validator in validator registry. */
+    /** Index of validator in the registry. */
     validatorIndex: ssz.ValidatorIndex,
     /** The slot at which the validator must perform PTC duties. */
     slot: ssz.Slot,
