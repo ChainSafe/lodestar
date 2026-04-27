@@ -291,8 +291,10 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
-    // TODO GLOAS: Get payload attestations from pool for previous slot
-    gloasBody.payloadAttestations = [];
+    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+      parentBlock.blockRoot,
+      blockSlot - 1
+    );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
     blockBody = gloasBody as AssembledBodyType<T>;
 
