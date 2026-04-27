@@ -4,7 +4,8 @@ import {ForkName} from "@lodestar/params";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
-import {generateBlock} from "../../../utils/blocksAndData.js";
+import {getMockedClock} from "../../../mocks/clock.js";
+import {config, generateBlock} from "../../../utils/blocksAndData.js";
 
 describe("SeenPayloadEnvelopeInput", () => {
   let cache: SeenPayloadEnvelopeInput;
@@ -18,6 +19,8 @@ describe("SeenPayloadEnvelopeInput", () => {
     serializedCache = new SerializedCache();
 
     cache = new SeenPayloadEnvelopeInput({
+      config,
+      clock: getMockedClock(),
       chainEvents,
       signal: abortController.signal,
       serializedCache,

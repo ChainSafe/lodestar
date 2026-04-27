@@ -41,7 +41,8 @@ export async function verifyBlocksInEpoch(
   postStates: IBeaconStateView[];
   proposerBalanceDeltas: number[];
   segmentExecStatus: SegmentExecStatus;
-  dataAvailabilityStatuses: DataAvailabilityStatus[];
+  blockDAStatuses: DataAvailabilityStatus[];
+  payloadDAStatuses: Map<Slot, DataAvailabilityStatus>;
   indexedAttestationsByBlock: IndexedAttestation[][];
 }> {
   const blocks = blockInputs.map((blockInput) => blockInput.getBlock());
@@ -116,8 +117,12 @@ export async function verifyBlocksInEpoch(
 
     // Pick the data-availability source by fork:
     // - Pre-Gloas: blob/Fulu-column data lives in IBlockInput → verifyBlocksDataAvailability.
-    // - Post-Gloas: verifyPayloadsDataAvailability
-    const daAvailabilityPromise =
+    // - Post-Gloas: verifyPayloadsDataAvailability (payload-level DA, keyed by slot).
+    const daAvailabilityPromise: Promise<{
+      blockDAStatuses: DataAvailabilityStatus[];
+      payloadDAStatuses: Map<Slot, DataAvailabilityStatus>;
+      availableTime: number;
+    }> =
       fork >= ForkSeq.gloas
         ? (async () => {
             const payloadInputsForDa: PayloadEnvelopeInput[] = [];
@@ -125,19 +130,37 @@ export async function verifyBlocksInEpoch(
               const pi = payloadEnvelopes?.get(input.slot);
               if (pi !== undefined) payloadInputsForDa.push(pi);
             }
-            await verifyPayloadsDataAvailability(payloadInputsForDa, abortController.signal);
+            const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
+              payloadInputsForDa,
+              abortController.signal
+            );
+            const payloadDAStatuses = new Map<Slot, DataAvailabilityStatus>();
+            for (let i = 0; i < payloadInputsForDa.length; i++) {
+              payloadDAStatuses.set(payloadInputsForDa[i].slot, dataAvailabilityStatuses[i]);
+            }
             return {
               // post-gloas, DataAvailabilityStatus is NotRequired for forkChoice.onBlock() ProtoBlock
-              dataAvailabilityStatuses: blockInputs.map(() => DataAvailabilityStatus.NotRequired),
-              availableTime: Date.now(),
+              blockDAStatuses: blockInputs.map(() => DataAvailabilityStatus.NotRequired),
+              payloadDAStatuses,
+              availableTime,
             };
           })()
-        : verifyBlocksDataAvailability(blockInputs, abortController.signal);
+        : (async () => {
+            const {dataAvailabilityStatuses, availableTime} = await verifyBlocksDataAvailability(
+              blockInputs,
+              abortController.signal
+            );
+            return {
+              blockDAStatuses: dataAvailabilityStatuses,
+              payloadDAStatuses: new Map<Slot, DataAvailabilityStatus>(),
+              availableTime,
+            };
+          })();
 
     // batch all I/O operations to reduce overhead
     const [
       segmentExecStatus,
-      {dataAvailabilityStatuses, availableTime},
+      {blockDAStatuses, payloadDAStatuses, availableTime},
       {postStates, proposerBalanceDeltas, verifyStateTime},
       {verifySignaturesTime},
     ] = await Promise.all([
@@ -258,7 +281,14 @@ export async function verifyBlocksInEpoch(
       );
     }
 
-    return {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock};
+    return {
+      postStates,
+      blockDAStatuses,
+      payloadDAStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+    };
   } finally {
     abortController.abort();
   }

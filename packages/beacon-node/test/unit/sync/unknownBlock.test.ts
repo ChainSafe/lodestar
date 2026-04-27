@@ -79,6 +79,7 @@ function buildPayloadFixture({
     sampledColumns,
     custodyColumns: sampledColumns,
     timeCreatedSec: Date.now() / 1000,
+    daOutOfRange: false,
   });
 
   const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
@@ -1410,6 +1411,7 @@ describe("UnknownBlockSync", () => {
         sampledColumns: [],
         custodyColumns: [],
         timeCreatedSec: Date.now() / 1000,
+        daOutOfRange: false,
       });
 
       const childBlock = ssz.gloas.SignedBeaconBlock.defaultValue();

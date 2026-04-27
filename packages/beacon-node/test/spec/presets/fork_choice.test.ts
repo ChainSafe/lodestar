@@ -20,6 +20,7 @@ import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
   BeaconStateView,
+  DataAvailabilityStatus,
   IBeaconStateViewGloas,
   createCachedBeaconState,
   createPubkeyCache,
@@ -421,7 +422,8 @@ const forkChoiceTest =
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
-                  ExecutionStatus.Valid
+                  ExecutionStatus.Valid,
+                  DataAvailabilityStatus.Available
                 );
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
