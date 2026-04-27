@@ -804,7 +804,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
   withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
-    if (!isStatePostGloas(this)) {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("withParentPayloadApplied is not available before Gloas");
     }
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
