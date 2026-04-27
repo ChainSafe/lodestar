@@ -4,6 +4,7 @@ import {ProtoBlock} from "@lodestar/fork-choice";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {PayloadEnvelopeInput} from "../../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
@@ -65,7 +66,10 @@ describe("api - validator - produceAttestationData", () => {
         slot: 0,
         blockRoot: ZERO_HASH_HEX,
       } as ProtoBlock);
-      modules.chain.seenPayloadEnvelope.mockReturnValue(true);
+      vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue({
+        hasPayloadEnvelope: () => true,
+        hasAllData: () => true,
+      } as PayloadEnvelopeInput);
 
       const res = await api.producePayloadAttestationData({slot: 0});
       if (res.data instanceof Uint8Array) {
