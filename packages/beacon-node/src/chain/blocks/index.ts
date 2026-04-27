@@ -90,8 +90,14 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
+    const {
+      postStates,
+      blockDAStatuses,
+      payloadDAStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -110,7 +116,7 @@ export async function processBlocks(
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
-        dataAvailabilityStatus: dataAvailabilityStatuses[i],
+        dataAvailabilityStatus: blockDAStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
@@ -130,9 +136,11 @@ export async function processBlocks(
           throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
         }
         // we already awaited DA in verifyBlocksInEpoch for this segment
-        // TODO GLOAS: may need FullyVerifiedPayload here with DatAvailabilityStatus added from here
-        // the current flow use that data from the forkchoice pending node which is not correct
-        await importExecutionPayload.call(this, payloadInput, {validSignature: false});
+        const payloadDA = payloadDAStatuses.get(slot);
+        if (payloadDA === undefined) {
+          throw new Error(`Missing payload DA status for slot ${slot}`);
+        }
+        await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
       }
 
       await nextEventLoop();

@@ -252,6 +252,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   payloadExpectedWithdrawals: capella.Withdrawal[];
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  getEpochPTCs(epoch: Epoch): Uint32Array[];
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
   /**
    * Compute expected withdrawals as if the parent was FULL.

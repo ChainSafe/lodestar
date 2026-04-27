@@ -964,7 +964,8 @@ export class ForkChoice implements IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionStatus: PayloadExecutionStatus
+    executionStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
     this.protoArray.onExecutionPayload(
       blockRoot,
@@ -972,7 +973,8 @@ export class ForkChoice implements IForkChoice {
       executionPayloadBlockHash,
       executionPayloadNumber,
       this.proposerBoostRoot,
-      executionStatus
+      executionStatus,
+      dataAvailabilityStatus
     );
   }
 
@@ -1056,6 +1058,12 @@ export class ForkChoice implements IForkChoice {
    */
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasPayload(blockRoot);
+  }
+
+  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    const votes = this.protoArray.getPTCVotes(blockRootHex);
+    if (votes === null) return null;
+    return votes.toBoolArray().map((v) => v ?? null);
   }
 
   /**

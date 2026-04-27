@@ -127,6 +127,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {slot: 1, committeeIndex: 2},
     res: {data: [ssz.electra.Attestation.defaultValue()], meta: {version: ForkName.electra}},
   },
+  getPoolPayloadAttestations: {
+    args: {slot: 1},
+    res: {data: [ssz.gloas.PayloadAttestation.defaultValue()], meta: {version: ForkName.gloas}},
+  },
   getPoolAttesterSlashings: {
     args: undefined,
     res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
@@ -177,6 +181,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   submitPoolSyncCommitteeSignatures: {
     args: {signatures: [ssz.altair.SyncCommitteeMessage.defaultValue()]},
+    res: undefined,
+  },
+  submitPayloadAttestationMessages: {
+    args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
     res: undefined,
   },
 

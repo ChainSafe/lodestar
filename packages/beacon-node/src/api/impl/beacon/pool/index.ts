@@ -1,17 +1,27 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkPostElectra,
+  ForkPreElectra,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  isForkPostElectra,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
 import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
   GossipAction,
+  PayloadAttestationError,
+  PayloadAttestationErrorCode,
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
+import {validateApiPayloadAttestationMessage} from "../../../../chain/validation/payloadAttestationMessage.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
@@ -60,6 +70,15 @@ export function getBeaconPoolApi({
       }
 
       return {data: attestations, meta: {version: fork}};
+    },
+
+    async getPoolPayloadAttestations({slot}) {
+      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `Payload attestation pool is not supported before Gloas fork=${fork}`);
+      }
+
+      return {data: chain.payloadAttestationPool.getAll(slot), meta: {version: fork}};
     },
 
     async getPoolAttesterSlashings() {
@@ -228,6 +247,69 @@ export function getBeaconPoolApi({
 
       if (failures.length > 0) {
         throw new IndexedError("Error processing BLS to execution changes", failures);
+      }
+    },
+
+    async submitPayloadAttestationMessages({payloadAttestationMessages}) {
+      const failures: FailureList = [];
+
+      await Promise.all(
+        payloadAttestationMessages.map(async (payloadAttestationMessage, i) => {
+          try {
+            const validateFn = () => validateApiPayloadAttestationMessage(chain, payloadAttestationMessage);
+            const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
+            const {attDataRootHex, validatorCommitteeIndex} = await validateGossipFnRetryUnknownRoot(
+              validateFn,
+              network,
+              chain,
+              slot,
+              beaconBlockRoot
+            );
+
+            const insertOutcome = chain.payloadAttestationPool.add(
+              payloadAttestationMessage,
+              attDataRootHex,
+              validatorCommitteeIndex
+            );
+            metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
+
+            chain.forkChoice.notifyPtcMessages(
+              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+              [validatorCommitteeIndex],
+              payloadAttestationMessage.data.payloadPresent
+            );
+
+            await network.publishPayloadAttestationMessage(payloadAttestationMessage);
+          } catch (e) {
+            const logCtx = {
+              slot: payloadAttestationMessage.data.slot,
+              validatorIndex: payloadAttestationMessage.validatorIndex,
+              beaconBlockRoot: toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+            };
+
+            if (
+              e instanceof PayloadAttestationError &&
+              e.type.code === PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN
+            ) {
+              logger.debug("Ignoring known payload attestation message", logCtx);
+              return;
+            }
+
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitPayloadAttestationMessages [${i}]`, logCtx, e as Error);
+            if (e instanceof PayloadAttestationError && e.action === GossipAction.REJECT) {
+              chain.persistInvalidSszValue(
+                ssz.gloas.PayloadAttestationMessage,
+                payloadAttestationMessage,
+                "api_reject"
+              );
+            }
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing payload attestation messages", failures);
       }
     },
 

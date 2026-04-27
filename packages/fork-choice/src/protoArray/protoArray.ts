@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
@@ -589,7 +589,8 @@ export class ProtoArray {
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
     proposerBoostRoot: RootHex | null,
-    executionStatus: PayloadExecutionStatus
+    executionStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
@@ -631,7 +632,7 @@ export class ProtoArray {
       });
     }
 
-    // Create FULL variant as a child of PENDING (sibling to EMPTY)
+    // Create FULL variant as a child of PENDING (sibling to EMPTY).
     const fullNode: ProtoNode = {
       ...pendingNode,
       parent: pendingIndex, // Points to own PENDING (same as EMPTY)
@@ -643,6 +644,7 @@ export class ProtoArray {
       executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
+      dataAvailabilityStatus,
     };
 
     const fullIndex = this.nodes.length;
@@ -712,6 +714,16 @@ export class ProtoArray {
     }
 
     return newQuorums;
+  }
+
+  getPTCVotes(blockRootHex: RootHex): BitArray | null {
+    const votes = this.ptcVotes.get(blockRootHex);
+    if (votes === undefined) {
+      // Block not found or not a Gloas block
+      return null;
+    }
+
+    return votes;
   }
 
   /**

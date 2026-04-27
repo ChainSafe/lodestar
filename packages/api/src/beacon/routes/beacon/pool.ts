@@ -1,6 +1,13 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostElectra, ForkPreElectra, isForkPostElectra} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostElectra,
+  ForkPreElectra,
+  MAX_PAYLOAD_ATTESTATIONS,
+  PTC_SIZE,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -37,6 +44,8 @@ const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
+const PayloadAttestationListType = ArrayOf(ssz.gloas.PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS);
+const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
@@ -50,6 +59,8 @@ type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
 type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeListType>;
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
+type PayloadAttestationList = ValueOf<typeof PayloadAttestationListType>;
+type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
 
 export type Endpoints = {
   /**
@@ -73,6 +84,18 @@ export type Endpoints = {
     {slot?: Slot; committeeIndex?: CommitteeIndex},
     {query: {slot?: number; committee_index?: number}},
     AttestationList,
+    VersionMeta
+  >;
+
+  /**
+   * Get payload attestations from operations pool
+   * Retrieves payload attestations known by the node but not necessarily incorporated into any block.
+   */
+  getPoolPayloadAttestations: Endpoint<
+    "GET",
+    {slot?: Slot},
+    {query: {slot?: number}},
+    PayloadAttestationList,
     VersionMeta
   >;
 
@@ -244,6 +267,18 @@ export type Endpoints = {
     EmptyResponseData,
     EmptyMeta
   >;
+
+  /**
+   * Submit payload attestation messages
+   * Submits payload attestation messages to the beacon node.
+   */
+  submitPayloadAttestationMessages: Endpoint<
+    "POST",
+    {payloadAttestationMessages: PayloadAttestationMessageList},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -271,6 +306,19 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: WithVersion((fork) => (isForkPostElectra(fork) ? AttestationListTypeElectra : AttestationListTypePhase0)),
+        meta: VersionCodec,
+      },
+    },
+    getPoolPayloadAttestations: {
+      url: "/eth/v1/beacon/pool/payload_attestations",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
+        schema: {query: {slot: Schema.Uint}},
+      },
+      resp: {
+        data: PayloadAttestationListType,
         meta: VersionCodec,
       },
     },
@@ -495,6 +543,33 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body}) => ({signatures: SyncCommitteeMessageListType.deserialize(body)}),
         schema: {
           body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    submitPayloadAttestationMessages: {
+      url: "/eth/v1/beacon/pool/payload_attestations",
+      method: "POST",
+      req: {
+        writeReqJson: ({payloadAttestationMessages}) => ({
+          body: PayloadAttestationMessageListType.toJson(payloadAttestationMessages),
+          headers: {[MetaHeader.Version]: ForkName.gloas},
+        }),
+        parseReqJson: ({body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {payloadAttestationMessages: PayloadAttestationMessageListType.fromJson(body)};
+        },
+        writeReqSsz: ({payloadAttestationMessages}) => ({
+          body: PayloadAttestationMessageListType.serialize(payloadAttestationMessages),
+          headers: {[MetaHeader.Version]: ForkName.gloas},
+        }),
+        parseReqSsz: ({body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {payloadAttestationMessages: PayloadAttestationMessageListType.deserialize(body)};
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
         },
       },
       resp: EmptyResponseCodec,

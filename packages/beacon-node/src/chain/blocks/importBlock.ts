@@ -128,7 +128,6 @@ export async function importBlock(
     blockDelaySec,
     currentSlot,
     fork >= ForkSeq.gloas ? ExecutionStatus.PayloadSeparated : executionStatus,
-    // TODO GLOAS: this is not useful post-gloas, may need to remove it?
     dataAvailabilityStatus
   );
 
