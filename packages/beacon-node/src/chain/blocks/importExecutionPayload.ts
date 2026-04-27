@@ -228,13 +228,11 @@ export async function importExecutionPayload(
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    this.executionEngine
-      .notifyForkchoiceUpdate(this.config.getForkName(slot), blockHashHex, safeBlockHash, finalizedBlockHash)
-      .catch((e) => {
-        if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-          this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
-        }
-      });
+    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+      }
+    });
   }
 
   // 8. Record metrics for payload envelope and column sources
