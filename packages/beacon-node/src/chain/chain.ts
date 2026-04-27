@@ -9,7 +9,6 @@ import {
    PayloadStatus,
    ProtoBlock,
    UpdateHeadOpt,
-   getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
