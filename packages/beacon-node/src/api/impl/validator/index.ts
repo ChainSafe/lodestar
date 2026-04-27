@@ -1066,8 +1066,8 @@ export function getValidatorApi(
 
       const blockIsForSlot = block.slot === slot;
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
-      const payloadPresent = blockIsForSlot && chain.seenPayloadEnvelope(block.blockRoot);
-      const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? payloadPresent);
+      const payloadPresent = blockIsForSlot && (payloadInput?.hasPayloadEnvelope() ?? false);
+      const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
 
       return {
         data: {
