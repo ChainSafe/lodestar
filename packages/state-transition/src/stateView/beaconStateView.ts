@@ -68,7 +68,7 @@ import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView, IBeaconStateViewLatestFork} from "./interface.js";
+import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
@@ -803,16 +803,19 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   /**
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
-  getExpectedWithdrawalsForFullParent(executionRequests: electra.ExecutionRequests): capella.Withdrawal[] {
-    const fork = this.config.getForkSeq(this.cachedState.slot);
-    if (fork < ForkSeq.gloas) {
-      throw new Error("getExpectedWithdrawalsForFullParent is not available before Gloas");
+  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+    if (!isStatePostGloas(this)) {
+      throw new Error("withParentPayloadApplied is not available before Gloas");
     }
-    // Make a copy of the state to avoid mutability issues
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
-    // Apply parent payload before computing withdrawals
+
     applyParentExecutionPayload(stateCopy, executionRequests);
 
-    return getExpectedWithdrawals(fork, stateCopy).expectedWithdrawals;
+    const stateView = new BeaconStateView(stateCopy);
+    if (!isStatePostGloas(stateView)) {
+      throw new Error("Expected gloas state after clone");
+    }
+
+    return stateView;
   }
 }
