@@ -957,7 +957,8 @@ export class ForkChoice implements IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionStatus: PayloadExecutionStatus
+    executionStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
     this.protoArray.onExecutionPayload(
       blockRoot,
@@ -965,7 +966,8 @@ export class ForkChoice implements IForkChoice {
       executionPayloadBlockHash,
       executionPayloadNumber,
       this.proposerBoostRoot,
-      executionStatus
+      executionStatus,
+      dataAvailabilityStatus
     );
   }
 
