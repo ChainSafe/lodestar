@@ -166,16 +166,18 @@ export class PrepareNextSlotScheduler {
         }
 
         let parentBlockHash: Bytes32;
-        // Apply parent payload once here as it's reused by EL prep and SSE emit below
         let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
         if (isStatePostGloas(updatedPrepareState)) {
           if (this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot)) {
             parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
-            const parentExecutionRequests = await this.chain.getParentExecutionRequests(
-              updatedHead.slot,
-              updatedHead.blockRoot
-            );
-            stateAfterParentPayload = updatedPrepareState.withParentPayloadApplied(parentExecutionRequests);
+            // Apply parent payload once here as it's reused by EL prep and SSE emit below
+            if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
+              const parentExecutionRequests = await this.chain.getParentExecutionRequests(
+                updatedHead.slot,
+                updatedHead.blockRoot
+              );
+              stateAfterParentPayload = updatedPrepareState.withParentPayloadApplied(parentExecutionRequests);
+            }
           } else {
             parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
           }
