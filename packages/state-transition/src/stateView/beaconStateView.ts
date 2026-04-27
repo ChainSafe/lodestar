@@ -406,6 +406,23 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   /**
+   * Return the PTCs for an epoch
+   */
+  getEpochPTCs(epoch: Epoch): Uint32Array[] {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("PTC committees are not supported before Gloas");
+    }
+
+    const epochCtx = (this.cachedState as CachedBeaconStateGloas).epochCtx;
+    if (epoch === epochCtx.epoch) {
+      return epochCtx.payloadTimelinessCommittees;
+    }
+    if (epoch === epochCtx.nextEpoch) {
+      return epochCtx.nextPayloadTimelinessCommittees;
+    }
+    throw new Error(`PTC committees are not available for epoch=${epoch}`);
+  }
+  /**
    * Return the index of the validator in the PTC committee for the given slot.
    * return -1 if validator is not in the PTC committee for the given slot.
    */

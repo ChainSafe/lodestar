@@ -1320,11 +1320,12 @@ export function getValidatorApi(
       }
 
       const pubkeys = getPubkeysForIndices(state, indices);
+      const ptcs = state.getEpochPTCs(epoch);
       const duties: routes.validator.PtcDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
-        for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
-          if (state.getIndexInPayloadTimelinessCommittee(validatorIndex, slot) !== -1) {
+        for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
+          if (ptcs[slot].indexOf(validatorIndex) !== -1) {
             duties.push({pubkey: pubkeys[i], validatorIndex, slot});
             break;
           }
