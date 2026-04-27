@@ -16,7 +16,6 @@ import {
   convertBuilderIndexToValidatorIndex,
   convertValidatorIndexToBuilderIndex,
   isBuilderIndex,
-  isParentBlockFull,
 } from "../util/gloas.js";
 import {
   decreaseBalance,
@@ -36,7 +35,10 @@ export function processWithdrawals(
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
     const isGenesisBlock = byteArrayEquals(stateGloas.latestBlockHash, ZERO_HASH);
-    const isParentBlockEmpty = !isParentBlockFull(stateGloas);
+    const isParentBlockEmpty = !byteArrayEquals(
+      stateGloas.latestBlockHash,
+      stateGloas.latestExecutionPayloadBid.blockHash
+    );
     if (isGenesisBlock || isParentBlockEmpty) {
       return;
     }
