@@ -632,9 +632,6 @@ export async function produceBlockBody<T extends BlockType>(
 
 /**
  * Produce ExecutionPayload for post-merge.
- *
- * Post-gloas, when extending a full parent, callers must apply
- * parent execution payload first (see `withParentPayloadApplied`).
  */
 export async function prepareExecutionPayload(
   chain: {
@@ -647,6 +644,10 @@ export async function prepareExecutionPayload(
   parentBlockHash: Bytes32,
   safeBlockHash: RootHex,
   finalizedBlockHash: RootHex,
+  /**
+   * Post-gloas, when extending a full parent, callers must apply
+   * parent execution payload first (see `withParentPayloadApplied`).
+   */
   state: IBeaconStateViewBellatrix,
   suggestedFeeRecipient: string
 ): Promise<{prepType: PayloadPreparationType; payloadId: PayloadId}> {

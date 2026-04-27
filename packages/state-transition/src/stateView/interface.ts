@@ -255,7 +255,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   getEpochPTCs(epoch: Epoch): Uint32Array[];
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
   /**
-   * Clone the state and apply parent execution payload effects, returning the new view.
+   * Clone the state and apply parent execution payload effects.
    * Used during block production and prepareNextSlot so that withdrawals and
    * operation selection (e.g. voluntary exits) see the same post-apply state that the block
    * processor will see at import.
