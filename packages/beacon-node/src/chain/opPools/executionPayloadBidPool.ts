@@ -12,13 +12,13 @@ type BlockRootHex = string;
 type BlockHashHex = string;
 
 /**
- * Store the best execution payload bid per slot / (parent block root, parent block hash).
+ * Store the best signed execution payload bid per slot / (parent block root, parent block hash).
  */
 export class ExecutionPayloadBidPool {
   private readonly bidByParentHashByParentRootBySlot = new MapDef<
     Slot,
-    MapDef<BlockRootHex, Map<BlockHashHex, gloas.ExecutionPayloadBid>>
-  >(() => new MapDef<BlockRootHex, Map<BlockHashHex, gloas.ExecutionPayloadBid>>(() => new Map()));
+    MapDef<BlockRootHex, Map<BlockHashHex, gloas.SignedExecutionPayloadBid>>
+  >(() => new MapDef<BlockRootHex, Map<BlockHashHex, gloas.SignedExecutionPayloadBid>>(() => new Map()));
   private lowestPermissibleSlot = 0;
 
   get size(): number {
@@ -31,8 +31,8 @@ export class ExecutionPayloadBidPool {
     return count;
   }
 
-  add(bid: gloas.ExecutionPayloadBid): InsertOutcome {
-    const {slot, parentBlockRoot, parentBlockHash, value} = bid;
+  add(signedBid: gloas.SignedExecutionPayloadBid): InsertOutcome {
+    const {slot, parentBlockRoot, parentBlockHash, value} = signedBid.message;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     if (slot < lowestPermissibleSlot) {
@@ -45,28 +45,28 @@ export class ExecutionPayloadBidPool {
     const existing = bidByParentHash.get(parentHashHex);
 
     if (existing) {
-      const existingValue = existing.value;
+      const existingValue = existing.message.value;
       const newValue = value;
       if (newValue > existingValue) {
-        bidByParentHash.set(parentHashHex, bid);
+        bidByParentHash.set(parentHashHex, signedBid);
         return InsertOutcome.NewData;
       }
       return newValue === existingValue ? InsertOutcome.AlreadyKnown : InsertOutcome.NotBetterThan;
     }
 
-    bidByParentHash.set(parentHashHex, bid);
+    bidByParentHash.set(parentHashHex, signedBid);
     return InsertOutcome.NewData;
   }
 
   /**
-   * Return the highest-value bid matching slot, parent block hash, and parent block root.
+   * Return the highest-value signed bid matching slot, parent block hash, and parent block root.
    * Used for gossip validation and block production.
    */
   getBestBid(
     slot: Slot,
     parentBlockHash: BlockHashHex,
     parentBlockRoot: BlockRootHex
-  ): gloas.ExecutionPayloadBid | null {
+  ): gloas.SignedExecutionPayloadBid | null {
     const bidByParentHash = this.bidByParentHashByParentRootBySlot.get(slot)?.get(parentBlockRoot);
     return bidByParentHash?.get(parentBlockHash) ?? null;
   }

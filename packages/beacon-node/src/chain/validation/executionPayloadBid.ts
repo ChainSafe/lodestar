@@ -103,12 +103,12 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] this bid is the highest value bid seen for the tuple
   // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
-  if (bestBid !== null && bestBid.value >= bid.value) {
+  const bestSignedBid = chain.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
+  if (bestSignedBid !== null && bestSignedBid.message.value >= bid.value) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
       bidValue: bid.value,
-      currentHighestBid: bestBid.value,
+      currentHighestBid: bestSignedBid.message.value,
     });
   }
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --

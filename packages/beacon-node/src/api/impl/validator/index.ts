@@ -874,6 +874,105 @@ export function getValidatorApi(
     throw Error("Unreachable error occurred during the builder and execution block production");
   }
 
+  /**
+   * GLOAS block production with gossip bid selection.
+   * Always builds a local block. If a gossip bid is available, also builds a block with that bid
+   * in parallel and prefers it over the local block.
+   *
+   * TODO GLOAS: Currently always prefers gossip bid over local block regardless of builderSelection.
+   * Need to respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
+   * the user control bid source preferences and value comparison. Also add external builder api
+   * support when it is implemented.
+   */
+  async function produceEngineOrBuilderBlockGloas(
+    slot: Slot,
+    randaoReveal: BLSSignature,
+    graffiti?: string,
+    {feeRecipient}: {feeRecipient?: string} = {}
+  ): Promise<{
+    data: gloas.BeaconBlock;
+    meta: {version: ForkName; consensusBlockValue: Wei};
+  }> {
+    const fork = config.getForkName(slot);
+
+    notWhileSyncing();
+    await waitForSlot(slot);
+
+    const parentBlock = chain.getProposerHead(slot);
+    const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
+    const parentBlockRoot = fromHex(parentBlockRootHex);
+    notOnOutOfRangeData(parentBlockRoot);
+    metrics?.blockProductionSlotDelta.set(slot - parentSlot);
+
+    const graffitiBytes = toGraffitiBytes(
+      graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
+    );
+
+    // Look up best gossip bid from the pool (instant)
+    const parentBlockHash = parentBlock.executionPayloadBlockHash;
+    const gossipBid =
+      parentBlockHash != null
+        ? chain.executionPayloadBidPool.getBestBid(slot, parentBlockHash, parentBlockRootHex)
+        : null;
+
+    logger.verbose("Producing GLOAS block", {
+      slot,
+      parentSlot,
+      parentBlockRoot: parentBlockRootHex,
+      fork,
+      gossipBidAvailable: gossipBid !== null,
+    });
+
+    const commonBlockBodyPromise = chain.produceCommonBlockBody({
+      slot,
+      parentBlock,
+      randaoReveal,
+      graffiti: graffitiBytes,
+    });
+
+    const baseAttrs = {slot, parentBlock, randaoReveal, graffiti: graffitiBytes, feeRecipient, commonBlockBodyPromise};
+
+    // Always build local block. If gossip bid available, also build with it in parallel and prefer it.
+    if (gossipBid) {
+      const [engineResult, gossipResult] = await Promise.allSettled([
+        chain.produceBlock(baseAttrs),
+        chain.produceBlock({...baseAttrs, externalBid: gossipBid}),
+      ]);
+
+      if (gossipResult.status === "fulfilled") {
+        metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.builder});
+        logger.info("Selected gossip bid block", {
+          slot,
+          bidValue: gossipBid.message.value,
+          builderIndex: gossipBid.message.builderIndex,
+        });
+        return {
+          data: gossipResult.value.block as gloas.BeaconBlock,
+          meta: {version: fork, consensusBlockValue: gossipResult.value.consensusBlockValue},
+        };
+      }
+
+      if (engineResult.status === "fulfilled") {
+        metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.engine});
+        logger.warn("Gossip bid block production failed, using local block", {slot});
+        return {
+          data: engineResult.value.block as gloas.BeaconBlock,
+          meta: {version: fork, consensusBlockValue: engineResult.value.consensusBlockValue},
+        };
+      }
+
+      throw Error("Both engine and gossip bid block production failed");
+    }
+
+    // No gossip bid available, build local only
+    const {block, consensusBlockValue} = await chain.produceBlock(baseAttrs);
+    metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.engine});
+    return {
+      data: block as gloas.BeaconBlock,
+      meta: {version: fork, consensusBlockValue},
+    };
+  }
+
   return {
     async produceBlockV3({slot, randaoReveal, graffiti, skipRandaoVerification, builderBoostFactor, ...opts}) {
       const {data, ...meta} = await produceEngineOrBuilderBlock(
@@ -909,68 +1008,7 @@ export function getValidatorApi(
         throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
-      await waitForSlot(slot);
-
-      // TODO GLOAS: support producing blocks from builder bids
-      const source = ProducedBlockSource.engine;
-
-      // TODO GLOAS: needs to be updated after fork choice changes are merged
-      const parentBlock = chain.getProposerHead(slot);
-      const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
-      const parentBlockRoot = fromHex(parentBlockRootHex);
-      notOnOutOfRangeData(parentBlockRoot);
-      metrics?.blockProductionSlotDelta.set(slot - parentSlot);
-      metrics?.blockProductionRequests.inc({source});
-
-      const graffitiBytes = toGraffitiBytes(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
-      );
-      const commonBlockBodyPromise = chain.produceCommonBlockBody({
-        slot,
-        parentBlock,
-        randaoReveal,
-        graffiti: graffitiBytes,
-      });
-
-      let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
-      try {
-        timer = metrics?.blockProductionTime.startTimer();
-        const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
-          slot,
-          parentBlock,
-          randaoReveal,
-          graffiti: graffitiBytes,
-          feeRecipient,
-          commonBlockBodyPromise,
-        });
-
-        metrics?.blockProductionSuccess.inc({source});
-        metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-        metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
-        metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
-
-        const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
-        logger.verbose("Produced block", {
-          slot,
-          executionPayloadValue,
-          consensusBlockValue,
-          root: blockRoot,
-        });
-        if (chain.opts.persistProducedBlocks) {
-          void chain.persistBlock(block, "produced_engine_block");
-        }
-
-        return {
-          data: block as gloas.BeaconBlock,
-          meta: {
-            version: fork,
-            consensusBlockValue,
-          },
-        };
-      } finally {
-        timer?.({source});
-      }
+      return produceEngineOrBuilderBlockGloas(slot, randaoReveal, graffiti, {feeRecipient});
     },
 
     async produceAttestationData({committeeIndex, slot}) {

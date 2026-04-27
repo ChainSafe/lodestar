@@ -48,7 +48,7 @@ import {
   gloas,
   ssz,
 } from "@lodestar/types";
-import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {
@@ -93,6 +93,8 @@ export type BlockAttributes = {
   slot: Slot;
   parentBlock: ProtoBlock;
   feeRecipient?: string;
+  /** When provided, build block with this external bid instead of a self-build bid */
+  externalBid?: gloas.SignedExecutionPayloadBid;
 };
 
 export enum BlockType {
@@ -173,6 +175,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
+    externalBid,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
@@ -198,96 +201,142 @@ export async function produceBlockBody<T extends BlockType>(
       throw new Error("Expected Gloas state for Gloas block production");
     }
 
-    // TODO GLOAS: support non self-building here, the block type differentiation between
-    // full and blinded no longer makes sense in gloas, it might be a good idea to move
-    // this into a completely separate function and have pre/post gloas more separated
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
+    let signedBid: gloas.SignedExecutionPayloadBid;
+    let parentExecutionRequests: electra.ExecutionRequests;
 
-    const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
+    if (externalBid !== undefined) {
+      signedBid = externalBid;
 
-    this.logger.verbose("Preparing execution payload from engine", {
-      slot: blockSlot,
-      parentBlockRoot: toRootHex(parentBlockRoot),
-      feeRecipient,
-    });
+      const isExtendingPayload = byteArrayEquals(
+        externalBid.message.parentBlockHash,
+        currentState.latestExecutionPayloadBid.blockHash
+      );
+      parentExecutionRequests = isExtendingPayload
+        ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
+        : ssz.electra.ExecutionRequests.defaultValue();
 
-    // Get execution payload from EL
-    const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
-    let parentBlockHash = isExtendingPayload
-      ? currentState.latestExecutionPayloadBid.blockHash
-      : currentState.latestExecutionPayloadBid.parentBlockHash;
-    // At gloas genesis the committed bid has no prior EL block to reference
-    // (`bid.parentBlockHash` is zero). Fall back to `bid.blockHash` (= eth1 genesis hash) so the
-    // FCU to the EL carries a valid head. Post-genesis bids always reference a non-zero parent.
-    if (isStatePostGloas(currentState) && byteArrayEquals(parentBlockHash, ZERO_HASH)) {
-      parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
+      executionPayloadValue = BigInt(externalBid.message.value) * GWEI_TO_WEI;
+
+      this.logger.verbose("Produced block with external bid", {
+        slot: blockSlot,
+        builderIndex: externalBid.message.builderIndex,
+        bidValue: externalBid.message.value,
+      });
+    } else {
+      // Self-build path: fetch execution payload from local EL
+      const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+      const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+      const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
+
+      const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
+
+      this.logger.verbose("Preparing execution payload from engine", {
+        slot: blockSlot,
+        parentBlockRoot: toRootHex(parentBlockRoot),
+        feeRecipient,
+      });
+
+      const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
+      let parentBlockHash = isExtendingPayload
+        ? currentState.latestExecutionPayloadBid.blockHash
+        : currentState.latestExecutionPayloadBid.parentBlockHash;
+      // At gloas genesis the committed bid has no prior EL block to reference
+      // (`bid.parentBlockHash` is zero). Fall back to `bid.blockHash` (= eth1 genesis hash) so the
+      // FCU to the EL carries a valid head. Post-genesis bids always reference a non-zero parent.
+      if (isStatePostGloas(currentState) && byteArrayEquals(parentBlockHash, ZERO_HASH)) {
+        parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
+      }
+      parentExecutionRequests = isExtendingPayload
+        ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
+        : ssz.electra.ExecutionRequests.defaultValue();
+      const prepareRes = await prepareExecutionPayload(
+        this,
+        this.logger,
+        fork,
+        parentBlockRoot,
+        parentBlockHash,
+        safeBlockHash,
+        finalizedBlockHash ?? ZERO_HASH_HEX,
+        currentState,
+        feeRecipient,
+        parentExecutionRequests
+      );
+
+      const {prepType, payloadId} = prepareRes;
+      Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
+      if (prepType !== PayloadPreparationType.Cached) {
+        await sleep(PAYLOAD_GENERATION_TIME_MS);
+      }
+
+      this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
+      const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
+
+      endExecutionPayload?.({step: BlockProductionStep.executionPayload});
+
+      const {executionPayload, blobsBundle, executionRequests} = payloadRes;
+      executionPayloadValue = payloadRes.executionPayloadValue;
+      shouldOverrideBuilder = payloadRes.shouldOverrideBuilder;
+
+      if (blobsBundle === undefined) {
+        throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
+      }
+      if (executionRequests === undefined) {
+        throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
+      }
+
+      const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
+      if (this.opts.sanityCheckExecutionEngineBlobs) {
+        await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
+      }
+
+      // Create self-build execution payload bid
+      const bid: gloas.ExecutionPayloadBid = {
+        parentBlockHash,
+        parentBlockRoot,
+        blockHash: executionPayload.blockHash,
+        prevRandao: currentState.getRandaoMix(currentState.epoch),
+        feeRecipient: executionPayload.feeRecipient,
+        gasLimit: BigInt(executionPayload.gasLimit),
+        builderIndex: BUILDER_INDEX_SELF_BUILD,
+        slot: blockSlot,
+        value: 0,
+        executionPayment: 0,
+        blobKzgCommitments: blobsBundle.commitments,
+        executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
+      };
+      signedBid = {
+        message: bid,
+        signature: G2_POINT_AT_INFINITY,
+      };
+
+      // Store execution payload data required to construct execution payload envelope later
+      const gloasResult = produceResult as ProduceFullGloas;
+      gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
+      gloasResult.executionRequests = executionRequests;
+      gloasResult.blobsBundle = blobsBundle;
+      gloasResult.cells = cells;
+
+      const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
+      this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
+      this.logger.verbose("Produced block with self-build bid", {
+        slot: blockSlot,
+        executionPayloadValue,
+        prepType,
+        payloadId,
+        fetchedTime,
+        executionBlockHash: toRootHex(executionPayload.blockHash),
+        blobs: blobsBundle.commitments.length,
+      });
+
+      Object.assign(logMeta, {
+        transactions: executionPayload.transactions.length,
+        blobs: blobsBundle.commitments.length,
+        shouldOverrideBuilder,
+      });
     }
-    const parentExecutionRequests = isExtendingPayload
-      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
-      : ssz.electra.ExecutionRequests.defaultValue();
-    const prepareRes = await prepareExecutionPayload(
-      this,
-      this.logger,
-      fork,
-      parentBlockRoot,
-      parentBlockHash,
-      safeBlockHash,
-      finalizedBlockHash ?? ZERO_HASH_HEX,
-      currentState,
-      feeRecipient,
-      parentExecutionRequests
-    );
 
-    const {prepType, payloadId} = prepareRes;
-    Object.assign(logMeta, {executionPayloadPrepType: prepType});
-
-    if (prepType !== PayloadPreparationType.Cached) {
-      await sleep(PAYLOAD_GENERATION_TIME_MS);
-    }
-
-    this.logger.verbose("Fetching execution payload from engine", {slot: blockSlot, payloadId});
-    const payloadRes = await this.executionEngine.getPayload(fork, payloadId);
-
-    endExecutionPayload?.({step: BlockProductionStep.executionPayload});
-
-    const {executionPayload, blobsBundle, executionRequests} = payloadRes;
-    executionPayloadValue = payloadRes.executionPayloadValue;
-    shouldOverrideBuilder = payloadRes.shouldOverrideBuilder;
-
-    if (blobsBundle === undefined) {
-      throw Error(`Missing blobsBundle response from getPayload at fork=${fork}`);
-    }
-    if (executionRequests === undefined) {
-      throw Error(`Missing executionRequests response from getPayload at fork=${fork}`);
-    }
-
-    const cells = blobsBundle.blobs.map((blob) => kzg.computeCells(blob));
-    if (this.opts.sanityCheckExecutionEngineBlobs) {
-      await validateCellsAndKzgCommitments(blobsBundle.commitments, blobsBundle.proofs, cells);
-    }
-
-    // Create self-build execution payload bid
-    const bid: gloas.ExecutionPayloadBid = {
-      parentBlockHash,
-      parentBlockRoot,
-      blockHash: executionPayload.blockHash,
-      prevRandao: currentState.getRandaoMix(currentState.epoch),
-      feeRecipient: executionPayload.feeRecipient,
-      gasLimit: BigInt(executionPayload.gasLimit),
-      builderIndex: BUILDER_INDEX_SELF_BUILD,
-      slot: blockSlot,
-      value: 0,
-      executionPayment: 0,
-      blobKzgCommitments: blobsBundle.commitments,
-      executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
-    };
-    const signedBid: gloas.SignedExecutionPayloadBid = {
-      message: bid,
-      signature: G2_POINT_AT_INFINITY,
-    };
-
+    // Assemble GLOAS block body
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
@@ -297,31 +346,6 @@ export async function produceBlockBody<T extends BlockType>(
     );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
     blockBody = gloasBody as AssembledBodyType<T>;
-
-    // Store execution payload data required to construct execution payload envelope later
-    const gloasResult = produceResult as ProduceFullGloas;
-    gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
-    gloasResult.executionRequests = executionRequests;
-    gloasResult.blobsBundle = blobsBundle;
-    gloasResult.cells = cells;
-
-    const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
-    this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);
-    this.logger.verbose("Produced block with self-build bid", {
-      slot: blockSlot,
-      executionPayloadValue,
-      prepType,
-      payloadId,
-      fetchedTime,
-      executionBlockHash: toRootHex(executionPayload.blockHash),
-      blobs: blobsBundle.commitments.length,
-    });
-
-    Object.assign(logMeta, {
-      transactions: executionPayload.transactions.length,
-      blobs: blobsBundle.commitments.length,
-      shouldOverrideBuilder,
-    });
   } else if (isForkPostBellatrix(fork)) {
     if (!isStatePostBellatrix(currentState)) {
       throw new Error("Expected Bellatrix state for execution block production");
