@@ -1324,9 +1324,9 @@ export function getValidatorApi(
       const duties: routes.validator.PtcDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
-        for (let slot = 0; slot < SLOTS_PER_EPOCH; slot++) {
-          if (ptcs[slot].indexOf(validatorIndex) !== -1) {
-            duties.push({pubkey: pubkeys[i], validatorIndex, slot});
+        for (let j = 0; j < SLOTS_PER_EPOCH; j++) {
+          if (ptcs[j].indexOf(validatorIndex) !== -1) {
+            duties.push({pubkey: pubkeys[i], validatorIndex, slot: j + startSlot});
             break;
           }
         }
