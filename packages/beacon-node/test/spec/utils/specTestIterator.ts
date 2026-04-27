@@ -112,7 +112,8 @@ export const defaultSkipOpts: SkipOpts = {
 export function specTestIterator(
   configDirpath: string,
   testRunners: Record<string, TestRunner>,
-  opts: SkipOpts = defaultSkipOpts
+  opts: SkipOpts = defaultSkipOpts,
+  testIdPrefix = ""
 ): void {
   for (const forkStr of readdirSyncSpec(configDirpath)) {
     if (
@@ -150,7 +151,7 @@ export function specTestIterator(
 
         const testHandlerDirpath = path.join(testRunnerDirpath, testHandler);
         for (const testSuite of readdirSyncSpec(testHandlerDirpath)) {
-          const testId = `${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
+          const testId = `${testIdPrefix}${fork}/${testRunnerName}/${testHandler}/${testSuite}`;
 
           if (opts?.skippedTestSuites?.some((skippedMatch) => testId.match(skippedMatch))) {
             displaySkipTest(testId);

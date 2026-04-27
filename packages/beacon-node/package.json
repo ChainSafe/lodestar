@@ -100,6 +100,8 @@
     "test:sim": "vitest run test/sim/**/*.test.ts",
     "test:sim:blobs": "vitest run test/sim/4844-interop.test.ts",
     "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
+    "download-compliance-fc-tests": "../../scripts/download-compliance-fc-tests.sh",
+    "test:spec:compliance-fc": "../../scripts/compliance-fc-report.sh",
     "test:spec:bls": "vitest run --project spec-minimal test/spec/bls/",
     "test:spec:general": "vitest run --project spec-minimal test/spec/general/",
     "test:spec:minimal": "vitest run --project spec-minimal test/spec/presets/",
