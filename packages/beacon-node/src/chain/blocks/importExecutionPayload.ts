@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {isStatePostGloas} from "@lodestar/state-transition";
 import {fromHex, isErrorAborted} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.ts";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
