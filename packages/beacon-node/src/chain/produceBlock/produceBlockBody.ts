@@ -49,7 +49,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {
   IExecutionBuilder,
@@ -215,9 +215,15 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
-    const parentBlockHash = isExtendingPayload
+    let parentBlockHash = isExtendingPayload
       ? currentState.latestExecutionPayloadBid.blockHash
       : currentState.latestExecutionPayloadBid.parentBlockHash;
+    // At gloas genesis the committed bid has no prior EL block to reference
+    // (`bid.parentBlockHash` is zero). Fall back to `bid.blockHash` (= eth1 genesis hash) so the
+    // FCU to the EL carries a valid head. Post-genesis bids always reference a non-zero parent.
+    if (isStatePostGloas(currentState) && byteArrayEquals(parentBlockHash, ZERO_HASH)) {
+      parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
+    }
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
       : ssz.electra.ExecutionRequests.defaultValue();
@@ -285,8 +291,10 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
-    // TODO GLOAS: Get payload attestations from pool for previous slot
-    gloasBody.payloadAttestations = [];
+    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+      parentBlock.blockRoot,
+      blockSlot - 1
+    );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
     blockBody = gloasBody as AssembledBodyType<T>;
 

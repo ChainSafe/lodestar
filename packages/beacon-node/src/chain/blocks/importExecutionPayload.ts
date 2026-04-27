@@ -1,7 +1,8 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {isStatePostGloas} from "@lodestar/state-transition";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -75,21 +76,23 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * The envelope is only verified here, no state mutation. State effects from the payload
  * are applied on the next block via processParentExecutionPayload.
  *
+ * The DA wait must have run upstream (range sync awaits DA in `verifyBlocksInEpoch` for the
+ * whole segment; gossip / API path uses the `processExecutionPayload` wrapper below).
+ *
  * Steps:
  * 1. Emit `execution_payload_available` event for payload attestation
  * 2. Get the ProtoBlock from fork choice
- * 3. Wait for data columns to be available
- * 4. Regenerate state for envelope verification
- * 5. Verify envelope (fields against state, signature, and EL in parallel where possible)
- * 6. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
- * 7. Update fork choice (transitions the block's PENDING variant to FULL)
+ * 3. Regenerate state for envelope verification
+ * 4. Verify envelope (fields against state, signature, and EL in parallel where possible)
+ * 5. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
+ * 6. Update fork choice (transitions the block's PENDING variant to FULL)
+ * 7. Queue notifyForkchoiceUpdate to engine api
  * 8. Record metrics for payload envelope and column sources
  * 9. Emit `execution_payload` event
  */
 export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
-  signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
@@ -119,11 +122,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 3. Wait for data columns to be available.
-  // The helper is shared with future gloas sync services; take the single-item batch form here.
-  await verifyPayloadsDataAvailability([payloadInput], signal);
-
-  // 4. Regenerate state for envelope verification
+  // 3. Regenerate state for envelope verification
   const blockState = await this.regen.getBlockSlotState(
     protoBlock,
     protoBlock.slot,
@@ -137,7 +136,7 @@ export async function importExecutionPayload(
     });
   }
 
-  // 5. Verify envelope fields against state first to fail fast before the EL + BLS work.
+  // 4. Verify envelope fields against state first to fail fast before the EL + BLS work.
   // When validSignature is true, gossip/API has already verified both the signature and the
   // executionRequestsRoot, so we skip those checks here.
   try {
@@ -154,7 +153,7 @@ export async function importExecutionPayload(
     );
   }
 
-  // 5a. Run EL and signature verification in parallel
+  // 4a. Run EL and signature verification in parallel
   const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
       fork,
@@ -176,12 +175,12 @@ export async function importExecutionPayload(
         ),
   ]);
 
-  // 5b. Check signature verification result
+  // 4b. Check signature verification result
   if (!signatureValid) {
     throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
   }
 
-  // 5c. Handle EL response
+  // 4c. Handle EL response
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
       break;
@@ -207,7 +206,7 @@ export async function importExecutionPayload(
       });
   }
 
-  // 6. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
+  // 5. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
   // on the import pipeline during sync, then perform the write asynchronously to avoid blocking.
   await this.unfinalizedPayloadEnvelopeWrites.waitForSpace();
   this.unfinalizedPayloadEnvelopeWrites.push(payloadInput).catch((e) => {
@@ -220,9 +219,21 @@ export async function importExecutionPayload(
     }
   });
 
-  // 7. Update fork choice, transitions the block's PENDING variant to FULL
+  // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
+
+  // 7. Queue notifyForkchoiceUpdate to engine api
+  const head = this.forkChoice.getHead();
+  if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+      }
+    });
+  }
 
   // 8. Record metrics for payload envelope and column sources
   this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
@@ -248,4 +259,22 @@ export async function importExecutionPayload(
     blockRoot: blockRootHex,
     blockHash: blockHashHex,
   });
+}
+
+/**
+ * Process an execution payload envelope end-to-end: wait for DA, then import.
+ *
+ * Used by the PayloadEnvelopeProcessor queue (gossip / API / unknown-payload sync) — i.e.
+ * callers that have NOT already awaited DA themselves. Range sync's inline dispatch in
+ * processBlocks skips this wrapper and calls `importExecutionPayload` directly, since
+ * `verifyBlocksInEpoch` already awaited DA for the segment.
+ */
+export async function processExecutionPayload(
+  this: BeaconChain,
+  payloadInput: PayloadEnvelopeInput,
+  signal: AbortSignal,
+  opts: ImportPayloadOpts = {}
+): Promise<void> {
+  await verifyPayloadsDataAvailability([payloadInput], signal);
+  await importExecutionPayload.call(this, payloadInput, opts);
 }

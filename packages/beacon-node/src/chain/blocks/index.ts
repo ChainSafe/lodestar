@@ -1,4 +1,4 @@
-import {SignedBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -8,6 +8,8 @@ import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.j
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
+import {importExecutionPayload} from "./importExecutionPayload.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
@@ -21,20 +23,24 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[IBlockInput[], ImportBlockOpts], void>(
-      (job, importOpts) => {
-        return processBlocks.call(chain, job, {...opts, ...importOpts});
+    this.jobQueue = new JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>(
+      (job, payloadEnvelopes, importOpts) => {
+        return processBlocks.call(chain, job, payloadEnvelopes, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }
 
-  async processBlocksJob(job: IBlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
-    await this.jobQueue.push(job, opts);
+  async processBlocksJob(
+    job: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    opts: ImportBlockOpts = {}
+  ): Promise<void> {
+    await this.jobQueue.push(job, payloadEnvelopes, opts);
   }
 }
 
@@ -51,14 +57,11 @@ export class BlockProcessor {
 export async function processBlocks(
   this: BeaconChain,
   blocks: IBlockInput[],
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
     return; // TODO: or throw?
-  }
-
-  if (blocks.length > 1) {
-    assertLinearChainSegment(this.config, blocks);
   }
 
   try {
@@ -70,10 +73,25 @@ export async function processBlocks(
       return;
     }
 
+    const {warnings: orphanedPayloads} = assertLinearChainSegment(
+      this.config,
+      relevantBlocks,
+      payloadEnvelopes,
+      parentBlock
+    );
+    if (orphanedPayloads != null) {
+      for (const orphaned of orphanedPayloads) {
+        this.logger.debug("Orphaned payload envelope in chain segment", {
+          slot: orphaned.slot,
+          blockRoot: orphaned.payloadEnvelopeInput.blockRootHex,
+        });
+      }
+    }
+
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
     const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus, indexedAttestationsByBlock} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
+      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -103,6 +121,20 @@ export async function processBlocks(
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
       // TODO: Consider batching importBlock too if it takes significant time
       await importBlock.call(this, fullyVerifiedBlock, opts);
+
+      const slot = fullyVerifiedBlock.blockInput.getBlock().message.slot;
+      const payloadInput = payloadEnvelopes?.get(slot);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        if (!payloadInput.isComplete()) {
+          // we validated DA before reaching this
+          throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
+        }
+        // we already awaited DA in verifyBlocksInEpoch for this segment
+        // TODO GLOAS: may need FullyVerifiedPayload here with DatAvailabilityStatus added from here
+        // the current flow use that data from the forkchoice pending node which is not correct
+        await importExecutionPayload.call(this, payloadInput, {validSignature: false});
+      }
+
       await nextEventLoop();
     }
   } catch (e) {

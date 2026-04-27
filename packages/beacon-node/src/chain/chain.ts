@@ -106,6 +106,7 @@ import {
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
   SeenPayloadEnvelopeInput,
+  SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -186,6 +187,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
+  readonly seenProposerPreferences = new SeenProposerPreferences();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -891,6 +893,10 @@ export class BeaconChain implements IBeaconChain {
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
   ): Promise<electra.ExecutionRequests> {
+    // at the fork boundary, parent is pre-gloas
+    if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
+      return ssz.electra.ExecutionRequests.defaultValue();
+    }
     const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
     if (envelope === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
@@ -1094,11 +1100,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], opts);
+    return this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
-  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob(blocks, opts);
+  async processChainSegment(
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void> {
+    await this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
@@ -1429,6 +1439,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
+    this.seenProposerPreferences.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

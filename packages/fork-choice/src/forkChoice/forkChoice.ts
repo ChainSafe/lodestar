@@ -268,6 +268,11 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
+    // Gloas genesis anchor has no parent in the proto array. No reorg possible.
+    if (headBlock.parentRoot === HEX_ZERO_HASH) {
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ParentBlockNotAvailable};
+    }
+
     const parentBlock = this.protoArray.getBlock(
       headBlock.parentRoot,
       this.protoArray.getParentPayloadStatus(headBlock)
@@ -386,6 +391,11 @@ export class ForkChoice implements IForkChoice {
         proposerBoostReorg,
       });
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
+    }
+
+    // Gloas genesis anchor has no parent in the proto array. No reorg possible.
+    if (headBlock.parentRoot === HEX_ZERO_HASH) {
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
     const parentBlock = this.protoArray.getBlock(
@@ -1172,13 +1182,12 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Returns all blocks backwards starting from a block root.
-   * Return only the non-finalized blocks.
+   * Raw ancestor walk from `blockRoot` back toward the previous finalized block. Includes both
+   * `blockRoot` and the previous-finalized boundary as last element. Mirrors the semantics of
+   * `getAllAncestorAndNonAncestorBlocks.ancestors`
    */
   getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
-    const blocks = this.protoArray.getAllAncestorNodes(blockRoot, payloadStatus);
-    // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
-    return blocks.slice(0, blocks.length - 1);
+    return this.protoArray.getAllAncestorNodes(blockRoot, payloadStatus);
   }
 
   /**

@@ -172,11 +172,6 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
 
-// TODO GLOAS: This function no longer exists in v1.7.0-alpha.5 specs. Remove it when appropriate to do so
-export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
-  return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
-}
-
 export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[] {
   const ptcWindow: Uint32Array[] = Array.from({length: SLOTS_PER_EPOCH}, () => new Uint32Array(PTC_SIZE));
   const currentEpoch = state.epochCtx.epoch;
