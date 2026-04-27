@@ -148,6 +148,7 @@ describe("sync / finalized sync for gloas", () => {
 
     // Walk Node B's fork-choice from head back through its ancestors. Every gloas block in the
     // canonical chain below the head MUST have its FULL payload variant in fork-choice
+    // Also sssert that >50% PTC votes have been included
     const bn2Head = bn2.chain.forkChoice.getHead();
     const bn2Ancestors = bn2.chain.forkChoice.getAllAncestorBlocks(bn2Head.blockRoot, bn2Head.payloadStatus);
     const gloasFirstSlot = GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
@@ -157,6 +158,14 @@ describe("sync / finalized sync for gloas", () => {
           true,
           `Node B missing FULL payload variant for gloas block slot=${block.slot} root=${block.blockRoot}`
         );
+        if (block.slot > gloasFirstSlot) {
+          const ptcVotes = bn2.chain.forkChoice.getPTCVotes(block.blockRoot) ?? [];
+
+          expect(ptcVotes.some(Boolean)).toBeWithMessage(
+            true,
+            `Node A missing PTC votes for gloas block slot=${block.slot} root=${block.blockRoot}`
+          );
+        }
       }
     }
   });

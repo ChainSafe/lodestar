@@ -231,6 +231,7 @@ export interface IForkChoice {
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
+  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */

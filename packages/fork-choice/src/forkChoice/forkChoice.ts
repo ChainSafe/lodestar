@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
@@ -1049,6 +1050,12 @@ export class ForkChoice implements IForkChoice {
    */
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasPayload(blockRoot);
+  }
+
+  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    const votes = this.protoArray.getPTCVotes(blockRootHex);
+    if (votes === null) return null;
+    return votes.toBoolArray().map((v) => v ?? null);
   }
 
   /**

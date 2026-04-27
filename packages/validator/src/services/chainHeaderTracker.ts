@@ -13,6 +13,11 @@ export type HeadEventData = {
   currentDutyDependentRoot: RootHex;
 };
 
+export type ExecutionPayloadAvailableEventData = {
+  slot: Slot;
+  blockRoot: RootHex;
+};
+
 type RunEveryFn = (event: HeadEventData) => Promise<void>;
 
 /**
@@ -30,20 +35,20 @@ export class ChainHeaderTracker {
   ) {}
 
   start(signal: AbortSignal): void {
-    this.logger.verbose("Subscribing to head event");
+    this.logger.verbose("Subscribing to validator events");
     this.api.events
       .eventstream({
-        topics: [EventType.head],
+        topics: [EventType.head, EventType.executionPayloadAvailable],
         signal,
-        onEvent: this.onHeadUpdate,
+        onEvent: this.onEvent,
         onError: (e) => {
-          this.logger.error("Failed to receive head event", {}, e);
+          this.logger.error("Failed to receive validator event", {}, e);
         },
         onClose: () => {
-          this.logger.verbose("Closed stream for head event", {});
+          this.logger.verbose("Closed stream for validator events", {});
         },
       })
-      .catch((e) => this.logger.error("Failed to subscribe to head event", {}, e));
+      .catch((e) => this.logger.error("Failed to subscribe to validator events", {}, e));
   }
 
   getCurrentChainHead(slot: Slot): Root | null {
@@ -58,7 +63,7 @@ export class ChainHeaderTracker {
     this.fns.push(fn);
   }
 
-  private onHeadUpdate = (event: routes.events.BeaconEvent): void => {
+  private onEvent = (event: routes.events.BeaconEvent): void => {
     if (event.type === EventType.head) {
       const {message} = event;
       const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
@@ -83,6 +88,15 @@ export class ChainHeaderTracker {
         head: block,
         previousDuty: previousDutyDependentRoot,
         currentDuty: currentDutyDependentRoot,
+      });
+    }
+
+    if (event.type === EventType.executionPayloadAvailable) {
+      this.emitter.emit(ValidatorEvent.executionPayloadAvailable, event.message);
+
+      this.logger.verbose("Found execution payload available", {
+        slot: event.message.slot,
+        blockRoot: event.message.blockRoot,
       });
     }
   };
