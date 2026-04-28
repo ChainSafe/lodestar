@@ -132,7 +132,7 @@ export async function processBlocks(
     // initializeForkChoice as PENDING+EMPTY) and therefore not in verifiedBlocksBySlot — the
     // payload still needs to be imported here to populate the anchor's FULL variant so
     // subsequent slots can find their parent payload.
-    const slots = blocks.map((b) => b.getBlock().message.slot);
+    const slots = Array.from(new Set(blocks.map((b) => b.getBlock().message.slot)));
     for (const slot of slots) {
       const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
       if (fullyVerifiedBlock !== undefined) {
