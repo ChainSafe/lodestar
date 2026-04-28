@@ -79,6 +79,11 @@ export const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$
 
 const logger = testLogger("spec-test");
 
+// The libp2p private key isn't validated in spec tests — only used to derive a
+// PeerId for the BeaconChain instance, which never opens a connection. Generate
+// once at module load and share across all test cases (~3000 keygens → 1).
+const sharedPrivateKey = await generateKeyPair("secp256k1");
+
 export const forkChoiceTest =
   (opts: {onlyPredefinedResponses: boolean}): TestRunnerFn<ForkChoiceTestCase, void> =>
   (fork) => {
@@ -140,12 +145,12 @@ export const forkChoiceTest =
             proposerBoostReorg: true,
           },
           {
-            privateKey: await generateKeyPair("secp256k1"),
+            privateKey: sharedPrivateKey,
             config: beaconConfig,
             pubkeyCache,
             db: getMockedBeaconDb(),
             dataDir: ".",
-            dbName: ",",
+            dbName: "",
             logger,
             processShutdownCallback: () => {},
             clock,
