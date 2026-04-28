@@ -3,17 +3,18 @@ import {Logger, sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics/metrics.js";
 import {DataColumnReconstructionCode, recoverDataColumnSidecars} from "../util/dataColumns.js";
 import {BlockInputColumns} from "./blocks/blockInput/index.js";
+import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 /**
  * Minimum time to wait before attempting reconstruction
  */
-const RECONSTRUCTION_DELAY_MIN_MS = 800;
+const RECONSTRUCTION_DELAY_MIN_BPS = 667;
 
 /**
  * Maximum time to wait before attempting reconstruction
  */
-const RECONSTRUCTION_DELAY_MAX_MS = 1200;
+const RECONSTRUCTION_DELAY_MAX_BPS = 1000;
 
 export type ColumnReconstructionTrackerInit = {
   logger: Logger;
@@ -41,33 +42,37 @@ export class ColumnReconstructionTracker {
   /** Track if a reconstruction attempt is in-flight */
   running = false;
 
+  private readonly minDelayMs: number;
+  private readonly maxDelayMs: number;
+
   constructor(init: ColumnReconstructionTrackerInit) {
     this.logger = init.logger;
     this.emitter = init.emitter;
     this.metrics = init.metrics;
     this.config = init.config;
+    this.minDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MIN_BPS);
+    this.maxDelayMs = this.config.getSlotComponentDurationMs(RECONSTRUCTION_DELAY_MAX_BPS);
   }
 
-  triggerColumnReconstruction(blockInput: BlockInputColumns): void {
+  triggerColumnReconstruction(input: BlockInputColumns | PayloadEnvelopeInput): void {
     if (this.running) {
       return;
     }
 
-    if (this.lastBlockRootHex === blockInput.blockRootHex) {
+    if (this.lastBlockRootHex === input.blockRootHex) {
       return;
     }
 
     // We don't care about the outcome of this call,
     // just that it has been triggered for this block root.
     this.running = true;
-    this.lastBlockRootHex = blockInput.blockRootHex;
-    const delay =
-      RECONSTRUCTION_DELAY_MIN_MS + Math.random() * (RECONSTRUCTION_DELAY_MAX_MS - RECONSTRUCTION_DELAY_MIN_MS);
+    this.lastBlockRootHex = input.blockRootHex;
+    const delay = this.minDelayMs + Math.random() * (this.maxDelayMs - this.minDelayMs);
     sleep(delay)
       .then(() => {
-        const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
+        const logCtx = {slot: input.slot, root: input.blockRootHex};
         this.logger.debug("Attempting data column sidecar reconstruction", logCtx);
-        recoverDataColumnSidecars(blockInput, this.emitter, this.metrics)
+        recoverDataColumnSidecars(input, this.emitter, this.metrics)
           .then((result) => {
             this.metrics?.recoverDataColumnSidecars.reconstructionResult.inc({result});
             this.logger.debug("Data column sidecar reconstruction complete", {...logCtx, result});

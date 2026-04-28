@@ -17,11 +17,40 @@ export const NULL_VOTE_INDEX = 0xffffffff;
  */
 export type VoteIndex = number;
 
+/**
+ * Execution status of a block in fork choice.
+ *
+ * - Valid: Execution payload verified as valid by the EL
+ * - Syncing: EL is syncing, payload validity unknown (optimistic sync)
+ * - PreMerge: Block is from before The Merge, no execution payload exists
+ * - Invalid: Execution payload was invalidated by the EL (post-import status)
+ * - PayloadSeparated: Gloas beacon block without embedded execution payload.
+ *         The execution payload arrives separately via SignedExecutionPayloadEnvelope.
+ *         Gloas blocks WITH execution payload (FULL variant) use Valid/Invalid/Syncing.
+ */
 export enum ExecutionStatus {
   Valid = "Valid",
   Syncing = "Syncing",
   PreMerge = "PreMerge",
   Invalid = "Invalid",
+  PayloadSeparated = "PayloadSeparated",
+}
+
+/**
+ * Payload status for ePBS (Gloas fork)
+ * Spec: gloas/fork-choice.md#constants
+ */
+export enum PayloadStatus {
+  PENDING = 0,
+  EMPTY = 1,
+  FULL = 2,
+}
+
+/**
+ * Check if a block is in the Gloas fork (ePBS enabled)
+ */
+export function isGloasBlock(block: ProtoBlock): boolean {
+  return block.parentBlockHash !== null;
 }
 
 export type LVHValidResponse = {
@@ -35,10 +64,26 @@ export type LVHInvalidResponse = {
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
-export type MaybeValidExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
+/**
+ * Any execution status that is not definitively invalid.
+ * Pre-Gloas: Valid | Syncing | PreMerge
+ * Post-Gloas: execution status must be PayloadSeparated (beacon block imported before its payload arrives via SignedExecutionPayloadEnvelope)
+ */
+export type BlockExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
+
+/**
+ * Execution status for a block whose execution payload is present and has been submitted to the EL.
+ * Used post-Gloas when transitioning a PayloadSeparated block to FULL via onExecutionPayload().
+ */
+export type PayloadExecutionStatus = ExecutionStatus.Valid | ExecutionStatus.Syncing;
 
 export type BlockExtraMeta =
   | {
+      // Pre-gloas:
+      //   - block hash of payload of the block
+      // Post-gloas:
+      //   - this is parentBlockHash of block bid because payload is only received later
+      //   - payload block hash for FULL variant
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
@@ -92,11 +137,20 @@ export type ProtoBlock = BlockExtraMeta & {
 
   // Indicate whether EIP-7805 is enabled
   isEip7805Enabled: boolean;
+
+  /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
+  payloadStatus: PayloadStatus;
+
+  // Used to determine if this block extends EMPTY or FULL parent variant
+  // Spec: gloas/fork-choice.md#new-get_parent_payload_status
+  parentBlockHash: RootHex | null;
 };
 
 /**
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
+ *
+ * It is also used as ForkChoiceNode in fork choice spec
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;

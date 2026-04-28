@@ -1,20 +1,19 @@
+import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_INCLUSION_LIST_COMMITTEE} from "@lodestar/params";
-import {eip7805, ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
+import {Slot, eip7805, ssz} from "@lodestar/types";
 import {ISignatureSet, SignatureSetType, computeSigningRoot} from "../util/index.js";
 
 export function getInclusionListSignatureSet(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
+  stateSlot: Slot,
   inclusionList: eip7805.SignedInclusionList
 ): ISignatureSet {
   const message = inclusionList.message;
-  const validatorIndex = message.validatorIndex;
-  const pubkey = state.epochCtx.index2pubkey[validatorIndex];
-  const domain = state.config.getDomain(state.slot, DOMAIN_INCLUSION_LIST_COMMITTEE, message.slot);
+  const domain = config.getDomain(stateSlot, DOMAIN_INCLUSION_LIST_COMMITTEE, message.slot);
 
   return {
-    type: SignatureSetType.single,
-    pubkey,
+    type: SignatureSetType.indexed,
+    index: message.validatorIndex,
     signingRoot: computeSigningRoot(ssz.eip7805.InclusionList, message, domain),
     signature: inclusionList.signature,
   };

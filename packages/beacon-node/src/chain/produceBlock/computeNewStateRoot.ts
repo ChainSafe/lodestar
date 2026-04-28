@@ -1,9 +1,8 @@
 import {
-  CachedBeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  IBeaconStateView,
   StateHashTreeRootSource,
-  stateTransition,
 } from "@lodestar/state-transition";
 import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
 import {ZERO_HASH} from "../../constants/index.js";
@@ -16,14 +15,13 @@ import {Metrics} from "../../metrics/index.js";
  */
 export function computeNewStateRoot(
   metrics: Metrics | null,
-  state: CachedBeaconStateAllForks,
+  state: IBeaconStateView,
   block: BeaconBlock | BlindedBeaconBlock
-): {newStateRoot: Root; proposerReward: Gwei} {
+): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
   // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
   const blockEmptySig = {message: block, signature: ZERO_HASH};
 
-  const postState = stateTransition(
-    state,
+  const postState = state.stateTransition(
     blockEmptySig,
     {
       // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
@@ -51,5 +49,5 @@ export function computeNewStateRoot(
   const newStateRoot = postState.hashTreeRoot();
   hashTreeRootTimer?.();
 
-  return {newStateRoot, proposerReward};
+  return {newStateRoot, proposerReward, postState};
 }

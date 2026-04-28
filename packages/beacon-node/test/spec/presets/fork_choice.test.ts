@@ -3,27 +3,41 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {getConfig} from "@lodestar/config/test-utils";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreDeneb,
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
-import {BeaconStateAllForks, isExecutionStateType, signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  BeaconStateView,
+  DataAvailabilityStatus,
+  IBeaconStateViewGloas,
+  createCachedBeaconState,
+  createPubkeyCache,
+  isExecutionStateType,
+  isGloasStateType,
+  signedBlockToSignedHeader,
+  syncPubkeys,
+} from "@lodestar/state-transition";
 import {
   Attestation,
   AttesterSlashing,
   BeaconBlock,
   RootHex,
   SignedBeaconBlock,
-  bellatrix,
   deneb,
   fulu,
+  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -31,16 +45,20 @@ import {bnToNum, fromHex, toHex} from "@lodestar/utils";
 import {
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
+import {
+  verifyExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
-import {validateBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {RegenCaller} from "../../../src/chain/regen/index.js";
+import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
-import {PowMergeBlock} from "../../../src/eth1/interface.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -48,9 +66,6 @@ import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blob
 import {ClockEvent} from "../../../src/util/clock.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
-import {getConfig} from "../../utils/config.js";
-import {testLogger} from "../../utils/logger.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
@@ -61,7 +76,7 @@ const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const BLOBS_FILE_NAME = "^(blobs)_([0-9a-zA-Z]+)$";
 const COLUMN_FILE_NAME = "^(column)_([0-9a-zA-Z]+)$";
-const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
+const EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME = "^(execution_payload_envelope)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
@@ -75,17 +90,18 @@ const forkChoiceTest =
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
-        const state = createCachedBeaconStateTest(anchorState, config);
+        // const state = createCachedBeaconStateTest(anchorState, config);
 
         /** This is to track test's tickTime to be used in proposer boost */
         let tickTime = 0;
         const clock = new ClockStopped(currentSlot);
-        const eth1 = new Eth1ForBlockProductionMock();
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
-          genesisBlockHash: isExecutionStateType(anchorState)
-            ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
-            : ZERO_HASH_HEX,
+          genesisBlockHash: isGloasStateType(anchorState)
+            ? toHexString(anchorState.latestBlockHash)
+            : isExecutionStateType(anchorState)
+              ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
+              : ZERO_HASH_HEX,
         });
 
         const controller = new AbortController();
@@ -93,6 +109,18 @@ const forkChoiceTest =
           signal: controller.signal,
           logger: testLogger("executionEngine"),
         });
+
+        const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
+        const pubkeyCache = createPubkeyCache();
+        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        const cachedState = createCachedBeaconState(
+          anchorState,
+          {
+            config: beaconConfig,
+            pubkeyCache,
+          },
+          {skipSyncPubkeys: true}
+        );
 
         const chain = new BeaconChain(
           {
@@ -116,7 +144,8 @@ const forkChoiceTest =
           },
           {
             privateKey: await generateKeyPair("secp256k1"),
-            config: createBeaconConfig(config, state.genesisValidatorsRoot),
+            config: beaconConfig,
+            pubkeyCache,
             db: getMockedBeaconDb(),
             dataDir: ".",
             dbName: ",",
@@ -125,9 +154,8 @@ const forkChoiceTest =
             clock,
             metrics: null,
             validatorMonitor: null,
-            anchorState,
+            anchorState: new BeaconStateView(cachedState),
             isAnchorStateFinalized: true,
-            eth1,
             executionEngine,
             executionBuilder: undefined,
           }
@@ -154,10 +182,10 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState();
+              const headState = chain.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               chain.forkChoice.onAttestation(
-                headState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
+                headState.cachedState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
                 attDataRootHex
               );
             }
@@ -221,18 +249,31 @@ const forkChoiceTest =
                 let blockImport;
                 const forkSeq = config.getForkSeq(slot);
 
-                if (forkSeq >= ForkSeq.fulu) {
+                if (forkSeq >= ForkSeq.gloas) {
+                  // Gloas (ePBS) blocks don't carry blobs/columns directly on the block body.
+                  // Blob KZG commitments are nested inside signedExecutionPayloadBid.
+                  // Use BlockInputNoData since DA is handled separately via execution payload envelopes.
+                  blockImport = BlockInputNoData.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
+                } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
                     columns = [];
                   }
 
-                  await validateBlockDataColumnSidecars(
+                  await validateFuluBlockDataColumnSidecars(
                     chain,
                     slot,
                     blockRoot,
                     (signedBlock as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>).message.body.blobKzgCommitments
                       .length,
-                    columns
+                    columns,
+                    chain.metrics?.peerDas
                   );
 
                   blockImport = BlockInputColumns.createFromBlock({
@@ -333,21 +374,61 @@ const forkChoiceTest =
               }
             }
 
-            // **on_merge_block execution**
-            // Adds PowBlock data which is required for executing on_block(store, block).
-            // The file is located in the same folder (see below). PowBlocks should be used as return values for
-            // get_pow_block(hash: Hash32) -> PowBlock function if hashes match.
-            else if (isPowBlock(step)) {
-              const powBlock = testcase.powBlocks.get(step.pow_block);
-              if (!powBlock) throw Error(`pow_block ${step.pow_block} not found`);
-              logger.debug(`Step ${i}/${stepsLen} pow_block`, {
-                blockHash: toHexString(powBlock.blockHash),
-                parentHash: toHexString(powBlock.parentHash),
+            // execution_payload step for Gloas (ePBS) tests
+            else if (isExecutionPayload(step)) {
+              const isValid = Boolean(step.valid ?? true);
+              logger.debug(`Step ${i}/${stepsLen} execution_payload`, {
+                envelope: step.execution_payload,
+                valid: isValid,
               });
-              // Register PowBlock for `get_pow_block(hash: Hash32)` calls in verifyBlock
-              eth1.addPowBlock(powBlock);
-              // Register PowBlock to allow validation in execution engine
-              executionEngineBackend.addPowBlock(powBlock);
+              const envelope = testcase.executionPayloadEnvelopes.get(step.execution_payload);
+              if (!envelope) throw Error(`No execution payload envelope ${step.execution_payload}`);
+
+              try {
+                const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
+                const blockHash = toHex(envelope.message.payload.blockHash);
+                const blockNumber = envelope.message.payload.blockNumber;
+
+                // Verify envelope against the state
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
+                if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
+                const blockState = await chain.regen.getBlockSlotState(
+                  protoBlock,
+                  protoBlock.slot,
+                  {dontTransferCache: true},
+                  RegenCaller.processBlock
+                );
+                verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope.message);
+
+                // Verify signature
+                const sigValid = await verifyExecutionPayloadEnvelopeSignature(
+                  beaconConfig,
+                  blockState as IBeaconStateViewGloas,
+                  pubkeyCache,
+                  envelope,
+                  blockState.latestBlockHeader.proposerIndex,
+                  chain.bls
+                );
+                if (!sigValid) throw Error("Invalid execution payload envelope signature");
+
+                // Add predefined VALID status for the payload's block hash so the EL mock accepts it
+                executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
+                  status: ExecutionPayloadStatus.VALID,
+                  latestValidHash: null,
+                  validationError: null,
+                });
+
+                (chain.forkChoice as ForkChoice).onExecutionPayload(
+                  beaconBlockRoot,
+                  blockHash,
+                  blockNumber,
+                  ExecutionStatus.Valid,
+                  DataAvailabilityStatus.Available
+                );
+                if (!isValid) throw Error("Expect error since this is a negative test");
+              } catch (e) {
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
+              }
             }
 
             // Optional step for optimistic sync tests.
@@ -417,10 +498,20 @@ const forkChoiceTest =
                   `Invalid proposer head at step ${i}`
                 );
               }
+              if (step.checks.head_payload_status !== undefined) {
+                // Map our PayloadStatus enum to spec's numbering:
+                // Spec: EMPTY=0, FULL=1, PENDING=2
+                // Ours: PENDING=0, EMPTY=1, FULL=2
+                const payloadStatusToSpec: Record<number, number> = {0: 2, 1: 0, 2: 1};
+                expect(payloadStatusToSpec[head.payloadStatus]).toEqualWithMessage(
+                  bnToNum(step.checks.head_payload_status),
+                  `Invalid head payload status at step ${i}`
+                );
+              }
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
                 const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
-                  head.blockRoot,
+                  head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
                 );
@@ -455,7 +546,7 @@ const forkChoiceTest =
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
           [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
-          [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
+          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.SignedExecutionPayloadEnvelope,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
         },
@@ -464,7 +555,7 @@ const forkChoiceTest =
           const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const columns = new Map<string, fulu.DataColumnSidecar>();
-          const powBlocks = new Map<string, bellatrix.PowBlock>();
+          const executionPayloadEnvelopes = new Map<string, gloas.SignedExecutionPayloadEnvelope>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
@@ -482,9 +573,9 @@ const forkChoiceTest =
             if (columnMatch) {
               columns.set(key, t[key]);
             }
-            const powBlockMatch = key.match(POW_BLOCK_FILE_NAME);
-            if (powBlockMatch) {
-              powBlocks.set(key, t[key]);
+            const envelopeMatch = key.match(EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME);
+            if (envelopeMatch) {
+              executionPayloadEnvelopes.set(key, t[key]);
             }
             const attMatch = key.match(ATTESTATION_FILE_NAME);
             if (attMatch) {
@@ -503,7 +594,7 @@ const forkChoiceTest =
             blocks,
             blobs,
             columns,
-            powBlocks,
+            executionPayloadEnvelopes,
             attestations,
             attesterSlashings,
           };
@@ -518,7 +609,21 @@ const forkChoiceTest =
         //
         // This skip can be removed once a kzg lib with run-time minimal blob size setup is released and
         // integrated
-        shouldSkip: (_testcase, name, _index) => name.includes("invalid_incorrect_proof"),
+        shouldSkip: (_testcase, name, _index) =>
+          name.includes("invalid_incorrect_proof") ||
+          // TODO GLOAS: Proposer boost specs have been changed retroactively in v1.7.0-alpha.1,
+          // and these tests are failing until we update our implementation.
+          name.includes("voting_source_beyond_two_epoch") ||
+          name.includes("justified_update_always_if_better") ||
+          name.includes("justified_update_not_realized_finality") ||
+          // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
+          (name.includes("gloas") &&
+            (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
+              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
+              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
+          // TODO GLOAS: Spec test fixture bug in v1.7.0-alpha.5: wrong_withdrawals envelope SSZ data is
+          // byte-for-byte identical to the valid envelope, making it impossible to reject
+          name.endsWith("on_execution_payload_envelope__wrong_withdrawals"),
       },
     };
   };
@@ -530,7 +635,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPowBlock | OnPayloadInfo | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnExecutionPayloadEnvelope | OnPayloadInfo | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -571,13 +676,11 @@ type OnBlock = {
   valid?: number;
 };
 
-/** Optional step for optimistic sync tests. */
-type OnPowBlock = {
-  /**
-   * the name of the `pow_block_<32-byte-root>.ssz_snappy` file. To
-   * execute `on_pow_block(store, block)`
-   */
-  pow_block: string;
+type OnExecutionPayloadEnvelope = {
+  /** the name of the execution_payload_envelope file */
+  execution_payload: string;
+  /** optional, default to `true`. */
+  valid?: number;
 };
 
 type OnPayloadInfo = {
@@ -603,6 +706,7 @@ type Checks = {
     justified_checkpoint?: SpecTestCheckpoint;
     finalized_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
+    head_payload_status?: bigint;
     get_proposer_head?: string;
     should_override_forkchoice_update?: {
       validator_is_connected: boolean;
@@ -622,7 +726,7 @@ type ForkChoiceTestCase = {
   blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   columns: Map<string, fulu.DataColumnSidecar>;
-  powBlocks: Map<string, bellatrix.PowBlock>;
+  executionPayloadEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };
@@ -643,8 +747,8 @@ function isBlock(step: Step): step is OnBlock {
   return typeof (step as OnBlock).block === "string";
 }
 
-function isPowBlock(step: Step): step is OnPowBlock {
-  return typeof (step as OnPowBlock).pow_block === "string";
+function isExecutionPayload(step: Step): step is OnExecutionPayloadEnvelope {
+  return typeof (step as OnExecutionPayloadEnvelope).execution_payload === "string";
 }
 
 function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
@@ -653,25 +757,6 @@ function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
 
 function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
-}
-
-// Extend Eth1ForBlockProductionDisabled to not have to re-implement new methods
-class Eth1ForBlockProductionMock extends Eth1ForBlockProductionDisabled {
-  private items = new Map<string, PowMergeBlock>();
-
-  async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
-    return this.items.get(powBlockHash) ?? null;
-  }
-
-  addPowBlock(powBlock: bellatrix.PowBlock): void {
-    this.items.set(toHexString(powBlock.blockHash), {
-      // not used by verifyBlock()
-      number: 0,
-      blockHash: toHexString(powBlock.blockHash),
-      parentHash: toHexString(powBlock.parentHash),
-      totalDifficulty: powBlock.totalDifficulty,
-    });
-  }
 }
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {

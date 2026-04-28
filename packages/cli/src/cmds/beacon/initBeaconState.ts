@@ -2,10 +2,8 @@ import {
   DbCPStateDatastore,
   FileCPStateDatastore,
   IBeaconDb,
-  IBeaconNodeOptions,
   checkAndPersistAnchorState,
   getStateTypeFromBytes,
-  initStateFromEth1,
 } from "@lodestar/beacon-node";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {
@@ -42,7 +40,7 @@ async function initAndVerifyWeakSubjectivityState(
   isWsStateFinalized: boolean,
   wsCheckpoint: Checkpoint,
   opts: {forceCheckpointSync?: boolean; ignoreWeakSubjectivityCheck?: boolean} = {}
-): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
+): Promise<{anchorState: BeaconStateAllForks; stateBytes: Uint8Array; wsCheckpoint: Checkpoint}> {
   const dbState = dbStateBytes.state;
   const wsState = wsStateBytes.state;
   // Check if the store's state and wsState are compatible
@@ -84,7 +82,7 @@ async function initAndVerifyWeakSubjectivityState(
   }
 
   // Return the latest anchorState but still return original wsCheckpoint to validate in backfill
-  return {anchorState: anchorState.state, wsCheckpoint};
+  return {anchorState: anchorState.state, stateBytes: anchorState.stateBytes, wsCheckpoint};
 }
 
 /**
@@ -94,21 +92,23 @@ async function initAndVerifyWeakSubjectivityState(
  * 1. restore from weak subjectivity state (possibly downloaded from a remote beacon node)
  * 2. restore from db
  * 3. restore from genesis state (possibly downloaded via URL)
- * 4. create genesis state from eth1
  *
  * The returned anchorState could be finalized or not.
  * - if we load from checkpointState, checkpointSyncUrl, genesisStateFile or archived db, it is finalized
  * - it's not finalized if we load from unsafeCheckpointState or lastPersistedCheckpointState
  */
 export async function initBeaconState(
-  options: IBeaconNodeOptions,
   args: BeaconArgs & GlobalArgs,
   dataDir: string,
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
-  logger: Logger,
-  signal: AbortSignal
-): Promise<{anchorState: BeaconStateAllForks; isFinalized: boolean; wsCheckpoint?: Checkpoint}> {
+  logger: Logger
+): Promise<{
+  anchorState: BeaconStateAllForks;
+  stateBytes: Uint8Array;
+  isFinalized: boolean;
+  wsCheckpoint?: Checkpoint;
+}> {
   if (args.forceCheckpointSync && !(args.checkpointState || args.checkpointSyncUrl || args.unsafeCheckpointState)) {
     throw new Error("Forced checkpoint sync without specifying a checkpointState or checkpointSyncUrl");
   }
@@ -171,7 +171,7 @@ export async function initBeaconState(
           stateRoot: toRootHex(lastDbState.hashTreeRoot()),
           isFinalized,
         });
-        return {anchorState: lastDbState, isFinalized};
+        return {anchorState: lastDbState, stateBytes, isFinalized};
       }
     }
   }
@@ -330,12 +330,10 @@ export async function initBeaconState(
       stateRoot,
       isFinalized,
     });
-    return {anchorState, isFinalized};
+    return {anchorState, stateBytes, isFinalized};
   }
 
-  // Only place we will not bother checking isWithinWeakSubjectivityPeriod as forceGenesis passed by user
-  const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
-  return {anchorState, isFinalized: true};
+  throw Error("Failed to initialize beacon state, please provide a genesis state file or use checkpoint sync");
 }
 
 async function readWSState(
@@ -351,7 +349,7 @@ async function readWSState(
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
-): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
+): Promise<{anchorState: BeaconStateAllForks; stateBytes: Uint8Array; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a provided state file:
   // if a weak subjectivity checkpoint has been provided, it is used for additional verification
   // otherwise, the state itself is used for verification (not bad, because the trusted state has been explicitly provided)
@@ -387,7 +385,7 @@ async function fetchWSStateFromBeaconApi(
   chainForkConfig: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger
-): Promise<{anchorState: BeaconStateAllForks; wsCheckpoint?: Checkpoint}> {
+): Promise<{anchorState: BeaconStateAllForks; stateBytes: Uint8Array; wsCheckpoint?: Checkpoint}> {
   // weak subjectivity sync from a state that needs to be fetched:
   // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
   // otherwise, the 'finalized' state is downloaded and the state itself is used for verification (all trust delegated to the remote beacon node)

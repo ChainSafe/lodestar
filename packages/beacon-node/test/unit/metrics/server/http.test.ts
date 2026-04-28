@@ -1,7 +1,7 @@
 import {afterAll, describe, it} from "vitest";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {fetch} from "@lodestar/utils";
 import {HttpMetricsServer, getHttpMetricsServer} from "../../../../src/metrics/index.js";
-import {testLogger} from "../../../utils/logger.js";
 import {createMetricsTest} from "../utils.js";
 
 describe("HttpMetricsServer", () => {

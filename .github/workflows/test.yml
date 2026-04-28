@@ -15,14 +15,14 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
@@ -30,8 +30,8 @@ jobs:
       - name: Test root binary exists
         run: ./lodestar --version
 
-      - name: Reject yarn.lock changes
-        run: .github/workflows/scripts/reject_yarn_lock_changes.sh
+      - name: Reject pnpm-lock.yaml changes
+        run: .github/workflows/scripts/reject_pnpm_lock_changes.sh
         # Run only on forks
         if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
 
@@ -42,21 +42,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
-      - name: Assert yarn prints no warnings
-        run: scripts/assert_no_yarn_warnings.sh
-
-      - name: Lint yarn lockfile
-        run: npx lockfile-lint --path yarn.lock --allowed-hosts npm yarn github.com --allowed-schemes "https:" "git+https:"
+      - name: Assert pnpm prints no warnings
+        run: scripts/assert_no_pnpm_warnings.sh
 
       - name: Lint Code
-        run: yarn lint
+        run: pnpm lint
 
       - name: Lint Grafana dashboards
         run: scripts/validate-grafana-dashboards.sh
@@ -71,53 +68,53 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       - name: Check Types
-        run: yarn check-types
+        run: pnpm check-types
 
       - name: README check
-        run: yarn check-readme
+        run: pnpm check-readme
 
   unit-tests:
     name: Unit Tests
     needs: type-checks
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       - name: Unit tests
         # id: unit_tests
-        # Rever to "yarn test:unit" when finished debugging core dumps
-        # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which yarn) test:unit"
-        run: yarn vitest run --project unit --project unit-minimal --coverage
+        # Rever to "pnpm test:unit" when finished debugging core dumps
+        # run: sudo sh -c "ulimit -c unlimited && /usr/bin/node-with-debug $(which pnpm) test:unit"
+        run: pnpm vitest run --project unit --project unit-minimal --coverage
 
       # # Remove when finished debugging core dumps
       # - uses: './.github/actions/core-dump'
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
@@ -126,15 +123,15 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     needs: build
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: "./.github/actions/setup-and-build"
         with:
@@ -147,7 +144,7 @@ jobs:
         run: scripts/run_e2e_env.sh start
 
       - name: E2E tests
-        run: yarn test:e2e
+        run: pnpm test:e2e
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
 
@@ -156,70 +153,70 @@ jobs:
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
 
   browser-tests:
     name: Browser Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     needs: build
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
       - name: Install
-        run: yarn playwright install
+        run: pnpm playwright install
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'
           Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-          yarn test:browsers
+          pnpm test:browsers
 
   spec-tests:
     name: Spec tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
-        node: [22]
+        node: [24]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: packages/beacon-node/spec-tests
-          key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
+          key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
       - name: Download spec tests
-        run: yarn download-spec-tests
+        run: pnpm download-spec-tests
       # Run them in different steps to quickly identifying which command failed
-      # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
+      # Otherwise just doing `pnpm test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
       - name: Spec tests general
-        run: yarn test:spec:general
+        run: pnpm test:spec:general
         working-directory: packages/beacon-node
       - name: Spec tests bls
-        run: yarn test:spec:bls
+        run: pnpm test:spec:bls
         working-directory: packages/beacon-node
       - name: Spec tests minimal
-        run: yarn test:spec:minimal
+        run: pnpm test:spec:minimal
         working-directory: packages/beacon-node
       - name: Spec tests mainnet
-        run: NODE_OPTIONS='--max-old-space-size=4096' yarn test:spec:mainnet
+        run: NODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:mainnet
         working-directory: packages/beacon-node
       - name: Spec tests validator
-        run: yarn test:spec
+        run: pnpm test:spec
         working-directory: packages/validator

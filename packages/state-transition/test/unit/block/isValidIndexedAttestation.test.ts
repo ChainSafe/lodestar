@@ -4,7 +4,7 @@ import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {IndexedAttestation, ssz} from "@lodestar/types";
 import {isValidIndexedAttestation} from "../../../src/block/isValidIndexedAttestation.js";
 import {EMPTY_SIGNATURE} from "../../../src/index.js";
-import {generateCachedState} from "../../utils/state.js";
+import {generateCachedState} from "../../../src/testUtils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("validate indexed attestation", () => {
@@ -29,9 +29,19 @@ describe("validate indexed attestation", () => {
       name: "should return invalid indexed attestation - indexes not sorted",
     },
     {
+      indices: [0, 0],
+      expectedValue: false,
+      name: "should return invalid indexed attestation - duplicate indexes",
+    },
+    {
       indices: [0, 1, 2, 3],
       expectedValue: true,
       name: "should return valid indexed attestation",
+    },
+    {
+      indices: [0],
+      expectedValue: true,
+      name: "should return valid indexed attestation - single index 0",
     },
   ];
 
@@ -45,6 +55,15 @@ describe("validate indexed attestation", () => {
       data: attestationData,
       signature: EMPTY_SIGNATURE,
     };
-    expect(isValidIndexedAttestation(state, indexedAttestation, false)).toBe(expectedValue);
+    expect(
+      isValidIndexedAttestation(
+        state.config,
+        state.epochCtx.pubkeyCache,
+        state.slot,
+        state.validators.length,
+        indexedAttestation,
+        false
+      )
+    ).toBe(expectedValue);
   });
 });

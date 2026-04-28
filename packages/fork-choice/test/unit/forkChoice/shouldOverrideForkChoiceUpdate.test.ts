@@ -13,6 +13,7 @@ import {
   InclusionListCommitteeRootStore,
   InclusionListEquivocatorStore,
   InclusionListStore,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -52,6 +53,9 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     timeliness: false,
     isEip7805Enabled: false,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
   };
 
   const baseHeadBlock: ProtoBlockWithWeight = {
@@ -78,6 +82,9 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
     weight: 29,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
   };
 
   const baseParentHeadBlock: ProtoBlockWithWeight = {
@@ -103,17 +110,28 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     isEip7805Enabled: false,
     weight: 212, // 240 - 29 + 1
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+    parentBlockHash: null,
+    payloadStatus: PayloadStatus.FULL,
   };
 
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisBlock.blockRoot),
+        rootHex: genesisBlock.blockRoot,
+      },
       balances: new Uint16Array(Array(32).fill(150)),
       totalBalance: 32 * 150,
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisBlock.blockRoot), rootHex: genesisBlock.blockRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisBlock.blockRoot),
+        rootHex: genesisBlock.blockRoot,
+      },
       balances: new Uint16Array(Array(32).fill(150)),
     },
     finalizedCheckpoint: {
@@ -205,8 +223,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     expectedNotReorgedReason,
   } of testCases) {
     it(id, async () => {
-      protoArr.onBlock(parentBlock, parentBlock.slot);
-      protoArr.onBlock(headBlock, headBlock.slot);
+      protoArr.onBlock(parentBlock, parentBlock.slot, null);
+      protoArr.onBlock(headBlock, headBlock.slot, null);
 
       const secFromSlot = 0;
       const currentSlot = blockSeenSlot ?? headBlock.slot;
@@ -215,7 +233,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         proposerBoostReorg: true,
       });
 
-      const result = forkChoice.shouldOverrideForkChoiceUpdate(headBlock.blockRoot, secFromSlot, currentSlot);
+      const result = forkChoice.shouldOverrideForkChoiceUpdate(headBlock, secFromSlot, currentSlot);
 
       expect(result.shouldOverrideFcu).toBe(expectReorg);
 

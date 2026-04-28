@@ -1,4 +1,3 @@
-import all from "it-all";
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ContainerType} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
@@ -21,6 +20,7 @@ vi.mock("@lodestar/db/controller/level", async (importOriginal) => {
         valuesStream: vi.fn(),
         batchDelete: vi.fn(),
         batchPut: vi.fn(),
+        batch: vi.fn(),
       };
     }),
   };
@@ -38,7 +38,7 @@ const TestSSZType = new ContainerType({
 
 class TestRepository extends Repository<string, TestType> {
   constructor(db: Db) {
-    super(config, db, Bucket.phase0_depositEvent, TestSSZType, "phase0_depositEvent");
+    super(config, db, Bucket.phase0_exit, TestSSZType, "phase0_exit");
   }
 }
 
@@ -144,7 +144,7 @@ describe("database repository", () => {
     }
 
     controller.valuesStream.mockReturnValue(sample());
-    const result = await all(repository.valuesStream());
+    const result = await Array.fromAsync(repository.valuesStream());
     expect(result.length).toBe(2);
   });
 });

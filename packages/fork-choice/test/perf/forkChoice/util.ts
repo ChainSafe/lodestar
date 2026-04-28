@@ -9,6 +9,7 @@ import {
   InclusionListCommitteeRootStore,
   InclusionListEquivocatorStore,
   InclusionListStore,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -40,6 +41,9 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
   );
@@ -49,16 +53,32 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot,
     justified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisRoot),
+        rootHex: genesisRoot,
+      },
       balances,
       totalBalance: computeTotalBalance(balances),
     },
     unrealizedJustified: {
-      checkpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+      checkpoint: {
+        epoch: genesisEpoch,
+        root: fromHexString(genesisRoot),
+        rootHex: genesisRoot,
+      },
       balances,
     },
-    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
-    unrealizedFinalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(genesisRoot), rootHex: genesisRoot},
+    finalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisRoot),
+      rootHex: genesisRoot,
+    },
+    unrealizedFinalizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisRoot),
+      rootHex: genesisRoot,
+    },
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
     inclusionLists: new InclusionListStore(),
@@ -93,9 +113,12 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       timeliness: false,
       isEip7805Enabled: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     };
 
-    protoArr.onBlock(block, block.slot);
+    protoArr.onBlock(block, block.slot, null);
     parentBlockRoot = blockRoot;
   }
 

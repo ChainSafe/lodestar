@@ -1,7 +1,6 @@
 import {CompactMultiProof, ProofType, createProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {loadState} from "@lodestar/state-transition";
 import {ApiOptions} from "../../options.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
@@ -24,17 +23,10 @@ export function getProofApi(
 
       const res = await getStateResponseWithRegen(chain, stateId);
 
-      const state =
-        res.state instanceof Uint8Array ? loadState(config, chain.getHeadState(), res.state).state : res.state;
-
-      // Commit any changes before computing the state root. In normal cases the state should have no changes here
-      state.commit();
-      const stateNode = state.node;
-
-      const proof = createProof(stateNode, {type: ProofType.compactMulti, descriptor});
+      const state = res.state instanceof Uint8Array ? chain.getHeadState().loadOtherState(res.state) : res.state;
 
       return {
-        data: proof as CompactMultiProof,
+        data: state.createMultiProof(descriptor),
         meta: {version: config.getForkName(state.slot)},
       };
     },

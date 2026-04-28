@@ -3,11 +3,18 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {CachedBeaconStateEip7805, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
 import {Transactions} from "@lodestar/types/bellatrix";
-import {MapDef, toRootHex} from "@lodestar/utils";
-import {byteArrayArrayEquals, byteArrayEquals} from "../../util/bytes.js";
+import {MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {IBeaconChain} from "../index.js";
 import {pruneBySlot} from "./utils.js";
+
+function byteArrayArrayEquals(arrA: Uint8Array[], arrB: Uint8Array[]): boolean {
+  if (arrA.length !== arrB.length) return false;
+  for (let i = 0; i < arrA.length; i++) {
+    if (!byteArrayEquals(arrA[i], arrB[i])) return false;
+  }
+  return true;
+}
 
 /**
  *

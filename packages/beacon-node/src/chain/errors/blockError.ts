@@ -1,4 +1,4 @@
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot, ValidatorIndex} from "@lodestar/types";
 import {LodestarError, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus} from "../../execution/engine/interface.js";
@@ -68,6 +68,14 @@ export enum BlockErrorCode {
   DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
   /** Block contains too many kzg commitments */
   TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
+  /** Bid parent block root does not match block parent root */
+  BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
+  /** The parent block's execution payload has been verified as invalid */
+  PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
+  /** The block's parent execution payload (defined by bid.parent_block_hash) has not been seen */
+  PARENT_PAYLOAD_UNKNOWN = "BLOCK_ERROR_PARENT_PAYLOAD_UNKNOWN",
+  /** An execution payload envelope in the chain segment references a block root that does not match its slot's block */
+  ENVELOPE_BLOCK_ROOT_MISMATCH = "BLOCK_ERROR_ENVELOPE_BLOCK_ROOT_MISMATCH",
 }
 
 type ExecutionErrorStatus = Exclude<
@@ -89,18 +97,19 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; blockSlot: Slot}
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconStateAllForks}
+  | {code: BlockErrorCode.INVALID_SIGNATURE; state: IBeaconStateView}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
       root: Uint8Array;
       expectedRoot: Uint8Array;
-      preState: CachedBeaconStateAllForks;
-      postState: CachedBeaconStateAllForks;
+      preState: IBeaconStateView;
+      postState: IBeaconStateView;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
   | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
+  | {code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
   | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
@@ -111,7 +120,10 @@ export type BlockErrorType =
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
   | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
-  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number};
+  | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
+  | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
+  | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
+  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 

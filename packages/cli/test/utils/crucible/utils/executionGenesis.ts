@@ -1,10 +1,7 @@
 import {SIM_ENV_CHAIN_ID, SIM_ENV_NETWORK_ID} from "../constants.js";
-import {Eth1GenesisBlock, ExecutionGenesisOptions, ExecutionStartMode} from "../interfaces.js";
+import {Eth1GenesisBlock, ExecutionGenesisOptions} from "../interfaces.js";
 
-export const getGethGenesisBlock = (
-  mode: ExecutionStartMode,
-  options: ExecutionGenesisOptions
-): Record<string, unknown> => {
+export const getGethGenesisBlock = (options: ExecutionGenesisOptions): Record<string, unknown> => {
   const {ttd, cliqueSealingPeriod, shanghaiTime, genesisTime, cancunTime, pragueTime} = options;
 
   const genesis = {
@@ -63,20 +60,12 @@ export const getGethGenesisBlock = (
     baseFeePerGas: "0x0",
   };
 
-  if (mode === ExecutionStartMode.PreMerge) {
-    return genesis;
-  }
-
-  // TODO: Figure out PostMerge genesis later
   return genesis;
 };
 
-export const getNethermindChainSpec = (
-  mode: ExecutionStartMode,
-  options: ExecutionGenesisOptions
-): Record<string, unknown> => {
+export const getNethermindChainSpec = (options: ExecutionGenesisOptions): Record<string, unknown> => {
   const {ttd, shanghaiTime} = options;
-  const genesis = getGethGenesisBlock(mode, options) as Eth1GenesisBlock;
+  const genesis = getGethGenesisBlock(options) as Eth1GenesisBlock;
 
   return {
     name: "simulation-dev",

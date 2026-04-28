@@ -18,17 +18,15 @@ import * as chiado from "./chiado.js";
 import * as dev from "./dev.js";
 import * as ephemery from "./ephemery.js";
 import * as gnosis from "./gnosis.js";
-import * as holesky from "./holesky.js";
 import * as hoodi from "./hoodi.js";
 import * as mainnet from "./mainnet.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "holesky" | "hoodi" | "chiado" | "ephemery";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "hoodi" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
   "sepolia",
-  "holesky",
   "hoodi",
   "chiado",
   "ephemery",
@@ -51,7 +49,6 @@ const GET_STATE_LOG_INTERVAL = 30 * 1000;
 
 export function getNetworkData(network: NetworkName): {
   chainConfig: ChainConfig;
-  depositContractDeployBlock: number;
   genesisFileUrl: string | null;
   genesisStateRoot: string | null;
   bootnodesFileUrl: string | null;
@@ -66,8 +63,6 @@ export function getNetworkData(network: NetworkName): {
       return gnosis;
     case "sepolia":
       return sepolia;
-    case "holesky":
-      return holesky;
     case "hoodi":
       return hoodi;
     case "chiado":

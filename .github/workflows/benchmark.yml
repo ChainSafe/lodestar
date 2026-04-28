@@ -21,7 +21,7 @@ on:
 
 jobs:
   run:
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     # Skip for dependabot PRs, secrets are not made available and will fail
     # Don't run on forks. Forks don't have access to the S3 credentials and the workflow will fail
     if: |
@@ -30,40 +30,21 @@ jobs:
 
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: "./.github/actions/setup-and-build"
         with:
-          node-version: 22
-          check-latest: true
-          cache: yarn
-      - name: Node.js version
-        id: node
-        run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
-      - name: Restore dependencies
-        uses: actions/cache@v4
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
-      - name: Install & build
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
-      - name: Build
-        run: yarn build
-        if: steps.cache-deps.outputs.cache-hit == 'true'
+          node: 24
       # </common-build>
 
       # Restore performance downloaded states
       - name: Restore performance state cache
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: packages/state-transition/test-cache
           key: perf-states-${{ hashFiles('packages/state-transition/test/perf/params.ts') }}
 
       - name: Run benchmarks
-        run: yarn benchmark
+        run: pnpm benchmark
         env:
           # To download content for tests
           INFURA_ETH2_CREDENTIALS: ${{ secrets.INFURA_ETH2_CREDENTIALS }}

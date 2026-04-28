@@ -2,14 +2,13 @@ import {PublicKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
-import {CachedBeaconStateAllForks} from "../types.js";
-import {ISignatureSet, SignatureSetType, computeSigningRoot, verifySignatureSet} from "../util/index.js";
+import {SignatureSetType, SingleSignatureSet, computeSigningRoot, verifySignatureSet} from "../util/index.js";
 
 export function verifyBlsToExecutionChangeSignature(
-  state: CachedBeaconStateAllForks,
+  config: BeaconConfig,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
 ): boolean {
-  return verifySignatureSet(getBlsToExecutionChangeSignatureSet(state.config, signedBLSToExecutionChange));
+  return verifySignatureSet(getBlsToExecutionChangeSignatureSet(config, signedBLSToExecutionChange));
 }
 
 /**
@@ -18,7 +17,7 @@ export function verifyBlsToExecutionChangeSignature(
 export function getBlsToExecutionChangeSignatureSet(
   config: BeaconConfig,
   signedBLSToExecutionChange: capella.SignedBLSToExecutionChange
-): ISignatureSet {
+): SingleSignatureSet {
   // signatureFork for signing domain is fixed
   const signatureFork = ForkName.phase0;
   const domain = config.getDomainAtFork(signatureFork, DOMAIN_BLS_TO_EXECUTION_CHANGE);
@@ -36,7 +35,7 @@ export function getBlsToExecutionChangeSignatureSet(
 export function getBlsToExecutionChangeSignatureSets(
   config: BeaconConfig,
   signedBlock: capella.SignedBeaconBlock
-): ISignatureSet[] {
+): SingleSignatureSet[] {
   return signedBlock.message.body.blsToExecutionChanges.map((blsToExecutionChange) =>
     getBlsToExecutionChangeSignatureSet(config, blsToExecutionChange)
   );

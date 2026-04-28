@@ -2,6 +2,7 @@ import {
   assertValidAttesterSlashing,
   getAttesterSlashableIndices,
   getAttesterSlashingSignatureSets,
+  isSlashableValidator,
 } from "@lodestar/state-transition";
 import {AttesterSlashing} from "@lodestar/types";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
@@ -43,7 +44,14 @@ export async function validateAttesterSlashing(
   // [REJECT] All of the conditions within process_attester_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
-    assertValidAttesterSlashing(state, attesterSlashing, false);
+    assertValidAttesterSlashing(
+      chain.config,
+      chain.pubkeyCache,
+      state.slot,
+      state.validatorCount,
+      attesterSlashing,
+      false
+    );
   } catch (e) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
@@ -51,7 +59,15 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(state, attesterSlashing);
+  const currentEpoch = state.epoch;
+  if (!intersectingIndices.some((index) => isSlashableValidator(state.getValidator(index), currentEpoch))) {
+    throw new AttesterSlashingError(GossipAction.REJECT, {
+      code: AttesterSlashingErrorCode.INVALID,
+      error: Error("AttesterSlashing has no slashable validators"),
+    });
+  }
+
+  const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,

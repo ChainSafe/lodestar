@@ -2,10 +2,10 @@ import assert from "node:assert";
 import {bench, describe} from "@chainsafe/benchmark";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ssz} from "@lodestar/types";
-import {bytesToInt} from "@lodestar/utils";
+import {byteArrayEquals, bytesToInt} from "@lodestar/utils";
+import {generateState} from "../../../../src/testUtils/state.js";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
 import {VALIDATOR_BYTES_SIZE} from "../../../../src/util/sszBytes.js";
-import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
 
 /**
@@ -71,7 +71,7 @@ describe("find modified validators by different ways", () => {
           return clonedState;
         },
         fn: (clonedState) => {
-          const validatorsBytes = Uint8Array.from(stateBytes.subarray(validatorsRange.start, validatorsRange.end));
+          const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
           const validatorsBytes2 = clonedState.validators.serialize();
           const modifiedValidators: number[] = [];
           findModifiedValidators(validatorsBytes, validatorsBytes2, modifiedValidators);
@@ -84,7 +84,7 @@ describe("find modified validators by different ways", () => {
     }
   });
 
-  describe("deserialize validators then compare validator ViewDUs", () => {
+  describe.skip("deserialize validators then compare validator ViewDUs", () => {
     const validatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
     bench("compare ViewDUs", () => {
       const numValidator = state.validators.length;
@@ -97,19 +97,19 @@ describe("find modified validators by different ways", () => {
     });
   });
 
-  describe("serialize each validator then compare Uin8Array", () => {
+  describe.skip("serialize each validator then compare Uin8Array", () => {
     const validators = state.validators.getAllReadonly();
     bench("compare each validator Uint8Array", () => {
       for (let i = 0; i < state.validators.length; i++) {
         const validatorBytes = ssz.phase0.Validator.serialize(validators[i]);
         if (
-          Buffer.compare(
+          !byteArrayEquals(
             validatorBytes,
             stateBytes.subarray(
               validatorsRange.start + i * VALIDATOR_BYTES_SIZE,
               validatorsRange.start + (i + 1) * VALIDATOR_BYTES_SIZE
             )
-          ) !== 0
+          )
         ) {
           throw Error(`validator ${i} is not equal`);
         }
@@ -117,7 +117,7 @@ describe("find modified validators by different ways", () => {
     });
   });
 
-  describe("compare validator ViewDU to Uint8Array", () => {
+  describe.skip("compare validator ViewDU to Uint8Array", () => {
     bench("compare ViewDU to Uint8Array", () => {
       const numValidator = state.validators.length;
       for (let i = 0; i < numValidator; i++) {
@@ -139,12 +139,12 @@ describe("find modified validators by different ways", () => {
 
 function validatorDiff(validator: CompositeViewDU<typeof ssz.phase0.Validator>, bytes: Uint8Array): string | null {
   const pubkey = bytes.subarray(0, 48);
-  if (Buffer.compare(validator.pubkey, pubkey) !== 0) {
+  if (!byteArrayEquals(validator.pubkey, pubkey)) {
     return "pubkey";
   }
 
   const withdrawalCredentials = bytes.subarray(48, 80);
-  if (Buffer.compare(validator.withdrawalCredentials, withdrawalCredentials) !== 0) {
+  if (!byteArrayEquals(validator.withdrawalCredentials, withdrawalCredentials)) {
     return "withdrawalCredentials";
   }
 

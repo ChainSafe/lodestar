@@ -2,6 +2,7 @@
   "window.title": "${activeEditorShort}${separator}${rootName}${separator}${profileName}${separator}[${activeRepositoryBranchName}]",
   // For `sysoev.vscode-open-in-github` extension
   "openInGitHub.defaultBranch": "unstable",
+  "js/ts.experimental.useTsgo": true,
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "explicit",

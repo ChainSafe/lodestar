@@ -1,17 +1,22 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {PublicKey, SecretKey, Signature} from "@chainsafe/blst";
-import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {ISignatureSet, SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
-import {testLogger} from "../../../utils/logger.js";
 
 describe("BlsVerifier ", () => {
   // take time for creating thread pool
   const numKeys = 3;
   const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));
+  // Create a mock pubkeyCache that maps indices to public keys
+  const pubkeyCache = createPubkeyCache();
+  for (const [i, sk] of secretKeys.entries()) {
+    pubkeyCache.set(i, sk.toPublicKey().toBytes());
+  }
   const verifiers = [
-    new BlsSingleThreadVerifier({metrics: null}),
-    new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger()}),
+    new BlsSingleThreadVerifier({metrics: null, pubkeyCache}),
+    new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger(), pubkeyCache}),
   ];
 
   for (const verifier of verifiers) {

@@ -1,16 +1,28 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {ForkName, ForkPostFulu, ForkPreGloas, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkName,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreGloas,
+  SLOTS_PER_EPOCH,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSSignature, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
-import {LodestarError, Logger, pruneSetToMax} from "@lodestar/utils";
+import {LodestarError, Logger, byteArrayEquals, pruneSetToMax} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {MAX_LOOK_AHEAD_EPOCHS} from "../../sync/constants.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {
   BlockInput,
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputNoData,
   BlockInputPreData,
   BlockWithSource,
   DAType,
@@ -26,7 +38,17 @@ import {
 } from "../blocks/blockInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 
-const MAX_BLOCK_INPUT_CACHE_SIZE = 5;
+// Target size for the block input cache, enforced by pruneToMaxSize() which runs after prune()
+// and onFinalized() — NOT on insertion. The cache can temporarily exceed this during range sync
+// (e.g. 32 blocks inserted per batch) but is trimmed back after blocks are processed.
+//
+// Must be large enough to hold blocks from all concurrently downloaded range sync batches.
+// Range sync downloads up to MAX_LOOK_AHEAD_EPOCHS batches ahead of the processing head,
+// so up to (MAX_LOOK_AHEAD_EPOCHS + 1) batches (current + look-ahead) of SLOTS_PER_EPOCH
+// blocks can be in the cache simultaneously. If this value is too small, pruneToMaxSize()
+// will evict blocks from the batch being processed before they are persisted to the database,
+// causing errors when async handlers like onForkChoiceFinalized run.
+const MAX_BLOCK_INPUT_CACHE_SIZE = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
 
 export type SeenBlockInputCacheModules = {
   config: ChainForkConfig;
@@ -34,6 +56,7 @@ export type SeenBlockInputCacheModules = {
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   custodyConfig: CustodyConfig;
+  serializedCache: SerializedCache;
   metrics: Metrics | null;
   logger?: Logger;
 };
@@ -64,14 +87,14 @@ export type GetByBlobOptions = {
  * - onFinalized event handler will help to prune any non-canonical forks once the chain finalizes. Any block-slots that
  *   are before the finalized checkpoint will be pruned.
  * - Range-sync periods.  The range process uses this cache to store and sync blocks with DA data as the chain is pulled
- *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are pulled concurrently.
- *   It is important to set the MAX_BLOCK_INPUT_CACHE_SIZE high enough to support range sync activities.  Currently the
- *   value is set for 5 batches of 32 slots.  As process block is called (similar to following head) the BlockInput and
- *   its ancestors will be pruned.
+ *   from peers.  We pull batches, by epoch, so 32 slots are pulled at a time and several batches are downloaded
+ *   concurrently (up to MAX_LOOK_AHEAD_EPOCHS ahead).  All downloaded blocks are added to this shared cache, so it
+ *   must be large enough to hold blocks from all concurrent batches.  If pruneToMaxSize() evicts blocks from the batch
+ *   currently being processed, those blocks may not yet be persisted to the database, causing getBlockByRoot() to fail
+ *   when async event handlers (e.g. onForkChoiceFinalized) try to look them up.
  * - Non-Finality times.  This is a bit more tricky.  There can be long periods of non-finality and storing everything
- *   will cause OOM.  The pruneToMax will help ensure a hard limit on the number of stored blocks (with DA) that are held
- *   in memory at any one time.  The value for MAX_BLOCK_INPUT_CACHE_SIZE is set to accommodate range-sync but in
- *   practice this value may need to be massaged in the future if we find issues when debugging non-finality
+ *   will cause OOM.  The pruneToMaxSize will help ensure the number of stored blocks (with DA) is trimmed back to
+ *   MAX_BLOCK_INPUT_CACHE_SIZE after each prune() or onFinalized() call
  */
 
 export class SeenBlockInput {
@@ -80,6 +103,7 @@ export class SeenBlockInput {
   private readonly clock: IClock;
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
+  private readonly serializedCache: SerializedCache;
   private readonly metrics: Metrics | null;
   private readonly logger?: Logger;
   private blockInputs = new Map<RootHex, IBlockInput>();
@@ -88,19 +112,35 @@ export class SeenBlockInput {
   // and the signature to ensure we only skip verification if both match
   private verifiedProposerSignatures = new Map<Slot, Map<RootHex, BLSSignature>>();
 
-  constructor({config, custodyConfig, clock, chainEvents, signal, metrics, logger}: SeenBlockInputCacheModules) {
+  constructor({
+    config,
+    custodyConfig,
+    clock,
+    chainEvents,
+    signal,
+    serializedCache,
+    metrics,
+    logger,
+  }: SeenBlockInputCacheModules) {
     this.config = config;
     this.custodyConfig = custodyConfig;
     this.clock = clock;
     this.chainEvents = chainEvents;
     this.signal = signal;
+    this.serializedCache = serializedCache;
     this.metrics = metrics;
     this.logger = logger;
 
     if (metrics) {
-      metrics.seenCache.blockInput.blockInputCount.addCollect(() =>
-        metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size)
-      );
+      metrics.seenCache.blockInput.blockInputCount.addCollect(() => {
+        metrics.seenCache.blockInput.blockInputCount.set(this.blockInputs.size);
+        metrics.seenCache.blockInput.serializedObjectRefs.set(
+          Array.from(this.blockInputs.values()).reduce(
+            (count, blockInput) => count + blockInput.getSerializedCacheKeys().length,
+            0
+          )
+        );
+      });
     }
 
     this.chainEvents.on(ChainEvent.forkChoiceFinalized, this.onFinalized);
@@ -109,8 +149,8 @@ export class SeenBlockInput {
     });
   }
 
-  has(rootHex: RootHex): boolean {
-    return this.blockInputs.has(rootHex);
+  hasBlock(rootHex: RootHex): boolean {
+    return this.blockInputs.get(rootHex)?.hasBlock() ?? false;
   }
 
   get(rootHex: RootHex): IBlockInput | undefined {
@@ -121,7 +161,10 @@ export class SeenBlockInput {
    * Removes the single BlockInput from the cache
    */
   remove(rootHex: RootHex): void {
-    this.blockInputs.delete(rootHex);
+    const blockInput = this.blockInputs.get(rootHex);
+    if (blockInput) {
+      this.evictBlockInput(blockInput);
+    }
   }
 
   /**
@@ -133,24 +176,24 @@ export class SeenBlockInput {
     let deletedCount = 0;
     while (blockInput) {
       deletedCount++;
-      this.blockInputs.delete(blockInput.blockRootHex);
+      this.evictBlockInput(blockInput);
       blockInput = this.blockInputs.get(parentRootHex ?? "");
       parentRootHex = blockInput?.parentRootHex;
     }
-    this.logger?.debug(`BlockInputCache.prune deleted ${deletedCount} cached BlockInputs`);
+    this.logger?.debug("BlockInputCache.prune deleted cached BlockInputs", {deletedCount});
     this.pruneToMaxSize();
   }
 
   onFinalized = (checkpoint: CheckpointWithHex) => {
     let deletedCount = 0;
     const cutoffSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    for (const [rootHex, blockInput] of this.blockInputs) {
+    for (const [, blockInput] of this.blockInputs) {
       if (blockInput.slot < cutoffSlot) {
         deletedCount++;
-        this.blockInputs.delete(rootHex);
+        this.evictBlockInput(blockInput);
       }
     }
-    this.logger?.debug(`BlockInputCache.onFinalized deleted ${deletedCount} cached BlockInputs`);
+    this.logger?.debug("BlockInputCache.onFinalized deleted cached BlockInputs", {deletedCount});
     this.pruneToMaxSize();
   };
 
@@ -160,12 +203,19 @@ export class SeenBlockInput {
     if (!blockInput) {
       const {forkName, daOutOfRange} = this.buildCommonProps(block.message.slot);
 
-      // TODO GLOAS: Implement
       if (isForkPostGloas(forkName)) {
-        throw Error("Not implemented");
-      }
-      // Pre-deneb
-      if (!isForkPostDeneb(forkName)) {
+        // Post-gloas
+        blockInput = BlockInputNoData.createFromBlock({
+          block: block as SignedBeaconBlock<ForkPostGloas>,
+          blockRootHex,
+          daOutOfRange,
+          forkName,
+          source,
+          seenTimestampSec,
+          peerIdStr,
+        });
+      } else if (!isForkPostDeneb(forkName)) {
+        // Pre-deneb
         blockInput = BlockInputPreData.createFromBlock({
           block,
           blockRootHex,
@@ -175,8 +225,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Fulu Only
       } else if (isForkPostFulu(forkName)) {
+        // Fulu Only
         blockInput = BlockInputColumns.createFromBlock({
           block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
           blockRootHex,
@@ -188,8 +238,8 @@ export class SeenBlockInput {
           seenTimestampSec,
           peerIdStr,
         });
-        // Deneb and Electra
       } else {
+        // Deneb and Electra
         blockInput = BlockInputBlobs.createFromBlock({
           block: block as SignedBeaconBlock<ForkBlobsDA>,
           blockRootHex,
@@ -200,6 +250,7 @@ export class SeenBlockInput {
           peerIdStr,
         });
       }
+      this.metrics?.seenCache.blockInput.createdByBlock.inc();
       this.blockInputs.set(blockInput.blockRootHex, blockInput);
     }
 
@@ -299,7 +350,7 @@ export class SeenBlockInput {
         custodyColumns: this.custodyConfig.custodyColumns,
         sampledColumns: this.custodyConfig.sampledColumns,
       });
-      this.metrics?.seenCache.blockInput.createdByBlob.inc();
+      this.metrics?.seenCache.blockInput.createdByColumn.inc();
       this.blockInputs.set(blockRootHex, blockInput);
     }
 
@@ -344,7 +395,7 @@ export class SeenBlockInput {
       return false;
     }
     // Only consider verified if the signature matches
-    return Buffer.compare(cachedSignature, signature) === 0;
+    return byteArrayEquals(cachedSignature, signature);
   }
 
   /**
@@ -379,14 +430,20 @@ export class SeenBlockInput {
     let itemsToDelete = this.blockInputs.size - MAX_BLOCK_INPUT_CACHE_SIZE;
 
     if (itemsToDelete > 0) {
-      const sorted = [...this.blockInputs.entries()].sort((a, b) => b[1].slot - a[1].slot);
-      for (const [rootHex] of sorted) {
-        this.blockInputs.delete(rootHex);
+      const sorted = [...this.blockInputs.entries()].sort((a, b) => a[1].slot - b[1].slot);
+      for (const [, blockInput] of sorted) {
+        this.evictBlockInput(blockInput);
         itemsToDelete--;
         if (itemsToDelete <= 0) return;
       }
     }
     pruneSetToMax(this.verifiedProposerSignatures, MAX_BLOCK_INPUT_CACHE_SIZE);
+  }
+
+  private evictBlockInput(blockInput: IBlockInput): void {
+    // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable
+    this.serializedCache.delete(blockInput.getSerializedCacheKeys());
+    this.blockInputs.delete(blockInput.blockRootHex);
   }
 }
 

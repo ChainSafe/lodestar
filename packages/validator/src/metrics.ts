@@ -19,7 +19,7 @@ export type LodestarGitData = {
   version: string;
   /** "4f816b16dfde718e2d74f95f2c8292596138c248" */
   commit: string;
-  /** "holesky" */
+  /** "hoodi" */
   network: string;
 };
 
@@ -102,6 +102,17 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       name: "vc_sync_committee_step_call_publish_aggregate_seconds",
       help: "Time between CONTRIBUTION_DUE_BPS of slot and call publish aggregate",
       buckets: [0.5, 1, 2, 3, 6, 12],
+    }),
+
+    ptcStepCallProducePayloadAttestation: register.histogram({
+      name: "vc_ptc_step_call_produce_payload_attestation_seconds",
+      help: "Time between PAYLOAD_ATTESTATION_DUE_BPS of slot and call produce payload attestation",
+      buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
+    }),
+    ptcStepCallPublishPayloadAttestation: register.histogram({
+      name: "vc_ptc_step_call_publish_payload_attestation_seconds",
+      help: "Time between PAYLOAD_ATTESTATION_DUE_BPS of slot and call publish payload attestation",
+      buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
     }),
 
     // Min wait time it 0. CallProduceBlock step is a bit redundant since it must be 0, but let's check
@@ -222,6 +233,41 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     publishedSyncCommitteeContribution: register.gauge({
       name: "vc_published_sync_committee_contribution_total",
       help: "Total published SyncCommitteeContribution",
+    }),
+
+    // PtcService
+
+    publishedPayloadAttestations: register.gauge({
+      name: "vc_published_payload_attestations_total",
+      help: "Total published PayloadAttestationMessages",
+    }),
+
+    ptcError: register.gauge<{error: "sign" | "publish"}>({
+      name: "vc_ptc_service_errors",
+      help: "Total errors in PtcService",
+      labelNames: ["error"],
+    }),
+
+    // PtcDutiesService
+
+    ptcDutiesCount: register.gauge({
+      name: "vc_ptc_duties_count",
+      help: "Current count of duties in PtcDutiesService",
+    }),
+
+    ptcDutiesEpochCount: register.gauge({
+      name: "vc_ptc_duties_epoch_count",
+      help: "Current count of epoch duties in PtcDutiesService",
+    }),
+
+    ptcDutiesReorg: register.gauge({
+      name: "vc_ptc_duties_reorg_total",
+      help: "Total count of instances the PTC duties dependent root changed",
+    }),
+
+    ptcDutiesNextSlot: register.gauge({
+      name: "vc_ptc_duty_slot",
+      help: "Slot of next scheduled PTC duty",
     }),
 
     // SyncCommitteeDutiesService

@@ -1,13 +1,14 @@
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
+import {parseRange} from "../../util/format.js";
 import {BeaconArgs, beaconOptions} from "../beacon/options.js";
 import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;
   genesisValidators: number;
-  startValidators?: string;
+  startValidators?: number[];
   genesisTime?: number;
   reset?: boolean;
   dumpTestnetFiles?: string;
@@ -29,8 +30,13 @@ const devOwnOptions: CliCommandOptions<IDevOwnArgs> = {
   },
 
   startValidators: {
-    description: "Start interop validators in inclusive range with notation '0..7'",
-    type: "string",
+    description: "Start interop validators in inclusive range(s) with notation '0..7'",
+    type: "array",
+    coerce: (indexes: string[]): number[] =>
+      // Parse ["11..13,15..17"] to ["11..13", "15..17"]
+      indexes
+        .flatMap((item) => item.split(","))
+        .flatMap(parseRange),
     group: "dev",
   },
 
@@ -80,11 +86,6 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
     defaultDescription: undefined,
     default: true,
   },
-  eth1: {
-    ...beaconNodeOptions.eth1,
-    defaultDescription: undefined,
-    default: false,
-  },
   rest: {
     ...beaconNodeOptions.rest,
     defaultDescription: undefined,
@@ -96,6 +97,10 @@ const externalOptionsOverrides: Partial<Record<"network" | keyof typeof beaconNo
   },
   "rest.swaggerUI": {
     ...beaconNodeOptions["rest.swaggerUI"],
+    default: true,
+  },
+  "execution.engineMock": {
+    ...beaconNodeOptions["execution.engineMock"],
     default: true,
   },
 };

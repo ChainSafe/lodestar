@@ -45,11 +45,6 @@ export enum ExecutionClient {
   Nethermind = "execution-nethermind",
 }
 
-export enum ExecutionStartMode {
-  PreMerge = "pre-merge",
-  PostMerge = "post-merge",
-}
-
 export type BeaconClientsOptions = {
   [BeaconClient.Lodestar]: Partial<BeaconArgs & GlobalArgs>;
   [BeaconClient.Lighthouse]: Record<string, unknown>;
@@ -137,7 +132,6 @@ export interface ExecutionGenesisOptions<E extends ExecutionClient = ExecutionCl
 export interface ExecutionGeneratorOptions<E extends ExecutionClient = ExecutionClient>
   extends ExecutionGenesisOptions<E>,
     GeneratorOptions {
-  mode: ExecutionStartMode;
   mining: boolean;
   paths: ExecutionPaths;
   clientOptions: ExecutionClientsOptions[E];
@@ -178,6 +172,11 @@ export interface BeaconNode<C extends BeaconClient = BeaconClient> {
   readonly restPrivateUrl: string;
   readonly api: C extends BeaconClient.Lodestar ? LodestarAPI : LighthouseAPI;
   readonly job: Job;
+  /**
+   * P2P multiaddr including peer ID, populated after the node starts.
+   * Used for configuring `--directPeers` on other nodes.
+   */
+  multiaddr?: string;
 }
 
 export interface ValidatorNode<C extends ValidatorClient = ValidatorClient> {

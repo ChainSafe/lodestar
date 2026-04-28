@@ -35,8 +35,9 @@ async function validateProposerSlashing(
 
   // [REJECT] All of the conditions within process_proposer_slashing pass validation.
   try {
+    const proposer = state.getValidator(proposerSlashing.signedHeader1.message.proposerIndex);
     // verifySignature = false, verified in batch below
-    assertValidProposerSlashing(state, proposerSlashing, false);
+    assertValidProposerSlashing(chain.config, chain.pubkeyCache, state.slot, proposerSlashing, proposer, false);
   } catch (e) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
@@ -44,7 +45,7 @@ async function validateProposerSlashing(
     });
   }
 
-  const signatureSets = getProposerSlashingSignatureSets(state, proposerSlashing);
+  const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,

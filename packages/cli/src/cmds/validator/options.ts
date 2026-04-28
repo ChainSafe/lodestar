@@ -3,7 +3,7 @@ import {CliCommandOptions} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
 import {coerceCors, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {ensure0xPrefix} from "../../util/index.js";
+import {ensure0xPrefix, parseRange} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -60,19 +60,20 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
+    "http.requestTimeout"?: number;
 
     "clock.skipSlots"?: boolean;
 
-    "externalSigner.url"?: string;
+    "externalSigner.urls"?: string[];
     "externalSigner.pubkeys"?: string[];
     "externalSigner.fetch"?: boolean;
     "externalSigner.fetchInterval"?: number;
 
     distributed?: boolean;
 
-    interopIndexes?: string;
+    interopIndexes?: number[];
     fromMnemonic?: string;
-    mnemonicIndexes?: string;
+    mnemonicIndexes?: number[];
 
     metrics?: boolean;
     "metrics.port"?: number;
@@ -333,6 +334,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     group: "http",
   },
 
+  "http.requestTimeout": {
+    type: "number",
+    description: "Timeout in milliseconds for HTTP requests to the beacon node",
+    group: "http",
+  },
+
   "clock.skipSlots": {
     hidden: true,
     description: "Skip slots when tasks take more than one slot to run",
@@ -341,14 +348,23 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   // External signer
 
-  "externalSigner.url": {
-    description: "URL to connect to an external signing server",
-    type: "string",
+  "externalSigner.urls": {
+    alias: "externalSigner.url",
+    description: "URL(s) to connect to external signing server(s)",
+    type: "array",
+    string: true,
+    // Support backward compatibility: allow string in config files, convert to array
+    coerce: (urls: string | string[]): string[] => {
+      if (typeof urls === "string") {
+        return [urls];
+      }
+      return urls;
+    },
     group: "externalSigner",
   },
 
   "externalSigner.pubkeys": {
-    implies: ["externalSigner.url"],
+    implies: ["externalSigner.urls"],
     description:
       "List of validator public keys used by an external signer. May also provide a single string of comma-separated public keys",
     type: "array",
@@ -362,10 +378,10 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   "externalSigner.fetch": {
-    implies: ["externalSigner.url"],
+    implies: ["externalSigner.urls"],
     conflicts: ["externalSigner.pubkeys"],
     description:
-      "Fetch the list of public keys to validate from an external signer. Cannot be used in combination with `--externalSigner.pubkeys`",
+      "Fetch the list of public keys to validate from external signer(s). Cannot be used in combination with `--externalSigner.pubkeys`",
     type: "boolean",
     group: "externalSigner",
   },
@@ -373,7 +389,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "externalSigner.fetchInterval": {
     implies: ["externalSigner.fetch"],
     description:
-      "Interval in milliseconds between fetching the list of public keys from external signer, once per epoch by default",
+      "Interval in milliseconds between fetching the list of public keys from external signer(s), once per epoch by default",
     type: "number",
     group: "externalSigner",
   },
@@ -453,8 +469,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   interopIndexes: {
     hidden: true,
-    description: "Range (inclusive) of interop key indexes to validate with: 0..16",
-    type: "string",
+    description: "Range(s) (inclusive) of interop key indexes to validate with: 0..16",
+    type: "array",
+    coerce: (indexes: string[]): number[] =>
+      // Parse ["11..13,15..17"] to ["11..13", "15..17"]
+      indexes
+        .flatMap((item) => item.split(","))
+        .flatMap(parseRange),
   },
 
   fromMnemonic: {
@@ -465,7 +486,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
 
   mnemonicIndexes: {
     hidden: true,
-    description: "UNSAFE. Range (inclusive) of mnemonic key indexes to validate with: 0..16",
-    type: "string",
+    description: "UNSAFE. Range(s) (inclusive) of mnemonic key indexes to validate with: 0..16",
+    type: "array",
+    coerce: (indexes: string[]): number[] =>
+      // Parse ["11..13,15..17"] to ["11..13", "15..17"]
+      indexes
+        .flatMap((item) => item.split(","))
+        .flatMap(parseRange),
   },
 };

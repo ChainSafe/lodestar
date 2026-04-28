@@ -1,9 +1,25 @@
 // There are various equivalent ways to declare your Docusaurus config.
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
+import {readFileSync} from "node:fs";
 import type {Config} from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 import {themes as prismThemes} from "prism-react-renderer";
+
+// Read the latest version from versions.json (created by `docusaurus docs:version`)
+// Gracefully handles missing file, empty file, or invalid JSON
+const versions: string[] = (() => {
+  try {
+    return JSON.parse(readFileSync("./versions.json", "utf-8"));
+  } catch {
+    return [];
+  }
+})();
+// Default to the latest stable version (skip RC pre-releases)
+const lastVersion = versions.find((v) => !v.includes("-"));
+
+const siteUrl = "https://chainsafe.github.io";
+const basePath = "/lodestar";
 
 const config: Config = {
   title: "Lodestar",
@@ -65,6 +81,18 @@ const config: Config = {
           sidebarPath: "./sidebars.ts",
           editUrl: "https://github.com/ChainSafe/lodestar/tree/unstable/docs/",
           routeBasePath: "/",
+          includeCurrentVersion: true,
+          ...(lastVersion
+            ? {
+                lastVersion,
+                versions: {
+                  current: {
+                    label: "Next 🚧",
+                    path: "next",
+                  },
+                },
+              }
+            : {}),
         },
         theme: {
           customCss: "./src/css/custom.css",
@@ -86,6 +114,11 @@ const config: Config = {
         src: "images/logo.png",
       },
       items: [
+        {
+          type: "docsVersionDropdown",
+          position: "right",
+          dropdownActiveClassDisabled: true,
+        },
         {
           href: "https://github.com/ChainSafe/lodestar",
           label: "GitHub",
@@ -129,6 +162,47 @@ const config: Config = {
     },
   } satisfies Preset.ThemeConfig,
   scripts: [{src: "https://plausible.io/js/script.js", defer: true, "data-domain": "chainsafe.github.io/lodestar"}],
+
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+        href: `${basePath}/images/apple-touch-icon.png`,
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "192x192",
+        href: `${basePath}/images/favicon-192x192.png`,
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        property: "og:image",
+        content: `${siteUrl}${basePath}/images/favicon-512x512.png`,
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:card",
+        content: "summary_large_image",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "twitter:image",
+        content: `${siteUrl}${basePath}/images/favicon-512x512.png`,
+      },
+    },
+  ],
 };
 
 export default config;

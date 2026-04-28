@@ -6,6 +6,7 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostElectra,
+  isForkPostFulu,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -70,6 +71,10 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.light_client_optimistic_update:
     case GossipType.bls_to_execution_change:
     case GossipType.inclusion_list:
+    case GossipType.execution_payload:
+    case GossipType.payload_attestation_message:
+    case GossipType.execution_payload_bid:
+    case GossipType.proposer_preferences:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -90,7 +95,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.blob_sidecar:
       return ssz.deneb.BlobSidecar;
     case GossipType.data_column_sidecar:
-      return ssz.fulu.DataColumnSidecar;
+      return isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecar : ssz.fulu.DataColumnSidecar;
     case GossipType.beacon_aggregate_and_proof:
       return sszTypesFor(fork).SignedAggregateAndProof;
     case GossipType.beacon_attestation:
@@ -117,6 +122,14 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.capella.SignedBLSToExecutionChange;
     case GossipType.inclusion_list:
       return ssz.eip7805.SignedInclusionList;
+    case GossipType.execution_payload:
+      return ssz.gloas.SignedExecutionPayloadEnvelope;
+    case GossipType.payload_attestation_message:
+      return ssz.gloas.PayloadAttestationMessage;
+    case GossipType.execution_payload_bid:
+      return ssz.gloas.SignedExecutionPayloadBid;
+    case GossipType.proposer_preferences:
+      return ssz.gloas.SignedProposerPreferences;
   }
 }
 
@@ -194,6 +207,10 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.light_client_optimistic_update:
       case GossipType.bls_to_execution_change:
       case GossipType.inclusion_list:
+      case GossipType.execution_payload:
+      case GossipType.payload_attestation_message:
+      case GossipType.execution_payload_bid:
+      case GossipType.proposer_preferences:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -246,6 +263,13 @@ export function getCoreTopicsAtFork(
 
   if (ForkSeq[fork] >= ForkSeq.eip7805) {
     topics.push({type: GossipType.inclusion_list});
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    topics.push({type: GossipType.execution_payload});
+    topics.push({type: GossipType.payload_attestation_message});
+    topics.push({type: GossipType.execution_payload_bid});
+    topics.push({type: GossipType.proposer_preferences});
   }
 
   // After fulu also track data_column_sidecar_{index}
@@ -338,4 +362,8 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.light_client_optimistic_update]: false,
   [GossipType.bls_to_execution_change]: true,
   [GossipType.inclusion_list]: true,
+  [GossipType.execution_payload]: true,
+  [GossipType.payload_attestation_message]: true,
+  [GossipType.execution_payload_bid]: true,
+  [GossipType.proposer_preferences]: true,
 };

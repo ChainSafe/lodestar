@@ -3,16 +3,47 @@
 # Run this on local host only.
 # Generated image is larger than production image. Do not use this for production.
 
-FROM --platform=${BUILDPLATFORM:-amd64} node:22 AS build_dev
-ARG COMMIT
+FROM --platform=${BUILDPLATFORM:-amd64} node:24 AS build_dev
 
 WORKDIR /usr/app
 
+# Enable corepack for pnpm support
+RUN corepack enable
+
+# Copy dependency manifests first for optimal layer caching.
+# Only changes to package.json or lockfile will invalidate the install layer,
+# source code changes will only invalidate the build layer.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/api/package.json packages/api/
+COPY packages/beacon-node/package.json packages/beacon-node/
+COPY packages/cli/package.json packages/cli/
+COPY packages/config/package.json packages/config/
+COPY packages/db/package.json packages/db/
+COPY packages/era/package.json packages/era/
+COPY packages/flare/package.json packages/flare/
+COPY packages/fork-choice/package.json packages/fork-choice/
+COPY packages/light-client/package.json packages/light-client/
+COPY packages/logger/package.json packages/logger/
+COPY packages/params/package.json packages/params/
+COPY packages/prover/package.json packages/prover/
+COPY packages/reqresp/package.json packages/reqresp/
+COPY packages/spec-test-util/package.json packages/spec-test-util/
+COPY packages/state-transition/package.json packages/state-transition/
+COPY packages/test-utils/package.json packages/test-utils/
+COPY packages/types/package.json packages/types/
+COPY packages/utils/package.json packages/utils/
+COPY packages/validator/package.json packages/validator/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy source code and build
 COPY . .
 
-RUN yarn install --non-interactive && yarn build
+RUN pnpm build
 
-RUN cd packages/cli && GIT_COMMIT=${COMMIT} yarn write-git-data
+# Declare COMMIT arg after install+build layers to avoid cache invalidation
+ARG COMMIT
+RUN cd packages/cli && GIT_COMMIT=${COMMIT} pnpm write-git-data
 
 ENV NODE_OPTIONS=--max-old-space-size=8192
 

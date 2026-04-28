@@ -11,53 +11,12 @@ import {
   TARGET_COMMITTEE_SIZE,
 } from "@lodestar/params";
 import {Epoch, Root, RootHex, ValidatorIndex, ssz} from "@lodestar/types";
-import {GaugeExtra, Logger, NoLabels, intDiv, toRootHex} from "@lodestar/utils";
+import {intDiv, toRootHex} from "@lodestar/utils";
 import {BeaconStateAllForks} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeAnchorCheckpoint} from "./computeAnchorCheckpoint.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
 import {getSeed} from "./seed.js";
-
-export interface ShufflingBuildProps {
-  state: BeaconStateAllForks;
-  activeIndices: Uint32Array;
-}
-
-export interface PublicShufflingCacheMetrics {
-  shufflingCache: {
-    nextShufflingNotOnEpochCache: GaugeExtra<NoLabels>;
-  };
-}
-export interface IShufflingCache {
-  metrics: PublicShufflingCacheMetrics | null;
-  logger: Logger | null;
-  /**
-   * Gets a cached shuffling via the epoch and decision root. If the state and
-   * activeIndices are passed and a shuffling is not available it will be built
-   * synchronously. If the state is not passed and the shuffling is not available
-   * nothing will be returned.
-   *
-   * NOTE: If a shuffling is already queued and not calculated it will build and resolve
-   * the promise but the already queued build will happen at some later time
-   */
-  getSync<T extends ShufflingBuildProps | undefined>(
-    epoch: Epoch,
-    decisionRoot: RootHex,
-    buildProps?: T
-  ): T extends ShufflingBuildProps ? EpochShuffling : EpochShuffling | null;
-
-  /**
-   * Gets a cached shuffling via the epoch and decision root.  Returns a promise
-   * for the shuffling if it hs not calculated yet.  Returns null if a build has
-   * not been queued nor a shuffling was calculated.
-   */
-  get(epoch: Epoch, decisionRoot: RootHex): Promise<EpochShuffling | null>;
-
-  /**
-   * Queue asynchronous build for an EpochShuffling
-   */
-  build(epoch: Epoch, decisionRoot: RootHex, state: BeaconStateAllForks, activeIndices: Uint32Array): void;
-}
 
 /**
  * Readonly interface for EpochShuffling.
@@ -86,38 +45,38 @@ export type EpochShuffling = {
   /**
    * List of list of committees Committees
    *
-   * Beacon committees by index, by slot
+   * Committees by index, by slot
    *
    * Note: With a high amount of shards, or low amount of validators,
    * some shards may not have a committee this epoch
    */
-  beaconCommittees: Uint32Array[][];
+  committees: Uint32Array[][];
 
   /**
-   * Beacon committees per slot, for fast attestation verification
+   * Committees per slot, for fast attestation verification
    */
-  beaconCommitteesPerSlot: number;
+  committeesPerSlot: number;
 
   /**
-   * Inclusion list committees by slot for a epoch
+   * Inclusion list committees by slot for an epoch
    */
   inclusionListCommittees: Uint32Array[];
 
   /**
-   * Inclusion list committee roots by slot for a epoch
+   * Inclusion list committee roots by slot for an epoch
    */
   inclusionListCommitteeRoots: Root[];
 };
 
-export function computeBeaconCommitteeCount(activeValidatorCount: number): number {
+export function computeCommitteeCount(activeValidatorCount: number): number {
   const validatorsPerSlot = intDiv(activeValidatorCount, SLOTS_PER_EPOCH);
   const committeesPerSlot = intDiv(validatorsPerSlot, TARGET_COMMITTEE_SIZE);
   return Math.max(1, Math.min(MAX_COMMITTEES_PER_SLOT, committeesPerSlot));
 }
 
-function buildBeaconCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
+function buildCommitteesFromShuffling(shuffling: Uint32Array): Uint32Array[][] {
   const activeValidatorCount = shuffling.length;
-  const committeesPerSlot = computeBeaconCommitteeCount(activeValidatorCount);
+  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
 
   const committees = new Array<Uint32Array[]>(SLOTS_PER_EPOCH);
@@ -169,7 +128,7 @@ export function computeEpochShuffling(
   // Beacon Committee
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = unshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-  const committees = buildBeaconCommitteesFromShuffling(shuffling);
+  const committees = buildCommitteesFromShuffling(shuffling);
 
   // Inclusion List Committee
   const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
@@ -181,8 +140,8 @@ export function computeEpochShuffling(
     epoch,
     activeIndices,
     shuffling,
-    beaconCommittees: committees,
-    beaconCommitteesPerSlot: committees[0].length,
+    committees,
+    committeesPerSlot: committees[0].length,
     inclusionListCommittees: ilCommittees,
     inclusionListCommitteeRoots: ilCommitteeRoots,
   };
@@ -197,7 +156,7 @@ export async function computeEpochShufflingAsync(
   // Beacon Committee
   const seed = getSeed(state, epoch, DOMAIN_BEACON_ATTESTER);
   const shuffling = await asyncUnshuffleList(activeIndices, seed, SHUFFLE_ROUND_COUNT);
-  const committees = buildBeaconCommitteesFromShuffling(shuffling);
+  const committees = buildCommitteesFromShuffling(shuffling);
 
   // Inclusion List Committee
   const ilSeed = getSeed(state, epoch, DOMAIN_INCLUSION_LIST_COMMITTEE);
@@ -209,14 +168,14 @@ export async function computeEpochShufflingAsync(
     epoch,
     activeIndices,
     shuffling,
-    beaconCommittees: committees,
-    beaconCommitteesPerSlot: committees[0].length,
+    committees,
+    committeesPerSlot: committees[0].length,
     inclusionListCommittees: ilCommittees,
     inclusionListCommitteeRoots: ilCommitteeRoots,
   };
 }
 
-function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
+export function calculateDecisionRoot(state: BeaconStateAllForks, epoch: Epoch): RootHex {
   const pivotSlot = computeStartSlotAtEpoch(epoch - 1) - 1;
   return toRootHex(getBlockRootAtSlot(state, pivotSlot));
 }

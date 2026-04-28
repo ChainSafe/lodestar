@@ -1,17 +1,17 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostEip7805, isForkPostElectra} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostEip7805} from "@lodestar/params";
 import {
-  BeaconStateElectra,
-  CachedBeaconStateAllForks,
-  CachedBeaconStateExecutions,
+  IBeaconStateView,
+  IBeaconStateViewBellatrix,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
-  isExecutionStateType,
+  isStatePostBellatrix,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {Bytes32, Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
@@ -81,9 +81,10 @@ export class PrepareNextSlotScheduler {
       await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
 
       // calling updateHead() here before we produce a block to reduce reorg possibility
-      const {slot: headSlot, blockRoot: headRoot} = this.chain.recomputeForkChoiceHead(
-        ForkchoiceCaller.prepareNextSlot
-      );
+      const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
+      const {slot: headSlot, blockRoot: headRoot} = headBlock;
+      // may be updated below if we predict a proposer-boost-reorg
+      let updatedHead = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -113,29 +114,24 @@ export class PrepareNextSlotScheduler {
       // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
       // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
       const prepareState = await this.chain.regen.getBlockSlotState(
-        headRoot,
+        headBlock,
         prepareSlot,
         // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
         // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
         // for other slots dontTransferCached=true because we don't run state transition on this state
-        //
-        // Shuffling calculation will be done asynchronously when passing asyncShufflingCalculation=true.  Shuffling will be queued in
-        // beforeProcessEpoch and should theoretically be ready immediately after the synchronous epoch transition finished and the
-        // event loop is free.  In long periods of non-finality too many forks will cause the shufflingCache to throw an error for
-        // too many queued shufflings so only run async during normal epoch transition. See issue ChainSafe/lodestar#7244
-        {dontTransferCache: !isEpochTransition, asyncShufflingCalculation: true},
+        {dontTransferCache: !isEpochTransition},
         RegenCaller.precomputeEpoch
       );
 
-      if (isExecutionStateType(prepareState)) {
-        const proposerIndex = prepareState.epochCtx.getBeaconProposer(prepareSlot);
+      if (isForkPostBellatrix(fork)) {
+        const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
         let updatedPrepareState = prepareState;
-        let updatedHeadRoot = headRoot;
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = this.chain.predictProposerHead(clockSlot);
+          const proposerHead = this.chain.predictProposerHead(clockSlot);
+          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
           // If we predict we can reorg, update prepareState with proposer head block
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
@@ -146,13 +142,14 @@ export class PrepareNextSlotScheduler {
               headRoot,
             });
             this.metrics?.weakHeadDetected.inc();
-            updatedPrepareState = (await this.chain.regen.getBlockSlotState(
-              proposerHeadRoot,
+            updatedPrepareState = await this.chain.regen.getBlockSlotState(
+              proposerHead,
               prepareSlot,
+              // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
-            )) as CachedBeaconStateExecutions;
-            updatedHeadRoot = proposerHeadRoot;
+            );
+            updatedHead = proposerHead;
           }
 
           // Update the builder status, if enabled shoot an api call to check status
@@ -162,7 +159,34 @@ export class PrepareNextSlotScheduler {
               this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
             });
           }
+        }
 
+        if (!isStatePostBellatrix(updatedPrepareState)) {
+          throw new Error("Expected Bellatrix state for payload attributes");
+        }
+
+        let parentBlockHash: Bytes32;
+        // Apply parent payload once here as it's reused by EL prep and SSE emit below
+        let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
+        if (isStatePostGloas(updatedPrepareState)) {
+          if (this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot)) {
+            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
+            // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
+            if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
+              const parentExecutionRequests = await this.chain.getParentExecutionRequests(
+                updatedHead.slot,
+                updatedHead.blockRoot
+              );
+              stateAfterParentPayload = updatedPrepareState.withParentPayloadApplied(parentExecutionRequests);
+            }
+          } else {
+            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
+          }
+        } else {
+          parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
+        }
+
+        if (feeRecipient) {
           const preparationTime =
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
@@ -170,8 +194,9 @@ export class PrepareNextSlotScheduler {
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+
           // awaiting here instead of throwing an async call because there is no other task
-          // left for scheduler and this gives nice sematics to catch and log errors in the
+          // left for scheduler and this gives nice semantics to catch and log errors in the
           // try/catch wrapper here.
           // EIP7805: We need to sleep until `PROPOSER_INCLUSION_LIST_CUTOFF_BPS` (~92% of slot) to make sure
           // we have gathered all ILs
@@ -185,10 +210,11 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
-            fromHex(updatedHeadRoot),
+            fromHex(updatedHead.blockRoot),
+            parentBlockHash,
             safeBlockHash,
             finalizedBlockHash,
-            updatedPrepareState,
+            stateAfterParentPayload,
             feeRecipient
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
@@ -198,21 +224,31 @@ export class PrepareNextSlotScheduler {
           });
         }
 
+        if (ForkSeq[fork] >= ForkSeq.gloas) {
+          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
+          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
+          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
+          const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
+          if (updatedHeadParent) {
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(updatedHeadParent.slot);
+          }
+        }
+
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
+        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
         if (
-          this.chain.opts.emitPayloadAttributes === true &&
+          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
         ) {
           // TODO EIP-7805: do we wanna emit data about inclusion lists here
-          const data = await getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
-            prepareState: updatedPrepareState,
+          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
+            prepareState: stateAfterParentPayload,
             prepareSlot,
-            parentBlockRoot: fromHex(headRoot),
-            // The likely consumers of this API are builders and will anyway ignore the
-            // feeRecipient, so just pass zero hash for now till a real use case arises
-            feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            parentBlockRoot: fromHex(updatedHead.blockRoot),
+            parentBlockHash,
+            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
@@ -230,9 +266,6 @@ export class PrepareNextSlotScheduler {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
         this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
-
-        // Check if we can stop polling eth1 data
-        this.stopEth1Polling();
 
         this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
           nextEpoch,
@@ -252,7 +285,7 @@ export class PrepareNextSlotScheduler {
     }
   };
 
-  computeStateHashTreeRoot(state: CachedBeaconStateAllForks, isEpochTransition: boolean): void {
+  computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
     // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
     // see https://github.com/ChainSafe/lodestar/issues/6194
     const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
@@ -260,28 +293,5 @@ export class PrepareNextSlotScheduler {
     });
     state.hashTreeRoot();
     hashTreeRootTimer?.();
-  }
-
-  /**
-   * Stop eth1 data polling after eth1_deposit_index has reached deposit_requests_start_index in Electra as described in EIP-6110
-   */
-  stopEth1Polling(): void {
-    // Only continue if eth1 is still polling and finalized checkpoint is in Electra. State regen is expensive
-    if (this.chain.eth1.isPollingEth1Data()) {
-      const finalizedCheckpoint = this.chain.forkChoice.getFinalizedCheckpoint();
-      const checkpointFork = this.config.getForkInfoAtEpoch(finalizedCheckpoint.epoch).name;
-
-      if (isForkPostElectra(checkpointFork)) {
-        const finalizedState = this.chain.getStateByCheckpoint(finalizedCheckpoint)?.state;
-
-        if (
-          finalizedState !== undefined &&
-          finalizedState.eth1DepositIndex === Number((finalizedState as BeaconStateElectra).depositRequestsStartIndex)
-        ) {
-          // Signal eth1 to stop polling eth1Data
-          this.chain.eth1.stopPollingEth1Data();
-        }
-      }
-    }
   }
 }

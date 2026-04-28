@@ -39,6 +39,9 @@ export const InclusionListByCommitteeIndicesRequest = new ContainerType(
   {typeName: "InclusionListByCommitteeIndicesRequest", jsonCase: "eth2"}
 );
 
+export const DataColumnSidecar = fuluSsz.DataColumnSidecar;
+export const DataColumnSidecars = fuluSsz.DataColumnSidecars;
+
 export const BeaconState = new ContainerType(
   {
     ...fuluSsz.BeaconState.fields,

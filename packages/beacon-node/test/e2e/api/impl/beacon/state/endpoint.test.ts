@@ -2,17 +2,17 @@ import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {ApiClient, getClient} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeBeaconCommitteeCount} from "@lodestar/state-transition";
+import {computeCommitteeCount} from "@lodestar/state-transition";
 import {BeaconNode} from "../../../../../../src/node/nodejs.js";
-import {LogLevel, testLogger} from "../../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
 
 describe("beacon state api", () => {
   const restPort = 9596;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
   const validatorCount = 512;
-  const committeesPerSlot = computeBeaconCommitteeCount(validatorCount);
+  const committeesPerSlot = computeCommitteeCount(validatorCount);
   const committeeCount = committeesPerSlot * SLOTS_PER_EPOCH;
   const validatorsPerCommittee = validatorCount / committeeCount;
 

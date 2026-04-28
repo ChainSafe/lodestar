@@ -1,17 +1,19 @@
-import {SignedBeaconBlock} from "@lodestar/types";
+import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
+import {importExecutionPayload} from "./importExecutionPayload.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
-import {removeEagerlyPersistedBlockInputs} from "./writeBlockInputToDb.js";
 
 export {AttestationImportOpt, type ImportBlockOpts} from "./types.js";
 
@@ -21,20 +23,24 @@ const QUEUE_MAX_LENGTH = 256;
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
-  readonly jobQueue: JobItemQueue<[IBlockInput[], ImportBlockOpts], void>;
+  readonly jobQueue: JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>;
 
   constructor(chain: BeaconChain, metrics: Metrics | null, opts: BlockProcessOpts, signal: AbortSignal) {
-    this.jobQueue = new JobItemQueue<[IBlockInput[], ImportBlockOpts], void>(
-      (job, importOpts) => {
-        return processBlocks.call(chain, job, {...opts, ...importOpts});
+    this.jobQueue = new JobItemQueue<[IBlockInput[], Map<Slot, PayloadEnvelopeInput> | null, ImportBlockOpts], void>(
+      (job, payloadEnvelopes, importOpts) => {
+        return processBlocks.call(chain, job, payloadEnvelopes, {...opts, ...importOpts});
       },
       {maxLength: QUEUE_MAX_LENGTH, noYieldIfOneItem: true, signal},
       metrics?.blockProcessorQueue ?? undefined
     );
   }
 
-  async processBlocksJob(job: IBlockInput[], opts: ImportBlockOpts = {}): Promise<void> {
-    await this.jobQueue.push(job, opts);
+  async processBlocksJob(
+    job: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    opts: ImportBlockOpts = {}
+  ): Promise<void> {
+    await this.jobQueue.push(job, payloadEnvelopes, opts);
   }
 }
 
@@ -51,14 +57,11 @@ export class BlockProcessor {
 export async function processBlocks(
   this: BeaconChain,
   blocks: IBlockInput[],
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<void> {
   if (blocks.length === 0) {
     return; // TODO: or throw?
-  }
-
-  if (blocks.length > 1) {
-    assertLinearChainSegment(this.config, blocks);
   }
 
   try {
@@ -70,10 +73,31 @@ export async function processBlocks(
       return;
     }
 
+    const {warnings: orphanedPayloads} = assertLinearChainSegment(
+      this.config,
+      relevantBlocks,
+      payloadEnvelopes,
+      parentBlock
+    );
+    if (orphanedPayloads != null) {
+      for (const orphaned of orphanedPayloads) {
+        this.logger.debug("Orphaned payload envelope in chain segment", {
+          slot: orphaned.slot,
+          blockRoot: orphaned.payloadEnvelopeInput.blockRootHex,
+        });
+      }
+    }
+
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {postStates, dataAvailabilityStatuses, proposerBalanceDeltas, segmentExecStatus} =
-      await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, opts);
+    const {
+      postStates,
+      blockDAStatuses,
+      payloadDAStatuses,
+      proposerBalanceDeltas,
+      segmentExecStatus,
+      indexedAttestationsByBlock,
+    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
 
     // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
     // and we need to further propagate
@@ -92,17 +116,34 @@ export async function processBlocks(
         parentBlockSlot: parentSlots[i],
         executionStatus: executionStatuses[i],
         // start supporting optimistic syncing/processing
-        dataAvailabilityStatus: dataAvailabilityStatuses[i],
+        dataAvailabilityStatus: blockDAStatuses[i],
         proposerBalanceDelta: proposerBalanceDeltas[i],
+        indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
       })
     );
 
     for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
-      // No need to sleep(0) here since `importBlock` includes a disk write
       // TODO: Consider batching importBlock too if it takes significant time
       await importBlock.call(this, fullyVerifiedBlock, opts);
+
+      const slot = fullyVerifiedBlock.blockInput.getBlock().message.slot;
+      const payloadInput = payloadEnvelopes?.get(slot);
+      if (payloadInput?.hasPayloadEnvelope()) {
+        if (!payloadInput.isComplete()) {
+          // we validated DA before reaching this
+          throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
+        }
+        // we already awaited DA in verifyBlocksInEpoch for this segment
+        const payloadDA = payloadDAStatuses.get(slot);
+        if (payloadDA === undefined) {
+          throw new Error(`Missing payload DA status for slot ${slot}`);
+        }
+        await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
+      }
+
+      await nextEventLoop();
     }
   } catch (e) {
     if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {
@@ -125,7 +166,7 @@ export async function processBlocks(
         const {state} = err.type;
         const forkTypes = this.config.getForkTypes(blockSlot);
         this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
-        this.persistInvalidSszView(state, `${state.slot}_invalid_signature`);
+        this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
       } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
         const {signedBlock} = err;
         const blockSlot = signedBlock.message.slot;
@@ -140,24 +181,6 @@ export async function processBlocks(
           );
         });
       }
-    }
-
-    // Clean db if we don't have blocks in forkchoice but already persisted them to db
-    //
-    // NOTE: this function is awaited to ensure that DB size remains constant, otherwise an attacker may bloat the
-    // disk with big malicious payloads. Our sequential block importer will wait for this promise before importing
-    // another block. The removal call error is not propagated since that would halt the chain.
-    //
-    // LOG: Because the error is not propagated and there's a risk of db bloat, the error is logged at warn level
-    // to alert the user of potential db bloat. This error _should_ never happen user must act and report to us
-    if (opts.eagerPersistBlock) {
-      await removeEagerlyPersistedBlockInputs.call(this, blocks).catch((e) => {
-        this.logger.warn(
-          "Error pruning eagerly imported block inputs, DB may grow in size if this error happens frequently",
-          {slot: blocks.map((block) => block.getBlock().message.slot).join(",")},
-          e
-        );
-      });
     }
 
     throw err;

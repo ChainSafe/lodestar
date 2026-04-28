@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.37.0",
+  "version": "1.42.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -29,6 +29,11 @@
       "bun": "./src/configs.ts",
       "types": "./lib/configs.d.ts",
       "import": "./lib/configs.js"
+    },
+    "./test-utils": {
+      "bun": "./src/testUtils/index.ts",
+      "types": "./lib/testUtils/index.d.ts",
+      "import": "./lib/testUtils/index.js"
     }
   },
   "files": [
@@ -38,16 +43,16 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsc -p tsconfig.build.json",
-    "build:release": "yarn run clean && yarn run build",
-    "build:watch": "yarn run build --watch",
+    "build": "tsgo -p tsconfig.build.json",
+    "build:release": "pnpm run clean && pnpm run build",
+    "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsc",
+    "check-types": "tsgo",
     "lint": "biome check src/",
-    "lint:fix": "yarn run lint --write",
-    "test": "yarn test:unit",
-    "test:unit": "yarn vitest run --project unit --project unit-minimal",
-    "check-readme": "typescript-docs-verifier"
+    "lint:fix": "pnpm run lint --write",
+    "test": "pnpm test:unit",
+    "test:unit": "pnpm vitest run --project unit --project unit-minimal",
+    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",
@@ -60,9 +65,11 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/ssz": "^1.2.2",
-    "@lodestar/params": "^1.37.0",
-    "@lodestar/types": "^1.37.0",
-    "@lodestar/utils": "^1.37.0"
+    "@chainsafe/as-sha256": "^1.2.0",
+    "@chainsafe/ssz": "^1.4.0",
+    "@lodestar/params": "workspace:^",
+    "@lodestar/spec-test-util": "workspace:^",
+    "@lodestar/types": "workspace:^",
+    "@lodestar/utils": "workspace:^"
   }
 }

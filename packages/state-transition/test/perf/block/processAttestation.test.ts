@@ -13,7 +13,7 @@ import {
 import {phase0} from "@lodestar/types";
 import {processAttestationsAltair} from "../../../src/block/processAttestationsAltair.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../src/index.js";
-import {generatePerfTestCachedStateAltair, perfStateId} from "../util.js";
+import {generatePerfTestCachedStateAltair, perfStateId} from "../../../src/testUtils/util.js";
 import {BlockAltairOpts, getBlockAltair} from "./util.js";
 
 type StateAttestations = {
@@ -120,7 +120,7 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
         );
         // just get committees of slot 10
         let count = 0;
-        for (const committees of state.epochCtx.currentShuffling.beaconCommittees[10]) {
+        for (const committees of state.epochCtx.currentShuffling.committees[10]) {
           for (const committee of committees) {
             currentEpochParticipation.set(committee, 0b111);
             count++;

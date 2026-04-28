@@ -1,8 +1,18 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconState, Epoch, RootHex, Slot, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
 import {
   ArrayOf,
+  AttesterSlashing,
+  BeaconState,
+  Epoch,
+  RootHex,
+  SignedBeaconBlock,
+  Slot,
+  ValidatorIndex,
+  ssz,
+} from "@lodestar/types";
+import {
   EmptyArgs,
   EmptyMeta,
   EmptyRequest,
@@ -12,10 +22,13 @@ import {
   JsonOnlyResponseCodec,
   WithVersion,
 } from "../../utils/codecs.js";
+import {toForkName} from "../../utils/fork.js";
+import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
+  MetaHeader,
   VersionCodec,
   VersionMeta,
 } from "../../utils/metadata.js";
@@ -54,6 +67,18 @@ export type GossipPeerScoreStat = {
   peerId: string;
   // + Other un-typed options
 };
+
+/**
+ * A multiaddr with peer ID or ENR string.
+ *
+ * Supported formats:
+ * - Multiaddr with peer ID: `/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAmKLhW7...`
+ * - ENR: `enr:-IS4QHCYrYZbAKWCBRlAy5zzaDZXJBGkcnh4MHcBFZntXNFrdvJjX04jRzjzCBOo...`
+ *
+ * For multiaddrs, the string must contain a /p2p/ component with the peer ID.
+ * For ENRs, the TCP multiaddr and peer ID are extracted from the encoded record.
+ */
+export type DirectPeer = string;
 
 export type RegenQueueItem = {
   key: string;
@@ -101,6 +126,15 @@ const HistoricalSummariesResponseType = new ContainerType(
 );
 
 export type HistoricalSummariesResponse = ValueOf<typeof HistoricalSummariesResponseType>;
+
+export type CustodyInfo = {
+  /** Earliest slot for which the node has custodied data columns */
+  earliestCustodiedSlot: Slot;
+  /** Number of custody groups the node is responsible for */
+  custodyGroupCount: number;
+  /** List of column indices the node is custodying */
+  custodyColumns: number[];
+};
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -232,6 +266,41 @@ export type Endpoints = {
     EmptyResponseData,
     EmptyMeta
   >;
+
+  /**
+   * Add a direct peer at runtime.
+   * Direct peers maintain permanent mesh connections without GRAFT/PRUNE negotiation.
+   * Accepts either a multiaddr with peer ID or an ENR string.
+   */
+  addDirectPeer: Endpoint<
+    // ⏎
+    "POST",
+    {peer: DirectPeer},
+    {query: {peer: string}},
+    {peerId: string},
+    EmptyMeta
+  >;
+
+  /** Remove a peer from direct peers */
+  removeDirectPeer: Endpoint<
+    // ⏎
+    "DELETE",
+    {peerId: string},
+    {query: {peerId: string}},
+    {removed: boolean},
+    EmptyMeta
+  >;
+
+  /** Get list of direct peer IDs */
+  getDirectPeers: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    string[],
+    EmptyMeta
+  >;
+
   /** Same to node api with new fields */
   getPeers: Endpoint<
     "GET",
@@ -272,6 +341,18 @@ export type Endpoints = {
     VersionMeta
   >;
 
+  /**
+   * Returns the validator indices that are currently being monitored by the validator monitor.
+   */
+  getMonitoredValidatorIndices: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ValidatorIndex[],
+    EmptyMeta
+  >;
+
   /** Dump Discv5 Kad values */
   discv5GetKadValues: Endpoint<
     // ⏎
@@ -305,9 +386,37 @@ export type Endpoints = {
     {root: RootHex; slot: Slot}[],
     EmptyMeta
   >;
+
+  /** Get custody information for data columns */
+  getCustodyInfo: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    CustodyInfo,
+    EmptyMeta
+  >;
+
+  /** Craft attester slashings from the attestations in the provided blocks */
+  getAttesterSlashingsFromBlocks: Endpoint<
+    "POST",
+    {signedBlocks: SignedBeaconBlock[]},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    AttesterSlashing[],
+    VersionMeta
+  >;
 };
 
-export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  function assertBlocksMatchFork(signedBlocks: SignedBeaconBlock[], expectedFork: ForkName): void {
+    for (const block of signedBlocks) {
+      const blockFork = config.getForkName(block.message.slot);
+      if (blockFork !== expectedFork) {
+        throw new Error(`Block at slot ${block.message.slot} is from fork ${blockFork}, expected ${expectedFork}`);
+      }
+    }
+  }
+
   return {
     writeHeapdump: {
       url: "/eth/v1/lodestar/write_heapdump",
@@ -413,6 +522,32 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: EmptyResponseCodec,
     },
+    addDirectPeer: {
+      url: "/eth/v1/lodestar/direct_peers",
+      method: "POST",
+      req: {
+        writeReq: ({peer}) => ({query: {peer}}),
+        parseReq: ({query}) => ({peer: query.peer}),
+        schema: {query: {peer: Schema.StringRequired}},
+      },
+      resp: JsonOnlyResponseCodec,
+    },
+    removeDirectPeer: {
+      url: "/eth/v1/lodestar/direct_peers",
+      method: "DELETE",
+      req: {
+        writeReq: ({peerId}) => ({query: {peerId}}),
+        parseReq: ({query}) => ({peerId: query.peerId}),
+        schema: {query: {peerId: Schema.StringRequired}},
+      },
+      resp: JsonOnlyResponseCodec,
+    },
+    getDirectPeers: {
+      url: "/eth/v1/lodestar/direct_peers",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
     getPeers: {
       url: "/eth/v1/lodestar/peers",
       method: "GET",
@@ -444,6 +579,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },
+    // TODO GLOAS: this endpoint needs to be updated because post-gloas there could be two variants of the persisted checkpoint state (empty or full).
+    // Either add a an additional parameter `payloadPresent`, or return one or both variants of state.
     getPersistedCheckpointState: {
       url: "/eth/v1/lodestar/persisted_checkpoint_state",
       method: "GET",
@@ -462,6 +599,12 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         // Default timeout is not sufficient to download state
         timeoutMs: 5 * 60 * 1000,
       },
+    },
+    getMonitoredValidatorIndices: {
+      url: "/eth/v1/lodestar/monitored_validators",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
     },
     discv5GetKadValues: {
       url: "/eth/v1/debug/discv5_kad_values",
@@ -484,6 +627,54 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
+    },
+    getCustodyInfo: {
+      url: "/eth/v1/lodestar/custody_info",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getAttesterSlashingsFromBlocks: {
+      url: "/eth/v1/lodestar/blocks/attester_slashings",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedBlocks}) => {
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
+        },
+        writeReqSsz: ({signedBlocks}) => {
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => ArrayOf(ssz[fork].AttesterSlashing)),
+        meta: VersionCodec,
+      },
     },
   };
 }

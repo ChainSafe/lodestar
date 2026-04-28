@@ -1,4 +1,4 @@
-import {toBufferBE} from "bigint-buffer";
+import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {digest} from "@chainsafe/as-sha256";
 import {SecretKey} from "@chainsafe/blst";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";

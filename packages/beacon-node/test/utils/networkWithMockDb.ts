@@ -1,18 +1,17 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {BeaconStateView, createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
-import {Eth1ForBlockProductionDisabled} from "../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../src/execution/index.js";
 import {ArchiveMode} from "../../src/index.js";
 import {GossipHandlers, Network, NetworkInitModules, getReqRespHandlers} from "../../src/network/index.js";
 import {NetworkOptions, defaultNetworkOptions} from "../../src/network/options.js";
 import {GetReqRespHandlerFn} from "../../src/network/reqresp/types.js";
 import {getMockedBeaconDb} from "../mocks/mockedBeaconDb.js";
-import {createCachedBeaconStateTest} from "./cachedBeaconState.js";
 import {ClockStatic} from "./clock.js";
-import {testLogger} from "./logger.js";
 import {generateState} from "./state.js";
 
 export type NetworkForTestOpts = {
@@ -43,12 +42,21 @@ export async function getNetworkForTest(
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
+  const pubkeyCache = createPubkeyCache();
+  syncPubkeys(pubkeyCache, state.validators.getAllReadonlyValues());
+  const cachedState = createCachedBeaconState(
+    state,
+    {
+      config: beaconConfig,
+      pubkeyCache,
+    },
+    {skipSyncPubkeys: true}
+  );
   const db = getMockedBeaconDb();
   const privateKey = await generateKeyPair("secp256k1");
 
   const chain = new BeaconChain(
     {
-      safeSlotsToImportOptimistically: 0,
       archiveStateEpochFrequency: 0,
       suggestedFeeRecipient: "",
       blsVerifyAllMainThread: true,
@@ -62,6 +70,7 @@ export async function getNetworkForTest(
     {
       privateKey,
       config: beaconConfig,
+      pubkeyCache,
       db,
       dataDir: ".",
       dbName: ".",
@@ -75,9 +84,8 @@ export async function getNetworkForTest(
       ),
       metrics: null,
       validatorMonitor: null,
-      anchorState: createCachedBeaconStateTest(state, beaconConfig),
+      anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: true,
-      eth1: new Eth1ForBlockProductionDisabled(),
       executionEngine: new ExecutionEngineDisabled(),
     }
   );
@@ -99,7 +107,7 @@ export async function getNetworkForTest(
       maxPeers: 10,
       targetPeers: 1,
       bootMultiaddrs: [],
-      localMultiaddrs: ["/ip4/0.0.0.0/tcp/0"],
+      localMultiaddrs: ["/ip4/0.0.0.0/udp/0/quic-v1", "/ip4/0.0.0.0/tcp/0"],
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       skipParamsLog: true,

@@ -5,17 +5,21 @@ concurrency: cd-publish-rc
 
 # See for rationale https://github.com/ChainSafe/lodestar/blob/unstable/RELEASE.md
 on:
-  push:
-    tags:
-      - v*
+  workflow_call:
+
+permissions:
+  contents: write # Required for OIDC
+  id-token: write # Required to create a Github release
+  pull-requests: write # Required to add tags to pull requests
 
 jobs:
   tag:
     name: Check tag
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    # To support npm provenance we must use github-hosted runners
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
 
@@ -51,30 +55,30 @@ jobs:
 
   npm:
     name: Publish to NPM & Github
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: ubuntu-latest
     needs: [tag, binaries]
     if: needs.tag.outputs.is_rc == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
 
       - uses: "./.github/actions/setup-and-build"
         with:
-          node: 22
+          node: 24
 
       - name: Generate changelog
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
 
       - name: Get binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: dist/
           merge-multiple: true
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -84,6 +88,7 @@ jobs:
           body_path: "CHANGELOG.md"
           name: Release ${{ needs.tag.outputs.tag }}
           prerelease: true
+          draft: true
 
       - name: Change and commit version
         # Write version before publishing so it's picked up by `lerna publish from-package`.
@@ -91,7 +96,7 @@ jobs:
         # This "temp" commit doesn't change the actually release commit which is captured above.
         # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
-          node_modules/.bin/lerna version ${{ needs.tag.outputs.version }} \
+          pnpm lerna version ${{ needs.tag.outputs.version }} \
           --force-publish \
           --exact \
           --yes \
@@ -101,20 +106,18 @@ jobs:
           git config user.email 'temp@github.com'
           git commit -am "${{ needs.tag.outputs.version }}"
 
-      # From https://github.com/lerna/lerna/issues/2404
-      - run: echo //registry.npmjs.org/:_authToken=${NPM_TOKEN} > .npmrc
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish to npm registry
-        run: yarn run release:publish --dist-tag rc
+        run: pnpm run release:publish --dist-tag rc
+
+      - name: Publish release
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
 
       # In case of failure
       - name: Rollback on failure
         if: failure()
-        uses: author/action-rollback@1.0.4
+        uses: author/action-rollback@f4473931b1155b601092ec00eb1fa4882b80219f # 1.0.4
         with:
           release_id: ${{ steps.create_release.outputs.id }}
           tag: ${{ needs.tag.outputs.tag }}
@@ -122,49 +125,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  docker:
-    name: Publish to Docker Hub
-    runs-on: buildjet-4vcpu-ubuntu-2204
+  await-release:
+    name: Await npm release
+    runs-on: ubuntu-latest
     needs: [tag, npm]
     if: needs.tag.outputs.is_rc == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} rc 900
-      # https://github.com/docker/setup-qemu-action
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      # https://github.com/docker/setup-buildx-action
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Build and push
-        run: >
-          docker buildx build . --push
-          --tag chainsafe/lodestar:rc
-          --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }}
-          --platform linux/amd64,linux/arm64
-          --build-arg COMMIT=$(git rev-parse HEAD)
 
-      - run: docker run chainsafe/lodestar:${{ needs.tag.outputs.tag }} --help
-      # Display history to know byte size of each layer
-      # Image is available only because of the previous `docker run` command
-      - run: docker image history chainsafe/lodestar:${{ needs.tag.outputs.tag }}
-
-      - name: Build and push custom Grafana
-        run: >
-          docker buildx build ./docker/grafana/ --push
-          --file ./docker/grafana/Dockerfile
-          --build-context dashboards=./dashboards
-          --tag chainsafe/lodestar-grafana:${{ needs.tag.outputs.tag }}
-          --platform linux/amd64,linux/arm64
-
-      - name: Build and push custom Prometheus
-        run: >
-          docker buildx build ./docker/prometheus/ --push
-          --file ./docker/prometheus/Dockerfile
-          --tag chainsafe/lodestar-prometheus:${{ needs.tag.outputs.tag }}
-          --platform linux/amd64,linux/arm64
+  docker:
+    name: Publish to Docker Hub
+    needs: [tag, await-release]
+    if: needs.tag.outputs.is_rc == 'true'
+    uses: ./.github/workflows/docker.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      extra-tags: rc
+    secrets: inherit

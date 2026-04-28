@@ -3,7 +3,7 @@ import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
 // Mainnet config
-// https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml
+// https://github.com/ethereum/consensus-specs/blob/master/configs/mainnet.yaml
 
 export const chainConfig: ChainConfig = {
   // Extends the mainnet preset
@@ -74,6 +74,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs ~27 hours
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
+  // 2**6 (= 64) epochs
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: 64,
   // 2**8 (= 256) epochs ~27 hours
   SHARD_COMMITTEE_PERIOD: 256,
   // 2**11 (= 2,048) Eth1 blocks ~8 hours

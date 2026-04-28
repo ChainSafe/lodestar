@@ -9,14 +9,17 @@ export type ChainConfig = {
    * Free-form short name of the network that this configuration applies to - known
    * canonical network names include:
    * * 'mainnet' - there can be only one
-   * * 'holesky' - testnet
+   * * 'hoodi' - testnet
    * Must match the regex: [a-z0-9\-]
    */
   CONFIG_NAME: string;
 
   // Transition
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_TOTAL_DIFFICULTY: bigint;
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_BLOCK_HASH: Uint8Array;
+  /** @deprecated All networks have completed the merge transition */
   TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: number;
 
   // Genesis
@@ -57,6 +60,7 @@ export type ChainConfig = {
   SLOT_DURATION_MS: number;
   SECONDS_PER_ETH1_BLOCK: number;
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: number;
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: number;
   SHARD_COMMITTEE_PERIOD: number;
   ETH1_FOLLOW_DISTANCE: number;
 
@@ -185,6 +189,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   SLOT_DURATION_MS: "number",
   SECONDS_PER_ETH1_BLOCK: "number",
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: "number",
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: "number",
   SHARD_COMMITTEE_PERIOD: "number",
   ETH1_FOLLOW_DISTANCE: "number",
 

@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, ProtoArray} from "../../../src/index.js";
+import {ExecutionStatus, PayloadStatus, ProtoArray} from "../../../src/index.js";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {
@@ -35,6 +35,9 @@ describe("ProtoArray", () => {
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
       },
       genesisSlot
     );
@@ -62,8 +65,12 @@ describe("ProtoArray", () => {
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
       },
-      genesisSlot + 1
+      genesisSlot + 1,
+      null
     );
 
     // Add block that is *not* a finalized descendant.
@@ -89,8 +96,12 @@ describe("ProtoArray", () => {
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
       },
-      genesisSlot + 1
+      genesisSlot + 1,
+      null
     );
 
     // ancestorRoot, descendantRoot, isDescendant
@@ -119,7 +130,7 @@ describe("ProtoArray", () => {
     ];
 
     for (const [ancestorRoot, descendantRoot, isDescendant] of assertions) {
-      expect(fc.isDescendant(ancestorRoot, descendantRoot)).toBeWithMessage(
+      expect(fc.isDescendant(ancestorRoot, PayloadStatus.FULL, descendantRoot, PayloadStatus.FULL)).toBeWithMessage(
         isDescendant,
         `${descendantRoot} must be ${isDescendant ? "descendant" : "not descendant"} of ${ancestorRoot}`
       );

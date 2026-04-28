@@ -1,8 +1,7 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostAltair} from "@lodestar/params";
-import {isSyncCommitteeAggregator} from "@lodestar/state-transition";
-import {BLSSignature, CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
+import {CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
@@ -71,18 +70,6 @@ export class SyncCommitteeService {
       const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
       if (dutiesAtSlot.length === 0) {
         return;
-      }
-
-      if (this.opts?.distributedAggregationSelection) {
-        // Validator in distributed cluster only has a key share, not the full private key.
-        // The partial selection proofs must be exchanged for combined selection proofs by
-        // calling submitSyncCommitteeSelections on the distributed validator middleware client.
-        // This will run in parallel to other sync committee tasks but must be finished before starting
-        // sync committee contributions as it is required to correctly determine if validator is aggregator
-        // and to produce a ContributionAndProof that can be threshold aggregated by the middleware client.
-        this.runDistributedAggregationSelectionTasks(fork, dutiesAtSlot, slot, signal).catch((e) =>
-          this.logger.error("Error on sync committee aggregation selection", {slot}, e)
-        );
       }
 
       // unlike Attestation, SyncCommitteeSignature could be published asap
@@ -254,84 +241,6 @@ export class SyncCommitteeService {
         this.metrics?.publishedSyncCommitteeContribution.inc(signedContributions.length);
       } catch (e) {
         this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e as Error);
-      }
-    }
-  }
-
-  /**
-   * Performs additional sync committee contribution tasks required if validator is part of distributed cluster
-   *
-   * 1. Exchange partial for combined selection proofs
-   * 2. Determine validators that should produce sync committee contribution
-   * 3. Mutate duty objects to set selection proofs for aggregators
-   *
-   * See https://docs.google.com/document/d/1q9jOTPcYQa-3L8luRvQJ-M0eegtba4Nmon3dpO79TMk/mobilebasic
-   */
-  private async runDistributedAggregationSelectionTasks(
-    fork: ForkName,
-    duties: SyncDutyAndProofs[],
-    slot: number,
-    signal: AbortSignal
-  ): Promise<void> {
-    const partialSelections: routes.validator.SyncCommitteeSelection[] = [];
-
-    for (const {duty, selectionProofs} of duties) {
-      const validatorSelections: routes.validator.SyncCommitteeSelection[] = selectionProofs.map(
-        ({subcommitteeIndex, partialSelectionProof}) => ({
-          validatorIndex: duty.validatorIndex,
-          slot,
-          subcommitteeIndex,
-          selectionProof: partialSelectionProof as BLSSignature,
-        })
-      );
-      partialSelections.push(...validatorSelections);
-    }
-
-    this.logger.debug("Submitting partial sync committee selection proofs", {slot, count: partialSelections.length});
-
-    const res = await Promise.race([
-      this.api.validator.submitSyncCommitteeSelections({selections: partialSelections}),
-      // Exit sync committee contributions flow if there is no response after CONTRIBUTION_DUE_BPS of the slot.
-      // This is in contrast to attestations aggregations flow which is already exited at ATTESTATION_DUE_BPS of the slot
-      // because for sync committee is not required to resubscribe to subnets as beacon node will assume
-      // validator always aggregates. This allows us to wait until we have to produce sync committee contributions.
-      // Note that the sync committee contributions flow is not explicitly exited but rather will be skipped
-      // due to the fact that calculation of `is_sync_committee_aggregator` in SyncCommitteeDutiesService is not done
-      // and selectionProof is set to null, meaning no validator will be considered an aggregator.
-      sleep(this.config.getSyncContributionDueMs(fork) - this.clock.msFromSlot(slot), signal),
-    ]);
-
-    if (!res) {
-      throw new Error("Failed to receive combined selection proofs before CONTRIBUTION_DUE_BPS of the slot");
-    }
-
-    const combinedSelections = res.value();
-    this.logger.debug("Received combined sync committee selection proofs", {slot, count: combinedSelections.length});
-
-    for (const dutyAndProofs of duties) {
-      const {validatorIndex, subnets} = dutyAndProofs.duty;
-
-      for (const subnet of subnets) {
-        const logCtxValidator = {slot, index: subnet, validatorIndex};
-
-        const combinedSelection = combinedSelections.find(
-          (s) => s.validatorIndex === validatorIndex && s.slot === slot && s.subcommitteeIndex === subnet
-        );
-
-        if (!combinedSelection) {
-          this.logger.warn("Did not receive combined sync committee selection proof", logCtxValidator);
-          continue;
-        }
-
-        const isAggregator = isSyncCommitteeAggregator(combinedSelection.selectionProof);
-
-        if (isAggregator) {
-          const selectionProofObject = dutyAndProofs.selectionProofs.find((p) => p.subcommitteeIndex === subnet);
-          if (selectionProofObject) {
-            // Update selection proof by mutating proof objects in duty object
-            selectionProofObject.selectionProof = combinedSelection.selectionProof;
-          }
-        }
       }
     }
   }

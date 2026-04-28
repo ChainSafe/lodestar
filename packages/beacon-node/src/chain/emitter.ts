@@ -2,10 +2,12 @@ import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
-import {RootHex, deneb, fulu, phase0} from "@lodestar/types";
+import {IBeaconStateView} from "@lodestar/state-transition";
+import {DataColumnSidecar, RootHex, deneb, phase0} from "@lodestar/types";
+import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -54,18 +56,32 @@ export enum ChainEvent {
    */
   updateStatus = "updateStatus",
   /**
-   * Trigger a BlockInputSync for blocks where the parentRoot is not known to fork choice
+   * Trigger BlockInputSync to find parent of a SignedBeaconBlock received
+   * Post-gloas, missing parent could be a SignedBeaconBlock and/or a SignedExecutionPayloadEnvelope
    */
-  unknownParent = "unknownParent",
+  blockUnknownParent = "blockUnknownParent",
   /**
-   * Trigger BlockInputSync for objects that correspond to a block that is not known to fork choice
+   * Trigger BlockInputSync to find a SignedBeaconBlock given a SignedExecutionPayloadEnvelop received
+   */
+  envelopeUnknownBlock = "envelopeUnknownBlock",
+  /**
+   * Trigger BlockInputSync to find a SignedBeaconBlock with specified block root.
    */
   unknownBlockRoot = "unknownBlockRoot",
+  /**
+   * Trigger BlockInputSync to find a SignedExecutionPayloadEnvelope with specified block root.
+   */
+  unknownEnvelopeBlockRoot = "unknownEnvelopeBlockRoot",
   /**
    * Trigger BlockInputSync for blocks that are partially received via gossip but are not complete by time the
    * cut-off window passes for waiting on gossip
    */
   incompleteBlockInput = "incompleteBlockInput",
+  /**
+   * Post-gloas: trigger BlockInputSync for payload envelopes whose envelope and/or sampled columns are partially
+   * received via gossip but are not complete by time the cut-off window passes for waiting on gossip
+   */
+  incompletePayloadEnvelope = "incompletePayloadEnvelope",
 }
 
 export type HeadEventData = routes.events.EventData[routes.events.EventType.head];
@@ -75,20 +91,31 @@ export type ReorgEventData = routes.events.EventData[routes.events.EventType.cha
 type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData[K]) => void};
 
 export type ChainEventData = {
-  [ChainEvent.unknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.blockUnknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.envelopeUnknownBlock]: {
+    envelope: SignedExecutionPayloadEnvelope;
+    peer?: PeerIdStr;
+    source: BlockInputSource;
+  };
   [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.incompletePayloadEnvelope]: {
+    payloadInput: PayloadEnvelopeInput;
+    peer: PeerIdStr;
+    source: BlockInputSource;
+  };
+  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
-  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconStateAllForks) => void;
+  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
-  [ChainEvent.publishDataColumns]: (sidecars: fulu.DataColumnSidecar[]) => void;
+  [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
   [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
 
@@ -96,9 +123,12 @@ export type IChainEvents = ApiEvents & {
 
   // Sync events that are chain->chain. Initiated from network requests but do not cross the network
   // barrier so are considered ChainEvent(s).
-  [ChainEvent.unknownParent]: (data: ChainEventData[ChainEvent.unknownParent]) => void;
+  [ChainEvent.blockUnknownParent]: (data: ChainEventData[ChainEvent.blockUnknownParent]) => void;
+  [ChainEvent.envelopeUnknownBlock]: (data: ChainEventData[ChainEvent.envelopeUnknownBlock]) => void;
   [ChainEvent.unknownBlockRoot]: (data: ChainEventData[ChainEvent.unknownBlockRoot]) => void;
   [ChainEvent.incompleteBlockInput]: (data: ChainEventData[ChainEvent.incompleteBlockInput]) => void;
+  [ChainEvent.incompletePayloadEnvelope]: (data: ChainEventData[ChainEvent.incompletePayloadEnvelope]) => void;
+  [ChainEvent.unknownEnvelopeBlockRoot]: (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]) => void;
 };
 
 /**

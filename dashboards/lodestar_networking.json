@@ -4383,7 +4383,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "lodestar_reprocess_gossip_attestations_per_slot_total",
+          "expr": "lodestar_awaiting_block_gossip_messages_per_slot_total",
           "legendFormat": "Per Slot",
           "range": true,
           "refId": "A"
@@ -4394,14 +4394,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_reprocess_gossip_attestations_total[$rate_interval]) * 12",
+          "expr": "sum by (topic)(rate(lodestar_awaiting_block_gossip_messages_total[$rate_interval])) * 12",
           "hide": false,
-          "legendFormat": "Avg Per Slot",
+          "legendFormat": "{{topic}}",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Reprocess",
+      "title": "Awaiting Block Gossip Messages",
       "type": "timeseries"
     },
     {
@@ -4574,8 +4574,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_reprocess_gossip_attestations_resolve_total[$rate_interval]) * 12",
-          "legendFormat": "Per Slot",
+          "expr": "sum by (topic)(rate(lodestar_awaiting_block_gossip_messages_resolve_total[$rate_interval])) * 12",
+          "legendFormat": "{{topic}}",
           "range": true,
           "refId": "A"
         },
@@ -4585,14 +4585,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "lodestar_reprocess_gossip_attestations_wait_time_resolve_seconds",
+          "expr": "lodestar_awaiting_block_gossip_messages_wait_time_resolve_seconds",
           "hide": false,
-          "legendFormat": "Wait Sec",
+          "legendFormat": "{{topic}}",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Reprocess - Resolved",
+      "title": "Awaiting Block Gossip Messages - Resolved",
       "type": "timeseries"
     },
     {
@@ -4684,8 +4684,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_reprocess_gossip_attestations_reject_total[$rate_interval]) * 12",
-          "legendFormat": "{{reason}}",
+          "expr": "sum by (reason, topic)(rate(lodestar_awaiting_block_gossip_messages_reject_total[$rate_interval])) * 12",
+          "legendFormat": "{{reason}} - {{topic}}",
           "range": true,
           "refId": "A"
         },
@@ -4695,14 +4695,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "lodestar_reprocess_gossip_attestations_wait_time_reject_seconds",
+          "expr": "lodestar_awaiting_block_gossip_messages_wait_time_reject_seconds",
           "hide": false,
-          "legendFormat": "Wait Sec",
+          "legendFormat": "{{reason}} - {{topic}}",
           "range": true,
           "refId": "B"
         }
       ],
-      "title": "Reprocess - Reject",
+      "title": "Awaiting Block Gossip Messages - Rejected",
       "type": "timeseries"
     },
     {
@@ -6753,7 +6753,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41-dkr"
+            "value": "unstable-super"
           }
         ],
         "hide": 0,

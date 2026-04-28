@@ -2,21 +2,20 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe, setBenchOpts} from "@chainsafe/benchmark";
 import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateView} from "@lodestar/state-transition";
+import {getNetworkCachedBlock, getNetworkCachedState, rangeSyncTest} from "@lodestar/state-transition/test-utils";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
-import {rangeSyncTest} from "../../../../state-transition/test/perf/params.js";
-import {beforeValue} from "../../../../state-transition/test/utils/beforeValueBenchmark.js";
-import {getNetworkCachedBlock, getNetworkCachedState} from "../../../../state-transition/test/utils/testFileCache.js";
 import {BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../src/chain/blocks/blockInput/types.js";
 import {AttestationImportOpt} from "../../../src/chain/blocks/types.js";
 import {BeaconChain} from "../../../src/chain/index.js";
-import {Eth1ForBlockProductionDisabled} from "../../../src/eth1/index.js";
 import {ExecutionEngineDisabled} from "../../../src/execution/engine/index.js";
 import {ArchiveMode, BeaconDb} from "../../../src/index.js";
 import {linspace} from "../../../src/util/numpy.js";
-import {testLogger} from "../../utils/logger.js";
+import {beforeValue} from "../../utils/beforeValueBenchmark.js";
 
 // Define this params in `packages/state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -82,7 +81,6 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           proposerBoost: true,
           proposerBoostReorg: true,
           computeUnrealized: false,
-          safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
           disableArchiveOnCheckpoint: true,
           suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
           skipCreateStateCacheIfAvailable: true,
@@ -93,6 +91,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         {
           privateKey: await generateKeyPair("secp256k1"),
           config: state.config,
+          pubkeyCache: state.epochCtx.pubkeyCache,
           db,
           dataDir: ".",
           dbName: ".",
@@ -100,9 +99,8 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           processShutdownCallback: () => {},
           metrics: null,
           validatorMonitor: null,
-          anchorState: state,
+          anchorState: new BeaconStateView(state),
           isAnchorStateFinalized: true,
-          eth1: new Eth1ForBlockProductionDisabled(),
           executionEngine: new ExecutionEngineDisabled(),
         }
       );
@@ -128,7 +126,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         });
       });
 
-      await chain.processChainSegment(blocksImport, {
+      await chain.processChainSegment(blocksImport, null, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
         // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
         // TODO: Review if this is okay, can we prevent some attacks by importing attestations?

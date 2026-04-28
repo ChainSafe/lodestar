@@ -84,7 +84,10 @@ PRs
 Plaintext
 PoS
 Prysm
+QUIC
 Quickstart
+README
+READMEs
 RPC
 Reth
 Ryzen
@@ -94,6 +97,7 @@ SSD
 SSZ
 Somer
 Stakehouse
+TLS
 TOC
 TTD
 Teku
@@ -147,6 +151,7 @@ devnet
 devnets
 devtools
 distutils
+dropdown
 eg
 enodes
 enum
@@ -174,6 +179,7 @@ keyrings
 keystore
 keystores
 libp
+lifecycle
 lightclient
 linter
 liveness
@@ -194,6 +200,7 @@ multifork
 namespace
 namespaced
 namespaces
+navbar
 nodemodule
 orchestrator
 osx
@@ -201,6 +208,7 @@ params
 performant
 pid
 plaintext
+pnpm
 pre
 premined
 produceBlockV
@@ -242,6 +250,7 @@ vite
 vitest
 webpack
 wip
+wordlist
 xRelayPubKey
 xcode
 yaml

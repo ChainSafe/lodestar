@@ -1,16 +1,18 @@
 import {routes} from "@lodestar/api";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {CheckpointHex} from "../stateCache/index.js";
+import {CheckpointHex} from "../stateCache/types.js";
 
 export enum RegenCaller {
   getDuties = "getDuties",
   processBlock = "processBlock",
   produceBlock = "produceBlock",
   validateGossipBlock = "validateGossipBlock",
+  validateGossipPayloadEnvelope = "validateGossipPayloadEnvelope",
   validateGossipBlob = "validateGossipBlob",
   validateGossipDataColumn = "validateGossipDataColumn",
+  validateGossipExecutionPayloadEnvelope = "validateGossipExecutionPayloadEnvelope",
   precomputeEpoch = "precomputeEpoch",
   predictProposerHead = "predictProposerHead",
   produceAttestationData = "produceAttestationData",
@@ -18,6 +20,8 @@ export enum RegenCaller {
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
+  validateGossipExecutionPayloadBid = "validateGossipExecutionPayloadBid",
+  validateGossipProposerPreferences = "validateGossipProposerPreferences",
   onForkChoiceFinalized = "onForkChoiceFinalized",
   restApi = "restApi",
 }
@@ -26,30 +30,25 @@ export enum RegenFnName {
   getBlockSlotState = "getBlockSlotState",
   getState = "getState",
   getPreState = "getPreState",
-  getCheckpointState = "getCheckpointState",
 }
 
 export type StateRegenerationOpts = {
   dontTransferCache: boolean;
-  /**
-   * Do not queue shuffling calculation async. Forces sync JIT calculation in afterProcessEpoch if not passed as `true`
-   */
-  asyncShufflingCalculation?: boolean;
 };
 
 export interface IStateRegenerator extends IStateRegeneratorInternal {
   dropCache(): void;
   dumpCacheSummary(): routes.lodestar.StateCacheItem[];
-  getStateSync(stateRoot: RootHex): CachedBeaconStateAllForks | null;
-  getPreStateSync(block: BeaconBlock): CachedBeaconStateAllForks | null;
-  getCheckpointStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
-  getCheckpointStateSync(cp: CheckpointHex): CachedBeaconStateAllForks | null;
-  getClosestHeadState(head: ProtoBlock): CachedBeaconStateAllForks | null;
+  getStateSync(stateRoot: RootHex): IBeaconStateView | null;
+  getPreStateSync(block: BeaconBlock): IBeaconStateView | null;
+  getCheckpointStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null>;
+  getCheckpointStateSync(cp: CheckpointHex): IBeaconStateView | null;
+  getClosestHeadState(head: ProtoBlock): IBeaconStateView | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
   pruneOnFinalized(finalizedEpoch: Epoch): void;
-  processState(blockRootHex: RootHex, postState: CachedBeaconStateAllForks): void;
-  addCheckpointState(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void;
-  updateHeadState(newHead: ProtoBlock, maybeHeadState: CachedBeaconStateAllForks): void;
+  processState(blockRootHex: RootHex, postState: IBeaconStateView): void;
+  addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void;
+  updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
 }
 
@@ -61,34 +60,20 @@ export interface IStateRegeneratorInternal {
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
    */
-  getPreState(
-    block: BeaconBlock,
-    opts: StateRegenerationOpts,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks>;
-
-  /**
-   * Return a valid checkpoint state
-   * This will always return a state with `state.slot % SLOTS_PER_EPOCH === 0`
-   */
-  getCheckpointState(
-    cp: phase0.Checkpoint,
-    opts: StateRegenerationOpts,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks>;
+  getPreState(block: BeaconBlock, opts: StateRegenerationOpts, rCaller: RegenCaller): Promise<IBeaconStateView>;
 
   /**
    * Return the state of `blockRoot` processed to slot `slot`
    */
   getBlockSlotState(
-    blockRoot: RootHex,
+    block: ProtoBlock,
     slot: Slot,
     opts: StateRegenerationOpts,
     rCaller: RegenCaller
-  ): Promise<CachedBeaconStateAllForks>;
+  ): Promise<IBeaconStateView>;
 
   /**
    * Return the exact state with `stateRoot`
    */
-  getState(stateRoot: RootHex, rCaller: RegenCaller, opts?: StateRegenerationOpts): Promise<CachedBeaconStateAllForks>;
+  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<IBeaconStateView>;
 }

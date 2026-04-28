@@ -1,16 +1,16 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ExecutionStatus} from "@lodestar/fork-choice";
+import {ForkName, isForkPostBellatrix, isForkPostDeneb, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
-  isExecutionEnabled,
-  isExecutionStateType,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb} from "@lodestar/types";
-import {sleep, toRootHex} from "@lodestar/utils";
+import {SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
@@ -23,6 +23,7 @@ export async function validateGossipBlock(
 ): Promise<void> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
+  const blockEpoch = computeEpochAtSlot(blockSlot);
 
   // [IGNORE] The block is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) -- i.e.validate
   // that signed_beacon_block.message.slot <= current_slot (a client MAY queue future blocks for processing at the
@@ -55,7 +56,7 @@ export async function validateGossipBlock(
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
   const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
-  if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
+  if (chain.forkChoice.getBlockHexDefaultStatus(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
@@ -71,7 +72,7 @@ export async function validateGossipBlock(
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   const parentRoot = toRootHex(block.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
@@ -84,6 +85,28 @@ export async function validateGossipBlock(
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+  }
+
+  // [IGNORE] The block's parent (defined by `block.parent_root`) passes all validation
+  // (including execution node verification of the `block.body.execution_payload`)
+  if (isForkPostBellatrix(fork) && parentBlock.executionStatus === ExecutionStatus.Invalid) {
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.PARENT_EXECUTION_INVALID,
+      parentRoot,
+    });
+  }
+
+  // [IGNORE] The block's parent execution payload (defined by bid.parent_block_hash) has been seen
+  // (via gossip or non-gossip sources) (a client MAY queue blocks for processing once the parent payload is retrieved).
+  if (isGloasBeaconBlock(block)) {
+    const parentBlockHashHex = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+    if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
+      throw new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+        parentRoot,
+        parentBlockHash: parentBlockHashHex,
+      });
+    }
   }
 
   // [IGNORE] The attestation head block is too far behind the attestation slot, causing many skip slots.
@@ -103,7 +126,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The block is from a higher slot than its parent.
   if (parentBlock.slot >= blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
+    throw new BlockGossipError(GossipAction.REJECT, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
       parentSlot: parentBlock.slot,
       slot: blockSlot,
@@ -111,9 +134,9 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
-  if (isForkPostDeneb(fork)) {
+  if (isForkPostDeneb(fork) && !isForkPostGloas(fork)) {
     const blobKzgCommitmentsLen = (block as deneb.BeaconBlock).body.blobKzgCommitments.length;
-    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(computeEpochAtSlot(blockSlot));
+    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(blockEpoch);
     if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
       throw new BlockGossipError(GossipAction.REJECT, {
         code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
@@ -121,6 +144,34 @@ export async function validateGossipBlock(
         commitmentLimit: maxBlobsPerBlock,
       });
     }
+  }
+
+  if (isForkPostGloas(fork)) {
+    const bid = (block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message;
+
+    // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
+    // -- i.e. validate that len(bid.blob_kzg_commitments) <= max_blobs_per_block
+    const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+    const maxBlobsPerBlock = config.getMaxBlobsPerBlock(blockEpoch);
+    if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS,
+        blobKzgCommitmentsLen,
+        commitmentLimit: maxBlobsPerBlock,
+      });
+    }
+
+    // [REJECT] The bid's parent (defined by bid.parent_block_root) equals the block's parent (defined by block.parent_root)
+    if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH,
+        bidParentRoot: toRootHex(bid.parentBlockRoot),
+        blockParentRoot: parentRoot,
+      });
+    }
+
+    // TODO GLOAS: [REJECT] The block's execution payload parent (defined by bid.parent_block_hash) passes all validation
+    // This requires execution engine integration to verify the parent block hash
   }
 
   // use getPreState to reload state if needed. It also checks for whether the current finalized checkpoint is an ancestor of the block.
@@ -134,13 +185,15 @@ export async function validateGossipBlock(
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });
 
-  // Extra conditions for merge fork blocks
+  // in forky condition, make sure to populate ShufflingCache with regened state
+  chain.shufflingCache.processState(blockState);
+
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
-  if (fork === ForkName.bellatrix) {
-    if (!isExecutionBlockBodyType(block.body)) throw Error("Not merge block type");
+  if (isForkPostBellatrix(fork) && !isForkPostGloas(fork)) {
+    if (!isExecutionBlockBodyType(block.body)) throw Error("Not execution block body type");
     const executionPayload = block.body.executionPayload;
-    if (isExecutionStateType(blockState) && isExecutionEnabled(blockState, block)) {
+    if (isStatePostBellatrix(blockState) && blockState.isExecutionStateType && blockState.isExecutionEnabled(block)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
@@ -152,9 +205,14 @@ export async function validateGossipBlock(
     }
   }
 
+  // [REJECT] The proposer index is a valid validator index
+  if (proposerIndex >= blockState.validatorCount) {
+    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.UNKNOWN_PROPOSER, proposerIndex});
+  }
+
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(blockState, signedBlock);
+    const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
       throw new BlockGossipError(GossipAction.REJECT, {
@@ -170,7 +228,7 @@ export async function validateGossipBlock(
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
-  if (blockState.epochCtx.getBeaconProposer(blockSlot) !== proposerIndex) {
+  if (blockState.getBeaconProposer(blockSlot) !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
   }
 

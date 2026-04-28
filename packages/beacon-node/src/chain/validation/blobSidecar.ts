@@ -12,7 +12,7 @@ import {
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
 import {BlobIndex, Root, Slot, SubnetID, deneb, ssz} from "@lodestar/types";
-import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
+import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {kzg} from "../../util/kzg.js";
 import {BlobSidecarErrorCode, BlobSidecarGossipError, BlobSidecarValidationError} from "../errors/blobSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
@@ -78,7 +78,7 @@ export async function validateGossipBlobSidecar(
   // already know this block.
   const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blobSidecar.signedBlockHeader.message);
   const blockHex = toRootHex(blockRoot);
-  if (chain.forkChoice.getBlockHex(blockHex) !== null) {
+  if (chain.forkChoice.getBlockHexDefaultStatus(blockHex) !== null) {
     throw new BlobSidecarGossipError(GossipAction.IGNORE, {code: BlobSidecarErrorCode.ALREADY_KNOWN, root: blockHex});
   }
 
@@ -89,7 +89,7 @@ export async function validateGossipBlobSidecar(
   // gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is
   // retrieved).
   const parentRoot = toRootHex(blobSidecar.signedBlockHeader.message.parentRoot);
-  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
@@ -124,7 +124,7 @@ export async function validateGossipBlobSidecar(
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
+    .getBlockSlotState(parentBlock, blobSlot, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
       throw new BlobSidecarGossipError(GossipAction.IGNORE, {
         code: BlobSidecarErrorCode.PARENT_UNKNOWN,
@@ -137,7 +137,11 @@ export async function validateGossipBlobSidecar(
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   const signature = blobSidecar.signedBlockHeader.signature;
   if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blobSlot, blockHex, signature)) {
-    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(blockState, blobSidecar.signedBlockHeader);
+    const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
+      chain.config,
+      blockState.slot,
+      blobSidecar.signedBlockHeader
+    );
     // Don't batch so verification is not delayed
     if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
       throw new BlobSidecarGossipError(GossipAction.REJECT, {
@@ -172,7 +176,7 @@ export async function validateGossipBlobSidecar(
   // MAY be queued for later processing while proposers for the block's branch are calculated -- in such
   // a case _do not_ `REJECT`, instead `IGNORE` this message.
   const proposerIndex = blobSidecar.signedBlockHeader.message.proposerIndex;
-  if (blockState.epochCtx.getBeaconProposer(blobSlot) !== proposerIndex) {
+  if (blockState.getBeaconProposer(blobSlot) !== proposerIndex) {
     throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.INCORRECT_PROPOSER,
       proposerIndex,
@@ -222,7 +226,7 @@ export async function validateBlockBlobSidecars(
   const firstSidecarSignedBlockHeader = blobSidecars[0].signedBlockHeader;
   const firstSidecarBlockHeader = firstSidecarSignedBlockHeader.message;
   const firstBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstSidecarBlockHeader);
-  if (Buffer.compare(blockRoot, firstBlockRoot) !== 0) {
+  if (!byteArrayEquals(blockRoot, firstBlockRoot)) {
     throw new BlobSidecarValidationError(
       {
         code: BlobSidecarErrorCode.INCORRECT_BLOCK,
@@ -239,8 +243,7 @@ export async function validateBlockBlobSidecars(
     const blockRootHex = toRootHex(blockRoot);
     const signature = firstSidecarSignedBlockHeader.signature;
     if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRootHex, signature)) {
-      const headState = await chain.getHeadState();
-      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(headState, firstSidecarSignedBlockHeader);
+      const signatureSet = getBlockHeaderProposerSignatureSetByHeaderSlot(chain.config, firstSidecarSignedBlockHeader);
 
       if (
         !(await chain.bls.verifySignatureSets([signatureSet], {

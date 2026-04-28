@@ -22,6 +22,7 @@ export function getApiClientStub(): ApiClientStub {
       submitPoolSyncCommitteeSignatures: vi.fn(),
       submitPoolAttestations: vi.fn(),
       submitPoolAttestationsV2: vi.fn(),
+      submitPayloadAttestationMessages: vi.fn(),
     },
     node: {
       getSyncingStatus: vi.fn(),
@@ -29,6 +30,7 @@ export function getApiClientStub(): ApiClientStub {
     validator: {
       getProposerDuties: vi.fn(),
       getAttesterDuties: vi.fn(),
+      getPtcDuties: vi.fn(),
       prepareBeaconCommitteeSubnet: vi.fn(),
       produceBlockV3: vi.fn(),
       getSyncCommitteeDuties: vi.fn(),
@@ -40,6 +42,7 @@ export function getApiClientStub(): ApiClientStub {
       submitSyncCommitteeSelections: vi.fn(),
       produceAttestationData: vi.fn(),
       produceInclusionList: vi.fn(),
+      producePayloadAttestationData: vi.fn(),
       getAggregatedAttestation: vi.fn(),
       getAggregatedAttestationV2: vi.fn(),
       publishAggregateAndProofs: vi.fn(),

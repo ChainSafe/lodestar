@@ -1,6 +1,7 @@
 import {FAR_FUTURE_EPOCH, MIN_ACTIVATION_BALANCE, PENDING_CONSOLIDATIONS_LIMIT} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
-import {CachedBeaconStateElectra} from "../types.js";
+import {byteArrayEquals} from "@lodestar/utils";
+import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasEth1WithdrawalCredential} from "../util/capella.js";
 import {
   hasCompoundingWithdrawalCredential,
@@ -13,7 +14,7 @@ import {getConsolidationChurnLimit, getPendingBalanceToWithdraw, isActiveValidat
 
 // TODO Electra: Clean up necessary as there is a lot of overlap with isValidSwitchToCompoundRequest
 export function processConsolidationRequest(
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   consolidationRequest: electra.ConsolidationRequest
 ): void {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
@@ -56,7 +57,7 @@ export function processConsolidationRequest(
 
   // Verify source withdrawal credentials
   const hasCorrectCredential = hasExecutionWithdrawalCredential(sourceValidator.withdrawalCredentials);
-  const isCorrectSourceAddress = Buffer.compare(sourceWithdrawalAddress, sourceAddress) === 0;
+  const isCorrectSourceAddress = byteArrayEquals(sourceWithdrawalAddress, sourceAddress);
   if (!(hasCorrectCredential && isCorrectSourceAddress)) {
     return;
   }
@@ -103,7 +104,7 @@ export function processConsolidationRequest(
  * Determine if we should set consolidation target validator to compounding credential
  */
 function isValidSwitchToCompoundRequest(
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   consolidationRequest: electra.ConsolidationRequest
 ): boolean {
   const {sourcePubkey, targetPubkey, sourceAddress} = consolidationRequest;
@@ -124,7 +125,7 @@ function isValidSwitchToCompoundRequest(
   const sourceValidator = state.validators.getReadonly(sourceIndex);
   const sourceWithdrawalAddress = sourceValidator.withdrawalCredentials.subarray(12);
   // Verify request has been authorized
-  if (Buffer.compare(sourceWithdrawalAddress, sourceAddress) !== 0) {
+  if (!byteArrayEquals(sourceWithdrawalAddress, sourceAddress)) {
     return false;
   }
 

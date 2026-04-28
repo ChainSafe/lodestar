@@ -21,6 +21,12 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
@@ -46,6 +52,7 @@
       "url": ""
     }
   ],
+  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
@@ -55,9 +62,9 @@
         "x": 0,
         "y": 0
       },
-      "id": 61,
+      "id": 100,
       "panels": [],
-      "title": "Network",
+      "title": "Health Overview",
       "type": "row"
     },
     {
@@ -65,14 +72,175 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time elapsed between data column sidecar slot time and the time data column received",
+      "description": "Total number of custody groups",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "thresholds"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 0,
+        "y": 1
+      },
+      "id": 36,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "8.5.16",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "beacon_custody_groups",
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Custody groups",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Number of custody data columns expected to have but are missing currently.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 5,
+        "y": 1
+      },
+      "id": 101,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "8.5.16",
+      "targets": [
+        {
+          "expr": "lodestar_data_columns_missing_custody_columns_count",
+          "legendFormat": "missing",
+          "refId": "A"
+        }
+      ],
+      "title": "Missing Custody Columns",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Total number of backfilled custody groups",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "green",
+            "mode": "thresholds"
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 10,
+        "y": 1
+      },
+      "id": 53,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "8.5.16",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "beacon_custody_groups_backfilled",
+          "interval": "",
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Backfilled custody groups",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Average number of data column sidecars per slot that were already received via another source per slot (ie scaled x12).",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -86,7 +254,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -108,10 +275,85 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 7,
+        "w": 9,
+        "x": 15,
+        "y": 1
+      },
+      "id": 103,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(lodestar_data_column_sidecar_already_added[$rate_interval]) * 12",
+          "legendFormat": "duplicates",
+          "refId": "A"
+        }
+      ],
+      "title": "Duplicate Columns per slot",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Average time elapsed between data column's slot time and when it is received",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 1
+        "y": 8
       },
       "id": 71,
       "options": {
@@ -133,15 +375,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_column_elapsed_time_till_received_seconds_sum{source=\"gossip\"}[$rate_interval])\n/\nrate(lodestar_data_column_elapsed_time_till_received_seconds_count{source=\"gossip\"}[$rate_interval])",
+          "expr": "sum by (receivedOrder) (rate(lodestar_data_column_elapsed_time_till_received_seconds_sum[$rate_interval]))\n/\nsum by (receivedOrder) (rate(lodestar_data_column_elapsed_time_till_received_seconds_count[$rate_interval]))",
           "instant": false,
           "interval": "",
-          "legendFormat": "{{source}}",
+          "legendFormat": "{{receivedOrder}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Data columns receiving delay",
+      "title": "Receiving delay (avg)",
       "type": "timeseries"
     },
     {
@@ -149,7 +391,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time elapsed between data column sidecar slot time and the time data column received",
+      "description": "Heatmap of data column receiving latency, (columns/second) received within each latency bucket.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -166,17 +408,17 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 1
+        "y": 8
       },
       "id": 62,
       "options": {
         "calculate": false,
-        "cellGap": 2,
+        "cellGap": 1,
         "color": {
-          "exponent": 0.5,
+          "exponent": 0.15,
           "fill": "dark-orange",
           "mode": "scheme",
           "reverse": false,
@@ -198,16 +440,17 @@
         },
         "tooltip": {
           "mode": "single",
-          "showColorScale": false,
-          "yHistogram": false
+          "show": true,
+          "showColorScale": true,
+          "yHistogram": true
         },
         "yAxis": {
           "axisPlacement": "left",
           "reverse": false,
-          "unit": "short"
+          "unit": "s"
         }
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "8.5.16",
       "targets": [
         {
           "datasource": {
@@ -215,7 +458,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "12*rate(lodestar_data_column_elapsed_time_till_received_seconds_bucket{source=\"gossip\"}[$rate_interval])",
+          "expr": "sum by (le) (rate(lodestar_data_column_elapsed_time_till_received_seconds_bucket[$rate_interval]))",
           "format": "heatmap",
           "instant": false,
           "interval": "",
@@ -224,25 +467,37 @@
           "refId": "A"
         }
       ],
-      "title": "Data columns receiving delay",
+      "title": "Receiving delay (heatmap)",
       "type": "heatmap"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 61,
+      "panels": [],
+      "title": "Gossip",
+      "type": "row"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Number of received data columns by source",
+      "description": "Average number of data columns received per slot, by source, ( ie scaled x12).",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "columns / slot (scaled)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -253,7 +508,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -275,10 +529,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 7
+        "y": 17
       },
       "id": 63,
       "options": {
@@ -308,37 +562,24 @@
           "refId": "A"
         }
       ],
-      "title": "Data columns source",
+      "title": "Data columns received per slot (by source)",
       "type": "timeseries"
-    },
-    {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 13
-      },
-      "id": 16,
-      "panels": [],
-      "title": "Data columns gossip verification",
-      "type": "row"
     },
     {
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Number of data column sidecars processed per slot, by outcome (ie scaled x12).",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "columns / slot (scaled)",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -349,7 +590,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -360,21 +600,23 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "none"
+              "mode": "normal"
             },
             "thresholdsStyle": {
               "mode": "off"
             }
           },
-          "mappings": []
+          "decimals": 2,
+          "mappings": [],
+          "unit": "none"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 14
+        "x": 12,
+        "y": 17
       },
       "id": 13,
       "interval": "1m",
@@ -401,11 +643,11 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "avg_over_time(\n  (rate(beacon_data_column_sidecar_processing_requests_total[1m]) * 12 > 0)[$rate_interval:]\n)",
+          "expr": "rate(beacon_data_column_sidecar_processing_requests_total[$rate_interval]) * 12",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "befor verification",
+          "legendFormat": "total",
           "range": true,
           "refId": "A"
         },
@@ -415,11 +657,11 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(\n  (rate(beacon_data_column_sidecar_processing_successes_total[1m]) * 12 > 0)[$rate_interval:]\n)",
+          "expr": "rate(beacon_data_column_sidecar_processing_successes_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "after verification",
+          "legendFormat": "verified",
           "range": true,
           "refId": "B"
         },
@@ -429,100 +671,30 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(\n  (rate(beacon_data_column_sidecar_processing_requests_total[1m]) * 12 > 0)[$rate_interval:]\n)\n-\navg_over_time(\n  (rate(beacon_data_column_sidecar_processing_successes_total[1m]) * 12 > 0)[$rate_interval:]\n) != 0",
+          "expr": "rate(beacon_data_column_sidecar_processing_skip_total[$rate_interval]) * 12",
           "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "failures",
+          "legendFormat": "skipped",
           "range": true,
           "refId": "C"
-        }
-      ],
-      "title": "Data column sidecars gossip verification",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 14
-      },
-      "id": 70,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_gossip_validation_error_total{topic=\"data_column_sidecar\"}[$rate_interval])",
+          "expr": "(\n  rate(beacon_data_column_sidecar_processing_requests_total[$rate_interval])\n  -\n  rate(beacon_data_column_sidecar_processing_successes_total[$rate_interval])\n  -\n  rate(beacon_data_column_sidecar_processing_skip_total[$rate_interval])\n) * 12",
+          "hide": false,
           "instant": false,
           "interval": "",
-          "legendFormat": "{{error}}",
+          "legendFormat": "failed",
           "range": true,
-          "refId": "A"
+          "refId": "D"
         }
       ],
-      "title": "Gossip DataColumnSidecar Error",
+      "title": "Data column sidecars processing(verification) (per slot)",
       "type": "timeseries"
     },
     {
@@ -530,14 +702,13 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time elapsed between data column received and data column validated",
+      "description": "p99 time to verify a gossip data column sidecar",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -551,89 +722,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 20
-      },
-      "id": 69,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_gossip_data_column_received_to_gossip_validate_seconds_bucket[$rate_interval])",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Data column recv to gossip validation delay",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -656,10 +744,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 20
+        "x": 0,
+        "y": 25
       },
       "id": 35,
       "interval": "30s",
@@ -671,7 +759,6 @@
           "showLegend": false
         },
         "tooltip": {
-          "hideZeros": false,
           "mode": "single",
           "sort": "none"
         }
@@ -687,12 +774,12 @@
           "expr": "histogram_quantile(0.99, rate(beacon_data_column_sidecar_gossip_verification_seconds_bucket    [$rate_interval]))\n",
           "instant": false,
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "p99",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Runtime of data column sidecars gossip verification",
+      "title": "Gossip verification runtime (p99)",
       "type": "timeseries"
     },
     {
@@ -700,6 +787,90 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Validation errors while processing gossip sidecars (errors / slot) (ie scaled x12)",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "errors / slot (scaled)",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 25
+      },
+      "id": 70,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_validation_error_total{topic=\"data_column_sidecar\"}[$rate_interval]) * 12",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{error}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Gossip DataColumnSidecar validation errors (per slot)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Heatmap of gossip data column sidecar verification latency. Shows (sidecars/sec) verified within each latency bucket over time.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -716,10 +887,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 26
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 33
       },
       "id": 72,
       "interval": "30s",
@@ -727,7 +898,7 @@
         "calculate": false,
         "cellGap": 1,
         "color": {
-          "exponent": 0.5,
+          "exponent": 0.7,
           "fill": "dark-orange",
           "mode": "scheme",
           "reverse": false,
@@ -742,22 +913,24 @@
           "le": 1e-9
         },
         "legend": {
-          "show": true
+          "show": false
         },
         "rowsFrame": {
           "layout": "auto"
         },
         "tooltip": {
           "mode": "single",
-          "showColorScale": false,
-          "yHistogram": false
+          "show": true,
+          "showColorScale": true,
+          "yHistogram": true
         },
         "yAxis": {
           "axisPlacement": "left",
-          "reverse": false
+          "reverse": false,
+          "unit": "s"
         }
       },
-      "pluginVersion": "10.4.1",
+      "pluginVersion": "8.5.16",
       "targets": [
         {
           "datasource": {
@@ -769,12 +942,12 @@
           "format": "heatmap",
           "instant": false,
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "{{le}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Runtime of data column sidecars gossip verification",
+      "title": "Gossip verification runtime (heatmap)",
       "type": "heatmap"
     },
     {
@@ -783,11 +956,11 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 32
+        "y": 42
       },
       "id": 58,
       "panels": [],
-      "title": "engine_getBlobsV2",
+      "title": "Engine",
       "type": "row"
     },
     {
@@ -795,14 +968,13 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total number of engine_getBlobsV2 requests sent and responses received",
+      "description": "Rate of engine_getBlobsV2 requests sent and responses received (req/s)",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -816,7 +988,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -835,15 +1006,15 @@
           },
           "decimals": 0,
           "mappings": [],
-          "unit": "none"
+          "unit": "ops"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 33
+        "y": 43
       },
       "id": 50,
       "interval": "30s",
@@ -907,7 +1078,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -921,7 +1091,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -944,10 +1113,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 33
+        "y": 43
       },
       "id": 49,
       "options": {
@@ -973,12 +1142,12 @@
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, rate(beacon_engine_getBlobsV2_request_duration_seconds_bucket[$rate_interval]))",
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "p99",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Duration of engine_getBlobsV2 requests",
+      "title": "Duration of engine_getBlobsV2 requests (p99)",
       "type": "timeseries"
     },
     {
@@ -993,7 +1162,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1007,7 +1175,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1024,17 +1191,17 @@
               "mode": "off"
             }
           },
-          "decimals": 0,
+          "decimals": 1,
           "mappings": [],
-          "unit": "none"
+          "unit": "percent"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 39
+        "y": 51
       },
       "id": 57,
       "interval": "30s",
@@ -1060,16 +1227,91 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "(rate(beacon_engine_getBlobsV2_requests_total[$rate_interval])\n-\nrate(beacon_engine_getBlobsV2_responses_total[$rate_interval])) / rate(beacon_engine_getBlobsV2_requests_total[$rate_interval]) * 100",
+          "expr": "(rate(beacon_engine_getBlobsV2_requests_total[$rate_interval])-rate(beacon_engine_getBlobsV2_responses_total[$rate_interval])) / clamp_min(rate(beacon_engine_getBlobsV2_requests_total[$rate_interval]), 1)* 100",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
           "range": true,
-          "refId": "A"
+          "refId": "A",
+          "legendFormat": "unsuccessful %"
         }
       ],
       "title": "Unsuccessful engine_getBlobsV2 requests rate (%)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Rate of engine API results per second, broken down by outcome",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 51
+      },
+      "id": 102,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "expr": "rate(lodestar_data_column_engine_result_total[$rate_interval])",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Engine API Results (per second)",
       "type": "timeseries"
     },
     {
@@ -1078,7 +1320,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 45
+        "y": 59
       },
       "id": 60,
       "panels": [],
@@ -1097,7 +1339,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1111,7 +1352,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1134,10 +1374,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 60
       },
       "id": 21,
       "options": {
@@ -1161,14 +1401,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, rate(beacon_data_column_sidecar_computation_seconds_bucket[$rate_interval]))\n",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(beacon_data_column_sidecar_computation_seconds_bucket[$rate_interval])))",
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "p99",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Time taken to compute data column sidecar",
+      "title": "Data column sidecar computation time (p99)",
       "type": "timeseries"
     },
     {
@@ -1182,7 +1422,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1196,7 +1435,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1219,10 +1457,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 60
       },
       "id": 22,
       "options": {
@@ -1247,12 +1485,12 @@
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, rate(beacon_data_column_sidecar_inclusion_proof_verification_seconds_bucket[$rate_interval]))",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "p99",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Time taken to verify data column sidecar inclusion proof",
+      "title": "Time taken to verify data column sidecar inclusion proof (p99)",
       "type": "timeseries"
     },
     {
@@ -1266,7 +1504,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1280,7 +1517,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1303,10 +1539,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 52
+        "y": 68
       },
       "id": 24,
       "options": {
@@ -1332,127 +1568,13 @@
           "editorMode": "code",
           "expr": "histogram_quantile(0.99, rate(beacon_kzg_verification_data_column_batch_seconds_bucket[$rate_interval]))",
           "interval": "",
-          "legendFormat": "{{instance}}",
+          "legendFormat": "p99",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Runtime of batched data column kzg verification",
+      "title": "Runtime of batched data column kzg verification (p99)",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Total number of custody groups",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "green",
-            "mode": "thresholds"
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 12,
-        "y": 52
-      },
-      "id": 36,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "beacon_target_custody_group_count",
-          "interval": "",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Custody groups",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Total number of backfilled custody groups",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "fixedColor": "green",
-            "mode": "thresholds"
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 6,
-        "x": 18,
-        "y": 52
-      },
-      "id": 53,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "beacon_custody_groups_backfilled",
-          "interval": "",
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Backfilled custody groups",
-      "type": "stat"
     },
     {
       "collapsed": false,
@@ -1460,7 +1582,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 76
       },
       "id": 59,
       "panels": [],
@@ -1478,10 +1600,9 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
+            "axisLabel": "columns/s",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -1492,7 +1613,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1510,15 +1630,16 @@
             }
           },
           "decimals": 0,
-          "mappings": []
+          "mappings": [],
+          "unit": "none"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 59
+        "y": 77
       },
       "id": 14,
       "interval": "30s",
@@ -1543,7 +1664,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg_over_time(\n  (rate(beacon_data_availability_reconstructed_columns_total[1m]) * 12 > 0)[$rate_interval:]\n)",
+          "expr": "rate(beacon_data_availability_reconstructed_columns_total[$rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -1552,7 +1673,7 @@
           "refId": "A"
         }
       ],
-      "title": "Total count of reconstructed columns",
+      "title": "Rate of column reconstruction",
       "type": "timeseries"
     },
     {
@@ -1566,7 +1687,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1580,7 +1700,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1603,10 +1722,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 59
+        "y": 77
       },
       "id": 25,
       "interval": "30s",
@@ -1631,13 +1750,13 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, rate(beacon_data_availability_reconstruction_time_seconds_bucket[$rate_interval]))",
-          "legendFormat": "{{job}}",
+          "expr": "histogram_quantile(0.99,sum by (le) (rate(beacon_data_availability_reconstruction_time_seconds_bucket[$rate_interval])))",
+          "legendFormat": "p99",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Time taken to reconstruct columns",
+      "title": "Time taken to reconstruct columns (p99)",
       "type": "timeseries"
     },
     {
@@ -1652,7 +1771,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1666,7 +1784,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1683,15 +1800,16 @@
               "mode": "off"
             }
           },
-          "mappings": []
+          "mappings": [],
+          "unit": "short"
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 85
       },
       "id": 64,
       "options": {
@@ -1713,9 +1831,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_data_columns_in_custody_before_reconstruction[$rate_interval]) * 12",
+          "expr": "lodestar_data_columns_in_custody_before_reconstruction",
           "instant": false,
-          "legendFormat": "__auto",
+          "legendFormat": "{{job}}",
           "range": true,
           "refId": "A"
         }
@@ -1728,14 +1846,13 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Data column sidecars reconstruction result ",
+      "description": "Reconstruction outcomes per slot (ie rate scaled x12), grouped by result code.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -1749,7 +1866,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -1760,7 +1876,7 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "none"
+              "mode": "normal"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -1771,10 +1887,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 6,
+        "h": 8,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 85
       },
       "id": 67,
       "options": {
@@ -1804,90 +1920,7 @@
           "refId": "A"
         }
       ],
-      "title": "Reconstruction result",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Time elapsed between block slot time and the time data column sidecar reconstructed",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 0,
-        "y": 71
-      },
-      "id": 68,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds_sum[$rate_interval])\n/\nrate(lodestar_data_column_sidecar_elapsed_time_till_reconstructed_seconds_count[$rate_interval])",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Data columns reconstruction delay",
+      "title": "Reconstruction result (per slot)",
       "type": "timeseries"
     }
   ],
@@ -2002,7 +2035,7 @@
             "condition": "",
             "key": "instance",
             "operator": "=",
-            "value": "unstable-lg1k-hzax41-dkr"
+            "value": "unstable-super"
           }
         ],
         "hide": 0,

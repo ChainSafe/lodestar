@@ -4,10 +4,9 @@ import {GENESIS_SLOT, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
-import {prettyPrintPeerId} from "../../util.ts";
+import {prettyPrintPeerId} from "../../util.js";
 
 // TODO: Unit test
 
@@ -22,10 +21,13 @@ export async function* onBeaconBlocksByRange(
   const endSlot = startSlot + count;
 
   const finalized = db.blockArchive;
-  const unfinalized = db.block;
   // in the case of initializing from a non-finalized state, we don't have the finalized block so this api does not work
   // chain.forkChoice.getFinalizeBlock().slot
   const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
+  // Blocks are migrated to blockArchive at finalization (including the finalized block itself),
+  // so the archive loop serves up to AND INCLUDING finalizedSlot and the headChain loop
+  // starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
+  const archiveMaxSlot = finalizedSlot;
 
   const forkName = chain.config.getForkName(startSlot);
   if (isForkPostFulu(forkName) && startSlot < chain.earliestAvailableSlot) {
@@ -37,9 +39,12 @@ export async function* onBeaconBlocksByRange(
   }
 
   // Finalized range of blocks
-  if (startSlot <= finalizedSlot) {
+  if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
-    for await (const {key, value} of finalized.binaryEntriesStream({gte: startSlot, lt: endSlot})) {
+    for await (const {key, value} of finalized.binaryEntriesStream({
+      gte: startSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
+    })) {
       yield {
         data: value,
         boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(finalized.decodeKey(key))),
@@ -48,24 +53,26 @@ export async function* onBeaconBlocksByRange(
   }
 
   // Non-finalized range of blocks
-  if (endSlot > finalizedSlot) {
-    const headRoot = chain.forkChoice.getHeadRoot();
+  if (endSlot > archiveMaxSlot) {
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
-    // getAllAncestorBlocks response includes the head node, so it's the full chain.
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
 
-      // Must include only blocks in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      // Must include only blocks in the range requested, and skip anything the archive loop
+      // above already served via the block.slot > archiveMaxSlot filter.
+      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blockBytes = await unfinalized.getBinary(fromHex(block.blockRoot));
+        const blockBytes = await chain.getSerializedBlockByRoot(block.blockRoot);
         if (!blockBytes) {
           throw new ResponseError(
             RespStatus.SERVER_ERROR,
@@ -74,7 +81,7 @@ export async function* onBeaconBlocksByRange(
         }
 
         yield {
-          data: blockBytes,
+          data: blockBytes.block,
           boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
         };
       }
@@ -97,10 +104,12 @@ export function validateBeaconBlocksByRangeRequest(
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+
+  // The phase0 req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
+  // Archival nodes may still serve older retained blocks to allow genesis sync.
 
   // step > 1 is deprecated, see https://github.com/ethereum/consensus-specs/pull/2856
 

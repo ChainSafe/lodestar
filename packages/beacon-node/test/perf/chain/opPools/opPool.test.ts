@@ -1,4 +1,6 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
+import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {
   ForkName,
   MAX_ATTESTER_SLASHINGS,
@@ -6,9 +8,9 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
 } from "@lodestar/params";
-import {CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateAltair, PubkeyCache} from "@lodestar/state-transition";
+import {generatePerfTestCachedStateAltair} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
 import {BlockType} from "../../../../src/chain/interface.js";
 import {OpPool} from "../../../../src/chain/opPools/opPool.js";
 import {generateBlsToExecutionChanges} from "../../../fixtures/capella.js";
@@ -19,11 +21,12 @@ import {
 } from "../../../fixtures/phase0.js";
 
 describe("opPool", () => {
-  let originalState: CachedBeaconStateAltair;
+  let originalState: BeaconStateView;
+  const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
 
   beforeAll(
     () => {
-      originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
+      originalState = new BeaconStateView(generatePerfTestCachedStateAltair({goBackOneSlot: true}));
     },
     2 * 60 * 1000 // Generating the states for the first time is very slow
   );
@@ -31,11 +34,13 @@ describe("opPool", () => {
   bench({
     id: "getSlashingsAndExits - default max",
     beforeEach: () => {
-      const pool = new OpPool();
-      fillAttesterSlashing(pool, originalState, MAX_ATTESTER_SLASHINGS);
-      fillProposerSlashing(pool, originalState, MAX_PROPOSER_SLASHINGS);
-      fillVoluntaryExits(pool, originalState, MAX_VOLUNTARY_EXITS);
-      fillBlsToExecutionChanges(pool, originalState, MAX_BLS_TO_EXECUTION_CHANGES);
+      const pool = new OpPool(config);
+      const beaconState = originalState.cachedState as CachedBeaconStateAltair;
+      fillAttesterSlashing(pool, beaconState, MAX_ATTESTER_SLASHINGS);
+      fillProposerSlashing(pool, beaconState, MAX_PROPOSER_SLASHINGS);
+      fillVoluntaryExits(pool, beaconState, MAX_VOLUNTARY_EXITS);
+      // TODO: feed pubkeyCache separately instead of getting from originalState
+      fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, MAX_BLS_TO_EXECUTION_CHANGES);
 
       return pool;
     },
@@ -47,13 +52,14 @@ describe("opPool", () => {
   bench({
     id: "getSlashingsAndExits - 2k",
     beforeEach: () => {
-      const pool = new OpPool();
+      const pool = new OpPool(config);
       const maxItemsInPool = 2_000;
-
-      fillAttesterSlashing(pool, originalState, maxItemsInPool);
-      fillProposerSlashing(pool, originalState, maxItemsInPool);
-      fillVoluntaryExits(pool, originalState, maxItemsInPool);
-      fillBlsToExecutionChanges(pool, originalState, maxItemsInPool);
+      const beaconState = originalState.cachedState as CachedBeaconStateAltair;
+      fillAttesterSlashing(pool, beaconState, maxItemsInPool);
+      fillProposerSlashing(pool, beaconState, maxItemsInPool);
+      fillVoluntaryExits(pool, beaconState, maxItemsInPool);
+      // TODO: feed pubkeyCache separately instead of getting from originalState
+      fillBlsToExecutionChanges(beaconState.epochCtx.pubkeyCache, pool, beaconState, maxItemsInPool);
 
       return pool;
     },
@@ -99,8 +105,13 @@ function fillVoluntaryExits(pool: OpPool, state: CachedBeaconStateAltair, count:
 
 // This does not set the `withdrawalCredentials` for the validator
 // So it will be in the pool but not returned from `getSlashingsAndExits`
-function fillBlsToExecutionChanges(pool: OpPool, state: CachedBeaconStateAltair, count: number): OpPool {
-  for (const blsToExecution of generateBlsToExecutionChanges(state, count)) {
+function fillBlsToExecutionChanges(
+  pubkeyCache: PubkeyCache,
+  pool: OpPool,
+  state: CachedBeaconStateAltair,
+  count: number
+): OpPool {
+  for (const blsToExecution of generateBlsToExecutionChanges(pubkeyCache, state, count)) {
     pool.insertBlsToExecutionChange(blsToExecution);
   }
 

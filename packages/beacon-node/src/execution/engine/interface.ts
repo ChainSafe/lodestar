@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
@@ -18,11 +19,13 @@ import {
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
-import {DATA} from "../../eth1/provider/utils.js";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
+import {DATA} from "./utils.js";
 
 export {PayloadIdCache, type PayloadId, type WithdrawalV1};
+export type ClientVersion = routes.node.ClientVersion;
+export const ClientCode = routes.node.ClientCode;
 
 export enum ExecutionPayloadStatus {
   /** given payload is valid */
@@ -54,26 +57,6 @@ export enum ExecutionEngineState {
   SYNCING = "SYNCING",
   SYNCED = "SYNCED",
   AUTH_FAILED = "AUTH_FAILED",
-}
-
-/**
- * Client code as defined in https://github.com/ethereum/execution-apis/blob/v1.0.0-beta.4/src/engine/identification.md#clientcode
- * ClientCode.XX is dedicated to other clients which do not have their own code
- */
-export enum ClientCode {
-  BU = "BU", // besu
-  EJ = "EJ", // ethereumJS
-  EG = "EG", // erigon
-  GE = "GE", // go-ethereum
-  GR = "GR", // grandine
-  LH = "LH", // lighthouse
-  LS = "LS", // lodestar
-  NM = "NM", // nethermind
-  NB = "NB", // nimbus
-  TK = "TK", // teku
-  PM = "PM", // prysm
-  RH = "RH", // reth
-  XX = "XX", // unknown
 }
 
 export type ExecutionRequestType =
@@ -117,13 +100,7 @@ export type PayloadAttributes = {
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
   inclusionListTransactions?: bellatrix.Transactions;
-};
-
-export type ClientVersion = {
-  code: ClientCode;
-  name: string;
-  version: string;
-  commit: string;
+  slotNumber?: number; // EIP-7843
 };
 
 export type VersionedHashes = Uint8Array[];
@@ -170,7 +147,7 @@ export interface IExecutionEngine {
    *   corresponding state, up to and including finalized_block_hash.
    *
    * The call of the notify_forkchoice_updated function maps on the POS_FORKCHOICE_UPDATED event defined in the EIP-3675.
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/fork-choice.md#notify_forkchoice_updated
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.7/specs/merge/fork-choice.md#notify_forkchoice_updated
    *
    * Should be called in response to fork-choice head and finalized events
    */
@@ -187,7 +164,7 @@ export interface IExecutionEngine {
    * since the corresponding call to prepare_payload method.
    *
    * Required for block producing
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.7/specs/merge/validator.md#get_payload
    */
   getPayload(
     fork: ForkName,

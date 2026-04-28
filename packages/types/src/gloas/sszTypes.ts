@@ -1,14 +1,26 @@
-import {BitVectorType, ContainerType, ListBasicType, ListCompositeType, VectorCompositeType} from "@chainsafe/ssz";
+import {
+  BitVectorType,
+  ByteListType,
+  ContainerType,
+  ListBasicType,
+  ListCompositeType,
+  VectorBasicType,
+  VectorCompositeType,
+} from "@chainsafe/ssz";
 import {
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
+  BUILDER_REGISTRY_LIMIT,
   HISTORICAL_ROOTS_LIMIT,
+  MAX_BYTES_PER_TRANSACTION,
   MAX_PAYLOAD_ATTESTATIONS,
+  MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
+import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
@@ -17,25 +29,58 @@ import {ssz as phase0Ssz} from "../phase0/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 // biome-ignore lint/suspicious/noShadowRestrictedNames: We explicitly want `Boolean` name to be imported
-const {Gwei, ExecutionAddress, ValidatorIndex, Epoch, BLSSignature, Bytes32, Root, Slot, Boolean, UintBn64, UintNum64} =
-  primitiveSsz;
+const {Boolean} = primitiveSsz;
+
+const {
+  Gwei,
+  ExecutionAddress,
+  ValidatorIndex,
+  Epoch,
+  BLSSignature,
+  Bytes32,
+  Root,
+  Slot,
+  UintBn64,
+  UintNum64,
+  BLSPubkey,
+  Uint8,
+  BuilderIndex,
+  EpochInf,
+} = primitiveSsz;
+
+export const Builder = new ContainerType(
+  {
+    pubkey: BLSPubkey,
+    version: Uint8,
+    executionAddress: ExecutionAddress,
+    balance: UintNum64,
+    depositEpoch: EpochInf,
+    withdrawableEpoch: EpochInf,
+  },
+  {typeName: "Builder", jsonCase: "eth2"}
+);
 
 export const BuilderPendingWithdrawal = new ContainerType(
   {
     feeRecipient: ExecutionAddress,
-    amount: Gwei,
-    builderIndex: ValidatorIndex,
-    withdrawableEpoch: Epoch,
+    amount: UintNum64,
+    builderIndex: BuilderIndex,
   },
   {typeName: "BuilderPendingWithdrawal", jsonCase: "eth2"}
 );
 
 export const BuilderPendingPayment = new ContainerType(
   {
-    weight: Gwei,
+    weight: UintNum64,
     withdrawal: BuilderPendingWithdrawal,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
+);
+
+export const PayloadTimelinessCommittee = new VectorBasicType(ValidatorIndex, PTC_SIZE);
+export const PtcWindow = new VectorCompositeType(
+  PayloadTimelinessCommittee,
+  (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH
 );
 
 export const PayloadAttestationData = new ContainerType(
@@ -75,17 +120,38 @@ export const IndexedPayloadAttestation = new ContainerType(
   {typeName: "IndexedPayloadAttestation", jsonCase: "eth2"}
 );
 
+export const ProposerPreferences = new ContainerType(
+  {
+    proposalSlot: Slot,
+    validatorIndex: ValidatorIndex,
+    feeRecipient: ExecutionAddress,
+    gasLimit: UintNum64,
+  },
+  {typeName: "ProposerPreferences", jsonCase: "eth2"}
+);
+
+export const SignedProposerPreferences = new ContainerType(
+  {
+    message: ProposerPreferences,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedProposerPreferences", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadBid = new ContainerType(
   {
     parentBlockHash: Bytes32,
     parentBlockRoot: Root,
     blockHash: Bytes32,
+    prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
     gasLimit: UintBn64,
-    builderIndex: ValidatorIndex,
+    builderIndex: BuilderIndex,
     slot: Slot,
-    value: Gwei,
-    blobKzgCommitmentsRoot: Root,
+    value: UintNum64,
+    executionPayment: UintNum64,
+    blobKzgCommitments: denebSsz.BlobKzgCommitments,
+    executionRequestsRoot: Root,
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
@@ -98,15 +164,23 @@ export const SignedExecutionPayloadBid = new ContainerType(
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
 );
 
+export const BlockAccessList = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+
+export const ExecutionPayload = new ContainerType(
+  {
+    ...electraSsz.ExecutionPayload.fields,
+    blockAccessList: BlockAccessList, // New in GLOAS:EIP-7928
+    slotNumber: Slot, // New in GLOAS:EIP-7843
+  },
+  {typeName: "ExecutionPayload", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadEnvelope = new ContainerType(
   {
-    payload: electraSsz.ExecutionPayload,
+    payload: ExecutionPayload,
     executionRequests: electraSsz.ExecutionRequests,
-    builderIndex: ValidatorIndex,
+    builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
-    slot: Slot,
-    blobKzgCommitments: denebSsz.BlobKzgCommitments,
-    stateRoot: Root,
   },
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
@@ -136,6 +210,7 @@ export const BeaconBlockBody = new ContainerType(
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadAttestations: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
+    parentExecutionRequests: electraSsz.ExecutionRequests, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
@@ -193,7 +268,7 @@ export const BeaconState = new ContainerType(
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
     // latestExecutionPayloadHeader: ExecutionPayloadHeader, // Removed in GLOAS:EIP7732
-    latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
+    latestBlockHash: Bytes32, // New in GLOAS:EIP7732
     // Withdrawals
     nextWithdrawalIndex: capellaSsz.BeaconState.fields.nextWithdrawalIndex,
     nextWithdrawalValidatorIndex: capellaSsz.BeaconState.fields.nextWithdrawalValidatorIndex,
@@ -209,11 +284,14 @@ export const BeaconState = new ContainerType(
     pendingPartialWithdrawals: electraSsz.BeaconState.fields.pendingPartialWithdrawals,
     pendingConsolidations: electraSsz.BeaconState.fields.pendingConsolidations,
     proposerLookahead: fuluSsz.BeaconState.fields.proposerLookahead,
+    builders: new ListCompositeType(Builder, BUILDER_REGISTRY_LIMIT), // New in GLOAS:EIP7732
+    nextWithdrawalBuilderIndex: BuilderIndex, // New in GLOAS:EIP7732
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
     builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
     builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
-    latestBlockHash: Bytes32, // New in GLOAS:EIP7732
-    latestWithdrawalsRoot: Root, // New in GLOAS:EIP7732
+    latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
+    payloadExpectedWithdrawals: capellaSsz.Withdrawals, // New in GLOAS:EIP7732
+    ptcWindow: PtcWindow, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -222,7 +300,7 @@ export const DataColumnSidecar = new ContainerType(
   {
     index: fuluSsz.DataColumnSidecar.fields.index,
     column: fuluSsz.DataColumnSidecar.fields.column,
-    kzgCommitments: fuluSsz.DataColumnSidecar.fields.kzgCommitments,
+    // kzgCommitments: denebSsz.BlobKzgCommitments, // Removed in GLOAS:EIP7732
     kzgProofs: fuluSsz.DataColumnSidecar.fields.kzgProofs,
     // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
     // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732
@@ -233,3 +311,25 @@ export const DataColumnSidecar = new ContainerType(
 );
 
 export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, NUMBER_OF_COLUMNS);
+
+export const ExecutionPayloadEnvelopesByRangeRequest = new ContainerType(
+  {startSlot: Slot, count: UintNum64},
+  {typeName: "ExecutionPayloadEnvelopesByRangeRequest", jsonCase: "eth2"}
+);
+
+// PayloadAttributes primarily for SSE event
+export const PayloadAttributes = new ContainerType(
+  {
+    ...denebSsz.PayloadAttributes.fields,
+    slotNumber: Slot,
+  },
+  {typeName: "PayloadAttributes", jsonCase: "eth2"}
+);
+
+export const SSEPayloadAttributes = new ContainerType(
+  {
+    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    payloadAttributes: PayloadAttributes,
+  },
+  {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
+);

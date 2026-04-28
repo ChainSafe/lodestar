@@ -1,4 +1,4 @@
-import {BitArray, byteArrayEquals} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   BLOCK_BODY_EXECUTION_PAYLOAD_DEPTH as EXECUTION_PAYLOAD_DEPTH,
@@ -22,6 +22,7 @@ import {
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
+import {byteArrayEquals} from "@lodestar/utils";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot, isValidMerkleBranch} from "../utils/index.js";
 import {normalizeMerkleBranch} from "../utils/normalizeMerkleBranch.js";
 import {LightClientStore} from "./store.js";

@@ -1,5 +1,5 @@
 import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/blst";
-import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {ISignatureSet, PubkeyCache, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/metrics.js";
 import {LinkedList} from "../../../util/array.js";
 import {VerifySignatureOpts} from "../interface.js";
@@ -48,14 +48,18 @@ export function jobItemSigSets(job: JobQueueItem): number {
  * Prepare BlsWorkReq from JobQueueItem
  * WARNING: May throw with untrusted user input
  */
-export async function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): Promise<BlsWorkReq> {
+export async function jobItemWorkReq(
+  job: JobQueueItem,
+  pubkeyCache: PubkeyCache,
+  metrics: Metrics | null
+): Promise<BlsWorkReq> {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
         opts: job.opts,
         sets: job.sets.map((set) => ({
           // this can throw, handled in the consumer code
-          publicKey: getAggregatedPubkey(set, metrics).toBytes(),
+          publicKey: getAggregatedPubkey(set, pubkeyCache, metrics).toBytes(),
           signature: set.signature,
           message: set.signingRoot,
         })),

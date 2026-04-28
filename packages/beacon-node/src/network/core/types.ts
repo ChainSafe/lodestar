@@ -1,5 +1,5 @@
-import {PeerScoreStatsDump} from "@chainsafe/libp2p-gossipsub/score";
-import {PublishOpts} from "@chainsafe/libp2p-gossipsub/types";
+import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
+import type {PublishOpts} from "@libp2p/gossipsub/types";
 import {routes} from "@lodestar/api";
 import {SpecJson} from "@lodestar/config";
 import {LoggerNodeOpts} from "@lodestar/logger/node";
@@ -30,6 +30,12 @@ export interface INetworkCorePublic {
   // Debug
   connectToPeer(peer: PeerIdStr, multiaddr: MultiaddrStr[]): Promise<void>;
   disconnectPeer(peer: PeerIdStr): Promise<void>;
+
+  // Direct peers management
+  addDirectPeer(peer: routes.lodestar.DirectPeer): Promise<string | null>;
+  removeDirectPeer(peerId: PeerIdStr): Promise<boolean>;
+  getDirectPeers(): Promise<string[]>;
+
   dumpPeers(): Promise<routes.lodestar.LodestarNodePeer[]>;
   dumpPeer(peerIdStr: PeerIdStr): Promise<routes.lodestar.LodestarNodePeer | undefined>;
   dumpPeerScoreStats(): Promise<PeerScoreStats>;

@@ -23,7 +23,6 @@ export type ChainArgs = {
   "chain.computeUnrealized"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
-  "safe-slots-to-import-optimistically": number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -31,8 +30,8 @@ export type ChainArgs = {
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveDataEpochs"?: number;
   "chain.archiveMode": ArchiveMode;
-  "chain.nHistoricalStates"?: boolean;
   "chain.nHistoricalStatesFileDataStore"?: boolean;
+  "chain.nativeStateView"?: boolean;
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
   "chain.maxCPStateEpochsOnDisk"?: number;
@@ -63,7 +62,6 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     computeUnrealized: args["chain.computeUnrealized"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
-    safeSlotsToImportOptimistically: args["safe-slots-to-import-optimistically"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -72,9 +70,9 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveDataEpochs: args["chain.archiveDataEpochs"],
     archiveMode: args["chain.archiveMode"] ?? defaultOptions.chain.archiveMode,
-    nHistoricalStates: args["chain.nHistoricalStates"] ?? defaultOptions.chain.nHistoricalStates,
     nHistoricalStatesFileDataStore:
       args["chain.nHistoricalStatesFileDataStore"] ?? defaultOptions.chain.nHistoricalStatesFileDataStore,
+    nativeStateView: args["chain.nativeStateView"] ?? defaultOptions.chain.nativeStateView,
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
@@ -227,15 +225,6 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "safe-slots-to-import-optimistically": {
-    hidden: true,
-    type: "number",
-    description:
-      "Slots from current (clock) slot till which its safe to import a block optimistically if the merge is not justified yet.",
-    default: defaultOptions.chain.safeSlotsToImportOptimistically,
-    group: "chain",
-  },
-
   "chain.archiveStateEpochFrequency": {
     description: "Minimum number of epochs between archived states",
     default: defaultOptions.chain.archiveStateEpochFrequency,
@@ -285,20 +274,19 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
-  "chain.nHistoricalStates": {
-    hidden: true,
-    description:
-      "Use the new FIFOBlockStateCache and PersistentCheckpointStateCache or not which make lodestar heap size bounded instead of unbounded as before",
-    type: "boolean",
-    default: defaultOptions.chain.nHistoricalStates,
-    group: "chain",
-  },
-
   "chain.nHistoricalStatesFileDataStore": {
     hidden: true,
     description: "Use fs to store checkpoint state for PersistentCheckpointStateCache or not",
     type: "boolean",
     default: defaultOptions.chain.nHistoricalStatesFileDataStore,
+    group: "chain",
+  },
+
+  "chain.nativeStateView": {
+    hidden: true,
+    description: "Use native (Zig) BeaconStateView instead of JS implementation",
+    type: "boolean",
+    default: defaultOptions.chain.nativeStateView,
     group: "chain",
   },
 

@@ -111,7 +111,9 @@ export type BeaconPreset = {
   // GLOAS
   PTC_SIZE: number;
   MAX_PAYLOAD_ATTESTATIONS: number;
+  BUILDER_REGISTRY_LIMIT: number;
   BUILDER_PENDING_WITHDRAWALS_LIMIT: number;
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: number;
 };
 
 /**
@@ -228,7 +230,9 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   // GLOAS
   PTC_SIZE: "number",
   MAX_PAYLOAD_ATTESTATIONS: "number",
+  BUILDER_REGISTRY_LIMIT: "number",
   BUILDER_PENDING_WITHDRAWALS_LIMIT: "number",
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: "number",
 };
 
 type BeaconPresetTypes = {

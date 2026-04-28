@@ -1,0 +1,193 @@
+name: Version docs
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  version-docs:
+    name: Create versioned docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Determine if this is a stable release or pre-release
+          if echo "$VERSION" | grep -qF -- '-rc.'; then
+            echo "is_stable=false" >> $GITHUB_OUTPUT
+            # Extract base version (e.g., 1.40.0 from 1.40.0-rc.0)
+            BASE_VERSION=$(echo "$VERSION" | sed 's/-.*//')
+            echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+            echo "Pre-release detected: $VERSION (base: $BASE_VERSION)"
+          else
+            echo "is_stable=true" >> $GITHUB_OUTPUT
+            echo "base_version=$VERSION" >> $GITHUB_OUTPUT
+            echo "Stable release detected: $VERSION"
+          fi
+
+      # Checkout the tagged release to build its docs
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          check-latest: true
+          cache: pnpm
+
+      - name: Install dependencies & build
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - name: Generate docs (CLI references, READMEs, assets)
+        run: pnpm docs:build
+
+      - name: Install docs dependencies
+        working-directory: docs
+        run: pnpm install
+
+      # Fetch existing versioned docs from the docs-versions branch
+      - name: Fetch existing versioned docs
+        run: |
+          git fetch origin docs-versions || true
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            echo "Found existing docs-versions branch"
+            git worktree add /tmp/docs-versions origin/docs-versions
+            # Copy existing versioned content into docs/
+            cp -r /tmp/docs-versions/versioned_docs docs/ 2>/dev/null || true
+            cp -r /tmp/docs-versions/versioned_sidebars docs/ 2>/dev/null || true
+            cp /tmp/docs-versions/versions.json docs/ 2>/dev/null || true
+            git worktree remove /tmp/docs-versions
+          else
+            echo "No existing docs-versions branch, starting fresh"
+          fi
+
+      - name: Check if version already exists
+        id: check
+        run: |
+          if [ -f docs/versions.json ] && grep -q "\"${{ steps.version.outputs.version }}\"" docs/versions.json; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Version ${{ steps.version.outputs.version }} already exists, skipping"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # For stable releases, remove any RC pre-release versions for the same base version
+      - name: Remove pre-release versions for this release
+        if: steps.check.outputs.exists == 'false' && steps.version.outputs.is_stable == 'true'
+        run: |
+          if [ ! -f docs/versions.json ]; then
+            echo "No versions.json, nothing to clean up"
+            exit 0
+          fi
+
+          BASE="${{ steps.version.outputs.base_version }}"
+          echo "Cleaning up pre-release versions matching $BASE-*..."
+
+          # Find pre-release versions to remove (e.g., 1.40.0-rc.0)
+          PRE_RELEASES=$(cat docs/versions.json | jq -r --arg base "$BASE" '.[] | select(startswith($base + "-"))')
+
+          if [ -z "$PRE_RELEASES" ]; then
+            echo "No pre-release versions found for $BASE"
+            exit 0
+          fi
+
+          for PRE in $PRE_RELEASES; do
+            echo "Removing pre-release version: $PRE"
+            rm -rf "docs/versioned_docs/version-$PRE"
+            rm -f "docs/versioned_sidebars/version-$PRE-sidebars.json"
+          done
+
+          # Update versions.json to exclude the removed pre-releases
+          cat docs/versions.json | jq --arg base "$BASE" '[.[] | select(startswith($base + "-") | not)]' > docs/versions.json.tmp
+          mv docs/versions.json.tmp docs/versions.json
+          echo "Updated versions.json:"
+          cat docs/versions.json
+
+      - name: Create docs version snapshot
+        if: steps.check.outputs.exists == 'false'
+        working-directory: docs
+        run: npx docusaurus docs:version ${{ steps.version.outputs.version }}
+
+      # Prune old versions: keep last 10 stable + any active pre-releases
+      - name: Prune old versions (keep last 10 stable)
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          if [ ! -f docs/versions.json ]; then
+            echo "No versions.json found, skipping prune"
+            exit 0
+          fi
+
+          # Count only stable versions (no hyphens)
+          STABLE_COUNT=$(cat docs/versions.json | jq '[.[] | select(contains("-") | not)] | length')
+
+          if [ "$STABLE_COUNT" -le 10 ]; then
+            echo "Only $STABLE_COUNT stable versions, no pruning needed"
+            exit 0
+          fi
+
+          echo "Found $STABLE_COUNT stable versions, pruning to keep last 10..."
+
+          # Get stable versions to remove (beyond the 5 most recent)
+          TO_REMOVE=$(cat docs/versions.json | jq -r '[.[] | select(contains("-") | not)][10:] | .[]')
+
+          for OLD_VERSION in $TO_REMOVE; do
+            echo "Removing old version: $OLD_VERSION"
+            rm -rf "docs/versioned_docs/version-$OLD_VERSION"
+            rm -f "docs/versioned_sidebars/version-$OLD_VERSION-sidebars.json"
+          done
+
+          # Rebuild versions.json excluding pruned versions
+          REMOVE_JSON=$(echo "$TO_REMOVE" | jq -R . | jq -s .)
+          cat docs/versions.json | jq --argjson remove "$REMOVE_JSON" '[.[] | select(. as $v | $remove | index($v) | not)]' > docs/versions.json.tmp
+          mv docs/versions.json.tmp docs/versions.json
+          echo "Pruned versions.json:"
+          cat docs/versions.json
+
+      - name: Push versioned docs to docs-versions branch
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          # Save versioned content to a temp directory
+          TMPDIR=$(mktemp -d)
+          cp -r docs/versioned_docs "$TMPDIR/" 2>/dev/null || true
+          cp -r docs/versioned_sidebars "$TMPDIR/" 2>/dev/null || true
+          cp docs/versions.json "$TMPDIR/" 2>/dev/null || true
+
+          # Clone just the docs-versions branch (or create orphan) in a clean directory
+          WORK=$(mktemp -d)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --heads origin docs-versions | grep -q docs-versions; then
+            git clone --branch docs-versions --single-branch --depth 1 \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$WORK"
+          else
+            git init "$WORK"
+            cd "$WORK"
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+            git checkout --orphan docs-versions
+            cd -
+          fi
+
+          # Replace content with updated versioned docs
+          cd "$WORK"
+          rm -rf versioned_docs versioned_sidebars versions.json
+          cp -r "$TMPDIR/versioned_docs" . 2>/dev/null || true
+          cp -r "$TMPDIR/versioned_sidebars" . 2>/dev/null || true
+          cp "$TMPDIR/versions.json" . 2>/dev/null || true
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add versioned_docs versioned_sidebars versions.json
+          git commit -m "docs: add versioned docs for v${{ steps.version.outputs.version }}" || echo "Nothing to commit"
+          git push origin docs-versions

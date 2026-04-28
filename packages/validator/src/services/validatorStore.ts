@@ -6,9 +6,11 @@ import {
   DOMAIN_AGGREGATE_AND_PROOF,
   DOMAIN_APPLICATION_BUILDER,
   DOMAIN_BEACON_ATTESTER,
+  DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
   DOMAIN_INCLUSION_LIST_COMMITTEE,
+  DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
@@ -41,6 +43,7 @@ import {
   altair,
   bellatrix,
   eip7805,
+  gloas,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -55,7 +58,7 @@ import {DoppelgangerService} from "./doppelgangerService.js";
 import {IndicesService} from "./indices.js";
 
 type BLSPubkeyMaybeHex = BLSPubkey | PubkeyHex;
-type Eth1Address = string;
+type ExecutionAddress = string;
 
 export enum SignerType {
   Local,
@@ -76,7 +79,7 @@ export type SignerRemote = {
 type DefaultProposerConfig = {
   graffiti?: string;
   strictFeeRecipientCheck: boolean;
-  feeRecipient: Eth1Address;
+  feeRecipient: ExecutionAddress;
   builder: {
     gasLimit: number;
     selection: routes.validator.BuilderSelection;
@@ -87,7 +90,7 @@ type DefaultProposerConfig = {
 export type ProposerConfig = {
   graffiti?: string;
   strictFeeRecipientCheck?: boolean;
-  feeRecipient?: Eth1Address;
+  feeRecipient?: ExecutionAddress;
   builder?: {
     gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
@@ -221,7 +224,7 @@ export class ValidatorStore {
       : this.indicesService.pollValidatorIndices(Array.from(this.validators.keys()));
   }
 
-  getFeeRecipient(pubkeyHex: PubkeyHex): Eth1Address {
+  getFeeRecipient(pubkeyHex: PubkeyHex): ExecutionAddress {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
@@ -229,12 +232,12 @@ export class ValidatorStore {
     return validatorData.feeRecipient ?? this.defaultProposerConfig.feeRecipient;
   }
 
-  getFeeRecipientByIndex(index: ValidatorIndex): Eth1Address {
+  getFeeRecipientByIndex(index: ValidatorIndex): ExecutionAddress {
     const pubkey = this.indicesService.index2pubkey.get(index);
     return pubkey ? this.getFeeRecipient(pubkey) : this.defaultProposerConfig.feeRecipient;
   }
 
-  setFeeRecipient(pubkeyHex: PubkeyHex, feeRecipient: Eth1Address): void {
+  setFeeRecipient(pubkeyHex: PubkeyHex, feeRecipient: ExecutionAddress): void {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
@@ -489,6 +492,40 @@ export class ValidatorStore {
     } as SignedBeaconBlock | SignedBlindedBeaconBlock;
   }
 
+  async signExecutionPayloadEnvelope(
+    pubkey: BLSPubkey,
+    envelope: gloas.ExecutionPayloadEnvelope,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<gloas.SignedExecutionPayloadEnvelope> {
+    // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
+    if (envelope.payload.slotNumber > currentSlot) {
+      throw Error(
+        `Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`
+      );
+    }
+
+    const signingSlot = envelope.payload.slotNumber;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
+    const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
+
+    logger?.debug("Signing execution payload envelope", {
+      slot: signingSlot,
+      beaconBlockRoot: toRootHex(envelope.beaconBlockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE,
+      data: envelope,
+    };
+
+    return {
+      message: envelope,
+      signature: await this.getSignature(pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const signingSlot = slot;
     const domain = this.config.getDomain(slot, DOMAIN_RANDAO);
@@ -634,6 +671,41 @@ export class ValidatorStore {
     };
   }
 
+  async signPayloadAttestation(
+    duty: routes.validator.PtcDuty,
+    data: gloas.PayloadAttestationData,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<gloas.PayloadAttestationMessage> {
+    if (data.slot > currentSlot) {
+      throw Error(`Not signing payload attestation with slot ${data.slot} greater than current slot ${currentSlot}`);
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+    this.validatePtcDuty(duty, data);
+
+    const signingSlot = data.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_PTC_ATTESTER);
+    const signingRoot = computeSigningRoot(ssz.gloas.PayloadAttestationData, data, domain);
+
+    logger?.debug("Signing payload attestation message", {
+      slot: signingSlot,
+      beaconBlockRoot: toRootHex(data.beaconBlockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      data,
+    };
+
+    return {
+      validatorIndex: duty.validatorIndex,
+      data,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
   async signAttestationSelectionProof(pubkey: BLSPubkeyMaybeHex, slot: Slot): Promise<BLSSignature> {
     const signingSlot = slot;
     const domain = this.config.getDomain(slot, DOMAIN_SELECTION_PROOF);
@@ -718,7 +790,7 @@ export class ValidatorStore {
 
   async signValidatorRegistration(
     pubkeyMaybeHex: BLSPubkeyMaybeHex,
-    regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
+    regAttributes: {feeRecipient: ExecutionAddress; gasLimit: number},
     _slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
     const pubkey = typeof pubkeyMaybeHex === "string" ? fromHex(pubkeyMaybeHex) : pubkeyMaybeHex;
@@ -749,7 +821,7 @@ export class ValidatorStore {
 
   async getValidatorRegistration(
     pubkeyMaybeHex: BLSPubkeyMaybeHex,
-    regAttributes: {feeRecipient: Eth1Address; gasLimit: number},
+    regAttributes: {feeRecipient: ExecutionAddress; gasLimit: number},
     slot: Slot
   ): Promise<bellatrix.SignedValidatorRegistrationV1> {
     const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);
@@ -819,13 +891,21 @@ export class ValidatorStore {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
 
-    const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
+    const forkSeq = this.config.getForkSeq(data.slot);
+    const isPostElectra = forkSeq >= ForkSeq.electra;
+    const isPostGloas = forkSeq >= ForkSeq.gloas;
+
     if (!isPostElectra && duty.committeeIndex !== data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
-    if (isPostElectra && data.index !== 0) {
+    if (isPostGloas) {
+      // After Gloas, data.index signals payload status: 0 (EMPTY) or 1 (FULL)
+      if (data.index !== 0 && data.index !== 1) {
+        throw Error(`Invalid payload status index post-gloas during signing: data.index=${data.index}`);
+      }
+    } else if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
     }
   }
@@ -840,6 +920,12 @@ export class ValidatorStore {
     }
 
     // TODO EIP-7805: Maybe check if validator index in inclusionListCommitteeRoot?
+  }
+
+  private validatePtcDuty(duty: routes.validator.PtcDuty, data: gloas.PayloadAttestationData): void {
+    if (duty.slot !== data.slot) {
+      throw Error(`Inconsistent PTC duties during signing: duty.slot ${duty.slot} != data.slot ${data.slot}`);
+    }
   }
 
   private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {

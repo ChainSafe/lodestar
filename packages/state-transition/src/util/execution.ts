@@ -18,6 +18,7 @@ import {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateExecutions,
+  BeaconStateGloas,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
 } from "../types.js";
@@ -31,51 +32,34 @@ export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBl
     return true;
   }
 
-  // Throws if not post-bellatrix block. A fork-guard in isExecutionEnabled() prevents this from happening
+  // Throws if not post-bellatrix block. A fork-guard before isExecutionEnabled() prevents this from happening
   const payload = getFullOrBlindedPayload(block);
-  // Note: spec says to check all payload is zero-ed. However a state-root cannot be zero for any non-empty payload
-  // TODO: Consider comparing with the payload root if this assumption is not correct.
-  // return !byteArrayEquals(payload.stateRoot, ZERO_HASH);
 
-  // UPDATE: stateRoot comparision should have been enough with zero hash, but spec tests were failing
-  // Revisit this later to fix specs and make this efficient
   return isExecutionPayload(payload)
     ? !ssz.bellatrix.ExecutionPayload.equals(payload, ssz.bellatrix.ExecutionPayload.defaultValue())
     : !ssz.bellatrix.ExecutionPayloadHeader.equals(
         state.latestExecutionPayloadHeader,
-        // TODO: Performance
         ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
       );
 }
 
 /**
- * Merge block is the SINGLE block that transitions from POW to POS.
- * state has no execution data AND this block has execution data
- */
-export function isMergeTransitionBlock(state: BeaconStateExecutions, body: bellatrix.BeaconBlockBody): boolean {
-  return (
-    !isMergeTransitionComplete(state) &&
-    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue())
-  );
-}
-
-/**
  * Merge is complete when the state includes execution layer data:
- * state.latestExecutionPayloadHeader NOT EMPTY
+ * state.latestExecutionPayloadHeader NOT EMPTY or state is post-capella
  */
-export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean {
-  if (!isCapellaStateType(state)) {
-    return !ssz.bellatrix.ExecutionPayloadHeader.equals(
-      (state as BeaconStateBellatrix).latestExecutionPayloadHeader,
-      // TODO: Performance
-      ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
-    );
+export function isMergeTransitionComplete(state: BeaconStateExecutions | BeaconStateGloas): boolean {
+  if (isGloasStateType(state)) {
+    return true;
   }
 
-  return !ssz.capella.ExecutionPayloadHeader.equals(
-    state.latestExecutionPayloadHeader,
-    // TODO: Performance
-    ssz.capella.ExecutionPayloadHeader.defaultValue()
+  if (isCapellaStateType(state)) {
+    // All networks have completed the merge transition before capella
+    return true;
+  }
+
+  return !ssz.bellatrix.ExecutionPayloadHeader.equals(
+    (state as BeaconStateBellatrix).latestExecutionPayloadHeader,
+    ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
   );
 }
 
@@ -90,6 +74,11 @@ export function isCapellaStateType(state: BeaconStateAllForks): state is BeaconS
     (state as BeaconStateCapella).latestExecutionPayloadHeader !== undefined &&
     (state as BeaconStateCapella).latestExecutionPayloadHeader.withdrawalsRoot !== undefined
   );
+}
+
+/** Type guard for gloas.BeaconState */
+export function isGloasStateType(state: BeaconStateAllForks): state is BeaconStateGloas {
+  return (state as BeaconStateGloas).latestBlockHash !== undefined;
 }
 
 /** Type guard for bellatrix.CachedBeaconState */
@@ -164,7 +153,7 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   }
 
   if (fork >= ForkSeq.deneb) {
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    // https://github.com/ethereum/consensus-specs/blob/v1.3.0-rc.2/specs/eip4844/beacon-chain.md#process_execution_payload
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).blobGasUsed;

@@ -1,4 +1,7 @@
 import {afterEach, beforeEach, describe, it, vi} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
+import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {BeaconStateView} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError.js";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing.js";
@@ -9,12 +12,13 @@ import {generateCachedState} from "../../../utils/state.js";
 describe("validate proposer slashing", () => {
   let chainStub: MockedBeaconChain;
   let opPool: MockedBeaconChain["opPool"];
+  const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
 
   beforeEach(() => {
-    chainStub = getMockedBeaconChain();
+    chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
 
-    const state = generateCachedState();
+    const state = new BeaconStateView(generateCachedState());
     vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
     vi.spyOn(opPool, "hasSeenProposerSlashing");
   });

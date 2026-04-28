@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
-import {CachedBeaconStateAllForks} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {Epoch, RootHex, phase0} from "@lodestar/types";
-import {StateRegenerationOpts} from "../regen/interface.js";
 
 export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 
@@ -21,20 +20,20 @@ export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
  * The cache key is state root
  */
 export interface BlockStateCache {
-  get(rootHex: RootHex, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null;
-  add(item: CachedBeaconStateAllForks): void;
-  setHeadState(item: CachedBeaconStateAllForks | null): void;
+  get(rootHex: RootHex): IBeaconStateView | null;
+  add(item: IBeaconStateView): void;
+  setHeadState(item: IBeaconStateView | null): void;
   /**
    * Get a seed state for state reload.
    */
-  getSeedState(): CachedBeaconStateAllForks;
+  getSeedState(): IBeaconStateView;
   clear(): void;
   size: number;
   prune(headStateRootHex: RootHex): void;
   deleteAllBeforeEpoch(finalizedEpoch: Epoch): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
   /** Expose beacon states stored in cache. Use with caution */
-  getStates(): IterableIterator<CachedBeaconStateAllForks>;
+  getStates(): IterableIterator<IBeaconStateView>;
 }
 
 /**
@@ -60,24 +59,20 @@ export interface BlockStateCache {
  */
 export interface CheckpointStateCache {
   init?: () => Promise<void>;
-  getOrReload(cp: CheckpointHex, opts?: StateRegenerationOpts): Promise<CachedBeaconStateAllForks | null>;
-  getStateOrBytes(cp: CheckpointHex): Promise<CachedBeaconStateAllForks | Uint8Array | null>;
-  get(cpOrKey: CheckpointHex | string, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null;
-  add(cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void;
-  getLatest(rootHex: RootHex, maxEpoch: Epoch, opts?: StateRegenerationOpts): CachedBeaconStateAllForks | null;
-  getOrReloadLatest(
-    rootHex: RootHex,
-    maxEpoch: Epoch,
-    opts?: StateRegenerationOpts
-  ): Promise<CachedBeaconStateAllForks | null>;
+  getOrReload(cp: CheckpointHex): Promise<IBeaconStateView | null>;
+  getStateOrBytes(cp: CheckpointHex): Promise<IBeaconStateView | Uint8Array | null>;
+  get(cpOrKey: CheckpointHex | string): IBeaconStateView | null;
+  add(cp: phase0.Checkpoint, state: IBeaconStateView): void;
+  getLatest(rootHex: RootHex, maxEpoch: Epoch): IBeaconStateView | null;
+  getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<IBeaconStateView | null>;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
   pruneFinalized(finalizedEpoch: Epoch): void;
-  processState(blockRootHex: RootHex, state: CachedBeaconStateAllForks): Promise<number>;
+  processState(blockRootHex: RootHex, state: IBeaconStateView): Promise<number>;
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
   /** Expose beacon states stored in cache. Use with caution */
-  getStates(): IterableIterator<CachedBeaconStateAllForks>;
+  getStates(): IterableIterator<IBeaconStateView>;
 }
 
 export enum CacheItemType {

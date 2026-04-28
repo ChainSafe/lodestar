@@ -3,6 +3,7 @@ import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {
@@ -210,6 +211,81 @@ export function createLodestarMetrics(
       concurrency: register.gauge({
         name: "lodestar_block_processor_queue_concurrency",
         help: "Current concurrency of block processor queue",
+      }),
+    },
+
+    unfinalizedBlockWritesQueue: {
+      length: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_length",
+        help: "Count of total unfinalized block writes queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_dropped_jobs_total",
+        help: "Count of total unfinalized block writes queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_time_seconds",
+        help: "Time to process unfinalized block writes queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_unfinalized_block_writes_queue_job_wait_time_seconds",
+        help: "Time from job added to the unfinalized block writes queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_unfinalized_block_writes_queue_concurrency",
+        help: "Current concurrency of unfinalized block writes queue",
+      }),
+    },
+
+    payloadEnvelopeProcessorQueue: {
+      length: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_length",
+        help: "Count of total payload envelope processor queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_dropped_jobs_total",
+        help: "Count of total payload envelope processor queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_time_seconds",
+        help: "Time to process payload envelope processor queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_payload_envelope_processor_queue_job_wait_time_seconds",
+        help: "Time from job added to the payload envelope processor queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_payload_envelope_processor_queue_concurrency",
+        help: "Current concurrency of payload envelope processor queue",
+      }),
+    },
+
+    unfinalizedPayloadEnvelopeWritesQueue: {
+      length: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_length",
+        help: "Count of total unfinalized payload envelope writes queue length",
+      }),
+      droppedJobs: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_dropped_jobs_total",
+        help: "Count of total unfinalized payload envelope writes queue dropped jobs",
+      }),
+      jobTime: register.histogram({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_job_time_seconds",
+        help: "Time to process unfinalized payload envelope writes queue job in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      jobWaitTime: register.histogram({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_job_wait_time_seconds",
+        help: "Time from job added to the unfinalized payload envelope writes queue to starting in seconds",
+        buckets: [0.01, 0.1, 1, 4, 12],
+      }),
+      concurrency: register.gauge({
+        name: "lodestar_unfinalized_payload_envelope_writes_queue_concurrency",
+        help: "Current concurrency of unfinalized payload envelope writes queue",
       }),
     },
 
@@ -538,6 +614,10 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_pending_blocks_size",
         help: "Current size of UnknownBlockSync pending blocks cache",
       }),
+      pendingPayloads: register.gauge({
+        name: "lodestar_sync_unknown_block_pending_payloads_size",
+        help: "Current size of UnknownBlockSync pending payloads cache",
+      }),
       knownBadBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_known_bad_blocks_size",
         help: "Current size of UnknownBlockSync known bad blocks cache",
@@ -803,19 +883,31 @@ export function createLodestarMetrics(
         help: "Total number of blobs retrieved from execution engine and published to gossip",
       }),
     },
-    recoverDataColumnSidecars: {
-      recoverTime: register.histogram({
-        name: "lodestar_recover_data_column_sidecar_recover_time_seconds",
-        help: "Time elapsed to recover data column sidecar",
-        buckets: [0.5, 1.0, 1.5, 2],
+    // Gossip execution payload envelope
+    gossipExecutionPayloadEnvelope: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_execution_payload_envelope_elapsed_time_till_received",
+        help: "Time elapsed between slot time and the time execution payload envelope received",
+        labelNames: ["source"],
+        buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+    },
+    // recovery in the case of specific blob rows required
+    recoverBlobSidecars: {
+      blobsReconstructed: register.counter({
+        name: "lodestar_blobs_reconstructed_total",
+        help: "Total count of reconstructed blobs",
+      }),
+      reconstructionTime: register.histogram({
+        name: "lodestar_blob_reconstruction_seconds",
+        help: "Time taken to reconstruct blobs",
+        buckets: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 2, 5],
+      }),
+    },
+    recoverDataColumnSidecars: {
       custodyBeforeReconstruction: register.gauge({
         name: "lodestar_data_columns_in_custody_before_reconstruction",
         help: "Number of data columns in custody before reconstruction",
-      }),
-      numberOfColumnsRecovered: register.gauge({
-        name: "lodestar_recover_data_column_sidecar_recovered_columns_total",
-        help: "Total number of columns that were recovered",
       }),
       reconstructionResult: register.counter<{result: DataColumnReconstructionCode}>({
         name: "lodestar_data_column_sidecars_reconstruction_result",
@@ -824,6 +916,10 @@ export function createLodestarMetrics(
       }),
     },
     dataColumns: {
+      alreadyAdded: register.counter({
+        name: "lodestar_data_column_sidecar_already_added",
+        help: "Total number of columns that were already added by other sources while waiting",
+      }),
       bySource: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_data_columns_by_source",
         help: "Number of received data columns by source",
@@ -879,20 +975,32 @@ export function createLodestarMetrics(
         help: "Total number of imported blobs by source",
         labelNames: ["blobsSource"],
       }),
-      columnsBySource: register.gauge<{source: BlockInputSource}>({
-        name: "lodestar_import_columns_by_source_total",
-        help: "Total number of imported columns (sampled columns) by source",
-        labelNames: ["source"],
-      }),
       notOverrideFcuReason: register.counter<{reason: NotReorgedReason}>({
         name: "lodestar_import_block_not_override_fcu_reason_total",
         help: "Reason why the fcu call is not suppressed during block import",
         labelNames: ["reason"],
       }),
     },
+    importPayload: {
+      bySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_by_source_total",
+        help: "Total number of imported execution payload envelopes by source",
+        labelNames: ["source"],
+      }),
+      columnsBySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_columns_by_source_total",
+        help: "Total number of payload-attached columns (sampled columns for Gloas) by source",
+        labelNames: ["source"],
+      }),
+    },
     engineNotifyNewPayloadResult: register.gauge<{result: ExecutionPayloadStatus}>({
       name: "lodestar_execution_engine_notify_new_payload_result_total",
       help: "The total result of calling notifyNewPayload execution engine api",
+      labelNames: ["result"],
+    }),
+    engineNotifyForkchoiceUpdateResult: register.gauge<{result: ExecutionPayloadStatus}>({
+      name: "lodestar_execution_engine_notify_forkchoice_update_result_total",
+      help: "The total result of calling notifyForkchoiceUpdate execution engine api",
       labelNames: ["result"],
     }),
     backfillSync: {
@@ -1126,6 +1234,46 @@ export function createLodestarMetrics(
           help: "Total number of empty returns in SyncContributionAndProofPool.getAggregate(slot, root)",
         }),
       },
+      payloadAttestationPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_size",
+          help: "Current size of the PayloadAttestationPool = total payload attestations unique by data and slot",
+        }),
+        payloadAttDataPerSlot: register.gauge({
+          name: "lodestar_oppool_payload_attestation_pool_payload_attestation_data_per_slot_total",
+          help: "Total number of payload attestation data per slot in PayloadAttestationPool",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_payload_attestation_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding a payload attestation message from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        getPayloadAttestationsCacheMisses: register.counter({
+          name: "lodestar_oppool_payload_attestation_pool_get_payload_attestations_cache_misses_total",
+          help: "Total number of getPayloadAttestationsForBlock calls with no aggregate for slot and payload attestation data root",
+        }),
+      },
+      executionPayloadBidPool: {
+        size: register.gauge({
+          name: "lodestar_oppool_execution_payload_bid_pool_size",
+          help: "Current size of the ExecutionPayloadBidPool = total number of bids",
+        }),
+        gossipInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_gossip_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from gossip to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+        apiInsertOutcome: register.counter<{insertOutcome: InsertOutcome}>({
+          name: "lodestar_oppool_execution_payload_bid_pool_api_insert_outcome_total",
+          help: "Total number of InsertOutcome as a result of adding an execution payload bid from api to the pool",
+          labelNames: ["insertOutcome"],
+        }),
+      },
     },
 
     chain: {
@@ -1318,32 +1466,18 @@ export function createLodestarMetrics(
         name: "lodestar_shuffling_cache_miss_count",
         help: "Count of shuffling cache miss",
       }),
-      shufflingBuiltMultipleTimes: register.gauge({
-        name: "lodestar_shuffling_cache_recalculated_shuffling_count",
-        help: "Count of shuffling that were build multiple times",
-      }),
-      shufflingPromiseNotResolvedAndThrownAway: register.gauge({
-        name: "lodestar_shuffling_cache_promise_not_resolved_and_thrown_away_count",
-        help: "Count of shuffling cache promises that were discarded and the shuffling was built synchronously",
+      shufflingSetMultipleTimes: register.gauge({
+        name: "lodestar_shuffling_cache_set_multiple_times_count",
+        help: "Count of shuffling that were set multiple times",
       }),
       shufflingPromiseNotResolved: register.gauge({
         name: "lodestar_shuffling_cache_promise_not_resolved_count",
         help: "Count of shuffling cache promises that were requested before the promise was resolved",
       }),
-      nextShufflingNotOnEpochCache: register.gauge({
-        name: "lodestar_shuffling_cache_next_shuffling_not_on_epoch_cache",
-        help: "The next shuffling was not on the epoch cache before the epoch transition",
-      }),
       shufflingPromiseResolutionTime: register.histogram({
         name: "lodestar_shuffling_cache_promise_resolution_time_seconds",
         help: "Time from promise insertion until promise resolution when shuffling was ready in seconds",
         buckets: [0.5, 1, 1.5, 2],
-      }),
-      shufflingCalculationTime: register.histogram<{source: "build" | "getSync"}>({
-        name: "lodestar_shuffling_cache_shuffling_calculation_time_seconds",
-        help: "Run time of shuffling calculation",
-        buckets: [0.5, 0.75, 1, 1.25, 1.5],
-        labelNames: ["source"],
       }),
     },
 
@@ -1406,28 +1540,50 @@ export function createLodestarMetrics(
           name: "lodestar_seen_block_input_cache_size",
           help: "Number of cached BlockInputs",
         }),
-        duplicateBlockCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_block_count",
+        serializedObjectRefs: register.gauge({
+          name: "lodestar_seen_block_input_cache_serialized_object_refs",
+          help: "Number of serialized-cache object refs retained by cached BlockInputs",
+        }),
+        duplicateBlockCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_block_total",
           help: "Total number of duplicate blocks that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateBlobCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_blob_count",
+        duplicateBlobCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_blob_total",
           help: "Total number of duplicate blobs that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        duplicateColumnCount: register.gauge<{source: BlockInputSource}>({
-          name: "lodestar_seen_block_input_cache_duplicate_column_count",
+        duplicateColumnCount: register.counter<{source: BlockInputSource}>({
+          name: "lodestar_seen_block_input_cache_duplicate_column_total",
           help: "Total number of duplicate columns that pass validation and attempt to be cached but are known",
           labelNames: ["source"],
         }),
-        createdByBlock: register.gauge({
-          name: "lodestar_seen_block_input_cache_items_created_by_block",
+        createdByBlock: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_block_total",
           help: "Number of BlockInputs created via a block being seen first",
         }),
-        createdByBlob: register.gauge({
-          name: "lodestar_seen_block_input_cache_items_created_by_blob",
+        createdByBlob: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_blob_total",
           help: "Number of BlockInputs created via a blob being seen first",
+        }),
+        createdByColumn: register.counter({
+          name: "lodestar_seen_block_input_cache_items_created_by_column_total",
+          help: "Number of BlockInputs created via a data column being seen first",
+        }),
+      },
+      payloadEnvelopeInput: {
+        count: register.gauge({
+          name: "lodestar_seen_payload_envelope_input_cache_size",
+          help: "Number of cached PayloadEnvelopeInputs",
+        }),
+        serializedObjectRefs: register.gauge({
+          name: "lodestar_seen_payload_envelope_input_cache_serialized_object_refs",
+          help: "Number of serialized-cache object refs retained by cached PayloadEnvelopeInputs",
+        }),
+        created: register.counter({
+          name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
+          help: "Number of PayloadEnvelopeInputs created",
         }),
       },
     },
@@ -1570,33 +1726,71 @@ export function createLodestarMetrics(
       }),
     },
 
-    // reprocess gossip attestations
-    reprocessGossipAttestations: {
-      total: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_total",
-        help: "Total number of gossip attestations waiting to reprocess",
+    // some gossip messages need to wait for block to be processed before they can be processed
+    awaitingBlockGossipMessages: {
+      queue: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_total",
+        help: "Total number of gossip messages waiting for block to be processed",
+        labelNames: ["topic"],
       }),
       countPerSlot: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_per_slot_total",
-        help: "Total number of gossip attestations waiting to reprocess pet slot",
+        name: "lodestar_awaiting_block_gossip_messages_per_slot_total",
+        help: "Total number of gossip messages waiting for block to be processed per slot",
       }),
-      resolve: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_resolve_total",
-        help: "Total number of gossip attestations are reprocessed",
+      resolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_resolve_total",
+        help: "Total number of gossip messages are reprocessed",
+        labelNames: ["topic"],
       }),
-      waitSecBeforeResolve: register.gauge({
-        name: "lodestar_reprocess_gossip_attestations_wait_time_resolve_seconds",
+      waitSecBeforeResolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_wait_time_resolve_seconds",
         help: "Time to wait for unknown block in seconds",
+        labelNames: ["topic"],
       }),
-      reject: register.gauge<{reason: ReprocessRejectReason}>({
-        name: "lodestar_reprocess_gossip_attestations_reject_total",
-        help: "Total number of attestations are rejected to reprocess",
-        labelNames: ["reason"],
+      // having 2 labels here is not great for performance, however it's rarely happening and having the reason label is important for debugging
+      reject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_reject_total",
+        help: "Total number of gossip messages are rejected to reprocess",
+        labelNames: ["reason", "topic"],
       }),
-      waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason}>({
-        name: "lodestar_reprocess_gossip_attestations_wait_time_reject_seconds",
+      waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_block_gossip_messages_wait_time_reject_seconds",
         help: "Time to wait for unknown block before being rejected",
-        labelNames: ["reason"],
+        labelNames: ["reason", "topic"],
+      }),
+    },
+
+    // some gossip messages need to wait for payload to be processed before they can be processed
+    awaitingPayloadGossipMessages: {
+      queue: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_payload_gossip_messages_total",
+        help: "Total number of gossip messages waiting for payload to be processed",
+        labelNames: ["topic"],
+      }),
+      countPerSlot: register.gauge({
+        name: "lodestar_awaiting_payload_gossip_messages_per_slot_total",
+        help: "Total number of gossip messages waiting for payload to be processed per slot",
+      }),
+      resolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_payload_gossip_messages_resolve_total",
+        help: "Total number of gossip messages are reprocessed",
+        labelNames: ["topic"],
+      }),
+      waitSecBeforeResolve: register.gauge<{topic: GossipType}>({
+        name: "lodestar_awaiting_payload_gossip_messages_wait_time_resolve_seconds",
+        help: "Time to wait for unknown payload in seconds",
+        labelNames: ["topic"],
+      }),
+      // having 2 labels here is not great for performance, however it's rarely happening and having the reason label is important for debugging
+      reject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_payload_gossip_messages_reject_total",
+        help: "Total number of gossip messages are rejected to reprocess",
+        labelNames: ["reason", "topic"],
+      }),
+      waitSecBeforeReject: register.gauge<{reason: ReprocessRejectReason; topic: GossipType}>({
+        name: "lodestar_awaiting_payload_gossip_messages_wait_time_reject_seconds",
+        help: "Time to wait for unknown payload before being rejected",
+        labelNames: ["reason", "topic"],
       }),
     },
 
@@ -1626,150 +1820,6 @@ export function createLodestarMetrics(
       staleLightClientUpdates: register.counter({
         name: "lodestar_lightclient_server_stale_updates_total",
         help: "Total number of stale light client updates that were not emitted",
-      }),
-    },
-
-    eth1: {
-      depositTrackerIsCaughtup: register.gauge({
-        name: "lodestar_eth1_deposit_tracker_is_caughtup",
-        help: "Eth1 deposit is caught up 0=false 1=true",
-      }),
-      depositTrackerUpdateErrors: register.gauge({
-        name: "lodestar_eth1_deposit_tracker_update_errors_total",
-        help: "Eth1 deposit update loop errors total",
-      }),
-      remoteHighestBlock: register.gauge({
-        name: "lodestar_eth1_remote_highest_block",
-        help: "Eth1 current highest block number",
-      }),
-      depositEventsFetched: register.gauge({
-        name: "lodestar_eth1_deposit_events_fetched_total",
-        help: "Eth1 deposit events fetched total",
-      }),
-      lastProcessedDepositBlockNumber: register.gauge({
-        name: "lodestar_eth1_last_processed_deposit_block_number",
-        help: "Eth1 deposit tracker lastProcessedDepositBlockNumber",
-      }),
-      blocksFetched: register.gauge({
-        name: "lodestar_eth1_blocks_fetched_total",
-        help: "Eth1 blocks fetched total",
-      }),
-      lastFetchedBlockBlockNumber: register.gauge({
-        name: "lodestar_eth1_last_fetched_block_block_number",
-        help: "Eth1 deposit tracker last fetched block's block number",
-      }),
-      lastFetchedBlockTimestamp: register.gauge({
-        name: "lodestar_eth1_last_fetched_block_timestamp",
-        help: "Eth1 deposit tracker last fetched block's timestamp",
-      }),
-      eth1FollowDistanceSecondsConfig: register.gauge({
-        name: "lodestar_eth1_follow_distance_seconds_config",
-        help: "Constant with value = SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE",
-      }),
-      eth1FollowDistanceDynamic: register.gauge({
-        name: "lodestar_eth1_follow_distance_dynamic",
-        help: "Eth1 dynamic follow distance changed by the deposit tracker if blocks are slow",
-      }),
-      eth1GetBlocksBatchSizeDynamic: register.gauge({
-        name: "lodestar_eth1_blocks_batch_size_dynamic",
-        help: "Dynamic batch size to fetch blocks",
-      }),
-      eth1GetLogsBatchSizeDynamic: register.gauge({
-        name: "lodestar_eth1_logs_batch_size_dynamic",
-        help: "Dynamic batch size to fetch deposit logs",
-      }),
-
-      // Merge Search info
-      eth1MergeStatus: register.gauge({
-        name: "lodestar_eth1_merge_status",
-        help: "Eth1 Merge Status 0 PRE_MERGE 1 SEARCHING 2 FOUND 3 POST_MERGE",
-      }),
-      eth1MergeTDFactor: register.gauge({
-        name: "lodestar_eth1_merge_td_factor",
-        help: "TTD set for the merge",
-      }),
-      eth1MergeTTD: register.gauge({
-        name: "lodestar_eth1_merge_ttd",
-        help: "TTD set for the merge scaled down by td_factor",
-      }),
-
-      eth1PollMergeBlockErrors: register.gauge({
-        name: "lodestar_eth1_poll_merge_block_errors_total",
-        help: "Total count of errors polling merge block",
-      }),
-      getTerminalPowBlockPromiseCacheHit: register.gauge({
-        name: "lodestar_eth1_get_terminal_pow_block_promise_cache_hit_total",
-        help: "Total count of skipped runs in poll merge block, because a previous promise existed",
-      }),
-      eth1ParentBlocksFetched: register.gauge({
-        name: "lodestar_eth1_parent_blocks_fetched_total",
-        help: "Total count of parent blocks fetched searching for merge block",
-      }),
-
-      // Latest block details
-      eth1LatestBlockTD: register.gauge({
-        name: "lodestar_eth1_latest_block_ttd",
-        help: "Eth1 latest Block td scaled down by td_factor",
-      }),
-      eth1LatestBlockNumber: register.gauge({
-        name: "lodestar_eth1_latest_block_number",
-        help: "Eth1 latest block number",
-      }),
-      eth1LatestBlockTimestamp: register.gauge({
-        name: "lodestar_eth1_latest_block_timestamp",
-        help: "Eth1 latest block timestamp",
-      }),
-
-      // Merge details
-      eth1MergeBlockDetails: register.gauge<{
-        terminalBlockHash: string;
-        terminalBlockNumber: string;
-        terminalBlockTD: string;
-      }>({
-        name: "lodestar_eth1_merge_block_details",
-        help: "If found then 1 with terminal block details",
-        labelNames: ["terminalBlockHash", "terminalBlockNumber", "terminalBlockTD"],
-      }),
-    },
-
-    eth1HttpClient: {
-      requestTime: register.histogram<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_time_seconds",
-        help: "eth1 JsonHttpClient - histogram or roundtrip request times",
-        labelNames: ["routeId"],
-        // Provide max resolution on problematic values around 1 second
-        buckets: [0.1, 0.5, 1, 2, 5, 15],
-      }),
-      streamTime: register.histogram<{routeId: string}>({
-        name: "lodestar_eth1_http_client_stream_time_seconds",
-        help: "eth1 JsonHttpClient - streaming time by routeId",
-        labelNames: ["routeId"],
-        // Provide max resolution on problematic values around 1 second
-        buckets: [0.1, 0.5, 1, 2, 5, 15],
-      }),
-      requestErrors: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_errors_total",
-        help: "eth1 JsonHttpClient - total count of request errors",
-        labelNames: ["routeId"],
-      }),
-      retryCount: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_retries_total",
-        help: "eth1 JsonHttpClient - total count of request retries",
-        labelNames: ["routeId"],
-      }),
-      requestUsedFallbackUrl: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_request_used_fallback_url_total",
-        help: "eth1 JsonHttpClient - total count of requests on fallback url(s)",
-        labelNames: ["routeId"],
-      }),
-      activeRequests: register.gauge<{routeId: string}>({
-        name: "lodestar_eth1_http_client_active_requests",
-        help: "eth1 JsonHttpClient - current count of active requests",
-        labelNames: ["routeId"],
-      }),
-      configUrlsCount: register.gauge({
-        name: "lodestar_eth1_http_client_config_urls_count",
-        help: "eth1 JsonHttpClient - static config urls count",
       }),
     },
 

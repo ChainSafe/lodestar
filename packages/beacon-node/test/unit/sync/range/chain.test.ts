@@ -1,5 +1,6 @@
 import {afterEach, describe, it} from "vitest";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
@@ -12,7 +13,6 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
-import {testLogger} from "../../../utils/logger.js";
 import {validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
@@ -117,7 +117,7 @@ describe("sync / range / chain", () => {
             })
           );
         }
-        return {result: blocks, warnings: null};
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -172,7 +172,7 @@ describe("sync / range / chain", () => {
           })
         );
       }
-      return {result: blocks, warnings: null};
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -218,9 +218,9 @@ describe("sync / range / chain", () => {
 
 function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
-    processChainSegment(blocks, syncType) {
+    processChainSegment(blocks, payloadEnvelopes, syncType) {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
-      return fns.processChainSegment(blocks, syncType);
+      return fns.processChainSegment(blocks, payloadEnvelopes, syncType);
     },
     downloadByRange(peer, request, syncType) {
       logger.debug("mock downloadBeaconBlocksByRange", request.state.status);

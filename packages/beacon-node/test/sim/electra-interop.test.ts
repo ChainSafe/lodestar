@@ -3,27 +3,28 @@ import fs from "node:fs";
 import {afterAll, afterEach, describe, it, vi} from "vitest";
 import {ChainConfig} from "@lodestar/config";
 import {TimestampFormatCode} from "@lodestar/logger";
+import {TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {CachedBeaconStateElectra} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
 import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
-import {bytesToData, dataToBytes} from "../../src/eth1/provider/utils.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
-import {ExecutionPayloadStatus, PayloadAttributes, initializeExecutionEngine} from "../../src/execution/index.js";
+import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
+import {bytesToData, dataToBytes} from "../../src/execution/engine/utils.js";
+import {initializeExecutionEngine} from "../../src/execution/index.js";
 import {BeaconNode} from "../../src/index.js";
 import {ClockEvent} from "../../src/util/clock.js";
-import {TestLoggerOpts, testLogger} from "../utils/logger.js";
 import {getDevBeaconNode} from "../utils/node/beacon.js";
 import {simTestInfoTracker} from "../utils/node/simTest.js";
 import {getAndInitDevValidators} from "../utils/node/validator.js";
-import {ELClient, ELStartMode, runEL, sendRawTransactionBig} from "../utils/runEl.js";
+import {ELClient, runEL, sendRawTransactionBig} from "../utils/runEl.js";
 import {logFilesDir} from "./params.js";
 import {shell} from "./shell.js";
 
 // NOTE: How to run
-// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker yarn vitest run test/sim/electra-interop.test.ts
+// DEV_RUN=true EL_BINARY_DIR=ethpandaops/ethereumjs:master-0e06ddf EL_SCRIPT_DIR=ethereumjsdocker pnpm vitest run test/sim/electra-interop.test.ts
 // ```
 
 const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
@@ -65,7 +66,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
 
   it("Send and get payloads with depositRequests to/from EL", async () => {
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
+      {...elSetupConfig, genesisTemplate: "electra.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -230,7 +231,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
   it.skip("Post-merge, run for a few blocks", async () => {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {elClient, tearDownCallBack} = await runEL(
-      {...elSetupConfig, mode: ELStartMode.PostMerge, genesisTemplate: "electra.tmpl"},
+      {...elSetupConfig, genesisTemplate: "electra.tmpl"},
       {...elRunOptions, ttd: BigInt(0)},
       controller.signal
     );
@@ -257,7 +258,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     electraEpoch: Epoch;
     testName: string;
   }): Promise<void> {
-    const {genesisBlockHash, ttd, engineRpcUrl, ethRpcUrl} = elClient;
+    const {genesisBlockHash, engineRpcUrl, ethRpcUrl} = elClient;
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
 
@@ -304,14 +305,11 @@ describe("executionEngine / ExecutionEngineHttp", () => {
         CAPELLA_FORK_EPOCH: 0,
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: electraEpoch,
-        TERMINAL_TOTAL_DIFFICULTY: ttd,
       },
       options: {
         api: {rest: {enabled: true} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
-        // Now eth deposit/merge tracker methods directly available on engine endpoints
-        eth1: {enabled: false, providerUrls: [engineRpcUrl], jwtSecretHex},
         executionEngine: {urls: [engineRpcUrl], jwtSecretHex},
         chain: {suggestedFeeRecipient: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
       },
@@ -361,12 +359,12 @@ describe("executionEngine / ExecutionEngineHttp", () => {
 
     await waitForSlot(bn, 5);
     // Expect new validator to be in unfinalized cache, in state.validators and not in finalized cache
-    let headState = bn.chain.getHeadState();
-    let epochCtx = headState.epochCtx;
-    if (headState.validators.length !== 33 || headState.balances.length !== 33) {
+    let headState = bn.chain.getHeadState() as BeaconStateView;
+    let epochCtx = headState.cachedState.epochCtx;
+    if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("Pubkey cache is not updated");
     }
 
@@ -387,17 +385,20 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     await sleep(500);
 
     // Check if new validator is in finalized cache
-    headState = bn.chain.getHeadState() as CachedBeaconStateElectra;
-    epochCtx = headState.epochCtx;
+    headState = bn.chain.getHeadState() as BeaconStateView;
+    epochCtx = headState.cachedState.epochCtx;
 
-    if (headState.validators.length !== 33 || headState.balances.length !== 33) {
+    if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state.");
     }
-    if (epochCtx.index2pubkey.length !== 33 || epochCtx.pubkey2index.size !== 33) {
+    if (epochCtx.pubkeyCache.size !== 33) {
       throw Error("New validator is not in pubkey cache");
     }
 
-    if (headState.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+    if (
+      (headState.cachedState as CachedBeaconStateElectra).depositRequestsStartIndex ===
+      UNSET_DEPOSIT_REQUESTS_START_INDEX
+    ) {
       throw Error("state.depositRequestsStartIndex is not set upon processing new deposit receipt");
     }
 

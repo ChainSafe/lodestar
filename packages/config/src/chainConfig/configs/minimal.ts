@@ -3,7 +3,7 @@ import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
 // Minimal config
-// https://github.com/ethereum/consensus-specs/blob/dev/configs/minimal.yaml
+// https://github.com/ethereum/consensus-specs/blob/master/configs/minimal.yaml
 
 export const chainConfig: ChainConfig = {
   // Extends the minimal preset
@@ -67,6 +67,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
+  // [customized] 2**1 (= 2) epochs
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: 2,
   // [customized] higher frequency of committee turnover and faster time to acceptable voluntary exit
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure

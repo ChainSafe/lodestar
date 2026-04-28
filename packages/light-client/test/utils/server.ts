@@ -21,7 +21,9 @@ export async function startServer(
   const server = fastify({
     logger: false,
     ajv: {customOptions: {coerceTypes: "array"}},
-    querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
+    routerOptions: {
+      querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
+    },
   });
 
   addSszContentTypeParser(server);

@@ -1,17 +1,28 @@
 import {PublicKey, aggregatePublicKeys} from "@chainsafe/blst";
-import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {ISignatureSet, PubkeyCache, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 
-export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metrics | null = null): PublicKey {
+export function getAggregatedPubkey(
+  signatureSet: ISignatureSet,
+  pubkeyCache: PubkeyCache,
+  metrics: Metrics | null = null
+): PublicKey {
   switch (signatureSet.type) {
     case SignatureSetType.single:
       return signatureSet.pubkey;
 
+    case SignatureSetType.indexed: {
+      return pubkeyCache.getOrThrow(signatureSet.index);
+    }
+
     case SignatureSetType.aggregate: {
       const timer = metrics?.blsThreadPool.pubkeysAggregationMainThreadDuration.startTimer();
-      const pubkeys = aggregatePublicKeys(signatureSet.pubkeys);
+      const pubkeys = signatureSet.indices.map((i) => {
+        return pubkeyCache.getOrThrow(i);
+      });
+      const aggregated = aggregatePublicKeys(pubkeys);
       timer?.();
-      return pubkeys;
+      return aggregated;
     }
 
     default:
@@ -20,11 +31,11 @@ export function getAggregatedPubkey(signatureSet: ISignatureSet, metrics: Metric
 }
 
 export function getAggregatedPubkeysCount(signatureSets: ISignatureSet[]): number {
-  let pubkeysConut = 0;
+  let pubkeysCount = 0;
   for (const set of signatureSets) {
     if (set.type === SignatureSetType.aggregate) {
-      pubkeysConut += set.pubkeys.length;
+      pubkeysCount += set.indices.length;
     }
   }
-  return pubkeysConut;
+  return pubkeysCount;
 }

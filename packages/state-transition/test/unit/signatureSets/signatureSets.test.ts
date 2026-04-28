@@ -6,8 +6,9 @@ import {config} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
 import {BLSSignature, ValidatorIndex, capella, phase0, ssz} from "@lodestar/types";
 import {ZERO_HASH} from "../../../src/constants/index.js";
+import {BeaconStateView} from "../../../src/index.js";
 import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
-import {generateCachedState} from "../../utils/state.js";
+import {generateCachedState} from "../../../src/testUtils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 const EMPTY_SIGNATURE = Buffer.alloc(96);
@@ -65,8 +66,18 @@ describe("signatureSets", () => {
     }
 
     const state = generateCachedState(config, {validators});
+    const fork = state.config.getForkSeq(signedBlock.message.slot);
+    const indexedAttestations = signedBlock.message.body.attestations.map((attestation) =>
+      state.epochCtx.getIndexedAttestation(fork, attestation)
+    );
 
-    const signatureSets = getBlockSignatureSets(state, signedBlock);
+    const signatureSets = getBlockSignatureSets(
+      state.config,
+      state.epochCtx.currentSyncCommitteeIndexed,
+      new BeaconStateView(state),
+      signedBlock,
+      indexedAttestations
+    );
     expect(signatureSets.length).toBe(
       // block signature
       1 +

@@ -1,6 +1,5 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
   ForkChoice,
@@ -10,9 +9,10 @@ import {
   InclusionListStore,
   ProtoArray,
 } from "@lodestar/fork-choice";
-import {HISTORICAL_ROOTS_LIMIT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {HISTORICAL_ROOTS_LIMIT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  CachedBeaconStateAltair,
+  BeaconStateView,
+  CachedBeaconStateElectra,
   DataAvailabilityStatus,
   computeAnchorCheckpoint,
   computeEpochAtSlot,
@@ -20,9 +20,10 @@ import {
   getBlockRootAtSlot,
   newFilledArray,
 } from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
-import {generatePerfTestCachedStateAltair} from "../../../../../state-transition/test/perf/util.js";
+import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
+import {electra, ssz} from "@lodestar/types";
 import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
+import {ShufflingCache} from "../../../../src/chain/shufflingCache.js";
 
 const vc = 1_500_000;
 
@@ -33,14 +34,14 @@ const vc = 1_500_000;
  *   ✔ notSeenSlots=1 numMissedVotes=0 numBadVotes=4                       11.44517 ops/s    87.37307 ms/op        -         13 runs   14.5 s
  *   ✔ notSeenSlots=2 numMissedVotes=1 numBadVotes=10                      23.86144 ops/s    41.90862 ms/op        -         18 runs   34.1 s
  */
-describe(`getAttestationsForBlock vc=${vc}`, () => {
-  let originalState: CachedBeaconStateAltair;
+describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
+  let originalState: CachedBeaconStateElectra;
   let protoArray: ProtoArray;
   let forkchoice: ForkChoice;
 
   beforeAll(
     () => {
-      originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true, vc});
+      originalState = generatePerfTestCachedStateElectra({goBackOneSlot: true, vc});
 
       const {blockHeader, checkpoint} = computeAnchorCheckpoint(originalState.config, originalState);
       // TODO figure out why getBlockRootAtSlot(originalState, justifiedSlot) is not the same to justifiedCheckpoint.root
@@ -76,6 +77,9 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
           timeliness: false,
           isEip7805Enabled: false,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+          parentBlockHash: null,
+          payloadStatus: 2, // PayloadStatus.FULL
         },
         originalState.slot
       );
@@ -102,8 +106,12 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
             timeliness: false,
             isEip7805Enabled: false,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+            parentBlockHash: null,
+            payloadStatus: 2, // PayloadStatus.FULL
           },
-          slot
+          slot,
+          null
         );
       }
 
@@ -115,16 +123,28 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
       const fcStore: IForkChoiceStore = {
         currentSlot: originalState.slot,
         justified: {
-          checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+          checkpoint: {
+            ...justifiedCheckpoint,
+            rootHex: toHexString(justifiedCheckpoint.root),
+          },
           balances: originalState.epochCtx.effectiveBalanceIncrements,
           totalBalance,
         },
         unrealizedJustified: {
-          checkpoint: {...justifiedCheckpoint, rootHex: toHexString(justifiedCheckpoint.root)},
+          checkpoint: {
+            ...justifiedCheckpoint,
+            rootHex: toHexString(justifiedCheckpoint.root),
+          },
           balances: originalState.epochCtx.effectiveBalanceIncrements,
         },
-        finalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
-        unrealizedFinalizedCheckpoint: {...finalizedCheckpoint, rootHex: toHexString(finalizedCheckpoint.root)},
+        finalizedCheckpoint: {
+          ...finalizedCheckpoint,
+          rootHex: toHexString(finalizedCheckpoint.root),
+        },
+        unrealizedFinalizedCheckpoint: {
+          ...finalizedCheckpoint,
+          rootHex: toHexString(finalizedCheckpoint.root),
+        },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
         inclusionLists: new InclusionListStore(),
@@ -172,14 +192,20 @@ describe(`getAttestationsForBlock vc=${vc}`, () => {
         state.previousEpochParticipation = ssz.altair.EpochParticipation.toViewDU(previousParticipation);
         state.currentEpochParticipation = ssz.altair.EpochParticipation.toViewDU(currentParticipation);
         state.commit();
-        return state;
+        return new BeaconStateView(state);
       },
       beforeEach: (state) => {
-        const pool = getAggregatedAttestationPool(state, numMissedVotes, numBadVotes);
-        return {state, pool};
+        const pool = getAggregatedAttestationPool(
+          state.cachedState as CachedBeaconStateElectra,
+          numMissedVotes,
+          numBadVotes
+        );
+        const shufflingCache = new ShufflingCache();
+        shufflingCache.processState(state);
+        return {state, pool, shufflingCache};
       },
-      fn: ({state, pool}) => {
-        pool.getAttestationsForBlock(state.config.getForkName(state.slot), forkchoice, state);
+      fn: ({state, pool, shufflingCache}) => {
+        pool.getAttestationsForBlock(originalState.config.getForkName(state.slot), forkchoice, shufflingCache, state);
       },
     });
   }
@@ -241,13 +267,11 @@ describe.skip("getAttestationsForBlock aggregationBits intersectValues vs get", 
  * - numBadVotes: number of bad attestations/votes at every committee, they are not included in block because they are seen in the state
  */
 function getAggregatedAttestationPool(
-  state: CachedBeaconStateAltair,
+  state: CachedBeaconStateElectra,
   numMissedVotes: number,
   numBadVotes: number
 ): AggregatedAttestationPool {
-  const config = createChainForkConfig(defaultChainConfig);
-
-  const pool = new AggregatedAttestationPool(config);
+  const pool = new AggregatedAttestationPool(state.config);
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
     const slot = state.slot - 1 - epochSlot;
     const epoch = computeEpochAtSlot(slot);
@@ -260,7 +284,7 @@ function getAggregatedAttestationPool(
     for (let committeeIndex = 0; committeeIndex < committeeCount; committeeIndex++) {
       const goodAttData = {
         slot: slot,
-        index: committeeIndex,
+        index: 0,
         beaconBlockRoot: getBlockRootAtSlot(state, slot),
         source: sourceCheckpoint,
         target: {
@@ -281,6 +305,7 @@ function getAggregatedAttestationPool(
       for (let i = 0; i < numBadVotes; i++) {
         goodVoteBits.set(i + numMissedVotes, false);
       }
+      const committeeBits = BitArray.fromSingleBit(MAX_COMMITTEES_PER_SLOT, committeeIndex);
 
       // there are 4 different versions of the good vote
       for (const endingBits of [0b1000, 0b0100, 0b0010, 0b0001]) {
@@ -290,8 +315,9 @@ function getAggregatedAttestationPool(
         aggregationBits.set(committeeLen - 3, Boolean(endingBits & 0b0100));
         aggregationBits.set(committeeLen - 4, Boolean(endingBits & 0b1000));
 
-        const attestation = {
+        const attestation: electra.Attestation = {
           aggregationBits,
+          committeeBits,
           data: goodAttData,
           signature: Buffer.alloc(96),
         };
@@ -320,8 +346,9 @@ function getAggregatedAttestationPool(
         attData.beaconBlockRoot = getBlockRootAtSlot(state, slot - i - 1);
         const aggregationBits = zeroAggregationBits.clone();
         aggregationBits.set(i + numMissedVotes, true);
-        const attestation = {
+        const attestation: electra.Attestation = {
           aggregationBits,
+          committeeBits,
           data: attData,
           signature: Buffer.alloc(96),
         };

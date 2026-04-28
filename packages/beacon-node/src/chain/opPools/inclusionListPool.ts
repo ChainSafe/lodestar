@@ -1,8 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
-import {MapDef} from "@lodestar/utils";
-import {byteArrayEquals} from "../../util/bytes.js";
+import {MapDef, byteArrayEquals} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {OpPoolError, OpPoolErrorCode} from "./types.js";
 import {pruneBySlot} from "./utils.js";

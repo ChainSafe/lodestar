@@ -1,0 +1,176 @@
+name: Backfill versioned docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "Number of recent stable releases to backfill"
+        required: false
+        default: "10"
+        type: string
+      dry_run:
+        description: "Dry run (list versions to backfill without building)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    name: Backfill versioned docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: unstable
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Determine versions to backfill
+        id: versions
+        run: |
+          COUNT=${{ github.event.inputs.count || '10' }}
+
+          # Get the last N stable release tags (exclude rc pre-releases)
+          STABLE_TAGS=$(git tag -l 'v*' --sort=-v:refname | grep -vF -- '-rc.' | head -n "$COUNT")
+          echo "Found stable tags:"
+          echo "$STABLE_TAGS"
+
+          # Fetch existing versions from docs-versions branch
+          EXISTING=""
+          git fetch origin docs-versions 2>/dev/null || true
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            git worktree add /tmp/docs-versions origin/docs-versions
+            if [ -f /tmp/docs-versions/versions.json ]; then
+              EXISTING=$(cat /tmp/docs-versions/versions.json | jq -r '.[]')
+              echo "Existing versions: $EXISTING"
+            fi
+            git worktree remove /tmp/docs-versions
+          fi
+
+          # Find missing versions
+          MISSING=""
+          for TAG in $STABLE_TAGS; do
+            VERSION="${TAG#v}"
+            if echo "$EXISTING" | grep -qx "$VERSION"; then
+              echo "✓ $VERSION already exists"
+            else
+              echo "✗ $VERSION missing — will backfill"
+              MISSING="$MISSING $TAG"
+            fi
+          done
+
+          MISSING=$(echo "$MISSING" | xargs)
+          echo "missing=$MISSING" >> $GITHUB_OUTPUT
+
+          if [ -z "$MISSING" ]; then
+            echo "All $COUNT recent stable versions are already cached!"
+          else
+            echo "Versions to backfill: $MISSING"
+          fi
+
+      - name: Install pnpm
+        if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
+        with:
+          node-version: 24
+          check-latest: true
+          cache: pnpm
+
+      - name: Backfill missing versions
+        if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
+        run: |
+          MISSING="${{ steps.versions.outputs.missing }}"
+
+          # Fetch existing versioned docs
+          git fetch origin docs-versions 2>/dev/null || true
+          VERSIONED_DIR=$(mktemp -d)
+
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            git worktree add /tmp/docs-versions origin/docs-versions
+            cp -r /tmp/docs-versions/versioned_docs "$VERSIONED_DIR/" 2>/dev/null || true
+            cp -r /tmp/docs-versions/versioned_sidebars "$VERSIONED_DIR/" 2>/dev/null || true
+            cp /tmp/docs-versions/versions.json "$VERSIONED_DIR/" 2>/dev/null || true
+            git worktree remove /tmp/docs-versions
+          fi
+
+          # Process each missing version (oldest first for correct ordering)
+          REVERSED=$(echo "$MISSING" | tr ' ' '\n' | tac | tr '\n' ' ')
+
+          for TAG in $REVERSED; do
+            VERSION="${TAG#v}"
+            echo ""
+            echo "========================================="
+            echo "Backfilling $VERSION (from tag $TAG)"
+            echo "========================================="
+
+            # Checkout the tag
+            git checkout "$TAG"
+
+            # Install and build at that tag
+            pnpm install --frozen-lockfile
+            pnpm build
+
+            # Generate docs
+            pnpm docs:build
+
+            # Restore existing versioned content into docs/
+            cp -r "$VERSIONED_DIR/versioned_docs" docs/ 2>/dev/null || true
+            cp -r "$VERSIONED_DIR/versioned_sidebars" docs/ 2>/dev/null || true
+            cp "$VERSIONED_DIR/versions.json" docs/ 2>/dev/null || true
+
+            # Install docs deps and create version snapshot
+            cd docs
+            pnpm install
+            npx docusaurus docs:version "$VERSION"
+            cd ..
+
+            # Save updated versioned content
+            cp -r docs/versioned_docs "$VERSIONED_DIR/" 2>/dev/null || true
+            cp -r docs/versioned_sidebars "$VERSIONED_DIR/" 2>/dev/null || true
+            cp docs/versions.json "$VERSIONED_DIR/" 2>/dev/null || true
+
+            echo "✓ $VERSION backfilled"
+          done
+
+          echo ""
+          echo "Final versions.json:"
+          cat "$VERSIONED_DIR/versions.json"
+
+          # Save for push step
+          echo "VERSIONED_DIR=$VERSIONED_DIR" >> $GITHUB_ENV
+
+      - name: Push backfilled docs to docs-versions branch
+        if: steps.versions.outputs.missing != '' && github.event.inputs.dry_run != 'true'
+        run: |
+          WORK=$(mktemp -d)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --heads origin docs-versions | grep -q docs-versions; then
+            git clone --branch docs-versions --single-branch --depth 1 \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "$WORK"
+          else
+            git init "$WORK"
+            cd "$WORK"
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+            git checkout --orphan docs-versions
+            cd -
+          fi
+
+          cd "$WORK"
+          rm -rf versioned_docs versioned_sidebars versions.json
+          cp -r "$VERSIONED_DIR/versioned_docs" . 2>/dev/null || true
+          cp -r "$VERSIONED_DIR/versioned_sidebars" . 2>/dev/null || true
+          cp "$VERSIONED_DIR/versions.json" . 2>/dev/null || true
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add versioned_docs versioned_sidebars versions.json
+          git commit -m "docs: backfill versioned docs for ${{ steps.versions.outputs.missing }}" || echo "Nothing to commit"
+          git push origin docs-versions

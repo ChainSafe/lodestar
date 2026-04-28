@@ -6,7 +6,7 @@ import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
-import {prettyPrintPeerId} from "../../util.ts";
+import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
   validateRequestedDataColumns,
@@ -34,7 +34,7 @@ export async function* onDataColumnSidecarsByRoot(
     }
 
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHex(blockRootHex);
+    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
     const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
 
@@ -61,11 +61,7 @@ export async function* onDataColumnSidecarsByRoot(
       continue;
     }
 
-    const dataColumns = block
-      ? // Non-finalized sidecars are stored by block root
-        await db.dataColumnSidecar.getManyBinary(blockRoot, availableColumns)
-      : // Finalized sidecars are archived and stored by slot
-        await db.dataColumnSidecarArchive.getManyBinary(slot, availableColumns);
+    const dataColumns = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns);
 
     const unavailableColumnIndices: ColumnIndex[] = [];
     for (let i = 0; i < dataColumns.length; i++) {

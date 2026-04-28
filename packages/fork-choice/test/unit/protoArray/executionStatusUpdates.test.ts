@@ -1,9 +1,10 @@
 import {describe, expect, it} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {
+  BlockExecutionStatus,
   BlockExtraMeta,
   ExecutionStatus,
-  MaybeValidExecutionStatus,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
@@ -16,7 +17,7 @@ type ValidationTestCase = {
   executionStatus: ExecutionStatus | undefined;
 };
 
-type TestBlock = {slot: number; root: string; parent: string; executionStatus: MaybeValidExecutionStatus};
+type TestBlock = {slot: number; root: string; parent: string; executionStatus: BlockExecutionStatus};
 type TestCase = [string, string | undefined, string | undefined, ExecutionStatus];
 const blocks: TestBlock[] = [
   {slot: 1, root: "1A", parent: "0", executionStatus: ExecutionStatus.Syncing},
@@ -74,7 +75,12 @@ function setupForkChoice(): ProtoArray {
       finalizedEpoch: 0,
       finalizedRoot: "-",
 
-      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     0
   );
@@ -116,8 +122,12 @@ function setupForkChoice(): ProtoArray {
         isEip7805Enabled: false,
 
         ...executionData,
+
+        parentBlockHash: null,
+        payloadStatus: PayloadStatus.FULL,
       },
-      block.slot
+      block.slot,
+      null
     );
   }
 
@@ -290,7 +300,10 @@ describe("executionStatus / invalidate all postmerge chain", () => {
 
   const fcHead = fc.findHead("0", 3);
   it("pre merge block should be the FC head", () => {
-    expect(fcHead).toBe("0");
+    // findHead returns ProtoNode
+    // For pre-Gloas blocks, this should have blockRoot "0" and payloadStatus FULL (2)
+    expect(fcHead.blockRoot).toBe("0");
+    expect(fcHead.payloadStatus).toBe(2); // PayloadStatus.FULL
   });
 });
 
@@ -422,7 +435,8 @@ function collectProtoarrayValidationStatus(fcArray: ProtoArray): ValidationTestC
   const expectedForkChoice: ValidationTestCase[] = [];
 
   for (const fcRoot of fcRoots) {
-    const fcNode = fcArray.getNode(fcRoot);
+    const defaultStatus = fcArray.getDefaultVariant(fcRoot);
+    const fcNode = defaultStatus !== undefined ? fcArray.getNode(fcRoot, defaultStatus) : undefined;
     const bestChild =
       fcNode?.bestChild !== undefined ? fcArray["getNodeFromIndex"](fcNode.bestChild).blockRoot : undefined;
     const bestDescendant =

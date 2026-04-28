@@ -1,7 +1,7 @@
 import {BeaconPreset} from "../types.js";
 
 // Mainnet preset
-// https://github.com/ethereum/consensus-specs/tree/dev/presets/mainnet
+// https://github.com/ethereum/consensus-specs/tree/master/presets/mainnet
 
 export const mainnetPreset: BeaconPreset = {
   // Misc
@@ -149,5 +149,7 @@ export const mainnetPreset: BeaconPreset = {
   // GLOAS
   PTC_SIZE: 512,
   MAX_PAYLOAD_ATTESTATIONS: 4,
+  BUILDER_REGISTRY_LIMIT: 1099511627776, // 2**40
   BUILDER_PENDING_WITHDRAWALS_LIMIT: 1048576, // 2**20
+  MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: 16384, // 2**14
 };

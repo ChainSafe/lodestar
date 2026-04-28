@@ -9,7 +9,7 @@ export enum InvalidBlockCode {
 }
 
 export type InvalidBlock =
-  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex}
+  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex; hash: RootHex | null}
   | {code: InvalidBlockCode.FUTURE_SLOT; currentSlot: Slot; blockSlot: Slot}
   | {code: InvalidBlockCode.FINALIZED_SLOT; finalizedSlot: Slot; blockSlot: Slot}
   | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: RootHex; blockAncestor?: RootHex};
@@ -53,6 +53,14 @@ export enum InvalidAttestationCode {
    * Delay consideration in the fork choice until their slot is in the past.
    */
   FUTURE_SLOT = "FUTURE_SLOT",
+  /**
+   * The attestation data index is invalid for a Gloas block (must be 0 or 1).
+   */
+  INVALID_DATA_INDEX = "INVALID_DATA_INDEX",
+  /**
+   * The attestation votes for a full payload (index=1) but the payload status is not known.
+   */
+  UNKNOWN_PAYLOAD_STATUS = "UNKNOWN_PAYLOAD_STATUS",
 }
 
 export type InvalidAttestation =
@@ -64,7 +72,9 @@ export type InvalidAttestation =
   | {code: InvalidAttestationCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
   | {code: InvalidAttestationCode.INVALID_TARGET; attestation: RootHex; local: RootHex}
   | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
-  | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot};
+  | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot}
+  | {code: InvalidAttestationCode.INVALID_DATA_INDEX; index: number}
+  | {code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS; beaconBlockRoot: RootHex};
 
 export enum ForkChoiceErrorCode {
   INVALID_ATTESTATION = "FORKCHOICE_ERROR_INVALID_ATTESTATION",

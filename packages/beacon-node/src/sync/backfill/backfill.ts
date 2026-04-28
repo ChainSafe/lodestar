@@ -2,15 +2,14 @@ import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
+import {IBeaconStateView, blockToHeader} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
-import {ErrorAborted, Logger, sleep, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
-import {byteArrayEquals} from "../../util/bytes.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {shuffleOne} from "../../util/shuffle.js";
@@ -30,7 +29,7 @@ export type BackfillSyncModules = {
   config: BeaconConfig;
   logger: Logger;
   metrics: Metrics | null;
-  anchorState: BeaconStateAllForks;
+  anchorState: IBeaconStateView;
   wsCheckpoint?: phase0.Checkpoint;
   signal: AbortSignal;
 };
@@ -128,7 +127,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private wsValidated = false;
 
   /**
-   * From https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/weak-subjectivity.md
+   * From https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/weak-subjectivity.md
    *
    *
    * If
@@ -232,7 +231,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   ): Promise<T> {
     const {config, anchorState, db, wsCheckpoint, logger} = modules;
 
-    const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
+    const {checkpoint: anchorCp} = anchorState.computeAnchorCheckpoint();
     const anchorSlot = anchorState.latestBlockHeader.slot;
     const syncAnchor = {
       anchorBlock: null,
@@ -750,7 +749,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     // GENESIS_SLOT doesn't has valid signature
     if (anchorBlock.message.slot === GENESIS_SLOT) return;
-    await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), [anchorBlock]);
+    await verifyBlockProposerSignature(this.chain.config, this.chain.bls, [anchorBlock]);
 
     // We can write to the disk if this is ahead of prevFinalizedCheckpointBlock otherwise
     // we will need to go make checks on the top of sync loop before writing as it might
@@ -815,7 +814,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     // If any of the block's proposer signature fail, we can't trust this peer at all
     if (verifiedBlocks.length > 0) {
-      await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), verifiedBlocks);
+      await verifyBlockProposerSignature(this.chain.config, this.chain.bls, verifiedBlocks);
 
       // This is bad, like super bad. Abort the backfill
       if (!nextAnchor)

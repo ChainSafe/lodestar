@@ -115,7 +115,7 @@ async function validateInclusionList(
   }
 
   // [REJECT] The signature of inclusion_list.signature is valid with respect to the validator index.
-  const signatureSet = getInclusionListSignatureSet(chain.getHeadState(), inclusionList);
+  const signatureSet = getInclusionListSignatureSet(chain.config, chain.getHeadState().slot, inclusionList);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     chain.metrics?.eip7805.inclusionListsInvalid.inc({source, reason: InvalidInclusionListReason.invalidSignature});
     chain.metrics?.eip7805.inclusionListsInvalidSize.inc(inclusionListSize);

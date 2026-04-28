@@ -1,14 +1,13 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
+  IBeaconStateView,
   ParticipationFlags,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  getBlockRootAtSlot,
   getCurrentSlot,
+  isStatePostAltair,
   parseAttesterFlags,
   parseParticipationFlags,
 } from "@lodestar/state-transition";
@@ -23,8 +22,9 @@ import {
   ValidatorIndex,
   altair,
   deneb,
+  gloas,
 } from "@lodestar/types";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, toRootHex} from "@lodestar/utils";
+import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {RegistryMetricCreator} from "../metrics/index.js";
 
@@ -39,7 +39,8 @@ const MAX_CACHED_DISTINCT_TARGETS = 4;
 const LATE_ATTESTATION_SUBMISSION_BPS = 5000;
 const LATE_BLOCK_SUBMISSION_BPS = 2500;
 
-const RETAIN_REGISTERED_VALIDATORS_MS = 1 * 3600 * 1000; // 1 hour
+/** Number of epochs to retain registered validators after their last registration */
+const RETAIN_REGISTERED_VALIDATORS_EPOCHS = 2;
 
 type Seconds = number;
 export enum OpSource {
@@ -60,6 +61,11 @@ export type ValidatorMonitor = {
   ): void;
   registerBeaconBlock(src: OpSource, delaySec: Seconds, block: BeaconBlock): void;
   registerBlobSidecar(src: OpSource, seenTimestampSec: Seconds, blob: deneb.BlobSidecar): void;
+  registerExecutionPayloadEnvelope(
+    src: OpSource,
+    delaySec: Seconds,
+    envelope: gloas.SignedExecutionPayloadEnvelope
+  ): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -95,8 +101,10 @@ export type ValidatorMonitor = {
     syncAggregate: altair.SyncAggregate,
     syncCommitteeIndices: Uint32Array
   ): void;
-  onceEveryEndOfEpoch(state: CachedBeaconStateAllForks): void;
+  onceEveryEndOfEpoch(state: IBeaconStateView): void;
   scrapeMetrics(slotClock: Slot): void;
+  /** Returns the list of validator indices currently being monitored */
+  getMonitoredValidatorIndices(): ValidatorIndex[];
 };
 
 export type ValidatorMonitorOpts = {
@@ -284,6 +292,9 @@ export function createValidatorMonitor(
     logger[logLevel](message, context);
   };
 
+  // Calculate retain time dynamically based on slot duration (2 epochs)
+  const retainRegisteredValidatorsMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS * RETAIN_REGISTERED_VALIDATORS_EPOCHS;
+
   /** The validators that require additional monitoring. */
   const validators = new MapDef<ValidatorIndex, MonitoredValidator>(() => ({
     summaries: new Map<Epoch, EpochSummary>(),
@@ -306,11 +317,19 @@ export function createValidatorMonitor(
 
   let lastRegisteredStatusEpoch = -1;
 
+  // Track validator additions/removals per epoch for logging
+  const addedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
+  const removedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
+
   const validatorMonitorMetrics = metricsRegister ? createValidatorMonitorMetrics(metricsRegister) : null;
 
   const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
+      const isNewValidator = !validators.has(index);
       validators.getOrDefault(index).lastRegisteredTimeMs = Date.now();
+      if (isNewValidator) {
+        addedValidatorsInEpoch.add(index);
+      }
     },
 
     registerLocalValidatorInSyncCommittee(index, untilEpoch) {
@@ -332,6 +351,9 @@ export function createValidatorMonitor(
       if (previousEpoch === -1) {
         return;
       }
+
+      // Track total balance instead of per-validator balance to reduce metric cardinality
+      let totalBalance = 0;
 
       for (const [index, monitoredValidator] of validators.entries()) {
         // We subtract two from the state of the epoch that generated these summaries.
@@ -391,7 +413,7 @@ export function createValidatorMonitor(
 
         const balance = balances?.[index];
         if (balance !== undefined) {
-          validatorMonitorMetrics?.prevEpochOnChainBalance.set({index}, balance);
+          totalBalance += balance;
         }
 
         if (!summary.isPrevSourceAttester || !summary.isPrevTargetAttester || !summary.isPrevHeadAttester) {
@@ -405,6 +427,10 @@ export function createValidatorMonitor(
             inclusionDistance,
           });
         }
+      }
+
+      if (balances !== undefined) {
+        validatorMonitorMetrics?.prevEpochOnChainBalance.set(totalBalance);
       }
     },
 
@@ -427,6 +453,10 @@ export function createValidatorMonitor(
 
     registerBlobSidecar(_src, _seenTimestampSec, _blob) {
       //TODO: freetheblobs
+    },
+
+    registerExecutionPayloadEnvelope(_src, _delaySec, _envelope) {
+      // TODO GLOAS: implement execution payload envelope monitoring
     },
 
     registerImportedBlock(block, {proposerBalanceDelta}) {
@@ -673,10 +703,28 @@ export function createValidatorMonitor(
 
       // Prune validators not seen in a while
       for (const [index, validator] of validators.entries()) {
-        if (Date.now() - validator.lastRegisteredTimeMs > RETAIN_REGISTERED_VALIDATORS_MS) {
+        if (Date.now() - validator.lastRegisteredTimeMs > retainRegisteredValidatorsMs) {
           validators.delete(index);
+          removedValidatorsInEpoch.add(index);
         }
       }
+
+      // Log validator monitor status every epoch
+      const allIndices = Array.from(validators.keys()).sort((a, b) => a - b);
+      const addedIndices = Array.from(addedValidatorsInEpoch).sort((a, b) => a - b);
+      const removedIndices = Array.from(removedValidatorsInEpoch).sort((a, b) => a - b);
+
+      log("Validator monitor status", {
+        epoch: computeEpochAtSlot(headState.slot),
+        added: addedIndices.length > 0 ? prettyPrintIndices(addedIndices) : "none",
+        removed: removedIndices.length > 0 ? prettyPrintIndices(removedIndices) : "none",
+        total: validators.size,
+        indices: prettyPrintIndices(allIndices),
+      });
+
+      // Clear tracking sets for next epoch
+      addedValidatorsInEpoch.clear();
+      removedValidatorsInEpoch.clear();
 
       // Compute summaries of previous epoch attestation performance
       const prevEpoch = computeEpochAtSlot(headState.slot) - 1;
@@ -687,16 +735,19 @@ export function createValidatorMonitor(
         return;
       }
 
+      if (validators.size === 0) {
+        return;
+      }
+
       const rootCache = new RootHexCache(headState);
 
-      if (config.getForkSeq(headState.slot) >= ForkSeq.altair) {
-        const {previousEpochParticipation} = headState as CachedBeaconStateAltair;
+      if (isStatePostAltair(headState)) {
         const prevEpochStartSlot = computeStartSlotAtEpoch(prevEpoch);
-        const prevEpochTargetRoot = toRootHex(getBlockRootAtSlot(headState, prevEpochStartSlot));
+        const prevEpochTargetRoot = toRootHex(headState.getBlockRootAtSlot(prevEpochStartSlot));
 
         // Check attestation performance
         for (const [index, validator] of validators.entries()) {
-          const flags = parseParticipationFlags(previousEpochParticipation.get(index));
+          const flags = parseParticipationFlags(headState.getPreviousEpochParticipation(index));
           const attestationSummary = validator.attestations.get(prevEpoch)?.get(prevEpochTargetRoot);
           const summary = renderAttestationSummary(config, rootCache, attestationSummary, flags);
           validatorMonitorMetrics?.prevEpochAttestationSummary.inc({summary});
@@ -708,9 +759,9 @@ export function createValidatorMonitor(
         }
       }
 
-      if (headState.epochCtx.proposersPrevEpoch !== null) {
+      if (headState.previousProposers !== null) {
         // proposersPrevEpoch is null on the first epoch of `headState` being generated
-        for (const [slotIndex, validatorIndex] of headState.epochCtx.proposersPrevEpoch.entries()) {
+        for (const [slotIndex, validatorIndex] of headState.previousProposers.entries()) {
           const validator = validators.get(validatorIndex);
           if (validator) {
             // If expected proposer is a tracked validator
@@ -735,6 +786,13 @@ export function createValidatorMonitor(
      */
     scrapeMetrics(slotClock) {
       validatorMonitorMetrics?.validatorsConnected.set(validators.size);
+
+      // Update static metric with connected validator indices
+      if (validatorMonitorMetrics?.validatorsConnectedIndices) {
+        validatorMonitorMetrics.validatorsConnectedIndices.reset();
+        const allIndices = Array.from(validators.keys()).sort((a, b) => a - b);
+        validatorMonitorMetrics.validatorsConnectedIndices.set({indices: prettyPrintIndices(allIndices)}, 1);
+      }
 
       const epoch = computeEpochAtSlot(slotClock);
       const slotInEpoch = slotClock % SLOTS_PER_EPOCH;
@@ -815,6 +873,10 @@ export function createValidatorMonitor(
       validatorMonitorMetrics?.prevEpochSyncCommitteeHits.set(prevEpochSyncCommitteeHits);
       validatorMonitorMetrics?.prevEpochSyncCommitteeMisses.set(prevEpochSyncCommitteeMisses);
     },
+
+    getMonitoredValidatorIndices() {
+      return Array.from(validators.keys()).sort((a, b) => a - b);
+    },
   };
 
   // Register a single collect() function to run all validatorMonitor metrics
@@ -839,7 +901,7 @@ function renderAttestationSummary(
   summary: AttestationSummary | undefined,
   flags: ParticipationFlags
 ): string {
-  // Reference https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
+  // Reference https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
   //
   // is_matching_source = data.source == justified_checkpoint
   // is_matching_target = is_matching_source and data.target.root == get_block_root(state, data.target.epoch)
@@ -1079,12 +1141,12 @@ function renderBlockProposalSummary(
 export class RootHexCache {
   private readonly blockRootSlotCache = new Map<Slot, RootHex>();
 
-  constructor(private readonly state: CachedBeaconStateAllForks) {}
+  constructor(private readonly state: IBeaconStateView) {}
 
   getBlockRootAtSlot(slot: Slot): RootHex {
     let root = this.blockRootSlotCache.get(slot);
     if (!root) {
-      root = toRootHex(getBlockRootAtSlot(this.state, slot));
+      root = toRootHex(this.state.getBlockRootAtSlot(slot));
       this.blockRootSlotCache.set(slot, root);
     }
     return root;
@@ -1098,17 +1160,21 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
       help: "Count of validators that are specifically monitored by this beacon node",
     }),
 
+    validatorsConnectedIndices: register.gauge<{indices: string}>({
+      name: "validator_monitor_indices",
+      help: "Static metric with connected validator indices as label, value is always 1",
+      labelNames: ["indices"],
+    }),
+
     validatorsInSyncCommittee: register.gauge({
       name: "validator_monitor_validators_in_sync_committee",
       help: "Count of validators monitored by this beacon node that are part of sync committee",
     }),
 
     // Validator Monitor Metrics (per-epoch summaries)
-    // Only track prevEpochOnChainBalance per index
-    prevEpochOnChainBalance: register.gauge<{index: number}>({
+    prevEpochOnChainBalance: register.gauge({
       name: "validator_monitor_prev_epoch_on_chain_balance",
-      help: "Balance of validator after an epoch",
-      labelNames: ["index"],
+      help: "Total balance of all monitored validators after an epoch",
     }),
     prevEpochOnChainAttesterHit: register.gauge({
       name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",

@@ -13,13 +13,6 @@ export {block, pool, state, rewards};
 
 export type {BlockHeaderResponse, BlockId} from "./block.js";
 export {BroadcastValidation} from "./block.js";
-export type {
-  AttestationsRewards,
-  BlockRewards,
-  IdealAttestationsReward,
-  SyncCommitteeRewards,
-  TotalAttestationsReward,
-} from "./rewards.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
   EpochCommitteeResponse,

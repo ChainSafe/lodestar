@@ -4,6 +4,7 @@ import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -44,13 +45,19 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: IBlockInput[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    syncType: RangeSyncType
+  ) => Promise<void>;
   /** Must download blocks, and validate their range */
   downloadByRange: (
     peer: PeerSyncMeta,
     batch: Batch,
     syncType: RangeSyncType
-  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
+  ) => Promise<
+    WarnResult<{blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null}, DownloadByRangeError>
+  >;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
@@ -516,7 +523,8 @@ export class SyncChain {
         });
         this.metrics?.syncRange.downloadByRange.success.inc();
         const {warnings, result} = res.result;
-        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
+        const {blocks: downloadedBlocks, payloadEnvelopes} = result;
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, downloadedBlocks, payloadEnvelopes);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };
@@ -578,14 +586,13 @@ export class SyncChain {
    * Sends `batch` to the processor. Note: batch may be empty
    */
   private async processBatch(batch: Batch): Promise<void> {
-    const blocks = batch.startProcessing();
+    const {blocks, payloadEnvelopes} = batch.startProcessing();
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks, this.syncType));
+    const res = await wrapError(this.processChainSegment(blocks, payloadEnvelopes, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();
-      this.pruneBlockInputs(batch.getBlocks());
 
       // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {

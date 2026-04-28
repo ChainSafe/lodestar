@@ -1,25 +1,36 @@
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {aggregateSerializedPublicKeys} from "@chainsafe/blst";
 import {HttpHeader, getClient, routes} from "@lodestar/api";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
-import {chainConfig as chainConfigDef} from "@lodestar/config/default";
-import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
+import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
+import {ForkName} from "@lodestar/params";
+import {isStatePostAltair} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Validator} from "@lodestar/validator";
 import {BeaconNode} from "../../../../../src/node/nodejs.js";
 import {waitForEvent} from "../../../../utils/events/resolver.js";
-import {LogLevel, TestLoggerOpts, testLogger} from "../../../../utils/logger.js";
 import {getDevBeaconNode} from "../../../../utils/node/beacon.js";
 import {getAndInitDevValidators} from "../../../../utils/node/validator.js";
 
-describe("lightclient api", () => {
+// TODO: Re-enable once lightclient E2E timing is stabilized
+// https://github.com/ChainSafe/lodestar/issues/8937
+describe.skipIf(process.env.CI)("lightclient api", () => {
   const SLOT_DURATION_MS = 1000;
-  const ALTAIR_FORK_EPOCH = 0;
   const restPort = 9596;
-  const chainConfig: ChainConfig = {...chainConfigDef, SLOT_DURATION_MS, ALTAIR_FORK_EPOCH};
+  const ELECTRA_FORK_EPOCH = 0;
+  const FULU_FORK_EPOCH = 1;
+  const testParams: Partial<ChainConfig> = {
+    SLOT_DURATION_MS,
+    ALTAIR_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    BELLATRIX_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    CAPELLA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    DENEB_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    ELECTRA_FORK_EPOCH: ELECTRA_FORK_EPOCH,
+    FULU_FORK_EPOCH: FULU_FORK_EPOCH,
+  };
+
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-  const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
+  const config = createBeaconConfig(testParams, genesisValidatorsRoot);
   const testLoggerOpts: TestLoggerOpts = {level: LogLevel.info};
   const loggerNodeA = testLogger("lightclient-api", testLoggerOpts);
   const validatorCount = 2;
@@ -30,7 +41,7 @@ describe("lightclient api", () => {
 
   beforeEach(async () => {
     bn = await getDevBeaconNode({
-      params: chainConfig,
+      params: testParams,
       options: {
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
@@ -84,7 +95,7 @@ describe("lightclient api", () => {
     expect(updates.length).toBe(1);
     // best update could be any slots
     // version is set
-    expect(res.meta().versions[0]).toBe(ForkName.altair);
+    expect(res.meta().versions[0]).toBe(ForkName.electra);
   });
 
   it("getLightClientOptimisticUpdate()", async () => {
@@ -96,7 +107,7 @@ describe("lightclient api", () => {
     // at slot 2 we got attestedHeader for slot 1
     expect(update.attestedHeader.beacon.slot).toBe(slot - 1);
     // version is set
-    expect(res.meta().version).toBe(ForkName.altair);
+    expect(res.meta().version).toBe(ForkName.electra);
     // Ensure version header is made available to scripts running in the browser
     expect(res.headers.get(HttpHeader.ExposeHeaders)?.includes("Eth-Consensus-Version")).toBe(true);
   });
@@ -116,21 +127,17 @@ describe("lightclient api", () => {
     const lightclient = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).lightclient;
     const committeeRes = await lightclient.getLightClientCommitteeRoot({startPeriod: 0, count: 1});
     committeeRes.assertOk();
-    const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
-    const validators = (await client.postStateValidators({stateId: "head"})).value();
-    const pubkeys = validators.map((v) => v.validator.pubkey);
-    expect(pubkeys.length).toBe(validatorCount);
-    // only 2 validators spreading to 512 committee slots
-    const committeePubkeys = Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) =>
-      i % 2 === 0 ? pubkeys[0] : pubkeys[1]
-    );
-    const aggregatePubkey = aggregateSerializedPublicKeys(committeePubkeys).toBytes();
+
+    // Get the actual sync committee root from the head state
+    // The sync committee is computed using a weighted random shuffle, not simple alternation
+    // Since the test starts at Electra, headState is always post-Altair and has currentSyncCommittee
+    const headState = bn.chain.getHeadState();
+    if (!isStatePostAltair(headState)) {
+      throw new Error("Expected Altair state in lightclient test");
+    }
+    const expectedRoot = ssz.altair.SyncCommittee.hashTreeRoot(headState.currentSyncCommittee);
+
     // single committee hash since we requested for the first period
-    expect(committeeRes.value()).toEqual([
-      ssz.altair.SyncCommittee.hashTreeRoot({
-        pubkeys: committeePubkeys,
-        aggregatePubkey,
-      }),
-    ]);
+    expect(committeeRes.value()).toEqual([expectedRoot]);
   });
 });

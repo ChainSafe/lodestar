@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {generateState} from "../../../../src/testUtils/state.js";
 import {findModifiedValidators} from "../../../../src/util/loadState/findModifiedValidators.js";
-import {generateState} from "../../../utils/state.js";
 import {generateValidators} from "../../../utils/validator.js";
 
 describe("findModifiedValidators", () => {

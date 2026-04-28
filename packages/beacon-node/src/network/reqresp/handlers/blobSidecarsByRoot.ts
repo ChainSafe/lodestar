@@ -2,18 +2,22 @@ import {BLOB_SIDECAR_FIXED_SIZE} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
 import {BlobSidecarsByRootRequest} from "../../../util/types.js";
 
 export async function* onBlobSidecarsByRoot(
   requestBody: BlobSidecarsByRootRequest,
-  chain: IBeaconChain,
-  db: IBeaconDb
+  chain: IBeaconChain
 ): AsyncIterable<ResponseOutgoing> {
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+
+  // Spec: [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
+  const currentEpoch = chain.clock.currentEpoch;
+  const minimumRequestEpoch = Math.max(
+    currentEpoch - chain.config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS,
+    chain.config.DENEB_FORK_EPOCH
+  );
 
   // In sidecars by root request, it can be expected that sidecar requests will be come
   // clustured by blockroots, and this helps us save db lookups once we load sidecars
@@ -23,7 +27,7 @@ export async function* onBlobSidecarsByRoot(
   for (const blobIdentifier of requestBody) {
     const {blockRoot, index} = blobIdentifier;
     const blockRootHex = toRootHex(blockRoot);
-    const block = chain.forkChoice.getBlockHex(blockRootHex);
+    const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
 
     // NOTE: Only support non-finalized blocks.
     // SPEC: Clients MUST support requesting blocks and sidecars since the latest finalized epoch.
@@ -32,16 +36,19 @@ export async function* onBlobSidecarsByRoot(
       continue;
     }
 
+    if (computeEpochAtSlot(block.slot) < minimumRequestEpoch) {
+      continue;
+    }
+
     // Check if we need to load sidecars for a new block root
     if (lastFetchedSideCars === null || lastFetchedSideCars.blockRoot !== blockRootHex) {
-      const blobSideCarsBytesWrapped = await db.blobSidecars.getBinary(fromHex(block.blockRoot));
-      if (!blobSideCarsBytesWrapped) {
+      const blobSidecarsBytes = await chain.getSerializedBlobSidecars(block.slot, blockRootHex);
+      if (!blobSidecarsBytes) {
         // Handle the same to onBeaconBlocksByRange
         throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);
       }
-      const blobSideCarsBytes = blobSideCarsBytesWrapped.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
 
-      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: blobSideCarsBytes};
+      lastFetchedSideCars = {blockRoot: blockRootHex, bytes: blobSidecarsBytes};
     }
 
     const blobSidecarBytes = lastFetchedSideCars.bytes.slice(

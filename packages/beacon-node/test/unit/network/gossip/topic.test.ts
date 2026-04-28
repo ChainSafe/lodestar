@@ -6,8 +6,7 @@ import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/networ
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 
 describe("network / gossip / topic", () => {
-  // TODO EIP-7805: this can be removed once fulu is scheduled
-  const config = createBeaconConfig({...chainConfig, EIP7805_FORK_EPOCH: 600000}, ZERO_HASH);
+  const config = createBeaconConfig({...chainConfig, EIP7805_FORK_EPOCH: 600000, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
@@ -146,6 +145,46 @@ describe("network / gossip / topic", () => {
           encoding,
         },
         topicStr: "/eth2/a41d57bd/inclusion_list/ssz_snappy",
+      },
+    ],
+    [GossipType.execution_payload]: [
+      {
+        topic: {
+          type: GossipType.execution_payload,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/29065f35/execution_payload/ssz_snappy",
+      },
+    ],
+    [GossipType.payload_attestation_message]: [
+      {
+        topic: {
+          type: GossipType.payload_attestation_message,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/29065f35/payload_attestation_message/ssz_snappy",
+      },
+    ],
+    [GossipType.execution_payload_bid]: [
+      {
+        topic: {
+          type: GossipType.execution_payload_bid,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/29065f35/execution_payload_bid/ssz_snappy",
+      },
+    ],
+    [GossipType.proposer_preferences]: [
+      {
+        topic: {
+          type: GossipType.proposer_preferences,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/29065f35/proposer_preferences/ssz_snappy",
       },
     ],
   };

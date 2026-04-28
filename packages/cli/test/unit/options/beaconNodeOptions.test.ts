@@ -1,9 +1,8 @@
-import fs from "node:fs";
 import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
-import {getTestdirPath} from "../../utils.js";
+import {NetworkArgs, parseArgs as parseNetworkArgs} from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
@@ -33,27 +32,16 @@ describe("options / beaconNodeOptions", () => {
       suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "chain.assertCorrectProgressiveBalances": true,
       "chain.maxSkipSlots": 100,
-      "safe-slots-to-import-optimistically": 256,
       "chain.archiveStateEpochFrequency": 1024,
       "chain.minSameMessageSignatureSetsToBatch": 32,
       "chain.maxShufflingCacheEpochs": 100,
       "chain.archiveDataEpochs": 10000,
-      "chain.nHistoricalStates": true,
       "chain.nHistoricalStatesFileDataStore": true,
       "chain.maxBlockStates": 100,
       "chain.maxCPStateEpochsInMemory": 100,
       "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.archiveMode": ArchiveMode.Frequency,
       emitPayloadAttributes: false,
-
-      eth1: true,
-      "eth1.providerUrl": "http://my.node:8545",
-      "eth1.providerUrls": ["http://my.node:8545"],
-      "eth1.depositContractDeployBlock": 1625314,
-      "eth1.disableEth1DepositDataTracker": true,
-      "eth1.unsafeAllowDepositDataOverwrite": false,
-      "eth1.forcedEth1DataVote":
-        "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
@@ -80,6 +68,7 @@ describe("options / beaconNodeOptions", () => {
       listenAddress: "127.0.0.1",
       port: 9001,
       discoveryPort: 9002,
+      quicPort: 9003,
       bootnodes: [
         "enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
       ],
@@ -106,6 +95,7 @@ describe("options / beaconNodeOptions", () => {
       "network.useWorker": true,
       "network.maxYoungGenerationSizeMb": 152,
       "network.targetGroupPeers": 12,
+      directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -139,7 +129,6 @@ describe("options / beaconNodeOptions", () => {
         preaggregateSlotDistance: 1,
         attDataCacheSlotDistance: 2,
         computeUnrealized: true,
-        safeSlotsToImportOptimistically: 256,
         suggestedFeeRecipient: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         assertCorrectProgressiveBalances: true,
         maxSkipSlots: 100,
@@ -149,20 +138,11 @@ describe("options / beaconNodeOptions", () => {
         maxShufflingCacheEpochs: 100,
         archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
-        nHistoricalStates: true,
         nHistoricalStatesFileDataStore: true,
+        nativeStateView: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
-      },
-      eth1: {
-        enabled: true,
-        providerUrls: ["http://my.node:8545"],
-        depositContractDeployBlock: 1625314,
-        disableEth1DepositDataTracker: true,
-        unsafeAllowDepositDataOverwrite: false,
-        forcedEth1DataVote:
-          "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
@@ -201,7 +181,7 @@ describe("options / beaconNodeOptions", () => {
         },
         maxPeers: 30,
         targetPeers: 25,
-        localMultiaddrs: ["/ip4/127.0.0.1/tcp/9001"],
+        localMultiaddrs: ["/ip4/127.0.0.1/udp/9003/quic-v1", "/ip4/127.0.0.1/tcp/9001"],
         subscribeAllSubnets: true,
         slotsToSubscribeBeforeAggregatorDuty: 1,
         disablePeerScoring: true,
@@ -214,11 +194,14 @@ describe("options / beaconNodeOptions", () => {
         gossipsubDHigh: 6,
         gossipsubAwaitHandler: true,
         mdns: false,
+        quic: true,
         rateLimitMultiplier: 1,
         maxGossipTopicConcurrency: 64,
         useWorker: true,
         maxYoungGenerationSizeMb: 152,
         targetGroupPeers: 12,
+        tcp: true,
+        directPeers: ["/ip4/192.168.1.1/tcp/9000/p2p/16Uiu2HAkuWPWqF4W3aw9oo5Yw79v5muzBaaGTGKMmuqjPfEyfkwu"],
       },
       sync: {
         isSingleNode: true,
@@ -232,28 +215,111 @@ describe("options / beaconNodeOptions", () => {
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).toEqual(expectedOptions);
   });
+});
 
-  it("Should use execution endpoint & jwt for eth1", () => {
-    const jwtSecretFile = getTestdirPath("./jwtsecret");
-    const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-    fs.writeFileSync(jwtSecretFile, jwtSecretHex, {encoding: "utf8"});
+describe("options / network / tcp and quic flags", () => {
+  it("should include both tcp and quic multiaddrs by default", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+  });
 
-    // Cast to match the expected fully defined type
-    const beaconNodeArgsPartial = {
-      eth1: true,
-      "execution.urls": ["http://my.node:8551"],
-      jwtSecret: jwtSecretFile,
-    } as BeaconNodeArgs;
+  it("should include both tcp and quic multiaddrs when quic is explicitly true", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, quic: true} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+  });
 
-    const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
-      eth1: {
-        enabled: true,
-        providerUrls: ["http://my.node:8551"],
-        jwtSecretHex,
-      },
-    };
+  it("should exclude tcp multiaddrs when tcp is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true} as NetworkArgs);
+    const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
+    expect(tcpAddrs).toHaveLength(0);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/udp/9001/quic-v1");
+    expect(result.tcp).toBe(false);
+  });
 
-    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
-    expect(options.eth1).toEqual(expectedOptions.eth1);
+  it("should exclude quic multiaddrs when quic is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, quic: false} as NetworkArgs);
+    const quicAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/quic"));
+    expect(quicAddrs).toHaveLength(0);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/9000");
+    expect(result.quic).toBe(false);
+  });
+
+  it("should not validate derived quicPort when quic is false", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 65535, quic: false} as NetworkArgs);
+    expect(result.localMultiaddrs).toContain("/ip4/0.0.0.0/tcp/65535");
+    expect(result.localMultiaddrs).not.toContain("/ip4/0.0.0.0/udp/65536/quic-v1");
+  });
+
+  it("should not validate explicit quicPort when quic is false", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      quic: false,
+      quicPort: 65536,
+    } as NetworkArgs);
+    expect(result.quic).toBe(false);
+  });
+
+  it("should exclude ipv6 tcp multiaddrs when tcp is false", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      listenAddress6: "::",
+      port: 9000,
+      tcp: false,
+      quic: true,
+    } as NetworkArgs);
+    const tcpAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/tcp/"));
+    expect(tcpAddrs).toHaveLength(0);
+    // quic for both ipv4 and ipv6 should still be present
+    const quicAddrs = result.localMultiaddrs.filter((mu) => mu.includes("/quic"));
+    expect(quicAddrs).toHaveLength(2);
+  });
+
+  it("should pass tcp through to network options", () => {
+    const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: true} as NetworkArgs);
+    expect(result.tcp).toBe(false);
+  });
+
+  it("should throw when both TCP and QUIC are disabled", () => {
+    expect(() =>
+      parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000, tcp: false, quic: false} as NetworkArgs)
+    ).toThrow("Cannot disable both TCP and QUIC transports");
+  });
+
+  it("should throw when discoveryPort and quicPort collide", () => {
+    expect(() =>
+      parseNetworkArgs({
+        listenAddress: "0.0.0.0",
+        port: 9000,
+        discoveryPort: 9001,
+        quicPort: 9001,
+        quic: true,
+      } as NetworkArgs)
+    ).toThrow(/discoveryPort and quicPort must not collide/);
+  });
+
+  it("should not throw on port collision when quic is false", () => {
+    const result = parseNetworkArgs({
+      listenAddress: "0.0.0.0",
+      port: 9000,
+      discoveryPort: 9001,
+      quicPort: 9001,
+      quic: false,
+    } as NetworkArgs);
+    expect(result.quic).toBe(false);
+  });
+
+  it("should throw when discoveryPort6 and quicPort6 collide", () => {
+    expect(() =>
+      parseNetworkArgs({
+        listenAddress6: "::",
+        port6: 9000,
+        discoveryPort6: 9001,
+        quicPort6: 9001,
+        quic: true,
+      } as NetworkArgs)
+    ).toThrow(/discoveryPort6 and quicPort6 must not collide/);
   });
 });

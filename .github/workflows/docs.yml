@@ -4,70 +4,94 @@ on:
   push:
     branches:
       - stable
+      - unstable
+  workflow_run:
+    workflows: ["Version docs"]
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       ref:
-        description: "Ref to deploy, defaults to `unstable`"
+        description: "Ref to deploy docs from, defaults to `unstable`"
         required: false
         default: "unstable"
         type: string
 
 jobs:
   docs:
+    # For workflow_run, only deploy if Version docs succeeded
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     env:
-      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'stable' }}
+      # Always build "current" (Next) docs from unstable
+      # Versioned docs come from docs-versions branch
+      DEPLOY_REF: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.ref || 'unstable' }}
     steps:
-      # Log out the ref being deployed
       - name: Log Deployment Ref
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "Deploying ref: $DEPLOY_REF"
+        run: echo "Deploying docs from ref $DEPLOY_REF"
 
-      # Checkout the correct ref being deployed
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ env.DEPLOY_REF }}
 
-      - uses: actions/setup-node@v4
+      - name: Install pnpm before setup node
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: 22
+          node-version: 24
           check-latest: true
-          cache: yarn
+          cache: pnpm
 
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
 
       - name: Restore dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         id: cache-deps
         with:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/pnpm-lock.yaml', '**/package.json') }}
 
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: pnpm install --frozen-lockfile && pnpm build
 
       - name: Build
-        run: yarn build
+        run: pnpm build
         if: steps.cache-deps.outputs.cache-hit == 'true'
 
       - name: Build and collect docs
-        run: yarn docs:build
+        run: pnpm docs:build
 
       - name: Lint built docs
-        run: yarn docs:lint:fix
+        run: pnpm docs:lint:fix
+
+      # Fetch versioned docs from docs-versions branch (if it exists)
+      - name: Fetch versioned docs
+        run: |
+          git fetch origin docs-versions 2>/dev/null || true
+          if git rev-parse origin/docs-versions >/dev/null 2>&1; then
+            echo "Found docs-versions branch, fetching versioned content..."
+            git worktree add /tmp/docs-versions origin/docs-versions
+            cp -r /tmp/docs-versions/versioned_docs docs/ 2>/dev/null || echo "No versioned_docs"
+            cp -r /tmp/docs-versions/versioned_sidebars docs/ 2>/dev/null || echo "No versioned_sidebars"
+            cp /tmp/docs-versions/versions.json docs/ 2>/dev/null || echo "No versions.json"
+            git worktree remove /tmp/docs-versions
+            echo "Versioned docs fetched successfully"
+          else
+            echo "No docs-versions branch found, building without versioning"
+          fi
 
       - name: Build docs
         working-directory: docs
-        run: yarn && yarn build
+        run: pnpm install && pnpm build
 
       - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/build

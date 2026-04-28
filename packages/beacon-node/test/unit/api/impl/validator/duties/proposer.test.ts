@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks} from "@lodestar/state-transition";
+import {BeaconStateAllForks, BeaconStateView} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
@@ -30,7 +30,7 @@ describe("get proposers api impl", () => {
 
     initializeState(currentSlot);
 
-    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(cachedState);
+    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(new BeaconStateView(cachedState));
     modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     modules.forkChoice.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
     modules.db.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
@@ -107,8 +107,12 @@ describe("get proposers api impl", () => {
 
   it("should get proposers for historical epoch", async () => {
     const historicalEpoch = currentEpoch - 2;
-    initializeState(currentSlot - 2 * SLOTS_PER_EPOCH);
-    modules.chain.getStateBySlot.mockResolvedValue({state, executionOptimistic: false, finalized: true});
+    initializeState(currentSlot - 2 * SLOTS_PER_EPOCH + 1);
+    modules.chain.getStateBySlot.mockResolvedValue({
+      state: new BeaconStateView(cachedState),
+      executionOptimistic: false,
+      finalized: true,
+    });
 
     const {data: result} = (await api.getProposerDuties({epoch: historicalEpoch})) as {
       data: routes.validator.ProposerDutyList;

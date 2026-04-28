@@ -1,10 +1,11 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
-import {ForkName, ForkPostFulu, ForkPreGloas} from "@lodestar/params";
+import {testLogger} from "@lodestar/logger/test-utils";
+import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
+  BlockInputPreData,
   BlockInputSource,
   IBlockInput,
   isBlockInputBlobs,
@@ -16,18 +17,19 @@ import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInp
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
+import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {
   config,
   generateBlock,
   generateBlockWithBlobSidecars,
   generateChainOfBlocks,
 } from "../../../utils/blocksAndData.js";
-import {testLogger} from "../../../utils/logger.js";
 
 describe("SeenBlockInputCache", async () => {
   let cache: SeenBlockInput;
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
+  let serializedCache: SerializedCache;
 
   const privateKey = await generateKeyPair("secp256k1");
   const nodeId = computeNodeIdFromPrivateKey(privateKey);
@@ -37,6 +39,7 @@ describe("SeenBlockInputCache", async () => {
   beforeEach(() => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
+    serializedCache = new SerializedCache();
     const signal = abortController.signal;
     const genesisTime = Math.floor(Date.now() / 1000);
     cache = new SeenBlockInput({
@@ -45,13 +48,14 @@ describe("SeenBlockInputCache", async () => {
       clock: new Clock({config, genesisTime, signal}),
       chainEvents,
       signal,
+      serializedCache,
       logger,
       metrics: null,
     });
   });
 
-  describe("has()", () => {
-    it("should return true if in cache", () => {
+  describe("hasBlock()", () => {
+    it("should return true if block is in cache", () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.capella});
       cache.getByBlock({
         block,
@@ -59,7 +63,7 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
-      expect(cache.has(rootHex)).toBeTruthy();
+      expect(cache.hasBlock(rootHex)).toBeTruthy();
     });
 
     it("should return false if not in cache", () => {
@@ -70,11 +74,11 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
-      expect(cache.has(rootHex)).toBeTruthy();
+      expect(cache.hasBlock(rootHex)).toBeTruthy();
       blockRoot[0] = (blockRoot[0] + 1) % 255;
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
-      expect(cache.has(toRootHex(blockRoot))).toBeFalsy();
+      expect(cache.hasBlock(toRootHex(blockRoot))).toBeFalsy();
     });
   });
 
@@ -120,6 +124,21 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(rootHex)).toBeUndefined();
     });
 
+    it("should remove serialized cache entries for the evicted BlockInput", () => {
+      const {block, rootHex} = generateBlock({forkName: ForkName.capella});
+      cache.getByBlock({
+        block,
+        blockRootHex: rootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      serializedCache.set(block, new Uint8Array([1]));
+
+      expect(serializedCache.get(block)).toBeDefined();
+      cache.remove(rootHex);
+      expect(serializedCache.get(block)).toBeUndefined();
+    });
+
     it("should not throw an error if BlockInput not in cache", () => {
       const {block, blockRoot, rootHex} = generateBlock({forkName: ForkName.capella});
       const blockInput = cache.getByBlock({
@@ -133,7 +152,7 @@ describe("SeenBlockInputCache", async () => {
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
       expect(() => cache.remove(toRootHex(blockRoot))).not.toThrow();
-      expect(cache.has(rootHex)).toBeTruthy();
+      expect(cache.hasBlock(rootHex)).toBeTruthy();
     });
   });
 
@@ -178,6 +197,34 @@ describe("SeenBlockInputCache", async () => {
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
     });
+
+    it("should remove serialized cache entries for the pruned BlockInputs", () => {
+      const blocks = generateChainOfBlocks({forkName: ForkName.capella, count: 2});
+      const parentBlock = blocks[0].block;
+      const parentRootHex = blocks[0].rootHex;
+      const childBlock = blocks[1].block;
+      const childRootHex = blocks[1].rootHex;
+
+      cache.getByBlock({
+        block: parentBlock,
+        blockRootHex: parentRootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      cache.getByBlock({
+        block: childBlock,
+        blockRootHex: childRootHex,
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Date.now() / 1000,
+      });
+      serializedCache.set(parentBlock, new Uint8Array([1]));
+      serializedCache.set(childBlock, new Uint8Array([2]));
+
+      cache.prune(childRootHex);
+
+      expect(serializedCache.get(parentBlock)).toBeUndefined();
+      expect(serializedCache.get(childBlock)).toBeUndefined();
+    });
   });
 
   describe("onFinalized()", () => {
@@ -214,6 +261,9 @@ describe("SeenBlockInputCache", async () => {
     });
 
     it("should remove all BlockInputs in slots before the checkpoint", () => {
+      serializedCache.set(parentBlockInput.getBlock(), new Uint8Array([1]));
+      serializedCache.set(childBlockInput.getBlock(), new Uint8Array([2]));
+
       chainEvents.emit(ChainEvent.forkChoiceFinalized, {
         epoch: config.DENEB_FORK_EPOCH,
         root,
@@ -221,6 +271,8 @@ describe("SeenBlockInputCache", async () => {
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
+      expect(serializedCache.get(parentBlockInput.getBlock())).toBeUndefined();
+      expect(serializedCache.get(childBlockInput.getBlock())).toBeUndefined();
     });
 
     it("should not remove BlockInputs in slots after the checkpoint", () => {
@@ -308,9 +360,10 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
+      expect(isBlockInputPreDeneb(blockInput)).toBeTruthy();
       expect(() =>
-        blockInput.addBlock({
-          block: block as SignedBeaconBlock<ForkPostFulu & ForkPreGloas>,
+        (blockInput as BlockInputPreData).addBlock({
+          block,
           blockRootHex: rootHex,
           source: BlockInputSource.gossip,
           seenTimestampSec: Date.now() / 1000,

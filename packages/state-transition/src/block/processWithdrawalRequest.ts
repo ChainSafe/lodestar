@@ -7,7 +7,7 @@ import {
 } from "@lodestar/params";
 import {electra, phase0, ssz} from "@lodestar/types";
 import {toHex} from "@lodestar/utils";
-import {CachedBeaconStateElectra} from "../types.js";
+import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {hasCompoundingWithdrawalCredential, hasExecutionWithdrawalCredential} from "../util/electra.js";
 import {computeExitEpochAndUpdateChurn} from "../util/epoch.js";
 import {getPendingBalanceToWithdraw, isActiveValidator} from "../util/validator.js";
@@ -15,13 +15,13 @@ import {initiateValidatorExit} from "./initiateValidatorExit.js";
 
 export function processWithdrawalRequest(
   fork: ForkSeq,
-  state: CachedBeaconStateElectra,
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   withdrawalRequest: electra.WithdrawalRequest
 ): void {
   const amount = Number(withdrawalRequest.amount);
   const {pendingPartialWithdrawals, validators, epochCtx} = state;
   // no need to use unfinalized pubkey cache from 6110 as validator won't be active anyway
-  const {pubkey2index, config} = epochCtx;
+  const {pubkeyCache, config} = epochCtx;
   const isFullExitRequest = amount === FULL_EXIT_REQUEST_AMOUNT;
 
   // If partial withdrawal queue is full, only full exits are processed
@@ -31,7 +31,7 @@ export function processWithdrawalRequest(
 
   // bail out if validator is not in beacon state
   // note that we don't need to check for 6110 unfinalized vals as they won't be eligible for withdraw/exit anyway
-  const validatorIndex = pubkey2index.get(withdrawalRequest.validatorPubkey);
+  const validatorIndex = pubkeyCache.getIndex(withdrawalRequest.validatorPubkey);
   if (validatorIndex === null) {
     return;
   }
@@ -81,7 +81,7 @@ export function processWithdrawalRequest(
 function isValidatorEligibleForWithdrawOrExit(
   validator: phase0.Validator,
   sourceAddress: Uint8Array,
-  state: CachedBeaconStateElectra
+  state: CachedBeaconStateElectra | CachedBeaconStateGloas
 ): boolean {
   const {withdrawalCredentials} = validator;
   const addressStr = toHex(withdrawalCredentials.subarray(12));

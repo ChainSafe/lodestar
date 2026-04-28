@@ -38,7 +38,6 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
         : PeerAction.LowToleranceError;
     // TODO: Detect SSZDecodeError and return PeerAction.Fatal
 
-    case RequestErrorCode.TTFB_TIMEOUT:
     case RequestErrorCode.RESP_TIMEOUT:
       switch (method) {
         case ReqRespMethod.Ping:
@@ -47,6 +46,8 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
           return PeerAction.LowToleranceError;
         case ReqRespMethod.BeaconBlocksByRange:
         case ReqRespMethod.BeaconBlocksByRoot:
+        case ReqRespMethod.ExecutionPayloadEnvelopesByRoot:
+        case ReqRespMethod.ExecutionPayloadEnvelopesByRange:
           return PeerAction.MidToleranceError;
         default:
           return null;

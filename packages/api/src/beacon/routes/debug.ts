@@ -1,8 +1,8 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {BeaconState, StringType, fulu, ssz} from "@lodestar/types";
+import {isForkPostFulu} from "@lodestar/params";
+import {ArrayOf, BeaconState, DataColumnSidecars, StringType, ssz, sszTypesFor} from "@lodestar/types";
 import {
-  ArrayOf,
   EmptyArgs,
   EmptyMeta,
   EmptyMetaCodec,
@@ -150,7 +150,7 @@ export type Endpoints = {
       indices?: number[];
     },
     {params: {block_id: string}; query: {indices?: number[]}},
-    fulu.DataColumnSidecars,
+    DataColumnSidecars,
     ExecutionOptimisticFinalizedAndVersionMeta
   >;
 };
@@ -223,7 +223,9 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {params: {block_id: Schema.StringRequired}, query: {indices: Schema.UintArray}},
       },
       resp: {
-        data: ssz.fulu.DataColumnSidecars,
+        data: WithVersion((fork) =>
+          isForkPostFulu(fork) ? sszTypesFor(fork).DataColumnSidecars : ssz.fulu.DataColumnSidecars
+        ),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
       },
     },

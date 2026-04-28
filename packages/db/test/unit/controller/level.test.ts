@@ -1,6 +1,5 @@
 import {execSync} from "node:child_process";
 import os from "node:os";
-import all from "it-all";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {getEnvLogger} from "@lodestar/logger/env";
 import {LevelDbController} from "../../../src/index.js";
@@ -82,6 +81,55 @@ describe("LevelDB controller", () => {
     expect((await db.entries()).length).toBe(0);
   });
 
+  it("test batch", async () => {
+    const [
+      {key: k1, value: v1},
+      {key: k2, value: v2},
+      {key: k3, value: v3},
+      {key: k4, value: v4},
+      {key: k5, value: v5},
+    ] = Array.from({length: 5}, (_, i) => ({
+      key: Buffer.from(`test${i}`),
+      value: Buffer.from(`some value ${i}`),
+    }));
+    await db.put(k1, v1);
+    await db.put(k2, v2);
+    await db.put(k3, v3);
+
+    expect(await db.entries()).toEqual([
+      {key: k1, value: v1},
+      {key: k2, value: v2},
+      {key: k3, value: v3},
+    ]);
+
+    await db.batch([
+      {
+        type: "del",
+        key: k1,
+      },
+      {
+        type: "put",
+        key: k4,
+        value: v4,
+      },
+      {
+        type: "del",
+        key: k3,
+      },
+      {
+        type: "put",
+        key: k5,
+        value: v5,
+      },
+    ]);
+
+    expect(await db.entries()).toEqual([
+      {key: k2, value: v2},
+      {key: k4, value: v4},
+      {key: k5, value: v5},
+    ]);
+  });
+
   it("test entries", async () => {
     const k1 = Buffer.from("test1");
     const k2 = Buffer.from("test2");
@@ -119,7 +167,7 @@ describe("LevelDB controller", () => {
       gte: k1,
       lte: k2,
     });
-    const result = await all(resultStream);
+    const result = await Array.fromAsync(resultStream);
     expect(result.length).toBe(2);
   });
 
@@ -131,7 +179,7 @@ describe("LevelDB controller", () => {
     const result = await db.entries({limit: 3});
     expect(result.length).toBe(3);
     const resultStream = db.entriesStream({limit: 3});
-    expect((await all(resultStream)).length).toBe(3);
+    expect((await Array.fromAsync(resultStream)).length).toBe(3);
   });
 
   it("test reverse", async () => {

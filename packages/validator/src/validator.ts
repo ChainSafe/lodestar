@@ -16,6 +16,7 @@ import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/exter
 import {InclusionListService} from "./services/inclusionList.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
+import {PtcService} from "./services/ptc.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
@@ -31,6 +32,7 @@ export type ValidatorModules = {
   slashingProtection: ISlashingProtection;
   blockProposingService: BlockProposingService;
   attestationService: AttestationService;
+  ptcService: PtcService;
   syncCommitteeService: SyncCommitteeService;
   inclusionListService: InclusionListService;
   config: BeaconConfig;
@@ -86,6 +88,7 @@ export class Validator {
   private readonly slashingProtection: ISlashingProtection;
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
+  private readonly ptcService: PtcService;
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly inclusionListService: InclusionListService;
   private readonly config: BeaconConfig;
@@ -105,6 +108,7 @@ export class Validator {
     slashingProtection,
     blockProposingService,
     attestationService,
+    ptcService,
     syncCommitteeService,
     inclusionListService,
     config,
@@ -122,6 +126,7 @@ export class Validator {
     this.slashingProtection = slashingProtection;
     this.blockProposingService = blockProposingService;
     this.attestationService = attestationService;
+    this.ptcService = ptcService;
     this.syncCommitteeService = syncCommitteeService;
     this.inclusionListService = inclusionListService;
     this.config = config;
@@ -184,7 +189,11 @@ export class Validator {
           urls: typeof clientOrUrls === "string" ? [clientOrUrls] : clientOrUrls,
           // Validator would need the beacon to respond within the slot
           // See https://github.com/ChainSafe/lodestar/issues/5315 for rationale
-          globalInit: {timeoutMs: config.SLOT_DURATION_MS, signal: controller.signal, ...globalInit},
+          globalInit: {
+            signal: controller.signal,
+            ...globalInit,
+            timeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
+          },
         },
         {config, logger, metrics: metrics?.restApiClient}
       );
@@ -226,7 +235,7 @@ export class Validator {
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     emitter.setMaxListeners(Infinity);
 
-    const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
+    const chainHeaderTracker = new ChainHeaderTracker(config, logger, api, emitter);
     const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
     const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
@@ -248,6 +257,18 @@ export class Validator {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         distributedAggregationSelection: opts.distributed,
       }
+    );
+
+    const ptcService = new PtcService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeaderTracker,
+      syncingStatusTracker,
+      metrics
     );
 
     const syncCommitteeService = new SyncCommitteeService(
@@ -283,6 +304,7 @@ export class Validator {
       slashingProtection,
       blockProposingService,
       attestationService,
+      ptcService,
       syncCommitteeService,
       inclusionListService,
       config,
@@ -312,6 +334,7 @@ export class Validator {
         urls: urls.map(toPrintableUrl).toString(),
         requestWireFormat: globalInit?.requestWireFormat ?? defaultInit.requestWireFormat,
         responseWireFormat: globalInit?.responseWireFormat ?? defaultInit.responseWireFormat,
+        requestTimeoutMs: globalInit?.timeoutMs ?? config.SLOT_DURATION_MS,
       });
     } else {
       api = clientOrUrls;
@@ -349,6 +372,7 @@ export class Validator {
   removeDutiesForKey(pubkey: PubkeyHex): void {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
+    this.ptcService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
     this.inclusionListService.removeDutiesForKey(pubkey);
   }

@@ -1,0 +1,20 @@
+{
+  "ethereumConsensusSpecsTests": {
+    "specVersion": "v1.7.0-alpha.5",
+    "specTestsRepoUrl": "https://github.com/ethereum/consensus-specs",
+    "outputDirBase": "spec-tests",
+    "testsToDownload": [
+      "general",
+      "mainnet",
+      "minimal"
+    ]
+  },
+  "blsSpecTests": {
+    "specVersion": "v0.1.1",
+    "specTestsRepoUrl": "https://github.com/ethereum/bls12-381-tests",
+    "outputDirBase": "spec-tests-bls",
+    "testsToDownload": [
+      "bls_tests_yaml"
+    ]
+  }
+}

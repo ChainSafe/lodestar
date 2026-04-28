@@ -1,9 +1,10 @@
-import {Message, TopicValidatorResult} from "@libp2p/interface";
-import {Libp2p} from "libp2p";
-import {PeerIdStr} from "@chainsafe/libp2p-gossipsub/types";
+import type {Message, TopicValidatorResult} from "@libp2p/gossipsub";
+import type {PeerIdStr} from "@libp2p/gossipsub/types";
+import type {Libp2p} from "libp2p";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   AttesterSlashing,
+  DataColumnSidecar,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
   SignedAggregateAndProof,
@@ -15,7 +16,7 @@ import {
   capella,
   deneb,
   eip7805,
-  fulu,
+  gloas,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -39,6 +40,10 @@ export enum GossipType {
   light_client_optimistic_update = "light_client_optimistic_update",
   bls_to_execution_change = "bls_to_execution_change",
   inclusion_list = "inclusion_list",
+  execution_payload = "execution_payload",
+  payload_attestation_message = "payload_attestation_message",
+  execution_payload_bid = "execution_payload_bid",
+  proposer_preferences = "proposer_preferences",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -74,6 +79,10 @@ export type GossipTopicTypeMap = {
   [GossipType.light_client_optimistic_update]: {type: GossipType.light_client_optimistic_update};
   [GossipType.bls_to_execution_change]: {type: GossipType.bls_to_execution_change};
   [GossipType.inclusion_list]: {type: GossipType.inclusion_list};
+  [GossipType.execution_payload]: {type: GossipType.execution_payload};
+  [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
+  [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
+  [GossipType.proposer_preferences]: {type: GossipType.proposer_preferences};
 };
 
 export type GossipTopicMap = {
@@ -94,7 +103,7 @@ export type GossipTypeMap = {
   [GossipType.blob_sidecar]: deneb.BlobSidecar;
   [GossipType.beacon_aggregate_and_proof]: SignedAggregateAndProof;
   [GossipType.beacon_attestation]: SingleAttestation;
-  [GossipType.data_column_sidecar]: fulu.DataColumnSidecar;
+  [GossipType.data_column_sidecar]: DataColumnSidecar;
   [GossipType.voluntary_exit]: phase0.SignedVoluntaryExit;
   [GossipType.proposer_slashing]: phase0.ProposerSlashing;
   [GossipType.attester_slashing]: AttesterSlashing;
@@ -104,6 +113,10 @@ export type GossipTypeMap = {
   [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
   [GossipType.inclusion_list]: eip7805.SignedInclusionList;
+  [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
+  [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
+  [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
+  [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
 };
 
 export type GossipFnByType = {
@@ -111,7 +124,7 @@ export type GossipFnByType = {
   [GossipType.blob_sidecar]: (blobSidecar: deneb.BlobSidecar) => Promise<void> | void;
   [GossipType.beacon_aggregate_and_proof]: (aggregateAndProof: SignedAggregateAndProof) => Promise<void> | void;
   [GossipType.beacon_attestation]: (attestation: SingleAttestation) => Promise<void> | void;
-  [GossipType.data_column_sidecar]: (dataColumnSidecar: fulu.DataColumnSidecar) => Promise<void> | void;
+  [GossipType.data_column_sidecar]: (dataColumnSidecar: DataColumnSidecar) => Promise<void> | void;
   [GossipType.voluntary_exit]: (voluntaryExit: phase0.SignedVoluntaryExit) => Promise<void> | void;
   [GossipType.proposer_slashing]: (proposerSlashing: phase0.ProposerSlashing) => Promise<void> | void;
   [GossipType.attester_slashing]: (attesterSlashing: AttesterSlashing) => Promise<void> | void;
@@ -127,6 +140,17 @@ export type GossipFnByType = {
   ) => Promise<void> | void;
   [GossipType.bls_to_execution_change]: (
     blsToExecutionChange: capella.SignedBLSToExecutionChange
+  ) => Promise<void> | void;
+  [GossipType.inclusion_list]: (inclusionList: eip7805.SignedInclusionList) => Promise<void> | void;
+  [GossipType.execution_payload]: (
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  ) => Promise<void> | void;
+  [GossipType.payload_attestation_message]: (
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ) => Promise<void> | void;
+  [GossipType.execution_payload_bid]: (executionPayloadBid: gloas.SignedExecutionPayloadBid) => Promise<void> | void;
+  [GossipType.proposer_preferences]: (
+    signedProposerPreferences: gloas.SignedProposerPreferences
   ) => Promise<void> | void;
 };
 

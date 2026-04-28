@@ -10,18 +10,23 @@ Some of the important Lodestar flags related to networking are:
 - [`--listenAddress`](./beacon-cli#--listenaddress)
 - [`--port`](./beacon-cli#--port)
 - [`--discoveryPort`](./beacon-cli#--discoveryport)
+- [`--quicPort`](./beacon-cli#--quicport)
 - [`--listenAddress6`](./beacon-cli#--listenaddress6)
 - [`--port6`](./beacon-cli#--port6)
 - [`--discoveryPort6`](./beacon-cli#--discoveryport6)
+- [`--quicPort6`](./beacon-cli#--quicport6)
+- [`--quic`](./beacon-cli#--quic)
 - [`--bootnodes`](./beacon-cli#--bootnodes)
 - [`--subscribeAllSubnets`](./beacon-cli#--subscribeallsubnets)
 - [`--disablePeerScoring`](./beacon-cli#--disablepeerscoring)
 - [`--enr.ip`](./beacon-cli#--enrip)
 - [`--enr.tcp`](./beacon-cli#--enrtcp)
 - [`--enr.udp`](./beacon-cli#--enrudp)
+- [`--enr.quic`](./beacon-cli#--enrquic)
 - [`--enr.ip6`](./beacon-cli#--enrip6)
 - [`--enr.tcp6`](./beacon-cli#--enrtcp6)
 - [`--enr.udp6`](./beacon-cli#--enrudp6)
+- [`--enr.quic6`](./beacon-cli#--enrquic6)
 - [`--nat`](./beacon-cli#--nat)
 - [`--private`](./beacon-cli#--private)
 
@@ -79,6 +84,24 @@ Libp2p is a modular and extensible network stack that serves as the data transpo
 
 Libp2p operates at the lower levels of the OSI model, particularly at the Transport and Network layers. Libp2p supports both TCP and UDP protocols for establishing connections and data transmission. Combined with libp2p's modular design it can integrate with various networking technologies to facilitating both routing and addressing.
 
+### QUIC Transport
+
+Lodestar supports [QUIC](https://datatracker.ietf.org/doc/html/rfc9000) as a transport alongside TCP. QUIC is a UDP-based transport that provides built-in encryption (TLS 1.3), multiplexed streams, and faster connection establishment compared to TCP. QUIC is enabled by default and Lodestar will prefer QUIC when dialing peers that advertise QUIC support. The node's ENR automatically includes QUIC port information so other nodes can discover and connect via QUIC. The ENR fields can be overridden with `--enr.quic` and `--enr.quic6`.
+
+## Port Configuration
+
+Lodestar uses three ports for P2P networking:
+
+| Port              | Protocol | Default                 | Purpose                   |
+| ----------------- | -------- | ----------------------- | ------------------------- |
+| `--port`          | TCP      | 9000                    | TCP transport for libp2p  |
+| `--discoveryPort` | UDP      | 9000 (same as `--port`) | discv5 peer discovery     |
+| `--quicPort`      | UDP      | 9001 (`--port` + 1)     | QUIC transport for libp2p |
+
+Note that `--discoveryPort` and `--quicPort` are both UDP but must use different ports. Lodestar will error on startup if they collide.
+
+For IPv6 dual-stack, equivalent flags are available: `--port6`, `--discoveryPort6`, and `--quicPort6`.
+
 ## Firewall Management
 
 If your setup is behind a firewall there are a few ports that will need to be opened to allow for P2P discovery and communication. There are also some ports that need to be protected to prevent unwanted access or DDOS attacks on your node.
@@ -86,7 +109,8 @@ If your setup is behind a firewall there are a few ports that will need to be op
 Ports that must be opened:
 
 - 30303/TCP+UDP - Execution layer P2P communication port
-- 9000/TCP+UDP - Beacon node IPv4 and IPv6 P2P communication port
+- 9000/TCP+UDP - Beacon node P2P communication (TCP transport + discv5 discovery)
+- 9001/UDP - Beacon node QUIC transport
 
 Ports that must be protected:
 

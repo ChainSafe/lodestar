@@ -1,5 +1,4 @@
 import worker from "node:worker_threads";
-import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
@@ -52,8 +51,6 @@ const queue = new JobFnQueue(
   queueMetrics
 );
 
-const pubkey2index = new PubkeyIndexMap();
-
 const api: HistoricalStateWorkerApi = {
   async close() {
     abortController.abort();
@@ -65,7 +62,7 @@ const api: HistoricalStateWorkerApi = {
     historicalStateRegenMetrics?.regenRequestCount.inc();
 
     const stateBytes = await queue.push<Uint8Array>(() =>
-      getHistoricalState(slot, config, db, pubkey2index, historicalStateRegenMetrics)
+      getHistoricalState(slot, config, db, workerData.nativeStateView, historicalStateRegenMetrics)
     );
     const result = Transfer(stateBytes, [stateBytes.buffer]) as unknown as Uint8Array;
 
