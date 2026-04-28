@@ -64,7 +64,7 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
   attestation.data.index = 0; // Must be zero post-electra
   attestation.data.target.epoch = currentEpoch;
   attestation.signature = validSignature;
-  const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
+  const attDataRootHex = toHexString(ssz.phase0.AttestationData.serialize(attestation.data));
 
   const validatorOpts = {
     activationEpoch: 0,
