@@ -215,7 +215,9 @@
     </spec>
 
 - name: apply_parent_execution_payload#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processParentExecutionPayload.ts
+      search: export function applyParentExecutionPayload(
   spec: |
     <spec fn="apply_parent_execution_payload" fork="gloas" hash="bcd06f01">
     def apply_parent_execution_payload(
@@ -9812,7 +9814,9 @@
     </spec>
 
 - name: process_parent_execution_payload#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processParentExecutionPayload.ts
+      search: export function processParentExecutionPayload(
   spec: |
     <spec fn="process_parent_execution_payload" fork="gloas" hash="de7daac8">
     def process_parent_execution_payload(state: BeaconState, block: BeaconBlock) -> None:
@@ -10945,7 +10949,9 @@
     </spec>
 
 - name: settle_builder_payment#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/block/processParentExecutionPayload.ts
+      search: function settleBuilderPayment(
   spec: |
     <spec fn="settle_builder_payment" fork="gloas" hash="42ebaa70">
     def settle_builder_payment(state: BeaconState, payment_index: uint64) -> None:
@@ -12866,7 +12872,9 @@
     </spec>
 
 - name: verify_execution_payload_envelope#gloas
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/blocks/verifyExecutionPayloadEnvelope.ts
+      search: export function verifyExecutionPayloadEnvelope(
   spec: |
     <spec fn="verify_execution_payload_envelope" fork="gloas" hash="0261931f">
     def verify_execution_payload_envelope(
@@ -12913,8 +12921,8 @@
 
 - name: verify_execution_payload_envelope_signature#gloas
   sources:
-    - file: packages/state-transition/src/block/processExecutionPayloadEnvelope.ts
-      search: function verifyExecutionPayloadEnvelopeSignature(
+    - file: packages/beacon-node/src/chain/blocks/verifyExecutionPayloadEnvelope.ts
+      search: export async function verifyExecutionPayloadEnvelopeSignature(
   spec: |
     <spec fn="verify_execution_payload_envelope_signature" fork="gloas" hash="49483ae2">
     def verify_execution_payload_envelope_signature(

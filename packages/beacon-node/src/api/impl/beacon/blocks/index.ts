@@ -234,7 +234,7 @@ export function getBeaconBlockApi({
           }
 
           try {
-            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], {
+            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], null, {
               ...opts,
               verifyOnly: true,
               skipVerifyBlockSignatures: true,
@@ -311,7 +311,10 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            if (
+              e instanceof BlockError &&
+              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+            ) {
               chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,
                 peer: IDENTITY_PEER_ID,
@@ -773,9 +776,9 @@ export function getBeaconBlockApi({
       // Track metrics for data column publishing
       if (dataColumnSidecars.length > 0) {
         let columnsPublishedWithZeroPeers = 0;
-        // Skip first entry (envelope), track data columns
-        for (let i = 1; i < sentPeersArr.length; i++) {
-          const sentPeers = sentPeersArr[i] as number;
+        // Skip first entry (envelope); the final entry is processExecutionPayload(), which returns void.
+        for (let i = 0; i < dataColumnSidecars.length; i++) {
+          const sentPeers = sentPeersArr[i + 1] as number;
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
           if (sentPeers === 0) {
             columnsPublishedWithZeroPeers++;

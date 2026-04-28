@@ -277,9 +277,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // FULL should now exist
@@ -297,9 +297,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
@@ -317,18 +317,18 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
       protoArray.onExecutionPayload(
         "0x02",
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Should still only have one FULL node
@@ -350,9 +350,9 @@ describe("Gloas Fork Choice", () => {
           gloasForkSlot - 1,
           "0x02",
           gloasForkSlot - 1,
-          stateRoot,
           null,
-          ExecutionStatus.Valid
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
         )
       ).toThrow();
     });
@@ -364,9 +364,9 @@ describe("Gloas Fork Choice", () => {
           gloasForkSlot,
           "0x99",
           gloasForkSlot,
-          stateRoot,
           null,
-          ExecutionStatus.Valid
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
         )
       ).toThrow();
     });
@@ -437,9 +437,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Vote yes from majority of PTC (>50%)
@@ -461,9 +461,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Vote yes from exactly 50% (not >50%)
@@ -485,9 +485,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Vote mixed yes/no
@@ -546,9 +546,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
@@ -568,9 +568,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02Hash",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Block B extends A's FULL (parentBlockHash matches)
@@ -600,7 +600,15 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        blockSlot,
+        "0x02",
+        blockSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -677,7 +685,15 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        blockSlot,
+        "0x02",
+        blockSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -739,9 +755,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Get block1's variants indices before pruning
@@ -792,9 +808,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Set PTC votes for block1
@@ -827,9 +843,9 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Verify all three variants exist via the public API

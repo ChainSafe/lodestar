@@ -73,6 +73,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.execution_payload:
     case GossipType.payload_attestation_message:
     case GossipType.execution_payload_bid:
+    case GossipType.proposer_preferences:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -124,6 +125,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.gloas.PayloadAttestationMessage;
     case GossipType.execution_payload_bid:
       return ssz.gloas.SignedExecutionPayloadBid;
+    case GossipType.proposer_preferences:
+      return ssz.gloas.SignedProposerPreferences;
   }
 }
 
@@ -203,6 +206,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.execution_payload:
       case GossipType.payload_attestation_message:
       case GossipType.execution_payload_bid:
+      case GossipType.proposer_preferences:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -257,6 +261,7 @@ export function getCoreTopicsAtFork(
     topics.push({type: GossipType.execution_payload});
     topics.push({type: GossipType.payload_attestation_message});
     topics.push({type: GossipType.execution_payload_bid});
+    topics.push({type: GossipType.proposer_preferences});
   }
 
   // After fulu also track data_column_sidecar_{index}
@@ -351,4 +356,5 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.execution_payload]: true,
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
+  [GossipType.proposer_preferences]: true,
 };

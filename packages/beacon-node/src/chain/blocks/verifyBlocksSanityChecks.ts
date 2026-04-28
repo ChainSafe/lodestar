@@ -90,14 +90,23 @@ export function verifyBlocksSanityChecks(
     } else {
       // When importing a block segment, only the first NON-IGNORED block must be known to the fork-choice.
       const parentRoot = toRootHex(block.message.parentRoot);
-      parentBlock = isGloasBeaconBlock(block.message)
-        ? chain.forkChoice.getBlockHexAndBlockHash(
-            parentRoot,
-            toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
-          )
-        : chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
-      if (!parentBlock) {
+      const parentBlockDefaultStatus = chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+      if (!parentBlockDefaultStatus) {
         throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      }
+
+      parentBlock = parentBlockDefaultStatus;
+      if (isGloasBeaconBlock(block.message)) {
+        const parentBlockHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+        const parentBlockWithPayload = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+        if (!parentBlockWithPayload) {
+          throw new BlockError(block, {
+            code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+            parentRoot,
+            parentBlockHash,
+          });
+        }
+        parentBlock = parentBlockWithPayload;
       }
       // Parent is known to the fork-choice
       parentBlockSlot = parentBlock.slot;

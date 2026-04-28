@@ -135,8 +135,9 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
-  // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
-  if (fork >= ForkSeq.gloas) {
+  // For range sync, PayloadEnvelope is created before reaching this
+  // we also don't need to trigger getBlobs() in that case
+  if (fork >= ForkSeq.gloas && !opts.fromRangeSync) {
     const payloadInput = this.seenPayloadEnvelopeInputCache.add({
       blockRootHex,
       block: block as SignedBeaconBlock<ForkPostGloas>,

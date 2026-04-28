@@ -1,4 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
@@ -29,7 +30,6 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
       epoch: 0,
       root: Buffer.alloc(32),
       rootHex: "",
-      payloadStatus: PayloadStatus.FULL,
     });
     clock = new ClockStopped(currentSlot);
     modules = {config, forkChoice, clock, opts: {} as IChainOptions, blacklistedBlocks: new Map()};
@@ -40,6 +40,24 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
   it("PARENT_UNKNOWN", () => {
     forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
     expectThrowsLodestarError(() => verifyBlocksSanityChecks(modules, [block], {}), BlockErrorCode.PARENT_UNKNOWN);
+  });
+
+  it("PARENT_PAYLOAD_UNKNOWN", () => {
+    const gloasConfig = createChainForkConfig({
+      ...config,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    gloasBlock.message.slot = currentSlot;
+
+    forkChoice.getBlockHexDefaultStatus.mockReturnValue({slot: 0} as ProtoBlock);
+    forkChoice.getBlockHexAndBlockHash.mockReturnValue(null);
+
+    expectThrowsLodestarError(
+      () => verifyBlocksSanityChecks({...modules, config: gloasConfig}, [gloasBlock as SignedBeaconBlock], {}),
+      BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+    );
   });
 
   it("GENESIS_BLOCK", () => {
@@ -57,7 +75,6 @@ describe("chain / blocks / verifyBlocksSanityChecks", () => {
       epoch: 5,
       root: Buffer.alloc(32),
       rootHex: "",
-      payloadStatus: PayloadStatus.FULL,
     });
     expectThrowsLodestarError(
       () => verifyBlocksSanityChecks(modules, [block], {}),

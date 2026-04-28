@@ -41,7 +41,6 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
-import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
@@ -253,11 +252,15 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   payloadExpectedWithdrawals: capella.Withdrawal[];
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  getEpochPTCs(epoch: Epoch): Uint32Array[];
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
-  processExecutionPayloadEnvelope(
-    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    opts?: ProcessExecutionPayloadEnvelopeOpts
-  ): IBeaconStateView;
+  /**
+   * Clone the state and apply parent execution payload effects.
+   * Used during block production and prepareNextSlot so that withdrawals and
+   * operation selection (e.g. voluntary exits) see the same post-apply state that the block
+   * processor will see at import.
+   */
+  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
 }
 
 /**

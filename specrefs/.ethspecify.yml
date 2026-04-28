@@ -412,13 +412,9 @@ exceptions:
     - will_no_conflicting_checkpoint_be_justified#phase0
 
     # gloas / heze empty sources to skip
-    - apply_parent_execution_payload#gloas
     - is_payload_verified#gloas
     - on_execution_payload_envelope#gloas
     - on_execution_payload_envelope#heze
-    - process_parent_execution_payload#gloas
-    - settle_builder_payment#gloas
-    - verify_execution_payload_envelope#gloas
 
   configs:
     # phase0 fast confirmation / not implemented

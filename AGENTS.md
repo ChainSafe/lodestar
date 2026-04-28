@@ -92,6 +92,14 @@ pnpm vitest run --project unit -t "pattern"
 pnpm download-spec-tests
 pnpm test:spec
 
+# Download nightly artifacts from ethereum/consensus-specs CI instead of a
+# stable release. Useful when testing against unreleased spec changes.
+# Requires GITHUB_TOKEN in the env or a repo-root .env file.
+pnpm download-spec-tests latest                                # latest scheduled master run
+pnpm download-spec-tests 2026-04-14                            # latest successful run on that date
+pnpm download-spec-tests latest <owner>/consensus-specs        # fork
+pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
+
 # Run e2e tests (requires docker environment)
 ./scripts/run_e2e_env.sh start
 pnpm test:e2e
