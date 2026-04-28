@@ -2,13 +2,14 @@ import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
-import {bitCount, toRootHex} from "@lodestar/utils";
+import {toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
+  PTCVotes,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -20,22 +21,13 @@ import {
  * Threshold for payload timeliness (>50% of PTC must vote)
  * Spec: gloas/fork-choice.md (PAYLOAD_TIMELY_THRESHOLD = PTC_SIZE // 2)
  */
-const PAYLOAD_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
+export const PAYLOAD_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
 
 /**
  * Threshold for data availability (>50% of PTC must vote)
  * Spec: gloas/fork-choice.md (DATA_AVAILABILITY_TIMELY_THRESHOLD = PTC_SIZE // 2)
  */
-const DATA_AVAILABILITY_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
-
-/**
- * type to track PTC votes
- *
- * true means quorum of yea,
- * false means quorum of nay,
- * null means not enough votes
- */
-type Quorum = boolean | null;
+export const DATA_AVAILABILITY_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};
@@ -77,28 +69,15 @@ export class ProtoArray {
   private previousProposerBoost: ProposerBoost | null = null;
 
   /**
-   * PTC (Payload Timeliness Committee) votes per block as bitvectors
-   * Maps block root to BitArray of PTC_SIZE bits (512 mainnet, 2 minimal)
+   * PTC (Payload Timeliness Committee) votes per block as yea/nay bitvectors.
+   * Maps block root to BitArrays of PTC_SIZE bits (512 mainnet, 2 minimal)
    * Spec: gloas/fork-choice.md#modified-store (line 148)
    *
-   * Bit i is set if PTC member i voted payload_present=true
+   * Bit i is set in the matching 0/1 bitvector for an observed PTC message.
+   * Equivocation is not resolved here; once a quorum is cached, later contradictory messages do not replace it.
    * Used by is_payload_timely() and is_payload_data_available()
    */
-  private ptcVotes = new Map<
-    RootHex,
-    {
-      payloadTimely: {
-        0: BitArray;
-        1: BitArray;
-        quorum: Quorum;
-      };
-      dataAvailable: {
-        0: BitArray;
-        1: BitArray;
-        quorum: Quorum;
-      };
-    }
-  >();
+  private ptcVotes = new Map<RootHex, PTCVotes>();
 
   constructor({
     pruneThreshold,
@@ -536,16 +515,11 @@ export class ProtoArray {
       // Initialize PTC votes for this block (all false initially)
       // Spec: gloas/fork-choice.md#modified-on_block (line 645)
       this.ptcVotes.set(block.blockRoot, {
-        payloadTimely: {
-          0: BitArray.fromBitLen(PTC_SIZE),
-          1: BitArray.fromBitLen(PTC_SIZE),
-          quorum: null,
-        },
-        dataAvailable: {
-          0: BitArray.fromBitLen(PTC_SIZE),
-          1: BitArray.fromBitLen(PTC_SIZE),
-          quorum: null,
-        },
+        votes: BitArray.fromBitLen(PTC_SIZE),
+        payloadTimelyYea: 0,
+        payloadTimelyNay: 0,
+        dataAvailableYea: 0,
+        dataAvailableNay: 0,
       });
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
@@ -663,7 +637,7 @@ export class ProtoArray {
    *
    * @param blockRoot - The beacon block root being attested
    * @param ptcIndices - Array of PTC committee indices that voted (0..PTC_SIZE-1)
-   * @param payloadPresent - Whether the validators attest the payload is present
+   * @param payloadTimely - Whether the validators attest the payload is timely
    * @param dataAvailable - Whether the validators attest the data is available
    *
    * @returns An object containing _new_ quorum of payloadTimely and dataAvailable
@@ -672,51 +646,36 @@ export class ProtoArray {
   notifyPtcMessages(
     blockRoot: RootHex,
     ptcIndices: number[],
-    payloadPresent: boolean,
+    payloadTimely: boolean,
     dataAvailable: boolean
-  ): {payloadTimely: Quorum; dataAvailable: Quorum} {
+  ): PTCVotes | null {
     const votes = this.ptcVotes.get(blockRoot);
-    const newQuorums: {
-      payloadTimely: Quorum;
-      dataAvailable: Quorum;
-    } = {
-      payloadTimely: null,
-      dataAvailable: null,
-    };
     if (votes === undefined) {
       // Block not found or not a Gloas block, ignore
-      return newQuorums;
+      return null;
     }
-    const payloadPresentKey = payloadPresent ? 1 : 0;
-    const dataAvailableKey = dataAvailable ? 1 : 0;
+
+    const payloadTimelyKey = payloadTimely ? "payloadTimelyYea" : "payloadTimelyYea";
+    const dataAvailableKey = dataAvailable ? "dataAvailableYea" : "dataAvailableNay";
 
     for (const ptcIndex of ptcIndices) {
       if (ptcIndex < 0 || ptcIndex >= PTC_SIZE) {
         throw new Error(`Invalid PTC index: ${ptcIndex}, must be 0..${PTC_SIZE - 1}`);
       }
 
-      votes.payloadTimely[payloadPresentKey].set(ptcIndex, true);
-      votes.dataAvailable[dataAvailableKey].set(ptcIndex, true);
+      if (votes.votes.get(ptcIndex)) {
+        continue;
+      }
+      votes.votes.set(ptcIndex, true);
+
+      votes[payloadTimelyKey]++;
+      votes[dataAvailableKey]++;
     }
 
-    if (
-      votes.payloadTimely.quorum === null &&
-      bitCount(votes.payloadTimely[payloadPresentKey].uint8Array) > PAYLOAD_TIMELY_THRESHOLD
-    ) {
-      votes.payloadTimely.quorum = newQuorums.payloadTimely = payloadPresent;
-    }
-
-    if (
-      votes.dataAvailable.quorum === null &&
-      bitCount(votes.dataAvailable[dataAvailableKey].uint8Array) > DATA_AVAILABILITY_TIMELY_THRESHOLD
-    ) {
-      votes.dataAvailable.quorum = newQuorums.dataAvailable = dataAvailable;
-    }
-
-    return newQuorums;
+    return votes;
   }
 
-  getPTCVotes(blockRootHex: RootHex): BitArray | null {
+  getPTCVotes(blockRootHex: RootHex): PTCVotes | null {
     const votes = this.ptcVotes.get(blockRootHex);
     if (votes === undefined) {
       // Block not found or not a Gloas block
@@ -750,7 +709,7 @@ export class ProtoArray {
     }
 
     // Count votes for payload_present=true
-    return votes.payloadTimely.quorum === true;
+    return votes.payloadTimelyYea > PAYLOAD_TIMELY_THRESHOLD;
   }
 
   /**
@@ -777,7 +736,7 @@ export class ProtoArray {
     }
 
     // Count votes for data_available=true
-    return votes.dataAvailable.quorum === true;
+    return votes.dataAvailableYea > DATA_AVAILABILITY_TIMELY_THRESHOLD;
   }
 
   /**
@@ -795,7 +754,7 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md#new-should_extend_payload
    *
    * Returns true if payload is verified (FULL variant exists) AND:
-   * 1. Payload is timely, OR
+   * 1. Payload is timely and blob data is available according to PTC, OR
    * 2. No proposer boost root (empty/zero hash), OR
    * 3. Proposer boost root's parent is not this block, OR
    * 4. Proposer boost root extends FULL parent
@@ -808,8 +767,8 @@ export class ProtoArray {
       return false;
     }
 
-    // Condition 1: Payload is timely
-    if (this.isPayloadTimely(blockRoot)) {
+    // Condition 1: Payload is timely and data is available
+    if (this.isPayloadTimely(blockRoot) && this.isDataAvailable(blockRoot)) {
       return true;
     }
 

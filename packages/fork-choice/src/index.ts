@@ -29,6 +29,7 @@ export type {
   BlockExtraMeta,
   LVHInvalidResponse,
   LVHValidResponse,
+  PTCVotes,
   PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,

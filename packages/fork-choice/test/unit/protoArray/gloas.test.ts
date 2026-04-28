@@ -23,7 +23,7 @@ describe("Gloas Fork Choice", () => {
   ): ProtoNode | undefined {
     const index = protoArray.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
     if (index === undefined) return undefined;
-    return (protoArray as any).nodes[index];
+    return protoArray.nodes[index];
   }
 
   function createTestBlock(
@@ -56,10 +56,18 @@ describe("Gloas Fork Choice", () => {
     };
   }
 
+  function getQuorumIndices(): number[] {
+    return Array.from({length: Math.floor(PTC_SIZE / 2) + 1}, (_, i) => i);
+  }
+
+  function getNonQuorumIndices(): number[] {
+    return Array.from({length: Math.floor(PTC_SIZE / 2)}, (_, i) => i);
+  }
+
   describe("ProtoArray indices lookup", () => {
     it("indices map stores variants correctly for pre-Gloas blocks", () => {
       const protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00"), 0);
-      const variants = (protoArray as any).indices.get(genesisRoot);
+      const variants = protoArray.indices.get(genesisRoot);
       expect(variants).toBeDefined();
       // Pre-Gloas: variants is the FULL index
       expect(variants).toBe(0);
@@ -80,8 +88,11 @@ describe("Gloas Fork Choice", () => {
       const gloasBlock = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(gloasBlock, gloasForkSlot, null);
 
-      const variants = (protoArray as any).indices.get("0x02");
+      const variants = protoArray.indices.get("0x02");
       expect(variants).toBeDefined();
+      if (!Array.isArray(variants)) {
+        throw new Error("Expected Gloas variants");
+      }
       // Gloas: variants[PENDING] and variants[EMPTY] should be defined
       expect(variants[PayloadStatus.PENDING]).toBeDefined();
       expect(variants[PayloadStatus.EMPTY]).toBeDefined();
@@ -392,10 +403,12 @@ describe("Gloas Fork Choice", () => {
       // Initially not timely (no votes)
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
-      // Vote yes from validators at indices 0, 1, 2
-      protoArray.notifyPtcMessages("0x02", [0, 1, 2], true);
+      // Vote yes from validators below the quorum threshold
+      const indices = Array.from({length: Math.min(3, Math.floor(PTC_SIZE / 2))}, (_, i) => i);
+      const quorums = protoArray.notifyPtcMessages("0x02", indices, true, true);
 
       // Still not timely (need >50% of PTC_SIZE)
+      expect(quorums).toEqual({payloadTimely: null, dataAvailable: null});
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
     });
 
@@ -403,15 +416,15 @@ describe("Gloas Fork Choice", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
 
-      expect(() => protoArray.notifyPtcMessages("0x02", [-1], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE + 1], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessages("0x02", [0, 1, PTC_SIZE], true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [-1], true, true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE], true, true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE + 1], true, true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", [0, 1, PTC_SIZE], true, true)).toThrow(/Invalid PTC index/);
     });
 
     it("notifyPtcMessages() handles unknown block gracefully", () => {
       // Should not throw for unknown block
-      expect(() => protoArray.notifyPtcMessages("0x99", [0], true)).not.toThrow();
+      expect(() => protoArray.notifyPtcMessages("0x99", [0], true, true)).not.toThrow();
     });
 
     it("isPayloadTimely() returns false when payload not locally available", () => {
@@ -419,9 +432,8 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot, null);
 
       // Vote yes from majority of PTC
-      const threshold = Math.floor(PTC_SIZE / 2) + 1;
-      const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      const indices = getQuorumIndices();
+      protoArray.notifyPtcMessages("0x02", indices, true, true);
 
       // Without execution payload (no FULL variant), should return false
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
@@ -443,12 +455,62 @@ describe("Gloas Fork Choice", () => {
       );
 
       // Vote yes from majority of PTC (>50%)
-      const threshold = Math.floor(PTC_SIZE / 2) + 1;
-      const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      const indices = getQuorumIndices();
+      const quorums = protoArray.notifyPtcMessages("0x02", indices, true, true);
 
       // Should now be timely
+      expect(quorums).toEqual({payloadTimely: true, dataAvailable: true});
       expect(protoArray.isPayloadTimely("0x02")).toBe(true);
+      expect(protoArray.isDataAvailable("0x02")).toBe(true);
+    });
+
+    it("shouldExtendPayload() requires data availability quorum for timely payloads", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02Root",
+        gloasForkSlot,
+        "0x02FullHash",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      const proposerBoostBlock = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02Root");
+      protoArray.onBlock(proposerBoostBlock, gloasForkSlot + 1, "0x03Root");
+
+      const indices = getQuorumIndices();
+      const quorums = protoArray.notifyPtcMessages("0x02Root", indices, true, false);
+
+      expect(quorums).toEqual({payloadTimely: true, dataAvailable: false});
+      expect(protoArray.isPayloadTimely("0x02Root")).toBe(true);
+      expect(protoArray.isDataAvailable("0x02Root")).toBe(false);
+      expect(protoArray.shouldExtendPayload("0x02Root", "0x03Root")).toBe(false);
+    });
+
+    it("shouldExtendPayload() extends when payload timely and data availability quorums are reached", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02Root",
+        gloasForkSlot,
+        "0x02FullHash",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      const proposerBoostBlock = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02Root");
+      protoArray.onBlock(proposerBoostBlock, gloasForkSlot + 1, "0x03Root");
+
+      const quorums = protoArray.notifyPtcMessages("0x02Root", getQuorumIndices(), true, true);
+
+      expect(quorums).toEqual({payloadTimely: true, dataAvailable: true});
+      expect(protoArray.isPayloadTimely("0x02Root")).toBe(true);
+      expect(protoArray.isDataAvailable("0x02Root")).toBe(true);
+      expect(protoArray.shouldExtendPayload("0x02Root", "0x03Root")).toBe(true);
     });
 
     it("isPayloadTimely() returns false when threshold not met", () => {
@@ -467,15 +529,15 @@ describe("Gloas Fork Choice", () => {
       );
 
       // Vote yes from exactly 50% (not >50%)
-      const threshold = Math.floor(PTC_SIZE / 2);
-      const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      const quorums = protoArray.notifyPtcMessages("0x02", getNonQuorumIndices(), true, true);
 
       // Should not be timely (need >50%, not >=50%)
+      expect(quorums).toEqual({payloadTimely: null, dataAvailable: null});
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
+      expect(protoArray.isDataAvailable("0x02")).toBe(false);
     });
 
-    it("isPayloadTimely() counts only 'true' votes", () => {
+    it("tracks payload timeliness and data availability quorums independently", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
 
@@ -490,23 +552,11 @@ describe("Gloas Fork Choice", () => {
         DataAvailabilityStatus.Available
       );
 
-      // Vote mixed yes/no
-      const threshold = Math.floor(PTC_SIZE / 2) + 1;
-      // Vote yes from indices 0..threshold-1
-      const yesIndices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", yesIndices, true);
-      // Vote no from indices threshold..PTC_SIZE-1
-      const noIndices = Array.from({length: PTC_SIZE - threshold}, (_, i) => i + threshold);
-      protoArray.notifyPtcMessages("0x02", noIndices, false);
+      const quorums = protoArray.notifyPtcMessages("0x02", getQuorumIndices(), false, true);
 
-      // Should be timely (threshold met)
-      expect(protoArray.isPayloadTimely("0x02")).toBe(true);
-
-      // Change some yes votes to no
-      protoArray.notifyPtcMessages("0x02", [0, 1], false);
-
-      // Should no longer be timely
+      expect(quorums).toEqual({payloadTimely: false, dataAvailable: true});
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
+      expect(protoArray.isDataAvailable("0x02")).toBe(true);
     });
 
     it("isPayloadTimely() returns false for unknown block", () => {
@@ -521,7 +571,7 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
       // notifyPtcMessages should be no-op
-      expect(() => protoArray.notifyPtcMessages("0x02", [0], true)).not.toThrow();
+      expect(() => protoArray.notifyPtcMessages("0x02", [0], true, true)).not.toThrow();
     });
   });
 
@@ -816,7 +866,7 @@ describe("Gloas Fork Choice", () => {
       // Set PTC votes for block1
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", indices, true, true);
 
       // Verify PTC votes are set
       expect(protoArray.isPayloadTimely("0x02")).toBe(true);

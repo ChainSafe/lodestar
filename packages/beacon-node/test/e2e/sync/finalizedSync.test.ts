@@ -159,9 +159,12 @@ describe("sync / finalized sync for gloas", () => {
           `Node B missing FULL payload variant for gloas block slot=${block.slot} root=${block.blockRoot}`
         );
         if (block.slot > gloasFirstSlot) {
-          const ptcVotes = bn2.chain.forkChoice.getPTCVotes(block.blockRoot) ?? [];
+          const ptcVotes = bn2.chain.forkChoice.getPTCVotes(block.blockRoot);
+          if (ptcVotes === null) {
+            expect.fail("Block not found or not a Gloas block");
+          }
 
-          expect(ptcVotes.some(Boolean)).toBeWithMessage(
+          expect(ptcVotes.payloadTimelyYea + ptcVotes.payloadTimelyNay > 0).toBeWithMessage(
             true,
             `Node A missing PTC votes for gloas block slot=${block.slot} root=${block.blockRoot}`
           );

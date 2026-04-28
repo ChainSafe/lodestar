@@ -83,6 +83,8 @@ describe("Forkchoice", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
+    setPtcQuorumPayloadTimely: () => {},
+    setPtcQuorumDataAvailable: () => {},
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {

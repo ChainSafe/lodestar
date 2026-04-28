@@ -276,7 +276,8 @@ export function getBeaconPoolApi({
             chain.forkChoice.notifyPtcMessages(
               toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
               [validatorCommitteeIndex],
-              payloadAttestationMessage.data.payloadPresent
+              payloadAttestationMessage.data.payloadPresent,
+              payloadAttestationMessage.data.blobDataAvailable
             );
 
             await network.publishPayloadAttestationMessage(payloadAttestationMessage);

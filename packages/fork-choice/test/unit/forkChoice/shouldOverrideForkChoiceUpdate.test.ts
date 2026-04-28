@@ -140,6 +140,8 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    setPtcQuorumPayloadTimely: () => {},
+    setPtcQuorumDataAvailable: () => {},
   };
 
   const testCases: {

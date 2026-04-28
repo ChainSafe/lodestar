@@ -78,6 +78,8 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     },
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
+    setPtcQuorumPayloadTimely: () => {},
+    setPtcQuorumDataAvailable: () => {},
   };
 
   const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null);

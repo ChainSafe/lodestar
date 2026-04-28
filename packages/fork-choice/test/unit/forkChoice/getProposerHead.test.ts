@@ -140,6 +140,8 @@ describe("Forkchoice / GetProposerHead", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    setPtcQuorumPayloadTimely: () => {},
+    setPtcQuorumDataAvailable: () => {},
   };
 
   // head block's weight < 30 is considered weak. parent block's total weight > 240 is considered strong

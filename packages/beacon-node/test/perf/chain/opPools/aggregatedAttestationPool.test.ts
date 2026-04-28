@@ -137,6 +137,8 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
+        setPtcQuorumPayloadTimely: () => {},
+        setPtcQuorumDataAvailable: () => {},
       };
       forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },

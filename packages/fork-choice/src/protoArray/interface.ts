@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
 
@@ -154,4 +155,20 @@ export type ProtoNode = ProtoBlock & {
   weight: number;
   bestChild?: number;
   bestDescendant?: number;
+};
+
+/**
+ * type to track PTC votes
+ *
+ * true means quorum of yea,
+ * false means quorum of nay,
+ * null means not enough votes
+ */
+export type PTCQuorum = boolean | null;
+export type PTCVotes = {
+  votes: BitArray;
+  payloadTimelyYea: number;
+  payloadTimelyNay: number;
+  dataAvailableYea: number;
+  dataAvailableNay: number;
 };

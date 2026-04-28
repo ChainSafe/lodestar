@@ -35,6 +35,7 @@ import {
   HEX_ZERO_HASH,
   LVHExecResponse,
   NULL_VOTE_INDEX,
+  PTCVotes,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -42,7 +43,7 @@ import {
   VoteIndex,
   isGloasBlock,
 } from "../protoArray/interface.js";
-import {ProtoArray} from "../protoArray/protoArray.js";
+import {DATA_AVAILABILITY_TIMELY_THRESHOLD, PAYLOAD_TIMELY_THRESHOLD, ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
   AncestorResult,
@@ -945,13 +946,43 @@ export class ForkChoice implements IForkChoice {
    * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
    */
   notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean, dataAvailable: boolean): void {
-    const newQuorums = this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, dataAvailable);
-
-    if (newQuorums.payloadTimely !== null) {
-      this.fcStore.setPtcQuorumPayloadTimely(blockRoot, newQuorums.payloadTimely);
+    const votes = this.protoArray.getPTCVotes(blockRoot);
+    if (votes === null) {
+      return;
     }
-    if (newQuorums.dataAvailable !== null) {
-      this.fcStore.setPtcQuorumDataAvailable(blockRoot, newQuorums.dataAvailable);
+    const newVotes = this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, dataAvailable);
+    if (newVotes === null) {
+      return;
+    }
+
+    const {payloadTimelyYea, payloadTimelyNay, dataAvailableYea, dataAvailableNay} = votes;
+    const {
+      payloadTimelyYea: newPayloadTimelyYea,
+      payloadTimelyNay: newPayloadTimelyNay,
+      dataAvailableYea: newDataAvailableYea,
+      dataAvailableNay: newDataAvailableNay,
+    } = newVotes;
+
+    if (payloadTimelyYea <= PAYLOAD_TIMELY_THRESHOLD && newPayloadTimelyYea > PAYLOAD_TIMELY_THRESHOLD) {
+      this.fcStore.setPtcQuorumPayloadTimely(blockRoot, true);
+    }
+
+    if (payloadTimelyNay <= PAYLOAD_TIMELY_THRESHOLD && newPayloadTimelyNay > PAYLOAD_TIMELY_THRESHOLD) {
+      this.fcStore.setPtcQuorumPayloadTimely(blockRoot, false);
+    }
+
+    if (
+      dataAvailableYea <= DATA_AVAILABILITY_TIMELY_THRESHOLD &&
+      newDataAvailableYea > DATA_AVAILABILITY_TIMELY_THRESHOLD
+    ) {
+      this.fcStore.setPtcQuorumDataAvailable(blockRoot, true);
+    }
+
+    if (
+      dataAvailableNay <= DATA_AVAILABILITY_TIMELY_THRESHOLD &&
+      newDataAvailableNay > DATA_AVAILABILITY_TIMELY_THRESHOLD
+    ) {
+      this.fcStore.setPtcQuorumDataAvailable(blockRoot, false);
     }
   }
 
@@ -1060,10 +1091,8 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.hasPayload(blockRoot);
   }
 
-  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null {
-    const votes = this.protoArray.getPTCVotes(blockRootHex);
-    if (votes === null) return null;
-    return votes.toBoolArray().map((v) => v ?? null);
+  getPTCVotes(blockRootHex: RootHex): PTCVotes | null {
+    return this.protoArray.getPTCVotes(blockRootHex);
   }
 
   /**
