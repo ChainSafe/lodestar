@@ -929,7 +929,15 @@ describe("Gloas Fork Choice", () => {
       const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       block1.executionStatus = ExecutionStatus.Syncing;
       protoArray.onBlock(block1, gloasForkSlot, null);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Syncing);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
 
       const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
       block2.executionStatus = ExecutionStatus.Syncing;
@@ -941,7 +949,15 @@ describe("Gloas Fork Choice", () => {
       );
 
       // VALID payload arrives for block2 — should walk up validating block1 FULL + PENDING
-      protoArray.onExecutionPayload("0x03", gloasForkSlot + 1, "0x03", gloasForkSlot + 1, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x03",
+        gloasForkSlot + 1,
+        "0x03",
+        gloasForkSlot + 1,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.FULL)?.executionStatus).toBe(
         ExecutionStatus.Valid
@@ -972,7 +988,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block1, gloasForkSlot, null);
 
       // block1 FULL arrives Syncing with its OWN payload hash
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02hash", gloasForkSlot, null, ExecutionStatus.Syncing);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02hash",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
 
       // block2 extends block1's EMPTY (parentBlockHash = genesisRoot, NOT block1's payload hash)
       const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", genesisRoot);
@@ -981,7 +1005,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block2, gloasForkSlot + 1, null);
 
       // VALID for block2 — walk should go through block1's EMPTY, NOT block1's FULL
-      protoArray.onExecutionPayload("0x03", gloasForkSlot + 1, "0x03", gloasForkSlot + 1, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x03",
+        gloasForkSlot + 1,
+        "0x03",
+        gloasForkSlot + 1,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // block1 FULL must remain Syncing (not on this chain)
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
@@ -1000,7 +1032,15 @@ describe("Gloas Fork Choice", () => {
       const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       block1.executionStatus = ExecutionStatus.Syncing;
       protoArray.onBlock(block1, gloasForkSlot, null);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Syncing);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
 
       // FULL is Syncing, ancestors not validated
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
@@ -1030,7 +1070,15 @@ describe("Gloas Fork Choice", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       block.executionStatus = ExecutionStatus.Syncing;
       protoArray.onBlock(block, gloasForkSlot, null);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02hash", gloasForkSlot, null, ExecutionStatus.Syncing);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02hash",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
 
       // Look up by FULL's payload hash → should return FULL index
       const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
