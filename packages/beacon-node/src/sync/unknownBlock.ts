@@ -870,7 +870,7 @@ export class BlockInputSync {
 
     if (!payloadInput.hasPayloadEnvelope()) {
       const validationResult = await wrapError(
-        validateGossipExecutionPayloadEnvelope(this.chain, pendingPayload.envelope)
+        validateGossipExecutionPayloadEnvelope(this.chain, pendingPayload.envelope, {ignoreIfKnown: true})
       );
       if (validationResult.err) {
         this.logger.debug(
@@ -1079,7 +1079,7 @@ export class BlockInputSync {
         }
 
         if (!payloadInput.hasPayloadEnvelope()) {
-          await validateGossipExecutionPayloadEnvelope(this.chain, envelope);
+          await validateGossipExecutionPayloadEnvelope(this.chain, envelope, {ignoreIfKnown: true});
         }
 
         let pendingPayload = this.toPendingPayloadInput(payloadInput, cacheItem, envelope);

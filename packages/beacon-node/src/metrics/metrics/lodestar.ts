@@ -890,6 +890,12 @@ export function createLodestarMetrics(
         labelNames: ["source"],
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
+      waitForBlock: register.histogram<{result: "resolved" | "timeout"}>({
+        name: "lodestar_gossip_execution_payload_envelope_wait_for_block_seconds",
+        help: "Time spent in execution_payload gossip handler waiting for an unknown beacon block, labelled by outcome",
+        labelNames: ["result"],
+        buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 4, 6, 12],
+      }),
     },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {

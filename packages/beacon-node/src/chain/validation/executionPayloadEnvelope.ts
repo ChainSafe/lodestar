@@ -10,6 +10,10 @@ import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, Gossip
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
+export type ValidateExecutionPayloadEnvelopeOpts = {
+  ignoreIfKnown?: boolean;
+};
+
 export async function validateApiExecutionPayloadEnvelope(
   chain: IBeaconChain,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
@@ -19,14 +23,16 @@ export async function validateApiExecutionPayloadEnvelope(
 
 export async function validateGossipExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  opts: ValidateExecutionPayloadEnvelopeOpts = {}
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope, opts);
 }
 
 async function validateExecutionPayloadEnvelope(
   chain: IBeaconChain,
-  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+  opts: ValidateExecutionPayloadEnvelopeOpts = {}
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
   const {payload} = envelope;
@@ -50,6 +56,9 @@ async function validateExecutionPayloadEnvelope(
   const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
   const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
   if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
+    if (opts.ignoreIfKnown) {
+      return;
+    }
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
       blockRoot: blockRootHex,

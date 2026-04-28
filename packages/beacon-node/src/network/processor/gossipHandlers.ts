@@ -1062,21 +1062,56 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const signedEnvelope = sszDeserialize(topic, serializedData);
       const envelope = signedEnvelope.message;
+      const slot = envelope.payload.slotNumber;
+      const blockRootHex = toRootHex(envelope.beaconBlockRoot);
 
-      // unlike BlockInput, we send the envelope into UnknownBlockInput sync
-      // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
+      // If the beacon block has not yet been imported, hand the envelope to BlockInputSync
+      // (so it can reconcile via reconcilePayloadEnvelope as soon as the block lands) and
+      // wait for the block to import. This lets us validate, Accept, and forward to gossipsub
+      // instead of failing fast with BLOCK_ROOT_UNKNOWN -> Ignore.
+      let waited = false;
+      if (!chain.forkChoice.hasBlockHexUnsafe(blockRootHex)) {
+        chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
+          envelope: signedEnvelope,
+          peer: peerIdStr,
+          source: BlockInputSource.gossip,
+        });
+        waited = true;
+        logger.verbose("Waiting for unknown block before validating execution payload envelope", {
+          slot,
+          root: blockRootHex,
+        });
+        const waitStartSec = Date.now() / 1000;
+        const found = await chain.waitForBlock(slot, blockRootHex);
+        const waitElapsedSec = Date.now() / 1000 - waitStartSec;
+        metrics?.gossipExecutionPayloadEnvelope.waitForBlock.observe(
+          {result: found ? "resolved" : "timeout"},
+          waitElapsedSec
+        );
+        if (!found) {
+          logger.verbose("Timed out waiting for unknown block", {slot, root: blockRootHex, waitElapsedSec});
+          throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+            code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
+            blockRoot: blockRootHex,
+          });
+        }
+        logger.verbose("Block imported, resuming execution payload envelope validation", {
+          slot,
+          root: blockRootHex,
+          waitElapsedSec,
+        });
+      }
+
       try {
-        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope, {ignoreIfKnown: waited});
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
-          const {beaconBlockRoot} = signedEnvelope.message;
-          const slot = signedEnvelope.message.payload.slotNumber;
-          logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
+          logger.debug("Gossip envelope has error", {slot, root: blockRootHex, code: e.type.code});
           if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
-            chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
-              envelope: signedEnvelope,
-              peer: peerIdStr,
-              source: BlockInputSource.gossip,
+            // Should be unreachable: handler awaits chain.waitForBlock above before validating.
+            logger.debug("Unexpected BLOCK_ROOT_UNKNOWN in execution_payload handler", {
+              slot,
+              root: blockRootHex,
             });
           }
 
@@ -1092,12 +1127,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      const slot = envelope.payload.slotNumber;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
-      const blockRootHex = toRootHex(envelope.beaconBlockRoot);
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
 
       if (!payloadInput) {
@@ -1106,6 +1139,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
           blockRoot: blockRootHex,
         });
+      }
+
+      if (payloadInput.hasPayloadEnvelope()) {
+        // BlockInputSync.reconcilePayloadEnvelope already added the same envelope while we
+        // waited. Nothing left to do — return so gossipValidatorFn maps to Accept and gossipsub
+        // forwards.
+        return;
       }
 
       chain.serializedCache.set(signedEnvelope, serializedData);
