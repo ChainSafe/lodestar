@@ -69,12 +69,12 @@ export class ProtoArray {
   private previousProposerBoost: ProposerBoost | null = null;
 
   /**
-   * PTC (Payload Timeliness Committee) votes per block as yea/nay bitvectors.
-   * Maps block root to BitArrays of PTC_SIZE bits (512 mainnet, 2 minimal)
+   * PTC (Payload Timeliness Committee) votes per block as one observed-vote bitvector plus yea/nay counters.
+   * Maps block root to PTC vote tracking for PTC_SIZE members (512 mainnet, 2 minimal)
    * Spec: gloas/fork-choice.md#modified-store (line 148)
    *
-   * Bit i is set in the matching 0/1 bitvector for an observed PTC message.
-   * Equivocation is not resolved here; once a quorum is cached, later contradictory messages do not replace it.
+   * Bit i is set once an observed PTC message from member i has been counted.
+   * Equivocation is not resolved here; later contradictory messages from the same member are ignored.
    * Used by is_payload_timely() and is_payload_data_available()
    */
   private ptcVotes = new Map<RootHex, PTCVotes>();
@@ -640,8 +640,7 @@ export class ProtoArray {
    * @param payloadTimely - Whether the validators attest the payload is timely
    * @param dataAvailable - Whether the validators attest the data is available
    *
-   * @returns An object containing _new_ quorum of payloadTimely and dataAvailable
-   * This will only return a boolean if the quorum has changed.
+   * @returns The updated vote counts, or null when the block is unknown or pre-Gloas.
    */
   notifyPtcMessages(
     blockRoot: RootHex,
@@ -655,7 +654,7 @@ export class ProtoArray {
       return null;
     }
 
-    const payloadTimelyKey = payloadTimely ? "payloadTimelyYea" : "payloadTimelyYea";
+    const payloadTimelyKey = payloadTimely ? "payloadTimelyYea" : "payloadTimelyNay";
     const dataAvailableKey = dataAvailable ? "dataAvailableYea" : "dataAvailableNay";
 
     for (const ptcIndex of ptcIndices) {

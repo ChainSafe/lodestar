@@ -950,12 +950,13 @@ export class ForkChoice implements IForkChoice {
     if (votes === null) {
       return;
     }
+    const {payloadTimelyYea, payloadTimelyNay, dataAvailableYea, dataAvailableNay} = votes;
+
     const newVotes = this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, dataAvailable);
     if (newVotes === null) {
       return;
     }
 
-    const {payloadTimelyYea, payloadTimelyNay, dataAvailableYea, dataAvailableNay} = votes;
     const {
       payloadTimelyYea: newPayloadTimelyYea,
       payloadTimelyNay: newPayloadTimelyNay,
