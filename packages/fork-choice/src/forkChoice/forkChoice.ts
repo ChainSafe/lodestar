@@ -798,7 +798,7 @@ export class ForkChoice implements IForkChoice {
               // Fallback to parent block's number (we know it's post-merge from check above)
               return parentBlock.executionPayloadNumber;
             })(),
-            executionStatus: this.getPostGloasExecStatus(executionStatus),
+            executionStatus: this.getPostMergeExecStatus(executionStatus),
             dataAvailabilityStatus,
           }
         : isExecutionBlockBodyType(block.body) &&
@@ -808,7 +808,7 @@ export class ForkChoice implements IForkChoice {
           ? {
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
               executionPayloadNumber: block.body.executionPayload.blockNumber,
-              executionStatus: this.getPreGloasExecStatus(executionStatus),
+              executionStatus: this.getPostMergeExecStatus(executionStatus),
               dataAvailabilityStatus,
             }
           : {
@@ -1467,20 +1467,12 @@ export class ForkChoice implements IForkChoice {
     return dataAvailabilityStatus;
   }
 
-  private getPreGloasExecStatus(
+  private getPostMergeExecStatus(
     executionStatus: BlockExecutionStatus
   ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
-    if (executionStatus === ExecutionStatus.PreMerge || executionStatus === ExecutionStatus.PayloadSeparated)
+    if (executionStatus === ExecutionStatus.PreMerge)
       throw Error(
         `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid}, got ${executionStatus}`
-      );
-    return executionStatus;
-  }
-
-  private getPostGloasExecStatus(executionStatus: BlockExecutionStatus): ExecutionStatus.PayloadSeparated {
-    if (executionStatus !== ExecutionStatus.PayloadSeparated)
-      throw Error(
-        `Invalid post-gloas execution status: expected: ${ExecutionStatus.PayloadSeparated}, got ${executionStatus}`
       );
     return executionStatus;
   }

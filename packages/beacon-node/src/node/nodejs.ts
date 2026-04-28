@@ -221,7 +221,7 @@ export class BeaconNode {
 
     let executionEngineOpts = opts.executionEngine;
     if (opts.executionEngine.mode === "mock") {
-      const eth1BlockHash =
+      const lastEth1BlockHash =
         isStatePostBellatrix(anchorState) && anchorState.isExecutionStateType
           ? isStatePostGloas(anchorState)
             ? toRootHex(anchorState.latestBlockHash)
@@ -230,7 +230,7 @@ export class BeaconNode {
       executionEngineOpts = {
         ...opts.executionEngine,
         genesisBlockHash: ZERO_HASH_HEX,
-        eth1BlockHash,
+        eth1BlockHash: opts.executionEngine.eth1BlockHash ?? lastEth1BlockHash,
         genesisTime: anchorState.genesisTime,
         config,
       };
