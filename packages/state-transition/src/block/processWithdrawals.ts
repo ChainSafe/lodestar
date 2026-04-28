@@ -10,12 +10,12 @@ import {
 } from "@lodestar/params";
 import {BuilderIndex, ValidatorIndex, capella, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateCapella, CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {
   convertBuilderIndexToValidatorIndex,
   convertValidatorIndexToBuilderIndex,
   isBuilderIndex,
-  isParentBlockFull,
 } from "../util/gloas.js";
 import {
   decreaseBalance,
@@ -31,9 +31,17 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
   payload?: capella.FullOrBlindedExecutionPayload
 ): void {
-  // Return early if the parent block is empty
-  if (fork >= ForkSeq.gloas && !isParentBlockFull(state as CachedBeaconStateGloas)) {
-    return;
+  // Return early if this is genesis block or the parent block is empty
+  if (fork >= ForkSeq.gloas) {
+    const stateGloas = state as CachedBeaconStateGloas;
+    const isGenesisBlock = byteArrayEquals(stateGloas.latestBlockHash, ZERO_HASH);
+    const isParentBlockEmpty = !byteArrayEquals(
+      stateGloas.latestBlockHash,
+      stateGloas.latestExecutionPayloadBid.blockHash
+    );
+    if (isGenesisBlock || isParentBlockEmpty) {
+      return;
+    }
   }
 
   // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
@@ -48,7 +56,9 @@ export function processWithdrawals(
   } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
-  // After gloas, withdrawals are verified later in processExecutionPayloadEnvelope
+  // Pre-gloas verifies the payload's withdrawals against expectedWithdrawals here.
+  // Post-gloas, the payload arrives later as an envelope and that consistency check
+  // happens in verifyExecutionPayloadEnvelope against state.payloadExpectedWithdrawals.
   if (fork < ForkSeq.gloas) {
     if (payload === undefined) {
       throw Error("payload is required for pre-gloas processWithdrawals");

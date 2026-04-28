@@ -19,6 +19,11 @@
       "bun": "./src/downloadTests.ts",
       "types": "./lib/downloadTests.d.ts",
       "import": "./lib/downloadTests.js"
+    },
+    "./downloadNightlyTests": {
+      "bun": "./src/downloadNightlyTests.ts",
+      "types": "./lib/downloadNightlyTests.d.ts",
+      "import": "./lib/downloadNightlyTests.js"
     }
   },
   "files": [
@@ -60,7 +65,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/ssz": "^1.4.0",
     "@lodestar/types": "workspace:^",
     "vitest": "catalog:"
   }

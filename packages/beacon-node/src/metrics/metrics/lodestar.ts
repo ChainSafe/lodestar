@@ -613,6 +613,10 @@ export function createLodestarMetrics(
         name: "lodestar_sync_unknown_block_pending_blocks_size",
         help: "Current size of UnknownBlockSync pending blocks cache",
       }),
+      pendingPayloads: register.gauge({
+        name: "lodestar_sync_unknown_block_pending_payloads_size",
+        help: "Current size of UnknownBlockSync pending payloads cache",
+      }),
       knownBadBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_known_bad_blocks_size",
         help: "Current size of UnknownBlockSync known bad blocks cache",

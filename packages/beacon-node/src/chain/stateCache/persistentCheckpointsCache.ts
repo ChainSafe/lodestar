@@ -9,7 +9,7 @@ import {IClock} from "../../util/clock.js";
 import {serializeState} from "../serializeState.js";
 import {CPStateDatastore, DatastoreKey} from "./datastore/index.js";
 import {MapTracker} from "./mapMetrics.js";
-import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointHexPayload, CheckpointStateCache} from "./types.js";
+import {BlockStateCache, CacheItemType, CheckpointHex, CheckpointStateCache} from "./types.js";
 
 export type PersistentCheckpointStateCacheOpts = {
   /** Keep max n state epochs in memory, persist the rest to disk */
@@ -226,7 +226,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.cpStateCache.stateReloadDuration.startTimer();
-      const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes);
+      // preload validators and balances for faster state transition
+      const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes, {
+        preloadValidatorsAndBalances: true,
+      });
       // hashTreeRoot() calls the commit() inside
       // there is no modification inside the state, it's just that we want to compute and cache all roots
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
@@ -840,19 +843,6 @@ export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   return {
     epoch: checkpoint.epoch,
     rootHex: toRootHex(checkpoint.root),
-  };
-}
-
-/** TODO GLOAS: remove after rolling back regen dual-state changes */
-export function fcCheckpointToHexPayload(checkpoint: {
-  epoch: Epoch;
-  rootHex: RootHex;
-  payloadStatus?: number;
-}): CheckpointHexPayload {
-  return {
-    epoch: checkpoint.epoch,
-    rootHex: checkpoint.rootHex,
-    payloadPresent: true,
   };
 }
 

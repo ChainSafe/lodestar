@@ -1,6 +1,13 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPreFulu,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -263,7 +270,10 @@ export async function fetchByRoot({
       blockRoot,
     });
     const forkName = config.getForkName(block.message.slot);
-    if (isForkPostFulu(forkName)) {
+    if (isForkPostGloas(forkName)) {
+      // Post-gloas block sync only needs the block body. Payload columns stay on the
+      // payload/envelope path and are queued independently in the network processor.
+    } else if (isForkPostFulu(forkName)) {
       columnSidecarResult = await fetchAndValidateColumns({
         config,
         chain,

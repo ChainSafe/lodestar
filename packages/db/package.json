@@ -43,7 +43,7 @@
     "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "dependencies": {
-    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/ssz": "^1.4.0",
     "@lodestar/config": "workspace:^",
     "@lodestar/utils": "workspace:^",
     "classic-level": "^1.4.1"

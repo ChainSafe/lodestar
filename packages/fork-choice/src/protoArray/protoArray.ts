@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
@@ -108,30 +108,6 @@ export class ProtoArray {
       currentSlot,
       null
     );
-
-    // Anchor block PTC votes must be all-true per spec get_forkchoice_store:
-    // payload_timeliness_vote={anchor_root: Vector[boolean, PTC_SIZE](True for _ in range(PTC_SIZE))}
-    // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.4/specs/gloas/fork-choice.md#modified-get_forkchoice_store
-    if (protoArray.ptcVotes.has(block.blockRoot)) {
-      protoArray.ptcVotes.set(block.blockRoot, BitArray.fromBoolArray(Array.from({length: PTC_SIZE}, () => true)));
-
-      // In the spec, we have payload_states = {anchor_root: anchor_state.copy()}
-      // which means the anchor's "payload" is considered received
-      // Without FULL, blocks extending FULL from the anchor would be orphaned.
-      // TODO GLOAS: This is a bug in the spec. Keep this to pass the current spec test
-      // for now. Need to remove this when we work on v1.7.0-alpha.5
-      if (block.executionPayloadBlockHash !== null) {
-        protoArray.onExecutionPayload(
-          block.blockRoot,
-          currentSlot,
-          block.executionPayloadBlockHash,
-          (block as {executionPayloadNumber?: number}).executionPayloadNumber ?? 0,
-          block.stateRoot,
-          null,
-          ExecutionStatus.Valid
-        );
-      }
-    }
 
     return protoArray;
   }
@@ -572,9 +548,9 @@ export class ProtoArray {
     currentSlot: Slot,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex,
     proposerBoostRoot: RootHex | null,
-    executionStatus: PayloadExecutionStatus
+    executionStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
     // First check if block exists
     const variants = this.indices.get(blockRoot);
@@ -616,7 +592,7 @@ export class ProtoArray {
       });
     }
 
-    // Create FULL variant as a child of PENDING (sibling to EMPTY)
+    // Create FULL variant as a child of PENDING (sibling to EMPTY).
     const fullNode: ProtoNode = {
       ...pendingNode,
       parent: pendingIndex, // Points to own PENDING (same as EMPTY)
@@ -628,7 +604,7 @@ export class ProtoArray {
       executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
-      stateRoot: executionPayloadStateRoot,
+      dataAvailabilityStatus,
     };
 
     const fullIndex = this.nodes.length;
@@ -663,6 +639,16 @@ export class ProtoArray {
 
       votes.set(ptcIndex, payloadPresent);
     }
+  }
+
+  getPTCVotes(blockRootHex: RootHex): BitArray | null {
+    const votes = this.ptcVotes.get(blockRootHex);
+    if (votes === undefined) {
+      // Block not found or not a Gloas block
+      return null;
+    }
+
+    return votes;
   }
 
   /**
@@ -707,7 +693,7 @@ export class ProtoArray {
    * Determine if we should extend the payload (prefer FULL over EMPTY)
    * Spec: gloas/fork-choice.md#new-should_extend_payload
    *
-   * Returns true if:
+   * Returns true if payload is verified (FULL variant exists) AND:
    * 1. Payload is timely, OR
    * 2. No proposer boost root (empty/zero hash), OR
    * 3. Proposer boost root's parent is not this block, OR
@@ -717,6 +703,10 @@ export class ProtoArray {
    * @param proposerBoostRoot - Current proposer boost root (from ForkChoice)
    */
   shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {
+    if (!this.hasPayload(blockRoot)) {
+      return false;
+    }
+
     // Condition 1: Payload is timely
     if (this.isPayloadTimely(blockRoot)) {
       return true;
@@ -1672,10 +1662,9 @@ export class ProtoArray {
     const ancestors: ProtoNode[] = [];
     const nonAncestors: ProtoNode[] = [];
 
-    // Include starting node if it's not PENDING (i.e., pre-Gloas or EMPTY/FULL variant post-Gloas)
-    if (node.payloadStatus !== PayloadStatus.PENDING) {
-      ancestors.push(node);
-    }
+    // caller of this method may pass default status
+    // this is the only node that we accept PENDING
+    ancestors.push(node);
 
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
