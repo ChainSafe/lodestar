@@ -76,6 +76,7 @@ type WorkOpts = {
  */
 const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.beacon_block]: {bypassQueue: true},
+  [GossipType.execution_payload]: {bypassQueue: true},
   [GossipType.blob_sidecar]: {bypassQueue: true},
   [GossipType.data_column_sidecar]: {bypassQueue: true},
   [GossipType.beacon_aggregate_and_proof]: {},
@@ -88,7 +89,6 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.sync_committee]: {},
   [GossipType.light_client_finality_update]: {},
   [GossipType.light_client_optimistic_update]: {},
-  [GossipType.execution_payload]: {bypassQueue: true},
   [GossipType.payload_attestation_message]: {},
   [GossipType.execution_payload_bid]: {},
   [GossipType.proposer_preferences]: {},
