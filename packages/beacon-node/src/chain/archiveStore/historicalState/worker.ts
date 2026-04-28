@@ -3,6 +3,7 @@ import {Transfer, expose} from "@chainsafe/threads/worker";
 import {chainConfigFromJson, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {setUseNativeStateTransition} from "@lodestar/state-transition";
 import {BeaconDb} from "../../../db/index.js";
 import {RegistryMetricCreator, collectNodeJSMetrics} from "../../../metrics/index.js";
 import {JobFnQueue} from "../../../util/queue/fnQueue.js";
@@ -22,6 +23,10 @@ const workerData = worker.workerData as HistoricalStateWorkerData;
 const logger = getNodeLogger(workerData.loggerOpts);
 
 logger.info("Historical state worker started");
+
+if (workerData.nativeStateView) {
+  setUseNativeStateTransition(true);
+}
 
 const config = createBeaconConfig(chainConfigFromJson(workerData.chainConfigJson), workerData.genesisValidatorsRoot);
 

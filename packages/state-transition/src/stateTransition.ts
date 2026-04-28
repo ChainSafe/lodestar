@@ -1,9 +1,14 @@
+import {
+  BeaconStateView as NativeBeaconStateView,
+  stateTransition as nativeStateTransition,
+} from "@chainsafe/lodestar-z/state-transition";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
+import {createCachedBeaconState} from "./cache/stateCache.js";
 import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
@@ -29,6 +34,25 @@ import {
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
+import {getStateTypeFromBytes} from "./util/sszBytes.js";
+
+// Process-wide opt-in to the native (Zig) state transition. Flipped on at boot when the user
+// passes --chain.nativeStateView. Defaults off so the TS implementation runs unchanged.
+let useNativeStateTransition = false;
+
+export function setUseNativeStateTransition(value: boolean): void {
+  useNativeStateTransition = value;
+}
+
+function reloadCachedState(prev: CachedBeaconStateAllForks, postStateBytes: Uint8Array): CachedBeaconStateAllForks {
+  const {config, epochCtx} = prev;
+  const view = getStateTypeFromBytes(config, postStateBytes).deserializeToViewDU(postStateBytes);
+  return createCachedBeaconState(
+    view,
+    {config, pubkeyCache: epochCtx.pubkeyCache},
+    {skipSyncPubkeys: true}
+  ) as CachedBeaconStateAllForks;
+}
 
 // Multifork capable state transition
 
@@ -91,6 +115,16 @@ export function stateTransition(
   },
   {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
+  if (useNativeStateTransition) {
+    const {config} = state;
+    const blockBytes = config
+      .getForkTypes(signedBlock.message.slot)
+      .SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
+    const nativeView = NativeBeaconStateView.createFromBytes(state.serialize());
+    const postNative = nativeStateTransition(nativeView, blockBytes, options);
+    return reloadCachedState(state, postNative.serialize());
+  }
+
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
   const block = signedBlock.message;
@@ -165,6 +199,14 @@ export function processSlots(
   epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
   {metrics, validatorMonitor}: StateTransitionModules = {}
 ): CachedBeaconStateAllForks {
+  if (useNativeStateTransition) {
+    const nativeView = NativeBeaconStateView.createFromBytes(state.serialize());
+    const postNative = nativeView.processSlots(slot, {
+      dontTransferCache: epochTransitionCacheOpts?.dontTransferCache,
+    });
+    return reloadCachedState(state, postNative.serialize());
+  }
+
   // .clone() before mutating state in state transition
   let postState = state.clone(epochTransitionCacheOpts?.dontTransferCache);
 

@@ -1,3 +1,4 @@
+import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
@@ -26,12 +27,13 @@ type NativeOpts = {
  * The caller is responsible for creating and populating `pubkeyCache` (it is also
  * passed separately to BeaconNode.init, so it must live outside this factory).
  *
- * Set `useNative: true` to use the native (Zig) implementation once available.
+ * Set `useNative: true` to use the native (Zig) implementation.
  */
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    throw new Error("Native (Zig) BeaconStateView not yet implemented");
-    // TODO: return a new instance of NativeBeaconStateView
+    // The native BeaconStateView's getVoluntaryExitValidity returns a string-literal union with the same
+    // members as the TS `VoluntaryExitValidity` enum, but TS treats the enum nominally — single-step cast.
+    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateView;
   }
   const {anchorState, config, pubkeyCache} = opts;
   const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
@@ -65,12 +67,13 @@ type RegenNativeOpts = {
 /**
  * Create a BeaconStateView from raw SSZ bytes. Used in the historical state regen worker thread.
  *
- * Set `useNative: true` to use the native (Zig) implementation once available.
+ * Set `useNative: true` to use the native (Zig) implementation.
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    throw new Error("Native (Zig) BeaconStateView not yet implemented");
-    // TODO: return a new instance of NativeBeaconStateView
+    // The native BeaconStateView's getVoluntaryExitValidity returns a string-literal union with the same
+    // members as the TS `VoluntaryExitValidity` enum, but TS treats the enum nominally — single-step cast.
+    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateView;
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
