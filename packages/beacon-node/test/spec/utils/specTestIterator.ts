@@ -76,9 +76,40 @@ export const defaultSkipOpts: SkipOpts = {
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
-    /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    // TODO: re-enable after EIP-8061 churn (consensus-specs#5061) lands
+    /^gloas\/operations\/voluntary_exit\/.*/,
+    /^gloas\/operations\/voluntary_exit_churn\/.*/,
+    /^gloas\/operations\/consolidation_request\/.*/,
+    /^gloas\/operations\/(proposer|attester)_slashing\/.*/,
+    /^gloas\/operations\/withdrawal_request\/.*/,
+    /^gloas\/epoch_processing\/registry_updates\/.*/,
+    /^gloas\/epoch_processing\/pending_consolidations\/.*/,
+    /^gloas\/epoch_processing\/pending_deposits\/.*/,
+    /^gloas\/epoch_processing\/pending_deposits_churn\/.*/,
+    // TODO: re-enable after gloas misc batch (consensus-specs#5172 genesis fix) lands
+    /^gloas\/sanity\/.*/,
+    /^gloas\/finality\/.*/,
+    /^gloas\/random\/.*/,
+    /^gloas\/transition\/.*/,
+    /^gloas\/fork\/.*/,
+    /^gloas\/fork_choice\/.*/,
+    /^gloas\/rewards\/.*/,
+    /^gloas\/operations\/withdrawals\/.*/,
+    // TODO: re-enable after consensus-specs#5152 (parent_beacon_block_root in ExecutionPayloadEnvelope)
+    /^gloas\/ssz_static\/(Signed)?ExecutionPayloadEnvelope\/.*/,
+    // TODO: re-enable after consensus-specs#5135 (anchor seed for payload votes)
+    /^gloas\/operations\/payload_attestation\/.*/,
+    // TODO: re-enable after consensus-specs#5178 (light client extension for gloas)
+    /^gloas\/light_client\/.*/,
+    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    // TODO: re-enable after consensus-specs#5190 (checkpoint_root in ProposerPreferences) lands
+    /^gloas\/ssz_static\/(Signed)?ProposerPreferences\/.*/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // TODO: re-enable after consensus-specs#5178 (light client extension for gloas) lands
+    /\/gloas_fork$/,
+  ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["fast_confirmation", "networking"],
 };
