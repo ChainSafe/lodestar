@@ -164,14 +164,17 @@
 - name: CHURN_LIMIT_QUOTIENT#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "CHURN_LIMIT_QUOTIENT:"
+      search: '^\s+CHURN_LIMIT_QUOTIENT:'
+      regex: true
   spec: |
     <spec config_var="CHURN_LIMIT_QUOTIENT" fork="phase0" hash="a43a1d33">
     CHURN_LIMIT_QUOTIENT: uint64 = 65536
     </spec>
 
 - name: CHURN_LIMIT_QUOTIENT_GLOAS#gloas
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "CHURN_LIMIT_QUOTIENT_GLOAS:"
   spec: |
     <spec config_var="CHURN_LIMIT_QUOTIENT_GLOAS" fork="gloas" hash="fe8d5d9f">
     CHURN_LIMIT_QUOTIENT_GLOAS: uint64 = 32768
@@ -185,7 +188,9 @@
     </spec>
 
 - name: CONSOLIDATION_CHURN_LIMIT_QUOTIENT#gloas
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "CONSOLIDATION_CHURN_LIMIT_QUOTIENT:"
   spec: |
     <spec config_var="CONSOLIDATION_CHURN_LIMIT_QUOTIENT" fork="gloas" hash="03f92b84">
     CONSOLIDATION_CHURN_LIMIT_QUOTIENT: uint64 = 65536
@@ -437,7 +442,9 @@
     </spec>
 
 - name: MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS#gloas
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS:"
   spec: |
     <spec config_var="MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" fork="gloas" hash="5a9fd595">
     MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: Gwei = 256000000000
