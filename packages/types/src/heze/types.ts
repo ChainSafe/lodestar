@@ -6,6 +6,9 @@ export type InclusionList = ValueOf<typeof ssz.InclusionList>;
 export type SignedInclusionList = ValueOf<typeof ssz.SignedInclusionList>;
 export type InclusionListByCommitteeIndicesRequest = ValueOf<typeof ssz.InclusionListByCommitteeIndicesRequest>;
 
+export type ExecutionPayloadBid = ValueOf<typeof ssz.ExecutionPayloadBid>;
+export type SignedExecutionPayloadBid = ValueOf<typeof ssz.SignedExecutionPayloadBid>;
+
 export type BeaconState = ValueOf<typeof ssz.BeaconState>;
 export type BeaconBlockBody = ValueOf<typeof ssz.BeaconBlockBody>;
 export type BeaconBlock = ValueOf<typeof ssz.BeaconBlock>;

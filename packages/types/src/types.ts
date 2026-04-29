@@ -331,10 +331,10 @@ type TypesByFork = {
   [ForkName.heze]: {
     BeaconBlockHeader: phase0.BeaconBlockHeader;
     SignedBeaconBlockHeader: phase0.SignedBeaconBlockHeader;
-    BeaconBlock: gloas.BeaconBlock;
-    BeaconBlockBody: gloas.BeaconBlockBody;
+    BeaconBlock: heze.BeaconBlock;
+    BeaconBlockBody: heze.BeaconBlockBody;
     BeaconState: heze.BeaconState;
-    SignedBeaconBlock: gloas.SignedBeaconBlock;
+    SignedBeaconBlock: heze.SignedBeaconBlock;
     Metadata: fulu.Metadata;
     Status: fulu.Status;
     LightClientHeader: deneb.LightClientHeader;
@@ -365,7 +365,7 @@ type TypesByFork = {
     AggregateAndProof: electra.AggregateAndProof;
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
     ExecutionRequests: electra.ExecutionRequests;
-    ExecutionPayloadBid: gloas.ExecutionPayloadBid;
+    ExecutionPayloadBid: heze.ExecutionPayloadBid;
     DataColumnSidecar: gloas.DataColumnSidecar;
     DataColumnSidecars: gloas.DataColumnSidecars;
   };
