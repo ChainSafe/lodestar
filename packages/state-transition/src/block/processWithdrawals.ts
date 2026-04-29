@@ -30,7 +30,6 @@ export function processWithdrawals(
   state: CachedBeaconStateCapella | CachedBeaconStateElectra | CachedBeaconStateGloas,
   payload?: capella.FullOrBlindedExecutionPayload
 ): void {
-  // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#modified-process_withdrawals
   // Return early if the parent block is empty
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;

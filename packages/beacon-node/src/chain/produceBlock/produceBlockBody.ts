@@ -111,7 +111,6 @@ export type ProduceFullGloas = {
   executionRequests: electra.ExecutionRequests;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
-  /** parent_root of the block this payload is for, needed to populate the envelope's parent_beacon_block_root field. */
   parentBlockRoot: Root;
 };
 export type ProduceFullFulu = {

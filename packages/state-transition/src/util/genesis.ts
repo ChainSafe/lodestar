@@ -333,7 +333,6 @@ export function initializeBeaconStateFromEth1(
     stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
 
-    // Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/fork.md#initialize-state-for-pure-gloas-testnets-and-test-vectors
     stateGloas.latestBlockHash = eth1BlockHash;
     const emptyExecutionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
       ssz.electra.ExecutionRequests.defaultValue()

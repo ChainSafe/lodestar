@@ -160,7 +160,6 @@ export async function importExecutionPayload(
       fork,
       envelope.payload,
       payloadInput.getVersionedHashes(),
-      // Spec (gloas/EIP-5152): use envelope.parentBeaconBlockRoot rather than re-deriving from state.
       envelope.parentBeaconBlockRoot,
       envelope.executionRequests
     ),
