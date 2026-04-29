@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, prettyPrintIndices} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
@@ -79,9 +79,31 @@ export type BatchState =
     };
 
 export type BatchMetadata = {
+  // Batch-level slot window (always present)
   startEpoch: Epoch;
+  startSlot: Slot;
+  count: number;
   status: BatchStatus;
+
+  // Per-type outstanding request shapes; only present when that sub-request exists.
+  // Format: "startSlot=<n>,count=<n>" (plus ",cols=<indices>" for columns).
+  blocksReq?: string;
+  blobsReq?: string;
+  columnsReq?: string;
+  envelopesReq?: string;
+
+  // Retry counters
+  downloadAttempts: number;
+  processingAttempts: number;
 };
+
+function formatRangeReq(req: {startSlot: Slot; count: number}): string {
+  return `startSlot=${req.startSlot},count=${req.count}`;
+}
+
+function formatColumnsReq(req: {startSlot: Slot; count: number; columns: number[]}): string {
+  return `startSlot=${req.startSlot},count=${req.count},cols=${prettyPrintIndices(req.columns)}`;
+}
 
 /**
  * Batches are downloaded at the first block of the epoch.
@@ -286,7 +308,19 @@ export class Batch {
   }
 
   getMetadata(): BatchMetadata {
-    return {startEpoch: this.startEpoch, status: this.state.status};
+    const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
+    return {
+      startEpoch: this.startEpoch,
+      startSlot: this.startSlot,
+      count: this.count,
+      status: this.state.status,
+      ...(blocksRequest && {blocksReq: formatRangeReq(blocksRequest)}),
+      ...(blobsRequest && {blobsReq: formatRangeReq(blobsRequest)}),
+      ...(columnsRequest && {columnsReq: formatColumnsReq(columnsRequest)}),
+      ...(envelopesRequest && {envelopesReq: formatRangeReq(envelopesRequest)}),
+      downloadAttempts: this.failedDownloadAttempts.length,
+      processingAttempts: this.failedProcessingAttempts.length,
+    };
   }
 
   getBlocks(): IBlockInput[] {
@@ -479,7 +513,7 @@ export class Batch {
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
   private errorType(type: BatchErrorType): BatchErrorType & BatchErrorMetadata {
-    return {...type, ...this.getMetadata()};
+    return {...type, startEpoch: this.startEpoch, status: this.state.status};
   }
 
   private wrongStatusErrorType(expectedStatus: BatchStatus): BatchErrorType & BatchErrorMetadata {

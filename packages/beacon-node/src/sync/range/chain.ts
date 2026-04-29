@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Epoch, Root, Slot} from "@lodestar/types";
-import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -222,12 +222,14 @@ export class SyncChain {
    */
   stopSyncing(): void {
     this.status = SyncChainStatus.Stopped;
+    this.logger.debug("SyncChain stopSyncing", {id: this.logId});
   }
 
   /**
    * Permanently remove this chain. Throws the main AsyncIterable
    */
   remove(): void {
+    this.logger.debug("SyncChain remove", {id: this.logId});
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
   }
 
@@ -534,7 +536,7 @@ export class SyncChain {
             this.metrics?.syncRange.downloadByRange.warn.inc({client: peer.client, code: warning.type.code});
             this.logger.debug(
               "Batch downloaded with warning",
-              {id: this.logId, epoch: batch.startEpoch, ...logMeta, peer: prettyPrintPeerIdStr(peer.peerId)},
+              {id: this.logId, ...batch.getMetadata(), ...logMeta, peer: prettyPrintPeerIdStr(peer.peerId)},
               warning
             );
           }
@@ -560,10 +562,17 @@ export class SyncChain {
           // the flow will continue to call triggerBatchDownloader() below
         }
 
+        const blockSlots = downloadSuccessOutput.blocks.map((b) => b.slot);
+        const envelopeSlots = downloadSuccessOutput.payloadEnvelopes
+          ? Array.from(downloadSuccessOutput.payloadEnvelopes.keys())
+          : null;
+
         this.logger.debug(logMessage, {
           id: this.logId,
-          epoch: batch.startEpoch,
+          ...batch.getMetadata(),
           ...logMeta,
+          blockSlots: prettyPrintIndices(blockSlots),
+          ...(envelopeSlots ? {envelopeSlots: prettyPrintIndices(envelopeSlots)} : {}),
           peer: prettyPrintPeerIdStr(peer.peerId),
         });
       }
@@ -588,11 +597,21 @@ export class SyncChain {
   private async processBatch(batch: Batch): Promise<void> {
     const {blocks, payloadEnvelopes} = batch.startProcessing();
 
+    const logCtx = {
+      id: this.logId,
+      ...batch.getMetadata(),
+      blockCount: blocks.length,
+      blockSlots: prettyPrintIndices(blocks.map((b) => b.slot)),
+      ...(payloadEnvelopes ? {envelopeSlots: prettyPrintIndices(Array.from(payloadEnvelopes.keys()))} : {}),
+    };
+    this.logger.verbose("Processing batch", logCtx);
+
     // wrapError ensures to never call both batch success() and batch error()
     const res = await wrapError(this.processChainSegment(blocks, payloadEnvelopes, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();
+      this.logger.verbose("Processed batch", logCtx);
 
       // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {
