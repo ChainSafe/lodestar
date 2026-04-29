@@ -51,7 +51,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
-  engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc, InclusionListRpc];
+  engine_newPayloadV6: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc, InclusionListRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -70,6 +70,10 @@ export type EngineApiRpcParamTypes = {
     payloadAttributes?: PayloadAttributesRpc,
   ];
   engine_forkchoiceUpdatedV4: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
+  engine_forkchoiceUpdatedV5: [
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
   ];
@@ -123,7 +127,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
-  engine_newPayloadV5: PayloadStatus;
+  engine_newPayloadV6: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -137,6 +141,10 @@ export type EngineApiRpcReturnTypes = {
     payloadId: QUANTITY | null;
   };
   engine_forkchoiceUpdatedV4: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
+  engine_forkchoiceUpdatedV5: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };

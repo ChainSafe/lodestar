@@ -220,7 +220,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<ExecutePayloadResponse> {
     const method =
       ForkSeq[fork] >= ForkSeq.heze
-        ? "engine_newPayloadV5"
+        ? "engine_newPayloadV6"
         : ForkSeq[fork] >= ForkSeq.electra
           ? "engine_newPayloadV4"
           : ForkSeq[fork] >= ForkSeq.deneb
@@ -231,7 +231,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
-    // TODO HEZE: Add V5. Current code is ugly with all the nested if
     let engineRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {
@@ -255,7 +254,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           }
           const serializedILTransactions = serializeInclusionList(inclusionListTransactions);
           engineRequest = {
-            method: "engine_newPayloadV5",
+            method: "engine_newPayloadV6",
             params: [
               serializedExecutionPayload,
               serializedVersionedHashes,
@@ -373,7 +372,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // not provided
     const method =
       ForkSeq[fork] >= ForkSeq.heze
-        ? "engine_forkchoiceUpdatedV4"
+        ? "engine_forkchoiceUpdatedV5"
         : ForkSeq[fork] >= ForkSeq.deneb
           ? "engine_forkchoiceUpdatedV3"
           : ForkSeq[fork] >= ForkSeq.capella
