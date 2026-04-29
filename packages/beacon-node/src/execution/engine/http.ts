@@ -221,13 +221,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const method =
       ForkSeq[fork] >= ForkSeq.heze
         ? "engine_newPayloadV6"
-        : ForkSeq[fork] >= ForkSeq.electra
-          ? "engine_newPayloadV4"
-          : ForkSeq[fork] >= ForkSeq.deneb
-            ? "engine_newPayloadV3"
-            : ForkSeq[fork] >= ForkSeq.capella
-              ? "engine_newPayloadV2"
-              : "engine_newPayloadV1";
+        : ForkSeq[fork] >= ForkSeq.gloas
+          ? "engine_newPayloadV5"
+          : ForkSeq[fork] >= ForkSeq.electra
+            ? "engine_newPayloadV4"
+            : ForkSeq[fork] >= ForkSeq.deneb
+              ? "engine_newPayloadV3"
+              : ForkSeq[fork] >= ForkSeq.capella
+                ? "engine_newPayloadV2"
+                : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -266,7 +268,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           };
         } else {
           engineRequest = {
-            method: "engine_newPayloadV4",
+            method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
             params: [
               serializedExecutionPayload,
               serializedVersionedHashes,
@@ -373,11 +375,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const method =
       ForkSeq[fork] >= ForkSeq.heze
         ? "engine_forkchoiceUpdatedV5"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_forkchoiceUpdatedV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_forkchoiceUpdatedV2"
-            : "engine_forkchoiceUpdatedV1";
+        : ForkSeq[fork] >= ForkSeq.gloas
+          ? "engine_forkchoiceUpdatedV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_forkchoiceUpdatedV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_forkchoiceUpdatedV2"
+              : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot

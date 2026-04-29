@@ -132,6 +132,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
       engine_newPayloadV4: this.notifyNewPayload.bind(this),
+      engine_newPayloadV5: this.notifyNewPayload.bind(this),
       engine_newPayloadV6: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
