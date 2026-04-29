@@ -43,13 +43,10 @@ export async function validateGossipProposerPreferences(
   }
 
   // [IGNORE] The block with root `dependent_root` has been seen by the node.
-  // Resolve the proposer lookahead for the message's branch:
-  // 1. Fast path: head state already covers `dependent_root` (matches `currentDecisionRoot`
-  //    or `nextDecisionRoot`). Avoids a cache lookup and handles narrow timing windows
-  //    where the previous-root checkpoint state isn't (yet) populated.
-  // 2. Fallback: previous-root checkpoint state at `(proposalEpoch - 1, dependent_root)`,
-  //    populated by `processSlotsToNearestCheckpoint` for any imported branch crossing the
-  //    boundary into `proposalEpoch - 1`. Sync lookup only — never triggers disk reload.
+  // Resolve the proposer lookahead for the message's branch via head state (fast path) or
+  // the previous-root checkpoint state (populated by `processSlotsToNearestCheckpoint` for
+  // any imported branch crossing into `proposalEpoch - 1`). The head-state path also handles
+  // narrow timing windows where the checkpoint state isn't yet populated.
   const headState = chain.getHeadState();
   let proposers: ValidatorIndex[] | null = null;
   if (headState.epoch === proposalEpoch && headState.currentDecisionRoot === dependentRootHex) {
@@ -57,8 +54,11 @@ export async function validateGossipProposerPreferences(
   } else if (headState.epoch === proposalEpoch - 1 && headState.nextDecisionRoot === dependentRootHex) {
     proposers = headState.nextProposers;
   } else {
+    // Sync lookup only to not trigger disk reload from gossip input.
     const checkpointState = chain.regen.getCheckpointStateSync({epoch: proposalEpoch - 1, rootHex: dependentRootHex});
     if (checkpointState !== null) {
+      // State is at `proposalEpoch - 1`, so proposers for `proposalSlot` (next epoch from
+      // the state's perspective) live in `nextProposers`.
       proposers = checkpointState.nextProposers;
     }
   }
