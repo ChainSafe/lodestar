@@ -503,6 +503,9 @@ export async function importBlock(
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);
     this.regen.addCheckpointState(cp, checkpointState);
+    // Also cache under parent root to allow dependent root lookups
+    const parentRootCp: phase0.Checkpoint = {epoch: cp.epoch, root: checkpointState.latestBlockHeader.parentRoot};
+    this.regen.addCheckpointState(parentRootCp, checkpointState);
     // consumers should not mutate state ever
     this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 

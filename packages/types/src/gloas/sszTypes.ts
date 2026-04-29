@@ -122,6 +122,7 @@ export const IndexedPayloadAttestation = new ContainerType(
 
 export const ProposerPreferences = new ContainerType(
   {
+    dependentRoot: Root,
     proposalSlot: Slot,
     validatorIndex: ValidatorIndex,
     feeRecipient: ExecutionAddress,

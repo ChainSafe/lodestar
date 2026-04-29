@@ -3,12 +3,11 @@ import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getProposerPreferencesSigningRoot,
-  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
-import {RegenCaller} from "../regen/index.js";
 
 /**
  * Validates a gossiped `SignedProposerPreferences` per
@@ -19,7 +18,8 @@ export async function validateGossipProposerPreferences(
   signedProposerPreferences: gloas.SignedProposerPreferences
 ): Promise<void> {
   const preferences = signedProposerPreferences.message;
-  const {proposalSlot, validatorIndex} = preferences;
+  const {proposalSlot, validatorIndex, dependentRoot} = preferences;
+  const dependentRootHex = toRootHex(dependentRoot);
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
   // [IGNORE] `preferences.proposal_slot` is in the current or next epoch.
@@ -42,32 +42,38 @@ export async function validateGossipProposerPreferences(
     });
   }
 
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipProposerPreferences);
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for proposer preferences validation, got fork=${state.forkName}`);
+  // [IGNORE] The block with root `dependent_root` has been seen by the node.
+  // Sync lookup only to not trigger disk reload from gossip input.
+  const cpEpoch = proposalEpoch - 1;
+  const checkpointState = chain.regen.getCheckpointStateSync({epoch: cpEpoch, rootHex: dependentRootHex});
+  if (checkpointState === null) {
+    throw new ProposerPreferencesError(GossipAction.IGNORE, {
+      code: ProposerPreferencesErrorCode.UNKNOWN_DEPENDENT_ROOT,
+      proposalSlot,
+      dependentRoot: dependentRootHex,
+    });
   }
 
-  // [REJECT] `preferences.validator_index` is present at the correct slot in the current or next
-  // epoch's portion of `state.proposer_lookahead` — i.e. `is_valid_proposal_slot(state, preferences)`
-  // returns True.
-  const epochOffset = proposalEpoch - state.epoch;
-  const proposers = epochOffset === 0 ? state.currentProposers : state.nextProposers;
-  const expectedProposer = proposers[proposalSlot % SLOTS_PER_EPOCH];
-  if (epochOffset < 0 || epochOffset > 1 || expectedProposer !== validatorIndex) {
+  // [REJECT] `is_valid_proposal_slot(state, preferences)` returns True.
+  // The checkpoint state is at `proposalEpoch - 1`, so the proposer for `proposalSlot`
+  // (which is in the next epoch from the state's perspective) lives in `nextProposers`.
+  const expectedProposer = checkpointState.nextProposers[proposalSlot % SLOTS_PER_EPOCH];
+  if (expectedProposer !== validatorIndex) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_PROPOSER,
       proposalSlot,
       validatorIndex,
+      dependentRoot: dependentRootHex,
     });
   }
 
-  // [IGNORE] The `signed_proposer_preferences` is the first valid message received from the validator
-  // with index `preferences.validator_index` and the given slot `preferences.proposal_slot`.
-  if (chain.seenProposerPreferences.isKnown(proposalSlot, validatorIndex)) {
+  // [IGNORE] First valid message for (dependent_root, proposal_slot, validator_index).
+  if (chain.seenProposerPreferences.isKnown(dependentRootHex, proposalSlot, validatorIndex)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
       proposalSlot,
       validatorIndex,
+      dependentRoot: dependentRootHex,
     });
   }
 
@@ -87,5 +93,5 @@ export async function validateGossipProposerPreferences(
   }
 
   // Valid
-  chain.seenProposerPreferences.add(proposalSlot, validatorIndex);
+  chain.seenProposerPreferences.add(dependentRootHex, proposalSlot, validatorIndex);
 }
