@@ -145,7 +145,6 @@ export class BlockInputSync {
       this.chain.emitter.on(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
       this.chain.emitter.on(ChainEvent.incompletePayloadEnvelope, this.onIncompletePayloadEnvelope);
       this.chain.emitter.on(ChainEvent.blockUnknownParent, this.onUnknownParent);
-      this.chain.emitter.on(ChainEvent.envelopeUnknownBlock, this.onEnvelopeUnknownBlock);
       this.chain.emitter.on(routes.events.EventType.block, this.onBlockImported);
       this.chain.emitter.on(routes.events.EventType.executionPayload, this.onPayloadImported);
       this.network.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
@@ -161,7 +160,6 @@ export class BlockInputSync {
     this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
     this.chain.emitter.off(ChainEvent.incompletePayloadEnvelope, this.onIncompletePayloadEnvelope);
     this.chain.emitter.off(ChainEvent.blockUnknownParent, this.onUnknownParent);
-    this.chain.emitter.off(ChainEvent.envelopeUnknownBlock, this.onEnvelopeUnknownBlock);
     this.chain.emitter.off(routes.events.EventType.block, this.onBlockImported);
     this.chain.emitter.off(routes.events.EventType.executionPayload, this.onPayloadImported);
     this.network.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
@@ -260,19 +258,6 @@ export class BlockInputSync {
       this.metrics?.blockInputSync.source.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling unknownParent event", {}, e as Error);
-    }
-  };
-
-  private onEnvelopeUnknownBlock = (data: ChainEventData[ChainEvent.envelopeUnknownBlock]): void => {
-    try {
-      const blockRootHex = toRootHex(data.envelope.message.beaconBlockRoot);
-      this.addByRootHex(blockRootHex, data.peer);
-      this.addByPayloadEnvelope(data.envelope, data.peer);
-      this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_DATA});
-      this.metrics?.blockInputSync.source.inc({source: data.source});
-    } catch (e) {
-      this.logger.debug("Error handling envelopeUnknownBlock event", {}, e as Error);
     }
   };
 
@@ -379,41 +364,6 @@ export class BlockInputSync {
       this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingPayloads`);
     }
     return added;
-  };
-
-  private addByPayloadEnvelope = (envelope: gloas.SignedExecutionPayloadEnvelope, peerIdStr?: PeerIdStr): void => {
-    const rootHex = toRootHex(envelope.message.beaconBlockRoot);
-    const existingPendingPayload = this.pendingPayloads.get(rootHex);
-    let pendingPayload = this.pendingPayloads.get(rootHex);
-    if (!pendingPayload || !isPendingPayloadEnvelope(pendingPayload)) {
-      pendingPayload = {
-        status: PendingPayloadInputStatus.waitingForBlock,
-        envelope,
-        peerIdStrings: new Set(existingPendingPayload?.peerIdStrings ?? []),
-        timeAddedSec: existingPendingPayload?.timeAddedSec ?? Date.now() / 1000,
-      };
-      this.pendingPayloads.set(rootHex, pendingPayload);
-
-      this.logger.verbose("Added payload envelope to BlockInputSync.pendingPayloads", {
-        slot: envelope.message.payload.slotNumber,
-        root: rootHex,
-      });
-    } else {
-      this.logger.debug("Overwriting pending payload envelope for root already waiting for block", {
-        slot: envelope.message.payload.slotNumber,
-        root: rootHex,
-      });
-      pendingPayload.envelope = envelope;
-    }
-
-    if (peerIdStr) {
-      pendingPayload.peerIdStrings.add(peerIdStr);
-    }
-
-    const prunedItemCount = pruneSetToMax(this.pendingPayloads, this.maxPendingBlocks);
-    if (prunedItemCount > 0) {
-      this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingPayloads`);
-    }
   };
 
   private addByPayloadInput = (

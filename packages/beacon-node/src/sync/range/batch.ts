@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, prettyPrintIndices} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
@@ -79,9 +79,35 @@ export type BatchState =
     };
 
 export type BatchMetadata = {
+  // Batch-level slot window (always present)
   startEpoch: Epoch;
+  startSlot: Slot;
+  count: number;
   status: BatchStatus;
+
+  // Per-type outstanding request shapes; only present when that sub-request exists.
+  // Format: "startSlot=<n>,count=<n>" (plus ",cols=<indices>" for columns).
+  blocksReq?: string;
+  blobsReq?: string;
+  columnsReq?: string;
+  envelopesReq?: string;
+
+  // Retry counters
+  downloadAttempts: number;
+  processingAttempts: number;
+
+  // Cumulative peer attribution for failed attempts (only present when non-empty)
+  failedDownloadPeers?: string;
+  failedProcessingPeers?: string;
 };
+
+function formatRangeReq(req: {startSlot: Slot; count: number}): string {
+  return `startSlot=${req.startSlot},count=${req.count}`;
+}
+
+function formatColumnsReq(req: {startSlot: Slot; count: number; columns: number[]}): string {
+  return `startSlot=${req.startSlot},count=${req.count},cols=${prettyPrintIndices(req.columns)}`;
+}
 
 /**
  * Batches are downloaded at the first block of the epoch.
@@ -286,7 +312,26 @@ export class Batch {
   }
 
   getMetadata(): BatchMetadata {
-    return {startEpoch: this.startEpoch, status: this.state.status};
+    const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
+    const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
+    return {
+      startEpoch: this.startEpoch,
+      startSlot: this.startSlot,
+      count: this.count,
+      status: this.state.status,
+      ...(blocksRequest && {blocksReq: formatRangeReq(blocksRequest)}),
+      ...(blobsRequest && {blobsReq: formatRangeReq(blobsRequest)}),
+      ...(columnsRequest && {columnsReq: formatColumnsReq(columnsRequest)}),
+      ...(envelopesRequest && {envelopesReq: formatRangeReq(envelopesRequest)}),
+      downloadAttempts: this.failedDownloadAttempts.length,
+      processingAttempts: this.failedProcessingAttempts.length,
+      ...(this.failedDownloadAttempts.length > 0 && {
+        failedDownloadPeers: this.failedDownloadAttempts.join(","),
+      }),
+      ...(failedProcessingPeerList.length > 0 && {
+        failedProcessingPeers: failedProcessingPeerList.join(","),
+      }),
+    };
   }
 
   getBlocks(): IBlockInput[] {
@@ -383,7 +428,11 @@ export class Batch {
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
+  startProcessing(): {
+    blocks: IBlockInput[];
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+    peers: PeerIdStr[];
+  } {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
@@ -396,7 +445,7 @@ export class Batch {
     const peers = this.goodPeers;
     this.goodPeers = [];
     this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
-    return {blocks, payloadEnvelopes};
+    return {blocks, payloadEnvelopes, peers};
   }
 
   /**
@@ -479,7 +528,7 @@ export class Batch {
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
   private errorType(type: BatchErrorType): BatchErrorType & BatchErrorMetadata {
-    return {...type, ...this.getMetadata()};
+    return {...type, startEpoch: this.startEpoch, status: this.state.status};
   }
 
   private wrongStatusErrorType(expectedStatus: BatchStatus): BatchErrorType & BatchErrorMetadata {
