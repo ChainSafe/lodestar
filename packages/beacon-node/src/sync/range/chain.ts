@@ -611,7 +611,7 @@ export class SyncChain {
 
     if (!res.err) {
       batch.processingSuccess();
-      this.logger.verbose("Processed batch", logCtx);
+      this.logger.verbose("Processed batch", {...logCtx, ...batch.getMetadata()});
 
       // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {
