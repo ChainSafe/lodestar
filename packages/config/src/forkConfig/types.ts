@@ -63,6 +63,8 @@ export type ForkConfig = {
   getSyncContributionDueMs(fork: ForkName): number;
   getProposerReorgCutoffMs(fork: ForkName): number;
   getInclusionListSubmissionDueMs(fork: ForkName): number;
+  /** Spec heze/fork-choice.md: get_inclusion_list_due_ms (INCLUSION_LIST_DUE_BPS share of slot). */
+  getInclusionListDueMs(): number;
   getProposerInclusionListCutoffMs(fork: ForkName): number;
   getViewFreezeCutoffMs(fork: ForkName): number;
 

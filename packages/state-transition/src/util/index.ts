@@ -5,7 +5,6 @@ export * from "./attesterStatus.js";
 export * from "./balance.js";
 export * from "./blindedBlock.js";
 export * from "./blockRoot.js";
-export * from "./calculateInclusionListCommitteeAssignments.js";
 export * from "./capella.js";
 export * from "./computeAnchorCheckpoint.js";
 export * from "./deposit.js";

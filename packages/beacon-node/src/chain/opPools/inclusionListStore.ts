@@ -1,162 +1,234 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateHeze, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Slot, ValidatorIndex, bellatrix, heze} from "@lodestar/types";
-import {Transactions} from "@lodestar/types/bellatrix";
+import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
+import {CachedBeaconStateHeze} from "@lodestar/state-transition";
+import {RootHex, Slot, ValidatorIndex, bellatrix, heze, ssz} from "@lodestar/types";
 import {MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
-import {IBeaconChain} from "../index.js";
-import {pruneBySlot} from "./utils.js";
 
-function byteArrayArrayEquals(arrA: Uint8Array[], arrB: Uint8Array[]): boolean {
-  if (arrA.length !== arrB.length) return false;
-  for (let i = 0; i < arrA.length; i++) {
-    if (!byteArrayEquals(arrA[i], arrB[i])) return false;
-  }
-  return true;
-}
+const SLOTS_RETAINED = 2;
 
-/**
- *
- */
-const SLOTS_RETAINED = 2; // TODO HEZE: do we even need to retain previous slot?
-
-/** Hex string of Inclusion List Committee root */
-type CommitteeRootHex = string;
+/** Maximum number of distinct `SignedInclusionList`s stored per (slot, committee_root). DoS guard. */
+const MAX_INCLUSION_LISTS_PER_KEY = INCLUSION_LIST_COMMITTEE_SIZE * 2;
 
 export enum InclusionListInsertOutcome {
-  /**  */
+  /** Stored as a new entry. */
   New = "New",
-  /** Not existing in the pool but it's too old to add. No changes were made. */
+  /** Slot is older than the prune horizon. */
   Old = "Old",
-  /** The pool has reached its limit. No changes were made. */
+  /** Pool is full for this (slot, committee_root). */
   ReachLimit = "ReachLimit",
-  /**  */
+  /** Arrived after `getProposerInclusionListCutoffMs`. */
   Late = "Late",
-  /** The same inclusion list has already been seen */
+  /** Identical inclusion list already stored. */
   Seen = "Seen",
-  /** Equivocation detected */
+  /** New equivocation evidence: validator already had a different IL stored under the same key. */
   Equivocating = "Equivocating",
-  /** Equivocation already detected in previous insertion */
+  /** Validator was already marked as equivocator at this key. */
   SubsequentEquivocation = "SubsequentEquivocation",
 }
 
+/** Composite key: `${slot}-${committeeRootHex}`. */
+type CommitteeKey = string;
+type InclusionListRootHex = RootHex;
+
+function makeKey(slot: Slot, committeeRoot: Uint8Array | RootHex): CommitteeKey {
+  const rootHex = typeof committeeRoot === "string" ? committeeRoot : toRootHex(committeeRoot);
+  return `${slot}-${rootHex}`;
+}
+
 /**
- * This is an implementation of `InclusionListStore` as defined in EIP-7805.
- * Although it is called a store, it behaves more in line with other pools and not
- * forkchoice store.
+ * Implements `InclusionListStore` from heze/inclusion-list.md.
+ *
+ * Spec helpers exposed:
+ * - `processInclusionList(il, isTimely)`
+ * - `getInclusionListTransactions(state, slot, onlyTimely)`
+ * - `getInclusionListBits(state, slot, onlyTimely)`
+ * - `isInclusionListBitsInclusive(state, slot, bits, onlyTimely)`
  */
 export class InclusionListStore {
-  // Equivalent to InclusionListStore.inclusion_lists
-  private readonly transactionsByValidatorIndexByCommitteeBySlot = new MapDef<
-    Slot,
-    MapDef<CommitteeRootHex, Map<ValidatorIndex, Transactions>>
-  >(
-    () => new MapDef<CommitteeRootHex, Map<ValidatorIndex, Transactions>>(() => new Map<ValidatorIndex, Transactions>())
+  // (slot, committee_root) -> il_root -> InclusionList
+  private readonly inclusionLists = new MapDef<CommitteeKey, Map<InclusionListRootHex, heze.InclusionList>>(
+    () => new Map<InclusionListRootHex, heze.InclusionList>()
   );
-  private readonly equivocators = new MapDef<Slot, MapDef<CommitteeRootHex, Set<ValidatorIndex>>>(
-    () => new MapDef<CommitteeRootHex, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>())
+  // il_root -> isTimely
+  private readonly inclusionListTimeliness = new Map<InclusionListRootHex, boolean>();
+  // (slot, committee_root) -> equivocator validator indices
+  private readonly equivocators = new MapDef<CommitteeKey, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
+  // slot -> set of (slot, committee_root) keys for fast pruning
+  private readonly keysBySlot = new MapDef<Slot, Set<CommitteeKey>>(() => new Set<CommitteeKey>());
+  // slot -> validatorIndex -> count, for "seen at most twice" gossip rule
+  private readonly validatorIlCountBySlot = new MapDef<Slot, Map<ValidatorIndex, number>>(
+    () => new Map<ValidatorIndex, number>()
   );
 
   private lowestPermissibleSlot = 0;
 
   constructor(
-    private readonly chain: IBeaconChain,
     private readonly config: ChainForkConfig,
     private readonly clock: IClock
   ) {}
 
   get size(): number {
-    // TODO HEZE: See what makes sense for metrics
-    const count = 0;
+    let count = 0;
+    for (const ils of this.inclusionLists.values()) count += ils.size;
     return count;
   }
 
-  // Process inclusion list and add it to the store if valid
-  processInclusionList(inclusionList: heze.InclusionList): InclusionListInsertOutcome {
-    const {slot, validatorIndex, inclusionListCommitteeRoot, transactions} = inclusionList;
-    const inclusionListCommitteeRootHex = toRootHex(inclusionListCommitteeRoot);
+  /**
+   * Add a `SignedInclusionList` along with the locally observed timeliness.
+   * Spec: `process_inclusion_list` in heze/inclusion-list.md.
+   */
+  add(signedInclusionList: heze.SignedInclusionList, isTimely: boolean): InclusionListInsertOutcome {
+    return this.processInclusionList(signedInclusionList.message, isTimely);
+  }
+
+  /**
+   * Spec heze/inclusion-list.md `process_inclusion_list`.
+   * Pruning + late-arrival + per-key DoS guard added on top of spec semantics.
+   */
+  processInclusionList(inclusionList: heze.InclusionList, isTimely: boolean): InclusionListInsertOutcome {
+    const {slot, validatorIndex, inclusionListCommitteeRoot} = inclusionList;
     const fork = this.config.getForkName(slot);
 
-    // Reject any inclusion lists that are too old.
     if (slot < this.lowestPermissibleSlot) {
       return InclusionListInsertOutcome.Old;
     }
 
-    // Reject inclusion lists in the current slot but come to this pool very late
     if (this.clock.msFromSlot(slot) > this.config.getProposerInclusionListCutoffMs(fork)) {
       return InclusionListInsertOutcome.Late;
     }
 
-    // Ignore `inclusion_list` from equivocators.
-    // Avoid calling getOrDefault(). We don't want to create new map if not exist
-    const storedEquivocators = this.equivocators.get(slot)?.get(inclusionListCommitteeRootHex);
-    if (storedEquivocators?.has(validatorIndex)) {
+    // Spec p2p heze: "the message is either the first or second valid message received
+    // from the validator". Bump count on every gossip-validated arrival past the time gates.
+    const counts = this.validatorIlCountBySlot.getOrDefault(slot);
+    counts.set(validatorIndex, (counts.get(validatorIndex) ?? 0) + 1);
+
+    const key = makeKey(slot, inclusionListCommitteeRoot);
+
+    // Spec: ignore if validator is already a known equivocator at this (slot, committee_root).
+    const equivocators = this.equivocators.getOrDefault(key);
+    if (equivocators.has(validatorIndex)) {
       return InclusionListInsertOutcome.SubsequentEquivocation;
     }
 
-    const transactionsByValidatorIndexByCommittee =
-      this.transactionsByValidatorIndexByCommitteeBySlot.getOrDefault(slot);
-    const transationsByValidatorIndex =
-      transactionsByValidatorIndexByCommittee.getOrDefault(inclusionListCommitteeRootHex);
+    const stored = this.inclusionLists.getOrDefault(key);
+    const newRoot = toRootHex(ssz.heze.InclusionList.hashTreeRoot(inclusionList));
 
-    const storedTransactions = transationsByValidatorIndex.get(validatorIndex);
-
-    if (storedTransactions === undefined) {
-      transationsByValidatorIndex.set(validatorIndex, transactions);
-      return InclusionListInsertOutcome.New;
-    }
-
-    // Check equivocations
-    if (!byteArrayArrayEquals(storedTransactions, transactions)) {
-      this.equivocators.getOrDefault(slot).getOrDefault(inclusionListCommitteeRootHex).add(validatorIndex);
-      transationsByValidatorIndex.delete(validatorIndex);
+    // Spec: walk stored ILs for this key. If a different message is already stored
+    // for this validatorIndex, mark equivocation (and do NOT store this one).
+    for (const [existingRoot, existing] of stored) {
+      if (existing.validatorIndex !== validatorIndex) continue;
+      if (existingRoot === newRoot) {
+        return InclusionListInsertOutcome.Seen;
+      }
+      equivocators.add(validatorIndex);
       return InclusionListInsertOutcome.Equivocating;
     }
-    return InclusionListInsertOutcome.Seen;
+
+    if (stored.size >= MAX_INCLUSION_LISTS_PER_KEY) {
+      return InclusionListInsertOutcome.ReachLimit;
+    }
+
+    stored.set(newRoot, inclusionList);
+    this.inclusionListTimeliness.set(newRoot, isTimely);
+    this.keysBySlot.getOrDefault(slot).add(key);
+
+    return InclusionListInsertOutcome.New;
   }
 
   /**
-   * Return a list of unique inclusion list transactions for the given slot
+   * Used by gossip validation to enforce: "the message is either the first or second valid
+   * message received from the validator with index validator_index" for the slot.
    */
-  getInclusionListTransactions(slot: Slot, state: CachedBeaconStateHeze): bellatrix.Transactions {
-    const uniqueTransactions: bellatrix.Transactions = [];
-    const epoch = computeEpochAtSlot(slot);
-    const decisionRoot = state.epochCtx.getShufflingDecisionRoot(epoch);
-    const shuffling = this.chain.shufflingCache.getSync(epoch, decisionRoot);
+  seenTwice(slot: Slot, validatorIndex: ValidatorIndex): boolean {
+    return (this.validatorIlCountBySlot.get(slot)?.get(validatorIndex) ?? 0) >= 2;
+  }
 
-    if (shuffling === null) {
-      return uniqueTransactions;
+  /**
+   * Spec heze/inclusion-list.md `get_inclusion_list_transactions`.
+   * Returns deduplicated transactions from valid, non-equivocating ILs at the slot.
+   */
+  getInclusionListTransactions(state: CachedBeaconStateHeze, slot: Slot, onlyTimely = true): bellatrix.Transactions {
+    const key = this.localCommitteeKey(state, slot);
+    const stored = this.inclusionLists.get(key);
+    if (!stored || stored.size === 0) return [];
+    const equivocators = this.equivocators.get(key);
+
+    const out: bellatrix.Transactions = [];
+    for (const [ilRoot, il] of stored) {
+      if (equivocators?.has(il.validatorIndex)) continue;
+      if (onlyTimely && !this.inclusionListTimeliness.get(ilRoot)) continue;
+      for (const tx of il.transactions) {
+        if (!out.some((existing) => byteArrayEquals(existing, tx))) {
+          out.push(tx);
+        }
+      }
     }
+    return out;
+  }
 
-    const inclusionListCommitteeRoot = shuffling.inclusionListCommitteeRoots[slot % SLOTS_PER_EPOCH];
-    const inclusionListCommitteeRootHex = toRootHex(inclusionListCommitteeRoot);
+  /**
+   * Spec heze/inclusion-list.md `get_inclusion_list_bits`.
+   * Bit i is set iff the ith committee member submitted a valid, non-equivocating IL at `slot`.
+   */
+  getInclusionListBits(state: CachedBeaconStateHeze, slot: Slot, onlyTimely = true): BitArray {
+    const committee = state.epochCtx.getInclusionListCommittee(slot);
+    const key = makeKey(slot, ssz.heze.InclusionListCommittee.hashTreeRoot([...committee]));
 
-    const transactionsByValidatorIndex = this.transactionsByValidatorIndexByCommitteeBySlot
-      .get(slot)
-      ?.get(inclusionListCommitteeRootHex);
-
-    if (!transactionsByValidatorIndex) {
-      return uniqueTransactions;
-    }
-
-    const transactions = Array.from(transactionsByValidatorIndex.values()).flat();
-    for (const transaction of transactions) {
-      const duplicate = uniqueTransactions.some((existing) => byteArrayEquals(transaction, existing));
-
-      if (!duplicate) {
-        uniqueTransactions.push(transaction);
+    const submitted = new Set<ValidatorIndex>();
+    const stored = this.inclusionLists.get(key);
+    if (stored) {
+      const equivocators = this.equivocators.get(key);
+      for (const [ilRoot, il] of stored) {
+        if (equivocators?.has(il.validatorIndex)) continue;
+        if (onlyTimely && !this.inclusionListTimeliness.get(ilRoot)) continue;
+        submitted.add(il.validatorIndex);
       }
     }
 
-    return uniqueTransactions;
+    const bits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+    for (let i = 0; i < committee.length; i++) {
+      if (submitted.has(committee[i])) bits.set(i, true);
+    }
+    return bits;
   }
 
   /**
-   *
+   * Spec heze/inclusion-list.md `is_inclusion_list_bits_inclusive`.
+   * Returns true iff `bits` is a superset of the locally observed bits.
    */
+  isInclusionListBitsInclusive(state: CachedBeaconStateHeze, slot: Slot, bits: BitArray, onlyTimely = true): boolean {
+    const local = this.getInclusionListBits(state, slot, onlyTimely);
+    for (let i = 0; i < INCLUSION_LIST_COMMITTEE_SIZE; i++) {
+      if (local.get(i) && !bits.get(i)) return false;
+    }
+    return true;
+  }
+
+  /** Drop entries older than `clockSlot - SLOTS_RETAINED`. */
   prune(clockSlot: Slot): void {
-    pruneBySlot(this.transactionsByValidatorIndexByCommitteeBySlot, clockSlot, SLOTS_RETAINED);
-    this.lowestPermissibleSlot = Math.max(clockSlot - SLOTS_RETAINED, 0);
+    const horizon = clockSlot - SLOTS_RETAINED;
+    for (const [slot, keys] of this.keysBySlot) {
+      if (slot >= horizon) continue;
+      for (const key of keys) {
+        const ils = this.inclusionLists.get(key);
+        if (ils) {
+          for (const ilRoot of ils.keys()) {
+            this.inclusionListTimeliness.delete(ilRoot);
+          }
+          this.inclusionLists.delete(key);
+        }
+        this.equivocators.delete(key);
+      }
+      this.keysBySlot.delete(slot);
+      this.validatorIlCountBySlot.delete(slot);
+    }
+    this.lowestPermissibleSlot = Math.max(horizon, 0);
+  }
+
+  private localCommitteeKey(state: CachedBeaconStateHeze, slot: Slot): CommitteeKey {
+    const committee = state.epochCtx.getInclusionListCommittee(slot);
+    return makeKey(slot, ssz.heze.InclusionListCommittee.hashTreeRoot([...committee]));
   }
 }

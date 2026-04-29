@@ -239,6 +239,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getInclusionListSubmissionDueMs(_fork: ForkName): number {
       return this.getSlotComponentDurationMs(config.INCLUSION_LIST_SUBMISSION_DUE_BPS);
     },
+    getInclusionListDueMs(): number {
+      return this.getSlotComponentDurationMs(config.INCLUSION_LIST_SUBMISSION_DUE_BPS);
+    },
     getProposerInclusionListCutoffMs(_fork: ForkName): number {
       return this.getSlotComponentDurationMs(config.PROPOSER_INCLUSION_LIST_CUTOFF_BPS);
     },

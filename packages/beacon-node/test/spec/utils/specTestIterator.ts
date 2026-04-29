@@ -59,9 +59,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  // Skip heze spec tests until heze-specific spec changes (modified ExecutionPayloadBid,
-  // is_valid_inclusion_list_signature, get_inclusion_list_committee, etc.) are implemented.
-  skippedForks: ["heze"],
+  skippedForks: [],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -75,10 +73,12 @@ export const defaultSkipOpts: SkipOpts = {
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
     /^gloas\/ssz_static\/ForkChoiceNode.*$/,
+    /^heze\/ssz_static\/ForkChoiceNode.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
   ],
   skippedTests: [],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5

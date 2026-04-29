@@ -1,4 +1,4 @@
-import {ForkName, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
+import {ForkName, ForkSeq, INCLUSION_LIST_COMMITTEE_SIZE, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
 import {
   Attestation,
   CommitteeIndex,
@@ -191,6 +191,31 @@ export function getAttestingIndices(epochShuffling: EpochShuffling, fork: ForkSe
  */
 export function getBeaconCommittee(epochShuffling: EpochShuffling, slot: Slot, index: CommitteeIndex): Uint32Array {
   return getBeaconCommittees(epochShuffling, slot, [index])[0];
+}
+
+/**
+ * Return the inclusion list committee for `slot`, derived from the beacon committees of that slot.
+ * Spec: heze/beacon-chain.md `get_inclusion_list_committee`.
+ */
+export function getInclusionListCommittee(epochShuffling: EpochShuffling, slot: Slot): Uint32Array {
+  const slotCommittees = epochShuffling.committees[slot % SLOTS_PER_EPOCH];
+  let totalLen = 0;
+  for (const committee of slotCommittees) totalLen += committee.length;
+
+  const result = new Uint32Array(INCLUSION_LIST_COMMITTEE_SIZE);
+  if (totalLen === 0) return result;
+
+  for (let i = 0; i < INCLUSION_LIST_COMMITTEE_SIZE; i++) {
+    let offset = i % totalLen;
+    for (const committee of slotCommittees) {
+      if (offset < committee.length) {
+        result[i] = committee[offset];
+        break;
+      }
+      offset -= committee.length;
+    }
+  }
+  return result;
 }
 
 /**

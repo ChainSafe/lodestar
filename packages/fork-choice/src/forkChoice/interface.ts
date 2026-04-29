@@ -1,5 +1,5 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, heze} from "@lodestar/types";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {
   BlockExecutionStatus,
   LVHExecResponse,
@@ -176,10 +176,6 @@ export interface IForkChoice {
    */
   onAttesterSlashing(slashing: AttesterSlashing): void;
   /**
-   * inclusionListCommittee is a list of IL committee validators' index in the current slot
-   */
-  onInclusionList(inclusionList: heze.SignedInclusionList, secFromSlot: number): void;
-  /**
    * Process PTC (Payload Timeliness Committee) messages from a block
    * Updates the PTC votes for the attested beacon block
    *
@@ -327,7 +323,15 @@ export interface IForkChoice {
   getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 
   /**
-   * Add IL-unsatisfied block root to store.
+   * Spec heze/fork-choice.md `record_payload_inclusion_list_satisfaction`. Records whether the
+   * execution payload for `blockRoot` satisfied its inclusion-list constraints, as reported by
+   * the execution engine.
    */
-  addInclusionListUnsatisfiedBlock(blockRoot: RootHex): void;
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void;
+
+  /**
+   * Spec heze/fork-choice.md `is_payload_inclusion_list_satisfied`. Returns `true` only if a
+   * value has been recorded and it is `true`.
+   */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean;
 }

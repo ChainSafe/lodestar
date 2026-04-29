@@ -21,10 +21,8 @@ export {
   type CheckpointWithHex,
   ForkChoiceStore,
   type IForkChoiceStore,
-  InclusionListCommitteeRootStore,
-  InclusionListEquivocatorStore,
-  InclusionListStore,
   type JustifiedBalancesGetter,
+  PayloadInclusionListSatisfactionStore,
 } from "./forkChoice/store.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {

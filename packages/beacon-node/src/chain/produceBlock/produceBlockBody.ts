@@ -13,8 +13,11 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
+  BeaconStateView,
+  type CachedBeaconStateHeze,
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
@@ -64,7 +67,7 @@ import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
-import {InclusionListPool} from "../opPools/inclusionListPool.ts";
+import {InclusionListStore} from "../opPools/inclusionListStore.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -277,7 +280,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
 
     // Create self-build execution payload bid
-    const bid: gloas.ExecutionPayloadBid = {
+    const baseBid: gloas.ExecutionPayloadBid = {
       parentBlockHash,
       parentBlockRoot,
       blockHash: executionPayload.blockHash,
@@ -291,14 +294,27 @@ export async function produceBlockBody<T extends BlockType>(
       blobKzgCommitments: blobsBundle.commitments,
       executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
     };
-    const signedBid: gloas.SignedExecutionPayloadBid = {
+    // Spec heze/builder.md: bid.inclusion_list_bits = get_inclusion_list_bits(store, state, slot-1, only_timely=False)
+    let bid: gloas.ExecutionPayloadBid | heze.ExecutionPayloadBid = baseBid;
+    if (isForkPostHeze(fork)) {
+      const stateHeze = (currentState as unknown as BeaconStateView).cachedState as CachedBeaconStateHeze;
+      const inclusionListBits = this.inclusionListStore.getInclusionListBits(stateHeze, blockSlot - 1, false);
+      // Spec heze/validator.md: bid.inclusion_list_bits MUST satisfy is_inclusion_list_bits_inclusive.
+      // For self-build the bits are derived from our own view so this holds by construction; assert
+      // defensively to catch any future divergence (e.g. external builder-bid path).
+      if (!this.inclusionListStore.isInclusionListBitsInclusive(stateHeze, blockSlot - 1, inclusionListBits, false)) {
+        throw Error("bid.inclusion_list_bits does not satisfy is_inclusion_list_bits_inclusive");
+      }
+      bid = {...baseBid, inclusionListBits};
+    }
+    const signedBid: gloas.SignedExecutionPayloadBid | heze.SignedExecutionPayloadBid = {
       message: bid,
       signature: G2_POINT_AT_INFINITY,
     };
 
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
-    gloasBody.signedExecutionPayloadBid = signedBid;
+    gloasBody.signedExecutionPayloadBid = signedBid as gloas.SignedExecutionPayloadBid;
     gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
       parentBlock.blockRoot,
       blockSlot - 1
@@ -641,7 +657,7 @@ export async function produceBlockBody<T extends BlockType>(
 export async function prepareExecutionPayload(
   chain: {
     executionEngine: IExecutionEngine;
-    inclusionListPool: InclusionListPool;
+    inclusionListStore: InclusionListStore;
     config: ChainForkConfig;
     metrics: Metrics | null;
   },
@@ -744,7 +760,7 @@ export function getPayloadAttributesForSSE(
   chain: {
     config: ChainForkConfig;
     forkChoice: IForkChoice;
-    inclusionListPool: InclusionListPool;
+    inclusionListStore: InclusionListStore;
     metrics: Metrics | null;
   },
   {
@@ -802,7 +818,7 @@ function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
-    inclusionListPool: InclusionListPool;
+    inclusionListStore: InclusionListStore;
     metrics: Metrics | null;
   },
   {
@@ -866,7 +882,9 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
-    const transactions = chain.inclusionListPool.getTransactions(prepareSlot - 1);
+    // Spec heze/validator.md `prepare_execution_payload`: get_inclusion_list_transactions(only_timely=False).
+    const stateHeze = (prepareState as BeaconStateView).cachedState as CachedBeaconStateHeze;
+    const transactions = chain.inclusionListStore.getInclusionListTransactions(stateHeze, prepareSlot - 1, false);
     (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = transactions;
     chain.metrics?.inclusionListTransactionsPrepareExecutionPayload.inc(transactions.length);
   }

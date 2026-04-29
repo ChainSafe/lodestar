@@ -49,6 +49,7 @@ import {
   calculateCommitteeAssignments,
   getAttestingIndices,
   getBeaconCommittees,
+  getInclusionListCommittee,
   getIndexedAttestation,
 } from "../util/shuffling.js";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee.js";
@@ -764,6 +765,14 @@ export class EpochCache {
 
   getCommitteeCountPerSlot(epoch: Epoch): number {
     return this.getShufflingAtEpoch(epoch).committeesPerSlot;
+  }
+
+  /**
+   * Inclusion list committee for `slot`, derived from beacon committees of that slot.
+   * Spec: heze/beacon-chain.md `get_inclusion_list_committee`.
+   */
+  getInclusionListCommittee(slot: Slot): Uint32Array {
+    return getInclusionListCommittee(this.getShufflingAtSlot(slot), slot);
   }
 
   /**

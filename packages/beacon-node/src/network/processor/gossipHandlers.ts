@@ -1084,14 +1084,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       try {
-        const insertOutcome = chain.inclusionListPool.add(inclusionList);
-        metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
-
         const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
         metrics?.inclusionListArrivalTime.observe(secFromSlot);
-        chain.forkChoice.onInclusionList(inclusionList, secFromSlot);
+        // Spec heze/fork-choice.md `on_inclusion_list`: is_timely iff arrival is before
+        // INCLUSION_LIST_DUE_BPS share of slot. Spec `process_inclusion_list` runs inside `add`.
+        const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs();
+        const insertOutcome = chain.inclusionListStore.add(inclusionList, isTimely);
+        metrics?.opPool.inclusionListStoreInsertOutcome.inc({insertOutcome});
       } catch (e) {
-        logger.error("Error adding inclusionList to pool", {}, e as Error);
+        logger.error("Error adding inclusionList to store", {}, e as Error);
       }
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {

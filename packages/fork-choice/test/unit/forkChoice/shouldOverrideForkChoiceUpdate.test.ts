@@ -10,9 +10,7 @@ import {
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
-  InclusionListCommitteeRootStore,
-  InclusionListEquivocatorStore,
-  InclusionListStore,
+  PayloadInclusionListSatisfactionStore,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -146,9 +144,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
-    inclusionLists: new InclusionListStore(),
-    inclusionListEquivocators: new InclusionListEquivocatorStore(),
-    unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
+    payloadInclusionListSatisfaction: new PayloadInclusionListSatisfactionStore(),
   };
 
   const testCases: {

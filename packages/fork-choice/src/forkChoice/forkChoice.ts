@@ -21,7 +21,6 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
-  heze,
   isGloasBeaconBlock,
   phase0,
   ssz,
@@ -53,13 +52,7 @@ import {
   NotReorgedReason,
   ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
-import {
-  CheckpointWithHex,
-  IForkChoiceStore,
-  InclusionListStoreKey,
-  JustifiedBalances,
-  toCheckpointWithHex,
-} from "./store.js";
+import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -227,8 +220,8 @@ export class ForkChoice implements IForkChoice {
       return head;
     }
 
-    // Attempt to return parent block if head is IL unsatisified
-    if (!this.fcStore.unsatisifiedInclusionListBlocks.has(headRoot)) {
+    // Attempt to return parent block if head's payload was recorded as IL-unsatisfied.
+    if (this.fcStore.payloadInclusionListSatisfaction.get(headRoot) !== false) {
       return head;
     }
 
@@ -350,8 +343,13 @@ export class ForkChoice implements IForkChoice {
   /**
    * Decides whether to extend an available payload from the previous slot,
    * corresponding to the beacon block `blockRoot`.
+   * Spec heze/fork-choice.md `should_extend_payload`.
    */
   shouldExtendPayload(blockRoot: RootHex): boolean {
+    // [New in Heze:EIP7805] payload must satisfy inclusion-list constraints.
+    if (this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) === false) {
+      return false;
+    }
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
@@ -975,54 +973,12 @@ export class ForkChoice implements IForkChoice {
     }
   }
 
-  // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(inclusionList: heze.SignedInclusionList, secFromSlot: number): void {
-    const currentSlot = this.fcStore.currentSlot;
-    const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
-    const fork = this.config.getForkName(slot);
-    const msFromSlot = secFromSlot * 1000;
-
-    // If the inclusion list is from the previous slot, ignore it if already past the attestation deadline
-    const isBeforeAttestationDeadline = msFromSlot < this.config.getAttestationDueMs(fork);
-    if (slot === currentSlot - 1 && !isBeforeAttestationDeadline) {
-      return;
-    }
-
-    const isBeforeFreezeDeadline = slot === currentSlot && msFromSlot < this.config.getViewFreezeCutoffMs(fork);
-
-    const equivocators = this.fcStore.inclusionListEquivocators.get([slot, inclusionListCommitteeRoot]);
-
-    // Do not process inclusion lists from known equivocators
-    if (equivocators?.has(validatorIndex)) {
-      return;
-    }
-
-    const storeKey: InclusionListStoreKey = [slot, inclusionListCommitteeRoot];
-    const storedInclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
-    const validatorInclusionLists = storedInclusionLists.filter((il) => il.validatorIndex === validatorIndex);
-
-    if (validatorInclusionLists.length > 0) {
-      const validatorInclusionList = validatorInclusionLists[0];
-
-      // TODO HEZE: Avoid using JSON.stringify to compare ILs
-      if (JSON.stringify(validatorInclusionList) !== JSON.stringify(inclusionList.message)) {
-        // We have equivocation evidence for `validator_index`, record it as equivocator
-        const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();
-        equivocators.add(validatorIndex);
-        this.fcStore.inclusionListEquivocators.set(storeKey, equivocators);
-        this.metrics?.forkChoice.inclusionListsEquivocating.inc();
-      }
-    } else if (isBeforeFreezeDeadline) {
-      const inclusionLists = this.fcStore.inclusionLists.get(storeKey) ?? [];
-      inclusionLists.push(inclusionList.message);
-      this.fcStore.inclusionLists.set(storeKey, inclusionLists);
-    }
-
-    return;
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void {
+    this.fcStore.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
   }
 
-  addInclusionListUnsatisfiedBlock(blockRoot: RootHex) {
-    this.fcStore.unsatisifiedInclusionListBlocks.add(blockRoot);
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    return this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) === true;
   }
 
   /**

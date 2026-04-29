@@ -1,5 +1,5 @@
 import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {Root, RootHex, Slot, ValidatorIndex, heze, phase0} from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {CheckpointWithBalance, CheckpointWithTotalBalance} from "./interface.js";
 
@@ -12,11 +12,8 @@ export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 
 export type JustifiedBalances = EffectiveBalanceIncrements;
 
-export type InclusionListStoreKey = [Slot, Root];
-// TODO HEZE: Need prune mechanism to these three
-export class InclusionListStore extends Map<InclusionListStoreKey, heze.InclusionList[]> {}
-export class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {}
-export class InclusionListCommitteeRootStore extends Set<RootHex> {}
+/** Spec heze/fork-choice.md `Store.payload_inclusion_list_satisfaction`. */
+export class PayloadInclusionListSatisfactionStore extends Map<RootHex, boolean> {}
 
 /**
  * Returns the justified balances of checkpoint.
@@ -50,9 +47,7 @@ export interface IForkChoiceStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
-  inclusionLists: InclusionListStore;
-  inclusionListEquivocators: InclusionListEquivocatorStore;
-  unsatisifiedInclusionListBlocks: InclusionListCommitteeRootStore;
+  payloadInclusionListSatisfaction: PayloadInclusionListSatisfactionStore;
 }
 
 /**
@@ -66,9 +61,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
   equivocatingIndices = new Set<ValidatorIndex>();
   justifiedBalancesGetter: JustifiedBalancesGetter;
   currentSlot: Slot;
-  inclusionLists = new InclusionListStore();
-  inclusionListEquivocators = new InclusionListEquivocatorStore();
-  unsatisifiedInclusionListBlocks = new InclusionListCommitteeRootStore();
+  payloadInclusionListSatisfaction = new PayloadInclusionListSatisfactionStore();
 
   constructor(
     currentSlot: Slot,

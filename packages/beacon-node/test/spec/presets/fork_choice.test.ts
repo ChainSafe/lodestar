@@ -617,7 +617,7 @@ const forkChoiceTest =
           name.includes("justified_update_always_if_better") ||
           name.includes("justified_update_not_realized_finality") ||
           // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
-          (name.includes("gloas") &&
+          ((name.includes("gloas") || name.includes("heze")) &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
               name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||

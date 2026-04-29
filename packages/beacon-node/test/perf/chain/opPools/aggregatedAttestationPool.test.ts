@@ -4,9 +4,7 @@ import {
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
-  InclusionListCommitteeRootStore,
-  InclusionListEquivocatorStore,
-  InclusionListStore,
+  PayloadInclusionListSatisfactionStore,
   ProtoArray,
 } from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -147,9 +145,7 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
-        inclusionLists: new InclusionListStore(),
-        inclusionListEquivocators: new InclusionListEquivocatorStore(),
-        unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
+        payloadInclusionListSatisfaction: new PayloadInclusionListSatisfactionStore(),
       };
       forkchoice = new ForkChoice(originalState.config, fcStore, protoArray, originalState.validators.length, null);
     },

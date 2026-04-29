@@ -13,8 +13,6 @@ describe("FIFOBlockStateCache", () => {
     shuffling: new Uint32Array(),
     committees: [],
     committeesPerSlot: 1,
-    inclusionListCommittees: [],
-    inclusionListCommitteeRoots: [],
   };
 
   const state1 = new BeaconStateView(generateCachedState({slot: 0}));

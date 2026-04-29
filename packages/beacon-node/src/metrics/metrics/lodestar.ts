@@ -10,7 +10,7 @@ import {
   type InvalidAttestationData,
   ScannedSlotsTerminationReason,
 } from "../../chain/opPools/aggregatedAttestationPool.js";
-import {InclusionListInsertOutcome} from "../../chain/opPools/inclusionListPool.js";
+import {InclusionListInsertOutcome} from "../../chain/opPools/inclusionListStore.js";
 import {InsertOutcome} from "../../chain/opPools/types.js";
 import {RegenCaller, RegenFnName} from "../../chain/regen/interface.js";
 import {ReprocessStatus} from "../../chain/reprocess.js";
@@ -1179,13 +1179,13 @@ export function createLodestarMetrics(
         help: "Total number of InsertOutcome as a result of adding a SyncCommitteeMessage to pool",
         labelNames: ["insertOutcome"],
       }),
-      inclusionListPoolSize: register.gauge({
-        name: "lodestar_oppool_inclusion_list_pool_size",
-        help: "Current size of the InclusionListPool = total inclusion lists unique by validator and slot",
+      inclusionListStoreSize: register.gauge({
+        name: "lodestar_oppool_inclusion_list_store_size",
+        help: "Total inclusion lists in the InclusionListStore across all (slot, committee_root) keys",
       }),
-      inclusionListPoolInsertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
-        name: "lodestar_inclusion_list_pool_insert_outcome_total",
-        help: "Total number of InsertOutcome as a result of adding an inclusion list in a pool",
+      inclusionListStoreInsertOutcome: register.counter<{insertOutcome: InclusionListInsertOutcome}>({
+        name: "lodestar_inclusion_list_store_insert_outcome_total",
+        help: "Total InsertOutcome as a result of processing an inclusion list",
         labelNames: ["insertOutcome"],
       }),
       syncContributionAndProofPool: {

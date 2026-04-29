@@ -49,17 +49,6 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         FULU_FORK_EPOCH: forkEpoch,
         BLOB_SCHEDULE: [],
       });
-    case ForkName.heze:
-      return createChainForkConfig({
-        ALTAIR_FORK_EPOCH: 0,
-        BELLATRIX_FORK_EPOCH: 0,
-        CAPELLA_FORK_EPOCH: 0,
-        DENEB_FORK_EPOCH: 0,
-        ELECTRA_FORK_EPOCH: 0,
-        FULU_FORK_EPOCH: 0,
-        HEZE_FORK_EPOCH: forkEpoch,
-        BLOB_SCHEDULE: [],
-      });
     case ForkName.gloas:
       return createChainForkConfig({
         ALTAIR_FORK_EPOCH: 0,
@@ -68,8 +57,19 @@ export function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         DENEB_FORK_EPOCH: 0,
         ELECTRA_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
-        HEZE_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: forkEpoch,
+        BLOB_SCHEDULE: [],
+      });
+    case ForkName.heze:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: forkEpoch,
         BLOB_SCHEDULE: [],
       });
   }

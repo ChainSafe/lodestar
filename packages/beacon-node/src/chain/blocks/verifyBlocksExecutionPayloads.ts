@@ -8,14 +8,20 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq, isForkPostHeze} from "@lodestar/params";
-import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
+import {
+  BeaconStateView,
+  type CachedBeaconStateHeze,
+  IBeaconStateView,
+  isExecutionBlockBodyType,
+  isStatePostBellatrix,
+} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {InclusionListPool} from "../opPools/inclusionListPool.js";
+import {InclusionListStore} from "../opPools/inclusionListStore.js";
 import {BlockProcessOpts} from "../options.js";
 import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
@@ -28,7 +34,7 @@ export type VerifyBlockExecutionPayloadModules = {
   metrics: Metrics | null;
   forkChoice: IForkChoice;
   config: ChainForkConfig;
-  inclusionListPool: InclusionListPool;
+  inclusionListStore: InclusionListStore;
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};
@@ -173,8 +179,16 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
+  // Spec heze/inclusion-list.md `get_inclusion_list_transactions` for slot - 1 with only_timely=false,
+  // matching the validator's `prepare_execution_payload` and the builder's bid construction so the EL
+  // verifies against the same IL view the proposer/builder used.
+  // preState0 is the state at slot - 1 (block.message.slot - 1) so its IL committee is the relevant one.
   const ilTransactions = isForkPostHeze(fork)
-    ? chain.inclusionListPool.getTransactions(block.message.slot - 1)
+    ? chain.inclusionListStore.getInclusionListTransactions(
+        (preState0 as BeaconStateView).cachedState as CachedBeaconStateHeze,
+        block.message.slot - 1,
+        false
+      )
     : undefined;
 
   const logCtx = {slot: blockInput.slot, executionBlock: executionPayloadEnabled.blockNumber};
@@ -198,6 +212,13 @@ export async function verifyBlockExecutionPayload(
     case ExecutionPayloadStatus.VALID: {
       const executionStatus: ExecutionStatus.Valid = ExecutionStatus.Valid;
       const lvhResponse = {executionStatus, latestValidExecHash: execResult.latestValidHash};
+      // Spec heze/fork-choice.md: record IL satisfaction once the EL accepts the payload.
+      if (isForkPostHeze(fork)) {
+        const blockRoot = toRootHex(
+          chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
+        );
+        chain.forkChoice.recordPayloadInclusionListSatisfaction(blockRoot, true);
+      }
       return {executionStatus, lvhResponse, execError: null};
     }
 
@@ -244,7 +265,7 @@ export async function verifyBlockExecutionPayload(
       const blockRoot = toRootHex(
         chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
       );
-      chain.forkChoice.addInclusionListUnsatisfiedBlock(blockRoot);
+      chain.forkChoice.recordPayloadInclusionListSatisfaction(blockRoot, false);
       chain.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
 
       const execError = new BlockError(block, {

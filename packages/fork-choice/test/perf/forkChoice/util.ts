@@ -6,9 +6,7 @@ import {
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
-  InclusionListCommitteeRootStore,
-  InclusionListEquivocatorStore,
-  InclusionListStore,
+  PayloadInclusionListSatisfactionStore,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -81,9 +79,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     },
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
-    inclusionLists: new InclusionListStore(),
-    inclusionListEquivocators: new InclusionListEquivocatorStore(),
-    unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
+    payloadInclusionListSatisfaction: new PayloadInclusionListSatisfactionStore(),
   };
 
   const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null);

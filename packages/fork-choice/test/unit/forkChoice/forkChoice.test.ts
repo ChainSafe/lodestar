@@ -10,9 +10,7 @@ import {
   ExecutionStatus,
   ForkChoice,
   IForkChoiceStore,
-  InclusionListCommitteeRootStore,
-  InclusionListEquivocatorStore,
-  InclusionListStore,
+  PayloadInclusionListSatisfactionStore,
   PayloadStatus,
   ProtoArray,
   ProtoBlock,
@@ -86,9 +84,7 @@ describe("Forkchoice", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
-    inclusionLists: new InclusionListStore(),
-    inclusionListEquivocators: new InclusionListEquivocatorStore(),
-    unsatisifiedInclusionListBlocks: new InclusionListCommitteeRootStore(),
+    payloadInclusionListSatisfaction: new PayloadInclusionListSatisfactionStore(),
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {

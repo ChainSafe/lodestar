@@ -101,10 +101,6 @@ export function getForkChoiceMetrics(register: MetricsRegisterExtra) {
           help: "Count of new vote validators processed",
         }),
       },
-      inclusionListsEquivocating: register.counter({
-        name: "beacon_inclusion_lists_equivocating_total",
-        help: "Total number of equivocating inclusion lists",
-      }),
       unsatisfiedInclusionListBlocks: register.counter({
         name: "beacon_inclusion_list_unsatisfied_blocks_total",
         help: "Total number of unsatisfied inclusion list blocks",

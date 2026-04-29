@@ -85,7 +85,7 @@ import {
   AggregatedAttestationPool,
   AttestationPool,
   ExecutionPayloadBidPool,
-  InclusionListPool,
+  InclusionListStore,
   OpPool,
   PayloadAttestationPool,
   SyncCommitteeMessagePool,
@@ -178,7 +178,7 @@ export class BeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool;
-  readonly inclusionListPool: InclusionListPool;
+  readonly inclusionListStore: InclusionListStore;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
   readonly opPool: OpPool;
@@ -305,7 +305,7 @@ export class BeaconChain implements IBeaconChain {
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
-    this.inclusionListPool = new InclusionListPool(config, clock);
+    this.inclusionListStore = new InclusionListStore(config, clock);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);
@@ -1426,7 +1426,7 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.payloadAttestationPool.size.set(this.payloadAttestationPool.size);
     metrics.opPool.executionPayloadBidPool.size.set(this.executionPayloadBidPool.size);
     // syncContributionAndProofPool tracks metrics on its own
-    metrics.opPool.inclusionListPoolSize.set(this.inclusionListPool.size);
+    metrics.opPool.inclusionListStoreSize.set(this.inclusionListStore.size);
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
@@ -1452,7 +1452,7 @@ export class BeaconChain implements IBeaconChain {
     this.attestationPool.prune(slot);
     this.aggregatedAttestationPool.prune(slot);
     this.syncCommitteeMessagePool.prune(slot);
-    this.inclusionListPool.prune(slot);
+    this.inclusionListStore.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);

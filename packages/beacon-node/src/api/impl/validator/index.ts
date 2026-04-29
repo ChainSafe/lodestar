@@ -22,11 +22,11 @@ import {
   IBeaconStateView,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
-  calculateInclusionListCommitteeAssignments,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getCurrentSlot,
+  getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
   proposerShufflingDecisionRoot,
@@ -1482,19 +1482,27 @@ export function getValidatorApi(
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state, indices);
-      const decisionRoot = state.getShufflingDecisionRoot(epoch);
-      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
-      if (!shuffling) {
-        throw new ApiError(
-          500,
-          `No shuffling found to calculate committee assignments for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
-        );
+      const requestedSet = new Set(indices);
+      const epochStartSlot = computeStartSlotAtEpoch(epoch);
+      const shuffling = state.getShufflingAtEpoch(epoch);
+      const dutyByValidator = new Map<ValidatorIndex, {slot: Slot; committeeRoot: Uint8Array}>();
+
+      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+        const slot = epochStartSlot + i;
+        const committee = getInclusionListCommittee(shuffling, slot);
+        let committeeRoot: Uint8Array | null = null;
+        for (const validatorIndex of committee) {
+          if (requestedSet.has(validatorIndex) && !dutyByValidator.has(validatorIndex)) {
+            committeeRoot ??= ssz.heze.InclusionListCommittee.hashTreeRoot([...committee]);
+            dutyByValidator.set(validatorIndex, {slot, committeeRoot});
+          }
+        }
       }
-      const committeeAssignments = calculateInclusionListCommitteeAssignments(shuffling, indices);
+
       const duties: routes.validator.InclusionListDuty[] = [];
       for (let i = 0, len = indices.length; i < len; i++) {
         const validatorIndex = indices[i];
-        const duty = committeeAssignments.get(validatorIndex);
+        const duty = dutyByValidator.get(validatorIndex);
         if (duty) {
           duties.push({
             pubkey: pubkeys[i],
@@ -1694,10 +1702,10 @@ export function getValidatorApi(
       await validateApiInclusionList(chain, signedInclusionList);
       timer?.({source: InclusionListSource.api});
 
-      chain.inclusionListPool.add(signedInclusionList);
-
       const secFromSlot = chain.clock.secFromSlot(slot, Date.now() / 1000);
-      chain.forkChoice.onInclusionList(signedInclusionList, secFromSlot);
+      // API-published ILs are treated as timely if within the spec inclusion-list deadline.
+      const isTimely = secFromSlot * 1000 < chain.config.getInclusionListDueMs();
+      chain.inclusionListStore.add(signedInclusionList, isTimely);
 
       chain.emitter.emit(routes.events.EventType.inclusionList, {
         version: config.getForkName(signedInclusionList.message.slot),
