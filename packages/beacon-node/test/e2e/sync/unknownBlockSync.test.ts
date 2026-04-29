@@ -123,10 +123,10 @@ describe("sync / unknown block sync thru gloas", () => {
         testLoggerOpts,
       });
 
-      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close().catch(() => {}))));
-
-      // stop bn after validators
       afterEachCallbacks.push(() => bn.close().catch(() => {}));
+      // Cleanup callbacks run LIFO: close validators before Node A so a late
+      // proposal tick cannot call into a closing beacon node.
+      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close().catch(() => {}))));
 
       const payloadEvent = await waitForTargetPayloadOnNodeA;
       loggerNodeA.info("Node A selected gloas payload target", {slot: payloadEvent.slot, root: payloadEvent.blockRoot});
@@ -178,6 +178,18 @@ describe("sync / unknown block sync thru gloas", () => {
         forkName: bn.chain.config.getForkName(headSlot),
         daOutOfRange: false,
       });
+      if (event === ChainEvent.blockUnknownParent || event === ChainEvent.incompleteBlockInput) {
+        // This test injects a BlockInput directly into Node B, bypassing the gossip handler
+        // that normally seeds PayloadEnvelopeInput for Gloas blocks before unknown sync sees it.
+        bn2.chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex: headRootHex,
+          block: head,
+          forkName: headInput.forkName,
+          sampledColumns: bn2.chain.custodyConfig.sampledColumns,
+          custodyColumns: bn2.chain.custodyConfig.custodyColumns,
+          timeCreatedSec: headInput.getTimeComplete(),
+        });
+      }
       const waitForPayloadImported = expectsPayloadImport
         ? waitForEvent<routes.events.EventData[routes.events.EventType.executionPayload]>(
             bn2.chain.emitter,

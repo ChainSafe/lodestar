@@ -261,6 +261,17 @@ const forkChoiceTest =
                     seenTimestampSec: 0,
                     daOutOfRange: false,
                   });
+                  // importBlock requires a PayloadEnvelopeInput to exist for gloas blocks; in
+                  // production this is seeded by gossip / by-root / by-range / API producers.
+                  // Spec tests bypass those, so seed it here to mirror the gossip-handler path.
+                  chain.seenPayloadEnvelopeInputCache.add({
+                    blockRootHex,
+                    block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                    forkName: fork,
+                    sampledColumns: chain.custodyConfig.sampledColumns,
+                    custodyColumns: chain.custodyConfig.custodyColumns,
+                    timeCreatedSec: Date.now() / 1000,
+                  });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
                     columns = [];

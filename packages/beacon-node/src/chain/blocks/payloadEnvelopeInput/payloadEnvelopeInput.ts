@@ -156,6 +156,7 @@ export class PayloadEnvelopeInput {
       throw new Error("Payload envelope beacon_block_root mismatch");
     }
 
+    // TODO GLOAS: track source by metrics, maybe inside the seen cache
     const source: SourceMeta = {
       source: props.source,
       seenTimestampSec: props.seenTimestampSec,
