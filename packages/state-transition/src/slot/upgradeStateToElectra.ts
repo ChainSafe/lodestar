@@ -79,7 +79,7 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   const tmpElectraState = getCachedBeaconState(stateElectraView, stateDeneb);
   stateElectraView.exitBalanceToConsume = BigInt(getActivationExitChurnLimit(tmpElectraState.epochCtx));
   stateElectraView.consolidationBalanceToConsume = BigInt(
-    getConsolidationChurnLimit(tmpElectraState.epochCtx, ForkSeq.electra)
+    getConsolidationChurnLimit(ForkSeq.electra, tmpElectraState.epochCtx)
   );
 
   preActivation.sort((i0, i1) => {

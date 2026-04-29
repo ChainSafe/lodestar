@@ -78,7 +78,7 @@ export function computeConsolidationEpochAndUpdateChurn(
     state.earliestConsolidationEpoch,
     computeActivationExitEpoch(state.epochCtx.epoch)
   );
-  const perEpochConsolidationChurn = getConsolidationChurnLimit(state.epochCtx, fork);
+  const perEpochConsolidationChurn = getConsolidationChurnLimit(fork, state.epochCtx);
 
   // New epoch for consolidations
   let consolidationBalanceToConsume =

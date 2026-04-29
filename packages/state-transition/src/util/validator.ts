@@ -116,7 +116,7 @@ export function getExitChurnLimit(epochCtx: EpochCache): number {
  * Spec (electra): get_consolidation_churn_limit (uses combined balance churn minus activation+exit churn)
  * Spec (gloas): get_consolidation_churn_limit (independent quotient, no MIN floor)
  */
-export function getConsolidationChurnLimit(epochCtx: EpochCache, fork: ForkSeq): number {
+export function getConsolidationChurnLimit(fork: ForkSeq, epochCtx: EpochCache): number {
   if (fork >= ForkSeq.gloas) {
     // No MIN floor — pass 0 so getBalanceChurnLimit's max(churn, min) is a no-op.
     return getBalanceChurnLimit(

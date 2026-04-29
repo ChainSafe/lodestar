@@ -47,7 +47,7 @@ export function processConsolidationRequest(
 
   // If there is too little available consolidation churn limit, consolidation requests are ignored
   const fork = state.config.getForkSeq(state.slot);
-  if (getConsolidationChurnLimit(state.epochCtx, fork) <= MIN_ACTIVATION_BALANCE) {
+  if (getConsolidationChurnLimit(fork, state.epochCtx) <= MIN_ACTIVATION_BALANCE) {
     return;
   }
 
