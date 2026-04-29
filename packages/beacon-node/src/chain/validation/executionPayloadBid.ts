@@ -50,7 +50,8 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been
   // seen — i.e. `proposal_slot == bid.slot` AND `dependent_root ==
-  // get_checkpoint_block(store, bid.parent_block_root, compute_epoch_at_slot(bid.slot) - 1)`.
+  // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`,
+  // where `parent_state` is the post-state of `bid.parent_block_root`.
   // This is the message referenced as `proposer_preferences` in the following REJECT rules.
   // TODO GLOAS: Implement once a ProposerPreferencesPool exists.
 

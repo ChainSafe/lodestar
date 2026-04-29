@@ -4,7 +4,7 @@ import {
   createSingleSignatureSetFromComponents,
   getProposerPreferencesSigningRoot,
 } from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {ValidatorIndex, gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -43,10 +43,26 @@ export async function validateGossipProposerPreferences(
   }
 
   // [IGNORE] The block with root `dependent_root` has been seen by the node.
-  // Sync lookup only to not trigger disk reload from gossip input.
-  const cpEpoch = proposalEpoch - 1;
-  const checkpointState = chain.regen.getCheckpointStateSync({epoch: cpEpoch, rootHex: dependentRootHex});
-  if (checkpointState === null) {
+  // Resolve the proposer lookahead for the message's branch:
+  // 1. Fast path: head state already covers `dependent_root` (matches `currentDecisionRoot`
+  //    or `nextDecisionRoot`). Avoids a cache lookup and handles narrow timing windows
+  //    where the previous-root checkpoint state isn't (yet) populated.
+  // 2. Fallback: previous-root checkpoint state at `(proposalEpoch - 1, dependent_root)`,
+  //    populated by `processSlotsToNearestCheckpoint` for any imported branch crossing the
+  //    boundary into `proposalEpoch - 1`. Sync lookup only — never triggers disk reload.
+  const headState = chain.getHeadState();
+  let proposers: ValidatorIndex[] | null = null;
+  if (headState.epoch === proposalEpoch && headState.currentDecisionRoot === dependentRootHex) {
+    proposers = headState.currentProposers;
+  } else if (headState.epoch === proposalEpoch - 1 && headState.nextDecisionRoot === dependentRootHex) {
+    proposers = headState.nextProposers;
+  } else {
+    const checkpointState = chain.regen.getCheckpointStateSync({epoch: proposalEpoch - 1, rootHex: dependentRootHex});
+    if (checkpointState !== null) {
+      proposers = checkpointState.nextProposers;
+    }
+  }
+  if (proposers === null) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.UNKNOWN_DEPENDENT_ROOT,
       proposalSlot,
@@ -55,10 +71,7 @@ export async function validateGossipProposerPreferences(
   }
 
   // [REJECT] `is_valid_proposal_slot(state, preferences)` returns True.
-  // The checkpoint state is at `proposalEpoch - 1`, so the proposer for `proposalSlot`
-  // (which is in the next epoch from the state's perspective) lives in `nextProposers`.
-  const expectedProposer = checkpointState.nextProposers[proposalSlot % SLOTS_PER_EPOCH];
-  if (expectedProposer !== validatorIndex) {
+  if (proposers[proposalSlot % SLOTS_PER_EPOCH] !== validatorIndex) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_PROPOSER,
       proposalSlot,
