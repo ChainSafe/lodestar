@@ -87,17 +87,12 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/epoch_processing\/pending_consolidations\/.*/,
     /^gloas\/epoch_processing\/pending_deposits\/.*/,
     /^gloas\/epoch_processing\/pending_deposits_churn\/.*/,
-    // TODO: re-enable after gloas misc batch (consensus-specs#5172 genesis fix) lands
-    /^gloas\/sanity\/.*/,
-    /^gloas\/finality\/.*/,
+    // TODO: state-transition divergence in multi-block scenarios after the genesis fix from
+    // consensus-specs#5172; investigate latest_block_hash vs bid.block_hash flow before unskipping.
+    /^gloas\/sanity\/blocks\/.*/,
     /^gloas\/random\/.*/,
-    /^gloas\/transition\/.*/,
-    /^gloas\/fork\/.*/,
-    /^gloas\/fork_choice\/.*/,
-    /^gloas\/rewards\/.*/,
-    /^gloas\/operations\/withdrawals\/.*/,
-    // TODO: re-enable after consensus-specs#5152 (parent_beacon_block_root in ExecutionPayloadEnvelope)
-    /^gloas\/ssz_static\/(Signed)?ExecutionPayloadEnvelope\/.*/,
+    /^gloas\/transition\/core\/.*/,
+    /^gloas\/fork_choice\/reorg\/.*/,
     // TODO: re-enable after consensus-specs#5135 (anchor seed for payload votes)
     /^gloas\/operations\/payload_attestation\/.*/,
     // TODO: re-enable after consensus-specs#5178 (light client extension for gloas)

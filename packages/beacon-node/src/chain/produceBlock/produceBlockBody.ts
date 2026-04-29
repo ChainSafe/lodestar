@@ -111,6 +111,8 @@ export type ProduceFullGloas = {
   executionRequests: electra.ExecutionRequests;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
+  /** parent_root of the block this payload is for, needed to populate the envelope's parent_beacon_block_root field. */
+  parentBlockRoot: Root;
 };
 export type ProduceFullFulu = {
   type: BlockType.Full;
@@ -317,6 +319,7 @@ export async function produceBlockBody<T extends BlockType>(
     gloasResult.executionRequests = executionRequests;
     gloasResult.blobsBundle = blobsBundle;
     gloasResult.cells = cells;
+    gloasResult.parentBlockRoot = fromHex(parentBlock.blockRoot);
 
     const fetchedTime = Date.now() / 1000 - computeTimeAtSlot(this.config, blockSlot, this.genesisTime);
     this.metrics?.blockPayload.payloadFetchedTime.observe({prepType}, fetchedTime);

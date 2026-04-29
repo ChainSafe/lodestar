@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
-import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -160,7 +160,8 @@ export async function importExecutionPayload(
       fork,
       envelope.payload,
       payloadInput.getVersionedHashes(),
-      fromHex(protoBlock.parentRoot),
+      // Spec (gloas/EIP-5152): use envelope.parentBeaconBlockRoot rather than re-deriving from state.
+      envelope.parentBeaconBlockRoot,
       envelope.executionRequests
     ),
 
