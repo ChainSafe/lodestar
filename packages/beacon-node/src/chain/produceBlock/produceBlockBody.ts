@@ -49,7 +49,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {
   IExecutionBuilder,
