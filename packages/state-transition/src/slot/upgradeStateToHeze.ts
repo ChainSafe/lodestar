@@ -1,16 +1,32 @@
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateGloas, CachedBeaconStateHeze, getCachedBeaconState} from "../cache/stateCache.js";
+import {getCachedBeaconState} from "../cache/stateCache.js";
+import {CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 
 /**
  * Upgrade a state from Gloas to Heze.
- *
- * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/heze/fork.md
  */
 export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBeaconStateHeze {
   const {config} = stateGloas;
 
   const stateGloasNode = ssz.gloas.BeaconState.commitViewDU(stateGloas);
   const stateHezeView = ssz.heze.BeaconState.getViewDU(stateGloasNode);
+
+  const oldBid = stateGloas.latestExecutionPayloadBid;
+  const newBid = ssz.heze.ExecutionPayloadBid.defaultViewDU();
+  newBid.parentBlockHash = oldBid.parentBlockHash;
+  newBid.parentBlockRoot = oldBid.parentBlockRoot;
+  newBid.blockHash = oldBid.blockHash;
+  newBid.prevRandao = oldBid.prevRandao;
+  newBid.feeRecipient = oldBid.feeRecipient;
+  newBid.gasLimit = oldBid.gasLimit;
+  newBid.builderIndex = oldBid.builderIndex;
+  newBid.slot = oldBid.slot;
+  newBid.value = oldBid.value;
+  newBid.executionPayment = oldBid.executionPayment;
+  newBid.blobKzgCommitments = oldBid.blobKzgCommitments;
+  newBid.executionRequestsRoot = oldBid.executionRequestsRoot;
+  stateHezeView.latestExecutionPayloadBid = newBid;
+
   const stateHeze = getCachedBeaconState(stateHezeView, stateGloas);
 
   stateHeze.fork = ssz.phase0.Fork.toViewDU({
@@ -19,8 +35,10 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
     epoch: stateGloas.epochCtx.epoch,
   });
 
-  // Commit new added fields ViewDU to the root node
   stateHeze.commit();
-  // No need to clear cache since no index is replaced, only appended at the end
+  // Clear cache to ensure the cache of gloas fields is not used by new heze fields
+  // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
+  stateHeze["clearCache"]();
+
   return stateHeze;
 }
