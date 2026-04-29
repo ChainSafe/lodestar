@@ -121,15 +121,11 @@ export async function importBlock(
   // For range sync we skip triggerGetBlobs because column fetching is handled in the range path.
   if (fork >= ForkSeq.gloas && !opts.fromRangeSync) {
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    // PayloadEnvelopeInput is supposed to have right after we have block
+    // there are 4 sources of them: gossip, by root, by range and api
     if (!payloadInput) {
       throw Error(`PayloadEnvelopeInput not seeded for block ${blockRootHex} before importBlock`);
     }
-    this.logger.debug("PayloadEnvelopeInput ready for block", {
-      slot: blockSlot,
-      root: blockRootHex,
-      source: source.source,
-      ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
-    });
 
     // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
     // which is all the information we need so there is no reason to delay until execution payload arrives
