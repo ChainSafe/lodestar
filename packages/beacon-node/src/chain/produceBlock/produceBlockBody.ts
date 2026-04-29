@@ -225,12 +225,6 @@ export async function produceBlockBody<T extends BlockType>(
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
     } else {
       parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      // At gloas genesis the committed bid has no prior EL block to reference
-      // (`bid.parentBlockHash` is zero). Fall back to `bid.blockHash` (= eth1 genesis hash) so the
-      // FCU to the EL carries a valid head. Post-genesis bids always reference a non-zero parent.
-      if (byteArrayEquals(parentBlockHash, ZERO_HASH)) {
-        parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
-      }
       parentExecutionRequests = ssz.electra.ExecutionRequests.defaultValue();
     }
     const prepareRes = await prepareExecutionPayload(
