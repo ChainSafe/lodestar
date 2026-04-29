@@ -10,7 +10,7 @@ import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 /**
  * Process parent execution payload effects as the first step of processBlock.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-process_parent_execution_payload
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-process_parent_execution_payload
  */
 export function processParentExecutionPayload(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const bid = block.body.signedExecutionPayloadBid.message;
@@ -42,7 +42,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  * Called from processParentExecutionPayload during block processing, and from the validator during
  * block production before computing withdrawals.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
 export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: electra.ExecutionRequests): void {
   const fork = state.config.getForkSeq(state.slot);
@@ -94,7 +94,7 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
  * Settle a builder payment at the given index: move its withdrawal (if any) to the
  * pending withdrawals list and clear the payment slot.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-settle_builder_payment
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-settle_builder_payment
  */
 function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: number): void {
   if (paymentIndex >= state.builderPendingPayments.length) {
