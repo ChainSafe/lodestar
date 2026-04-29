@@ -97,7 +97,10 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after alpha.7 is released and https://github.com/ChainSafe/lodestar/pull/9303 is merged
     /^gloas\/ssz_static\/(Signed)?ProposerPreferences\/.*/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // TODO-GLOAS: re-enable after gloas light client is implemented
+    /\/gloas_fork$/,
+  ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["fast_confirmation", "networking"],
 };
