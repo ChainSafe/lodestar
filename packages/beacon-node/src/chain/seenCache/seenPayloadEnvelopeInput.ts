@@ -78,8 +78,9 @@ export class SeenPayloadEnvelopeInput {
   };
 
   add(props: Omit<CreateFromBlockProps, "daOutOfRange">): PayloadEnvelopeInput {
-    if (this.payloadInputs.has(props.blockRootHex)) {
-      throw new Error(`PayloadEnvelopeInput already exists for block ${props.blockRootHex}`);
+    const existing = this.payloadInputs.get(props.blockRootHex);
+    if (existing !== undefined) {
+      return existing;
     }
     const daOutOfRange = isDaOutOfRange(this.config, props.forkName, props.block.message.slot, this.clock.currentEpoch);
     const input = PayloadEnvelopeInput.createFromBlock({...props, daOutOfRange});
