@@ -70,11 +70,6 @@ describe("sync / unknown block sync thru gloas", () => {
       expectsPayloadImport: true,
     },
     {
-      id: "should do an envelopeUnknownBlock sync from another BN",
-      event: ChainEvent.envelopeUnknownBlock,
-      expectsPayloadImport: true,
-    },
-    {
       id: "should do an incompletePayloadEnvelope sync from another BN",
       event: ChainEvent.incompletePayloadEnvelope,
       expectsPayloadImport: true,
@@ -232,20 +227,6 @@ describe("sync / unknown block sync thru gloas", () => {
             source: BlockInputSource.gossip,
           });
           break;
-        case ChainEvent.envelopeUnknownBlock: {
-          // Node A produced the head; its cache has the full signed envelope (populated via
-          // publishExecutionPayloadEnvelope -> payloadInput.addPayloadEnvelope).
-          const payloadInputOnA = bn.chain.seenPayloadEnvelopeInputCache.get(headRootHex);
-          if (!payloadInputOnA?.hasPayloadEnvelope()) {
-            throw Error(`Expected node A to have signed envelope for ${headRootHex}`);
-          }
-          bn2.chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
-            envelope: payloadInputOnA.getPayloadEnvelope(),
-            peer: sourcePeerId,
-            source: BlockInputSource.gossip,
-          });
-          break;
-        }
         case ChainEvent.incompletePayloadEnvelope: {
           // get the chain started with an unknownBlockRoot
           bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
