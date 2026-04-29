@@ -11,10 +11,10 @@ import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
-// TODO EIP-7805: Do we need 2 epochs like attestations?
+// TODO HEZE: Do we need 2 epochs like attestations?
 const HISTORICAL_DUTIES_EPOCHS = 2;
 
-const EIP7805_FORK_LOOKAHEAD_EPOCHS = 1;
+const HEZE_FORK_LOOKAHEAD_EPOCHS = 1;
 
 type InclusionListDuty = routes.validator.InclusionListDuty;
 // To assist with readability
@@ -111,8 +111,8 @@ export class InclusionListDutiesService {
   };
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
-    // Before EIP-7805 fork (+ lookahead) no need to check duties
-    if (epoch < this.config.EIP7805_FORK_EPOCH - EIP7805_FORK_LOOKAHEAD_EPOCHS) {
+    // Before HEZE fork (+ lookahead) no need to check duties
+    if (epoch < this.config.HEZE_FORK_EPOCH - HEZE_FORK_LOOKAHEAD_EPOCHS) {
       return;
     }
 

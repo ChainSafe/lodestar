@@ -111,7 +111,7 @@ function buildInclusionListCommitteeFromShuffling(shuffling: Uint32Array): {
     const endOffset = startOffSet + INCLUSION_LIST_COMMITTEE_SIZE;
 
     const slotCommittee = shuffling.subarray(startOffSet, endOffset);
-    const committeeRoot = ssz.eip7805.InclusionListCommittee.hashTreeRoot([...slotCommittee]);
+    const committeeRoot = ssz.heze.InclusionListCommittee.hashTreeRoot([...slotCommittee]);
     committees.push(slotCommittee);
     committeeRoots.push(committeeRoot);
   }

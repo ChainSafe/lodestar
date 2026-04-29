@@ -43,10 +43,10 @@ import {
   altair,
   capella,
   deneb,
-  eip7805,
   electra,
   fulu,
   gloas,
+  heze,
   ssz,
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
@@ -636,7 +636,7 @@ export async function produceBlockBody<T extends BlockType>(
 /**
  * Produce ExecutionPayload for post-merge.
  *
- * TODO EIP-7805: call ILStore to get IL txs. Feed them into PayloadAttributes
+ * TODO HEZE: call ILStore to get IL txs. Feed them into PayloadAttributes
  */
 export async function prepareExecutionPayload(
   chain: {
@@ -865,10 +865,10 @@ function preparePayloadAttributes(
     (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
   }
 
-  if (ForkSeq[fork] >= ForkSeq.eip7805) {
+  if (ForkSeq[fork] >= ForkSeq.heze) {
     const transactions = chain.inclusionListPool.getTransactions(prepareSlot - 1);
-    (payloadAttributes as eip7805.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = transactions;
-    chain.metrics?.eip7805.inclusionListTransactionsPrepareExecutionPayload.inc(transactions.length);
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = transactions;
+    chain.metrics?.inclusionListTransactionsPrepareExecutionPayload.inc(transactions.length);
   }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {

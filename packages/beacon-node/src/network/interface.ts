@@ -31,9 +31,9 @@ import {
   altair,
   capella,
   deneb,
-  eip7805,
   fulu,
   gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
@@ -112,7 +112,7 @@ export interface INetwork extends INetworkCorePublic {
   publishContributionAndProof(contributionAndProof: altair.SignedContributionAndProof): Promise<number>;
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
-  publishInclusionList(inclusionList: eip7805.SignedInclusionList): Promise<number>;
+  publishInclusionList(inclusionList: heze.SignedInclusionList): Promise<number>;
   publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
   publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
 

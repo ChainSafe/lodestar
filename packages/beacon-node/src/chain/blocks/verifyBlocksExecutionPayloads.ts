@@ -7,7 +7,7 @@ import {
   LVHValidResponse,
   ProtoBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq, isForkPostEip7805} from "@lodestar/params";
+import {ForkSeq, isForkPostHeze} from "@lodestar/params";
 import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
@@ -173,7 +173,7 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
-  const ilTransactions = isForkPostEip7805(fork)
+  const ilTransactions = isForkPostHeze(fork)
     ? chain.inclusionListPool.getTransactions(block.message.slot - 1)
     : undefined;
 
@@ -188,7 +188,7 @@ export async function verifyBlockExecutionPayload(
     ilTransactions
   );
   if (ilTransactions) {
-    chain.metrics?.eip7805.inclusionListTransactionsNotifyNewPayload.inc(ilTransactions.length);
+    chain.metrics?.inclusionListTransactionsNotifyNewPayload.inc(ilTransactions.length);
   }
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 

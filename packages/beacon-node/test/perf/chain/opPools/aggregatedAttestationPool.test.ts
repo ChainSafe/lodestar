@@ -75,7 +75,7 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           executionStatus: ExecutionStatus.PreMerge,
 
           timeliness: false,
-          isEip7805Enabled: false,
+          isHezeEnabled: false,
           dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
           parentBlockHash: null,
@@ -104,7 +104,7 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
             executionPayloadBlockHash: null,
             executionStatus: ExecutionStatus.PreMerge,
             timeliness: false,
-            isEip7805Enabled: false,
+            isHezeEnabled: false,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
             parentBlockHash: null,

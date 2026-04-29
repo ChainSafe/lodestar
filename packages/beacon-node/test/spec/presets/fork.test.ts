@@ -7,8 +7,9 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
-  CachedBeaconStateEip7805,
   CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "@lodestar/state-transition";
 import * as slotFns from "@lodestar/state-transition/slot";
@@ -42,11 +43,10 @@ const fork: TestRunnerFn<ForkStateCase, BeaconStateAllForks> = (forkNext) => {
           return slotFns.upgradeStateToElectra(preState as CachedBeaconStateDeneb);
         case ForkName.fulu:
           return slotFns.upgradeStateToFulu(preState as CachedBeaconStateElectra);
-        case ForkName.eip7805:
-          // TODO EIP-7805: likely not needed, there are no state changes
-          throw Error(`Unsupported fork ${forkNext}`);
         case ForkName.gloas:
-          return slotFns.upgradeStateToGloas(preState as CachedBeaconStateEip7805);
+          return slotFns.upgradeStateToGloas(preState as CachedBeaconStateFulu);
+        case ForkName.heze:
+          return slotFns.upgradeStateToHeze(preState as CachedBeaconStateGloas);
       }
     },
     options: {

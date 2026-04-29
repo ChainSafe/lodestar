@@ -24,9 +24,9 @@ import {
   altair,
   capella,
   deneb,
-  eip7805,
   fulu,
   gloas,
+  heze,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
@@ -505,13 +505,13 @@ export class Network implements INetwork {
     );
   }
 
-  async publishInclusionList(inclusionList: eip7805.SignedInclusionList): Promise<number> {
+  async publishInclusionList(inclusionList: heze.SignedInclusionList): Promise<number> {
     const epoch = computeEpochAtSlot(inclusionList.message.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
     return this.publishGossip<GossipType.inclusion_list>(
       {type: GossipType.inclusion_list, boundary},
       inclusionList,
-      {ignoreDuplicatePublishError: true} // TODO EIP-7805: Double check if we want to ignore duplicate error
+      {ignoreDuplicatePublishError: true} // TODO HEZE: Double check if we want to ignore duplicate error
     );
   }
 
@@ -666,11 +666,11 @@ export class Network implements INetwork {
     );
   }
 
-  // TODO EIP-7805: add caller to this function
+  // TODO HEZE: add caller to this function
   async sendInclusionListByCommitteeIndices(
     peerId: PeerIdStr,
-    request: eip7805.InclusionListByCommitteeIndicesRequest
-  ): Promise<eip7805.SignedInclusionList[]> {
+    request: heze.InclusionListByCommitteeIndicesRequest
+  ): Promise<heze.SignedInclusionList[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.InclusionListByCommitteeIndices, [Version.V1], request),
       this.config.MAX_REQUEST_INCLUSION_LIST,

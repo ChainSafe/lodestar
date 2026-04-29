@@ -1,8 +1,10 @@
 import {BitVectorType, ContainerType, ListCompositeType, VectorBasicType} from "@chainsafe/ssz";
 import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_PAYLOAD} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
+import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as fuluSsz} from "../fulu/index.js";
+import {ssz as gloasSsz} from "../gloas/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
@@ -44,32 +46,34 @@ export const DataColumnSidecars = fuluSsz.DataColumnSidecars;
 
 export const BeaconState = new ContainerType(
   {
-    ...fuluSsz.BeaconState.fields,
+    ...gloasSsz.BeaconState.fields,
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
 export const BeaconBlockBody = new ContainerType(
   {
-    ...electraSsz.BeaconBlockBody.fields,
+    ...gloasSsz.BeaconBlockBody.fields,
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const BeaconBlock = new ContainerType(
   {
-    ...fuluSsz.BeaconBlock.fields,
+    ...gloasSsz.BeaconBlock.fields,
   },
   {typeName: "BeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedBeaconBlock = new ContainerType(
   {
-    ...fuluSsz.SignedBeaconBlock.fields,
+    ...gloasSsz.SignedBeaconBlock.fields,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
+// Gloas does not define blinded block types (post-ePBS uses bid/envelope split).
+// Heze inherits the electra blinded types for code paths still expecting them.
 export const BlindedBeaconBlockBody = new ContainerType(
   {
     ...electraSsz.BlindedBeaconBlockBody.fields,
@@ -93,14 +97,14 @@ export const SignedBlindedBeaconBlock = new ContainerType(
 
 export const ExecutionPayload = new ContainerType(
   {
-    ...electraSsz.ExecutionPayload.fields,
+    ...gloasSsz.ExecutionPayload.fields,
   },
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
 export const ExecutionPayloadHeader = new ContainerType(
   {
-    ...electraSsz.ExecutionPayloadHeader.fields,
+    ...denebSsz.ExecutionPayloadHeader.fields,
   },
   {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
@@ -108,7 +112,7 @@ export const ExecutionPayloadHeader = new ContainerType(
 // PayloadAttributes primarily for SSE event
 export const PayloadAttributes = new ContainerType(
   {
-    ...electraSsz.PayloadAttributes.fields,
+    ...gloasSsz.PayloadAttributes.fields,
     inclusionListTransactions: InclusionListTransactions,
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}

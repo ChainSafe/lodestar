@@ -15,8 +15,8 @@ import {
   altair,
   capella,
   deneb,
-  eip7805,
   gloas,
+  heze,
   phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -112,7 +112,7 @@ export type GossipTypeMap = {
   [GossipType.light_client_finality_update]: LightClientFinalityUpdate;
   [GossipType.light_client_optimistic_update]: LightClientOptimisticUpdate;
   [GossipType.bls_to_execution_change]: capella.SignedBLSToExecutionChange;
-  [GossipType.inclusion_list]: eip7805.SignedInclusionList;
+  [GossipType.inclusion_list]: heze.SignedInclusionList;
   [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
@@ -141,7 +141,7 @@ export type GossipFnByType = {
   [GossipType.bls_to_execution_change]: (
     blsToExecutionChange: capella.SignedBLSToExecutionChange
   ) => Promise<void> | void;
-  [GossipType.inclusion_list]: (inclusionList: eip7805.SignedInclusionList) => Promise<void> | void;
+  [GossipType.inclusion_list]: (inclusionList: heze.SignedInclusionList) => Promise<void> | void;
   [GossipType.execution_payload]: (
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
   ) => Promise<void> | void;

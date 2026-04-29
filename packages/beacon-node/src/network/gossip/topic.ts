@@ -121,7 +121,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.bls_to_execution_change:
       return ssz.capella.SignedBLSToExecutionChange;
     case GossipType.inclusion_list:
-      return ssz.eip7805.SignedInclusionList;
+      return ssz.heze.SignedInclusionList;
     case GossipType.execution_payload:
       return ssz.gloas.SignedExecutionPayloadEnvelope;
     case GossipType.payload_attestation_message:
@@ -261,7 +261,7 @@ export function getCoreTopicsAtFork(
     {type: GossipType.attester_slashing},
   ];
 
-  if (ForkSeq[fork] >= ForkSeq.eip7805) {
+  if (ForkSeq[fork] >= ForkSeq.heze) {
     topics.push({type: GossipType.inclusion_list});
   }
 

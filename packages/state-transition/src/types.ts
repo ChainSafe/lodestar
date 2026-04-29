@@ -6,11 +6,11 @@ export type {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
-  CachedBeaconStateEip7805,
   CachedBeaconStateElectra,
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
 } from "./cache/stateCache.js";
 export type {
@@ -19,11 +19,11 @@ export type {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
-  BeaconStateEip7805,
   BeaconStateElectra,
   BeaconStateExecutions,
   BeaconStateFulu,
   BeaconStateGloas,
+  BeaconStateHeze,
   BeaconStatePhase0,
   ShufflingGetter,
 } from "./cache/types.js";

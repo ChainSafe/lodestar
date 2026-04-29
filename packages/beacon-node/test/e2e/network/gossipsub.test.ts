@@ -43,7 +43,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     DENEB_FORK_EPOCH: 1,
     ELECTRA_FORK_EPOCH: 1,
     FULU_FORK_EPOCH: 1,
-    EIP7805_FORK_EPOCH: 1,
+    HEZE_FORK_EPOCH: 1,
   });
   const START_SLOT = computeStartSlotAtEpoch(config.ALTAIR_FORK_EPOCH);
 
@@ -313,12 +313,12 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       }
     }
 
-    const inclusionList = ssz.eip7805.SignedInclusionList.defaultValue();
+    const inclusionList = ssz.heze.SignedInclusionList.defaultValue();
     inclusionList.message.slot = START_SLOT;
     await netA.publishInclusionList(inclusionList);
 
     const received = await onInclusionListPromise;
-    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.eip7805.SignedInclusionList.serialize(inclusionList)));
+    expect(Buffer.from(received)).toEqual(Buffer.from(ssz.heze.SignedInclusionList.serialize(inclusionList)));
   });
 }
 

@@ -6,7 +6,7 @@ import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/networ
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 
 describe("network / gossip / topic", () => {
-  const config = createBeaconConfig({...chainConfig, EIP7805_FORK_EPOCH: 600000, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
+  const config = createBeaconConfig({...chainConfig, HEZE_FORK_EPOCH: 600000, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
@@ -141,10 +141,10 @@ describe("network / gossip / topic", () => {
       {
         topic: {
           type: GossipType.inclusion_list,
-          boundary: {fork: ForkName.eip7805, epoch: config.EIP7805_FORK_EPOCH},
+          boundary: {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH},
           encoding,
         },
-        topicStr: "/eth2/a41d57bd/inclusion_list/ssz_snappy",
+        topicStr: "/eth2/29065f35/inclusion_list/ssz_snappy",
       },
     ],
     [GossipType.execution_payload]: [
@@ -154,7 +154,7 @@ describe("network / gossip / topic", () => {
           boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
           encoding,
         },
-        topicStr: "/eth2/29065f35/execution_payload/ssz_snappy",
+        topicStr: "/eth2/a41d57bd/execution_payload/ssz_snappy",
       },
     ],
     [GossipType.payload_attestation_message]: [
@@ -164,7 +164,7 @@ describe("network / gossip / topic", () => {
           boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
           encoding,
         },
-        topicStr: "/eth2/29065f35/payload_attestation_message/ssz_snappy",
+        topicStr: "/eth2/a41d57bd/payload_attestation_message/ssz_snappy",
       },
     ],
     [GossipType.execution_payload_bid]: [
@@ -174,7 +174,7 @@ describe("network / gossip / topic", () => {
           boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
           encoding,
         },
-        topicStr: "/eth2/29065f35/execution_payload_bid/ssz_snappy",
+        topicStr: "/eth2/a41d57bd/execution_payload_bid/ssz_snappy",
       },
     ],
     [GossipType.proposer_preferences]: [
@@ -184,7 +184,7 @@ describe("network / gossip / topic", () => {
           boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
           encoding,
         },
-        topicStr: "/eth2/29065f35/proposer_preferences/ssz_snappy",
+        topicStr: "/eth2/a41d57bd/proposer_preferences/ssz_snappy",
       },
     ],
   };

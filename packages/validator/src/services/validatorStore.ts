@@ -42,8 +42,8 @@ import {
   ValidatorIndex,
   altair,
   bellatrix,
-  eip7805,
   gloas,
+  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -765,12 +765,12 @@ export class ValidatorStore {
 
   async signInclusionList(
     duty: routes.validator.InclusionListDuty,
-    inclusionList: eip7805.InclusionList
-  ): Promise<eip7805.SignedInclusionList> {
+    inclusionList: heze.InclusionList
+  ): Promise<heze.SignedInclusionList> {
     this.validateInclusionListDuty(duty, inclusionList);
 
     const domain = this.config.getDomain(inclusionList.slot, DOMAIN_INCLUSION_LIST_COMMITTEE);
-    const signingRoot = computeSigningRoot(ssz.eip7805.InclusionList, inclusionList, domain);
+    const signingRoot = computeSigningRoot(ssz.heze.InclusionList, inclusionList, domain);
 
     const signableMessage: SignableMessage = {
       type: SignableMessageType.INCLUSION_LIST,
@@ -911,15 +911,12 @@ export class ValidatorStore {
   }
 
   /** Prevent signing bad data sent by the Beacon node */
-  private validateInclusionListDuty(
-    duty: routes.validator.InclusionListDuty,
-    inclusionList: eip7805.InclusionList
-  ): void {
+  private validateInclusionListDuty(duty: routes.validator.InclusionListDuty, inclusionList: heze.InclusionList): void {
     if (duty.slot !== inclusionList.slot) {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != il.slot ${inclusionList.slot}`);
     }
 
-    // TODO EIP-7805: Maybe check if validator index in inclusionListCommitteeRoot?
+    // TODO HEZE: Maybe check if validator index in inclusionListCommitteeRoot?
   }
 
   private validatePtcDuty(duty: routes.validator.PtcDuty, data: gloas.PayloadAttestationData): void {

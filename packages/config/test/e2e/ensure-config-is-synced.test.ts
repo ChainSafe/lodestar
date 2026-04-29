@@ -15,7 +15,7 @@ import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
 const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // BLOB_SCHEDULE is an array/JSON format that requires special parsing
   "BLOB_SCHEDULE" as keyof ChainConfig,
-  // EIP-7805 (Inclusion Lists) - not yet implemented in Lodestar
+  // HEZE (EIP-7805 Inclusion Lists) - not yet implemented in Lodestar
   "VIEW_FREEZE_CUTOFF_BPS" as keyof ChainConfig,
   "INCLUSION_LIST_SUBMISSION_DUE_BPS" as keyof ChainConfig,
   "PROPOSER_INCLUSION_LIST_CUTOFF_BPS" as keyof ChainConfig,

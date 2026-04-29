@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
-import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
+import {Slot, ValidatorIndex, bellatrix, heze} from "@lodestar/types";
 import {MapDef, byteArrayEquals} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
 import {OpPoolError, OpPoolErrorCode} from "./types.js";
@@ -9,7 +9,7 @@ import {pruneBySlot} from "./utils.js";
 /**
  *
  */
-const SLOTS_RETAINED = 2; // TODO EIP-7805: do we even need to retain previous slot?
+const SLOTS_RETAINED = 2; // TODO HEZE: do we even need to retain previous slot?
 
 /**
  * The maximum number of distinct `SignedInclusionList` that will be stored in each slot.
@@ -59,7 +59,7 @@ export class InclusionListPool {
     return count;
   }
 
-  add(inclusionList: eip7805.SignedInclusionList): InclusionListInsertOutcome {
+  add(inclusionList: heze.SignedInclusionList): InclusionListInsertOutcome {
     const {slot, validatorIndex, transactions} = inclusionList.message;
     const fork = this.config.getForkName(slot);
 
@@ -69,7 +69,7 @@ export class InclusionListPool {
     }
 
     // Reject inclusion lists in the current slot but come to this pool very late
-    // TODO EIP-7805: review if this is correct
+    // TODO HEZE: review if this is correct
     if (this.clock.msFromSlot(slot) > this.config.getProposerInclusionListCutoffMs(fork)) {
       return InclusionListInsertOutcome.Late;
     }

@@ -1,5 +1,5 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, eip7805} from "@lodestar/types";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot, heze} from "@lodestar/types";
 import {
   BlockExecutionStatus,
   LVHExecResponse,
@@ -178,7 +178,7 @@ export interface IForkChoice {
   /**
    * inclusionListCommittee is a list of IL committee validators' index in the current slot
    */
-  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void;
+  onInclusionList(inclusionList: heze.SignedInclusionList, secFromSlot: number): void;
   /**
    * Process PTC (Payload Timeliness Committee) messages from a block
    * Updates the PTC votes for the attested beacon block

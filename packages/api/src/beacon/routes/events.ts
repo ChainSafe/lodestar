@@ -15,9 +15,9 @@ import {
   UintNum64,
   altair,
   capella,
-  eip7805,
   electra,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -185,7 +185,7 @@ export type EventData = {
   [EventType.payloadAttributes]: {version: ForkName; data: SSEPayloadAttributes};
   [EventType.blobSidecar]: BlobSidecarSSE;
   [EventType.dataColumnSidecar]: DataColumnSidecarSSE;
-  [EventType.inclusionList]: {version: ForkName; data: eip7805.SignedInclusionList};
+  [EventType.inclusionList]: {version: ForkName; data: heze.SignedInclusionList};
   [EventType.executionPayload]: {
     slot: Slot;
     builderIndex: BuilderIndex;
@@ -408,7 +408,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       (fork) => getPostAltairForkTypes(fork).LightClientFinalityUpdate
     ),
 
-    [EventType.inclusionList]: WithVersion(() => ssz.eip7805.SignedInclusionList),
+    [EventType.inclusionList]: WithVersion(() => ssz.heze.SignedInclusionList),
   };
 }
 

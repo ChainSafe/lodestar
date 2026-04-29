@@ -219,7 +219,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     inclusionListTransactions?: bellatrix.Transactions
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.eip7805
+      ForkSeq[fork] >= ForkSeq.heze
         ? "engine_newPayloadV5"
         : ForkSeq[fork] >= ForkSeq.electra
           ? "engine_newPayloadV4"
@@ -231,7 +231,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
-    // TODO EIP-7805: Add V5. Current code is ugly with all the nested if
+    // TODO HEZE: Add V5. Current code is ugly with all the nested if
     let engineRequest: EngineRequest;
     if (ForkSeq[fork] >= ForkSeq.deneb) {
       if (versionedHashes === undefined) {
@@ -249,7 +249,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
         }
         const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
-        if (ForkSeq[fork] >= ForkSeq.eip7805) {
+        if (ForkSeq[fork] >= ForkSeq.heze) {
           if (inclusionListTransactions === undefined) {
             throw Error(`inclusionListTransactions required in notifyNewPayload for fork=${fork}`);
           }
@@ -372,7 +372,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method =
-      ForkSeq[fork] >= ForkSeq.eip7805
+      ForkSeq[fork] >= ForkSeq.heze
         ? "engine_forkchoiceUpdatedV4"
         : ForkSeq[fork] >= ForkSeq.deneb
           ? "engine_forkchoiceUpdatedV3"

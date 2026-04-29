@@ -56,13 +56,13 @@ export const chainConfig: ChainConfig = {
   FULU_FORK_VERSION: b("0x06000000"),
   FULU_FORK_EPOCH: 411392, // December 3, 2025, 09:49:11pm UTC
 
-  // EIP-7805
-  EIP7805_FORK_VERSION: b("0x07000000"),
-  EIP7805_FORK_EPOCH: Infinity,
-
   // GLOAS
-  GLOAS_FORK_VERSION: b("0x08000000"),
+  GLOAS_FORK_VERSION: b("0x07000000"),
   GLOAS_FORK_EPOCH: Infinity,
+
+  // HEZE (EIP-7805)
+  HEZE_FORK_VERSION: b("0x08000000"),
+  HEZE_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -191,7 +191,7 @@ export const chainConfig: ChainConfig = {
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
 
-  // EIP-7805
+  // HEZE
   // 2**4 (= 16)
   MAX_REQUEST_INCLUSION_LIST: 16,
   // 2**13 (=8192)

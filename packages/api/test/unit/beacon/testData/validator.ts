@@ -133,7 +133,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   produceInclusionList: {
     args: {slot: 32000},
-    res: {data: [ssz.bellatrix.Transaction.defaultValue()], meta: {version: ForkName.eip7805}},
+    res: {data: [ssz.bellatrix.Transaction.defaultValue()], meta: {version: ForkName.heze}},
   },
   getAggregatedAttestation: {
     args: {attestationDataRoot: ZERO_HASH, slot: 32000},
@@ -156,7 +156,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     res: undefined,
   },
   publishInclusionList: {
-    args: {signedInclusionList: ssz.eip7805.SignedInclusionList.defaultValue()},
+    args: {signedInclusionList: ssz.heze.SignedInclusionList.defaultValue()},
     res: undefined,
   },
   prepareBeaconCommitteeSubnet: {

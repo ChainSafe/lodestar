@@ -68,7 +68,7 @@ const linearGossipQueueOpts: {
     dropOpts: {type: DropType.count, count: 1},
   },
   [GossipType.inclusion_list]: {
-    maxLength: 8192, // TODO EIP-7805: Verify this number. Unsigned IL uncompressed should be 8192.
+    maxLength: 8192, // TODO HEZE: Verify this number. Unsigned IL uncompressed should be 8192.
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },

@@ -50,12 +50,12 @@ export const chainConfig: ChainConfig = {
   // FULU
   FULU_FORK_VERSION: b("0x06000001"),
   FULU_FORK_EPOCH: Infinity,
-  // EIP-7805
-  EIP7805_FORK_VERSION: b("0x07000001"),
-  EIP7805_FORK_EPOCH: Infinity,
   // GLOAS
-  GLOAS_FORK_VERSION: b("0x08000001"),
+  GLOAS_FORK_VERSION: b("0x07000001"),
   GLOAS_FORK_EPOCH: Infinity,
+  // HEZE (EIP-7805)
+  HEZE_FORK_VERSION: b("0x08000001"),
+  HEZE_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -192,7 +192,7 @@ export const chainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
 
-  // EIP-7805
+  // HEZE
   // 2**4 (= 16)
   MAX_REQUEST_INCLUSION_LIST: 16,
   // 2**13 (=8192)

@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateEip7805, computeEpochAtSlot} from "@lodestar/state-transition";
-import {Slot, ValidatorIndex, bellatrix, eip7805} from "@lodestar/types";
+import {CachedBeaconStateHeze, computeEpochAtSlot} from "@lodestar/state-transition";
+import {Slot, ValidatorIndex, bellatrix, heze} from "@lodestar/types";
 import {Transactions} from "@lodestar/types/bellatrix";
 import {MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
@@ -19,7 +19,7 @@ function byteArrayArrayEquals(arrA: Uint8Array[], arrB: Uint8Array[]): boolean {
 /**
  *
  */
-const SLOTS_RETAINED = 2; // TODO EIP-7805: do we even need to retain previous slot?
+const SLOTS_RETAINED = 2; // TODO HEZE: do we even need to retain previous slot?
 
 /** Hex string of Inclusion List Committee root */
 type CommitteeRootHex = string;
@@ -67,13 +67,13 @@ export class InclusionListStore {
   ) {}
 
   get size(): number {
-    // TODO EIP-7805: See what makes sense for metrics
+    // TODO HEZE: See what makes sense for metrics
     const count = 0;
     return count;
   }
 
   // Process inclusion list and add it to the store if valid
-  processInclusionList(inclusionList: eip7805.InclusionList): InclusionListInsertOutcome {
+  processInclusionList(inclusionList: heze.InclusionList): InclusionListInsertOutcome {
     const {slot, validatorIndex, inclusionListCommitteeRoot, transactions} = inclusionList;
     const inclusionListCommitteeRootHex = toRootHex(inclusionListCommitteeRoot);
     const fork = this.config.getForkName(slot);
@@ -119,7 +119,7 @@ export class InclusionListStore {
   /**
    * Return a list of unique inclusion list transactions for the given slot
    */
-  getInclusionListTransactions(slot: Slot, state: CachedBeaconStateEip7805): bellatrix.Transactions {
+  getInclusionListTransactions(slot: Slot, state: CachedBeaconStateHeze): bellatrix.Transactions {
     const uniqueTransactions: bellatrix.Transactions = [];
     const epoch = computeEpochAtSlot(slot);
     const decisionRoot = state.epochCtx.getShufflingDecisionRoot(epoch);

@@ -68,11 +68,11 @@ export type {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateDeneb,
-  BeaconStateEip7805,
   BeaconStateElectra,
   BeaconStateExecutions,
   BeaconStateFulu,
   BeaconStateGloas,
+  BeaconStateHeze,
   // Non-cached states
   BeaconStatePhase0,
   // Cached states
@@ -81,11 +81,11 @@ export type {
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
-  CachedBeaconStateEip7805,
   CachedBeaconStateElectra,
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
 } from "./types.js";
 export * from "./util/index.js";

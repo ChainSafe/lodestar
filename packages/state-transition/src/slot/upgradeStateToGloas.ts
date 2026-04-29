@@ -4,18 +4,18 @@ import {toHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
 import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
-import {CachedBeaconStateEip7805, CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 
 /**
- * Upgrade a state from EIP-7805 to Gloas.
+ * Upgrade a state from Fulu to Gloas.
  */
-export function upgradeStateToGloas(stateEip7805: CachedBeaconStateEip7805): CachedBeaconStateGloas {
-  const {config} = stateEip7805;
+export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBeaconStateGloas {
+  const {config} = stateFulu;
 
-  ssz.eip7805.BeaconState.commitViewDU(stateEip7805);
-  const stateGloasCloned = stateEip7805;
+  ssz.fulu.BeaconState.commitViewDU(stateFulu);
+  const stateGloasCloned = stateFulu;
 
   const stateGloasView = ssz.gloas.BeaconState.defaultViewDU();
 
@@ -23,9 +23,9 @@ export function upgradeStateToGloas(stateEip7805: CachedBeaconStateEip7805): Cac
   stateGloasView.genesisValidatorsRoot = stateGloasCloned.genesisValidatorsRoot;
   stateGloasView.slot = stateGloasCloned.slot;
   stateGloasView.fork = ssz.phase0.Fork.toViewDU({
-    previousVersion: stateEip7805.fork.currentVersion,
+    previousVersion: stateFulu.fork.currentVersion,
     currentVersion: config.GLOAS_FORK_VERSION,
-    epoch: stateEip7805.epochCtx.epoch,
+    epoch: stateFulu.epochCtx.epoch,
   });
   stateGloasView.latestBlockHeader = stateGloasCloned.latestBlockHeader;
   stateGloasView.blockRoots = stateGloasCloned.blockRoots;
@@ -64,20 +64,20 @@ export function upgradeStateToGloas(stateEip7805: CachedBeaconStateEip7805): Cac
   stateGloasView.pendingPartialWithdrawals = stateGloasCloned.pendingPartialWithdrawals;
   stateGloasView.pendingConsolidations = stateGloasCloned.pendingConsolidations;
   stateGloasView.proposerLookahead = stateGloasCloned.proposerLookahead;
-  stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateEip7805));
+  stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
 
   for (let i = 0; i < SLOTS_PER_HISTORICAL_ROOT; i++) {
     stateGloasView.executionPayloadAvailability.set(i, true);
   }
   stateGloasView.latestBlockHash = stateGloasCloned.latestExecutionPayloadHeader.blockHash;
 
-  const stateGloas = getCachedBeaconState(stateGloasView, stateEip7805);
+  const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 
   // Process pending builder deposits at the fork boundary
   onboardBuildersFromPendingDeposits(stateGloas);
 
   stateGloas.commit();
-  // Clear cache to ensure the cache of eip7805 fields is not used by new gloas fields
+  // Clear cache to ensure the cache of fulu fields is not used by new gloas fields
   // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateGloas["clearCache"]();
 

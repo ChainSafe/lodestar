@@ -111,7 +111,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
-      isEip7805Enabled: false,
+      isHezeEnabled: false,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,

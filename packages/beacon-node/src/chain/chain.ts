@@ -563,7 +563,7 @@ export class BeaconChain implements IBeaconChain {
     return headState;
   }
 
-  // TODO EIP-7805: Temporary clone of `getHeadState()` to minimize impact on other parts that relies to real head
+  // TODO HEZE: Temporary clone of `getHeadState()` to minimize impact on other parts that relies to real head
   getAttesterHeadState(): IBeaconStateView {
     // head state should always exist
     const head = this.forkChoice.getAttesterHead();

@@ -102,7 +102,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const denebForkRelevant = localConfig.DENEB_FORK_EPOCH < Infinity;
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
-  const eip7805ForkRelevant = localConfig.EIP7805_FORK_EPOCH < Infinity;
+  const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
 
   return {
@@ -142,9 +142,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
-    // EIP-7805
-    EIP7805_FORK_VERSION: eip7805ForkRelevant,
-    EIP7805_FORK_EPOCH: eip7805ForkRelevant,
+    // HEZE
+    HEZE_FORK_VERSION: hezeForkRelevant,
+    HEZE_FORK_EPOCH: hezeForkRelevant,
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,
@@ -319,13 +319,13 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
 
-    // EIP-7805
-    INCLUSION_LIST_SUBMISSION_DUE_BPS: eip7805ForkRelevant,
-    PROPOSER_INCLUSION_LIST_CUTOFF_BPS: eip7805ForkRelevant,
-    VIEW_FREEZE_CUTOFF_BPS: eip7805ForkRelevant,
-    MAX_REQUEST_INCLUSION_LIST: eip7805ForkRelevant,
-    MAX_BYTES_PER_INCLUSION_LIST: eip7805ForkRelevant,
-    INCLUSION_LIST_COMMITTEE_SIZE: eip7805ForkRelevant,
+    // HEZE
+    INCLUSION_LIST_SUBMISSION_DUE_BPS: hezeForkRelevant,
+    PROPOSER_INCLUSION_LIST_CUTOFF_BPS: hezeForkRelevant,
+    VIEW_FREEZE_CUTOFF_BPS: hezeForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: hezeForkRelevant,
+    MAX_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
+    INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
 
     // GLOAS
     ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,

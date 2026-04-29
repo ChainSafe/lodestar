@@ -119,7 +119,7 @@ function setupForkChoice(): ProtoArray {
         unrealizedFinalizedRoot: "-",
 
         timeliness: false,
-        isEip7805Enabled: false,
+        isHezeEnabled: false,
 
         ...executionData,
 

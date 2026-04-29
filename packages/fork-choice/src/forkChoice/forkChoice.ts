@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH, isForkPostEip7805} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, isForkPostHeze} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -21,7 +21,7 @@ import {
   RootHex,
   Slot,
   ValidatorIndex,
-  eip7805,
+  heze,
   isGloasBeaconBlock,
   phase0,
   ssz,
@@ -215,15 +215,15 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * EIP-7805: Get attester's head
+   * HEZE: Get attester's head
    * See `get_attester_head()`
    */
-  // TODO EIP-7805: Can getAttesterHead return unsatisified block when predictProposerHead calls?
+  // TODO HEZE: Can getAttesterHead return unsatisified block when predictProposerHead calls?
   getAttesterHead(): ProtoBlock {
     const head = this.getHead();
     const headRoot = head.blockRoot;
 
-    if (!head.isEip7805Enabled) {
+    if (!head.isHezeEnabled) {
       return head;
     }
 
@@ -716,8 +716,8 @@ export class ForkChoice implements IForkChoice {
       this.proposerBoostRoot = blockRootHex;
     }
 
-    // Communicate if EIP-7805 is enabled
-    const isEip7805Enabled = isForkPostEip7805(this.config.getForkName(currentSlot));
+    // Communicate if HEZE is enabled
+    const isHezeEnabled = isForkPostHeze(this.config.getForkName(currentSlot));
 
     const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
@@ -798,7 +798,7 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toRootHex(targetRoot),
       stateRoot: toRootHex(block.stateRoot),
       timeliness: isTimely,
-      isEip7805Enabled,
+      isHezeEnabled,
 
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toRootHex(state.currentJustifiedCheckpoint.root),
@@ -976,7 +976,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   // Skip all validation check that overlaps `validateInclusionList()` since an IL needs to pass it before calling `onInclusionList()`
-  onInclusionList(inclusionList: eip7805.SignedInclusionList, secFromSlot: number): void {
+  onInclusionList(inclusionList: heze.SignedInclusionList, secFromSlot: number): void {
     const currentSlot = this.fcStore.currentSlot;
     const {slot, inclusionListCommitteeRoot, validatorIndex} = inclusionList.message;
     const fork = this.config.getForkName(slot);
@@ -1004,7 +1004,7 @@ export class ForkChoice implements IForkChoice {
     if (validatorInclusionLists.length > 0) {
       const validatorInclusionList = validatorInclusionLists[0];
 
-      // TODO EIP-7805: Avoid using JSON.stringify to compare ILs
+      // TODO HEZE: Avoid using JSON.stringify to compare ILs
       if (JSON.stringify(validatorInclusionList) !== JSON.stringify(inclusionList.message)) {
         // We have equivocation evidence for `validator_index`, record it as equivocator
         const equivocators = this.fcStore.inclusionListEquivocators.get(storeKey) ?? new Set<ValidatorIndex>();

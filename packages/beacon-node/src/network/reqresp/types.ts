@@ -14,9 +14,9 @@ import {
   Status,
   altair,
   deneb,
-  eip7805,
   fulu,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -74,7 +74,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
   [ReqRespMethod.LightClientOptimisticUpdate]: null;
-  [ReqRespMethod.InclusionListByCommitteeIndices]: eip7805.InclusionListByCommitteeIndicesRequest;
+  [ReqRespMethod.InclusionListByCommitteeIndices]: heze.InclusionListByCommitteeIndicesRequest;
 };
 
 type ResponseBodyByMethod = {
@@ -96,7 +96,7 @@ type ResponseBodyByMethod = {
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
   [ReqRespMethod.LightClientFinalityUpdate]: LightClientFinalityUpdate;
   [ReqRespMethod.LightClientOptimisticUpdate]: LightClientOptimisticUpdate;
-  [ReqRespMethod.InclusionListByCommitteeIndices]: eip7805.SignedInclusionList;
+  [ReqRespMethod.InclusionListByCommitteeIndices]: heze.SignedInclusionList;
 };
 
 /** Request SSZ type for each method and ForkName */
@@ -126,7 +126,7 @@ export const requestSszTypeByMethod: (
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
   [ReqRespMethod.LightClientFinalityUpdate]: null,
   [ReqRespMethod.LightClientOptimisticUpdate]: null,
-  [ReqRespMethod.InclusionListByCommitteeIndices]: ssz.eip7805.InclusionListByCommitteeIndicesRequest,
+  [ReqRespMethod.InclusionListByCommitteeIndices]: ssz.heze.InclusionListByCommitteeIndicesRequest,
 });
 
 export type ResponseTypeGetter<T> = (fork: ForkName, version: number) => Type<T>;
@@ -158,7 +158,7 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
   [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
-  [ReqRespMethod.InclusionListByCommitteeIndices]: () => ssz.eip7805.SignedInclusionList,
+  [ReqRespMethod.InclusionListByCommitteeIndices]: () => ssz.heze.SignedInclusionList,
 };
 
 function onlyPostAltairFork(fork: ForkName): ForkPostAltair {

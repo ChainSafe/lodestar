@@ -59,7 +59,9 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805", "heze"],
+  // Skip heze spec tests until heze-specific spec changes (modified ExecutionPayloadBid,
+  // is_valid_inclusion_list_signature, get_inclusion_list_committee, etc.) are implemented.
+  skippedForks: ["heze"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.

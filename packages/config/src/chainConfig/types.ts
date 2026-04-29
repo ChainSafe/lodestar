@@ -47,12 +47,12 @@ export type ChainConfig = {
   // FULU
   FULU_FORK_VERSION: Uint8Array;
   FULU_FORK_EPOCH: number;
-  // EIP-7805
-  EIP7805_FORK_VERSION: Uint8Array;
-  EIP7805_FORK_EPOCH: number;
   // GLOAS
   GLOAS_FORK_VERSION: Uint8Array;
   GLOAS_FORK_EPOCH: number;
+  // HEZE (EIP-7805)
+  HEZE_FORK_VERSION: Uint8Array;
+  HEZE_FORK_EPOCH: number;
 
   // Time parameters
   /** @deprecated Use `SLOT_DURATION_MS` instead. */
@@ -137,7 +137,7 @@ export type ChainConfig = {
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
 
-  // EIP-7805
+  // HEZE
   MAX_REQUEST_INCLUSION_LIST: number;
   MAX_BYTES_PER_INCLUSION_LIST: number;
   INCLUSION_LIST_COMMITTEE_SIZE: number;
@@ -177,12 +177,12 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // FULU
   FULU_FORK_VERSION: "bytes",
   FULU_FORK_EPOCH: "number",
-  // EIP-7805
-  EIP7805_FORK_VERSION: "bytes",
-  EIP7805_FORK_EPOCH: "number",
   // GLOAS
   GLOAS_FORK_VERSION: "bytes",
   GLOAS_FORK_EPOCH: "number",
+  // HEZE (EIP-7805)
+  HEZE_FORK_VERSION: "bytes",
+  HEZE_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -260,7 +260,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
 
-  // EIP-7805
+  // HEZE
   MAX_REQUEST_INCLUSION_LIST: "number",
   MAX_BYTES_PER_INCLUSION_LIST: "number",
   INCLUSION_LIST_COMMITTEE_SIZE: "number",

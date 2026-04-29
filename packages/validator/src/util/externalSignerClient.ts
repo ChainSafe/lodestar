@@ -12,8 +12,8 @@ import {
   Slot,
   altair,
   capella,
-  eip7805,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -89,7 +89,7 @@ export type SignableMessage =
   | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
   | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
   | {type: SignableMessageType.BLS_TO_EXECUTION_CHANGE; data: capella.BLSToExecutionChange}
-  | {type: SignableMessageType.INCLUSION_LIST; data: eip7805.InclusionList}
+  | {type: SignableMessageType.INCLUSION_LIST; data: heze.InclusionList}
   | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
   | {type: SignableMessageType.PAYLOAD_ATTESTATION; data: gloas.PayloadAttestationData};
 
@@ -286,7 +286,7 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
       return {BLS_TO_EXECUTION_CHANGE: ssz.capella.BLSToExecutionChange.toJson(payload.data)};
 
     case SignableMessageType.INCLUSION_LIST:
-      return {inclusion_list: ssz.eip7805.InclusionList.toJson(payload.data)};
+      return {inclusion_list: ssz.heze.InclusionList.toJson(payload.data)};
 
     case SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE:
       return {execution_payload_envelope: ssz.gloas.ExecutionPayloadEnvelope.toJson(payload.data)};

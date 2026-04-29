@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostEip7805} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostHeze} from "@lodestar/params";
 import {
   IBeaconStateView,
   IBeaconStateViewBellatrix,
@@ -198,9 +198,9 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the
           // try/catch wrapper here.
-          // EIP7805: We need to sleep until `PROPOSER_INCLUSION_LIST_CUTOFF_BPS` (~92% of slot) to make sure
+          // HEZE: We need to sleep until `PROPOSER_INCLUSION_LIST_CUTOFF_BPS` (~92% of slot) to make sure
           // we have gathered all ILs
-          if (isForkPostEip7805(fork)) {
+          if (isForkPostHeze(fork)) {
             await sleep(
               this.chain.config.getProposerInclusionListCutoffMs(fork) - this.chain.clock.msFromSlot(clockSlot),
               this.signal
@@ -242,7 +242,7 @@ export class PrepareNextSlotScheduler {
           (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
         ) {
-          // TODO EIP-7805: do we wanna emit data about inclusion lists here
+          // TODO HEZE: do we wanna emit data about inclusion lists here
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
             prepareState: stateAfterParentPayload,
             prepareSlot,

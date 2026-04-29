@@ -1,5 +1,5 @@
 import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {Root, RootHex, Slot, ValidatorIndex, eip7805, phase0} from "@lodestar/types";
+import {Root, RootHex, Slot, ValidatorIndex, heze, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {CheckpointWithBalance, CheckpointWithTotalBalance} from "./interface.js";
 
@@ -13,8 +13,8 @@ export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
 export type JustifiedBalances = EffectiveBalanceIncrements;
 
 export type InclusionListStoreKey = [Slot, Root];
-// TODO EIP-7805: Need prune mechanism to these three
-export class InclusionListStore extends Map<InclusionListStoreKey, eip7805.InclusionList[]> {}
+// TODO HEZE: Need prune mechanism to these three
+export class InclusionListStore extends Map<InclusionListStoreKey, heze.InclusionList[]> {}
 export class InclusionListEquivocatorStore extends Map<InclusionListStoreKey, Set<ValidatorIndex>> {}
 export class InclusionListCommitteeRootStore extends Set<RootHex> {}
 

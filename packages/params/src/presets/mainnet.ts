@@ -142,7 +142,7 @@ export const mainnetPreset: BeaconPreset = {
   FIELD_ELEMENTS_PER_EXT_BLOB: 8192,
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: 4,
 
-  // EIP7805
+  // HEZE
   ///////////
   INCLUSION_LIST_COMMITTEE_SIZE: 16,
 

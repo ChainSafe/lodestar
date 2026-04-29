@@ -14,20 +14,20 @@ import {
   upgradeStateToBellatrix,
   upgradeStateToCapella,
   upgradeStateToDeneb,
-  upgradeStateToEip7805,
   upgradeStateToElectra,
+  upgradeStateToFulu,
   upgradeStateToGloas,
+  upgradeStateToHeze,
 } from "./slot/index.js";
-import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateCapella,
   CachedBeaconStateDeneb,
-  CachedBeaconStateEip7805,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -277,11 +277,11 @@ function processSlotsWithTransientCache(
       if (stateEpoch === config.FULU_FORK_EPOCH) {
         postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
       }
-      if (stateEpoch === config.EIP7805_FORK_EPOCH) {
-        postState = upgradeStateToEip7805(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
-      }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
-        postState = upgradeStateToGloas(postState as CachedBeaconStateEip7805) as CachedBeaconStateAllForks;
+        postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+      }
+      if (stateEpoch === config.HEZE_FORK_EPOCH) {
+        postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
       }
 
       {

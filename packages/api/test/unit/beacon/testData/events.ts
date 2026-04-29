@@ -275,8 +275,8 @@ export const eventTestData: EventData = {
     ],
   }),
   [EventType.inclusionList]: {
-    version: ForkName.eip7805,
-    data: ssz.eip7805.SignedInclusionList.fromJson({
+    version: ForkName.heze,
+    data: ssz.heze.SignedInclusionList.fromJson({
       message: {
         slot: "0",
         validator_index: "0",

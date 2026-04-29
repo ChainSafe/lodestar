@@ -13,9 +13,9 @@ import {
   SYNC_COMMITTEE_SUBNET_SIZE,
   isForkPostBellatrix,
   isForkPostDeneb,
-  isForkPostEip7805,
   isForkPostElectra,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   DataAvailabilityStatus,
@@ -45,9 +45,9 @@ import {
   ValidatorIndex,
   Wei,
   bellatrix,
-  eip7805,
   getValidatorStatus,
   gloas,
+  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -1130,8 +1130,8 @@ export function getValidatorApi(
       notWhileSyncing();
 
       const fork = chain.config.getForkName(slot);
-      if (!isForkPostEip7805(fork)) {
-        throw new ApiError(400, `Producing inclusion list for pre-eip7805 slot: ${slot}`);
+      if (!isForkPostHeze(fork)) {
+        throw new ApiError(400, `Producing inclusion list for pre-heze slot: ${slot}`);
       }
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
@@ -1151,14 +1151,15 @@ export function getValidatorApi(
             toHex(headState.getBlockRootAtSlot(slot));
 
       const block = (await getBlockResponse(chain, beaconBlockRootHex)).block;
-      const executionPayload = (block as eip7805.SignedBeaconBlock).message.body.executionPayload;
-      const blockHash = toHex(executionPayload.blockHash);
+      // Heze inherits gloas's BeaconBlockBody, the EL block hash is sourced from the bid
+      const bid = (block as heze.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message;
+      const blockHash = toHex(bid.blockHash);
       logger.debug("produce inclusion list", {blockHash});
 
-      const timer = metrics?.eip7805.getInclusionListV1RequestsDuration.startTimer();
+      const timer = metrics?.getInclusionListV1RequestsDuration.startTimer();
       const ilTransactions = await chain.executionEngine.getInclusionList(blockHash);
       timer?.();
-      metrics?.eip7805.getInclusionListV1Requests.inc();
+      metrics?.getInclusionListV1Requests.inc();
 
       return {
         data: ilTransactions,
@@ -1456,8 +1457,8 @@ export function getValidatorApi(
       }
 
       const fork = chain.config.getForkName(computeStartSlotAtEpoch(epoch));
-      if (!isForkPostEip7805(fork)) {
-        throw new ApiError(400, `Requesting pre-eip7805 inclusion list committee duties epoch: ${epoch}`);
+      if (!isForkPostHeze(fork)) {
+        throw new ApiError(400, `Requesting pre-heze inclusion list committee duties epoch: ${epoch}`);
       }
 
       // May request for an epoch that's in the future
@@ -1682,14 +1683,14 @@ export function getValidatorApi(
     async publishInclusionList({signedInclusionList}) {
       notWhileSyncing();
 
-      // TODO EIP-7805: Add error handling
+      // TODO HEZE: Add error handling
       const slot = signedInclusionList.message.slot;
       const fork = chain.config.getForkName(slot);
-      if (!isForkPostEip7805(fork)) {
-        throw new ApiError(400, `Publishing pre-eip7805 inclusion list slot: ${slot}`);
+      if (!isForkPostHeze(fork)) {
+        throw new ApiError(400, `Publishing pre-heze inclusion list slot: ${slot}`);
       }
 
-      const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
+      const timer = metrics?.inclusionListsValidationTime.startTimer();
       await validateApiInclusionList(chain, signedInclusionList);
       timer?.({source: InclusionListSource.api});
 
@@ -1704,7 +1705,7 @@ export function getValidatorApi(
       });
 
       await network.publishInclusionList(signedInclusionList);
-      metrics?.eip7805.inclusionListsPublished.inc();
+      metrics?.inclusionListsPublished.inc();
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {

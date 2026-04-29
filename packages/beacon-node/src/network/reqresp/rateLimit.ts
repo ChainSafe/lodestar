@@ -110,7 +110,7 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     // Allow 2 per slot and a very safe bound until there's more testing of real usage.
     byPeer: {quota: 2, quotaTimeMs: 12_000},
   },
-  // TODO EIP-7805: Review this limit
+  // TODO HEZE: Review this limit
   [ReqRespMethod.InclusionListByCommitteeIndices]: {
     byPeer: {quota: 5, quotaTimeMs: 12_000},
   },

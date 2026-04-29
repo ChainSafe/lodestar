@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {Slot, bellatrix, eip7805} from "@lodestar/types";
+import {Slot, bellatrix, heze} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -53,7 +53,7 @@ export class InclusionListService {
     // A validator should create and broadcast the IL when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
-    // TODO EIP-7805: Review this timing. Spec says only mandates us to broadcast before 11s
+    // TODO HEZE: Review this timing. Spec says only mandates us to broadcast before 11s
     await sleep(this.config.getInclusionListSubmissionDueMs(fork) - this.clock.msFromSlot(slot), signal);
 
     // If there is more than one duty, all validators on duty will sign and publish the same IL
@@ -79,17 +79,17 @@ export class InclusionListService {
     inclusionListTransactions: bellatrix.Transactions,
     duties: routes.validator.InclusionListDutyList
   ) {
-    const signedInclusionLists: eip7805.SignedInclusionList[] = [];
+    const signedInclusionLists: heze.SignedInclusionList[] = [];
 
     await Promise.all(
       duties.map(async (duty) => {
-        const inclusionList: eip7805.InclusionList = {
+        const inclusionList: heze.InclusionList = {
           slot: duty.slot,
           validatorIndex: duty.validatorIndex,
           inclusionListCommitteeRoot: duty.inclusionListCommitteeRoot,
           transactions: inclusionListTransactions,
         };
-        // TODO EIP-7805: Log and log context here
+        // TODO HEZE: Log and log context here
         try {
           signedInclusionLists.push(await this.validatorStore.signInclusionList(duty, inclusionList));
         } catch (e) {

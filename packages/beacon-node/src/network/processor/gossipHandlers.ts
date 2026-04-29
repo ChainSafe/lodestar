@@ -1063,14 +1063,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.inclusion_list>) => {
       const {serializedData} = gossipData;
       const inclusionList = sszDeserialize(topic, serializedData);
-      metrics?.eip7805.inclusionListsReceived.inc({source: InclusionListSource.gossip});
-      metrics?.eip7805.inclusionListTransactionsReceived.inc(
+      metrics?.inclusionListsReceived.inc({source: InclusionListSource.gossip});
+      metrics?.inclusionListTransactionsReceived.inc(
         {source: InclusionListSource.gossip},
         inclusionList.message.transactions.length
       );
-      // TODO EIP-7805: should we persist invalid ssz value?
+      // TODO HEZE: should we persist invalid ssz value?
       try {
-        const timer = metrics?.eip7805.inclusionListsValidationTime.startTimer();
+        const timer = metrics?.inclusionListsValidationTime.startTimer();
         await validateGossipInclusionList(chain, inclusionList);
         timer?.({source: InclusionListSource.gossip});
       } catch (e) {
@@ -1088,7 +1088,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         metrics?.opPool.inclusionListPoolInsertOutcome.inc({insertOutcome});
 
         const secFromSlot = chain.clock.secFromSlot(inclusionList.message.slot, seenTimestampSec);
-        metrics?.eip7805.inclusionListArrivalTime.observe(secFromSlot);
+        metrics?.inclusionListArrivalTime.observe(secFromSlot);
         chain.forkChoice.onInclusionList(inclusionList, secFromSlot);
       } catch (e) {
         logger.error("Error adding inclusionList to pool", {}, e as Error);

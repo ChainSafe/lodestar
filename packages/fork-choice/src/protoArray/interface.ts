@@ -135,8 +135,8 @@ export type ProtoBlock = BlockExtraMeta & {
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
   timeliness: boolean;
 
-  // Indicate whether EIP-7805 is enabled
-  isEip7805Enabled: boolean;
+  // Indicate whether HEZE is enabled
+  isHezeEnabled: boolean;
 
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;

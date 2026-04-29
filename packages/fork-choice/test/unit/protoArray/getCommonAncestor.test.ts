@@ -42,7 +42,7 @@ describe("getCommonAncestor", () => {
       unrealizedFinalizedRoot: "-",
 
       timeliness: false,
-      isEip7805Enabled: false,
+      isHezeEnabled: false,
 
       ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
@@ -72,7 +72,7 @@ describe("getCommonAncestor", () => {
         unrealizedFinalizedRoot: "-",
 
         timeliness: false,
-        isEip7805Enabled: false,
+        isHezeEnabled: false,
 
         ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,

@@ -9,7 +9,7 @@ import {
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
 } from "@lodestar/fork-choice";
-import {ZERO_HASH_HEX, isForkPostEip7805} from "@lodestar/params";
+import {ZERO_HASH_HEX, isForkPostHeze} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
@@ -125,7 +125,7 @@ export function initializeForkChoiceFromFinalizedState(
         stateRoot: toRootHex(blockHeader.stateRoot),
         blockRoot: toRootHex(checkpoint.root),
         timeliness: true, // Optimistically assume is timely
-        isEip7805Enabled: isForkPostEip7805(config.getForkName(currentSlot)),
+        isHezeEnabled: isForkPostHeze(config.getForkName(currentSlot)),
         justifiedEpoch: justifiedCheckpoint.epoch,
         justifiedRoot: toRootHex(justifiedCheckpoint.root),
         finalizedEpoch: finalizedCheckpoint.epoch,
@@ -215,7 +215,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     blockRoot: headRoot,
     targetRoot: headRoot,
     timeliness: true, // Optimistically assume is timely
-    isEip7805Enabled: isForkPostEip7805(config.getForkName(currentSlot)),
+    isHezeEnabled: isForkPostHeze(config.getForkName(currentSlot)),
     justifiedEpoch: justifiedCheckpoint.epoch,
     justifiedRoot: toRootHex(justifiedCheckpoint.root),
     finalizedEpoch: finalizedCheckpoint.epoch,

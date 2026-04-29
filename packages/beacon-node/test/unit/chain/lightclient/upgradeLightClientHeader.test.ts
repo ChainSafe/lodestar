@@ -16,7 +16,7 @@ describe("UpgradeLightClientHeader", () => {
     DENEB_FORK_EPOCH: 4,
     ELECTRA_FORK_EPOCH: 5,
     FULU_FORK_EPOCH: 6,
-    EIP7805_FORK_EPOCH: 7,
+    HEZE_FORK_EPOCH: 7,
     GLOAS_FORK_EPOCH: 8,
   });
 
@@ -32,7 +32,7 @@ describe("UpgradeLightClientHeader", () => {
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.deneb.LightClientHeader.defaultValue(),
       fulu: ssz.deneb.LightClientHeader.defaultValue(),
-      eip7805: ssz.deneb.LightClientHeader.defaultValue(),
+      heze: ssz.deneb.LightClientHeader.defaultValue(),
       gloas: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
@@ -44,7 +44,7 @@ describe("UpgradeLightClientHeader", () => {
       deneb: 132,
       electra: 164,
       fulu: 195,
-      eip7805: 240,
+      heze: 240,
       gloas: 260,
     };
   });
