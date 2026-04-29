@@ -1,4 +1,4 @@
-import {FAR_FUTURE_EPOCH, GENESIS_SLOT, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq, GENESIS_SLOT, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, getCachedBeaconState} from "../cache/stateCache.js";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
@@ -78,7 +78,9 @@ export function upgradeStateToElectra(stateDeneb: CachedBeaconStateDeneb): Cache
   stateElectraView.commit();
   const tmpElectraState = getCachedBeaconState(stateElectraView, stateDeneb);
   stateElectraView.exitBalanceToConsume = BigInt(getActivationExitChurnLimit(tmpElectraState.epochCtx));
-  stateElectraView.consolidationBalanceToConsume = BigInt(getConsolidationChurnLimit(tmpElectraState.epochCtx));
+  stateElectraView.consolidationBalanceToConsume = BigInt(
+    getConsolidationChurnLimit(tmpElectraState.epochCtx, ForkSeq.electra)
+  );
 
   preActivation.sort((i0, i1) => {
     const res = validatorsArr[i0].activationEligibilityEpoch - validatorsArr[i1].activationEligibilityEpoch;

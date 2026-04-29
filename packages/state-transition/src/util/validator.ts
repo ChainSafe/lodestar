@@ -80,11 +80,43 @@ export function getBalanceChurnLimitFromCache(epochCtx: EpochCache): number {
   );
 }
 
+/**
+ * Per-epoch churn limit for activations in gloas, rounded to EFFECTIVE_BALANCE_INCREMENT.
+ * Spec (gloas): get_activation_churn_limit
+ */
+export function getActivationChurnLimitGloas(epochCtx: EpochCache): number {
+  const totalActiveBalance = epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT;
+  const churnRaw = Math.max(
+    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
+    Math.floor(totalActiveBalance / epochCtx.config.CHURN_LIMIT_QUOTIENT_GLOAS)
+  );
+  const churn = churnRaw - (churnRaw % EFFECTIVE_BALANCE_INCREMENT);
+  return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS, churn);
+}
+
+/**
+ * Per-epoch churn limit for exits in gloas, rounded to EFFECTIVE_BALANCE_INCREMENT.
+ * Spec (gloas): get_exit_churn_limit
+ */
+export function getExitChurnLimitGloas(epochCtx: EpochCache): number {
+  const totalActiveBalance = epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT;
+  const churnRaw = Math.max(
+    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
+    Math.floor(totalActiveBalance / epochCtx.config.CHURN_LIMIT_QUOTIENT_GLOAS)
+  );
+  return churnRaw - (churnRaw % EFFECTIVE_BALANCE_INCREMENT);
+}
+
 export function getActivationExitChurnLimit(epochCtx: EpochCache): number {
   return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimitFromCache(epochCtx));
 }
 
-export function getConsolidationChurnLimit(epochCtx: EpochCache): number {
+export function getConsolidationChurnLimit(epochCtx: EpochCache, fork: ForkSeq): number {
+  if (fork >= ForkSeq.gloas) {
+    const totalActiveBalance = epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT;
+    const churn = Math.floor(totalActiveBalance / epochCtx.config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT);
+    return churn - (churn % EFFECTIVE_BALANCE_INCREMENT);
+  }
   return getBalanceChurnLimitFromCache(epochCtx) - getActivationExitChurnLimit(epochCtx);
 }
 
