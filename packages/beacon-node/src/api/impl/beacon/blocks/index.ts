@@ -5,6 +5,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -109,6 +110,18 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
+
+    if (isForkPostGloas(fork)) {
+      chain.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: blockRoot,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+        sampledColumns: chain.custodyConfig.sampledColumns,
+        custodyColumns: chain.custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
+    }
+
     let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {

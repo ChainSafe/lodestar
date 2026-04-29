@@ -9,14 +9,7 @@ import {
   NotReorgedReason,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {
-  ForkPostAltair,
-  ForkPostElectra,
-  ForkPostGloas,
-  ForkSeq,
-  MAX_SEED_LOOKAHEAD,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
   RootCache,
@@ -27,17 +20,7 @@ import {
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {
-  Attestation,
-  BeaconBlock,
-  SignedBeaconBlock,
-  altair,
-  capella,
-  electra,
-  isGloasBeaconBlock,
-  phase0,
-  ssz,
-} from "@lodestar/types";
+import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -135,23 +118,14 @@ export async function importBlock(
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
 
-  // For range sync, PayloadEnvelope is created before reaching this
-  // we also don't need to trigger getBlobs() in that case
+  // For range sync we skip triggerGetBlobs because column fetching is handled in the range path.
   if (fork >= ForkSeq.gloas && !opts.fromRangeSync) {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.add({
-      blockRootHex,
-      block: block as SignedBeaconBlock<ForkPostGloas>,
-      forkName: blockInput.forkName,
-      sampledColumns: this.custodyConfig.sampledColumns,
-      custodyColumns: this.custodyConfig.custodyColumns,
-      timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
-    });
-    this.logger.debug("Created PayloadEnvelopeInput for block", {
-      slot: blockSlot,
-      root: blockRootHex,
-      source: source.source,
-      ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
-    });
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    // PayloadEnvelopeInput is supposed to have right after we have block
+    // there are 4 sources of them: gossip, by root, by range and api
+    if (!payloadInput) {
+      throw Error(`PayloadEnvelopeInput not seeded for block ${blockRootHex} before importBlock`);
+    }
 
     // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
     // which is all the information we need so there is no reason to delay until execution payload arrives
