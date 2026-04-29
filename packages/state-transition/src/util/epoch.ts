@@ -1,7 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconState, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {getActivationExitChurnLimit, getConsolidationChurnLimit, getExitChurnLimitGloas} from "./validator.js";
+import {getActivationExitChurnLimit, getConsolidationChurnLimit, getExitChurnLimit} from "./validator.js";
 
 /**
  * Return the epoch number at the given slot.
@@ -48,7 +48,7 @@ export function computeExitEpochAndUpdateChurn(
   const fork = state.config.getForkSeq(state.slot);
   let earliestExitEpoch = Math.max(state.earliestExitEpoch, computeActivationExitEpoch(state.epochCtx.epoch));
   const perEpochChurn =
-    fork >= ForkSeq.gloas ? getExitChurnLimitGloas(state.epochCtx) : getActivationExitChurnLimit(state.epochCtx);
+    fork >= ForkSeq.gloas ? getExitChurnLimit(state.epochCtx) : getActivationExitChurnLimit(state.epochCtx);
 
   // New epoch for exits.
   let exitBalanceToConsume =

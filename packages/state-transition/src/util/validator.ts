@@ -44,7 +44,12 @@ export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epo
   return new Uint32Array(indices);
 }
 
-export function getActivationChurnLimit(config: ChainForkConfig, fork: ForkSeq, activeValidatorCount: number): number {
+// Deneb fork upgrade only
+export function getValidatorActivationChurnLimit(
+  config: ChainForkConfig,
+  fork: ForkSeq,
+  activeValidatorCount: number
+): number {
   if (fork >= ForkSeq.deneb) {
     return Math.min(config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT, getChurnLimit(config, activeValidatorCount));
   }
@@ -80,42 +85,45 @@ export function getBalanceChurnLimitFromCache(epochCtx: EpochCache): number {
   );
 }
 
-/**
- * Per-epoch churn limit for activations in gloas, rounded to EFFECTIVE_BALANCE_INCREMENT.
- * Spec (gloas): get_activation_churn_limit
- */
-export function getActivationChurnLimitGloas(epochCtx: EpochCache): number {
-  const totalActiveBalance = epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT;
-  const churnRaw = Math.max(
-    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
-    Math.floor(totalActiveBalance / epochCtx.config.CHURN_LIMIT_QUOTIENT_GLOAS)
-  );
-  const churn = churnRaw - (churnRaw % EFFECTIVE_BALANCE_INCREMENT);
-  return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS, churn);
-}
-
-/**
- * Per-epoch churn limit for exits in gloas, rounded to EFFECTIVE_BALANCE_INCREMENT.
- * Spec (gloas): get_exit_churn_limit
- */
-export function getExitChurnLimitGloas(epochCtx: EpochCache): number {
-  const totalActiveBalance = epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT;
-  const churnRaw = Math.max(
-    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA,
-    Math.floor(totalActiveBalance / epochCtx.config.CHURN_LIMIT_QUOTIENT_GLOAS)
-  );
-  return churnRaw - (churnRaw % EFFECTIVE_BALANCE_INCREMENT);
-}
-
 export function getActivationExitChurnLimit(epochCtx: EpochCache): number {
   return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_EXIT_CHURN_LIMIT, getBalanceChurnLimitFromCache(epochCtx));
 }
 
+/**
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-get_activation_churn_limit
+ */
+export function getActivationChurnLimit(epochCtx: EpochCache): number {
+  const churn = getBalanceChurnLimit(
+    epochCtx.totalActiveBalanceIncrements,
+    epochCtx.config.CHURN_LIMIT_QUOTIENT_GLOAS,
+    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
+  );
+  return Math.min(epochCtx.config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS, churn);
+}
+
+/**
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-get_exit_churn_limit
+ */
+export function getExitChurnLimit(epochCtx: EpochCache): number {
+  return getBalanceChurnLimit(
+    epochCtx.totalActiveBalanceIncrements,
+    epochCtx.config.CHURN_LIMIT_QUOTIENT_GLOAS,
+    epochCtx.config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
+  );
+}
+
+/**
+ * Spec (electra): get_consolidation_churn_limit (uses combined balance churn minus activation+exit churn)
+ * Spec (gloas): get_consolidation_churn_limit (independent quotient, no MIN floor)
+ */
 export function getConsolidationChurnLimit(epochCtx: EpochCache, fork: ForkSeq): number {
   if (fork >= ForkSeq.gloas) {
-    const totalActiveBalance = epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT;
-    const churn = Math.floor(totalActiveBalance / epochCtx.config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT);
-    return churn - (churn % EFFECTIVE_BALANCE_INCREMENT);
+    // No MIN floor — pass 0 so getBalanceChurnLimit's max(churn, min) is a no-op.
+    return getBalanceChurnLimit(
+      epochCtx.totalActiveBalanceIncrements,
+      epochCtx.config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT,
+      0
+    );
   }
   return getBalanceChurnLimitFromCache(epochCtx) - getActivationExitChurnLimit(epochCtx);
 }

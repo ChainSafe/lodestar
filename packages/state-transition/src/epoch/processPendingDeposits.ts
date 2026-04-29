@@ -5,7 +5,7 @@ import {CachedBeaconStateElectra, EpochTransitionCache} from "../types.js";
 import {increaseBalance} from "../util/balance.js";
 import {hasCompoundingWithdrawalCredential, isValidatorKnown} from "../util/electra.js";
 import {computeStartSlotAtEpoch} from "../util/epoch.js";
-import {getActivationChurnLimitGloas, getActivationExitChurnLimit} from "../util/validator.js";
+import {getActivationChurnLimit, getActivationExitChurnLimit} from "../util/validator.js";
 
 /**
  * Starting from Electra:
@@ -20,7 +20,7 @@ export function processPendingDeposits(state: CachedBeaconStateElectra, cache: E
   const fork = state.config.getForkSeq(state.slot);
   const nextEpoch = state.epochCtx.epoch + 1;
   const churnLimit =
-    fork >= ForkSeq.gloas ? getActivationChurnLimitGloas(state.epochCtx) : getActivationExitChurnLimit(state.epochCtx);
+    fork >= ForkSeq.gloas ? getActivationChurnLimit(state.epochCtx) : getActivationExitChurnLimit(state.epochCtx);
   const availableForProcessing = state.depositBalanceToConsume + BigInt(churnLimit);
   let processedAmount = 0;
   let nextDepositIndex = 0;
