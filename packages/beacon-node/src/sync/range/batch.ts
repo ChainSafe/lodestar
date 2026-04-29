@@ -95,6 +95,10 @@ export type BatchMetadata = {
   // Retry counters
   downloadAttempts: number;
   processingAttempts: number;
+
+  // Cumulative peer attribution for failed attempts (only present when non-empty)
+  failedDownloadPeers?: string;
+  failedProcessingPeers?: string;
 };
 
 function formatRangeReq(req: {startSlot: Slot; count: number}): string {
@@ -309,6 +313,7 @@ export class Batch {
 
   getMetadata(): BatchMetadata {
     const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
+    const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
     return {
       startEpoch: this.startEpoch,
       startSlot: this.startSlot,
@@ -320,6 +325,12 @@ export class Batch {
       ...(envelopesRequest && {envelopesReq: formatRangeReq(envelopesRequest)}),
       downloadAttempts: this.failedDownloadAttempts.length,
       processingAttempts: this.failedProcessingAttempts.length,
+      ...(this.failedDownloadAttempts.length > 0 && {
+        failedDownloadPeers: this.failedDownloadAttempts.join(","),
+      }),
+      ...(failedProcessingPeerList.length > 0 && {
+        failedProcessingPeers: failedProcessingPeerList.join(","),
+      }),
     };
   }
 
@@ -417,7 +428,11 @@ export class Batch {
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
+  startProcessing(): {
+    blocks: IBlockInput[];
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+    peers: PeerIdStr[];
+  } {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
@@ -430,7 +445,7 @@ export class Batch {
     const peers = this.goodPeers;
     this.goodPeers = [];
     this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
-    return {blocks, payloadEnvelopes};
+    return {blocks, payloadEnvelopes, peers};
   }
 
   /**

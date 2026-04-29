@@ -595,7 +595,7 @@ export class SyncChain {
    * Sends `batch` to the processor. Note: batch may be empty
    */
   private async processBatch(batch: Batch): Promise<void> {
-    const {blocks, payloadEnvelopes} = batch.startProcessing();
+    const {blocks, payloadEnvelopes, peers} = batch.startProcessing();
 
     const logCtx = {
       id: this.logId,
@@ -603,6 +603,7 @@ export class SyncChain {
       blockCount: blocks.length,
       blockSlots: prettyPrintIndices(blocks.map((b) => b.slot)),
       ...(payloadEnvelopes ? {envelopeSlots: prettyPrintIndices(Array.from(payloadEnvelopes.keys()))} : {}),
+      peers: peers.map(prettyPrintPeerIdStr).join(","),
     };
     this.logger.verbose("Processing batch", logCtx);
 
@@ -621,7 +622,7 @@ export class SyncChain {
       // Potentially process next AwaitingProcessing batch
       this.triggerBatchProcessor();
     } else {
-      this.logger.verbose("Batch process error", {id: this.logId, ...batch.getMetadata()}, res.err);
+      this.logger.verbose("Batch process error", logCtx, res.err);
       batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
       // At least one block was successfully verified and imported, so we can be sure all
