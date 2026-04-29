@@ -2178,7 +2178,7 @@
 - name: get_activation_churn_limit#gloas
   sources:
     - file: packages/state-transition/src/util/validator.ts
-      search: export function getActivationChurnLimitGloas(
+      search: export function getActivationChurnLimit(
   spec: |
     <spec fn="get_activation_churn_limit" fork="gloas" hash="1341780f">
     def get_activation_churn_limit(state: BeaconState) -> Gwei:
@@ -5575,7 +5575,7 @@
 - name: get_validator_activation_churn_limit#deneb
   sources:
     - file: packages/state-transition/src/util/validator.ts
-      search: export function getActivationChurnLimit(
+      search: export function getValidatorActivationChurnLimit(
   spec: |
     <spec fn="get_validator_activation_churn_limit" fork="deneb" hash="cfc9e54a">
     def get_validator_activation_churn_limit(state: BeaconState) -> uint64:
