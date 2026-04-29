@@ -93,18 +93,13 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/random\/.*/,
     /^gloas\/transition\/core\/.*/,
     /^gloas\/fork_choice\/reorg\/.*/,
-    // TODO: re-enable after consensus-specs#5135 (anchor seed for payload votes)
-    /^gloas\/operations\/payload_attestation\/.*/,
     // TODO: re-enable after consensus-specs#5178 (light client extension for gloas)
     /^gloas\/light_client\/.*/,
     /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
     // TODO: re-enable after consensus-specs#5190 (checkpoint_root in ProposerPreferences) lands
     /^gloas\/ssz_static\/(Signed)?ProposerPreferences\/.*/,
   ],
-  skippedTests: [
-    // TODO: re-enable after consensus-specs#5178 (light client extension for gloas) lands
-    /\/gloas_fork$/,
-  ],
+  skippedTests: [],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["fast_confirmation", "networking"],
 };

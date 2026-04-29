@@ -620,6 +620,7 @@ const forkChoiceTest =
           (name.includes("gloas") &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
+              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||
               name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
           // TODO GLOAS: Spec test fixture bug in v1.7.0-alpha.5: wrong_withdrawals envelope SSZ data is
           // byte-for-byte identical to the valid envelope, making it impossible to reject
