@@ -5067,6 +5067,17 @@
         return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
     </spec>
 
+- name: get_proposer_dependent_root#gloas
+  sources: []
+  spec: |
+    <spec fn="get_proposer_dependent_root" fork="gloas" hash="2fabad44">
+    def get_proposer_dependent_root(state: BeaconState, epoch: Epoch) -> Root:
+        """
+        Return the dependent root for the proposer lookahead at ``epoch``.
+        """
+        return get_block_root_at_slot(state, Slot(compute_start_slot_at_epoch(Epoch(epoch - 1)) - 1))
+    </spec>
+
 - name: get_proposer_head#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
@@ -6870,7 +6881,7 @@
 - name: is_payload_data_available#gloas
   sources: []
   spec: |
-    <spec fn="is_payload_data_available" fork="gloas" hash="951cbbfc">
+    <spec fn="is_payload_data_available" fork="gloas" hash="e061dae8">
     def is_payload_data_available(store: Store, root: Root) -> bool:
         """
         Return whether the blob data for the beacon block with root ``root``
@@ -6884,7 +6895,8 @@
         if not is_payload_verified(store, root):
             return False
 
-        return sum(store.payload_data_availability_vote[root]) > DATA_AVAILABILITY_TIMELY_THRESHOLD
+        votes = store.payload_data_availability_vote[root]
+        return sum(vote is True for vote in votes) > DATA_AVAILABILITY_TIMELY_THRESHOLD
     </spec>
 
 - name: is_payload_inclusion_list_satisfied#heze
@@ -6910,7 +6922,7 @@
 - name: is_payload_timely#gloas
   sources: []
   spec: |
-    <spec fn="is_payload_timely" fork="gloas" hash="7fe3fa4c">
+    <spec fn="is_payload_timely" fork="gloas" hash="e49ecafe">
     def is_payload_timely(store: Store, root: Root) -> bool:
         """
         Return whether the execution payload for the beacon block with root ``root``
@@ -6924,7 +6936,8 @@
         if not is_payload_verified(store, root):
             return False
 
-        return sum(store.payload_timeliness_vote[root]) > PAYLOAD_TIMELY_THRESHOLD
+        votes = store.payload_timeliness_vote[root]
+        return sum(vote is True for vote in votes) > PAYLOAD_TIMELY_THRESHOLD
     </spec>
 
 - name: is_payload_verified#gloas
@@ -7872,7 +7885,7 @@
 - name: on_block#gloas
   sources: []
   spec: |
-    <spec fn="on_block" fork="gloas" hash="d1fb72e1">
+    <spec fn="on_block" fork="gloas" hash="57c61016">
     def on_block(store: Store, signed_block: SignedBeaconBlock) -> None:
         """
         Run ``on_block`` upon receiving a new block.
@@ -7913,8 +7926,8 @@
         # Add new state for this block to the store
         store.block_states[block_root] = state
         # Add a new PTC voting for this block to the store
-        store.payload_timeliness_vote[block_root] = [False] * PTC_SIZE
-        store.payload_data_availability_vote[block_root] = [False] * PTC_SIZE
+        store.payload_timeliness_vote[block_root] = [None] * PTC_SIZE
+        store.payload_data_availability_vote[block_root] = [None] * PTC_SIZE
 
         # Notify the store about the payload_attestations in the block
         notify_ptc_messages(store, state, block.body.payload_attestations)

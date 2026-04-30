@@ -421,7 +421,7 @@
 - name: Store#gloas
   sources: []
   spec: |
-    <spec dataclass="Store" fork="gloas" hash="5ece7e6f">
+    <spec dataclass="Store" fork="gloas" hash="e7c1cf9d">
     class Store(object):
         time: uint64
         genesis_time: uint64
@@ -442,9 +442,11 @@
         # [New in Gloas:EIP7732]
         payloads: Dict[Root, ExecutionPayloadEnvelope] = field(default_factory=dict)
         # [New in Gloas:EIP7732]
-        payload_timeliness_vote: Dict[Root, Vector[boolean, PTC_SIZE]] = field(default_factory=dict)
+        payload_timeliness_vote: Dict[Root, Vector[Optional[boolean], PTC_SIZE]] = field(
+            default_factory=dict
+        )
         # [New in Gloas:EIP7732]
-        payload_data_availability_vote: Dict[Root, Vector[boolean, PTC_SIZE]] = field(
+        payload_data_availability_vote: Dict[Root, Vector[Optional[boolean], PTC_SIZE]] = field(
             default_factory=dict
         )
     </spec>

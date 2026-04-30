@@ -1567,9 +1567,9 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ProposerPreferences =
   spec: |
-    <spec container="ProposerPreferences" fork="gloas" hash="dd21ec8a">
+    <spec container="ProposerPreferences" fork="gloas" hash="5ef93db5">
     class ProposerPreferences(Container):
-        checkpoint_root: Root
+        dependent_root: Root
         proposal_slot: Slot
         validator_index: ValidatorIndex
         fee_recipient: ExecutionAddress

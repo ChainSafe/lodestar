@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.6
+version: v1.7.0-alpha.7
 style: full
 
 specrefs:
@@ -363,6 +363,7 @@ exceptions:
     - update_proposer_boost_root#gloas
     - validate_merge_block#gloas
     - validate_on_attestation#gloas
+    - get_proposer_dependent_root#gloas
 
     # gloas (new in alpha.3, not yet implemented)
     - is_payload_data_available#gloas
