@@ -202,12 +202,10 @@ export function cacheByRangeResponses({
     });
   }
 
-  // Attach envelopes to entries whose envelope was returned by the peer. The returned
-  // payloadEnvelopes map only contains entries with envelopes ready for importExecutionPayload.
-  let payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null = null;
+  let payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null =
+    existingPayloadEnvelopes !== null ? new Map(existingPayloadEnvelopes) : null;
   if (downloadedPayloadEnvelopes !== null) {
-    payloadEnvelopes = new Map(existingPayloadEnvelopes ?? []);
-
+    payloadEnvelopes ??= new Map();
     for (const [slot, envelope] of downloadedPayloadEnvelopes) {
       const blockInput = updatedBatchBlocks.get(slot);
       if (!blockInput?.hasBlock() || !isForkPostGloas(blockInput.forkName)) {
