@@ -465,7 +465,10 @@ export function computeAdversarialWeight(
   endSlot: Slot
 ): number {
   const maximumWeight = estimateCommitteeWeightBetweenSlots(balanceSource, startSlot, endSlot);
-  const maxAdversarialWeight = Math.floor(maximumWeight / 100) * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD;
+  // The spec uses raw Gwei and computes `maximum_weight // 100 * threshold`.
+  // Lodestar carries effective-balance increments instead, so divide after multiplying to avoid
+  // dropping the adversarial budget to zero for small validator sets/minimal presets.
+  const maxAdversarialWeight = Math.floor((maximumWeight * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD) / 100);
   const equivocationScore = getEquivocationScore(ctx, store, cache, balanceSource, startSlot, endSlot);
   return maxAdversarialWeight > equivocationScore ? maxAdversarialWeight - equivocationScore : 0;
 }
@@ -625,7 +628,6 @@ export function isOneConfirmed(
     blockRoot
   );
   const isConfirmed = support > threshold;
-
   logger?.debug("Fast confirmation one-confirmed evaluation", {
     blockRoot,
     blockSlot: block.slot,
@@ -706,7 +708,10 @@ function computeHonestFfgSupport(
   byzantineThreshold: number
 ): number {
   const remainingFfgWeight = totalActiveBalance - ffgWeightTillNow;
-  const remainingHonestFfgWeight = Math.floor(remainingFfgWeight / 100) * (100 - byzantineThreshold);
+  // The spec rounds in raw Gwei as `remaining_ffg_weight // 100 * honest_percent`.
+  // In Lodestar this value is in effective-balance increments, so multiply before dividing by 100
+  // to preserve the same percentage semantics at our coarser unit scale.
+  const remainingHonestFfgWeight = Math.floor((remainingFfgWeight * (100 - byzantineThreshold)) / 100);
   const minHonestFfgSupport = ffgSupport - Math.min(adversarialWeight, ffgSupport);
   return minHonestFfgSupport + remainingHonestFfgWeight;
 }
