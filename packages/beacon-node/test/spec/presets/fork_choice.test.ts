@@ -261,6 +261,17 @@ const forkChoiceTest =
                     seenTimestampSec: 0,
                     daOutOfRange: false,
                   });
+                  // importBlock requires a PayloadEnvelopeInput to exist for gloas blocks; in
+                  // production this is seeded by gossip / by-root / by-range / API producers.
+                  // Spec tests bypass those, so seed it here to mirror the gossip-handler path.
+                  chain.seenPayloadEnvelopeInputCache.add({
+                    blockRootHex,
+                    block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                    forkName: fork,
+                    sampledColumns: chain.custodyConfig.sampledColumns,
+                    custodyColumns: chain.custodyConfig.custodyColumns,
+                    timeCreatedSec: Date.now() / 1000,
+                  });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
                     columns = [];
@@ -620,6 +631,7 @@ const forkChoiceTest =
           (name.includes("gloas") &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
+              name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||
               name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
           // TODO GLOAS: Spec test fixture bug in v1.7.0-alpha.5: wrong_withdrawals envelope SSZ data is
           // byte-for-byte identical to the valid envelope, making it impossible to reject

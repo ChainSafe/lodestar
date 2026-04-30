@@ -14,6 +14,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
@@ -185,9 +186,24 @@ export function cacheByRangeResponses({
     }
   }
 
-  // Build payloadEnvelopes map for gloas: start from existing (partial download) state.
-  // The entries are wrappers around (block + envelope + sampled columns) and also seeded into
-  // seenPayloadEnvelopeInputCache so importBlock can find them without creating a duplicate.
+  // Seed seenPayloadEnvelopeInputCache for every gloas block in the batch, regardless of whether
+  // the peer returned its envelope. Without this, a block returned without its envelope would be
+  // imported with no cache entry, and later payload-by-root sync would throw
+  // "Missing PayloadEnvelopeInput for known block" (see issue #9306).
+  for (const blockInput of updatedBatchBlocks.values()) {
+    if (!blockInput.hasBlock() || !isForkPostGloas(blockInput.forkName)) continue;
+    seenPayloadEnvelopeInputCache.add({
+      blockRootHex: blockInput.blockRootHex,
+      block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
+      sampledColumns: custodyConfig.sampledColumns,
+      custodyColumns: custodyConfig.custodyColumns,
+      timeCreatedSec: seenTimestampSec,
+    });
+  }
+
+  // Attach envelopes to entries whose envelope was returned by the peer. The returned
+  // payloadEnvelopes map only contains entries with envelopes ready for importExecutionPayload.
   let payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null = null;
   if (downloadedPayloadEnvelopes !== null) {
     payloadEnvelopes = new Map(existingPayloadEnvelopes ?? []);
@@ -198,20 +214,11 @@ export function cacheByRangeResponses({
         // No block to pair this envelope with; drop silently
         continue;
       }
-      const {blockRootHex} = blockInput;
 
-      // Reuse any existing PayloadEnvelopeInput (e.g. gossip arrived first) to avoid
-      // duplicate cache entries. If missing, create a fresh one from the block's bid.
-      let payloadInput = seenPayloadEnvelopeInputCache.get(blockRootHex);
+      const payloadInput = seenPayloadEnvelopeInputCache.get(blockInput.blockRootHex);
       if (payloadInput === undefined) {
-        payloadInput = seenPayloadEnvelopeInputCache.add({
-          blockRootHex,
-          block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
-          forkName: blockInput.forkName,
-          sampledColumns: custodyConfig.sampledColumns,
-          custodyColumns: custodyConfig.custodyColumns,
-          timeCreatedSec: seenTimestampSec,
-        });
+        // Unreachable given the loop above seeded an entry for every gloas block in the batch.
+        continue;
       }
 
       if (!payloadInput.hasPayloadEnvelope()) {
@@ -355,7 +362,7 @@ export async function requestByRange({
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
   let columnSidecars: undefined | DataColumnSidecar[];
-  let payloadEnvelopes: undefined | gloas.SignedExecutionPayloadEnvelope[];
+  const payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[] = [];
 
   const requests: Promise<unknown>[] = [];
 
@@ -363,6 +370,17 @@ export async function requestByRange({
     requests.push(
       network.sendBeaconBlocksByRange(peerIdStr, blocksRequest).then((blockResponse) => {
         blocks = blockResponse;
+        const firstBlock = blockResponse.at(0);
+        if (firstBlock && isGloasBeaconBlock(firstBlock.message)) {
+          return network
+            .sendExecutionPayloadEnvelopesByRoot(peerIdStr, [
+              firstBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot,
+            ])
+            .then((envelopeResponse) => {
+              payloadEnvelopes?.unshift(...envelopeResponse);
+            });
+        }
+        return undefined;
       })
     );
   }
@@ -386,7 +404,7 @@ export async function requestByRange({
   if (envelopesRequest) {
     requests.push(
       network.sendExecutionPayloadEnvelopesByRange(peerIdStr, envelopesRequest).then((envelopeResponse) => {
-        payloadEnvelopes = envelopeResponse;
+        payloadEnvelopes?.push(...envelopeResponse);
       })
     );
   }
@@ -1173,7 +1191,7 @@ export function validateEnvelopesByRangeResponse(
     const slot = payloadEnvelope.message.payload.slotNumber;
     const batchBlockRoot = batchBlockRoots.get(slot);
 
-    // Envelopes for slots not in the batch are silently ignored (orphaned payloads)
+    // Envelopes for slots not in the batch are silently ignored (orphaned payloads or a parent payload)
     if (batchBlockRoot === undefined) {
       continue;
     }
