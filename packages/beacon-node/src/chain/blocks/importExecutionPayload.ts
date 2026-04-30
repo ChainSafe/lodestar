@@ -1,6 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {isForkPostHeze} from "@lodestar/params";
+import {
+  BeaconStateView,
+  type CachedBeaconStateHeze,
+  DataAvailabilityStatus,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {fromHex, isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -154,6 +160,17 @@ export async function importExecutionPayload(
     );
   }
 
+  // Spec heze/inclusion-list.md `get_inclusion_list_transactions` for slot - 1 with only_timely=false.
+  // engine_newPayloadV6 requires the IL transactions; matches the validator/builder/verify paths so the
+  // EL verifies against the same IL view the proposer/builder used.
+  const ilTransactions = isForkPostHeze(fork)
+    ? this.inclusionListStore.getInclusionListTransactions(
+        (blockState as unknown as BeaconStateView).cachedState as CachedBeaconStateHeze,
+        slot - 1,
+        false
+      )
+    : undefined;
+
   // 4a. Run EL and signature verification in parallel
   const [execResult, signatureValid] = await Promise.all([
     this.executionEngine.notifyNewPayload(
@@ -161,7 +178,8 @@ export async function importExecutionPayload(
       envelope.payload,
       payloadInput.getVersionedHashes(),
       fromHex(protoBlock.parentRoot),
-      envelope.executionRequests
+      envelope.executionRequests,
+      ilTransactions
     ),
 
     opts.validSignature === true

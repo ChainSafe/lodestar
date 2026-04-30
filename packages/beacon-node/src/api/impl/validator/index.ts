@@ -20,6 +20,7 @@ import {
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
+  type IBeaconStateViewGloas,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
   computeEpochAtSlot,
@@ -47,7 +48,6 @@ import {
   bellatrix,
   getValidatorStatus,
   gloas,
-  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -88,7 +88,6 @@ import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
-import {getBlockResponse} from "../beacon/blocks/utils.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
@@ -1136,25 +1135,13 @@ export function getValidatorApi(
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
-      // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
+      // Spec heze/validator.md: build the IL against the local head's EL state. Use
+      // `state.latest_block_hash` rather than the head bid's `block_hash`: the bid commits a
+      // future payload that the EL only knows after the envelope is delivered. Using the bid's
+      // hash before the envelope arrives causes the EL to reject with "Unknown parent block".
       const headState = chain.getAttesterHeadState();
-      const headSlot = headState.slot;
-      const headBlockRootHex = chain.forkChoice.getAttesterHead().blockRoot;
-
-      const beaconBlockRootHex =
-        slot >= headSlot
-          ? // When attesting to the head slot or later, always use the head of the chain.
-            headBlockRootHex
-          : // Permit attesting to slots *prior* to the current head. This is desirable when
-            // the VC and BN are out-of-sync due to time issues or overloading.
-            toHex(headState.getBlockRootAtSlot(slot));
-
-      const block = (await getBlockResponse(chain, beaconBlockRootHex)).block;
-      // Heze inherits gloas's BeaconBlockBody, the EL block hash is sourced from the bid
-      const bid = (block as heze.SignedBeaconBlock).message.body.signedExecutionPayloadBid.message;
-      const blockHash = toHex(bid.blockHash);
-      logger.debug("produce inclusion list", {blockHash});
+      const blockHash = toHex((headState as IBeaconStateViewGloas).latestBlockHash);
+      logger.debug("produce inclusion list", {slot, blockHash});
 
       const timer = metrics?.getInclusionListV1RequestsDuration.startTimer();
       const ilTransactions = await chain.executionEngine.getInclusionList(blockHash);
