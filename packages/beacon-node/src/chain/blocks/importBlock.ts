@@ -116,13 +116,23 @@ export async function importBlock(
     }
     executionStatus = parentBlock.executionStatus;
   }
+
+  let expectedProposerIndex: number | null = null;
+  const headState = this.getHeadState();
+  if (headState.epoch === blockEpoch) {
+    expectedProposerIndex = headState.currentProposers[blockSlot % SLOTS_PER_EPOCH];
+  } else if (headState.epoch + 1 === blockEpoch) {
+    expectedProposerIndex = headState.nextProposers[blockSlot % SLOTS_PER_EPOCH];
+  }
+
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus
+    dataAvailabilityStatus,
+    expectedProposerIndex
   );
 
   // This adds the state necessary to process the next block

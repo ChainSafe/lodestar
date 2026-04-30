@@ -9,7 +9,7 @@ import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodest
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -486,7 +486,8 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Valid,
-            getDataAvailabilityStatusForFork(fork)
+            getDataAvailabilityStatusForFork(fork),
+            getHeadProposerIndex(chain.getHeadState(), slot)
           );
           blockStatesByRoot.set(blockRootHex, postState);
           continue;
@@ -501,7 +502,8 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Syncing,
-            getDataAvailabilityStatusForFork(fork)
+            getDataAvailabilityStatusForFork(fork),
+            getHeadProposerIndex(chain.getHeadState(), slot)
           );
           blockStatesByRoot.set(blockRootHex, postState);
           invalidateImportedBlock(chain, blockRootHex, parentRootHex);
@@ -725,6 +727,17 @@ async function validateMessageForTopic(
     default:
       throw new Error(`Unknown gossip topic: ${topic}`);
   }
+}
+
+function getHeadProposerIndex(headState: IBeaconStateView, slot: number): number | null {
+  const slotEpoch = computeEpochAtSlot(slot);
+  if (headState.epoch === slotEpoch) {
+    return headState.currentProposers[slot % SLOTS_PER_EPOCH];
+  }
+  if (headState.epoch + 1 === slotEpoch) {
+    return headState.nextProposers[slot % SLOTS_PER_EPOCH];
+  }
+  return null;
 }
 
 function rejectOnInvalidSerializedBytes<T>(fn: () => T): T {
