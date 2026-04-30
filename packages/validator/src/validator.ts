@@ -294,7 +294,8 @@ export class Validator {
       clock,
       validatorStore,
       chainHeaderTracker,
-      syncingStatusTracker
+      syncingStatusTracker,
+      emitter
     );
 
     return new Validator({

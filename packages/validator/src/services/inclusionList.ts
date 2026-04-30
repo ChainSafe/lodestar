@@ -5,6 +5,7 @@ import {sleep} from "@lodestar/utils";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
+import {ValidatorEventEmitter} from "./emitter.js";
 import {InclusionListDutiesService} from "./inclusionListDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -22,7 +23,8 @@ export class InclusionListService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     chainHeadTracker: ChainHeaderTracker,
-    syncingStatusTracker: SyncingStatusTracker
+    syncingStatusTracker: SyncingStatusTracker,
+    private readonly emitter: ValidatorEventEmitter
   ) {
     this.dutiesService = new InclusionListDutiesService(
       config,
@@ -50,11 +52,16 @@ export class InclusionListService {
     }
     const fork = this.config.getForkName(slot);
 
-    // A validator should create and broadcast the IL when either
-    // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
-    // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
-    // TODO HEZE: Review this timing. Spec says only mandates us to broadcast before 11s
-    await sleep(this.config.getInclusionListSubmissionDueMs(fork) - this.clock.msFromSlot(slot), signal);
+    // Spec heze/validator.md: broadcast the signed inclusion list by `get_inclusion_list_due_ms()`
+    // (~67% of slot) "built against the block for the current slot if it has been processed and
+    // confirmed as head, or against the local head returned by `get_head()` otherwise". Submit on
+    // whichever fires first:
+    //   (a) `executionPayloadImported` for `slot` — the EL has applied the slot's payload, so the
+    //       mempool view we'll query is post-slot. Note: if the import already completed before we
+    //       were scheduled, the helper short-circuits via its tracked latest-imported slot.
+    //   (b) the IL submission deadline — fallback for empty / missed slots, or when import is late.
+    const dueMs = Math.max(0, this.config.getInclusionListSubmissionDueMs(fork) - this.clock.msFromSlot(slot));
+    await Promise.race([sleep(dueMs, signal), this.emitter.waitForExecutionPayloadImportedSlot(slot)]);
 
     // If there is more than one duty, all validators on duty will sign and publish the same IL
     const inclusionListTransactions = await this.produceInclusionList(slot);

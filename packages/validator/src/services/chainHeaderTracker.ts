@@ -44,6 +44,8 @@ export class ChainHeaderTracker {
     // connections with pre-gloas beacon nodes
     if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
       topics.push(EventType.executionPayloadAvailable);
+      // [Heze] used by InclusionListService to broadcast against the freshly imported payload
+      topics.push(EventType.executionPayload);
     }
 
     this.api.events
@@ -105,6 +107,20 @@ export class ChainHeaderTracker {
       this.emitter.emit(ValidatorEvent.executionPayloadAvailable, event.message);
 
       this.logger.verbose("Found execution payload available", {
+        slot: event.message.slot,
+        blockRoot: event.message.blockRoot,
+      });
+    }
+
+    if (event.type === EventType.executionPayload) {
+      // [Heze] payload fully imported (EL accepted via newPayload, fork-choice updated). The
+      // mempool view is now post-slot, so the IL committee can build against it.
+      this.emitter.emit(ValidatorEvent.executionPayloadImported, {
+        slot: event.message.slot,
+        blockRoot: event.message.blockRoot,
+      });
+
+      this.logger.verbose("Found execution payload imported", {
         slot: event.message.slot,
         blockRoot: event.message.blockRoot,
       });
