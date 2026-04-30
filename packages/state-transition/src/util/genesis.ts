@@ -332,22 +332,6 @@ export function initializeBeaconStateFromEth1(
     const stateGloas = state as CompositeViewDU<typeof ssz.gloas.BeaconState>;
     stateGloas.fork.previousVersion = config.GLOAS_FORK_VERSION;
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
-
-    stateGloas.latestBlockHash = eth1BlockHash;
-    const emptyExecutionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
-      ssz.electra.ExecutionRequests.defaultValue()
-    );
-    const genesisBid = {
-      ...ssz.gloas.ExecutionPayloadBid.defaultValue(),
-      parentBlockHash: eth1BlockHash,
-      executionRequestsRoot: emptyExecutionRequestsRoot,
-    };
-    stateGloas.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(genesisBid);
-
-    // Re-compute latest_block_header.body_root to match a body with the genesis bid set
-    const genesisBlockBody = ssz.gloas.BeaconBlockBody.defaultValue();
-    genesisBlockBody.signedExecutionPayloadBid.message = genesisBid;
-    stateGloas.latestBlockHeader.bodyRoot = ssz.gloas.BeaconBlockBody.hashTreeRoot(genesisBlockBody);
   }
 
   state.commit();
