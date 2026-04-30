@@ -312,10 +312,13 @@ export class PayloadEnvelopeInput {
   }
 
   /**
-   * This function strictly checks all missing column from sampledColumns
-   * hasAllData is not considered
+   * Strictly checks missing sampled columns. Does NOT short-circuit on `state.hasAllData`.
    */
   getMissingSampledColumnMeta(): MissingColumnMeta {
+    if (this.state.hasComputedAllData) {
+      return {missing: [], versionedHashes: this.versionedHashes};
+    }
+
     const missing: ColumnIndex[] = [];
     for (const index of this.sampledColumns) {
       if (!this.columnsCache.has(index)) {
