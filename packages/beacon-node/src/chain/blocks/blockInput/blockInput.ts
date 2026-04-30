@@ -895,14 +895,11 @@ export class BlockInputColumns extends AbstractBlockInput<ForkColumnsDA, fulu.Da
     return this.getAllColumnsWithSource().map(({columnSidecar}) => columnSidecar);
   }
 
+  /**
+   * This function strictly checks all missing column from sampledColumns
+   * hasAllData is not considered
+   */
   getMissingSampledColumnMeta(): MissingColumnMeta {
-    if (this.state.hasAllData) {
-      return {
-        missing: [],
-        versionedHashes: this.state.versionedHashes,
-      };
-    }
-
     const missing: number[] = [];
     for (const index of this.sampledColumns) {
       if (!this.columnsCache.has(index)) {
