@@ -38,9 +38,9 @@ import {
   computeEpochAtSlot,
   computeProposers,
   computeSyncPeriodAtEpoch,
-  getValidatorActivationChurnLimit,
   getChurnLimit,
   getSeed,
+  getValidatorActivationChurnLimit,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
 } from "../util/index.js";

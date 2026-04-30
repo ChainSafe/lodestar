@@ -1,4 +1,10 @@
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, ForkSeq, GENESIS_EPOCH, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  ForkSeq,
+  GENESIS_EPOCH,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {BeaconState, Epoch, Gwei, Slot, SyncPeriod} from "@lodestar/types";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {getActivationExitChurnLimit, getConsolidationChurnLimit, getExitChurnLimit} from "./validator.js";
