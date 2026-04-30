@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   FastConfirmationContext,
@@ -29,12 +29,18 @@ export function makeBlock(
   opts: Partial<
     Pick<
       ProtoBlock,
-      "blockRoot" | "justifiedEpoch" | "justifiedRoot" | "unrealizedJustifiedEpoch" | "unrealizedJustifiedRoot"
+      | "blockRoot"
+      | "executionStatus"
+      | "justifiedEpoch"
+      | "justifiedRoot"
+      | "unrealizedJustifiedEpoch"
+      | "unrealizedJustifiedRoot"
     >
   > = {}
 ): ProtoBlock {
   const blockRoot = opts.blockRoot ?? rootFromNumber(slot);
-  return {
+  const executionStatus = opts.executionStatus ?? ExecutionStatus.PreMerge;
+  const block = {
     slot: slot as Slot,
     blockRoot,
     parentRoot,
@@ -48,12 +54,26 @@ export function makeBlock(
     unrealizedJustifiedRoot: opts.unrealizedJustifiedRoot ?? ZERO_ROOT,
     unrealizedFinalizedEpoch: 0,
     unrealizedFinalizedRoot: ZERO_ROOT,
-    executionPayloadBlockHash: null,
-    executionStatus: ExecutionStatus.PreMerge,
-    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
     timeliness: false,
+  };
+
+  if (executionStatus === ExecutionStatus.PreMerge) {
+    return {
+      ...block,
+      executionPayloadBlockHash: null,
+      executionStatus,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+    };
+  }
+
+  return {
+    ...block,
+    executionPayloadBlockHash: blockRoot,
+    executionPayloadNumber: 0,
+    executionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
 }
 
@@ -67,13 +87,14 @@ export function makeState(
   const activeIndices = Uint32Array.from(Array.from({length: validatorCount}, (_, i) => i as ValidatorIndex));
   const slashed = new Set<ValidatorIndex>(slashedIndices);
   const committees = new Map<Slot, Uint32Array>(committeeSlots.map((slot) => [slot, activeIndices]));
+  const slot = (committeeSlots.length > 0 ? Math.max(...committeeSlots) : 0) as Slot;
 
-  return {
-    slot: (committeeSlots.length > 0 ? Math.max(...committeeSlots) : 0) as Slot,
-    epoch: 0,
+  const state = {
+    slot,
+    epoch: computeEpochAtSlot(slot),
     effectiveBalanceIncrements: balances,
     getEffectiveBalanceIncrementsZeroInactive: () => balances,
-    getCurrentShuffling: () => ({activeIndices} as {activeIndices: Uint32Array}),
+    getCurrentShuffling: () => ({activeIndices}) as {activeIndices: Uint32Array},
     getBeaconCommitteeCountPerSlot: () => 1,
     getBeaconCommittee: (slot: Slot) => committees.get(slot) ?? activeIndices,
     getValidator: (index: ValidatorIndex) => ({
@@ -82,7 +103,14 @@ export function makeState(
       exitEpoch: FAR_FUTURE_EPOCH,
     }),
     validatorCount,
+    processSlots: (nextSlot: Slot) => ({
+      ...state,
+      slot: nextSlot,
+      epoch: computeEpochAtSlot(nextSlot),
+    }),
   } as unknown as IBeaconStateView;
+
+  return state;
 }
 
 export function makeStore(

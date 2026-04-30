@@ -15,6 +15,7 @@ import {
   isConfirmedChainSafe,
   isOneConfirmed,
 } from "../../../src/forkChoice/fastConfirmation/utils.js";
+import {ExecutionStatus} from "../../../src/index.js";
 import {
   ZERO_ROOT,
   latestMessagesFor,
@@ -97,6 +98,32 @@ describe("fast confirmation", () => {
     expect(
       isOneConfirmed(
         lowSupportCtx,
+        store,
+        createFastConfirmationCache(),
+        {state, balances: state.effectiveBalanceIncrements},
+        block.blockRoot,
+        "current"
+      )
+    ).toBe(false);
+  });
+
+  it("isOneConfirmed returns false when execution validity is unknown", () => {
+    const block = makeBlock(1, ZERO_ROOT, {executionStatus: ExecutionStatus.Syncing});
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
+    const state = makeState(100, 32, [1 as Slot]);
+    const store = makeStore(ZERO_ROOT, ZERO_ROOT, ZERO_ROOT, 0, 0, ZERO_ROOT, block.blockRoot, state);
+    const ctx = makeContext(
+      2 as Slot,
+      block.blockRoot,
+      blocks,
+      latestMessagesFor(100, block.blockRoot, 0),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state
+    );
+
+    expect(
+      isOneConfirmed(
+        ctx,
         store,
         createFastConfirmationCache(),
         {state, balances: state.effectiveBalanceIncrements},

@@ -73,6 +73,7 @@ export type FastConfirmationCache = {
   /** voteRoot -> totalWeight, keyed by sourceKey ("current" | "previous") */
   voteWeightBySource: Map<string, Map<RootHex, number>>;
   headState?: IBeaconStateView;
+  pulledUpHeadState?: IBeaconStateView;
   checkpointStateByKey: Map<string, IBeaconStateView | null>;
 };
 

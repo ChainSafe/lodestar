@@ -9,7 +9,7 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
-import {PayloadStatus, ProtoBlock} from "../../protoArray/interface.ts";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithPayloadStatus, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
 import {
   FastConfirmationBalanceSource,
@@ -142,6 +142,20 @@ export function getHeadState(
   if (!headState) throw new Error(`Head state not found for root ${ctx.getHead().stateRoot}`);
   cache.headState = headState;
   return cache.headState;
+}
+
+export function getPulledUpHeadState(
+  ctx: FastConfirmationContext,
+  store: IFastConfirmationStore,
+  cache: FastConfirmationCache
+): IBeaconStateView {
+  if (cache.pulledUpHeadState !== undefined) return cache.pulledUpHeadState;
+
+  const headState = getHeadState(ctx, store, cache);
+  const currentEpoch = computeEpochAtSlot(ctx.getCurrentSlot());
+  cache.pulledUpHeadState =
+    headState.epoch < currentEpoch ? headState.processSlots(computeStartSlotAtEpoch(currentEpoch)) : headState;
+  return cache.pulledUpHeadState;
 }
 
 export function getCheckpointState(
@@ -451,7 +465,7 @@ export function computeAdversarialWeight(
   endSlot: Slot
 ): number {
   const maximumWeight = estimateCommitteeWeightBetweenSlots(balanceSource, startSlot, endSlot);
-  const maxAdversarialWeight = Math.floor((maximumWeight * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD) / 100);
+  const maxAdversarialWeight = Math.floor(maximumWeight / 100) * ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD;
   const equivocationScore = getEquivocationScore(ctx, store, cache, balanceSource, startSlot, endSlot);
   return maxAdversarialWeight > equivocationScore ? maxAdversarialWeight - equivocationScore : 0;
 }
@@ -596,6 +610,9 @@ export function isOneConfirmed(
   if (currentSlot === 0) return false;
   const block = getBlock(ctx, cache, blockRoot);
   if (!block) return false;
+  if (block.executionStatus !== ExecutionStatus.Valid && block.executionStatus !== ExecutionStatus.PreMerge) {
+    return false;
+  }
 
   // Spec: is_one_confirmed(store, balance_source, block_root)
   // Compare actual support for this block against the computed LMD-GHOST safety threshold.
@@ -632,14 +649,12 @@ export function getCurrentTarget(ctx: FastConfirmationContext): CheckpointWithPa
   return getCheckpointForBlock(ctx, head, currentEpoch);
 }
 
-export function getCurrentTargetState(
+export function getCurrentEpochState(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
   cache: FastConfirmationCache
 ): IBeaconStateView | null {
-  const target = getCurrentTarget(ctx);
-  if (!target) return null;
-  return getCheckpointState(store, cache, target);
+  return getPulledUpHeadState(ctx, store, cache);
 }
 
 export function getCurrentTargetScore(
@@ -648,7 +663,7 @@ export function getCurrentTargetScore(
   cache: FastConfirmationCache
 ): number {
   const target = getCurrentTarget(ctx);
-  const targetState = getCurrentTargetState(ctx, store, cache);
+  const targetState = getCurrentEpochState(ctx, store, cache);
   if (!target || !targetState) return 0;
   const balances = targetState.effectiveBalanceIncrements;
   const activeIndices = targetState.getCurrentShuffling().activeIndices;
@@ -687,12 +702,12 @@ function computeHonestFfgSupport(
   totalActiveBalance: number,
   ffgSupport: number,
   ffgWeightTillNow: number,
+  adversarialWeight: number,
   byzantineThreshold: number
 ): number {
   const remainingFfgWeight = totalActiveBalance - ffgWeightTillNow;
-  const remainingHonestFfgWeight = Math.floor((remainingFfgWeight * (100 - byzantineThreshold)) / 100);
-  const minHonestFfgSupport =
-    ffgSupport - Math.min(Math.floor((ffgWeightTillNow * byzantineThreshold) / 100), ffgSupport);
+  const remainingHonestFfgWeight = Math.floor(remainingFfgWeight / 100) * (100 - byzantineThreshold);
+  const minHonestFfgSupport = ffgSupport - Math.min(adversarialWeight, ffgSupport);
   return minHonestFfgSupport + remainingHonestFfgWeight;
 }
 
@@ -704,7 +719,7 @@ export function computeHonestFfgSupportForCurrentTarget(
   const currentSlot = ctx.getCurrentSlot();
   if (currentSlot === 0) return 0;
   const currentEpoch = computeEpochAtSlot(currentSlot);
-  const targetState = getCurrentTargetState(ctx, store, cache);
+  const targetState = getCurrentEpochState(ctx, store, cache);
   if (!targetState) return 0;
   const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
   const ffgSupport = getCurrentTargetScore(ctx, store, cache);
@@ -713,10 +728,19 @@ export function computeHonestFfgSupportForCurrentTarget(
     computeStartSlotAtEpoch(currentEpoch),
     (currentSlot - 1) as Slot
   );
+  const adversarialWeight = computeAdversarialWeight(
+    ctx,
+    store,
+    cache,
+    {state: targetState, balances: targetState.effectiveBalanceIncrements},
+    computeStartSlotAtEpoch(currentEpoch),
+    (currentSlot - 1) as Slot
+  );
   return computeHonestFfgSupport(
     totalActiveBalance,
     ffgSupport,
     tillNowFFGWeight,
+    adversarialWeight,
     ctx.config.CONFIRMATION_BYZANTINE_THRESHOLD
   );
 }
@@ -731,7 +755,7 @@ export function willNoConflictingCheckpointBeJustified(
   if (equalCheckpointWithHex(target, ctx.getUnrealizedJustified().checkpoint)) {
     return true;
   }
-  const targetState = getCurrentTargetState(ctx, store, cache);
+  const targetState = getCurrentEpochState(ctx, store, cache);
   if (!targetState) return false;
   const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
   const honestSupport = computeHonestFfgSupportForCurrentTarget(ctx, store, cache);
@@ -743,7 +767,7 @@ export function willCurrentTargetBeJustified(
   store: IFastConfirmationStore,
   cache: FastConfirmationCache
 ): boolean {
-  const targetState = getCurrentTargetState(ctx, store, cache);
+  const targetState = getCurrentEpochState(ctx, store, cache);
   if (!targetState) return false;
   const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
   const honestSupport = computeHonestFfgSupportForCurrentTarget(ctx, store, cache);
