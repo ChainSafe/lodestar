@@ -179,15 +179,16 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
-  // Spec heze/inclusion-list.md `get_inclusion_list_transactions` for slot - 1 with only_timely=false,
-  // matching the validator's `prepare_execution_payload` and the builder's bid construction so the EL
-  // verifies against the same IL view the proposer/builder used.
-  // preState0 is the state at slot - 1 (block.message.slot - 1) so its IL committee is the relevant one.
+  // Spec heze/fork-choice.md `record_payload_inclusion_list_satisfaction` uses `only_timely=true`
+  // (default). The proposer/builder build with `only_timely=false`, so the payload is a superset of
+  // the timely-only set and verification against this subset is always satisfied for honest proposers.
+  // Using only_timely=false here would falsely reject blocks when the verifier holds late ILs the
+  // proposer never had a chance to satisfy.
   const ilTransactions = isForkPostHeze(fork)
     ? chain.inclusionListStore.getInclusionListTransactions(
         (preState0 as BeaconStateView).cachedState as CachedBeaconStateHeze,
         block.message.slot - 1,
-        false
+        true
       )
     : undefined;
 

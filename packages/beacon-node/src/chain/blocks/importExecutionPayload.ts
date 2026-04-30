@@ -160,14 +160,16 @@ export async function importExecutionPayload(
     );
   }
 
-  // Spec heze/inclusion-list.md `get_inclusion_list_transactions` for slot - 1 with only_timely=false.
-  // engine_newPayloadV6 requires the IL transactions; matches the validator/builder/verify paths so the
-  // EL verifies against the same IL view the proposer/builder used.
+  // Spec heze/fork-choice.md `record_payload_inclusion_list_satisfaction` uses `only_timely=true`
+  // (default). The proposer/builder build with `only_timely=false`, so the payload is a superset of
+  // the timely-only set and verification against this subset is always satisfied for honest proposers.
+  // Using only_timely=false here would falsely reject blocks when the verifier holds late ILs the
+  // proposer never had a chance to satisfy.
   const ilTransactions = isForkPostHeze(fork)
     ? this.inclusionListStore.getInclusionListTransactions(
         (blockState as unknown as BeaconStateView).cachedState as CachedBeaconStateHeze,
         slot - 1,
-        false
+        true
       )
     : undefined;
 
