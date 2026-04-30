@@ -803,7 +803,9 @@
     </spec>
 
 - name: compute_exit_epoch_and_update_churn#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/epoch.ts
+      search: export function computeExitEpochAndUpdateChurn(
   spec: |
     <spec fn="compute_exit_epoch_and_update_churn" fork="gloas" hash="392b6360">
     def compute_exit_epoch_and_update_churn(state: BeaconState, exit_balance: Gwei) -> Epoch:
@@ -2174,7 +2176,9 @@
     </spec>
 
 - name: get_activation_churn_limit#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/validator.ts
+      search: export function getActivationChurnLimit(
   spec: |
     <spec fn="get_activation_churn_limit" fork="gloas" hash="1341780f">
     def get_activation_churn_limit(state: BeaconState) -> Gwei:
@@ -3182,7 +3186,9 @@
     </spec>
 
 - name: get_consolidation_churn_limit#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/validator.ts
+      search: export function getConsolidationChurnLimit(
   spec: |
     <spec fn="get_consolidation_churn_limit" fork="gloas" hash="1c75d0a1">
     def get_consolidation_churn_limit(state: BeaconState) -> Gwei:
@@ -3841,7 +3847,9 @@
     </spec>
 
 - name: get_exit_churn_limit#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/validator.ts
+      search: export function getExitChurnLimit(
   spec: |
     <spec fn="get_exit_churn_limit" fork="gloas" hash="e9689891">
     def get_exit_churn_limit(state: BeaconState) -> Gwei:
@@ -5578,7 +5586,7 @@
 - name: get_validator_activation_churn_limit#deneb
   sources:
     - file: packages/state-transition/src/util/validator.ts
-      search: export function getActivationChurnLimit(
+      search: export function getValidatorActivationChurnLimit(
   spec: |
     <spec fn="get_validator_activation_churn_limit" fork="deneb" hash="cfc9e54a">
     def get_validator_activation_churn_limit(state: BeaconState) -> uint64:
@@ -10267,7 +10275,9 @@
     </spec>
 
 - name: process_pending_deposits#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/epoch/processPendingDeposits.ts
+      search: export function processPendingDeposits(
   spec: |
     <spec fn="process_pending_deposits" fork="gloas" hash="844e2ed3">
     def process_pending_deposits(state: BeaconState) -> None:

@@ -367,12 +367,7 @@ exceptions:
 
     # gloas (new in alpha.3, not yet implemented)
     - is_payload_data_available#gloas
-    - compute_exit_epoch_and_update_churn#gloas
     - compute_weak_subjectivity_period#gloas
-    - get_activation_churn_limit#gloas
-    - get_consolidation_churn_limit#gloas
-    - get_exit_churn_limit#gloas
-    - process_pending_deposits#gloas
     - block_to_light_client_header#gloas
     - get_lc_execution_root#gloas
     - is_valid_light_client_header#gloas
@@ -455,11 +450,6 @@ exceptions:
   configs:
     # phase0 fast confirmation / not implemented
     - CONFIRMATION_BYZANTINE_THRESHOLD#phase0
-
-    # gloas
-    - CHURN_LIMIT_QUOTIENT_GLOAS#gloas
-    - CONSOLIDATION_CHURN_LIMIT_QUOTIENT#gloas
-    - MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS#gloas
 
     # heze (not implemented)
     - HEZE_FORK_EPOCH#heze
