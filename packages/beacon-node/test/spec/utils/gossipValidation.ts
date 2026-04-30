@@ -311,11 +311,16 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
   if (!parentBlock?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: parent ${parentRootHex} has no latest valid execution hash`);
   }
+  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  if (!block?.executionPayloadBlockHash) {
+    throw new Error(`Cannot invalidate ${blockRootHex}: block has no execution payload hash`);
+  }
 
   chain.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
     invalidateFromParentBlockRoot: blockRootHex,
+    invalidateFromParentBlockHash: block.executionPayloadBlockHash,
   });
 }
 

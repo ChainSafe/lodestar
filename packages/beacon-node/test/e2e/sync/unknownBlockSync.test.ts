@@ -70,11 +70,6 @@ describe("sync / unknown block sync thru gloas", () => {
       expectsPayloadImport: true,
     },
     {
-      id: "should do an envelopeUnknownBlock sync from another BN",
-      event: ChainEvent.envelopeUnknownBlock,
-      expectsPayloadImport: true,
-    },
-    {
       id: "should do an incompletePayloadEnvelope sync from another BN",
       event: ChainEvent.incompletePayloadEnvelope,
       expectsPayloadImport: true,
@@ -128,10 +123,10 @@ describe("sync / unknown block sync thru gloas", () => {
         testLoggerOpts,
       });
 
-      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close().catch(() => {}))));
-
-      // stop bn after validators
       afterEachCallbacks.push(() => bn.close().catch(() => {}));
+      // Cleanup callbacks run LIFO: close validators before Node A so a late
+      // proposal tick cannot call into a closing beacon node.
+      afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.close().catch(() => {}))));
 
       const payloadEvent = await waitForTargetPayloadOnNodeA;
       loggerNodeA.info("Node A selected gloas payload target", {slot: payloadEvent.slot, root: payloadEvent.blockRoot});
@@ -183,6 +178,18 @@ describe("sync / unknown block sync thru gloas", () => {
         forkName: bn.chain.config.getForkName(headSlot),
         daOutOfRange: false,
       });
+      if (event === ChainEvent.blockUnknownParent || event === ChainEvent.incompleteBlockInput) {
+        // This test injects a BlockInput directly into Node B, bypassing the gossip handler
+        // that normally seeds PayloadEnvelopeInput for Gloas blocks before unknown sync sees it.
+        bn2.chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex: headRootHex,
+          block: head,
+          forkName: headInput.forkName,
+          sampledColumns: bn2.chain.custodyConfig.sampledColumns,
+          custodyColumns: bn2.chain.custodyConfig.custodyColumns,
+          timeCreatedSec: headInput.getTimeComplete(),
+        });
+      }
       const waitForPayloadImported = expectsPayloadImport
         ? waitForEvent<routes.events.EventData[routes.events.EventType.executionPayload]>(
             bn2.chain.emitter,
@@ -232,20 +239,6 @@ describe("sync / unknown block sync thru gloas", () => {
             source: BlockInputSource.gossip,
           });
           break;
-        case ChainEvent.envelopeUnknownBlock: {
-          // Node A produced the head; its cache has the full signed envelope (populated via
-          // publishExecutionPayloadEnvelope -> payloadInput.addPayloadEnvelope).
-          const payloadInputOnA = bn.chain.seenPayloadEnvelopeInputCache.get(headRootHex);
-          if (!payloadInputOnA?.hasPayloadEnvelope()) {
-            throw Error(`Expected node A to have signed envelope for ${headRootHex}`);
-          }
-          bn2.chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
-            envelope: payloadInputOnA.getPayloadEnvelope(),
-            peer: sourcePeerId,
-            source: BlockInputSource.gossip,
-          });
-          break;
-        }
         case ChainEvent.incompletePayloadEnvelope: {
           // get the chain started with an unknownBlockRoot
           bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {

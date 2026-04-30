@@ -167,14 +167,7 @@ function getHeadExecutionInfo(
     return [];
   }
 
-  // A PayloadSeparated head is a gloas beacon block imported before its payload envelope
-  // arrives, in that case the exec-block row surfaces the inherited parent anchor (from the
-  // bid), which is already validated. Normalize to "valid" to avoid leaking internal
-  // fork-choice bookkeeping into the log. Once the payload envelope arrives and the FULL
-  // variant becomes head, executionStatus is Valid/Syncing naturally.
-  // TODO GLOAS: revisit once optimistic sync is implemented
-  const executionStatusStr =
-    headInfo.executionStatus === ExecutionStatus.PayloadSeparated ? "valid" : headInfo.executionStatus.toLowerCase();
+  const executionStatusStr = headInfo.executionStatus.toLowerCase();
 
   // Add execution status to notifier only if head is on/post bellatrix
   if (isStatePostBellatrix(headState) && headState.isExecutionStateType) {

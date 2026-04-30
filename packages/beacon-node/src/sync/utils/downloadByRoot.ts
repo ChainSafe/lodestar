@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreFulu,
   isForkPostDeneb,
   isForkPostFulu,
@@ -111,6 +112,17 @@ export async function downloadByRoot({
       blockRootHex: rootHex,
       seenTimestampSec: Date.now() / 1000,
       source: BlockInputSource.byRoot,
+    });
+  }
+
+  if (isForkPostGloas(blockInput.forkName)) {
+    chain.seenPayloadEnvelopeInputCache.add({
+      blockRootHex: rootHex,
+      block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
+      sampledColumns: chain.custodyConfig.sampledColumns,
+      custodyColumns: chain.custodyConfig.custodyColumns,
+      timeCreatedSec: Date.now() / 1000,
     });
   }
 
