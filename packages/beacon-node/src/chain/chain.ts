@@ -305,7 +305,7 @@ export class BeaconChain implements IBeaconChain {
     this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
     this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
     this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
-    this.inclusionListStore = new InclusionListStore(config, clock);
+    this.inclusionListStore = new InclusionListStore();
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
     this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
     this.opPool = new OpPool(config);

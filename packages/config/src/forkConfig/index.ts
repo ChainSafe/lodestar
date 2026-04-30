@@ -245,9 +245,6 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getProposerInclusionListCutoffMs(_fork: ForkName): number {
       return this.getSlotComponentDurationMs(config.PROPOSER_INCLUSION_LIST_CUTOFF_BPS);
     },
-    getViewFreezeCutoffMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.VIEW_FREEZE_CUTOFF_BPS);
-    },
 
     getSlotComponentDurationMs(basisPoints: number): number {
       return Math.round((basisPoints * config.SLOT_DURATION_MS) / BASIS_POINTS);

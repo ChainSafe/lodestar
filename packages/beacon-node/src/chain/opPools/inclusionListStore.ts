@@ -1,10 +1,8 @@
 import {BitArray} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {CachedBeaconStateHeze} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, bellatrix, heze, ssz} from "@lodestar/types";
 import {MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {IClock} from "../../util/clock.js";
 
 const SLOTS_RETAINED = 2;
 
@@ -18,8 +16,6 @@ export enum InclusionListInsertOutcome {
   Old = "Old",
   /** Pool is full for this (slot, committee_root). */
   ReachLimit = "ReachLimit",
-  /** Arrived after `getProposerInclusionListCutoffMs`. */
-  Late = "Late",
   /** Identical inclusion list already stored. */
   Seen = "Seen",
   /** New equivocation evidence: validator already had a different IL stored under the same key. */
@@ -64,11 +60,6 @@ export class InclusionListStore {
 
   private lowestPermissibleSlot = 0;
 
-  constructor(
-    private readonly config: ChainForkConfig,
-    private readonly clock: IClock
-  ) {}
-
   get size(): number {
     let count = 0;
     for (const ils of this.inclusionLists.values()) count += ils.size;
@@ -85,18 +76,15 @@ export class InclusionListStore {
 
   /**
    * Spec heze/inclusion-list.md `process_inclusion_list`.
-   * Pruning + late-arrival + per-key DoS guard added on top of spec semantics.
+   * Pruning + per-key DoS guard added on top of spec semantics. Late ILs (after the gossip
+   * deadline) are stored with `is_timely=false` per spec; the gossip-layer slot filter ensures
+   * we never see ILs outside the current slot window.
    */
   processInclusionList(inclusionList: heze.InclusionList, isTimely: boolean): InclusionListInsertOutcome {
     const {slot, validatorIndex, inclusionListCommitteeRoot} = inclusionList;
-    const fork = this.config.getForkName(slot);
 
     if (slot < this.lowestPermissibleSlot) {
       return InclusionListInsertOutcome.Old;
-    }
-
-    if (this.clock.msFromSlot(slot) > this.config.getProposerInclusionListCutoffMs(fork)) {
-      return InclusionListInsertOutcome.Late;
     }
 
     // Spec p2p heze: "the message is either the first or second valid message received

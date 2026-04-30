@@ -79,7 +79,6 @@ export type ChainConfig = {
 
   INCLUSION_LIST_SUBMISSION_DUE_BPS: number;
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: number;
-  VIEW_FREEZE_CUTOFF_BPS: number;
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
@@ -211,7 +210,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   INCLUSION_LIST_SUBMISSION_DUE_BPS: "number",
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: "number",
-  VIEW_FREEZE_CUTOFF_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",

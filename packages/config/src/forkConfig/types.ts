@@ -66,7 +66,6 @@ export type ForkConfig = {
   /** Spec heze/fork-choice.md: get_inclusion_list_due_ms (INCLUSION_LIST_DUE_BPS share of slot). */
   getInclusionListDueMs(): number;
   getProposerInclusionListCutoffMs(fork: ForkName): number;
-  getViewFreezeCutoffMs(fork: ForkName): number;
 
   /** Convert basis points to milliseconds into the slot */
   getSlotComponentDurationMs(basisPoints: number): number;

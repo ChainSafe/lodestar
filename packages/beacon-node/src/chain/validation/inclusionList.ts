@@ -49,18 +49,17 @@ async function validateInclusionList(
     });
   }
 
-  // [REJECT] The slot message.slot is equal to the previous or current slot.
-  if (slot !== chain.clock.currentSlot && slot !== chain.clock.currentSlot - 1) {
+  // [IGNORE] Spec heze/p2p-interface.md: the slot `message.slot` is equal to the current slot
+  // (with `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
+  if (slot !== chain.clock.currentSlot) {
     chain.metrics?.inclusionListsInvalid.inc({source, reason: InvalidInclusionListReason.slotOutOfRange});
     chain.metrics?.inclusionListsInvalidSize.inc(inclusionListSize);
-    throw new InclusionListError(GossipAction.REJECT, {
+    throw new InclusionListError(GossipAction.IGNORE, {
       code: InclusionListErrorCode.INVALID_SLOT,
       inclusionListSlot: slot,
       currentSlot: chain.clock.currentSlot,
     });
   }
-
-  // [IGNORE] The slot message.slot is equal to the current slot, or it is equal to the previous slot and the current time is less than attestation_deadline seconds into the slot.
 
   const headState = chain.getHeadState();
   const shuffling = headState.getShufflingAtEpoch(computeEpochAtSlot(slot));
