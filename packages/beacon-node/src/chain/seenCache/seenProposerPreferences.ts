@@ -5,16 +5,16 @@ import {MapDef} from "@lodestar/utils";
  * Tracks signed proposer preferences we've already seen per (dependent_root, proposal_slot, validator_index).
  */
 export class SeenProposerPreferences {
-  private readonly validatorBySlotByDependentRoot = new MapDef<RootHex, Map<Slot, ValidatorIndex>>(
-    () => new Map<Slot, ValidatorIndex>()
+  private readonly validatorByDependentRootBySlot = new MapDef<Slot, Map<RootHex, ValidatorIndex>>(
+    () => new Map<RootHex, ValidatorIndex>()
   );
 
   isKnown(dependentRoot: RootHex, proposalSlot: Slot, validatorIndex: ValidatorIndex): boolean {
-    return this.validatorBySlotByDependentRoot.get(dependentRoot)?.get(proposalSlot) === validatorIndex;
+    return this.validatorByDependentRootBySlot.get(proposalSlot)?.get(dependentRoot) === validatorIndex;
   }
 
   add(dependentRoot: RootHex, proposalSlot: Slot, validatorIndex: ValidatorIndex): void {
-    this.validatorBySlotByDependentRoot.getOrDefault(dependentRoot).set(proposalSlot, validatorIndex);
+    this.validatorByDependentRootBySlot.getOrDefault(proposalSlot).set(dependentRoot, validatorIndex);
   }
 
   /**
@@ -23,14 +23,9 @@ export class SeenProposerPreferences {
    * on each slot tick.
    */
   prune(currentSlot: Slot): void {
-    for (const [dependentRoot, slotMap] of this.validatorBySlotByDependentRoot.entries()) {
-      for (const slot of slotMap.keys()) {
-        if (slot < currentSlot) {
-          slotMap.delete(slot);
-        }
-      }
-      if (slotMap.size === 0) {
-        this.validatorBySlotByDependentRoot.delete(dependentRoot);
+    for (const [slot] of this.validatorByDependentRootBySlot.entries()) {
+      if (slot < currentSlot) {
+        this.validatorByDependentRootBySlot.delete(slot);
       }
     }
   }
