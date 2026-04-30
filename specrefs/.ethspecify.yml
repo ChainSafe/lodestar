@@ -450,6 +450,11 @@ exceptions:
     # phase0 fast confirmation / not implemented
     - CONFIRMATION_BYZANTINE_THRESHOLD#phase0
 
+    # gloas
+    - CHURN_LIMIT_QUOTIENT_GLOAS#gloas
+    - CONSOLIDATION_CHURN_LIMIT_QUOTIENT#gloas
+    - MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS#gloas
+
     # heze (not implemented)
     - HEZE_FORK_EPOCH#heze
     - HEZE_FORK_VERSION#heze

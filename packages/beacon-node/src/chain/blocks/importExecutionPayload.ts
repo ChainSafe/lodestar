@@ -61,7 +61,6 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
   switch (status) {
     case ExecutionPayloadStatus.VALID:
       return ExecutionStatus.Valid;
-    // TODO GLOAS: Handle optimistic import for payload
     case ExecutionPayloadStatus.SYNCING:
     case ExecutionPayloadStatus.ACCEPTED:
       return ExecutionStatus.Syncing;
@@ -255,8 +254,7 @@ export async function importExecutionPayload(
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
-      // TODO GLOAS: revisit once we support optimistic import
-      executionOptimistic: false,
+      executionOptimistic: execStatus === ExecutionStatus.Syncing,
     });
   }
 

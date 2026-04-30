@@ -125,15 +125,17 @@ export async function verifyBlocksInEpoch(
     }> =
       fork >= ForkSeq.gloas
         ? (async () => {
-            const payloadInputsForDa: PayloadEnvelopeInput[] = [];
-            for (const input of blockInputs) {
-              const pi = payloadEnvelopes?.get(input.slot);
-              if (pi !== undefined) payloadInputsForDa.push(pi);
-            }
+            // Validate DA for ALL payloads in the Map, not just those paired with blockInputs.
+            // A checkpoint-sync batch may include a payload for a slot whose block was filtered
+            // out of relevantBlocks (e.g., the anchor at the finalized slot); that payload still
+            // needs DA validation so it can be imported in processBlocks.
+            const payloadInputsForDa: PayloadEnvelopeInput[] =
+              payloadEnvelopes !== null ? Array.from(payloadEnvelopes.values()) : [];
             const {dataAvailabilityStatuses, availableTime} = await verifyPayloadsDataAvailability(
               payloadInputsForDa,
               abortController.signal
             );
+
             const payloadDAStatuses = new Map<Slot, DataAvailabilityStatus>();
             for (let i = 0; i < payloadInputsForDa.length; i++) {
               payloadDAStatuses.set(payloadInputsForDa[i].slot, dataAvailabilityStatuses[i]);
