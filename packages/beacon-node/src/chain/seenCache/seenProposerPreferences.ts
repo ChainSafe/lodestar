@@ -23,7 +23,7 @@ export class SeenProposerPreferences {
    * on each slot tick.
    */
   prune(currentSlot: Slot): void {
-    for (const [slot] of this.validatorByDependentRootBySlot.entries()) {
+    for (const slot of this.validatorByDependentRootBySlot.keys()) {
       if (slot < currentSlot) {
         this.validatorByDependentRootBySlot.delete(slot);
       }
