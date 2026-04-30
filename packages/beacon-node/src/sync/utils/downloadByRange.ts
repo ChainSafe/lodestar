@@ -14,6 +14,7 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
@@ -361,7 +362,7 @@ export async function requestByRange({
   let blocks: undefined | SignedBeaconBlock[];
   let blobSidecars: undefined | deneb.BlobSidecars;
   let columnSidecars: undefined | DataColumnSidecar[];
-  let payloadEnvelopes: undefined | gloas.SignedExecutionPayloadEnvelope[];
+  const payloadEnvelopes: gloas.SignedExecutionPayloadEnvelope[] = [];
 
   const requests: Promise<unknown>[] = [];
 
@@ -369,6 +370,17 @@ export async function requestByRange({
     requests.push(
       network.sendBeaconBlocksByRange(peerIdStr, blocksRequest).then((blockResponse) => {
         blocks = blockResponse;
+        const firstBlock = blockResponse.at(0);
+        if (firstBlock && isGloasBeaconBlock(firstBlock.message)) {
+          return network
+            .sendExecutionPayloadEnvelopesByRoot(peerIdStr, [
+              firstBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot,
+            ])
+            .then((envelopeResponse) => {
+              payloadEnvelopes?.unshift(...envelopeResponse);
+            });
+        }
+        return undefined;
       })
     );
   }
@@ -392,7 +404,7 @@ export async function requestByRange({
   if (envelopesRequest) {
     requests.push(
       network.sendExecutionPayloadEnvelopesByRange(peerIdStr, envelopesRequest).then((envelopeResponse) => {
-        payloadEnvelopes = envelopeResponse;
+        payloadEnvelopes?.push(...envelopeResponse);
       })
     );
   }
@@ -1179,7 +1191,7 @@ export function validateEnvelopesByRangeResponse(
     const slot = payloadEnvelope.message.payload.slotNumber;
     const batchBlockRoot = batchBlockRoots.get(slot);
 
-    // Envelopes for slots not in the batch are silently ignored (orphaned payloads)
+    // Envelopes for slots not in the batch are silently ignored (orphaned payloads or a parent payload)
     if (batchBlockRoot === undefined) {
       continue;
     }
