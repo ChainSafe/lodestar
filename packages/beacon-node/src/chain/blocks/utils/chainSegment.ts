@@ -41,6 +41,14 @@ export function assertLinearChainSegment(
   // - EMPTY variant (no envelope for slot): execution hash is unchanged
   // null only for pre-merge parents, which cannot precede gloas blocks.
   let currentExecHash: string | null = parentBlock.executionPayloadBlockHash;
+  // Checkpoint sync first batch: parent is the anchor PENDING whose executionPayloadBlockHash
+  // is the inherited parentBlockHash semantic (= grandparent's payload), not its own payload.
+  // If parent's own payload envelope arrives in this batch, advance currentExecHash to that
+  // payload's blockHash so the segment validation sees the true EL chain head.
+  const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
+  if (parentPayloadInput?.hasPayloadEnvelope()) {
+    currentExecHash = parentPayloadInput.getBlockHashHex();
+  }
   // Track the execution hash before the last FULL advancement so we can recover
   // if the next block reveals that envelope was orphaned.
   let prevExecHash: string | null = currentExecHash;

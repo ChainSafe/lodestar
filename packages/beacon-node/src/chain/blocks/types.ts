@@ -99,7 +99,8 @@ export type ImportBlockOpts = {
  *
  * `executionStatus` reflects the outcome of execution payload verification at block-import time:
  * - pre-gloas: Valid | Syncing | PreMerge (from EL notifyNewPayload against the in-block payload)
- * - post-gloas: PayloadSeparated (payload arrives separately as an envelope and is imported later)
+ * - post-gloas: inherited from parent's chain (Valid/Syncing) by importBlock; payload arrives
+ *   separately as an envelope and creates the FULL variant later via onExecutionPayload
  */
 export type FullyVerifiedBlock = {
   blockInput: IBlockInput;

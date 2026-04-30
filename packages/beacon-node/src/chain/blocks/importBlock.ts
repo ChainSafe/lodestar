@@ -69,8 +69,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
-    fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, dataAvailabilityStatus, indexedAttestations} = fullyVerifiedBlock;
+  let {executionStatus} = fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
@@ -105,12 +105,23 @@ export async function importBlock(
 
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
+  if (fork >= ForkSeq.gloas) {
+    const parentRootHex = toRootHex(block.message.parentRoot);
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+    if (parentBlock === null) {
+      throw Error(`Parent block not found in forkChoice, parentRoot=${parentRootHex}`);
+    }
+    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+      throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
+    }
+    executionStatus = parentBlock.executionStatus;
+  }
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
-    fork >= ForkSeq.gloas ? ExecutionStatus.PayloadSeparated : executionStatus,
+    executionStatus,
     dataAvailabilityStatus
   );
 

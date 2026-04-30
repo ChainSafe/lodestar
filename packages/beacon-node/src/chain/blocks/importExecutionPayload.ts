@@ -7,7 +7,7 @@ import {
   DataAvailabilityStatus,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -67,7 +67,6 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
   switch (status) {
     case ExecutionPayloadStatus.VALID:
       return ExecutionStatus.Valid;
-    // TODO GLOAS: Handle optimistic import for payload
     case ExecutionPayloadStatus.SYNCING:
     case ExecutionPayloadStatus.ACCEPTED:
       return ExecutionStatus.Syncing;
@@ -179,7 +178,7 @@ export async function importExecutionPayload(
       fork,
       envelope.payload,
       payloadInput.getVersionedHashes(),
-      fromHex(protoBlock.parentRoot),
+      envelope.parentBeaconBlockRoot,
       envelope.executionRequests,
       ilTransactions
     ),
@@ -275,8 +274,7 @@ export async function importExecutionPayload(
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
-      // TODO GLOAS: revisit once we support optimistic import
-      executionOptimistic: false,
+      executionOptimistic: execStatus === ExecutionStatus.Syncing,
     });
   }
 

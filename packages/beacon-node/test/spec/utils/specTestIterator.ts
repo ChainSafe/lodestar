@@ -77,10 +77,19 @@ export const defaultSkipOpts: SkipOpts = {
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
-    /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
-    /^heze\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    // TODO-GLOAS: re-enable after Gloas light client is implemented
+    /^gloas\/light_client\/.*/,
+    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    /^heze\/light_client\/.*/,
+    /^heze\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // TODO-GLOAS: re-enable after gloas light client is implemented
+    /\/gloas_fork$/,
+    /\/heze_fork$/,
+  ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["fast_confirmation", "networking"],
 };

@@ -54,8 +54,7 @@ type VerifyBlockExecutionResponse =
   | VerifyExecutionErrorResponse
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
-  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null}
-  | {executionStatus: ExecutionStatus.PayloadSeparated; lvhResponse: undefined; execError: null};
+  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null};
 
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
@@ -153,9 +152,10 @@ export async function verifyBlockExecutionPayload(
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
-  // Gloas block doesn't have execution payload. Return right away
+  // Gloas block doesn't have execution payload. Return Syncing as a placeholder; the actual
+  // status for gloas PENDING/EMPTY is derived from parent's chain in importBlock.
   if (isBlockInputNoData(blockInput)) {
-    return {executionStatus: ExecutionStatus.PayloadSeparated, lvhResponse: undefined, execError: null};
+    return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
   }
 
   /** Not null if execution is enabled */
@@ -229,6 +229,7 @@ export async function verifyBlockExecutionPayload(
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
         invalidateFromParentBlockRoot: blockInput.parentRootHex,
+        invalidateFromParentBlockHash: toRootHex(executionPayloadEnabled.parentHash),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -327,6 +328,7 @@ function getSegmentErrorResponse(
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
         invalidateFromParentBlockRoot: parentBlock.blockRoot,
+        invalidateFromParentBlockHash: parentBlock.executionPayloadBlockHash,
       };
     }
   }

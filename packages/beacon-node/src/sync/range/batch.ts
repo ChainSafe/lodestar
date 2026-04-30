@@ -202,6 +202,7 @@ export class Batch {
     const envelopesBySlot = this.state.payloadEnvelopes ?? new Map<Slot, PayloadEnvelopeInput>();
 
     // ensure blocks are in slot-wise order
+    const isPostGloas = isForkPostGloas(this.forkName);
     for (const blockInput of blocks) {
       const blockSlot = blockInput.slot;
       // check if block/data is present (hasBlock/hasAllData). If present then check if startSlot is the same as
@@ -217,21 +218,36 @@ export class Batch {
       if (blockInput.hasBlock() && blockStartSlot === blockSlot) {
         blockStartSlot = blockSlot + 1;
       }
-      if (
-        blockInput.hasBlock() &&
-        envelopeStartSlot === blockSlot &&
-        envelopesBySlot.get(blockSlot)?.hasPayloadEnvelope()
-      ) {
-        envelopeStartSlot = blockSlot + 1;
-      }
-      if (!blockInput.hasAllData()) {
-        if (isBlockInputColumns(blockInput)) {
-          for (const index of blockInput.getMissingSampledColumnMeta().missing) {
+
+      // Range sync uses hasComputedAllData (all sampled columns physically present), not hasAllData
+      // which flips at the reconstruction threshold. Sync never triggers reconstruction, so accepting
+      // a half-downloaded block here makes writeBlockInputToDb later block on waitForComputedAllData.
+      if (isPostGloas) {
+        // Post-Gloas: column data lives on PayloadEnvelopeInput, not on BlockInputNoData.
+        const payloadInput = envelopesBySlot.get(blockSlot);
+        if (blockInput.hasBlock() && envelopeStartSlot === blockSlot && payloadInput?.hasPayloadEnvelope()) {
+          envelopeStartSlot = blockSlot + 1;
+        }
+        if (payloadInput && !payloadInput.hasComputedAllData()) {
+          for (const index of payloadInput.getMissingSampledColumnMeta().missing) {
             neededColumns.add(index);
           }
+        } else if (payloadInput?.hasComputedAllData() && dataStartSlot === blockSlot) {
+          // Only advance dataStartSlot when we know columns for this slot are complete. If
+          // payloadInput is missing entirely we cannot tell, so stop here so the next round
+          // re-requests columns (and envelopes) starting at this slot.
+          dataStartSlot = blockSlot + 1;
         }
-      } else if (dataStartSlot === blockSlot) {
-        dataStartSlot = blockSlot + 1;
+      } else {
+        if (isBlockInputColumns(blockInput) ? !blockInput.hasComputedAllData() : !blockInput.hasAllData()) {
+          if (isBlockInputColumns(blockInput)) {
+            for (const index of blockInput.getMissingSampledColumnMeta().missing) {
+              neededColumns.add(index);
+            }
+          }
+        } else if (dataStartSlot === blockSlot) {
+          dataStartSlot = blockSlot + 1;
+        }
       }
     }
 
@@ -251,11 +267,15 @@ export class Batch {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
       if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
-        requests.columnsRequest = {
-          count,
-          startSlot: dataStartSlot,
-          columns: Array.from(neededColumns),
-        };
+        // Skip the column re-request when we have no specific column indices outstanding.
+        // Peer rejects an empty `columns` list
+        if (neededColumns.size > 0) {
+          requests.columnsRequest = {
+            count,
+            startSlot: dataStartSlot,
+            columns: Array.from(neededColumns),
+          };
+        }
       } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
         requests.blobsRequest = {
           count,
@@ -379,7 +399,11 @@ export class Batch {
     const slots = new Set<number>();
     for (const block of blocks) {
       slots.add(block.slot);
-      if (!block.hasBlockAndAllData()) {
+      const dataComplete = isBlockInputColumns(block)
+        ? // by_range needs to download all columns
+          block.hasBlock() && block.hasComputedAllData()
+        : block.hasBlockAndAllData();
+      if (!dataComplete) {
         allComplete = false;
       }
     }
@@ -395,11 +419,22 @@ export class Batch {
     }
     const newPayloadEnvelopes = payloadEnvelopes ?? this.state.payloadEnvelopes;
 
+    if (allComplete && isForkPostGloas(this.forkName)) {
+      for (const block of blocks) {
+        const payloadInput = newPayloadEnvelopes?.get(block.slot);
+        // by_range needs to download all columns
+        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
+          allComplete = false;
+          break;
+        }
+      }
+    }
+
     if (allComplete) {
       this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes};
     } else {
-      this.requests = this.getRequests(blocks);
       this.state = {status: BatchStatus.AwaitingDownload, blocks, payloadEnvelopes: newPayloadEnvelopes};
+      this.requests = this.getRequests(blocks);
     }
 
     return this.state as DownloadSuccessState;
