@@ -185,6 +185,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     });
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex,
+          block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+          forkName: fork,
+          sampledColumns: chain.custodyConfig.sampledColumns,
+          custodyColumns: chain.custodyConfig.custodyColumns,
+          timeCreatedSec: seenTimestampSec,
+        });
+      }
+
       const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
@@ -1072,13 +1084,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const {beaconBlockRoot} = signedEnvelope.message;
           const slot = signedEnvelope.message.payload.slotNumber;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
-          if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
-            chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
-              envelope: signedEnvelope,
-              peer: peerIdStr,
-              source: BlockInputSource.gossip,
-            });
-          }
 
           if (e.action === GossipAction.REJECT) {
             chain.persistInvalidSszValue(
