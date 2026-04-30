@@ -94,8 +94,6 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /^gloas\/light_client\/.*/,
     /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
-    // TODO-GLOAS: re-enable after alpha.7 is released and https://github.com/ChainSafe/lodestar/pull/9303 is merged
-    /^gloas\/ssz_static\/(Signed)?ProposerPreferences\/.*/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
