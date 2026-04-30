@@ -76,9 +76,31 @@ export const defaultSkipOpts: SkipOpts = {
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
-    /^gloas\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    // TODO-GLOAS: re-enable after https://github.com/ChainSafe/lodestar/pull/9305 is merged
+    /^gloas\/operations\/voluntary_exit\/.*/,
+    /^gloas\/operations\/voluntary_exit_churn\/.*/,
+    /^gloas\/operations\/consolidation_request\/.*/,
+    /^gloas\/operations\/(proposer|attester)_slashing\/.*/,
+    /^gloas\/operations\/withdrawal_request\/.*/,
+    /^gloas\/epoch_processing\/registry_updates\/.*/,
+    /^gloas\/epoch_processing\/pending_consolidations\/.*/,
+    /^gloas\/epoch_processing\/pending_deposits\/.*/,
+    /^gloas\/epoch_processing\/pending_deposits_churn\/.*/,
+    /^gloas\/sanity\/blocks\/.*/,
+    /^gloas\/random\/.*/,
+    /^gloas\/transition\/core\/.*/,
+    /^gloas\/fork_choice\/reorg\/.*/,
+    // TODO-GLOAS: re-enable after gloas light client is implemented
+    /^gloas\/light_client\/.*/,
+    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    // TODO-GLOAS: re-enable after alpha.7 is released and https://github.com/ChainSafe/lodestar/pull/9303 is merged
+    /^gloas\/ssz_static\/(Signed)?ProposerPreferences\/.*/,
   ],
-  skippedTests: [],
+  skippedTests: [
+    // TODO-GLOAS: re-enable after gloas light client is implemented
+    /\/gloas_fork$/,
+  ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["fast_confirmation", "networking"],
 };

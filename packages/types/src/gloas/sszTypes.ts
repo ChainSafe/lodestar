@@ -181,6 +181,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     executionRequests: electraSsz.ExecutionRequests,
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
+    parentBeaconBlockRoot: Root,
   },
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
