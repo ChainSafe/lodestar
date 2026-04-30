@@ -61,7 +61,9 @@ export class InclusionListService {
     //       were scheduled, the helper short-circuits via its tracked latest-imported slot.
     //   (b) the IL submission deadline — fallback for empty / missed slots, or when import is late.
     const dueMs = Math.max(0, this.config.getInclusionListSubmissionDueMs(fork) - this.clock.msFromSlot(slot));
-    await Promise.race([sleep(dueMs, signal), this.emitter.waitForExecutionPayloadImportedSlot(slot)]);
+    // Need to broadcast before deadline to ensure ILs are considered by attesters
+    const beforeDueMs = 1000;
+    await Promise.race([sleep(dueMs - beforeDueMs, signal), this.emitter.waitForExecutionPayloadImportedSlot(slot)]);
 
     // If there is more than one duty, all validators on duty will sign and publish the same IL
     const inclusionListTransactions = await this.produceInclusionList(slot);
