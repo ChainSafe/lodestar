@@ -47,15 +47,14 @@ export async function validateGossipProposerPreferences(
     throw new Error(`Expected gloas+ state for proposer preferences validation, got fork=${state.forkName}`);
   }
 
-  // [IGNORE] (was REJECT before consensus-specs#5164) `preferences.validator_index` is present at
-  // the correct slot in the current or next epoch's portion of `state.proposer_lookahead` — i.e.
-  // `is_valid_proposal_slot(state, preferences)` returns True. Lodged as IGNORE so that proposers
-  // and receivers with diverging head views do not cross-downscore each other.
+  // [REJECT] `preferences.validator_index` is present at the correct slot in the current or next
+  // epoch's portion of `state.proposer_lookahead` — i.e. `is_valid_proposal_slot(state, preferences)`
+  // returns True.
   const epochOffset = proposalEpoch - state.epoch;
   const proposers = epochOffset === 0 ? state.currentProposers : state.nextProposers;
   const expectedProposer = proposers[proposalSlot % SLOTS_PER_EPOCH];
   if (epochOffset < 0 || epochOffset > 1 || expectedProposer !== validatorIndex) {
-    throw new ProposerPreferencesError(GossipAction.IGNORE, {
+    throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_PROPOSER,
       proposalSlot,
       validatorIndex,
