@@ -185,6 +185,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     });
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex,
+          block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+          forkName: fork,
+          sampledColumns: chain.custodyConfig.sampledColumns,
+          custodyColumns: chain.custodyConfig.custodyColumns,
+          timeCreatedSec: seenTimestampSec,
+        });
+      }
+
       const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;

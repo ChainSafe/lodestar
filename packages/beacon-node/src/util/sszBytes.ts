@@ -558,9 +558,10 @@ export function getBeaconBlockRootFromDataColumnSidecarSerialized(data: Uint8Arr
  * └─ ExecutionPayloadEnvelope (starts at byte 100):
  *    ├─ 4 bytes: payload offset
  *    ├─ 4 bytes: executionRequests offset
- *    ├─ 8 bytes: builderIndex        (offset 108-115)
- *    ├─ 32 bytes: beaconBlockRoot    (offset 116-147)
- *    └─ variable: payload data (starts at envelope + 48)
+ *    ├─ 8 bytes: builderIndex          (offset 108-115)
+ *    ├─ 32 bytes: beaconBlockRoot      (offset 116-147)
+ *    ├─ 32 bytes: parentBeaconBlockRoot (offset 148-179) — new in Gloas alpha.6 (consensus-specs#5152)
+ *    └─ variable: payload data (starts at envelope + 80)
  *       └─ ExecutionPayload fixed portion includes slotNumber at offset 532
  */
 const SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET = 4;
@@ -576,12 +577,13 @@ const BEACON_BLOCK_ROOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
   EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET +
   EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE; // 116
 
-// Envelope fixed portion (without slot): payload_offset(4) + requests_offset(4) + builderIndex(8) + beaconBlockRoot(32) = 48
+// Envelope fixed portion: payload_offset(4) + requests_offset(4) + builderIndex(8) + beaconBlockRoot(32) + parentBeaconBlockRoot(32) = 80
 const EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE =
   EXECUTION_PAYLOAD_ENVELOPE_PAYLOAD_OFFSET +
   EXECUTION_PAYLOAD_ENVELOPE_REQUESTS_OFFSET +
   EXECUTION_PAYLOAD_ENVELOPE_BUILDER_INDEX_SIZE +
-  ROOT_SIZE; // 48
+  ROOT_SIZE +
+  ROOT_SIZE; // 80
 
 // slotNumber offset within ExecutionPayload fixed portion:
 // parentHash(32) + feeRecipient(20) + stateRoot(32) + receiptsRoot(32) + logsBloom(256) +
@@ -595,7 +597,7 @@ const ENVELOPE_START_IN_SIGNED =
   SIGNED_EXECUTION_PAYLOAD_ENVELOPE_MESSAGE_OFFSET + SIGNED_EXECUTION_PAYLOAD_ENVELOPE_SIGNATURE_SIZE; // 100
 
 const SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE =
-  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE + SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 100 + 48 + 532 = 680
+  ENVELOPE_START_IN_SIGNED + EXECUTION_PAYLOAD_ENVELOPE_FIXED_SIZE + SLOT_NUMBER_OFFSET_IN_EXECUTION_PAYLOAD; // 100 + 80 + 532 = 712
 
 export function getSlotFromExecutionPayloadEnvelopeSerialized(data: Uint8Array): Slot | null {
   if (data.length < SLOT_OFFSET_IN_SIGNED_EXECUTION_PAYLOAD_ENVELOPE + SLOT_SIZE) {
