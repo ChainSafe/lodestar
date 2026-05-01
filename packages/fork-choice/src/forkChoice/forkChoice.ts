@@ -594,6 +594,10 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
   }
 
+  getViableHeads(): {root: RootHex; weight: number}[] {
+    return this.protoArray.getViableHeads(this.fcStore.currentSlot);
+  }
+
   /** This is for the debug API only */
   getAllNodes(): ProtoNode[] {
     return this.protoArray.nodes;

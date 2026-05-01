@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
@@ -1539,6 +1539,17 @@ export class ProtoArray {
 
     const correctFinalized = this.finalizedEpoch === 0 || this.isFinalizedRootOrDescendant(node);
     return correctJustified && correctFinalized;
+  }
+
+  /** Weight is converted from increment units to Gwei. */
+  getViableHeads(currentSlot: Slot): {root: RootHex; weight: number}[] {
+    const result: {root: RootHex; weight: number}[] = [];
+    for (const node of this.nodes) {
+      if (node.bestChild === undefined && this.nodeIsViableForHead(node, currentSlot)) {
+        result.push({root: node.blockRoot, weight: node.weight * EFFECTIVE_BALANCE_INCREMENT});
+      }
+    }
+    return result;
   }
 
   /**
