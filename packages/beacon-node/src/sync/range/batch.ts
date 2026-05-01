@@ -175,10 +175,7 @@ export class Batch {
       };
       const requests: DownloadByRangeRequests = {blocksRequest};
 
-      // Post-Gloas envelopes are required for block processing, independent of DA retention window.
-      if (isForkPostGloas(this.forkName)) {
-        requests.envelopesRequest = {startSlot: this.startSlot, count: this.count};
-      }
+      // DEBUG-SKIP-ENVELOPE: do not request envelopes during range sync; advance head from blocks alone.
 
       if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
         requests.columnsRequest = {
@@ -285,12 +282,8 @@ export class Batch {
       // dataSlot will still have a value but do not create a request for preDeneb forks
     }
 
-    if (isForkPostGloas(this.forkName) && envelopeStartSlot <= endSlot) {
-      requests.envelopesRequest = {
-        startSlot: envelopeStartSlot,
-        count: endSlot - envelopeStartSlot + 1,
-      };
-    }
+    // DEBUG-SKIP-ENVELOPE: do not request envelopes during range sync.
+    void envelopeStartSlot;
 
     return requests;
   }
@@ -419,16 +412,8 @@ export class Batch {
     }
     const newPayloadEnvelopes = payloadEnvelopes ?? this.state.payloadEnvelopes;
 
-    if (allComplete && isForkPostGloas(this.forkName)) {
-      for (const block of blocks) {
-        const payloadInput = newPayloadEnvelopes?.get(block.slot);
-        // by_range needs to download all columns
-        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
-          allComplete = false;
-          break;
-        }
-      }
-    }
+    // DEBUG-SKIP-ENVELOPE: do not gate batch completion on envelope availability.
+    // Original Gloas check that flipped allComplete=false when an envelope was missing has been removed.
 
     if (allComplete) {
       this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes};

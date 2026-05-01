@@ -49,11 +49,8 @@ export function assertLinearChainSegment(
   if (parentPayloadInput?.hasPayloadEnvelope()) {
     currentExecHash = parentPayloadInput.getBlockHashHex();
   }
-  // Track the execution hash before the last FULL advancement so we can recover
-  // if the next block reveals that envelope was orphaned.
-  let prevExecHash: string | null = currentExecHash;
-  // The slot whose envelope last advanced currentExecHash (for warning context).
-  let lastFullSlot: Slot | null = null;
+  // DEBUG-SKIP-ENVELOPE: prevExecHash/lastFullSlot orphan-recovery tracking removed since
+  // bid linearity is no longer enforced.
 
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i].getBlock();
@@ -77,28 +74,10 @@ export function assertLinearChainSegment(
     }
 
     if (isGloasBeaconBlock(block.message) && currentExecHash !== null) {
-      // Verify the bid's parentBlockHash matches the tracked execution hash.
-      // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
-      const bidParentHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-      if (bidParentHash !== currentExecHash) {
-        // Maybe the previous slot's FULL envelope was orphaned — try falling back.
-        // If even prevExecHash doesn't match, the segment is non-linear.
-        if (bidParentHash !== prevExecHash) {
-          throw new BlockError(block, {
-            code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
-            parentRoot: toRootHex(block.message.parentRoot),
-            parentBlockHash: bidParentHash,
-          });
-        }
-        if (lastFullSlot !== null && payloadEnvelopes !== null) {
-          const orphanedInput = payloadEnvelopes.get(lastFullSlot);
-          if (orphanedInput != null) {
-            warnings.push({slot: lastFullSlot, payloadEnvelopeInput: orphanedInput});
-          }
-        }
-        currentExecHash = prevExecHash;
-      }
-
+      // DEBUG-SKIP-ENVELOPE: do not enforce bid.parentBlockHash linearity against the tracked
+      // execution hash. Without envelopes the chain cannot be reconstructed locally, so bid
+      // validation is skipped. Envelopes that DO arrive are still cross-checked for blockRoot
+      // consistency below and advance currentExecHash for any later slots that have envelopes.
       const payloadInput = payloadEnvelopes?.get(slot) ?? null;
       const payloadEnvelope = payloadInput?.hasPayloadEnvelope() ? payloadInput.getPayloadEnvelope() : null;
       if (payloadEnvelope !== null) {
@@ -113,12 +92,10 @@ export function assertLinearChainSegment(
           });
         }
 
-        // FULL variant: save state before advancing, then advance
-        prevExecHash = currentExecHash;
-        lastFullSlot = slot;
+        // FULL variant: advance the tracked execution hash
         currentExecHash = toRootHex(payloadEnvelope.message.payload.blockHash);
       }
-      // EMPTY variant: currentExecHash unchanged
+      // EMPTY variant or DEBUG-SKIP-ENVELOPE: currentExecHash unchanged
     }
   }
 

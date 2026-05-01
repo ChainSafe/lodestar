@@ -14,7 +14,6 @@ import {
   deneb,
   fulu,
   gloas,
-  isGloasBeaconBlock,
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
@@ -368,17 +367,7 @@ export async function requestByRange({
     requests.push(
       network.sendBeaconBlocksByRange(peerIdStr, blocksRequest).then((blockResponse) => {
         blocks = blockResponse;
-        const firstBlock = blockResponse.at(0);
-        if (firstBlock && isGloasBeaconBlock(firstBlock.message)) {
-          return network
-            .sendExecutionPayloadEnvelopesByRoot(peerIdStr, [
-              firstBlock.message.body.signedExecutionPayloadBid.message.parentBlockRoot,
-            ])
-            .then((envelopeResponse) => {
-              payloadEnvelopes?.unshift(...envelopeResponse);
-            });
-        }
-        return undefined;
+        // DEBUG-SKIP-ENVELOPE: do not chain a parent envelope-by-root fetch for Gloas blocks.
       })
     );
   }
