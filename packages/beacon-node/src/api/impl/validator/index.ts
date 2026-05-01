@@ -20,7 +20,6 @@ import {
 import {
   DataAvailabilityStatus,
   IBeaconStateView,
-  type IBeaconStateViewGloas,
   beaconBlockToBlinded,
   calculateCommitteeAssignments,
   computeEpochAtSlot,
@@ -42,6 +41,7 @@ import {
   Epoch,
   ProducedBlockSource,
   Root,
+  RootHex,
   Slot,
   ValidatorIndex,
   Wei,
@@ -1135,12 +1135,14 @@ export function getValidatorApi(
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      // Spec heze/validator.md: build the IL against the local head's EL state. Use
-      // `state.latest_block_hash` rather than the head bid's `block_hash`: the bid commits a
-      // future payload that the EL only knows after the envelope is delivered. Using the bid's
-      // hash before the envelope arrives causes the EL to reject with "Unknown parent block".
-      const headState = chain.getAttesterHeadState();
-      const blockHash = toHex((headState as IBeaconStateViewGloas).latestBlockHash);
+      // Spec heze/validator.md: build the IL against the local head's EL state. The head
+      // ProtoBlock's `executionPayloadBlockHash` tracks the latest payload the EL has
+      // executed: it is set to the bid's parentBlockHash on PENDING (envelope not yet
+      // delivered) and is overwritten with the envelope's payload.blockHash by
+      // `onExecutionPayload` when the FULL variant is created. Using this matches the
+      // most-recent value lodestar sent in FCU, so it agrees with the EL's mempool head.
+      // Heze is post-merge, so `executionPayloadBlockHash` is always non-null here.
+      const blockHash = chain.forkChoice.getHead().executionPayloadBlockHash as RootHex;
       logger.debug("produce inclusion list", {slot, blockHash});
 
       const timer = metrics?.getInclusionListV1RequestsDuration.startTimer();
