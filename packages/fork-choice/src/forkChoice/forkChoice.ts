@@ -293,6 +293,15 @@ export class ForkChoice implements IForkChoice {
       return {shouldOverrideFcu: false, reason: NotReorgedReason.ProposerBoostReorgDisabled};
     }
 
+    // Gloas genesis anchor has no parent in the proto array. No reorg possible.
+    // This guard was removed in #9308 on the assumption that the gloas genesis state
+    // would no longer produce a `parent_root == ZERO_HASH` head, but kurtosis runs with
+    // `gloas_fork_epoch=0` still hit it; without the guard, getParentPayloadStatus throws
+    // UNKNOWN_PARENT_BLOCK on every prepare-next-slot tick before block 1 is produced.
+    if (headBlock.parentRoot === HEX_ZERO_HASH) {
+      return {shouldOverrideFcu: false, reason: NotReorgedReason.ParentBlockNotAvailable};
+    }
+
     const parentBlock = this.protoArray.getBlock(
       headBlock.parentRoot,
       this.protoArray.getParentPayloadStatus(headBlock)
@@ -416,6 +425,12 @@ export class ForkChoice implements IForkChoice {
         proposerBoostReorg,
       });
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ProposerBoostReorgDisabled};
+    }
+
+    // Gloas genesis anchor has no parent in the proto array. No reorg possible.
+    // See the matching guard in `shouldOverrideForkChoiceUpdate` for context (#9308).
+    if (headBlock.parentRoot === HEX_ZERO_HASH) {
+      return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotAvailable};
     }
 
     const parentBlock = this.protoArray.getBlock(
