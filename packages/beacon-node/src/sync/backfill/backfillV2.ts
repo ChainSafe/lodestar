@@ -17,7 +17,6 @@ import {shuffleOne} from "../../util/shuffle.js";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors.js";
 import {verifyBlockProposerSignature} from "./verify.js";
 
-
 const EPOCH_FLUSH_YIELD_MS = 50; //TODO: remove this since we will change to separate thread for backfill sync.
 // Maximum failed requests before disconnecting a peer
 const MAX_PEER_FAILURES = 5;
@@ -247,9 +246,11 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         this.epochBuffer.push(block);
         this.anchorRoot = block.message.parentRoot;
         this.anchorSlot = block.message.slot;
+        this.onPeerRequestSuccess(peer);
 
         // After genesis, parentRoot is ZERO_HASH and the loop's top-of-iteration
         // check handles flush+complete; skip the already-filled lookahead here.
+        // TODO: we're not syncing to GENESIS unless the user wants to do so.
         if (block.message.slot !== GENESIS_SLOT) {
           const nextEpoch = computeEpochAtSlot(block.message.slot - 1);
           if (nextEpoch !== blockEpoch) {
@@ -263,15 +264,26 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       } catch (e) {
         if (e instanceof BackfillSyncError) {
           switch (e.type.code) {
-            case BackfillSyncErrorCode.NOT_ANCHORED:
             case BackfillSyncErrorCode.INVALID_SIGNATURE:
-            case BackfillSyncErrorCode.MISSING_BLOCK:
+              this.network.reportPeer(peer, PeerAction.LowToleranceError, "BackfillSyncInvalidSignature");
               this.onPeerRequestFailed(peer);
               this.logger.warn("BackfillSync peer request failed", {code: e.type.code, peer});
               break;
+
+            case BackfillSyncErrorCode.NOT_ANCHORED:
+              // wrong chain - peer's on a different fork
+              this.network.reportPeer(peer, PeerAction.MidToleranceError, "BackfillSyncNotAnchored");
+              this.logger.warn("BackfillSync peer request failed", {code: e.type.code, peer});
+              break;
+
+            case BackfillSyncErrorCode.MISSING_BLOCK:
+              this.onPeerRequestFailed(peer);
+              this.logger.debug("BackfillSync peer missing block", {code: e.type.code, peer});
+              break;
+
             case BackfillSyncErrorCode.INTERNAL_ERROR:
               this.status = BackfillSyncStatus.aborted;
-              this.logger.error("backfillsync error", {}, e);
+              this.logger.error("BackfillSync error", {}, e);
               break;
           }
         } else {
@@ -371,13 +383,22 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     return shuffleOne(eligiblePeers) ?? null;
   }
 
+  private onPeerRequestSuccess(peer: PeerIdStr): void {
+    const meta = this.peers.get(peer);
+    if (meta && meta.failedRequests > 0) {
+      meta.failedRequests = Math.max(0, meta.failedRequests - 1);
+    }
+  }
+
   private onPeerRequestFailed(peer: PeerIdStr): void {
     const meta = this.peers.get(peer);
     if (meta) {
       meta.failedRequests++;
       if (meta.failedRequests >= MAX_PEER_FAILURES) {
-        this.logger.warn("BackfillSync: disconnecting peer after too many failures", {peer});
-        this.network.reportPeer(peer, PeerAction.LowToleranceError, "BackfillSyncFailures");
+        this.logger.debug("BackfillSync: peer exceeded local failure threshold, excluding from this sync", {
+          peer,
+          failRequests: meta.failedRequests,
+        });
       }
     }
   }
