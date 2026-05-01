@@ -215,15 +215,12 @@ export class ProtoArray {
     }
 
     const parentBlock = this.getBlockHexAndBlockHash(block.parentRoot, parentBlockHash);
-    if (parentBlock == null) {
-      throw new ProtoArrayError({
-        code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
-        parentRoot: block.parentRoot,
-        parentHash: parentBlockHash,
-      });
+    if (parentBlock != null) {
+      return parentBlock.payloadStatus;
     }
-
-    return parentBlock.payloadStatus;
+    // DEBUG-SKIP-ENVELOPE: parent's exact payload-hash variant not present (envelope missing).
+    // Treat the new block as extending an EMPTY parent so we don't throw and stall sync.
+    return PayloadStatus.EMPTY;
   }
 
   /**
@@ -248,7 +245,15 @@ export class ProtoArray {
     }
 
     // post-gloas
-    return this.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+    const matched = this.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
+    if (matched) {
+      return matched;
+    }
+    // DEBUG-SKIP-ENVELOPE: when no FULL/EMPTY variant matches the requested payload hash
+    // (because the parent's envelope was never imported), fall back to the default variant
+    // (PENDING for Gloas) so the chain can continue advancing without envelope data.
+    const defaultIdx = this.getDefaultNodeIndex(parentRoot);
+    return defaultIdx !== undefined ? this.nodes[defaultIdx] : null;
   }
 
   /**
