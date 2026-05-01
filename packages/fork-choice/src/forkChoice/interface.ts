@@ -119,6 +119,7 @@ export interface IForkChoice {
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
   getHeads(): ProtoBlock[];
+  getViableHeads(): {root: RootHex; weight: number}[];
   /**
    * Retrieve all nodes for the debug API.
    */
