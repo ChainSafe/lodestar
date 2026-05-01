@@ -15,6 +15,7 @@ import {
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -25,6 +26,7 @@ import {
   createCachedBeaconState,
   createPubkeyCache,
   createSingleSignatureSetFromComponents,
+  getIndexedAttestation,
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
@@ -57,9 +59,11 @@ import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
 } from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
+import {BlockError, BlockErrorCode} from "../../../src/chain/errors/blockError.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
+import {getShufflingForAttestationVerification} from "../../../src/chain/validation/attestation.js";
 import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
@@ -187,12 +191,26 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: isValid});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
-              const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(
-                ForkSeq[fork],
-                attestation
+
+              // `on_attestation` decodes aggregation_bits with the shuffling at the attestation's
+              // target checkpoint, not the head state — resolve it via ShufflingCache + regen so
+              // cross-epoch fork attestations (surfaced by the compliance suite) decode correctly.
+              const attHeadBlock = chain.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
+              if (attHeadBlock === null) {
+                logger.debug(`Step ${i}/${stepsLen} skip attestation: head block unknown`, {
+                  blockRoot: toHex(attestation.data.beaconBlockRoot),
+                });
+                continue;
+              }
+              const attEpoch = Math.floor(attestation.data.slot / SLOTS_PER_EPOCH);
+              const shuffling = await getShufflingForAttestationVerification(
+                chain,
+                attEpoch,
+                attHeadBlock,
+                RegenCaller.validateGossipAttestation
               );
+              const indexedAttestation = getIndexedAttestation(shuffling, ForkSeq[fork], attestation);
               try {
                 chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
@@ -463,10 +481,19 @@ const forkChoiceTest =
                   seenTimestampSec: tickTime,
                   validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
+                  validSignatures: testcase.meta?.bls_setting !== BigInt(1),
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
-                if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
+                // Spec `on_block` is a no-op success on a known block; lodestar's production
+                // import path rejects with ALREADY_KNOWN. Treat as success in the spec runner.
+                if (isValid && e instanceof BlockError && e.type.code === BlockErrorCode.ALREADY_KNOWN) {
+                  logger.debug(`Step ${i}/${stepsLen} block already known — treating as no-op success`, {
+                    id: step.block,
+                  });
+                } else if (isValid || (e as Error).message === "Expect error since this is a negative test") {
+                  throw e;
+                }
               }
             }
 
@@ -597,14 +624,22 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.head_payload_status !== undefined) {
-                // Map our PayloadStatus enum to spec's numbering:
-                // Spec: EMPTY=0, FULL=1, PENDING=2
-                // Ours: PENDING=0, EMPTY=1, FULL=2
+                // Spec: EMPTY=0, FULL=1, PENDING=2; Ours: PENDING=0, EMPTY=1, FULL=2
                 const payloadStatusToSpec: Record<number, number> = {0: 2, 1: 0, 2: 1};
                 expect(payloadStatusToSpec[head.payloadStatus]).toEqualWithMessage(
                   bnToNum(step.checks.head_payload_status),
                   `Invalid head payload status at step ${i}`
                 );
+              }
+              if (step.checks.viable_for_head_roots_and_weights !== undefined) {
+                const expected = step.checks.viable_for_head_roots_and_weights
+                  .map((entry) => ({root: entry.root, weight: bnToNum(entry.weight)}))
+                  .sort((a, b) => a.root.localeCompare(b.root));
+                const actual = (chain.forkChoice as ForkChoice)
+                  .getViableHeads()
+                  .map(({root, weight}) => ({root, weight}))
+                  .sort((a, b) => a.root.localeCompare(b.root));
+                expect(actual).toEqualWithMessage(expected, `Invalid viable heads at step ${i}`);
               }
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
@@ -856,6 +891,7 @@ type Checks = {
       block_root: RootHex;
       votes: (boolean | null)[];
     };
+    viable_for_head_roots_and_weights?: {root: RootHex; weight: bigint}[];
   };
 };
 
@@ -911,4 +947,5 @@ function isCheck(step: Step): step is Checks {
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   fork_choice: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: false})},
   sync: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: true})},
+  fork_choice_compliance: {type: RunnerType.default, fn: forkChoiceTest({onlyPredefinedResponses: false})},
 });
