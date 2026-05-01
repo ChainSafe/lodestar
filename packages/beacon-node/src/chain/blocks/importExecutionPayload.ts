@@ -203,6 +203,11 @@ export async function importExecutionPayload(
   // 4c. Handle EL response
   switch (execResult.status) {
     case ExecutionPayloadStatus.VALID:
+      // Spec heze/fork-choice.md `on_execution_payload_envelope` calls
+      // `record_payload_inclusion_list_satisfaction(...)` after envelope verification succeeds.
+      if (isForkPostHeze(fork)) {
+        this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, true);
+      }
       break;
 
     case ExecutionPayloadStatus.INVALID:
@@ -215,6 +220,17 @@ export async function importExecutionPayload(
     case ExecutionPayloadStatus.ACCEPTED:
     case ExecutionPayloadStatus.SYNCING:
       break;
+
+    case ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED:
+      // Spec heze/fork-choice.md: payload did not satisfy the IL constraints — fork-choice will
+      // refuse to extend this payload until/unless evidence changes.
+      this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, false);
+      this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
+      throw new PayloadError({
+        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+        execStatus: execResult.status,
+        errorMessage: execResult.validationError ?? "",
+      });
 
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:

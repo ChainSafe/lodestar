@@ -7,21 +7,14 @@ import {
   LVHValidResponse,
   ProtoBlock,
 } from "@lodestar/fork-choice";
-import {ForkSeq, isForkPostHeze} from "@lodestar/params";
-import {
-  BeaconStateView,
-  type CachedBeaconStateHeze,
-  IBeaconStateView,
-  isExecutionBlockBodyType,
-  isStatePostBellatrix,
-} from "@lodestar/state-transition";
+import {ForkSeq} from "@lodestar/params";
+import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
-import {InclusionListStore} from "../opPools/inclusionListStore.js";
 import {BlockProcessOpts} from "../options.js";
 import {isBlockInputBlobs, isBlockInputColumns, isBlockInputNoData} from "./blockInput/blockInput.js";
 import {IBlockInput} from "./blockInput/types.js";
@@ -34,7 +27,6 @@ export type VerifyBlockExecutionPayloadModules = {
   metrics: Metrics | null;
   forkChoice: IForkChoice;
   config: ChainForkConfig;
-  inclusionListStore: InclusionListStore;
 };
 
 type ExecAbortType = {blockIndex: number; execError: BlockError};
@@ -179,19 +171,9 @@ export async function verifyBlockExecutionPayload(
   const parentBlockRoot = ForkSeq[fork] >= ForkSeq.deneb ? block.message.parentRoot : undefined;
   const executionRequests =
     ForkSeq[fork] >= ForkSeq.electra ? (block.message.body as electra.BeaconBlockBody).executionRequests : undefined;
-  // Spec heze/fork-choice.md `record_payload_inclusion_list_satisfaction` uses `only_timely=true`
-  // (default). The proposer/builder build with `only_timely=false`, so the payload is a superset of
-  // the timely-only set and verification against this subset is always satisfied for honest proposers.
-  // Using only_timely=false here would falsely reject blocks when the verifier holds late ILs the
-  // proposer never had a chance to satisfy.
-  const ilTransactions = isForkPostHeze(fork)
-    ? chain.inclusionListStore.getInclusionListTransactions(
-        (preState0 as BeaconStateView).cachedState as CachedBeaconStateHeze,
-        block.message.slot - 1,
-        true
-      )
-    : undefined;
-
+  // Heze blocks carry no embedded execution payload (gloas+ payload-separated model) and never
+  // reach this code path — they early-exit above at `isBlockInputNoData`. IL satisfaction is
+  // recorded on the envelope-import side in `importExecutionPayload.ts`.
   const logCtx = {slot: blockInput.slot, executionBlock: executionPayloadEnabled.blockNumber};
   chain.logger.debug("Call engine api newPayload", logCtx);
   const execResult = await chain.executionEngine.notifyNewPayload(
@@ -199,12 +181,8 @@ export async function verifyBlockExecutionPayload(
     executionPayloadEnabled,
     versionedHashes,
     parentBlockRoot,
-    executionRequests,
-    ilTransactions
+    executionRequests
   );
-  if (ilTransactions) {
-    chain.metrics?.inclusionListTransactionsNotifyNewPayload.inc(ilTransactions.length);
-  }
   chain.logger.debug("Receive engine api newPayload result", {...logCtx, status: execResult.status});
 
   chain.metrics?.engineNotifyNewPayloadResult.inc({result: execResult.status});
@@ -213,13 +191,6 @@ export async function verifyBlockExecutionPayload(
     case ExecutionPayloadStatus.VALID: {
       const executionStatus: ExecutionStatus.Valid = ExecutionStatus.Valid;
       const lvhResponse = {executionStatus, latestValidExecHash: execResult.latestValidHash};
-      // Spec heze/fork-choice.md: record IL satisfaction once the EL accepts the payload.
-      if (isForkPostHeze(fork)) {
-        const blockRoot = toRootHex(
-          chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
-        );
-        chain.forkChoice.recordPayloadInclusionListSatisfaction(blockRoot, true);
-      }
       return {executionStatus, lvhResponse, execError: null};
     }
 
@@ -262,21 +233,9 @@ export async function verifyBlockExecutionPayload(
     // back. But for now, lets assume other mechanisms like unknown parent block of a future
     // child block will cause it to replay
 
-    case ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED: {
-      // Add IL-unsatisified block to fcstore
-      const blockRoot = toRootHex(
-        chain.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
-      );
-      chain.forkChoice.recordPayloadInclusionListSatisfaction(blockRoot, false);
-      chain.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
-
-      const execError = new BlockError(block, {
-        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError,
-      });
-      return {executionStatus: null, execError} as VerifyBlockExecutionResponse;
-    }
+    // Heze blocks early-exit at `isBlockInputNoData` above so this status cannot reach this path;
+    // IL satisfaction is tracked in `importExecutionPayload.ts` when the envelope is verified.
+    case ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED:
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:
     case ExecutionPayloadStatus.UNAVAILABLE: {
