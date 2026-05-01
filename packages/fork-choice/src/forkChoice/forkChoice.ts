@@ -352,6 +352,7 @@ export class ForkChoice implements IForkChoice {
   shouldExtendPayload(blockRoot: RootHex): boolean {
     // [New in Heze:EIP7805] payload must satisfy inclusion-list constraints.
     if (this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) === false) {
+      this.logger?.warn("Refusing to extend payload, inclusion list not satisfied", {blockRoot});
       return false;
     }
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);

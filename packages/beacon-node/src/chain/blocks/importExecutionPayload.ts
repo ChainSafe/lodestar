@@ -220,6 +220,12 @@ export async function importExecutionPayload(
       // then continue to import the envelope into the store. `should_extend_payload` will refuse
       // to build on top of this payload, but the envelope itself is still tracked so the
       // fork-choice can evaluate competing branches.
+      this.logger.warn("Execution payload did not satisfy inclusion list", {
+        slot,
+        blockRoot: blockRootHex,
+        blockHash: blockHashHex,
+        validationError: execResult.validationError ?? "",
+      });
       this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, false);
       this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
       break;
