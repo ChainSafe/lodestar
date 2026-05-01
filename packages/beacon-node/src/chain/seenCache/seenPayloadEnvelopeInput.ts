@@ -141,12 +141,12 @@ export class SeenPayloadEnvelopeInput {
         const input = this.payloadInputs.get(block.blockRoot);
         if (input) {
           this.evictPayloadInput(input);
+          this.logger?.verbose("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
+            slot: block.slot,
+            root: block.blockRoot,
+          });
         }
       }
-      this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
-        slot: block.slot,
-        root: block.blockRoot,
-      });
     }
   }
 
