@@ -157,27 +157,9 @@ type TransitionTestCase = {
   post: BeaconStateAllForks;
 };
 
-// TODO HEZE: 10 heze transition tests with operations at the fork boundary fail with an
-// `execution_payload_availability` bit-16 divergence (parent-payload-full check sees parent FULL
-// where spec sees EMPTY). Root cause not yet identified. Trim entries as they are fixed.
-const hezeSkippedTransitions = [
-  "transition_with_attester_slashing_right_after_fork",
-  "transition_with_attester_slashing_right_before_fork",
-  "transition_with_btec_right_after_fork",
-  "transition_with_btec_right_before_fork",
-  "transition_with_deposit_right_after_fork",
-  "transition_with_deposit_right_before_fork",
-  "transition_with_proposer_slashing_right_after_fork",
-  "transition_with_proposer_slashing_right_before_fork",
-  "transition_with_voluntary_exit_right_after_fork",
-  "transition_with_voluntary_exit_right_before_fork",
-];
-
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   transition: {
     type: RunnerType.default,
-    fn: transition({
-      [ForkName.heze]: hezeSkippedTransitions,
-    }),
+    fn: transition(),
   },
 });
