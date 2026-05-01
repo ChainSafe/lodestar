@@ -13,11 +13,8 @@ import {
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
-  isForkPostHeze,
 } from "@lodestar/params";
 import {
-  BeaconStateView,
-  type CachedBeaconStateHeze,
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
@@ -25,6 +22,7 @@ import {
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
+  isStatePostHeze,
 } from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -291,13 +289,14 @@ export async function produceBlockBody<T extends BlockType>(
     };
     // Spec heze/builder.md: bid.inclusion_list_bits = get_inclusion_list_bits(store, state, slot-1, only_timely=False)
     let bid: gloas.ExecutionPayloadBid | heze.ExecutionPayloadBid = baseBid;
-    if (isForkPostHeze(fork)) {
-      const stateHeze = (currentState as unknown as BeaconStateView).cachedState as CachedBeaconStateHeze;
-      const inclusionListBits = this.inclusionListStore.getInclusionListBits(stateHeze, blockSlot - 1, false);
+    if (isStatePostHeze(currentState)) {
+      const inclusionListBits = this.inclusionListStore.getInclusionListBits(currentState, blockSlot - 1, false);
       // Spec heze/validator.md: bid.inclusion_list_bits MUST satisfy is_inclusion_list_bits_inclusive.
       // For self-build the bits are derived from our own view so this holds by construction; assert
       // defensively to catch any future divergence (e.g. external builder-bid path).
-      if (!this.inclusionListStore.isInclusionListBitsInclusive(stateHeze, blockSlot - 1, inclusionListBits, false)) {
+      if (
+        !this.inclusionListStore.isInclusionListBitsInclusive(currentState, blockSlot - 1, inclusionListBits, false)
+      ) {
         throw Error("bid.inclusion_list_bits does not satisfy is_inclusion_list_bits_inclusive");
       }
       bid = {...baseBid, inclusionListBits};
@@ -877,10 +876,9 @@ function preparePayloadAttributes(
     (payloadAttributes as deneb.SSEPayloadAttributes["payloadAttributes"]).parentBeaconBlockRoot = parentBlockRoot;
   }
 
-  if (ForkSeq[fork] >= ForkSeq.heze) {
+  if (isStatePostHeze(prepareState)) {
     // Spec heze/validator.md `prepare_execution_payload`: get_inclusion_list_transactions(only_timely=False).
-    const stateHeze = (prepareState as BeaconStateView).cachedState as CachedBeaconStateHeze;
-    const transactions = chain.inclusionListStore.getInclusionListTransactions(stateHeze, prepareSlot - 1, false);
+    const transactions = chain.inclusionListStore.getInclusionListTransactions(prepareState, prepareSlot - 1, false);
     (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = transactions;
     chain.metrics?.inclusionListTransactionsPrepareExecutionPayload.inc(transactions.length);
   }

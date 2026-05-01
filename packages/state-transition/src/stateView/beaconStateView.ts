@@ -9,7 +9,6 @@ import {
   BuilderIndex,
   Bytes32,
   Epoch,
-  ExecutionPayloadBid,
   ExecutionPayloadHeader,
   Root,
   RootHex,
@@ -23,6 +22,7 @@ import {
   fulu,
   getValidatorStatus,
   gloas,
+  heze,
   mapToGeneralStatus,
   phase0,
   rewards,
@@ -93,7 +93,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   private _proposerLookahead: fulu.ProposerLookahead | null = null;
   // gloas
   private _executionPayloadAvailability: BitArray | null = null;
-  private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
+  private _latestExecutionPayloadBid: heze.ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
@@ -363,15 +363,17 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this._executionPayloadAvailability;
   }
 
-  get latestExecutionPayloadBid(): ExecutionPayloadBid {
+  get latestExecutionPayloadBid(): heze.ExecutionPayloadBid {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("latestExecutionPayloadBid is not available before Gloas");
     }
 
     if (this._latestExecutionPayloadBid === null) {
+      // For pre-heze gloas states the bid has no `inclusion_list_bits`; the heze field defaults
+      // to an unset bitvector at runtime, so the wider heze type is a safe upper bound.
       this._latestExecutionPayloadBid = (
         this.cachedState as CachedBeaconStateGloas
-      ).latestExecutionPayloadBid.toValue();
+      ).latestExecutionPayloadBid.toValue() as heze.ExecutionPayloadBid;
     }
     return this._latestExecutionPayloadBid;
   }
@@ -467,6 +469,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getNextShuffling(): EpochShuffling {
     return this.cachedState.epochCtx.nextShuffling;
+  }
+
+  /** Spec heze/beacon-chain.md `get_inclusion_list_committee`. */
+  getInclusionListCommittee(slot: Slot): Uint32Array {
+    return this.cachedState.epochCtx.getInclusionListCommittee(slot);
   }
 
   // Proposer shuffling

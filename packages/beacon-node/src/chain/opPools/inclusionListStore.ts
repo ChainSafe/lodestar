@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
-import {CachedBeaconStateHeze} from "@lodestar/state-transition";
+import type {IBeaconStateViewHeze} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, bellatrix, heze, ssz} from "@lodestar/types";
 import {MapDef, byteArrayEquals, toRootHex} from "@lodestar/utils";
 
@@ -137,7 +137,7 @@ export class InclusionListStore {
    * Spec heze/inclusion-list.md `get_inclusion_list_transactions`.
    * Returns deduplicated transactions from valid, non-equivocating ILs at the slot.
    */
-  getInclusionListTransactions(state: CachedBeaconStateHeze, slot: Slot, onlyTimely = true): bellatrix.Transactions {
+  getInclusionListTransactions(state: IBeaconStateViewHeze, slot: Slot, onlyTimely = true): bellatrix.Transactions {
     const key = this.localCommitteeKey(state, slot);
     const stored = this.inclusionLists.get(key);
     if (!stored || stored.size === 0) return [];
@@ -160,8 +160,8 @@ export class InclusionListStore {
    * Spec heze/inclusion-list.md `get_inclusion_list_bits`.
    * Bit i is set iff the ith committee member submitted a valid, non-equivocating IL at `slot`.
    */
-  getInclusionListBits(state: CachedBeaconStateHeze, slot: Slot, onlyTimely = true): BitArray {
-    const committee = state.epochCtx.getInclusionListCommittee(slot);
+  getInclusionListBits(state: IBeaconStateViewHeze, slot: Slot, onlyTimely = true): BitArray {
+    const committee = state.getInclusionListCommittee(slot);
     const key = makeKey(slot, ssz.heze.InclusionListCommittee.hashTreeRoot([...committee]));
 
     const submitted = new Set<ValidatorIndex>();
@@ -186,7 +186,7 @@ export class InclusionListStore {
    * Spec heze/inclusion-list.md `is_inclusion_list_bits_inclusive`.
    * Returns true iff `bits` is a superset of the locally observed bits.
    */
-  isInclusionListBitsInclusive(state: CachedBeaconStateHeze, slot: Slot, bits: BitArray, onlyTimely = true): boolean {
+  isInclusionListBitsInclusive(state: IBeaconStateViewHeze, slot: Slot, bits: BitArray, onlyTimely = true): boolean {
     const local = this.getInclusionListBits(state, slot, onlyTimely);
     for (let i = 0; i < INCLUSION_LIST_COMMITTEE_SIZE; i++) {
       if (local.get(i) && !bits.get(i)) return false;
@@ -215,8 +215,8 @@ export class InclusionListStore {
     this.lowestPermissibleSlot = Math.max(horizon, 0);
   }
 
-  private localCommitteeKey(state: CachedBeaconStateHeze, slot: Slot): CommitteeKey {
-    const committee = state.epochCtx.getInclusionListCommittee(slot);
+  private localCommitteeKey(state: IBeaconStateViewHeze, slot: Slot): CommitteeKey {
+    const committee = state.getInclusionListCommittee(slot);
     return makeKey(slot, ssz.heze.InclusionListCommittee.hashTreeRoot([...committee]));
   }
 }

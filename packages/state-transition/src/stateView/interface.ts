@@ -9,6 +9,7 @@ import {
   ForkPostElectra,
   ForkPostFulu,
   ForkPostGloas,
+  ForkPostHeze,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostCapella,
@@ -16,6 +17,7 @@ import {
   isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
+  isForkPostHeze,
 } from "@lodestar/params";
 import {
   BeaconBlock,
@@ -37,6 +39,7 @@ import {
   electra,
   fulu,
   gloas,
+  heze,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -263,14 +266,26 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
 }
 
+/** Heze+ state fields — use isStatePostHeze() guard */
+export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
+  forkName: ForkPostHeze;
+  /** Modified in heze: ExecutionPayloadBid carries `inclusion_list_bits`. */
+  latestExecutionPayloadBid: heze.ExecutionPayloadBid;
+  /**
+   * Spec heze/beacon-chain.md `get_inclusion_list_committee`. Returns the IL committee for `slot`,
+   * derived from beacon committees of that slot and modulo-padded to `INCLUSION_LIST_COMMITTEE_SIZE`.
+   */
+  getInclusionListCommittee(slot: Slot): Uint32Array;
+}
+
 /**
  * Type constraint for the concrete BeaconStateView class.
- * Requires all fields from the latest fork interface (IBeaconStateViewGloas) but keeps
+ * Requires all fields from the latest fork interface (IBeaconStateViewHeze) but keeps
  * forkName as ForkName since the class wraps any fork's state.
  * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
  */
 export type IBeaconStateViewLatestFork = Omit<
-  IBeaconStateViewGloas,
+  IBeaconStateViewHeze,
   "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
 > & {
   forkName: ForkName;
@@ -303,4 +318,8 @@ export function isStatePostFulu(state: IBeaconStateView): state is IBeaconStateV
 
 export function isStatePostGloas(state: IBeaconStateView): state is IBeaconStateViewGloas {
   return isForkPostGloas(state.forkName);
+}
+
+export function isStatePostHeze(state: IBeaconStateView): state is IBeaconStateViewHeze {
+  return isForkPostHeze(state.forkName);
 }

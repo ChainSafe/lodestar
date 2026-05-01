@@ -1,12 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {isForkPostHeze} from "@lodestar/params";
-import {
-  BeaconStateView,
-  type CachedBeaconStateHeze,
-  DataAvailabilityStatus,
-  isStatePostGloas,
-} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, isStatePostGloas, isStatePostHeze} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
@@ -168,12 +162,8 @@ export async function importExecutionPayload(
   // the timely-only set and verification against this subset is always satisfied for honest proposers.
   // Using only_timely=false here would falsely reject blocks when the verifier holds late ILs the
   // proposer never had a chance to satisfy.
-  const ilTransactions = isForkPostHeze(fork)
-    ? this.inclusionListStore.getInclusionListTransactions(
-        (blockState as unknown as BeaconStateView).cachedState as CachedBeaconStateHeze,
-        slot - 1,
-        true
-      )
+  const ilTransactions = isStatePostHeze(blockState)
+    ? this.inclusionListStore.getInclusionListTransactions(blockState, slot - 1, true)
     : undefined;
 
   // 4a. Run EL and signature verification in parallel
@@ -209,7 +199,7 @@ export async function importExecutionPayload(
     case ExecutionPayloadStatus.VALID:
       // Spec heze/fork-choice.md `on_execution_payload_envelope` calls
       // `record_payload_inclusion_list_satisfaction(...)` after envelope verification succeeds.
-      if (isForkPostHeze(fork)) {
+      if (isStatePostHeze(blockState)) {
         this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, true);
       }
       break;
