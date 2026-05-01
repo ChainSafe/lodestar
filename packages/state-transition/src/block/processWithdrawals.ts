@@ -15,7 +15,6 @@ import {
   convertBuilderIndexToValidatorIndex,
   convertValidatorIndexToBuilderIndex,
   isBuilderIndex,
-  isParentBlockFull,
 } from "../util/gloas.js";
 import {
   decreaseBalance,
@@ -32,8 +31,15 @@ export function processWithdrawals(
   payload?: capella.FullOrBlindedExecutionPayload
 ): void {
   // Return early if the parent block is empty
-  if (fork >= ForkSeq.gloas && !isParentBlockFull(state as CachedBeaconStateGloas)) {
-    return;
+  if (fork >= ForkSeq.gloas) {
+    const stateGloas = state as CachedBeaconStateGloas;
+    const isParentBlockEmpty = !byteArrayEquals(
+      stateGloas.latestBlockHash,
+      stateGloas.latestExecutionPayloadBid.blockHash
+    );
+    if (isParentBlockEmpty) {
+      return;
+    }
   }
 
   // processedBuilderWithdrawalsCount is withdrawals coming from builder payment since gloas (EIP-7732)
@@ -48,7 +54,9 @@ export function processWithdrawals(
   } = getExpectedWithdrawals(fork, state);
   const numWithdrawals = expectedWithdrawals.length;
 
-  // After gloas, withdrawals are verified later in processExecutionPayloadEnvelope
+  // Pre-gloas verifies the payload's withdrawals against expectedWithdrawals here.
+  // Post-gloas, the payload arrives later as an envelope and that consistency check
+  // happens in verifyExecutionPayloadEnvelope against state.payloadExpectedWithdrawals.
   if (fork < ForkSeq.gloas) {
     if (payload === undefined) {
       throw Error("payload is required for pre-gloas processWithdrawals");

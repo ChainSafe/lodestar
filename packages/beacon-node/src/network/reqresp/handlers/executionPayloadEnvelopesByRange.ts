@@ -21,12 +21,15 @@ export async function* onExecutionPayloadEnvelopesByRange(
 
   const finalized = db.executionPayloadEnvelopeArchive;
   const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
+  // The current finalized block's envelope is still in the hot db; archive migration happens
+  // in the next finalization run (see migrateExecutionPayloadEnvelopesFromHotToColdDb).
+  const archiveMaxSlot = finalizedSlot - 1;
 
   // Finalized range of envelopes
-  if (startSlot <= finalizedSlot) {
+  if (startSlot <= archiveMaxSlot) {
     for await (const {key, value: envelopeBytes} of finalized.binaryEntriesStream({
       gte: startSlot,
-      lt: endSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
       const slot = finalized.decodeKey(key);
       yield {
@@ -37,7 +40,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
   }
 
   // Non-finalized range of envelopes
-  if (endSlot > finalizedSlot) {
+  if (endSlot > archiveMaxSlot) {
     const headBlock = chain.forkChoice.getHead();
     const headRoot = headBlock.blockRoot;
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
@@ -46,7 +49,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
 
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Skip EMPTY blocks
         if (block.payloadStatus !== PayloadStatus.FULL) {
           continue;

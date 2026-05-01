@@ -26,6 +26,7 @@ import {
   computeTimeAtSlot,
   getCurrentSlot,
   isStatePostAltair,
+  isStatePostGloas,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -1049,6 +1050,36 @@ export function getValidatorApi(
       };
     },
 
+    async producePayloadAttestationData({slot}) {
+      const fork = config.getForkName(slot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `producePayloadAttestationData is not supported before Gloas fork=${fork}`);
+      }
+
+      notWhileSyncing();
+      await waitForSlot(slot);
+
+      const block = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
+      if (!block) {
+        throw new ApiError(404, `No canonical block found at or before slot=${slot}`);
+      }
+
+      const blockIsForSlot = block.slot === slot;
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
+      const payloadPresent = blockIsForSlot && (payloadInput?.hasPayloadEnvelope() ?? false);
+      const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
+
+      return {
+        data: {
+          beaconBlockRoot: fromHex(block.blockRoot),
+          slot,
+          payloadPresent,
+          blobDataAvailable,
+        },
+        meta: {version: fork},
+      };
+    },
+
     /**
      * GET `/eth/v1/validator/sync_committee_contribution`
      *
@@ -1249,6 +1280,55 @@ export function getValidatorApi(
           // Should be faster and require less memory
           duty.pubkey = pubkeys[i];
           duties.push(duty);
+        }
+      }
+
+      const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || (await getGenesisBlockRoot(state));
+
+      return {
+        data: duties,
+        meta: {
+          dependentRoot: toRootHex(dependentRoot),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      };
+    },
+
+    async getPtcDuties({epoch, indices}) {
+      notWhileSyncing();
+
+      if (indices.length === 0) {
+        throw new ApiError(400, "No validator to get PTC duties");
+      }
+
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      const fork = config.getForkName(startSlot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `PTC duties are not supported before Gloas fork=${fork}`);
+      }
+
+      await waitForNextClosestEpoch();
+
+      if (epoch > chain.clock.currentEpoch + 1) {
+        throw new ApiError(400, "Cannot get PTC duties for epoch more than one ahead");
+      }
+
+      const head = chain.forkChoice.getHead();
+      const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `PTC duties are not available before Gloas fork=${state.forkName}`);
+      }
+
+      const pubkeys = getPubkeysForIndices(state, indices);
+      const ptcs = state.getEpochPTCs(epoch);
+      const duties: routes.validator.PtcDuty[] = [];
+      for (let i = 0, len = indices.length; i < len; i++) {
+        const validatorIndex = indices[i];
+        for (let j = 0; j < SLOTS_PER_EPOCH; j++) {
+          if (ptcs[j].indexOf(validatorIndex) !== -1) {
+            duties.push({pubkey: pubkeys[i], validatorIndex, slot: j + startSlot});
+            break;
+          }
         }
       }
 
@@ -1641,17 +1721,14 @@ export function getValidatorApi(
         throw Error("Cached block production result is not full block");
       }
 
-      const {executionPayload, executionRequests} = produceResult as ProduceFullGloas;
+      const {executionPayload, executionRequests, parentBlockRoot} = produceResult as ProduceFullGloas;
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: executionPayload,
         executionRequests: executionRequests,
         builderIndex: BUILDER_INDEX_SELF_BUILD,
         beaconBlockRoot,
-        slot,
-        // TODO GLOAS: stateRoot is no longer computed during block production.
-        // This field will be removed when we implement defer payload processing
-        stateRoot: ZERO_HASH,
+        parentBeaconBlockRoot: parentBlockRoot,
       };
 
       logger.info("Produced execution payload envelope", {

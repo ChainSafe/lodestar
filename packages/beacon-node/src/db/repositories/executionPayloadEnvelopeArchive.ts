@@ -19,7 +19,7 @@ export class ExecutionPayloadEnvelopeArchiveRepository extends Repository<Slot, 
    * Id is the slot from the envelope
    */
   getId(value: gloas.SignedExecutionPayloadEnvelope): Slot {
-    return value.message.slot;
+    return value.message.payload.slotNumber;
   }
 
   encodeKey(id: Slot): Uint8Array {

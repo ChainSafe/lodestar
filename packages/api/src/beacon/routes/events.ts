@@ -186,7 +186,6 @@ export type EventData = {
     builderIndex: BuilderIndex;
     blockHash: RootHex;
     blockRoot: RootHex;
-    stateRoot: RootHex;
     executionOptimistic: boolean;
   };
   [EventType.executionPayloadGossip]: {
@@ -194,7 +193,6 @@ export type EventData = {
     builderIndex: BuilderIndex;
     blockHash: RootHex;
     blockRoot: RootHex;
-    stateRoot: RootHex;
   };
   [EventType.executionPayloadAvailable]: {
     slot: Slot;
@@ -376,7 +374,6 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
         blockRoot: stringType,
-        stateRoot: stringType,
         executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
@@ -387,7 +384,6 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
         blockRoot: stringType,
-        stateRoot: stringType,
       },
       {jsonCase: "eth2"}
     ),

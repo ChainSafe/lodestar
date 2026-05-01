@@ -57,11 +57,8 @@ const ignoredOperations = [
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
   // TODO GLOAS: required by v5.0.0-alpha.1
   "publishExecutionPayloadBid",
-  "getPoolPayloadAttestations",
-  "submitPayloadAttestationMessages",
-  "getPtcDuties",
-  "producePayloadAttestationData",
   "getExecutionPayloadBid",
+  "getSignedExecutionPayloadEnvelope",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
@@ -78,6 +75,7 @@ runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, 
 const ignoredTopics: string[] = [
   // TODO GLOAS: required by v5.0.0-alpha.1
   "payload_attestation_message",
+  "execution_payload_bid",
 ];
 
 // eventstream types are defined as comments in the description of "examples".
