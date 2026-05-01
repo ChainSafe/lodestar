@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, Slot} from "@lodestar/types";
+import {RootHex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
@@ -16,6 +16,7 @@ export {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 export type SeenPayloadEnvelopeInputModules = {
   config: ChainForkConfig;
   clock: IClock;
+  forkChoice: IForkChoice;
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   serializedCache: SerializedCache;
@@ -39,6 +40,7 @@ export type SeenPayloadEnvelopeInputModules = {
 export class SeenPayloadEnvelopeInput {
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
+  private readonly forkChoice: IForkChoice;
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
@@ -46,9 +48,19 @@ export class SeenPayloadEnvelopeInput {
   private readonly logger?: Logger;
   private payloadInputs = new Map<RootHex, PayloadEnvelopeInput>();
 
-  constructor({config, clock, chainEvents, signal, serializedCache, metrics, logger}: SeenPayloadEnvelopeInputModules) {
+  constructor({
+    config,
+    clock,
+    forkChoice,
+    chainEvents,
+    signal,
+    serializedCache,
+    metrics,
+    logger,
+  }: SeenPayloadEnvelopeInputModules) {
     this.config = config;
     this.clock = clock;
+    this.forkChoice = forkChoice;
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
@@ -67,14 +79,27 @@ export class SeenPayloadEnvelopeInput {
       });
     }
 
-    this.chainEvents.on(ChainEvent.forkChoiceFinalized, this.onFinalized);
+    this.chainEvents.on(ChainEvent.forkChoiceFinalized, this.pruneFinalized);
     this.signal.addEventListener("abort", () => {
-      this.chainEvents.off(ChainEvent.forkChoiceFinalized, this.onFinalized);
+      this.chainEvents.off(ChainEvent.forkChoiceFinalized, this.pruneFinalized);
     });
   }
 
-  private onFinalized = (checkpoint: CheckpointWithHex): void => {
-    this.pruneBelow(computeStartSlotAtEpoch(checkpoint.epoch));
+  private pruneFinalized = (checkpoint: CheckpointWithHex): void => {
+    const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    let deletedCount = 0;
+    for (const [, input] of this.payloadInputs) {
+      if (input.slot < finalizedSlot) {
+        this.evictPayloadInput(input);
+        deletedCount++;
+      }
+    }
+
+    this.logger?.debug("SeenPayloadEnvelopeInput.pruneFinalized deleted entries", {
+      finalizedSlot,
+      finalizedRoot: checkpoint.rootHex,
+      deletedCount,
+    });
   };
 
   add(props: Omit<CreateFromBlockProps, "daOutOfRange">): PayloadEnvelopeInput {
@@ -110,15 +135,19 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.size;
   }
 
-  pruneBelow(slot: Slot): void {
-    let deletedCount = 0;
-    for (const [, input] of this.payloadInputs) {
-      if (input.slot < slot) {
-        this.evictPayloadInput(input);
-        deletedCount++;
+  pruneBelowParent(parentBlock: ProtoBlock): void {
+    for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
+      if (block.slot < parentBlock.slot) {
+        const input = this.payloadInputs.get(block.blockRoot);
+        if (input) {
+          this.evictPayloadInput(input);
+        }
       }
+      this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
+        slot: block.slot,
+        root: block.blockRoot,
+      });
     }
-    this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelow deleted entries", {slot, deletedCount});
   }
 
   private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {
