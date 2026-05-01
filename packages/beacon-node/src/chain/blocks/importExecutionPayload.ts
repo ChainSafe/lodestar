@@ -66,6 +66,10 @@ export class PayloadError extends Error {
 function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExecutionStatus {
   switch (status) {
     case ExecutionPayloadStatus.VALID:
+    // Spec heze/fork-choice.md: an IL-unsatisfied payload is structurally valid (the EL would
+    // have returned INVALID otherwise). Fork-choice imports it as Valid; the IL constraint is
+    // tracked separately via `payload_inclusion_list_satisfaction` and gates `should_extend_payload`.
+    case ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED:
       return ExecutionStatus.Valid;
     case ExecutionPayloadStatus.SYNCING:
     case ExecutionPayloadStatus.ACCEPTED:
@@ -222,15 +226,13 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INCLUSION_LIST_UNSATISFIED:
-      // Spec heze/fork-choice.md: payload did not satisfy the IL constraints — fork-choice will
-      // refuse to extend this payload until/unless evidence changes.
+      // Spec heze/fork-choice.md `on_execution_payload_envelope`: record satisfaction = false,
+      // then continue to import the envelope into the store. `should_extend_payload` will refuse
+      // to build on top of this payload, but the envelope itself is still tracked so the
+      // fork-choice can evaluate competing branches.
       this.forkChoice.recordPayloadInclusionListSatisfaction(blockRootHex, false);
       this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
-      throw new PayloadError({
-        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "",
-      });
+      break;
 
     case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
     case ExecutionPayloadStatus.ELERROR:
