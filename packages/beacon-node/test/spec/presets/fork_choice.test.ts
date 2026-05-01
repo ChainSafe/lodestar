@@ -622,11 +622,6 @@ const forkChoiceTest =
         // integrated
         shouldSkip: (_testcase, name, _index) =>
           name.includes("invalid_incorrect_proof") ||
-          // TODO GLOAS: Proposer boost specs have been changed retroactively in v1.7.0-alpha.1,
-          // and these tests are failing until we update our implementation.
-          name.includes("voting_source_beyond_two_epoch") ||
-          name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality") ||
           // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
           (name.includes("gloas") &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
