@@ -612,7 +612,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockInput.blockRootHex);
           // This payloadInput should have been created just after gossip validation
           if (!payloadInput) {
-            throw Error(`PayloadEnvelopeInput not seeded for block ${blockInput.blockRootHex} during gossip processing`);
+            throw Error(
+              `PayloadEnvelopeInput not seeded for block ${blockInput.blockRootHex} during gossip processing`
+            );
           }
 
           // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
