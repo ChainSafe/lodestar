@@ -527,7 +527,7 @@ export class PeerDiscovery {
 
   private shouldDialPeer(peer: CachedENR): boolean {
     const forkSeq = this.config.getForkSeq(this.clock.currentSlot);
-    if (forkSeq >= ForkSeq.fulu && peer.custodyGroups !== null) {
+    if (forkSeq >= ForkSeq.fulu && peer.custodyGroups != null) {
       // pre-fulu `this.custodyGroupQueries` is empty
       // starting from fulu, we need to make sure we have stable subnet sampling peers first
       // given SAMPLES_PER_SLOT = 8 and 100 peers, we have 800 custody columns from peers
