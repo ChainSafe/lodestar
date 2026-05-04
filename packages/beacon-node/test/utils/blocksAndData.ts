@@ -1,6 +1,7 @@
 import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {Signature} from "@chainsafe/lodestar-z/blst";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ForkPostCapella,
@@ -29,8 +30,6 @@ import {
 } from "../../src/util/dataColumns.js";
 import {kzg} from "../../src/util/kzg.js";
 import {ROOT_SIZE} from "../../src/util/sszBytes.js";
-
-const SIGNATURE_LENGTH_COMPRESSED = 96;
 
 export const CAPELLA_FORK_EPOCH = 0;
 export const DENEB_FORK_EPOCH = 10;
@@ -116,7 +115,7 @@ function generateBeaconBlock<F extends ForkPostCapella>({
   block.message.stateRoot = Uint8Array.from(randomBytes(ROOT_SIZE));
   block.message.proposerIndex = generateProposerIndex();
   // signature is obviously not valid so can generate it now instead of after commitments are attached
-  block.signature = Uint8Array.from(randomBytes(SIGNATURE_LENGTH_COMPRESSED));
+  block.signature = Uint8Array.from(randomBytes(Signature.COMPRESS_SIZE));
   return block;
 }
 
