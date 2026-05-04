@@ -330,5 +330,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: true,
+
+    CHURN_LIMIT_QUOTIENT_GLOAS: gloasForkRelevant,
+    CONSOLIDATION_CHURN_LIMIT_QUOTIENT: gloasForkRelevant,
+    MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: gloasForkRelevant,
   };
 }

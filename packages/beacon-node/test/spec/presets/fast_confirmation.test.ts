@@ -58,7 +58,7 @@ import {ClockStopped} from "../../mocks/clock.ts";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.ts";
 import {assertCorrectProgressiveBalances} from "../config.ts";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.ts";
-import {specTestIterator} from "../utils/specTestIterator.ts";
+import {defaultSkipOpts, specTestIterator} from "../utils/specTestIterator.ts";
 import {RunnerType, TestRunnerFn} from "../utils/types.ts";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
@@ -683,4 +683,7 @@ function isCheck(step: Step): step is Checks {
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
   fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
+}, {
+  ...defaultSkipOpts,
+  skippedRunners: [],
 });

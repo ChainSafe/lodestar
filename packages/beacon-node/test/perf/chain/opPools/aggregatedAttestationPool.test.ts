@@ -1,6 +1,6 @@
 import {beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {ExecutionStatus, ForkChoice, IForkChoiceStore, PayloadStatus, ProtoArray} from "@lodestar/fork-choice";
+import {ExecutionStatus, ForkChoice, IForkChoiceStore, ProtoArray} from "@lodestar/fork-choice";
 import {HISTORICAL_ROOTS_LIMIT, MAX_COMMITTEES_PER_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   BeaconStateView,
@@ -116,7 +116,6 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           checkpoint: {
             ...justifiedCheckpoint,
             rootHex: toHexString(justifiedCheckpoint.root),
-            payloadStatus: PayloadStatus.FULL,
           },
           balances: originalState.epochCtx.effectiveBalanceIncrements,
           totalBalance,
@@ -125,19 +124,16 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
           checkpoint: {
             ...justifiedCheckpoint,
             rootHex: toHexString(justifiedCheckpoint.root),
-            payloadStatus: PayloadStatus.FULL,
           },
           balances: originalState.epochCtx.effectiveBalanceIncrements,
         },
         finalizedCheckpoint: {
           ...finalizedCheckpoint,
           rootHex: toHexString(finalizedCheckpoint.root),
-          payloadStatus: PayloadStatus.FULL,
         },
         unrealizedFinalizedCheckpoint: {
           ...finalizedCheckpoint,
           rootHex: toHexString(finalizedCheckpoint.root),
-          payloadStatus: PayloadStatus.FULL,
         },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),

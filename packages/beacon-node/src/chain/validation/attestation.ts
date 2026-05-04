@@ -315,6 +315,19 @@ async function validateAttestationNoSignatureCheck(
             code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
           });
         }
+
+        // [REJECT] If `attestation.data.index == 1` (payload present for a past
+        //   block), the execution payload for `block` passes validation.
+        // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
+        // the corresponding execution payload for `block` has been seen (a client MAY queue
+        // attestations for processing once the payload is retrieved and SHOULD request the
+        // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
+        if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
+          throw new AttestationError(GossipAction.IGNORE, {
+            code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+            beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
+          });
+        }
       } else {
         // [REJECT] attestation.data.index == 0
         if (attData.index !== 0) {

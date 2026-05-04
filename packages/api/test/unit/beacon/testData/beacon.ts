@@ -95,6 +95,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
     res: undefined,
   },
+  getSignedExecutionPayloadEnvelope: {
+    args: {blockId: "head"},
+    res: {
+      data: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue(),
+      meta: {executionOptimistic: true, finalized: false, version: ForkName.gloas},
+    },
+  },
   getBlobSidecars: {
     args: {blockId: "head", indices: [0]},
     res: {
@@ -119,6 +126,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getPoolAttestationsV2: {
     args: {slot: 1, committeeIndex: 2},
     res: {data: [ssz.electra.Attestation.defaultValue()], meta: {version: ForkName.electra}},
+  },
+  getPoolPayloadAttestations: {
+    args: {slot: 1},
+    res: {data: [ssz.gloas.PayloadAttestation.defaultValue()], meta: {version: ForkName.gloas}},
   },
   getPoolAttesterSlashings: {
     args: undefined,
@@ -170,6 +181,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   submitPoolSyncCommitteeSignatures: {
     args: {signatures: [ssz.altair.SyncCommitteeMessage.defaultValue()]},
+    res: undefined,
+  },
+  submitPayloadAttestationMessages: {
+    args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
     res: undefined,
   },
 

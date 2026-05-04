@@ -18,6 +18,7 @@ import {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateExecutions,
+  BeaconStateGloas,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
 } from "../types.js";
@@ -46,7 +47,11 @@ export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBl
  * Merge is complete when the state includes execution layer data:
  * state.latestExecutionPayloadHeader NOT EMPTY or state is post-capella
  */
-export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean {
+export function isMergeTransitionComplete(state: BeaconStateExecutions | BeaconStateGloas): boolean {
+  if (isGloasStateType(state)) {
+    return true;
+  }
+
   if (isCapellaStateType(state)) {
     // All networks have completed the merge transition before capella
     return true;
@@ -69,6 +74,11 @@ export function isCapellaStateType(state: BeaconStateAllForks): state is BeaconS
     (state as BeaconStateCapella).latestExecutionPayloadHeader !== undefined &&
     (state as BeaconStateCapella).latestExecutionPayloadHeader.withdrawalsRoot !== undefined
   );
+}
+
+/** Type guard for gloas.BeaconState */
+export function isGloasStateType(state: BeaconStateAllForks): state is BeaconStateGloas {
+  return (state as BeaconStateGloas).latestBlockHash !== undefined;
 }
 
 /** Type guard for bellatrix.CachedBeaconState */

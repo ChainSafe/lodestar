@@ -39,6 +39,7 @@ export {
   ForkChoiceStore,
   type IForkChoiceStore,
   type JustifiedBalancesGetter,
+  toCheckpointWithPayload,
 } from "./forkChoice/store.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {

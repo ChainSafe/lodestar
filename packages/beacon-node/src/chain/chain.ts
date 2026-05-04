@@ -3,17 +3,14 @@ import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {
-  CheckpointWithPayloadStatus,
+  CheckpointWithHex,
   ForkChoiceStateGetter,
   IForkChoice,
-  PayloadStatus,
   ProtoBlock,
   UpdateHeadOpt,
-  getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
-  BUILDER_INDEX_SELF_BUILD,
   EFFECTIVE_BALANCE_INCREMENT,
   type ForkPostFulu,
   type ForkPostGloas,
@@ -32,7 +29,6 @@ import {
   getEffectiveBalancesFromStateBytes,
   isStatePostAltair,
   isStatePostElectra,
-  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -49,6 +45,7 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
+  electra,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -101,8 +98,8 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeNewStateRoot, computePayloadEnvelopeStateRoot} from "./produceBlock/computeNewStateRoot.js";
-import {AssembledBlockType, BlockType, ProduceFullGloas, ProduceResult} from "./produceBlock/index.js";
+import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
+import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
@@ -115,6 +112,7 @@ import {
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
   SeenPayloadEnvelopeInput,
+  SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -126,7 +124,7 @@ import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datasto
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCache, fcCheckpointToHexPayload} from "./stateCache/persistentCheckpointsCache.js";
+import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -195,6 +193,7 @@ export class BeaconChain implements IBeaconChain {
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
+  readonly seenProposerPreferences = new SeenProposerPreferences();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -342,13 +341,6 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
-      chainEvents: emitter,
-      signal,
-      serializedCache: this.serializedCache,
-      metrics,
-      logger,
-    });
 
     this._earliestAvailableSlot = anchorState.slot;
 
@@ -391,13 +383,12 @@ export class BeaconChain implements IBeaconChain {
     const {checkpoint} = anchorState.computeAnchorCheckpoint();
     blockStateCache.add(anchorState);
     blockStateCache.setHeadState(anchorState);
-    const payloadPresent = getCheckpointPayloadStatus(config, anchorState, checkpoint.epoch) === PayloadStatus.FULL;
-    checkpointStateCache.add(checkpoint, anchorState, payloadPresent);
+    checkpointStateCache.add(checkpoint, anchorState);
 
     const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
       if (stateRoot) return blockStateCache.get(stateRoot);
 
-      if (checkpoint) return checkpointStateCache.get(fcCheckpointToHexPayload(checkpoint));
+      if (checkpoint) return checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex});
 
       return null;
     };
@@ -438,6 +429,18 @@ export class BeaconChain implements IBeaconChain {
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
+
+    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
+      config,
+      clock,
+      forkChoice,
+      chainEvents: emitter,
+      signal,
+      serializedCache: this.serializedCache,
+      metrics,
+      logger,
+    });
+
     this.clock = clock;
     this.regen = regen;
     this.bls = bls;
@@ -695,16 +698,16 @@ export class BeaconChain implements IBeaconChain {
 
     // TODO GLOAS: Need to revisit the design of this api. Currently we just retrieve FULL state of the checkpoint for backwards compatibility.
     // because pre-gloas we always store FULL checkpoint state.
-    const persistedKey = checkpointToDatastoreKey(checkpoint, true);
+    const persistedKey = checkpointToDatastoreKey(checkpoint);
     return this.cpStateDatastore.read(persistedKey);
   }
 
   getStateByCheckpoint(
-    checkpoint: CheckpointWithPayloadStatus
+    checkpoint: CheckpointWithHex
   ): {state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null {
     // finalized or justified checkpoint states maynot be available with PersistentCheckpointStateCache, use getCheckpointStateOrBytes() api to get Uint8Array
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHex);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlockDefaultStatus(
         ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
@@ -721,10 +724,10 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithPayloadStatus
+    checkpoint: CheckpointWithHex
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHex);
     if (cachedStateCtx) {
       const block = this.forkChoice.getBlockDefaultStatus(checkpoint.root);
       const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
@@ -888,6 +891,37 @@ export class BeaconChain implements IBeaconChain {
       (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
       null
     );
+  }
+
+  async getExecutionPayloadEnvelope(
+    blockSlot: Slot,
+    blockRootHex: string
+  ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+    if (payloadInput?.hasPayloadEnvelope()) {
+      return payloadInput.getPayloadEnvelope();
+    }
+
+    return (
+      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
+      null
+    );
+  }
+
+  async getParentExecutionRequests(
+    parentBlockSlot: Slot,
+    parentBlockRootHex: RootHex
+  ): Promise<electra.ExecutionRequests> {
+    // at the fork boundary, parent is pre-gloas
+    if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
+      return ssz.electra.ExecutionRequests.defaultValue();
+    }
+    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
+    if (envelope === null) {
+      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
+    }
+    return envelope.message.executionRequests;
   }
 
   async getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]> {
@@ -1064,7 +1098,7 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward, postBlockState} = computeNewStateRoot(this.metrics, state, block);
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
@@ -1073,26 +1107,9 @@ export class BeaconChain implements IBeaconChain {
     const blockRootHex = toRootHex(blockRoot);
 
     const fork = this.config.getForkName(slot);
-    if (isForkPostGloas(fork)) {
-      // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
-      if (produceResult.type !== BlockType.Full) {
-        throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
-      }
-
-      const gloasResult = produceResult as ProduceFullGloas;
-      const envelope: gloas.ExecutionPayloadEnvelope = {
-        payload: gloasResult.executionPayload,
-        executionRequests: gloasResult.executionRequests,
-        builderIndex: BUILDER_INDEX_SELF_BUILD,
-        beaconBlockRoot: blockRoot,
-        slot,
-        stateRoot: ZERO_HASH,
-      };
-      if (!isStatePostGloas(postBlockState)) {
-        throw Error(`Expected gloas+ post-state for execution payload envelope, got fork=${postBlockState.forkName}`);
-      }
-      const payloadEnvelopeStateRoot = computePayloadEnvelopeStateRoot(this.metrics, postBlockState, envelope);
-      gloasResult.payloadEnvelopeStateRoot = payloadEnvelopeStateRoot;
+    // TODO GLOAS: we should retire BlockType post-gloas, may need a new enum for self vs non-self built
+    if (isForkPostGloas(fork) && produceResult.type !== BlockType.Full) {
+      throw Error(`Unexpected block type=${produceResult.type} for post-gloas fork=${fork}`);
     }
 
     // Track the produced block for consensus broadcast validations, later validation, etc.
@@ -1103,11 +1120,15 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob([block], opts);
+    return this.blockProcessor.processBlocksJob([block], null, opts);
   }
 
-  async processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void> {
-    return this.blockProcessor.processBlocksJob(blocks, opts);
+  async processChainSegment(
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void> {
+    await this.blockProcessor.processBlocksJob(blocks, payloadEnvelopes, opts);
   }
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
@@ -1298,7 +1319,7 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private justifiedBalancesGetter(
-    checkpoint: CheckpointWithPayloadStatus,
+    checkpoint: CheckpointWithHex,
     blockState: IBeaconStateView
   ): EffectiveBalanceIncrements {
     this.metrics?.balancesCache.requests.inc();
@@ -1337,11 +1358,11 @@ export class BeaconChain implements IBeaconChain {
    * @param blockState state that declares justified checkpoint `checkpoint`
    */
   private closestJustifiedBalancesStateToCheckpoint(
-    checkpoint: CheckpointWithPayloadStatus,
+    checkpoint: CheckpointWithHex,
     blockState: IBeaconStateView
   ): {state: IBeaconStateView; stateId: string; shouldWarn: boolean} {
-    const checkpointHexPayload = fcCheckpointToHexPayload(checkpoint);
-    const state = this.regen.getCheckpointStateSync(checkpointHexPayload);
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const state = this.regen.getCheckpointStateSync(checkpointHex);
     if (state) {
       return {state, stateId: "checkpoint_state", shouldWarn: false};
     }
@@ -1352,10 +1373,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
-      checkpoint.rootHex,
-      checkpoint.payloadStatus
-    )) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendantsDefaultStatus(checkpoint.rootHex)) {
       if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
@@ -1371,10 +1389,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Find a state in the same branch of checkpoint at a latter epoch. Balances are not the same, but should be close
     // Note: must call .forwardIterateDescendants() again since nodes are not sorted
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendants(
-      checkpoint.rootHex,
-      checkpoint.payloadStatus
-    )) {
+    for (const descendantBlock of this.forkChoice.forwardIterateDescendantsDefaultStatus(checkpoint.rootHex)) {
       if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
         const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
         if (descendantBlockState) {
@@ -1444,6 +1459,7 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
+    this.seenProposerPreferences.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 
@@ -1465,10 +1481,6 @@ export class BeaconChain implements IBeaconChain {
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
 
-    if (epoch === this.config.GLOAS_FORK_EPOCH) {
-      this.regen.upgradeForGloas(epoch);
-    }
-
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
     this.seenPayloadAttesters.prune(epoch);
@@ -1482,7 +1494,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenContributionAndProof.prune(head.slot);
   }
 
-  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithPayloadStatus): void {
+  private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
   }
 
@@ -1493,7 +1505,7 @@ export class BeaconChain implements IBeaconChain {
     });
   }
 
-  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithPayloadStatus): Promise<void> {
+  private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
     const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
     this.seenBlockProposers.prune(finalizedSlot);
@@ -1534,7 +1546,7 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithPayloadStatus): Promise<void> {
+  private async updateValidatorsCustodyRequirement(finalizedCheckpoint: CheckpointWithHex): Promise<void> {
     if (this.custodyConfig.targetCustodyGroupCount === this.config.NUMBER_OF_CUSTODY_GROUPS) {
       // Custody requirements can only be increased, we can disable dynamic custody updates
       // if the node already maintains custody of all custody groups in case it is configured
