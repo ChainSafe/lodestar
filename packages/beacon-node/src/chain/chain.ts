@@ -2,13 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  CheckpointWithHex,
-  ForkChoiceStateGetter,
-  IForkChoice,
-  ProtoBlock,
-  UpdateHeadOpt,
-} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,

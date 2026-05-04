@@ -681,9 +681,13 @@ function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
 }
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
-  fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
-}, {
-  ...defaultSkipOpts,
-  skippedRunners: [],
-});
+specTestIterator(
+  path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
+  {
+    fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
+  },
+  {
+    ...defaultSkipOpts,
+    skippedRunners: [],
+  }
+);
