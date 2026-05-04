@@ -252,13 +252,15 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   payloadExpectedWithdrawals: capella.Withdrawal[];
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
+  getEpochPTCs(epoch: Epoch): Uint32Array[];
   getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
   /**
-   * Compute expected withdrawals as if the parent was FULL.
-   * Clones the state, applies parent payload effects, then computes withdrawals.
-   * Used by prepare_execution_payload when building on FULL parent.
+   * Clone the state and apply parent execution payload effects.
+   * Used during block production and prepareNextSlot so that withdrawals and
+   * operation selection (e.g. voluntary exits) see the same post-apply state that the block
+   * processor will see at import.
    */
-  getExpectedWithdrawalsForFullParent(executionRequests: electra.ExecutionRequests): capella.Withdrawal[];
+  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
 }
 
 /**

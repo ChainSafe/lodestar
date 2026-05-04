@@ -48,9 +48,12 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] the `SignedProposerPreferences` where `preferences.proposal_slot`
-  // is equal to `bid.slot` has been seen.
-  // TODO GLOAS: Implement this along with proposer preference
+  // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been
+  // seen — i.e. `proposal_slot == bid.slot` AND `dependent_root ==
+  // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`,
+  // where `parent_state` is the post-state of `bid.parent_block_root`.
+  // This is the message referenced as `proposer_preferences` in the following REJECT rules.
+  // TODO GLOAS: Implement once a ProposerPreferencesPool exists.
 
   // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
@@ -71,11 +74,11 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [REJECT] `bid.fee_recipient` matches the `fee_recipient` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // [REJECT] `bid.gas_limit` matches the `gas_limit` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // TODO GLOAS: Implement this along with proposer preference
+  // [REJECT] `bid.fee_recipient == proposer_preferences.fee_recipient`.
+  // [REJECT] `bid.gas_limit == proposer_preferences.gas_limit`.
+  // Both compared against the matching `proposer_preferences` defined above (same branch
+  // via dependent_root, same proposal_slot).
+  // TODO GLOAS: Implement once a ProposerPreferencesPool exists.
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
   // consensus layer -- i.e. validate that

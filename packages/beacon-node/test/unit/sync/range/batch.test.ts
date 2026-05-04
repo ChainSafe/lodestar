@@ -1,9 +1,16 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
-import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
+import {
+  BlockInputColumns,
+  BlockInputNoData,
+  BlockInputPreData,
+} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
@@ -261,6 +268,196 @@ describe("sync / range / batch", async () => {
 
   describe("downloadingSuccess", () => {
     it("should handle blocks that are not in slot-wise order", () => {});
+
+    describe("post-Gloas", () => {
+      const startEpoch = config.GLOAS_FORK_EPOCH + 1;
+      const seenTimestampSec = Date.now() / 1000;
+
+      function buildGloasBlockWithEnvelope({
+        slot,
+        blobCount = 0,
+        sampledColumns = [],
+        addEnvelope = true,
+        addAllColumns = true,
+      }: {
+        slot: number;
+        blobCount?: number;
+        sampledColumns?: number[];
+        addEnvelope?: boolean;
+        addAllColumns?: boolean;
+      }): {blockInput: BlockInputNoData; payloadInput: PayloadEnvelopeInput} {
+        const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+        block.message.slot = slot;
+        block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = Array.from({length: blobCount}, () =>
+          Buffer.alloc(48, 0x11)
+        );
+        const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block.message);
+        const blockRootHex = toRootHex(blockRoot);
+        const blockInput = BlockInputNoData.createFromBlock({
+          block: block as SignedBeaconBlock<typeof ForkName.gloas>,
+          blockRootHex,
+          forkName: ForkName.gloas,
+          daOutOfRange: false,
+          seenTimestampSec,
+          source: BlockInputSource.byRange,
+          peerIdStr: peer,
+        });
+        const payloadInput = PayloadEnvelopeInput.createFromBlock({
+          blockRootHex,
+          block: block as SignedBeaconBlock<typeof ForkName.gloas>,
+          forkName: ForkName.gloas,
+          sampledColumns,
+          custodyColumns: sampledColumns,
+          timeCreatedSec: seenTimestampSec,
+          daOutOfRange: false,
+        });
+        if (addEnvelope) {
+          const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+          envelope.message.beaconBlockRoot = blockRoot;
+          envelope.message.payload.slotNumber = slot;
+          payloadInput.addPayloadEnvelope({
+            envelope,
+            source: PayloadEnvelopeInputSource.byRange,
+            seenTimestampSec,
+            peerIdStr: peer,
+          });
+        }
+        if (addAllColumns && sampledColumns.length > 0) {
+          for (const index of sampledColumns) {
+            const columnSidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+            columnSidecar.beaconBlockRoot = blockRoot;
+            columnSidecar.slot = slot;
+            columnSidecar.index = index;
+            payloadInput.addColumn({
+              columnSidecar,
+              source: PayloadEnvelopeInputSource.byRange,
+              seenTimestampSec,
+              peerIdStr: peer,
+            });
+          }
+        }
+        return {blockInput, payloadInput};
+      }
+
+      it("transitions to AwaitingProcessing when every block has a complete payload envelope", () => {
+        const batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch.startDownloading(peer);
+
+        const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot});
+        const {blockInput: bi2, payloadInput: pi2} = buildGloasBlockWithEnvelope({slot: batch.startSlot + 1});
+        const payloadEnvelopes = new Map([
+          [bi1.slot, pi1],
+          [bi2.slot, pi2],
+        ]);
+
+        batch.downloadingSuccess(peer, [bi1, bi2], payloadEnvelopes);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+      });
+
+      it("stays AwaitingDownload when a block has no payload envelope", () => {
+        const batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch.startDownloading(peer);
+
+        const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot});
+        // Block downloaded but envelope is missing for this slot
+        const {blockInput: bi2} = buildGloasBlockWithEnvelope({slot: batch.startSlot + 1, addEnvelope: false});
+        const payloadEnvelopes = new Map([[bi1.slot, pi1]]);
+
+        batch.downloadingSuccess(peer, [bi1, bi2], payloadEnvelopes);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.requests.envelopesRequest).toBeDefined();
+      });
+
+      it("stays AwaitingDownload when a payload envelope is missing sampled columns", () => {
+        const batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch.startDownloading(peer);
+
+        const sampledColumns = [0, 1];
+        const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({
+          slot: batch.startSlot,
+          blobCount: 1,
+          sampledColumns,
+          addAllColumns: true,
+        });
+        // Envelope received but its sampled columns were not
+        const {blockInput: bi2, payloadInput: pi2} = buildGloasBlockWithEnvelope({
+          slot: batch.startSlot + 1,
+          blobCount: 1,
+          sampledColumns,
+          addAllColumns: false,
+        });
+        const payloadEnvelopes = new Map([
+          [bi1.slot, pi1],
+          [bi2.slot, pi2],
+        ]);
+
+        batch.downloadingSuccess(peer, [bi1, bi2], payloadEnvelopes);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.requests.columnsRequest).toBeDefined();
+        // Re-request must start at the slot whose payload is missing columns,
+        // and only include the missing column indices.
+        expect(batch.requests.columnsRequest?.startSlot).toBe(bi2.slot);
+        expect(batch.requests.columnsRequest?.columns).toEqual(sampledColumns);
+      });
+    });
+
+    describe("Fulu (pre-Gloas)", () => {
+      const startEpoch = config.FULU_FORK_EPOCH + 1;
+      const seenTimestampSec = Date.now() / 1000;
+
+      it("stays AwaitingDownload when reconstruction threshold reached but sampled columns missing", () => {
+        const batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch.startDownloading(peer);
+
+        // Pick sampled indices outside the range we'll fill so they stay physically missing
+        const sampledColumns = [100, 101, 102, 103];
+        const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+        block.message.slot = batch.startSlot;
+        block.message.body.blobKzgCommitments = [Buffer.alloc(48, 0x11)];
+        const blockRoot = ssz.fulu.BeaconBlock.hashTreeRoot(block.message);
+        const blockRootHex = toRootHex(blockRoot);
+
+        const blockInput = BlockInputColumns.createFromBlock({
+          block: block as SignedBeaconBlock<typeof ForkName.fulu>,
+          blockRootHex,
+          forkName: ForkName.fulu,
+          daOutOfRange: false,
+          seenTimestampSec,
+          source: BlockInputSource.byRange,
+          peerIdStr: peer,
+          sampledColumns,
+          custodyColumns: sampledColumns,
+        });
+
+        // Add NUMBER_OF_COLUMNS/2 columns at non-sampled indices (0..63) to hit the
+        // reconstruction threshold without any sampled column being physically present.
+        for (let i = 0; i < 64; i++) {
+          const columnSidecar = ssz.fulu.DataColumnSidecar.defaultValue();
+          columnSidecar.index = i;
+          blockInput.addColumn({
+            columnSidecar,
+            blockRootHex,
+            source: BlockInputSource.byRange,
+            seenTimestampSec,
+            peerIdStr: peer,
+          });
+        }
+
+        // Reconstruction-threshold semantics: hasAllData true, hasComputedAllData false.
+        expect(blockInput.hasAllData()).toBe(true);
+        expect(blockInput.hasComputedAllData()).toBe(false);
+
+        batch.downloadingSuccess(peer, [blockInput], null);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        expect(batch.requests.columnsRequest).toBeDefined();
+        expect(batch.requests.columnsRequest?.startSlot).toBe(batch.startSlot);
+        expect(batch.requests.columnsRequest?.columns.slice().sort((a, b) => a - b)).toEqual(sampledColumns);
+      });
+    });
   });
 
   it("Complete state flow", () => {

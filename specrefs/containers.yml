@@ -1063,12 +1063,13 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadEnvelope =
   spec: |
-    <spec container="ExecutionPayloadEnvelope" fork="gloas" hash="526d7f15">
+    <spec container="ExecutionPayloadEnvelope" fork="gloas" hash="3df22cd3">
     class ExecutionPayloadEnvelope(Container):
         payload: ExecutionPayload
         execution_requests: ExecutionRequests
         builder_index: BuilderIndex
         beacon_block_root: Root
+        parent_beacon_block_root: Root
     </spec>
 
 - name: ExecutionPayloadHeader#bellatrix
@@ -1349,6 +1350,20 @@
         execution_branch: ExecutionBranch
     </spec>
 
+- name: LightClientHeader#gloas
+  sources: []
+  spec: |
+    <spec container="LightClientHeader" fork="gloas" hash="b0387ab2">
+    class LightClientHeader(Container):
+        beacon: BeaconBlockHeader
+        # [Modified in Gloas:EIP7732]
+        # Removed `execution`
+        # [New in Gloas:EIP7732]
+        execution_block_hash: Hash32
+        # [Modified in Gloas:EIP7732]
+        execution_branch: ExecutionBranch
+    </spec>
+
 - name: LightClientOptimisticUpdate#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
@@ -1427,6 +1442,25 @@
         kzg_proof: KZGProof
         column_index: ColumnIndex
         row_index: RowIndex
+    </spec>
+
+- name: PartialDataColumnGroupID#gloas
+  sources: []
+  spec: |
+    <spec container="PartialDataColumnGroupID" fork="gloas" hash="9e8865b1">
+    class PartialDataColumnGroupID(Container):
+        slot: Slot
+        beacon_block_root: Root
+    </spec>
+
+- name: PartialDataColumnSidecar#gloas
+  sources: []
+  spec: |
+    <spec container="PartialDataColumnSidecar" fork="gloas" hash="57b4ad2a">
+    class PartialDataColumnSidecar(Container):
+        cells_present_bitmap: Bitlist[MAX_BLOB_COMMITMENTS_PER_BLOCK]
+        partial_column: List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+        kzg_proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
     </spec>
 
 - name: PayloadAttestation#gloas
@@ -1533,8 +1567,9 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ProposerPreferences =
   spec: |
-    <spec container="ProposerPreferences" fork="gloas" hash="2a38b149">
+    <spec container="ProposerPreferences" fork="gloas" hash="5ef93db5">
     class ProposerPreferences(Container):
+        dependent_root: Root
         proposal_slot: Slot
         validator_index: ValidatorIndex
         fee_recipient: ExecutionAddress

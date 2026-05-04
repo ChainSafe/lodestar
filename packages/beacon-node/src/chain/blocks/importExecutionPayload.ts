@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {isStatePostGloas} from "@lodestar/state-transition";
-import {fromHex, isErrorAborted} from "@lodestar/utils";
+import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -61,7 +61,6 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
   switch (status) {
     case ExecutionPayloadStatus.VALID:
       return ExecutionStatus.Valid;
-    // TODO GLOAS: Handle optimistic import for payload
     case ExecutionPayloadStatus.SYNCING:
     case ExecutionPayloadStatus.ACCEPTED:
       return ExecutionStatus.Syncing;
@@ -93,6 +92,7 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
 export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
+  dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
@@ -159,7 +159,7 @@ export async function importExecutionPayload(
       fork,
       envelope.payload,
       payloadInput.getVersionedHashes(),
-      fromHex(protoBlock.parentRoot),
+      envelope.parentBeaconBlockRoot,
       envelope.executionRequests
     ),
 
@@ -221,7 +221,13 @@ export async function importExecutionPayload(
 
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
-  this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
+  this.forkChoice.onExecutionPayload(
+    blockRootHex,
+    blockHashHex,
+    envelope.payload.blockNumber,
+    execStatus,
+    dataAvailabilityStatus
+  );
 
   // 7. Queue notifyForkchoiceUpdate to engine api
   const head = this.forkChoice.getHead();
@@ -248,8 +254,7 @@ export async function importExecutionPayload(
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
-      // TODO GLOAS: revisit once we support optimistic import
-      executionOptimistic: false,
+      executionOptimistic: execStatus === ExecutionStatus.Syncing,
     });
   }
 
@@ -275,6 +280,6 @@ export async function processExecutionPayload(
   signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  await verifyPayloadsDataAvailability([payloadInput], signal);
-  await importExecutionPayload.call(this, payloadInput, opts);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], signal);
+  await importExecutionPayload.call(this, payloadInput, dataAvailabilityStatuses[0], opts);
 }
