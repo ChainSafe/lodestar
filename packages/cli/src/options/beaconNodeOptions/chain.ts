@@ -100,7 +100,7 @@ export const options: CliCommandOptions<ChainArgs> = {
     description:
       "Spawn a worker thread to regenerate finalized beacon states on demand and serve them via the debug REST API (e.g. `/eth/v2/debug/beacon/states/{state_id}`). \
 Does not backfill historical data — only states the node already has (since genesis sync or `--checkpointState`) can be regenerated. \
-Regeneration cost depends on `--chain.archiveStateEpochFrequency` (default 1024) and may affect validator performance.",
+Regeneration cost depends on `--chain.archiveStateEpochFrequency` and may affect validator performance.",
     type: "boolean",
     default: defaultOptions.chain.serveHistoricalState,
     group: "chain",
@@ -318,7 +318,7 @@ Will double processing times. Use only for debugging purposes.",
 
   "chain.pruneHistory": {
     description:
-      "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
+      "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (e.g., 33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
 Use this to minimize disk usage when the node does not need to serve historical data. \
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",
