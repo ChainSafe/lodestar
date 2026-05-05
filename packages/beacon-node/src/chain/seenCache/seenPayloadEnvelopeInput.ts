@@ -140,7 +140,7 @@ export class SeenPayloadEnvelopeInput {
     for (const input of this.payloadInputs.values()) {
       if (
         input.slot < parentBlock.slot &&
-        // Check if the cached FULL cariant is an ancestor of the current parent block
+        // Check if the cached FULL variant is an ancestor of the current parent block
         this.forkChoice.isDescendant(
           input.blockRootHex,
           PayloadStatus.FULL,
