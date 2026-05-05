@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -136,17 +136,29 @@ export class SeenPayloadEnvelopeInput {
   }
 
   pruneBelowParent(parentBlock: ProtoBlock): void {
-    for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
-      if (block.slot < parentBlock.slot) {
-        const input = this.payloadInputs.get(block.blockRoot);
-        if (input) {
-          this.evictPayloadInput(input);
-          this.logger?.verbose("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
-            slot: block.slot,
-            root: block.blockRoot,
-          });
-        }
+    let deletedCount = 0;
+    for (const input of this.payloadInputs.values()) {
+      if (
+        input.slot < parentBlock.slot &&
+        // Check if the cached FULL cariant is an ancestor of the current parent block
+        this.forkChoice.isDescendant(
+          input.blockRootHex,
+          PayloadStatus.FULL,
+          parentBlock.blockRoot,
+          parentBlock.payloadStatus
+        )
+      ) {
+        this.evictPayloadInput(input);
+        deletedCount++;
       }
+    }
+
+    if (deletedCount > 0) {
+      this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelowParent deleted entries", {
+        parentSlot: parentBlock.slot,
+        parentRoot: parentBlock.blockRoot,
+        deletedCount,
+      });
     }
   }
 
