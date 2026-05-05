@@ -21,7 +21,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
     forkChoice = {
-      getAllAncestorBlocks: vi.fn(),
+      isDescendant: vi.fn().mockReturnValue(false),
     } as unknown as IForkChoice;
     serializedCache = new SerializedCache();
 
@@ -79,7 +79,8 @@ describe("SeenPayloadEnvelopeInput", () => {
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    // Only the older entries are ancestors
+    vi.mocked(forkChoice.isDescendant).mockImplementation((ancestorRoot) => ancestorRoot === oldRootHex);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeUndefined();
@@ -90,10 +91,22 @@ describe("SeenPayloadEnvelopeInput", () => {
     const rootHex = addPayloadInput(1);
     const parentBlock = protoBlock(rootHex, 1);
 
-    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock]);
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(rootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent leaves non-ancestor entries on forks alone", () => {
+    const forkRootHex = addPayloadInput(1);
+    const headRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(headRootHex, 2);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(false);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(cache.get(forkRootHex)).toBeDefined();
+    expect(cache.get(headRootHex)).toBeDefined();
   });
 
   it("add returns the existing entry on duplicate root", () => {
