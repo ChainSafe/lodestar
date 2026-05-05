@@ -925,7 +925,7 @@ export function getValidatorApi(
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
-      const gossipBid = chain.executionPayloadBidPool.getBestBid(
+      const builderBid = chain.executionPayloadBidPool.getBestBid(
         slot,
         parentBlock.executionPayloadBlockHash,
         parentBlockRootHex
@@ -938,46 +938,73 @@ export function getValidatorApi(
         graffiti: graffitiBytes,
       });
 
-      const baseAttrs = {slot, parentBlock, randaoReveal, graffiti: graffitiBytes, feeRecipient, commonBlockBodyPromise};
+      const baseAttrs = {
+        slot,
+        parentBlock,
+        randaoReveal,
+        graffiti: graffitiBytes,
+        feeRecipient,
+        commonBlockBodyPromise,
+      };
 
-      // Always build local block. If gossip bid available, also build with it in parallel and prefer it.
-      if (gossipBid) {
-        const [engineResult, gossipResult] = await Promise.allSettled([
+      metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
+      let source: ProducedBlockSource = ProducedBlockSource.engine;
+      let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
+      try {
+        timer = metrics?.blockProductionTime.startTimer();
+
+        // Always build local block. If builder bid available, also build with it in parallel and prefer it.
+        const [engineResult, bidResult] = await Promise.allSettled([
           chain.produceBlock(baseAttrs),
-          chain.produceBlock({...baseAttrs, builderBid: gossipBid}),
+          builderBid !== null ? chain.produceBlock({...baseAttrs, builderBid}) : Promise.reject(),
         ]);
 
-        if (gossipResult.status === "fulfilled") {
-          metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.builder});
-          logger.info("Selected gossip bid block", {
+        let bestResult: typeof engineResult | null = null;
+        if (builderBid !== null && bidResult.status === "fulfilled") {
+          source = ProducedBlockSource.builder;
+          bestResult = bidResult;
+          logger.info("Selected builder bid block", {
             slot,
-            bidValue: gossipBid.message.value,
-            builderIndex: gossipBid.message.builderIndex,
+            bidValue: builderBid.message.value,
+            builderIndex: builderBid.message.builderIndex,
           });
-          return {
-            data: gossipResult.value.block as gloas.BeaconBlock,
-            meta: {version: fork, consensusBlockValue: gossipResult.value.consensusBlockValue},
-          };
+        } else if (engineResult.status === "fulfilled") {
+          source = ProducedBlockSource.engine;
+          bestResult = engineResult;
+          if (builderBid !== null) {
+            logger.warn("Builder bid block production failed, using local block", {slot});
+          }
         }
 
-        if (engineResult.status === "fulfilled") {
-          metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.engine});
-          logger.warn("Gossip bid block production failed, using local block", {slot});
-          return {
-            data: engineResult.value.block as gloas.BeaconBlock,
-            meta: {version: fork, consensusBlockValue: engineResult.value.consensusBlockValue},
-          };
+        if (bestResult === null || bestResult.status !== "fulfilled") {
+          throw Error("Block production failed");
         }
 
-        throw Error("Both engine and gossip bid block production failed");
+        const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
+
+        metrics?.blockProductionSuccess.inc({source});
+        metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+        metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
+        metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+
+        const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
+        logger.verbose("Produced block", {
+          slot,
+          executionPayloadValue,
+          consensusBlockValue,
+          root: blockRoot,
+        });
+        if (chain.opts.persistProducedBlocks) {
+          void chain.persistBlock(block, "produced_engine_block");
+        }
+
+        return {
+          data: block as gloas.BeaconBlock,
+          meta: {version: fork, consensusBlockValue},
+        };
+      } finally {
+        timer?.({source});
       }
-
-      const {block, consensusBlockValue} = await chain.produceBlock(baseAttrs);
-      metrics?.blockProductionSuccess.inc({source: ProducedBlockSource.engine});
-      return {
-        data: block as gloas.BeaconBlock,
-        meta: {version: fork, consensusBlockValue},
-      };
     },
 
     async produceAttestationData({committeeIndex, slot}) {
