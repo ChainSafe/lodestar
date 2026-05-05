@@ -28,11 +28,14 @@ export async function verifyPayloadsDataAvailability(
   await Promise.all(promises);
 
   const availableTime = Math.max(0, Math.max(...payloadInputs.map((payloadInput) => payloadInput.getTimeComplete())));
-  const dataAvailabilityStatuses: DataAvailabilityStatus[] = payloadInputs.map((payloadInput) =>
-    payloadInput.getBlobKzgCommitments().length === 0
+  const dataAvailabilityStatuses: DataAvailabilityStatus[] = payloadInputs.map((payloadInput) => {
+    if (payloadInput.daOutOfRange) {
+      return DataAvailabilityStatus.OutOfRange;
+    }
+    return payloadInput.getBlobKzgCommitments().length === 0
       ? DataAvailabilityStatus.NotRequired
-      : DataAvailabilityStatus.Available
-  );
+      : DataAvailabilityStatus.Available;
+  });
 
   return {dataAvailabilityStatuses, availableTime};
 }

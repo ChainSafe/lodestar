@@ -68,7 +68,7 @@ import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {IBeaconStateView, IBeaconStateViewLatestFork} from "./interface.js";
+import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
 
 export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
@@ -405,6 +405,23 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return canBuilderCoverBid(this.cachedState as CachedBeaconStateGloas, builderIndex, bidAmount);
   }
 
+  /**
+   * Return the PTCs for an epoch
+   */
+  getEpochPTCs(epoch: Epoch): Uint32Array[] {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("PTC committees are not supported before Gloas");
+    }
+
+    const epochCtx = (this.cachedState as CachedBeaconStateGloas).epochCtx;
+    if (epoch === epochCtx.epoch) {
+      return epochCtx.payloadTimelinessCommittees;
+    }
+    if (epoch === epochCtx.nextEpoch) {
+      return epochCtx.nextPayloadTimelinessCommittees;
+    }
+    throw new Error(`PTC committees are not available for epoch=${epoch}`);
+  }
   /**
    * Return the index of the validator in the PTC committee for the given slot.
    * return -1 if validator is not in the PTC committee for the given slot.
@@ -786,16 +803,19 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   /**
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
-  getExpectedWithdrawalsForFullParent(envelope: gloas.SignedExecutionPayloadEnvelope): capella.Withdrawal[] {
-    const fork = this.config.getForkSeq(this.cachedState.slot);
-    if (fork < ForkSeq.gloas) {
-      throw new Error("getExpectedWithdrawalsForFullParent is not available before Gloas");
+  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("withParentPayloadApplied is not available before Gloas");
     }
-    // Make a copy of the state to avoid mutability issues
     const stateCopy = this.cachedState.clone(true) as CachedBeaconStateGloas;
-    // Apply parent payload before computing withdrawals
-    applyParentExecutionPayload(stateCopy, envelope.message.executionRequests);
 
-    return getExpectedWithdrawals(fork, stateCopy).expectedWithdrawals;
+    applyParentExecutionPayload(stateCopy, executionRequests);
+
+    const stateView = new BeaconStateView(stateCopy);
+    if (!isStatePostGloas(stateView)) {
+      throw new Error("Expected gloas state after clone");
+    }
+
+    return stateView;
   }
 }

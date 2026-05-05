@@ -272,7 +272,15 @@ describe("Gloas Fork Choice", () => {
       expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)).toBeUndefined();
 
       // Call onExecutionPayload
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // FULL should now exist
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
@@ -284,7 +292,15 @@ describe("Gloas Fork Choice", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
 
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
       const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
@@ -296,8 +312,24 @@ describe("Gloas Fork Choice", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
 
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Should still only have one FULL node
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
@@ -313,13 +345,29 @@ describe("Gloas Fork Choice", () => {
 
       // Calling onExecutionPayload should throw for pre-Gloas blocks
       expect(() =>
-        protoArray.onExecutionPayload("0x02", gloasForkSlot - 1, "0x02", gloasForkSlot - 1, null, ExecutionStatus.Valid)
+        protoArray.onExecutionPayload(
+          "0x02",
+          gloasForkSlot - 1,
+          "0x02",
+          gloasForkSlot - 1,
+          null,
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
+        )
       ).toThrow();
     });
 
     it("throws for unknown block", () => {
       expect(() =>
-        protoArray.onExecutionPayload("0x99", gloasForkSlot, "0x99", gloasForkSlot, null, ExecutionStatus.Valid)
+        protoArray.onExecutionPayload(
+          "0x99",
+          gloasForkSlot,
+          "0x99",
+          gloasForkSlot,
+          null,
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
+        )
       ).toThrow();
     });
   });
@@ -384,7 +432,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot, null);
 
       // Make execution payload available by creating FULL variant
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Vote yes from majority of PTC (>50%)
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
@@ -400,7 +456,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot, null);
 
       // Make execution payload available by creating FULL variant
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Vote yes from exactly 50% (not >50%)
       const threshold = Math.floor(PTC_SIZE / 2);
@@ -416,7 +480,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block, gloasForkSlot, null);
 
       // Make execution payload available by creating FULL variant
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Vote mixed yes/no
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
@@ -469,7 +541,15 @@ describe("Gloas Fork Choice", () => {
     it("intra-block: EMPTY/FULL variants have PENDING as parent", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
       const emptyNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
@@ -483,7 +563,15 @@ describe("Gloas Fork Choice", () => {
       // Block A
       const blockA = createTestBlock(gloasForkSlot, "0x02Root", genesisRoot, genesisRoot);
       protoArray.onBlock(blockA, gloasForkSlot, null);
-      protoArray.onExecutionPayload("0x02Root", gloasForkSlot, "0x02Hash", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02Root",
+        gloasForkSlot,
+        "0x02Hash",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Block B extends A's FULL (parentBlockHash matches)
       const blockB = createTestBlock(gloasForkSlot + 1, "0x03Root", "0x02Root", "0x02Hash");
@@ -512,7 +600,15 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        blockSlot,
+        "0x02",
+        blockSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -589,7 +685,15 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        blockSlot,
+        "0x02",
+        blockSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -646,7 +750,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block3, gloasForkSlot + 2, null);
 
       // Create all three variants for block1: PENDING, EMPTY, FULL
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Get block1's variants indices before pruning
       const block1PendingBefore = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
@@ -691,7 +803,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block2, gloasForkSlot + 1, null);
 
       // Create FULL variant for block1
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Set PTC votes for block1
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
@@ -718,7 +838,15 @@ describe("Gloas Fork Choice", () => {
       protoArray.onBlock(block2, gloasForkSlot + 1, null);
 
       // Create all three variants for block1
-      protoArray.onExecutionPayload("0x02", gloasForkSlot, "0x02", gloasForkSlot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       // Verify all three variants exist via the public API
       const pendingIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
@@ -743,6 +871,247 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING)).toBeUndefined();
       expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)).toBeUndefined();
       expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)).toBeUndefined();
+    });
+  });
+
+  describe("Inherited executionStatus on gloas onBlock (F1)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      // Genesis block is Valid via createTestBlock default
+      protoArray.onBlock(createTestBlock(0, genesisRoot, "0x00"), 0, null);
+    });
+
+    it("PENDING/EMPTY inherit Syncing when caller passes Syncing", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block, gloasForkSlot, null);
+      const pending = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
+      const empty = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
+      expect(pending?.executionStatus).toBe(ExecutionStatus.Syncing);
+      expect(empty?.executionStatus).toBe(ExecutionStatus.Syncing);
+    });
+
+    it("PENDING/EMPTY inherit Valid when caller passes Valid", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Valid;
+      protoArray.onBlock(block, gloasForkSlot, null);
+      const pending = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
+      const empty = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
+      expect(pending?.executionStatus).toBe(ExecutionStatus.Valid);
+      expect(empty?.executionStatus).toBe(ExecutionStatus.Valid);
+    });
+  });
+
+  describe("Back-validation in onExecutionPayload (Fix #1)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      protoArray.onBlock(createTestBlock(0, genesisRoot, "0x00"), 0, null);
+    });
+
+    it("VALID payload back-validates Syncing FULL ancestor on chain", () => {
+      // block1 (gloas, FULL Syncing) → block2 (gloas) extends block1's FULL
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block1.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block1, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
+      block2.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block2, gloasForkSlot + 1, null);
+
+      // Pre-condition: block1 FULL is Syncing
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+
+      // VALID payload arrives for block2 — should walk up validating block1 FULL + PENDING
+      protoArray.onExecutionPayload(
+        "0x03",
+        gloasForkSlot + 1,
+        "0x03",
+        gloasForkSlot + 1,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+    });
+
+    it("VALID payload does NOT validate alternative-timeline FULL", () => {
+      // Production semantic: gloas PENDING/EMPTY store parentBlockHash in executionPayloadBlockHash.
+      // FULL stores its own payload hash. Need different hashes to test alt-timeline correctly.
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block1.executionStatus = ExecutionStatus.Syncing;
+      block1.executionPayloadBlockHash = genesisRoot; // PENDING/EMPTY store parent's payload hash
+      protoArray.onBlock(block1, gloasForkSlot, null);
+
+      // block1 FULL arrives Syncing with its OWN payload hash
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02hash",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // block2 extends block1's EMPTY (parentBlockHash = genesisRoot, NOT block1's payload hash)
+      const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", genesisRoot);
+      block2.executionStatus = ExecutionStatus.Syncing;
+      block2.executionPayloadBlockHash = genesisRoot; // PENDING/EMPTY store parent's payload hash
+      protoArray.onBlock(block2, gloasForkSlot + 1, null);
+
+      // VALID for block2 — walk should go through block1's EMPTY, NOT block1's FULL
+      protoArray.onExecutionPayload(
+        "0x03",
+        gloasForkSlot + 1,
+        "0x03",
+        gloasForkSlot + 1,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      // block1 FULL must remain Syncing (not on this chain)
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      // block1 EMPTY (on the chain) should now be Valid
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+    });
+
+    it("Syncing payload does NOT trigger back-validation", () => {
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block1.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block1, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // FULL is Syncing, ancestors not validated
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+    });
+  });
+
+  describe("Parent variant disambiguation in validateLatestHash (F2)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      protoArray.onBlock(createTestBlock(0, genesisRoot, "0x00"), 0, null);
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns FULL when hash matches FULL", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02hash",
+        gloasForkSlot,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // Look up by FULL's payload hash → should return FULL index
+      const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x02", "0x02hash");
+      expect(found).toBe(fullIdx);
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns EMPTY when hash matches EMPTY (parent's hash)", () => {
+      // For gloas EMPTY, executionPayloadBlockHash == bid.parentBlockHash (= genesisRoot here)
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Syncing;
+      block.executionPayloadBlockHash = genesisRoot; // production semantic for gloas PENDING/EMPTY
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      // FULL not added yet — only EMPTY available with hash = genesisRoot
+      const emptyIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x02", genesisRoot);
+      expect(found).toBe(emptyIdx);
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns undefined when no variant matches", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x02", "0xunknown");
+      expect(found).toBeUndefined();
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns pre-gloas FULL when hash matches", () => {
+      const preGloasBlock = createTestBlock(gloasForkSlot - 1, "0x05", genesisRoot);
+      protoArray.onBlock(preGloasBlock, gloasForkSlot - 1, null);
+      const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x05", PayloadStatus.FULL);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x05", "0x05");
+      expect(found).toBe(fullIdx);
     });
   });
 });

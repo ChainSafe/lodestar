@@ -20,7 +20,7 @@ export type VerifyExecutionPayloadEnvelopeOpts = {
  * performed outside this function, see `verifyExecutionPayloadEnvelopeSignature` and
  * `importExecutionPayload` which run both in parallel with this check.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope
  */
 export function verifyExecutionPayloadEnvelope(
   config: BeaconConfig,
@@ -32,8 +32,8 @@ export function verifyExecutionPayloadEnvelope(
   const payload = envelope.payload;
 
   // Verify consistency with the beacon block.
-  // Compute header root on a copy of latestBlockHeader to avoid mutating state.
-  const headerValue = {...state.latestBlockHeader};
+  // Compute header root on a clone of latestBlockHeader to avoid mutating state.
+  const headerValue = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
   if (byteArrayEquals(headerValue.stateRoot, ssz.Root.defaultValue())) {
     headerValue.stateRoot = state.hashTreeRoot();
   }
@@ -41,6 +41,11 @@ export function verifyExecutionPayloadEnvelope(
   if (!byteArrayEquals(envelope.beaconBlockRoot, headerRoot)) {
     throw new Error(
       `Envelope's block is not the latest block header envelope=${toRootHex(envelope.beaconBlockRoot)} latestBlockHeader=${toRootHex(headerRoot)}`
+    );
+  }
+  if (!byteArrayEquals(envelope.parentBeaconBlockRoot, state.latestBlockHeader.parentRoot)) {
+    throw new Error(
+      `Envelope's parent_beacon_block_root mismatch envelope=${toRootHex(envelope.parentBeaconBlockRoot)} state=${toRootHex(state.latestBlockHeader.parentRoot)}`
     );
   }
 
@@ -108,7 +113,7 @@ export function verifyExecutionPayloadEnvelope(
 /**
  * Verify the BLS signature of an execution payload envelope.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope_signature
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope_signature
  */
 export async function verifyExecutionPayloadEnvelopeSignature(
   config: BeaconConfig,

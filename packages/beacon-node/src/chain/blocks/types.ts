@@ -1,5 +1,5 @@
 import type {ChainForkConfig} from "@lodestar/config";
-import {BlockExecutionStatus} from "@lodestar/fork-choice";
+import type {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
@@ -94,7 +94,8 @@ export type ImportBlockOpts = {
  *
  * `executionStatus` reflects the outcome of execution payload verification at block-import time:
  * - pre-gloas: Valid | Syncing | PreMerge (from EL notifyNewPayload against the in-block payload)
- * - post-gloas: PayloadSeparated (payload arrives separately as an envelope and is imported later)
+ * - post-gloas: inherited from parent's chain (Valid/Syncing) by importBlock; payload arrives
+ *   separately as an envelope and creates the FULL variant later via onExecutionPayload
  */
 export type FullyVerifiedBlock = {
   blockInput: IBlockInput;
@@ -107,5 +108,5 @@ export type FullyVerifiedBlock = {
   /** Seen timestamp seconds */
   seenTimestampSec: number;
   /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
-  executionStatus: BlockExecutionStatus;
+  executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
 };

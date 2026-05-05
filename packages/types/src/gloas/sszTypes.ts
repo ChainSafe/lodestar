@@ -122,6 +122,7 @@ export const IndexedPayloadAttestation = new ContainerType(
 
 export const ProposerPreferences = new ContainerType(
   {
+    dependentRoot: Root,
     proposalSlot: Slot,
     validatorIndex: ValidatorIndex,
     feeRecipient: ExecutionAddress,
@@ -181,6 +182,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     executionRequests: electraSsz.ExecutionRequests,
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
+    parentBeaconBlockRoot: Root,
   },
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
