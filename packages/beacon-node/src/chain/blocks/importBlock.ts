@@ -118,11 +118,11 @@ export async function importBlock(
   }
 
   let expectedProposerIndex: number | null = null;
-  const headState = this.getHeadState();
-  if (headState.epoch === blockEpoch) {
-    expectedProposerIndex = headState.currentProposers[blockSlot % SLOTS_PER_EPOCH];
-  } else if (headState.epoch + 1 === blockEpoch) {
-    expectedProposerIndex = headState.nextProposers[blockSlot % SLOTS_PER_EPOCH];
+  try {
+    expectedProposerIndex = this.getHeadState().getBeaconProposer(blockSlot);
+  } catch {
+    // headState is more than one epoch away from blockSlot; cannot determine the
+    // canonical proposer, so skip the proposer-boost canonical check.
   }
 
   const blockSummary = this.forkChoice.onBlock(
