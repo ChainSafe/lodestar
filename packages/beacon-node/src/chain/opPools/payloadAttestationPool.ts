@@ -119,6 +119,31 @@ export class PayloadAttestationPool {
       .map(fastToPayloadAttestation);
   }
 
+  getAll(slot?: Slot): gloas.PayloadAttestation[] {
+    const aggregates: AggregateFast[] = [];
+
+    const addAggregates = (aggregateByDataRootByBlockRoot: Map<BlockRootHex, Map<DataRootHex, AggregateFast>>) => {
+      for (const aggregateByDataRoot of aggregateByDataRootByBlockRoot.values()) {
+        aggregates.push(...aggregateByDataRoot.values());
+      }
+    };
+
+    if (slot !== undefined) {
+      const aggregateByDataRootByBlockRoot = this.aggregateByDataRootByBlockRootBySlot.get(slot);
+      if (aggregateByDataRootByBlockRoot) {
+        addAggregates(aggregateByDataRootByBlockRoot);
+      }
+    } else {
+      for (const aggregateByDataRootByBlockRoot of this.aggregateByDataRootByBlockRootBySlot.values()) {
+        addAggregates(aggregateByDataRootByBlockRoot);
+      }
+    }
+
+    return aggregates
+      .sort((a, b) => b.aggregationBits.getTrueBitIndexes().length - a.aggregationBits.getTrueBitIndexes().length)
+      .map(fastToPayloadAttestation);
+  }
+
   prune(clockSlot: Slot): void {
     pruneBySlot(this.aggregateByDataRootByBlockRootBySlot, clockSlot, SLOTS_RETAINED);
     this.lowestPermissibleSlot = clockSlot;

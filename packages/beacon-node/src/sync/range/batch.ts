@@ -1,7 +1,7 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {LodestarError} from "@lodestar/utils";
+import {LodestarError, prettyPrintIndices} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
@@ -79,9 +79,35 @@ export type BatchState =
     };
 
 export type BatchMetadata = {
+  // Batch-level slot window (always present)
   startEpoch: Epoch;
+  startSlot: Slot;
+  count: number;
   status: BatchStatus;
+
+  // Per-type outstanding request shapes; only present when that sub-request exists.
+  // Format: "startSlot=<n>,count=<n>" (plus ",cols=<indices>" for columns).
+  blocksReq?: string;
+  blobsReq?: string;
+  columnsReq?: string;
+  envelopesReq?: string;
+
+  // Retry counters
+  downloadAttempts: number;
+  processingAttempts: number;
+
+  // Cumulative peer attribution for failed attempts (only present when non-empty)
+  failedDownloadPeers?: string;
+  failedProcessingPeers?: string;
 };
+
+function formatRangeReq(req: {startSlot: Slot; count: number}): string {
+  return `startSlot=${req.startSlot},count=${req.count}`;
+}
+
+function formatColumnsReq(req: {startSlot: Slot; count: number; columns: number[]}): string {
+  return `startSlot=${req.startSlot},count=${req.count},cols=${prettyPrintIndices(req.columns)}`;
+}
 
 /**
  * Batches are downloaded at the first block of the epoch.
@@ -176,6 +202,7 @@ export class Batch {
     const envelopesBySlot = this.state.payloadEnvelopes ?? new Map<Slot, PayloadEnvelopeInput>();
 
     // ensure blocks are in slot-wise order
+    const isPostGloas = isForkPostGloas(this.forkName);
     for (const blockInput of blocks) {
       const blockSlot = blockInput.slot;
       // check if block/data is present (hasBlock/hasAllData). If present then check if startSlot is the same as
@@ -191,21 +218,36 @@ export class Batch {
       if (blockInput.hasBlock() && blockStartSlot === blockSlot) {
         blockStartSlot = blockSlot + 1;
       }
-      if (
-        blockInput.hasBlock() &&
-        envelopeStartSlot === blockSlot &&
-        envelopesBySlot.get(blockSlot)?.hasPayloadEnvelope()
-      ) {
-        envelopeStartSlot = blockSlot + 1;
-      }
-      if (!blockInput.hasAllData()) {
-        if (isBlockInputColumns(blockInput)) {
-          for (const index of blockInput.getMissingSampledColumnMeta().missing) {
+
+      // Range sync uses hasComputedAllData (all sampled columns physically present), not hasAllData
+      // which flips at the reconstruction threshold. Sync never triggers reconstruction, so accepting
+      // a half-downloaded block here makes writeBlockInputToDb later block on waitForComputedAllData.
+      if (isPostGloas) {
+        // Post-Gloas: column data lives on PayloadEnvelopeInput, not on BlockInputNoData.
+        const payloadInput = envelopesBySlot.get(blockSlot);
+        if (blockInput.hasBlock() && envelopeStartSlot === blockSlot && payloadInput?.hasPayloadEnvelope()) {
+          envelopeStartSlot = blockSlot + 1;
+        }
+        if (payloadInput && !payloadInput.hasComputedAllData()) {
+          for (const index of payloadInput.getMissingSampledColumnMeta().missing) {
             neededColumns.add(index);
           }
+        } else if (payloadInput?.hasComputedAllData() && dataStartSlot === blockSlot) {
+          // Only advance dataStartSlot when we know columns for this slot are complete. If
+          // payloadInput is missing entirely we cannot tell, so stop here so the next round
+          // re-requests columns (and envelopes) starting at this slot.
+          dataStartSlot = blockSlot + 1;
         }
-      } else if (dataStartSlot === blockSlot) {
-        dataStartSlot = blockSlot + 1;
+      } else {
+        if (isBlockInputColumns(blockInput) ? !blockInput.hasComputedAllData() : !blockInput.hasAllData()) {
+          if (isBlockInputColumns(blockInput)) {
+            for (const index of blockInput.getMissingSampledColumnMeta().missing) {
+              neededColumns.add(index);
+            }
+          }
+        } else if (dataStartSlot === blockSlot) {
+          dataStartSlot = blockSlot + 1;
+        }
       }
     }
 
@@ -225,11 +267,15 @@ export class Batch {
       // range of 40 - 63, startSlot will be inclusive but subtraction will exclusive so need to + 1
       const count = endSlot - dataStartSlot + 1;
       if (isForkPostFulu(this.forkName) && withinValidRequestWindow) {
-        requests.columnsRequest = {
-          count,
-          startSlot: dataStartSlot,
-          columns: Array.from(neededColumns),
-        };
+        // Skip the column re-request when we have no specific column indices outstanding.
+        // Peer rejects an empty `columns` list
+        if (neededColumns.size > 0) {
+          requests.columnsRequest = {
+            count,
+            startSlot: dataStartSlot,
+            columns: Array.from(neededColumns),
+          };
+        }
       } else if (isForkPostDeneb(this.forkName) && withinValidRequestWindow) {
         requests.blobsRequest = {
           count,
@@ -286,7 +332,26 @@ export class Batch {
   }
 
   getMetadata(): BatchMetadata {
-    return {startEpoch: this.startEpoch, status: this.state.status};
+    const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
+    const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
+    return {
+      startEpoch: this.startEpoch,
+      startSlot: this.startSlot,
+      count: this.count,
+      status: this.state.status,
+      ...(blocksRequest && {blocksReq: formatRangeReq(blocksRequest)}),
+      ...(blobsRequest && {blobsReq: formatRangeReq(blobsRequest)}),
+      ...(columnsRequest && {columnsReq: formatColumnsReq(columnsRequest)}),
+      ...(envelopesRequest && {envelopesReq: formatRangeReq(envelopesRequest)}),
+      downloadAttempts: this.failedDownloadAttempts.length,
+      processingAttempts: this.failedProcessingAttempts.length,
+      ...(this.failedDownloadAttempts.length > 0 && {
+        failedDownloadPeers: this.failedDownloadAttempts.join(","),
+      }),
+      ...(failedProcessingPeerList.length > 0 && {
+        failedProcessingPeers: failedProcessingPeerList.join(","),
+      }),
+    };
   }
 
   getBlocks(): IBlockInput[] {
@@ -334,7 +399,11 @@ export class Batch {
     const slots = new Set<number>();
     for (const block of blocks) {
       slots.add(block.slot);
-      if (!block.hasBlockAndAllData()) {
+      const dataComplete = isBlockInputColumns(block)
+        ? // by_range needs to download all columns
+          block.hasBlock() && block.hasComputedAllData()
+        : block.hasBlockAndAllData();
+      if (!dataComplete) {
         allComplete = false;
       }
     }
@@ -350,11 +419,22 @@ export class Batch {
     }
     const newPayloadEnvelopes = payloadEnvelopes ?? this.state.payloadEnvelopes;
 
+    if (allComplete && isForkPostGloas(this.forkName)) {
+      for (const block of blocks) {
+        const payloadInput = newPayloadEnvelopes?.get(block.slot);
+        // by_range needs to download all columns
+        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
+          allComplete = false;
+          break;
+        }
+      }
+    }
+
     if (allComplete) {
       this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes};
     } else {
-      this.requests = this.getRequests(blocks);
       this.state = {status: BatchStatus.AwaitingDownload, blocks, payloadEnvelopes: newPayloadEnvelopes};
+      this.requests = this.getRequests(blocks);
     }
 
     return this.state as DownloadSuccessState;
@@ -383,7 +463,11 @@ export class Batch {
   /**
    * AwaitingProcessing -> Processing
    */
-  startProcessing(): {blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null} {
+  startProcessing(): {
+    blocks: IBlockInput[];
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+    peers: PeerIdStr[];
+  } {
     if (this.state.status !== BatchStatus.AwaitingProcessing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
@@ -396,7 +480,7 @@ export class Batch {
     const peers = this.goodPeers;
     this.goodPeers = [];
     this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
-    return {blocks, payloadEnvelopes};
+    return {blocks, payloadEnvelopes, peers};
   }
 
   /**
@@ -479,7 +563,7 @@ export class Batch {
 
   /** Helper to construct typed BatchError. Stack traces are correct as the error is thrown above */
   private errorType(type: BatchErrorType): BatchErrorType & BatchErrorMetadata {
-    return {...type, ...this.getMetadata()};
+    return {...type, startEpoch: this.startEpoch, status: this.state.status};
   }
 
   private wrongStatusErrorType(expectedStatus: BatchStatus): BatchErrorType & BatchErrorMetadata {
