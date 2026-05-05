@@ -909,11 +909,11 @@ export function getValidatorApi(
     );
 
     // Look up best gossip bid from the pool (instant)
-    const parentBlockHash = parentBlock.executionPayloadBlockHash;
-    const gossipBid =
-      parentBlockHash != null
-        ? chain.executionPayloadBidPool.getBestBid(slot, parentBlockHash, parentBlockRootHex)
-        : null;
+    const gossipBid = chain.executionPayloadBidPool.getBestBid(
+      slot,
+      parentBlock.executionPayloadBlockHash,
+      parentBlockRootHex
+    );
 
     logger.verbose("Producing GLOAS block", {
       slot,
@@ -936,7 +936,7 @@ export function getValidatorApi(
     if (gossipBid) {
       const [engineResult, gossipResult] = await Promise.allSettled([
         chain.produceBlock(baseAttrs),
-        chain.produceBlock({...baseAttrs, externalBid: gossipBid}),
+        chain.produceBlock({...baseAttrs, builderBid: gossipBid}),
       ]);
 
       if (gossipResult.status === "fulfilled") {

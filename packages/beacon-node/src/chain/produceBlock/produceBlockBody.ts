@@ -93,8 +93,8 @@ export type BlockAttributes = {
   slot: Slot;
   parentBlock: ProtoBlock;
   feeRecipient?: string;
-  /** When provided, build block with this external bid instead of a self-build bid */
-  externalBid?: gloas.SignedExecutionPayloadBid;
+  /** When provided, build block with this builder bid instead of a self-build bid */
+  builderBid?: gloas.SignedExecutionPayloadBid;
 };
 
 export enum BlockType {
@@ -175,7 +175,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
-    externalBid,
+    builderBid,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
@@ -204,23 +204,23 @@ export async function produceBlockBody<T extends BlockType>(
     let signedBid: gloas.SignedExecutionPayloadBid;
     let parentExecutionRequests: electra.ExecutionRequests;
 
-    if (externalBid !== undefined) {
-      signedBid = externalBid;
+    if (builderBid !== undefined) {
+      signedBid = builderBid;
 
       const isExtendingPayload = byteArrayEquals(
-        externalBid.message.parentBlockHash,
+        builderBid.message.parentBlockHash,
         currentState.latestExecutionPayloadBid.blockHash
       );
       parentExecutionRequests = isExtendingPayload
         ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
         : ssz.electra.ExecutionRequests.defaultValue();
 
-      executionPayloadValue = BigInt(externalBid.message.value) * GWEI_TO_WEI;
+      executionPayloadValue = BigInt(builderBid.message.value) * GWEI_TO_WEI;
 
-      this.logger.verbose("Produced block with external bid", {
+      this.logger.verbose("Produced block with builder bid", {
         slot: blockSlot,
-        builderIndex: externalBid.message.builderIndex,
-        bidValue: externalBid.message.value,
+        builderIndex: builderBid.message.builderIndex,
+        bidValue: builderBid.message.value,
       });
     } else {
       // Self-build path: fetch execution payload from local EL

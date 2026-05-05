@@ -64,9 +64,10 @@ export class ExecutionPayloadBidPool {
    */
   getBestBid(
     slot: Slot,
-    parentBlockHash: BlockHashHex,
+    parentBlockHash: BlockHashHex | null,
     parentBlockRoot: BlockRootHex
   ): gloas.SignedExecutionPayloadBid | null {
+    if (parentBlockHash === null) return null;
     const bidByParentHash = this.bidByParentHashByParentRootBySlot.get(slot)?.get(parentBlockRoot);
     return bidByParentHash?.get(parentBlockHash) ?? null;
   }
