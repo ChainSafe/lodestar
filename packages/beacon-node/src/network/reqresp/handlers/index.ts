@@ -3,12 +3,14 @@ import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {
+  BeaconBlocksByHeadRequestType,
   BeaconBlocksByRootRequestType,
   BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequestType,
   ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../../util/types.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
+import {onBeaconBlocksByHead} from "./beaconBlocksByHead.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
@@ -46,6 +48,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       const fork = chain.config.getForkName(chain.clock.currentSlot);
       const body = BeaconBlocksByRootRequestType(fork, chain.config).deserialize(req.data);
       return onBeaconBlocksByRoot(body, chain);
+    },
+    [ReqRespMethod.BeaconBlocksByHead]: (req, peerId, peerClient) => {
+      const body = BeaconBlocksByHeadRequestType.deserialize(req.data);
+      return onBeaconBlocksByHead(body, chain, peerId, peerClient);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);

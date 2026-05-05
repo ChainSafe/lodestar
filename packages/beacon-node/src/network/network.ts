@@ -40,6 +40,7 @@ import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr, peerIdToString} from "../util/peerId.js";
 import {promiseAllMaybeAsync} from "../util/promises.js";
 import {
+  BeaconBlocksByHeadRequest,
   BeaconBlocksByRootRequest,
   BlobSidecarsByRootRequest,
   DataColumnSidecarsByRootRequest,
@@ -574,6 +575,15 @@ export class Network implements INetwork {
       ),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
+      this.chain.serializedCache
+    );
+  }
+
+  async sendBeaconBlocksByHead(peerId: PeerIdStr, request: BeaconBlocksByHeadRequest): Promise<SignedBeaconBlock[]> {
+    return collectMaxResponseTypedWithBytes(
+      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
+      Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
+      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
       this.chain.serializedCache
     );
   }

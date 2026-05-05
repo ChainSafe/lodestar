@@ -39,6 +39,7 @@ import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import {
+  BeaconBlocksByHeadRequest,
   BeaconBlocksByRootRequest,
   BlobSidecarsByRootRequest,
   DataColumnSidecarsByRootRequest,
@@ -78,6 +79,7 @@ export interface INetwork extends INetworkCorePublic {
   // ReqResp
   sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
   sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
+  sendBeaconBlocksByHead(peerId: PeerIdStr, request: BeaconBlocksByHeadRequest): Promise<SignedBeaconBlock[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
