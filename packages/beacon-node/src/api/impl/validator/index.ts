@@ -931,6 +931,21 @@ export function getValidatorApi(
         parentBlockRootHex
       );
 
+      const logCtx = {
+        slot,
+        parentSlot,
+        parentBlockRoot: parentBlockRootHex,
+        parentBlockHash: parentBlock.executionPayloadBlockHash,
+        fork,
+        ...(builderBid !== null
+          ? {
+              bidValue: builderBid.message.value,
+              builderIndex: builderBid.message.builderIndex,
+              bidBlockHash: toRootHex(builderBid.message.blockHash),
+            }
+          : {}),
+      };
+
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
         slot,
         parentBlock,
@@ -948,63 +963,63 @@ export function getValidatorApi(
       };
 
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
-      let source: ProducedBlockSource = ProducedBlockSource.engine;
-      let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
-      try {
-        timer = metrics?.blockProductionTime.startTimer();
-
-        // Always build local block. If builder bid available, also build with it in parallel and prefer it.
-        const [engineResult, bidResult] = await Promise.allSettled([
-          chain.produceBlock(baseAttrs),
-          builderBid !== null ? chain.produceBlock({...baseAttrs, builderBid}) : Promise.reject(),
-        ]);
-
-        let bestResult: typeof engineResult | null = null;
-        if (builderBid !== null && bidResult.status === "fulfilled") {
-          source = ProducedBlockSource.builder;
-          bestResult = bidResult;
-          logger.info("Selected builder bid block", {
-            slot,
-            bidValue: builderBid.message.value,
-            builderIndex: builderBid.message.builderIndex,
-          });
-        } else if (engineResult.status === "fulfilled") {
-          source = ProducedBlockSource.engine;
-          bestResult = engineResult;
-          if (builderBid !== null) {
-            logger.warn("Builder bid block production failed, using local block", {slot});
-          }
-        }
-
-        if (bestResult === null || bestResult.status !== "fulfilled") {
-          throw Error("Block production failed");
-        }
-
-        const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
-
-        metrics?.blockProductionSuccess.inc({source});
-        metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-        metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
-        metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
-
-        const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
-        logger.verbose("Produced block", {
-          slot,
-          executionPayloadValue,
-          consensusBlockValue,
-          root: blockRoot,
-        });
-        if (chain.opts.persistProducedBlocks) {
-          void chain.persistBlock(block, "produced_engine_block");
-        }
-
-        return {
-          data: block as gloas.BeaconBlock,
-          meta: {version: fork, consensusBlockValue},
-        };
-      } finally {
-        timer?.({source});
+      if (builderBid !== null) {
+        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
       }
+
+      const timed = <T>(source: ProducedBlockSource, fn: () => Promise<T>): Promise<T> => {
+        const t = metrics?.blockProductionTime.startTimer();
+        return fn().finally(() => t?.({source}));
+      };
+
+      // Always build local block. If builder bid available, also build with it in parallel and prefer it.
+      const [engineResult, bidResult] = await Promise.allSettled([
+        timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs)),
+        builderBid !== null
+          ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}))
+          : Promise.reject(),
+      ]);
+
+      let bestResult: typeof engineResult | null = null;
+      let source: ProducedBlockSource = ProducedBlockSource.engine;
+      if (builderBid !== null && bidResult.status === "fulfilled") {
+        source = ProducedBlockSource.builder;
+        bestResult = bidResult;
+        logger.info("Selected builder bid block", logCtx);
+      } else if (engineResult.status === "fulfilled") {
+        source = ProducedBlockSource.engine;
+        bestResult = engineResult;
+        if (builderBid !== null) {
+          logger.warn("Builder bid block production failed, using local block", logCtx);
+        }
+      }
+
+      if (bestResult === null || bestResult.status !== "fulfilled") {
+        throw Error("Block production failed");
+      }
+
+      const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
+
+      metrics?.blockProductionSuccess.inc({source});
+      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+
+      const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
+      logger.verbose("Produced block", {
+        ...logCtx,
+        executionPayloadValue,
+        consensusBlockValue,
+        root: blockRoot,
+      });
+      if (chain.opts.persistProducedBlocks) {
+        void chain.persistBlock(block, "produced_engine_block");
+      }
+
+      return {
+        data: block as gloas.BeaconBlock,
+        meta: {version: fork, consensusBlockValue},
+      };
     },
 
     async produceAttestationData({committeeIndex, slot}) {

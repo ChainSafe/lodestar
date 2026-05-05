@@ -274,8 +274,8 @@ export class BlockProposingService {
         blockRoot: blockRootHex,
       });
     } else {
-      // External bid: the builder is responsible for broadcasting the execution payload envelope
-      this.logger.info("Published block with external builder bid, envelope expected from builder", {
+      // Builder is responsible for broadcasting the execution payload envelope
+      this.logger.info("Published block with builder bid, envelope expected from builder", {
         ...logCtx,
         graffiti,
         builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,

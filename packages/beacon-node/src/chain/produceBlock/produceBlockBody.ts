@@ -239,12 +239,6 @@ export async function produceBlockBody<T extends BlockType>(
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
-    this.logger.verbose("Preparing execution payload from engine", {
-      slot: blockSlot,
-      parentBlockRoot: toRootHex(parentBlockRoot),
-      feeRecipient,
-    });
-
     // Get execution payload from EL
     const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
     let parentBlockHash = isExtendingPayload
@@ -274,6 +268,16 @@ export async function produceBlockBody<T extends BlockType>(
 
     const {prepType, payloadId} = prepareRes;
     Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
+    this.logger.verbose("Prepared execution payload from engine", {
+      slot: blockSlot,
+      parentBlockRoot: toRootHex(parentBlockRoot),
+      parentBlockHash: toRootHex(parentBlockHash),
+      feeRecipient,
+      prepType,
+      payloadId,
+      isExtendingPayload,
+    });
 
     if (prepType !== PayloadPreparationType.Cached) {
       await sleep(PAYLOAD_GENERATION_TIME_MS);

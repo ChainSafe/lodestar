@@ -31,8 +31,8 @@ export class ExecutionPayloadBidPool {
     return count;
   }
 
-  add(signedBid: gloas.SignedExecutionPayloadBid): InsertOutcome {
-    const {slot, parentBlockRoot, parentBlockHash, value} = signedBid.message;
+  add(bid: gloas.SignedExecutionPayloadBid): InsertOutcome {
+    const {slot, parentBlockRoot, parentBlockHash, value} = bid.message;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
     if (slot < lowestPermissibleSlot) {
@@ -48,13 +48,13 @@ export class ExecutionPayloadBidPool {
       const existingValue = existing.message.value;
       const newValue = value;
       if (newValue > existingValue) {
-        bidByParentHash.set(parentHashHex, signedBid);
+        bidByParentHash.set(parentHashHex, bid);
         return InsertOutcome.NewData;
       }
       return newValue === existingValue ? InsertOutcome.AlreadyKnown : InsertOutcome.NotBetterThan;
     }
 
-    bidByParentHash.set(parentHashHex, signedBid);
+    bidByParentHash.set(parentHashHex, bid);
     return InsertOutcome.NewData;
   }
 
