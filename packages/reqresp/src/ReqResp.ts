@@ -210,7 +210,9 @@ export class ReqResp {
           this.metrics?.dialErrors.inc();
         }
         if (e.type.code === RequestErrorCode.RESP_RATE_LIMITED) {
-          this.selfRateLimiter.onRateLimited(peerIdStr);
+          for (const protocolID of protocolIDs) {
+            this.selfRateLimiter.onRateLimited(peerIdStr, protocolID);
+          }
         }
         this.metrics?.outgoingErrorReasons.inc({reason: e.type.code});
 
