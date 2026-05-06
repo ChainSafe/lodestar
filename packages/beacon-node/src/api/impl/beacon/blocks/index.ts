@@ -68,7 +68,7 @@ import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
-import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
+import {getBlobIndicesByVersionedHashes, getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -983,15 +983,7 @@ export function getBeaconBlockApi({
             const blockVersionedHashes = blobKzgCommitments.map((commitment) =>
               toHex(kzgCommitmentToVersionedHash(commitment))
             );
-            indicesToReconstruct = [];
-            for (const requestedHash of versionedHashes) {
-              const index = blockVersionedHashes.findIndex((hash) => hash === requestedHash);
-              if (index === -1) {
-                throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
-              }
-              indicesToReconstruct.push(index);
-            }
-            indicesToReconstruct.sort((a, b) => a - b);
+            indicesToReconstruct = getBlobIndicesByVersionedHashes(blockVersionedHashes, versionedHashes);
           } else {
             indicesToReconstruct = Array.from({length: blobCount}, (_, i) => i);
           }
@@ -1022,16 +1014,9 @@ export function getBeaconBlockApi({
             toHex(kzgCommitmentToVersionedHash(commitment))
           );
 
-          const requestedIndices: number[] = [];
-          for (const requestedHash of versionedHashes) {
-            const index = blockVersionedHashes.findIndex((hash) => hash === requestedHash);
-            if (index === -1) {
-              throw new ApiError(400, `Versioned hash ${requestedHash} not found in block`);
-            }
-            requestedIndices.push(index);
-          }
+          const requestedIndices = getBlobIndicesByVersionedHashes(blockVersionedHashes, versionedHashes);
 
-          blobs = requestedIndices.sort((a, b) => a - b).map((index) => blobs[index]);
+          blobs = requestedIndices.map((index) => blobs[index]);
         }
       } else {
         blobs = [];
