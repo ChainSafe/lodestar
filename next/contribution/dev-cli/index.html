@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.78a93a4a.css">
-<script src="/lodestar/assets/js/runtime~main.dc907f58.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.b312da6b.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.9052c771.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -121,7 +121,7 @@
 <p>type: <code>boolean</code></p>
 <p>default: <code>false</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--servehistoricalstate"><code>--serveHistoricalState</code><a href="#--servehistoricalstate" class="hash-link" aria-label="Direct link to --servehistoricalstate" title="Direct link to --servehistoricalstate">​</a></h4>
-<p>Regenerate finalized beacon states on demand and serve them via the REST API (e.g. <code>/eth/v2/debug/beacon/states/&amp;#123;state_id&amp;#125;</code>). Does not backfill historical data, only states the node already has (since genesis sync or <code>--checkpointState</code>) can be regenerated. Regeneration cost depends on <code>--chain.archiveStateEpochFrequency</code> and may affect validator performance.</p>
+<p>Regenerate finalized beacon states on demand and serve them via the REST API (e.g. <code>/eth/v2/debug/beacon/states/{state_id}</code>). Does not backfill historical data, only states the node already has (since genesis sync or <code>--checkpointState</code>) can be regenerated. Regeneration cost depends on <code>--chain.archiveStateEpochFrequency</code> and may affect validator performance.</p>
 <p>type: <code>boolean</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--chainarchivestateepochfrequency"><code>--chain.archiveStateEpochFrequency</code><a href="#--chainarchivestateepochfrequency" class="hash-link" aria-label="Direct link to --chainarchivestateepochfrequency" title="Direct link to --chainarchivestateepochfrequency">​</a></h4>
 <p>Minimum number of epochs between archived states</p>
