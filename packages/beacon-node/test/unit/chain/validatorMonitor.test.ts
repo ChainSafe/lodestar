@@ -1,7 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
-import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateView, createCachedBeaconState, createPubkeyCache} from "@lodestar/state-transition";
+import {ssz} from "@lodestar/types";
 import {createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
 
 describe("ValidatorMonitor", () => {
@@ -20,12 +22,14 @@ describe("ValidatorMonitor", () => {
 
   // Helper to create a minimal mock head state for phase0
   function createMockHeadState(slot: number) {
-    return {
-      slot,
-      epochCtx: {
-        proposersPrevEpoch: null,
-      },
-    } as any;
+    const state = ssz.fulu.BeaconState.defaultViewDU();
+    state.slot = slot;
+    const cachedState = createCachedBeaconState(state, {
+      config: createBeaconConfig(defaultChainConfig, state.genesisValidatorsRoot),
+      pubkeyCache: createPubkeyCache(),
+    });
+    expect(cachedState.epochCtx.proposersPrevEpoch).toBeNull();
+    return new BeaconStateView(cachedState);
   }
 
   describe("registerLocalValidator", () => {

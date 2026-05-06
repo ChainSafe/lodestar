@@ -1,7 +1,7 @@
 import {ForkSeq} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
   EpochShuffling,
+  IBeaconStateView,
   getAttestingIndices,
   getBeaconCommittees,
   getIndexedAttestation,
@@ -159,17 +159,15 @@ export class ShufflingCache {
    * Process a state to extract and cache all shufflings (previous, current, next).
    * Uses the stored decision roots from epochCtx.
    */
-  processState(state: CachedBeaconStateAllForks): void {
-    const {epochCtx} = state;
-
+  processState(state: IBeaconStateView): void {
     // Cache previous shuffling
-    this.set(epochCtx.previousShuffling, epochCtx.previousDecisionRoot);
+    this.set(state.getPreviousShuffling(), state.previousDecisionRoot);
 
     // Cache current shuffling
-    this.set(epochCtx.currentShuffling, epochCtx.currentDecisionRoot);
+    this.set(state.getCurrentShuffling(), state.currentDecisionRoot);
 
     // Cache next shuffling
-    this.set(epochCtx.nextShuffling, epochCtx.nextDecisionRoot);
+    this.set(state.getNextShuffling(), state.nextDecisionRoot);
   }
 
   getIndexedAttestation(

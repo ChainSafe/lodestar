@@ -1,11 +1,15 @@
-import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateCapella, getLatestWeakSubjectivityCheckpointEpoch, loadState} from "@lodestar/state-transition";
-import {ssz} from "@lodestar/types";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getIndexedAttestation,
+  isStatePostCapella,
+} from "@lodestar/state-transition";
+import {Attestation, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {BeaconChain} from "../../../chain/index.js";
@@ -17,6 +21,7 @@ import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/pro
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
+import {getAttesterSlashingsFromIndexedAttestations} from "./attesterSlashing.js";
 
 export function getLodestarApi({
   chain,
@@ -86,7 +91,7 @@ export function getLodestarApi({
 
     async getLatestWeakSubjectivityCheckpointEpoch() {
       const state = chain.getHeadState();
-      return {data: getLatestWeakSubjectivityCheckpointEpoch(config, state)};
+      return {data: state.getLatestWeakSubjectivityCheckpointEpoch()};
     },
 
     async getSyncChainsDebugState() {
@@ -113,7 +118,7 @@ export function getLodestarApi({
       return {
         // biome-ignore lint/complexity/useLiteralKeys: The `blockProcessor` is a protected attribute
         data: (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
-          const [blockInputs, opts] = item.args;
+          const [blockInputs, _payloadEnvelopes, opts] = item.args;
           return {
             blockSlots: blockInputs.map((blockInput) => blockInput.slot),
             jobOpts: opts,
@@ -214,22 +219,23 @@ export function getLodestarApi({
     async getHistoricalSummaries({stateId}) {
       const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
-      const stateView = (
-        state instanceof Uint8Array ? loadState(config, chain.getHeadState(), state).state : state
-      ) as BeaconStateCapella;
+      const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
 
       const fork = config.getForkName(stateView.slot);
       if (ForkSeq[fork] < ForkSeq.capella) {
         throw new Error("Historical summaries are not supported before Capella");
       }
+      if (!isStatePostCapella(stateView)) {
+        throw new Error("Expected Capella state for historical summaries");
+      }
 
       const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);
-      const proof = new Tree(stateView.node).getSingleProof(gindex);
+      const proof = stateView.getSingleProof(gindex);
 
       return {
         data: {
           slot: stateView.slot,
-          historicalSummaries: stateView.historicalSummaries.toValue(),
+          historicalSummaries: stateView.historicalSummaries,
           proof: proof,
         },
         meta: {executionOptimistic, finalized, version: fork},
@@ -270,6 +276,46 @@ export function getLodestarApi({
           earliestCustodiedSlot: chain.earliestAvailableSlot,
           custodyGroupCount: targetCustodyGroupCount,
           custodyColumns,
+        },
+      };
+    },
+
+    async getAttesterSlashingsFromBlocks({signedBlocks}) {
+      const attestations = new Map<Epoch, Attestation[]>();
+
+      for (const block of signedBlocks) {
+        const attestationsOfABlock = block.message.body.attestations;
+        for (const attestation of attestationsOfABlock) {
+          const epoch = computeEpochAtSlot(attestation.data.slot);
+          let attestationsPerEpoch = attestations.get(epoch);
+          if (!attestationsPerEpoch) {
+            attestationsPerEpoch = [];
+            attestations.set(epoch, attestationsPerEpoch);
+          }
+          attestationsPerEpoch.push(attestation);
+        }
+      }
+
+      const indexedAttestations: IndexedAttestation[] = [];
+      // Assume all blocks are from the same fork
+      const forkSeq = config.getForkSeq(signedBlocks[0].message.slot);
+
+      for (const [epoch, attestationsPerEpoch] of attestations) {
+        const slot = computeStartSlotAtEpoch(epoch);
+        const {state} = await getStateResponseWithRegen(chain, slot);
+        const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
+        const shuffling = stateView.getShufflingAtEpoch(epoch);
+        for (const attestation of attestationsPerEpoch) {
+          indexedAttestations.push(getIndexedAttestation(shuffling, forkSeq, attestation));
+        }
+      }
+
+      const result = getAttesterSlashingsFromIndexedAttestations(forkSeq, indexedAttestations);
+
+      return {
+        data: result,
+        meta: {
+          version: config.getForkName(signedBlocks[0].message.slot),
         },
       };
     },

@@ -1,7 +1,7 @@
 import type {ChainForkConfig} from "@lodestar/config";
-import {MaybeValidExecutionStatus} from "@lodestar/fork-choice";
+import type {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {CachedBeaconStateAllForks, DataAvailabilityStatus, computeEpochAtSlot} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import type {IndexedAttestation, Slot, fulu} from "@lodestar/types";
 import {IBlockInput} from "./blockInput/types.js";
 
@@ -40,6 +40,15 @@ export enum BlobSidecarValidation {
    */
   Full,
 }
+
+export type ImportPayloadOpts = {
+  /**
+   * Set to true when the envelope was already validated upstream (e.g., gossip/API validation):
+   * signature is trusted and execution_requests_root was already verified against the bid.
+   * When false/undefined, both are verified during import.
+   */
+  validSignature?: boolean;
+};
 
 export type ImportBlockOpts = {
   /**
@@ -81,23 +90,23 @@ export type ImportBlockOpts = {
 };
 
 /**
- * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import
+ * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import.
+ *
+ * `executionStatus` reflects the outcome of execution payload verification at block-import time:
+ * - pre-gloas: Valid | Syncing | PreMerge (from EL notifyNewPayload against the in-block payload)
+ * - post-gloas: inherited from parent's chain (Valid/Syncing) by importBlock; payload arrives
+ *   separately as an envelope and creates the FULL variant later via onExecutionPayload
  */
 export type FullyVerifiedBlock = {
   blockInput: IBlockInput;
-  postState: CachedBeaconStateAllForks;
+  postState: IBeaconStateView;
   parentBlockSlot: Slot;
   proposerBalanceDelta: number;
-  /**
-   * If the execution payload couldnt be verified because of EL syncing status,
-   * used in optimistic sync or for merge block
-   */
-  executionStatus: MaybeValidExecutionStatus;
   dataAvailabilityStatus: DataAvailabilityStatus;
-  /**
-   * Pre-computed indexed attestations from signature verification to avoid duplicate work
-   */
+  /** Pre-computed indexed attestations from signature verification to avoid duplicate work */
   indexedAttestations: IndexedAttestation[];
   /** Seen timestamp seconds */
   seenTimestampSec: number;
+  /** If the execution payload couldn't be verified because of EL syncing status, used in optimistic sync */
+  executionStatus: BlockExecutionStatus | PayloadExecutionStatus;
 };

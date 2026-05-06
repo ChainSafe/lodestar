@@ -3,7 +3,7 @@ import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
-import {CachedBeaconStateBellatrix, G2_POINT_AT_INFINITY, computeTimeAtSlot} from "@lodestar/state-transition";
+import {BeaconStateView, G2_POINT_AT_INFINITY, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -21,7 +21,7 @@ import {generateProtoBlock} from "../../../../utils/typeGenerator.js";
 describe("api/validator - produceBlockV3", () => {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getValidatorApi>;
-  let state: CachedBeaconStateBellatrix;
+  let state: BeaconStateView;
 
   const chainConfig = createChainForkConfig({
     ...defaultChainConfig,
@@ -34,7 +34,7 @@ describe("api/validator - produceBlockV3", () => {
   beforeEach(() => {
     modules = getApiTestModules({config});
     api = getValidatorApi(defaultApiOptions, {...modules, config});
-    state = generateCachedBellatrixState();
+    state = new BeaconStateView(generateCachedBellatrixState());
 
     modules.chain.executionBuilder.status = BuilderStatus.enabled;
   });

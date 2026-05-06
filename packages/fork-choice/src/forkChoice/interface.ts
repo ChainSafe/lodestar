@@ -1,18 +1,15 @@
-import {
-  CachedBeaconStateAllForks,
-  DataAvailabilityStatus,
-  EffectiveBalanceIncrements,
-} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
 import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {
+  BlockExecutionStatus,
   LVHExecResponse,
-  MaybeValidExecutionStatus,
+  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
 } from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
-import {CheckpointWithHex, CheckpointWithPayloadStatus} from "./store.js";
+import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -24,12 +21,12 @@ export type CheckpointsWithHex = {
   finalizedCheckpoint: CheckpointWithHex;
 };
 
-export type CheckpointWithPayloadAndBalance = {
-  checkpoint: CheckpointWithPayloadStatus;
+export type CheckpointWithBalance = {
+  checkpoint: CheckpointWithHex;
   balances: EffectiveBalanceIncrements;
 };
 
-export type CheckpointWithPayloadAndTotalBalance = CheckpointWithPayloadAndBalance & {
+export type CheckpointWithTotalBalance = CheckpointWithBalance & {
   totalBalance: number;
 };
 
@@ -124,8 +121,8 @@ export interface IForkChoice {
    * Retrieve all nodes for the debug API.
    */
   getAllNodes(): ProtoNode[];
-  getFinalizedCheckpoint(): CheckpointWithPayloadStatus;
-  getJustifiedCheckpoint(): CheckpointWithPayloadStatus;
+  getFinalizedCheckpoint(): CheckpointWithHex;
+  getJustifiedCheckpoint(): CheckpointWithHex;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -144,10 +141,10 @@ export interface IForkChoice {
    */
   onBlock(
     block: BeaconBlock,
-    state: CachedBeaconStateAllForks,
+    state: IBeaconStateView,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus,
+    executionStatus: BlockExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock;
   /**
@@ -201,13 +198,13 @@ export interface IForkChoice {
    * @param blockRoot - The beacon block root for which the payload arrived
    * @param executionPayloadBlockHash - The block hash of the execution payload
    * @param executionPayloadNumber - The block number of the execution payload
-   * @param executionPayloadStateRoot - The execution payload state root ie. the root of post-state after processExecutionPayloadEnvelope()
    */
   onExecutionPayload(
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex
+    executionStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): void;
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
@@ -228,7 +225,14 @@ export interface IForkChoice {
    */
   hasBlockUnsafe(blockRoot: Root): boolean;
   hasBlockHexUnsafe(blockRoot: RootHex): boolean;
+  /**
+   * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
+   * without checking if the block is a descendant of the finalized root.
+   */
+  hasPayloadUnsafe(blockRoot: Root): boolean;
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
+  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
@@ -237,6 +241,7 @@ export interface IForkChoice {
   getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
+  shouldExtendPayload(blockRoot: RootHex): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;
@@ -268,11 +273,23 @@ export interface IForkChoice {
   getAllNonAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
+   *
+   * `ancestors` is the raw walk and includes the previous finalized block as its last element —
+   * callers that don't want the boundary should slice it off themselves.
    */
   getAllAncestorAndNonAncestorBlocks(
     blockRoot: RootHex,
     payloadStatus: PayloadStatus
   ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  /**
+   * Same as `getAllAncestorAndNonAncestorBlocks` but resolves the default payload-status variant
+   * (FULL pre-Gloas, PENDING for Gloas) for the given root. Use when the caller holds a
+   * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
+   */
+  getAllAncestorAndNonAncestorBlocksDefaultStatus(blockRoot: RootHex): {
+    ancestors: ProtoBlock[];
+    nonAncestors: ProtoBlock[];
+  };
   getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
   getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
@@ -284,6 +301,12 @@ export interface IForkChoice {
    * Iterates forward descendants of blockRoot. Does not yield blockRoot itself
    */
   forwardIterateDescendants(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
+  /**
+   * Same as `forwardIterateDescendants` but resolves the default payload-status variant
+   * (FULL pre-Gloas, PENDING for Gloas) for the given root. Use when the caller holds a
+   * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
+   */
+  forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */

@@ -1,11 +1,11 @@
-import {CompositeTypeAny, TreeView, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {BeaconStateAllForks, CachedBeaconStateAllForks, EpochShuffling, PubkeyCache} from "@lodestar/state-transition";
+import {EpochShuffling, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
-  DataColumnSidecars,
+  DataColumnSidecar,
   Epoch,
   Root,
   RootHex,
@@ -18,6 +18,8 @@ import {
   altair,
   capella,
   deneb,
+  electra,
+  gloas,
   phase0,
   rewards,
 } from "@lodestar/types";
@@ -32,7 +34,7 @@ import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
-import {ImportBlockOpts} from "./blocks/types.js";
+import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
@@ -58,14 +60,15 @@ import {
   SeenBlockProposers,
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
-  SeenExecutionPayloadEnvelopes,
   SeenPayloadAttesters,
+  SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
+import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
@@ -128,13 +131,14 @@ export interface IBeaconChain {
   readonly seenAggregators: SeenAggregators;
   readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadEnvelopes: SeenExecutionPayloadEnvelopes;
   readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
+  readonly seenProposerPreferences: SeenProposerPreferences;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockInputCache: SeenBlockInput;
+  readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
   readonly seenBlockAttesters: SeenBlockAttesters;
 
@@ -159,6 +163,8 @@ export interface IBeaconChain {
   close(): Promise<void>;
   /** Chain has seen the specified block root or not. The block may not be processed yet, use forkchoice.hasBlock to check it  */
   seenBlock(blockRoot: RootHex): boolean;
+  /** Chain has seen a SignedExecutionPayloadEnvelope for this block root (via seenCache or fork choice FULL variant) */
+  seenPayloadEnvelope(blockRoot: RootHex): boolean;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
@@ -166,9 +172,9 @@ export interface IBeaconChain {
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
-  getHeadState(): CachedBeaconStateAllForks;
-  getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
-  getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<CachedBeaconStateAllForks>;
+  getHeadState(): IBeaconStateView;
+  getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView>;
+  getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<IBeaconStateView>;
 
   getHistoricalStateBySlot(
     slot: Slot
@@ -178,22 +184,22 @@ export interface IBeaconChain {
   getStateBySlot(
     slot: Slot,
     opts?: StateGetOpts
-  ): Promise<{state: CachedBeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Returns a local state by state root */
   getStateByStateRoot(
     stateRoot: RootHex,
     opts?: StateGetOpts
-  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Return serialized bytes of a persisted checkpoint state */
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
   /** Returns a cached state by checkpoint */
   getStateByCheckpoint(
     checkpoint: CheckpointWithHex
-  ): {state: BeaconStateAllForks; executionOptimistic: boolean; finalized: boolean} | null;
+  ): {state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null;
   /** Return state bytes by checkpoint */
   getStateOrBytesByCheckpoint(
     checkpoint: CheckpointWithHex
-  ): Promise<{state: CachedBeaconStateAllForks | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**
    * Since we can have multiple parallel chains,
@@ -217,12 +223,18 @@ export interface IBeaconChain {
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
-  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecars>;
+  getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;
   getSerializedDataColumnSidecars(
     blockSlot: Slot,
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getExecutionPayloadEnvelope(
+    blockSlot: Slot,
+    blockRootHex: string
+  ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
+  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<electra.ExecutionRequests>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
@@ -240,7 +252,14 @@ export interface IBeaconChain {
   /** Process a block until complete */
   processBlock(block: IBlockInput, opts?: ImportBlockOpts): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(blocks: IBlockInput[], opts?: ImportBlockOpts): Promise<void>;
+  processChainSegment(
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    opts?: ImportBlockOpts
+  ): Promise<void>;
+
+  /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
+  processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
 
   getStatus(): Status;
 
@@ -258,14 +277,12 @@ export interface IBeaconChain {
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
   persistInvalidStateRoot(
-    preState: CachedBeaconStateAllForks,
-    postState: CachedBeaconStateAllForks,
+    preState: IBeaconStateView,
+    postState: IBeaconStateView,
     block: SignedBeaconBlock
   ): Promise<void>;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
-  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
-  persistInvalidSszView(view: TreeView<CompositeTypeAny>, suffix?: string): void;
   regenStateForAttestationVerification(
     attEpoch: Epoch,
     shufflingDependentRoot: RootHex,

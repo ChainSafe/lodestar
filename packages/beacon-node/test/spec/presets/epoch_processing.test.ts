@@ -7,6 +7,7 @@ import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   EpochTransitionCache,
   beforeProcessEpoch,
 } from "@lodestar/state-transition";
@@ -46,16 +47,20 @@ const epochTransitionFns: Record<string, EpochTransitionFn> = {
   },
   historical_summaries_update: epochFns.processHistoricalSummariesUpdate as EpochTransitionFn,
   pending_deposits: epochFns.processPendingDeposits as EpochTransitionFn,
+  pending_deposits_churn: epochFns.processPendingDeposits as EpochTransitionFn,
   pending_consolidations: epochFns.processPendingConsolidations as EpochTransitionFn,
   proposer_lookahead: (state, epochTransitionCache) => {
     const fork = state.config.getForkSeq(state.slot);
     epochFns.processProposerLookahead(fork, state as CachedBeaconStateFulu, epochTransitionCache);
   },
+  ptc_window: (state, epochTransitionCache) => {
+    epochFns.processPtcWindow(state as CachedBeaconStateGloas, epochTransitionCache);
+  },
   builder_pending_payments: epochFns.processBuilderPendingPayments as EpochTransitionFn,
 };
 
 /**
- * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md
  */
 type EpochTransitionCacheingTestCase = {
   meta?: {bls_setting?: bigint};
@@ -87,7 +92,7 @@ const epochProcessing =
 
         if (testcase.post === undefined) {
           // If post.ssz_snappy is not value, the sub-transition processing is aborted
-          // https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md#postssz_snappy
+          // https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/epoch_processing/README.md#postssz_snappy
           expect(() => epochTransitionFn(state, epochTransitionCache)).toThrow();
         } else {
           epochTransitionFn(state, epochTransitionCache);

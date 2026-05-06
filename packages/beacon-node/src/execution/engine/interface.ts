@@ -87,6 +87,7 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
+  slotNumber?: number; // EIP-7843
 };
 
 export type VersionedHashes = Uint8Array[];
@@ -128,7 +129,7 @@ export interface IExecutionEngine {
    *   corresponding state, up to and including finalized_block_hash.
    *
    * The call of the notify_forkchoice_updated function maps on the POS_FORKCHOICE_UPDATED event defined in the EIP-3675.
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/fork-choice.md#notify_forkchoice_updated
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.7/specs/merge/fork-choice.md#notify_forkchoice_updated
    *
    * Should be called in response to fork-choice head and finalized events
    */
@@ -145,7 +146,7 @@ export interface IExecutionEngine {
    * since the corresponding call to prepare_payload method.
    *
    * Required for block producing
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.7/specs/merge/validator.md#get_payload
    */
   getPayload(
     fork: ForkName,

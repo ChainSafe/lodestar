@@ -1,6 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostDeneb, ForkPostFulu, ForkPreFulu, isForkPostDeneb, isForkPostFulu} from "@lodestar/params";
+import {
+  ForkPostDeneb,
+  ForkPostFulu,
+  ForkPostGloas,
+  ForkPreFulu,
+  isForkPostDeneb,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {BlobIndex, ColumnIndex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {LodestarError, byteArrayEquals, fromHex, prettyPrintIndices, toHex, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -8,7 +16,7 @@ import {BlockInputSource, IBlockInput} from "../../chain/blocks/blockInput/types
 import {ChainEventEmitter} from "../../chain/emitter.js";
 import {IBeaconChain} from "../../chain/interface.js";
 import {validateBlockBlobSidecars} from "../../chain/validation/blobSidecar.js";
-import {validateBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
+import {validateFuluBlockDataColumnSidecars} from "../../chain/validation/dataColumnSidecar.js";
 import {INetwork} from "../../network/interface.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {prettyPrintPeerIdStr} from "../../network/util.js";
@@ -52,7 +60,7 @@ export type FetchByRootAndValidateColumnsProps = FetchByRootCoreProps & {
 export type FetchByRootResponses = {
   block: SignedBeaconBlock;
   blobSidecars?: deneb.BlobSidecars;
-  columnSidecars?: fulu.DataColumnSidecars;
+  columnSidecars?: fulu.DataColumnSidecar[];
 };
 
 export type DownloadByRootProps = FetchByRootCoreProps & {
@@ -104,6 +112,17 @@ export async function downloadByRoot({
       blockRootHex: rootHex,
       seenTimestampSec: Date.now() / 1000,
       source: BlockInputSource.byRoot,
+    });
+  }
+
+  if (isForkPostGloas(blockInput.forkName)) {
+    chain.seenPayloadEnvelopeInputCache.add({
+      blockRootHex: rootHex,
+      block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+      forkName: blockInput.forkName,
+      sampledColumns: chain.custodyConfig.sampledColumns,
+      custodyColumns: chain.custodyConfig.custodyColumns,
+      timeCreatedSec: Date.now() / 1000,
     });
   }
 
@@ -213,7 +232,7 @@ export async function fetchByRoot({
 }: FetchByRootProps): Promise<WarnResult<FetchByRootResponses, DownloadByRootError>> {
   let block: SignedBeaconBlock;
   let blobSidecars: deneb.BlobSidecars | undefined;
-  let columnSidecarResult: WarnResult<fulu.DataColumnSidecars, DownloadByRootError> | undefined;
+  let columnSidecarResult: WarnResult<fulu.DataColumnSidecar[], DownloadByRootError> | undefined;
   const {peerId: peerIdStr} = peerMeta;
 
   if (isPendingBlockInput(cacheItem)) {
@@ -263,7 +282,10 @@ export async function fetchByRoot({
       blockRoot,
     });
     const forkName = config.getForkName(block.message.slot);
-    if (isForkPostFulu(forkName)) {
+    if (isForkPostGloas(forkName)) {
+      // Post-gloas block sync only needs the block body. Payload columns stay on the
+      // payload/envelope path and are queued independently in the network processor.
+    } else if (isForkPostFulu(forkName)) {
       columnSidecarResult = await fetchAndValidateColumns({
         config,
         chain,
@@ -376,7 +398,7 @@ export async function fetchAndValidateColumns({
   block,
   blockRoot,
   missing,
-}: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecars, DownloadByRootError>> {
+}: FetchByRootAndValidateColumnsProps): Promise<WarnResult<fulu.DataColumnSidecar[], DownloadByRootError>> {
   const {peerId: peerIdStr} = peerMeta;
   const slot = block.message.slot;
   const blobCount = getBlobKzgCommitments(forkName, block).length;
@@ -387,9 +409,11 @@ export async function fetchAndValidateColumns({
   const blockRootHex = toRootHex(blockRoot);
   const peerColumns = new Set(peerMeta.custodyColumns ?? []);
   const requestedColumns = missing.filter((c) => peerColumns.has(c));
-  const columnSidecars = await network.sendDataColumnSidecarsByRoot(peerIdStr, [
+  // TODO GLOAS: Extend by root column sync to support gloas.DataColumnSidecar and
+  // validate against block bid commitments instead of the fulu signed header shape
+  const columnSidecars = (await network.sendDataColumnSidecarsByRoot(peerIdStr, [
     {blockRoot, columns: requestedColumns},
-  ]);
+  ])) as fulu.DataColumnSidecar[];
 
   const warnings: DownloadByRootError[] = [];
 
@@ -440,7 +464,8 @@ export async function fetchAndValidateColumns({
     );
   }
 
-  await validateBlockDataColumnSidecars(chain, slot, blockRoot, blobCount, columnSidecars, chain?.metrics?.peerDas);
+  // TODO GLOAS: Swap to fork-aware column validation once post-gloas by-root sync is implemented
+  await validateFuluBlockDataColumnSidecars(chain, slot, blockRoot, blobCount, columnSidecars, chain?.metrics?.peerDas);
 
   return {result: columnSidecars, warnings: warnings.length > 0 ? warnings : null};
 }
@@ -451,11 +476,12 @@ export async function fetchColumnsByRoot({
   peerMeta,
   blockRoot,
   missing,
-}: Pick<
-  FetchByRootAndValidateColumnsProps,
-  "network" | "peerMeta" | "blockRoot" | "missing"
->): Promise<fulu.DataColumnSidecars> {
-  return await network.sendDataColumnSidecarsByRoot(peerMeta.peerId, [{blockRoot, columns: missing}]);
+}: Pick<FetchByRootAndValidateColumnsProps, "network" | "peerMeta" | "blockRoot" | "missing">): Promise<
+  fulu.DataColumnSidecar[]
+> {
+  return (await network.sendDataColumnSidecarsByRoot(peerMeta.peerId, [
+    {blockRoot, columns: missing},
+  ])) as fulu.DataColumnSidecar[];
 }
 
 export enum DownloadByRootErrorCode {

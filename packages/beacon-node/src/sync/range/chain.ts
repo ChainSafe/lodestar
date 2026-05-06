@@ -1,10 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {DEFAULT_RATE_LIMIT_BACKOFF_MS, RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, Root, Slot} from "@lodestar/types";
-import {ErrorAborted, LodestarError, Logger, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlobSidecarErrorCode} from "../../chain/errors/blobSidecarError.js";
 import {DataColumnSidecarErrorCode} from "../../chain/errors/dataColumnSidecarError.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -45,13 +46,19 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: IBlockInput[], syncType: RangeSyncType) => Promise<void>;
+  processChainSegment: (
+    blocks: IBlockInput[],
+    payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
+    syncType: RangeSyncType
+  ) => Promise<void>;
   /** Must download blocks, and validate their range */
   downloadByRange: (
     peer: PeerSyncMeta,
     batch: Batch,
     syncType: RangeSyncType
-  ) => Promise<WarnResult<IBlockInput[], DownloadByRangeError>>;
+  ) => Promise<
+    WarnResult<{blocks: IBlockInput[]; payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null}, DownloadByRangeError>
+  >;
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerIdStr, action: PeerAction, actionName: string) => void;
   /** Gets current peer custodyColumns and earliestAvailableSlot */
@@ -222,12 +229,14 @@ export class SyncChain {
    */
   stopSyncing(): void {
     this.status = SyncChainStatus.Stopped;
+    this.logger.debug("SyncChain stopSyncing", {id: this.logId});
   }
 
   /**
    * Permanently remove this chain. Throws the main AsyncIterable
    */
   remove(): void {
+    this.logger.debug("SyncChain remove", {id: this.logId});
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
   }
 
@@ -541,7 +550,8 @@ export class SyncChain {
         });
         this.metrics?.syncRange.downloadByRange.success.inc();
         const {warnings, result} = res.result;
-        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, result);
+        const {blocks: downloadedBlocks, payloadEnvelopes} = result;
+        const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, downloadedBlocks, payloadEnvelopes);
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };
@@ -551,7 +561,7 @@ export class SyncChain {
             this.metrics?.syncRange.downloadByRange.warn.inc({client: peer.client, code: warning.type.code});
             this.logger.debug(
               "Batch downloaded with warning",
-              {id: this.logId, epoch: batch.startEpoch, ...logMeta, peer: prettyPrintPeerIdStr(peer.peerId)},
+              {id: this.logId, ...batch.getMetadata(), ...logMeta, peer: prettyPrintPeerIdStr(peer.peerId)},
               warning
             );
           }
@@ -577,10 +587,17 @@ export class SyncChain {
           // the flow will continue to call triggerBatchDownloader() below
         }
 
+        const blockSlots = downloadSuccessOutput.blocks.map((b) => b.slot);
+        const envelopeSlots = downloadSuccessOutput.payloadEnvelopes
+          ? Array.from(downloadSuccessOutput.payloadEnvelopes.keys())
+          : null;
+
         this.logger.debug(logMessage, {
           id: this.logId,
-          epoch: batch.startEpoch,
+          ...batch.getMetadata(),
           ...logMeta,
+          blockSlots: prettyPrintIndices(blockSlots),
+          ...(envelopeSlots ? {envelopeSlots: prettyPrintIndices(envelopeSlots)} : {}),
           peer: prettyPrintPeerIdStr(peer.peerId),
         });
       }
@@ -603,13 +620,24 @@ export class SyncChain {
    * Sends `batch` to the processor. Note: batch may be empty
    */
   private async processBatch(batch: Batch): Promise<void> {
-    const blocks = batch.startProcessing();
+    const {blocks, payloadEnvelopes, peers} = batch.startProcessing();
+
+    const logCtx = {
+      id: this.logId,
+      ...batch.getMetadata(),
+      blockCount: blocks.length,
+      blockSlots: prettyPrintIndices(blocks.map((b) => b.slot)),
+      ...(payloadEnvelopes ? {envelopeSlots: prettyPrintIndices(Array.from(payloadEnvelopes.keys()))} : {}),
+      peers: peers.map(prettyPrintPeerIdStr).join(","),
+    };
+    this.logger.verbose("Processing batch", logCtx);
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks, this.syncType));
+    const res = await wrapError(this.processChainSegment(blocks, payloadEnvelopes, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();
+      this.logger.verbose("Processed batch", {...logCtx, ...batch.getMetadata()});
 
       // If the processed batch is not empty, validate previous AwaitingValidation blocks.
       if (blocks.length > 0) {
@@ -619,7 +647,7 @@ export class SyncChain {
       // Potentially process next AwaitingProcessing batch
       this.triggerBatchProcessor();
     } else {
-      this.logger.verbose("Batch process error", {id: this.logId, ...batch.getMetadata()}, res.err);
+      this.logger.verbose("Batch process error", logCtx, res.err);
       batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
       // At least one block was successfully verified and imported, so we can be sure all

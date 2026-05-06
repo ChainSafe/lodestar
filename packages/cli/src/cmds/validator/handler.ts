@@ -164,6 +164,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
         globalInit: {
           requestWireFormat: parseWireFormat(args, "http.requestWireFormat"),
           responseWireFormat: parseWireFormat(args, "http.responseWireFormat"),
+          timeoutMs: args["http.requestTimeout"],
           headers: {"User-Agent": `Lodestar/${version}`},
         },
       },

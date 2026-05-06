@@ -3,6 +3,7 @@ import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
+  BeaconStateView,
   DataAvailabilityStatus,
   computeEpochAtSlot,
   computeSigningRoot,
@@ -82,8 +83,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
     parentBlockHash: null,
     payloadStatus: 2, // PayloadStatus.FULL
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [
@@ -157,9 +156,9 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
   // Add state to regen
   const regen = {
-    getState: async () => state,
+    getState: async () => new BeaconStateView(state),
     // TODO: remove this once we have a better way to get state
-    getStateSync: () => state,
+    getStateSync: () => new BeaconStateView(state),
   } as Partial<IStateRegenerator> as IStateRegenerator;
 
   const chain = {

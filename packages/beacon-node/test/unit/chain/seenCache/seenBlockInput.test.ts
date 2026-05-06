@@ -1,6 +1,5 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {beforeEach, describe, expect, it} from "vitest";
-import {PayloadStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
@@ -55,8 +54,8 @@ describe("SeenBlockInputCache", async () => {
     });
   });
 
-  describe("has()", () => {
-    it("should return true if in cache", () => {
+  describe("hasBlock()", () => {
+    it("should return true if block is in cache", () => {
       const {block, rootHex} = generateBlock({forkName: ForkName.capella});
       cache.getByBlock({
         block,
@@ -64,7 +63,7 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
-      expect(cache.has(rootHex)).toBeTruthy();
+      expect(cache.hasBlock(rootHex)).toBeTruthy();
     });
 
     it("should return false if not in cache", () => {
@@ -75,11 +74,11 @@ describe("SeenBlockInputCache", async () => {
         source: BlockInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
       });
-      expect(cache.has(rootHex)).toBeTruthy();
+      expect(cache.hasBlock(rootHex)).toBeTruthy();
       blockRoot[0] = (blockRoot[0] + 1) % 255;
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
-      expect(cache.has(toRootHex(blockRoot))).toBeFalsy();
+      expect(cache.hasBlock(toRootHex(blockRoot))).toBeFalsy();
     });
   });
 
@@ -153,7 +152,7 @@ describe("SeenBlockInputCache", async () => {
       blockRoot[1] = (blockRoot[1] + 1) % 255;
       blockRoot[2] = (blockRoot[2] + 1) % 255;
       expect(() => cache.remove(toRootHex(blockRoot))).not.toThrow();
-      expect(cache.has(rootHex)).toBeTruthy();
+      expect(cache.hasBlock(rootHex)).toBeTruthy();
     });
   });
 
@@ -269,7 +268,6 @@ describe("SeenBlockInputCache", async () => {
         epoch: config.DENEB_FORK_EPOCH,
         root,
         rootHex,
-        payloadStatus: PayloadStatus.FULL,
       });
       expect(cache.get(childRootHex)).toBeUndefined();
       expect(cache.get(parentRootHex)).toBeUndefined();
@@ -282,7 +280,6 @@ describe("SeenBlockInputCache", async () => {
         epoch: config.CAPELLA_FORK_EPOCH,
         root,
         rootHex,
-        payloadStatus: PayloadStatus.FULL,
       });
       expect(cache.get(childRootHex)).toBe(childBlockInput);
       expect(cache.get(parentRootHex)).toBe(parentBlockInput);

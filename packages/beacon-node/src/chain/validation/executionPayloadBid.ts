@@ -1,10 +1,10 @@
 import {PublicKey} from "@chainsafe/blst";
 import {
-  CachedBeaconStateGloas,
-  canBuilderCoverBid,
+  computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
   isActiveBuilder,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -33,9 +33,10 @@ async function validateExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
-  const state = (await chain.getHeadStateAtCurrentEpoch(
-    RegenCaller.validateGossipExecutionPayloadBid
-  )) as CachedBeaconStateGloas;
+  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid);
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
+  }
 
   // [IGNORE] `bid.slot` is the current slot or the next slot.
   const currentSlot = chain.clock.currentSlot;
@@ -47,13 +48,16 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] the `SignedProposerPreferences` where `preferences.proposal_slot`
-  // is equal to `bid.slot` has been seen.
-  // TODO GLOAS: Implement this along with proposer preference
+  // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been
+  // seen — i.e. `proposal_slot == bid.slot` AND `dependent_root ==
+  // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`,
+  // where `parent_state` is the post-state of `bid.parent_block_root`.
+  // This is the message referenced as `proposer_preferences` in the following REJECT rules.
+  // TODO GLOAS: Implement once a ProposerPreferencesPool exists.
 
   // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
-  const builder = state.builders.getReadonly(bid.builderIndex);
+  const builder = state.getBuilder(bid.builderIndex);
   if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
@@ -70,11 +74,24 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [REJECT] `bid.fee_recipient` matches the `fee_recipient` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // [REJECT] `bid.gas_limit` matches the `gas_limit` from the proposer's
-  // `SignedProposerPreferences` associated with `bid.slot`.
-  // TODO GLOAS: Implement this along with proposer preference
+  // [REJECT] `bid.fee_recipient == proposer_preferences.fee_recipient`.
+  // [REJECT] `bid.gas_limit == proposer_preferences.gas_limit`.
+  // Both compared against the matching `proposer_preferences` defined above (same branch
+  // via dependent_root, same proposal_slot).
+  // TODO GLOAS: Implement once a ProposerPreferencesPool exists.
+
+  // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
+  // consensus layer -- i.e. validate that
+  // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
+      blobKzgCommitmentsLen,
+      commitmentLimit: maxBlobsPerBlock,
+    });
+  }
 
   // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
   if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
@@ -87,9 +104,9 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this bid is the highest value bid seen for the corresponding slot
-  // and the given parent block hash.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(parentBlockRootHex, parentBlockHashHex, bid.slot);
+  // [IGNORE] this bid is the highest value bid seen for the tuple
+  // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
+  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
   if (bestBid !== null && bestBid.value >= bid.value) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
@@ -99,7 +116,7 @@ async function validateExecutionPayloadBid(
   }
   // [IGNORE] `bid.value` is less or equal than the builder's excess balance --
   // i.e. `can_builder_cover_bid(state, builder_index, amount)` returns `True`.
-  if (!canBuilderCoverBid(state, bid.builderIndex, bid.value)) {
+  if (!state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
       bidValue: bid.value,

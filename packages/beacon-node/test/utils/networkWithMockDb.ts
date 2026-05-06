@@ -1,7 +1,7 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
+import {BeaconStateView, createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -84,7 +84,7 @@ export async function getNetworkForTest(
       ),
       metrics: null,
       validatorMonitor: null,
-      anchorState: cachedState,
+      anchorState: new BeaconStateView(cachedState),
       isAnchorStateFinalized: true,
       executionEngine: new ExecutionEngineDisabled(),
     }
@@ -107,7 +107,7 @@ export async function getNetworkForTest(
       maxPeers: 10,
       targetPeers: 1,
       bootMultiaddrs: [],
-      localMultiaddrs: ["/ip4/0.0.0.0/tcp/0"],
+      localMultiaddrs: ["/ip4/0.0.0.0/udp/0/quic-v1", "/ip4/0.0.0.0/tcp/0"],
       discv5FirstQueryDelayMs: 0,
       discv5: null,
       skipParamsLog: true,

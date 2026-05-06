@@ -4,6 +4,7 @@ import {config} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateView} from "@lodestar/state-transition";
 import {getNetworkCachedBlock, getNetworkCachedState, rangeSyncTest} from "@lodestar/state-transition/test-utils";
 import {sleep, toHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
@@ -98,7 +99,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
           processShutdownCallback: () => {},
           metrics: null,
           validatorMonitor: null,
-          anchorState: state,
+          anchorState: new BeaconStateView(state),
           isAnchorStateFinalized: true,
           executionEngine: new ExecutionEngineDisabled(),
         }
@@ -125,7 +126,7 @@ describe.skip("verify+import blocks - range sync perf test", () => {
         });
       });
 
-      await chain.processChainSegment(blocksImport, {
+      await chain.processChainSegment(blocksImport, null, {
         // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
         // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
         // TODO: Review if this is okay, can we prevent some attacks by importing attestations?
