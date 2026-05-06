@@ -23,6 +23,7 @@ import {
 import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {isForkchoiceUpdateInvalidError} from "../../execution/engine/interface.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -34,6 +35,7 @@ import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {invalidateForkchoiceHeadFromFcuInvalid} from "./utils/forkchoiceUpdateInvalid.js";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
@@ -430,7 +432,8 @@ export async function importBlock(
      * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
      * - `headBlockHash !== ZERO_HASH` -> Pre TTD
      */
-    const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const fcuHead = this.forkChoice.getHead();
+    const headBlockHash = fcuHead.executionPayloadBlockHash ?? ZERO_HASH_HEX;
     /**
      * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
@@ -440,13 +443,12 @@ export async function importBlock(
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
-        .notifyForkchoiceUpdate(
-          this.config.getForkName(this.forkChoice.getHead().slot),
-          headBlockHash,
-          safeBlockHash,
-          finalizedBlockHash
-        )
+        .notifyForkchoiceUpdate(this.config.getForkName(fcuHead.slot), headBlockHash, safeBlockHash, finalizedBlockHash)
         .catch((e) => {
+          if (isForkchoiceUpdateInvalidError(e)) {
+            invalidateForkchoiceHeadFromFcuInvalid(this, fcuHead.blockRoot, headBlockHash, e);
+            return;
+          }
           if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
             this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
           }
