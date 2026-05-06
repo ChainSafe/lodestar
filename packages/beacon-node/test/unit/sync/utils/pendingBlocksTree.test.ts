@@ -9,7 +9,6 @@ import {
 import {
   UnknownAndAncestorBlocks,
   getAllDescendantBlocks,
-  getDescendantBlocks,
   getUnknownAndAncestorBlocks,
 } from "../../../../src/sync/utils/pendingBlocksTree.js";
 import {MockBlockInput} from "../../../utils/blockInput.js";
@@ -19,14 +18,12 @@ describe("sync / pendingBlocksTree", () => {
     id: string;
     blocks: {block: string; parent: string | null}[];
     getAllDescendantBlocks: {block: string; res: string[]}[];
-    getDescendantBlocks: {block: string; res: string[]}[];
     getUnknownOrAncestorBlocks: {unknowns: string[]; ancestors: string[]};
   }[] = [
     {
       id: "empty case",
       blocks: [],
       getAllDescendantBlocks: [{block: "0A", res: []}],
-      getDescendantBlocks: [{block: "0A", res: []}],
       getUnknownOrAncestorBlocks: {unknowns: [], ancestors: []},
     },
     {
@@ -42,12 +39,6 @@ describe("sync / pendingBlocksTree", () => {
       ],
       getAllDescendantBlocks: [
         {block: "0A", res: ["1A", "2A", "3A", "2B", "3B"]},
-        {block: "3C", res: ["4C"]},
-        {block: "3B", res: []},
-      ],
-      getDescendantBlocks: [
-        {block: "0A", res: ["1A"]},
-        {block: "1A", res: ["2A", "2B"]},
         {block: "3C", res: ["4C"]},
         {block: "3B", res: []},
       ],
@@ -71,12 +62,6 @@ describe("sync / pendingBlocksTree", () => {
       for (const {block, res} of testCase.getAllDescendantBlocks) {
         it(`getAllDescendantBlocks(${block})`, () => {
           expect(toRes(getAllDescendantBlocks(block, blocks))).toEqual(res);
-        });
-      }
-
-      for (const {block, res} of testCase.getDescendantBlocks) {
-        it(`getDescendantBlocks(${block})`, () => {
-          expect(toRes(getDescendantBlocks(block, blocks))).toEqual(res);
         });
       }
 

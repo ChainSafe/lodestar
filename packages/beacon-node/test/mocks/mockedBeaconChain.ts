@@ -58,12 +58,17 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getAllAncestorBlocks: vi.fn(),
       getAllNonAncestorBlocks: vi.fn(),
       getAllAncestorAndNonAncestorBlocks: vi.fn(),
+      getAllAncestorAndNonAncestorBlocksDefaultStatus: vi.fn(),
       iterateAncestorBlocks: vi.fn(),
       getBlockSummariesByParentRoot: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),
+      getCanonicalBlockClosestLteSlot: vi.fn(),
+      getCanonicalBlockByRoot: vi.fn(),
       getFinalizedCheckpoint: vi.fn(),
+      hasBlock: vi.fn(),
       hasBlockHex: vi.fn(),
       getBlockSummariesAtSlot: vi.fn(),
+      notifyPtcMessages: vi.fn(),
     };
   });
 
@@ -139,10 +144,18 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       opPool: new OpPool(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
+      payloadAttestationPool: {
+        add: vi.fn(),
+        getAll: vi.fn(),
+      },
       // @ts-expect-error
       beaconProposerCache: new BeaconProposerCache(),
       // @ts-expect-error
       seenBlockInputCache: new SeenBlockInput(),
+      seenPayloadEnvelopeInputCache: {
+        get: vi.fn(),
+      },
+      seenPayloadEnvelope: vi.fn(),
       shufflingCache: new ShufflingCache(),
       pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
@@ -158,6 +171,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
       processBlock: vi.fn(),
+      persistInvalidSszValue: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),
       logger,

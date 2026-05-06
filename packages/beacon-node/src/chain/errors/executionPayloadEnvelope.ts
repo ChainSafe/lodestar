@@ -11,6 +11,7 @@ export enum ExecutionPayloadEnvelopeErrorCode {
   SLOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_SLOT_MISMATCH",
   BUILDER_INDEX_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BUILDER_INDEX_MISMATCH",
   BLOCK_HASH_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_HASH_MISMATCH",
+  EXECUTION_REQUESTS_ROOT_MISMATCH = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_EXECUTION_REQUESTS_ROOT_MISMATCH",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_INVALID_SIGNATURE",
   PAYLOAD_ENVELOPE_INPUT_MISSING = "EXECUTION_PAYLOAD_ENVELOPE_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
 }
@@ -35,6 +36,11 @@ export type ExecutionPayloadEnvelopeErrorType =
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH;
       envelopeBlockHash: RootHex;
       bidBlockHash: RootHex | null;
+    }
+  | {
+      code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH;
+      envelopeRequestsRoot: RootHex;
+      bidRequestsRoot: RootHex;
     }
   | {code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE}
   | {code: ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; blockRoot: RootHex};

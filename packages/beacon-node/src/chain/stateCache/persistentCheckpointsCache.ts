@@ -226,7 +226,10 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
       }
       sszTimer?.();
       const timer = this.metrics?.cpStateCache.stateReloadDuration.startTimer();
-      const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes);
+      // preload validators and balances for faster state transition
+      const newCachedState = seedState.loadOtherState(stateBytes, validatorsBytes, {
+        preloadValidatorsAndBalances: true,
+      });
       // hashTreeRoot() calls the commit() inside
       // there is no modification inside the state, it's just that we want to compute and cache all roots
       const stateRoot = toRootHex(newCachedState.hashTreeRoot());
