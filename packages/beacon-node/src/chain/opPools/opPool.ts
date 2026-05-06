@@ -264,10 +264,7 @@ export class OpPool {
         // Signature validation is skipped in `isValidVoluntaryExit(,,false)` since it was already validated in gossip
         // However we must make sure that the signature fork is the same, or it will become invalid if included through
         // a future fork.
-        isVoluntaryExitSignatureIncludable(
-          stateFork,
-          this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch))
-        )
+        isVoluntaryExitSignatureIncludable(stateFork, this.getVoluntaryExitFork(voluntaryExit))
       ) {
         voluntaryExits.push(voluntaryExit);
         if (voluntaryExits.length >= MAX_VOLUNTARY_EXITS) {
@@ -373,7 +370,7 @@ export class OpPool {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
 
     for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
-      const voluntaryExitFork = this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
+      const voluntaryExitFork = this.getVoluntaryExitFork(voluntaryExit);
       if (!isVoluntaryExitSignatureIncludable(headStateFork, voluntaryExitFork)) {
         this.voluntaryExits.delete(key);
         continue;
@@ -384,6 +381,10 @@ export class OpPool {
         this.voluntaryExits.delete(key);
       }
     }
+  }
+
+  private getVoluntaryExitFork(voluntaryExit: phase0.SignedVoluntaryExit): ForkSeq {
+    return this.config.getForkSeq(computeStartSlotAtEpoch(voluntaryExit.message.epoch));
   }
 
   /**
