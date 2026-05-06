@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
+import {RequestError, RequestErrorCode, RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
@@ -281,6 +281,33 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     await expectRejectedWithLodestarError(
       netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 2}),
       new RequestError({code: RequestErrorCode.RESP_TIMEOUT})
+    );
+  });
+
+  it("should detect a rate-limit response and back off the peer", async () => {
+    // Simulates a Lighthouse/Grandine-style rate limit response (status 139)
+    const rateLimitMessage = "Rate limited. There are already 2 active requests with the same protocol";
+
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
+      (method) =>
+        // biome-ignore lint/correctness/useYield: No need for yield in test context
+        async function* onRequest() {
+          if (method === ReqRespMethod.BeaconBlocksByRange) {
+            throw new ResponseError(RespStatus.RATE_LIMITED, rateLimitMessage);
+          }
+        }
+    );
+
+    // First request: responder sends RATE_LIMITED → detected as RESP_RATE_LIMITED
+    await expectRejectedWithLodestarError(
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
+      new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED})
+    );
+
+    // Second request: SelfRateLimiter has the peer in backoff → blocked before sending
+    await expectRejectedWithLodestarError(
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
+      new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED})
     );
   });
 }
