@@ -1,28 +1,29 @@
 import {describe, expect, it} from "vitest";
-import {parseBackoffSeconds} from "../../../src/request/errors.js";
+import {RespStatus} from "../../../src/interface.js";
+import {RequestErrorCode, responseStatusErrorToRequestError} from "../../../src/request/errors.js";
+import {ResponseError} from "../../../src/response/index.js";
 
-describe("parseBackoffSeconds", () => {
-  const testCases: {input: string; expected: number | undefined}[] = [
-    // Grandine format
-    {input: "wait 2.816488536s", expected: 2817},
-    {input: "wait 30s", expected: 30_000},
-    {input: "wait 0.5s", expected: 500},
-    // "seconds" / "second" variants
-    {input: "wait 10 seconds", expected: 10_000},
-    {input: "wait 1 second", expected: 1000},
-    {input: "please wait 5 sec before retrying", expected: 5000},
-    // No parseable duration
-    {input: "rate limited", expected: undefined},
-    {input: "peer has been rate limited", expected: undefined},
-    {input: "rate limited. there are already 2 active requests with the same protocol", expected: undefined},
-    {input: "wait a moment", expected: undefined},
-    // Edge cases
-    {input: "wait 0s", expected: undefined},
+describe("responseStatusErrorToRequestError", () => {
+  const rateLimitMessages = [
+    "rate limited",
+    "Peer has been rate limited",
+    "Rate limited. There are already 2 active requests with the same protocol",
+    "Wait 2.816488536s",
   ];
 
-  for (const {input, expected} of testCases) {
-    it(`"${input}" => ${expected}`, () => {
-      expect(parseBackoffSeconds(input)).toBe(expected);
+  for (const errorMessage of rateLimitMessages) {
+    it(`maps "${errorMessage}" to RESP_RATE_LIMITED`, () => {
+      expect(responseStatusErrorToRequestError(new ResponseError(RespStatus.INVALID_REQUEST, errorMessage))).toEqual({
+        code: RequestErrorCode.RESP_RATE_LIMITED,
+      });
     });
   }
+
+  it("maps non-rate-limit invalid request errors", () => {
+    const errorMessage = "bad request";
+    expect(responseStatusErrorToRequestError(new ResponseError(RespStatus.INVALID_REQUEST, errorMessage))).toEqual({
+      code: RequestErrorCode.INVALID_REQUEST,
+      errorMessage,
+    });
+  });
 });

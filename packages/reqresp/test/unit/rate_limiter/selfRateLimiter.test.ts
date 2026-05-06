@@ -2,7 +2,6 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   CHECK_DISCONNECTED_PEERS_INTERVAL_MS,
   DEFAULT_RATE_LIMIT_BACKOFF_MS,
-  MAX_RATE_LIMIT_BACKOFF_MS,
   REQUEST_TIMEOUT_MS,
   SelfRateLimiter,
 } from "../../../src/rate_limiter/selfRateLimiter.js";
@@ -81,19 +80,6 @@ describe("SelfRateLimiter", () => {
       expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBe(true);
     });
 
-    it("should support custom backoff duration", () => {
-      const customBackoffMs = 15_000;
-      selfRateLimiter.onRateLimited("peer1", customBackoffMs);
-      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBe(false);
-
-      vi.advanceTimersByTime(DEFAULT_RATE_LIMIT_BACKOFF_MS);
-      // Still blocked because custom backoff is longer
-      expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBe(false);
-
-      vi.advanceTimersByTime(customBackoffMs - DEFAULT_RATE_LIMIT_BACKOFF_MS);
-      expect(selfRateLimiter.allows("peer1", "protocol1", 3)).toBe(true);
-    });
-
     it("should track rate limited peer count", () => {
       expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(0);
 
@@ -107,24 +93,11 @@ describe("SelfRateLimiter", () => {
       expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(1);
     });
 
-    it("should cap backoff at MAX_RATE_LIMIT_BACKOFF_MS", () => {
-      selfRateLimiter.onRateLimited("peer1", 300_000);
+    it("should keep backoff tracked during blocked attempts", () => {
+      selfRateLimiter.onRateLimited("peer1");
+
+      vi.advanceTimersByTime(DEFAULT_RATE_LIMIT_BACKOFF_MS / 2);
       expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBe(false);
-
-      // Should unblock at MAX, not at the requested 300s
-      vi.advanceTimersByTime(MAX_RATE_LIMIT_BACKOFF_MS);
-      expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBe(true);
-    });
-
-    it("should keep backoff alive during blocked attempts", () => {
-      selfRateLimiter.onRateLimited("peer1", MAX_RATE_LIMIT_BACKOFF_MS);
-
-      // Attempt midway through backoff — should still be blocked
-      vi.advanceTimersByTime(30_000);
-      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBe(false);
-
-      // Backoff entry should still be tracked (allows() updates lastSeen
-      // so checkDisconnectedPeers doesn't prematurely evict the entry)
       expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(1);
     });
 

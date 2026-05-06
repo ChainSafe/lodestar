@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {DEFAULT_RATE_LIMIT_BACKOFF_MS, RequestErrorCode} from "@lodestar/reqresp";
+import {RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, Root, Slot} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -16,7 +16,12 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
+import {
+  BATCH_BUFFER_SIZE,
+  EPOCHS_PER_BATCH,
+  MAX_LOOK_AHEAD_EPOCHS,
+  RATE_LIMITED_PEER_BACKOFF_MS,
+} from "../constants.js";
 import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
@@ -536,7 +541,7 @@ export class SyncChain {
         );
         if (errCode === RequestErrorCode.RESP_RATE_LIMITED || errCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED) {
           // Peer rate-limited us — don't count as a failed download attempt and mark peer for backoff
-          this.rateLimitedPeers.set(peer.peerId, Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS);
+          this.rateLimitedPeers.set(peer.peerId, Date.now() + RATE_LIMITED_PEER_BACKOFF_MS);
           batch.downloadingRateLimited();
           this.triggerBatchDownloader();
         } else {

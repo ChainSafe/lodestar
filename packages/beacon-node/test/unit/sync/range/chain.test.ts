@@ -240,7 +240,7 @@ describe("sync / range / chain", () => {
           })
         );
       }
-      return {result: blocks, warnings: null};
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};

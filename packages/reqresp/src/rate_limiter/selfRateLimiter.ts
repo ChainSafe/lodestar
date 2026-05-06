@@ -17,28 +17,8 @@ const DISCONNECTED_TIMEOUT_MS = 60 * 1000;
  **/
 export const REQUEST_TIMEOUT_MS = 30 * 1000;
 
-/**
- * Default backoff when a peer rate limits us without specifying a duration.
- * Only Grandine sends an explicit backoff (parsed and used directly); all other clients
- * send static error messages and fall back to this value.
- *
- * Cross-client rate limit behavior (as of March 2026):
- *   - Lighthouse: concurrent-limit only (max 2 in-flight per protocol), no GCRA rejections
- *   - Prysm:      30s leaky bucket for blocks/blobs, 1s for individual RPCs
- *   - Teku:       60s sliding window — then disconnects the peer entirely
- *   - Nimbus:     silent throttling (never sends errors)
- *   - Grandine:   GCRA with explicit wait time — this default is not used
- *
- * 5s is a circuit breaker, not a full recovery wait. It prevents immediate retry loops
- * while staying well under the ping interval (15-20s) since the backoff blocks ALL
- * protocols for the peer. For Lighthouse/Grandine's concurrent limit, 5s is enough for
- * an in-flight request to complete and free a slot (typical RTT 1-3s). For Prysm's
- * longer bucket, repeated rate limits naturally extend the backoff window.
- */
+/** Default backoff when a peer rate limits us. */
 export const DEFAULT_RATE_LIMIT_BACKOFF_MS = 5_000;
-
-/** Maximum backoff to prevent a malicious peer from requesting an excessively long backoff */
-export const MAX_RATE_LIMIT_BACKOFF_MS = 60_000;
 
 type RequestId = number;
 type RequestIdMs = number;
@@ -141,11 +121,10 @@ export class SelfRateLimiter {
   /**
    * Called when a peer responds with a rate-limit error, to enforce a backoff period before retrying.
    */
-  onRateLimited(peerId: PeerIdStr, backoffMs = DEFAULT_RATE_LIMIT_BACKOFF_MS): void {
-    const cappedBackoffMs = Math.min(backoffMs, MAX_RATE_LIMIT_BACKOFF_MS);
-    const rateLimitedUntil = Date.now() + cappedBackoffMs;
+  onRateLimited(peerId: PeerIdStr): void {
+    const rateLimitedUntil = Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS;
     this.rateLimitedUntilByPeer.set(peerId, rateLimitedUntil);
-    this.logger?.debug("SelfRateLimiter: peer rate limited us, backing off", {peerId, backoffMs: cappedBackoffMs});
+    this.logger?.debug("SelfRateLimiter: peer rate limited us, backing off", {peerId});
   }
 
   getPeerCount(): number {

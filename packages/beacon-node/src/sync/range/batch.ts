@@ -469,7 +469,11 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
-    this.state = {status: BatchStatus.AwaitingDownload, blocks: this.state.blocks};
+    this.state = {
+      status: BatchStatus.AwaitingDownload,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+    };
   }
 
   /**
