@@ -75,5 +75,9 @@ export function getMetrics(register: MetricsRegisterExtra) {
       name: "beacon_reqresp_self_rate_limiter_peer_count",
       help: "Count of peers tracked by the self rate limiter",
     }),
+    selfRateLimiterRateLimitedPeerCount: register.gauge({
+      name: "beacon_reqresp_self_rate_limiter_rate_limited_peer_count",
+      help: "Count of peers currently in rate-limit backoff",
+    }),
   };
 }

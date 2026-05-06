@@ -74,6 +74,9 @@ export class ReqResp {
     this.metrics?.selfRateLimiterPeerCount.addCollect(() => {
       this.metrics?.selfRateLimiterPeerCount.set(this.selfRateLimiter.getPeerCount());
     });
+    this.metrics?.selfRateLimiterRateLimitedPeerCount.addCollect(() => {
+      this.metrics?.selfRateLimiterRateLimitedPeerCount.set(this.selfRateLimiter.getRateLimitedPeerCount());
+    });
   }
 
   /**
@@ -205,6 +208,9 @@ export class ReqResp {
       if (e instanceof RequestError) {
         if (e.type.code === RequestErrorCode.DIAL_ERROR || e.type.code === RequestErrorCode.DIAL_TIMEOUT) {
           this.metrics?.dialErrors.inc();
+        }
+        if (e.type.code === RequestErrorCode.RESP_RATE_LIMITED) {
+          this.selfRateLimiter.onRateLimited(peerIdStr);
         }
         this.metrics?.outgoingErrorReasons.inc({reason: e.type.code});
 

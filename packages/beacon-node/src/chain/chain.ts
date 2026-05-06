@@ -338,15 +338,6 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
-      config,
-      clock,
-      chainEvents: emitter,
-      signal,
-      serializedCache: this.serializedCache,
-      metrics,
-      logger,
-    });
 
     this._earliestAvailableSlot = anchorState.slot;
 
@@ -426,6 +417,18 @@ export class BeaconChain implements IBeaconChain {
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
+
+    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
+      config,
+      clock,
+      forkChoice,
+      chainEvents: emitter,
+      signal,
+      serializedCache: this.serializedCache,
+      metrics,
+      logger,
+    });
+
     this.clock = clock;
     this.regen = regen;
     this.bls = bls;
