@@ -319,7 +319,7 @@ Will double processing times. Use only for debugging purposes.",
   "chain.pruneHistory": {
     description:
       "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
-Use this to minimize disk usage when the node does not need to serve historical data. \
+This is useful to minimize disk usage when the node does not need to serve historical data. \
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
