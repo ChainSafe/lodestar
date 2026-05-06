@@ -1,7 +1,8 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ZERO_HASH} from "@lodestar/params";
+import {ForkPostGloas, ForkSeq, ZERO_HASH} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateGloas,
   IBeaconStateView,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -52,6 +53,18 @@ export function createGenesisBlock(config: ChainForkConfig, genesisState: Beacon
   const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = genesisState.hashTreeRoot();
   genesisBlock.message.stateRoot = stateRoot;
+
+  // Gloas: per spec helper `create_signed_genesis_block`, the genesis block body's
+  // `signedExecutionPayloadBid.message` must equal `state.latestExecutionPayloadBid`,
+  // otherwise the body root in the block does not match `state.latestBlockHeader.bodyRoot`.
+  // See https://github.com/ethereum/consensus-specs/pull/5173 and
+  // https://github.com/ethpandaops/eth-beacon-genesis/issues/76.
+  if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.gloas) {
+    const gloasBlock = genesisBlock as SignedBeaconBlock<ForkPostGloas>;
+    const gloasState = genesisState as BeaconStateGloas;
+    gloasBlock.message.body.signedExecutionPayloadBid.message = gloasState.latestExecutionPayloadBid.toValue();
+  }
+
   return genesisBlock;
 }
 
