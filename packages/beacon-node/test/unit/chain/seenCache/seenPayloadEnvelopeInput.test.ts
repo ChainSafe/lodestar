@@ -71,6 +71,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
       payloadStatus: PayloadStatus.FULL,
       parentBlockHash: null,
+      isHezeEnabled: false,
     };
   }
 
