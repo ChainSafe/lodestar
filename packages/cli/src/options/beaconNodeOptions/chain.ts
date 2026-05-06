@@ -98,7 +98,7 @@ export const options: CliCommandOptions<ChainArgs> = {
 
   serveHistoricalState: {
     description:
-      "Regenerate finalized beacon states on demand and serve them via the REST API (e.g. `/eth/v2/debug/beacon/states/{state_id}`). \
+      "Regenerate finalized beacon states on demand and serve them via the REST API (e.g. `/eth/v2/debug/beacon/states/head`). \
 Does not backfill historical data, only states the node already has (since genesis sync or `--checkpointState`) can be regenerated. \
 Regeneration cost depends on `--chain.archiveStateEpochFrequency` and may affect validator performance.",
     type: "boolean",
