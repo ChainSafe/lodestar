@@ -138,7 +138,8 @@ describe("sync / range / chain", () => {
             pruneBlockInputs,
             onEnd,
           }),
-          {config, logger, clock, custodyConfig, metrics: null}
+          {config, logger, clock, custodyConfig, metrics: null},
+          undefined
         );
 
         const peers = [peer];
@@ -193,7 +194,8 @@ describe("sync / range / chain", () => {
           getConnectedPeerSyncMeta,
           onEnd,
         }),
-        {config, logger, clock, custodyConfig, metrics: null}
+        {config, logger, clock, custodyConfig, metrics: null},
+        undefined
       );
 
       // Add peers after some time

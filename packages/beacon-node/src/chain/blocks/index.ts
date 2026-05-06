@@ -126,13 +126,12 @@ export async function processBlocks(
       });
     }
 
-    // Iterate slots from the original `blocks` input (which spans the entire batch including
-    // slots filtered out of `relevantBlocks`). The first batch of a checkpoint sync may contain
-    // a payload at the anchor slot whose block is already in fork-choice (added by
-    // initializeForkChoice as PENDING+EMPTY) and therefore not in verifiedBlocksBySlot — the
-    // payload still needs to be imported here to populate the anchor's FULL variant so
-    // subsequent slots can find their parent payload.
-    const slots = Array.from(new Set(blocks.map((b) => b.getBlock().message.slot)));
+    const blockSlots = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
+    const slotSet = new Set<Slot>(blockSlots);
+    if (payloadEnvelopes) {
+      for (const slot of payloadEnvelopes.keys()) slotSet.add(slot);
+    }
+    const slots = Array.from(slotSet).sort((a, b) => a - b);
     for (const slot of slots) {
       const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
       if (fullyVerifiedBlock !== undefined) {
