@@ -219,7 +219,10 @@ describe("sync / range / chain", () => {
     const downloadByRange: SyncChainFns["downloadByRange"] = async (peerMeta, request, _partialDownload) => {
       if (peerMeta.peerId === peer1) {
         peer1Downloads++;
-        throw new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED});
+        throw new RequestError({
+          code: RequestErrorCode.RESP_RATE_LIMITED,
+          rateLimitedUntilMs: Date.now() + 50,
+        });
       }
 
       // peer2 returns blocks normally

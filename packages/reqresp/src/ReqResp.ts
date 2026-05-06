@@ -177,10 +177,12 @@ export class ReqResp {
         throw Error(`Request to send to protocol ${protocolID} but it has not been declared`);
       }
 
-      if (!this.selfRateLimiter.allows(peerIdStr, protocolID, requestId)) {
+      const allows = this.selfRateLimiter.allows(peerIdStr, protocolID, requestId);
+      if (allows !== true) {
         // we technically don't send request in this case but would be nice just to track this in the same `outgoingErrorReasons` metric
         this.metrics?.outgoingErrorReasons.inc({reason: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
-        throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED});
+        const rateLimitedUntilMs = typeof allows === "number" ? allows : undefined;
+        throw new RequestError({code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED, rateLimitedUntilMs});
         // don't call this.onOutgoingRequestError() to penalize peer
       }
 
@@ -211,7 +213,7 @@ export class ReqResp {
         }
         if (e.type.code === RequestErrorCode.RESP_RATE_LIMITED) {
           for (const protocolID of protocolIDs) {
-            this.selfRateLimiter.onRateLimited(peerIdStr, protocolID);
+            this.selfRateLimiter.onRateLimited(peerIdStr, protocolID, e.type.rateLimitedUntilMs);
           }
         }
         this.metrics?.outgoingErrorReasons.inc({reason: e.type.code});

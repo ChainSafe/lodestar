@@ -18,7 +18,7 @@ const DISCONNECTED_TIMEOUT_MS = 60 * 1000;
 export const REQUEST_TIMEOUT_MS = 30 * 1000;
 
 /** Default backoff when a peer rate limits us. */
-export const DEFAULT_RATE_LIMIT_BACKOFF_MS = 5_000;
+export const DEFAULT_RATE_LIMIT_BACKOFF_MS = 2_000;
 
 type RequestId = number;
 type RequestIdMs = number;
@@ -68,8 +68,12 @@ export class SelfRateLimiter {
 
   /**
    * called before we send a request to a peer.
+   * Returns one of three outcomes:
+   * - if the peer has rate-limited us and we're still in backoff, returns the timestamp until which we should back off,
+   * - if we've reached the concurrent request limit, returns false,
+   * - otherwise, returns true.
    */
-  allows(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): boolean {
+  allows(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): number | boolean {
     const now = Date.now();
 
     const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
@@ -80,7 +84,7 @@ export class SelfRateLimiter {
     const rateLimitedUntil = trackedRequests.rateLimitedUntilMs;
     if (rateLimitedUntil !== undefined) {
       if (now < rateLimitedUntil) {
-        return false;
+        return rateLimitedUntil;
       }
       // Backoff expired, clean up
       trackedRequests.rateLimitedUntilMs = undefined;
@@ -123,11 +127,14 @@ export class SelfRateLimiter {
   /**
    * Called when a peer responds with a rate-limit error, to enforce a backoff period before retrying.
    */
-  onRateLimited(peerId: PeerIdStr, protocolId: ProtocolID): void {
-    const rateLimitedUntil = Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS;
+  onRateLimited(
+    peerId: PeerIdStr,
+    protocolId: ProtocolID,
+    rateLimitedUntilMs = Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS
+  ): void {
     const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
     const trackedRequests = peerRateLimiter.getOrDefault(protocolId);
-    trackedRequests.rateLimitedUntilMs = rateLimitedUntil;
+    trackedRequests.rateLimitedUntilMs = rateLimitedUntilMs;
     this.logger?.debug("SelfRateLimiter: peer rate limited us, backing off", {peerId, protocolId});
   }
 
@@ -154,6 +161,13 @@ export class SelfRateLimiter {
       if (now - lastSeenTime >= DISCONNECTED_TIMEOUT_MS) {
         this.rateLimitersPerPeer.delete(peerIdStr);
         this.lastSeenRequestsByPeer.delete(peerIdStr);
+      }
+    }
+    for (const peerRateLimiter of this.rateLimitersPerPeer.values()) {
+      for (const trackedRequests of peerRateLimiter.values()) {
+        if (trackedRequests.rateLimitedUntilMs !== undefined && now >= trackedRequests.rateLimitedUntilMs) {
+          trackedRequests.rateLimitedUntilMs = undefined;
+        }
       }
     }
   }

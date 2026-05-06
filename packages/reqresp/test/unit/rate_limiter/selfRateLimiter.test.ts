@@ -64,17 +64,17 @@ describe("SelfRateLimiter", () => {
 
       selfRateLimiter.onRateLimited("peer1", "protocol1");
 
-      // All protocols should be blocked for this peer
-      expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBe(false);
-      expect(selfRateLimiter.allows("peer1", "protocol2", 3)).toBe(false);
+      // The rate-limited protocol should be blocked for this peer
+      expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBeTypeOf("number");
 
-      // Other peers should not be affected
+      // Other peers and protocols should not be affected
+      expect(selfRateLimiter.allows("peer1", "protocol2", 3)).toBe(true);
       expect(selfRateLimiter.allows("peer2", "protocol1", 4)).toBe(true);
     });
 
     it("should allow requests after backoff expires", () => {
       selfRateLimiter.onRateLimited("peer1", "protocol1");
-      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBe(false);
+      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBeTypeOf("number");
 
       vi.advanceTimersByTime(DEFAULT_RATE_LIMIT_BACKOFF_MS);
       expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBe(true);
@@ -97,7 +97,7 @@ describe("SelfRateLimiter", () => {
       selfRateLimiter.onRateLimited("peer1", "protocol1");
 
       vi.advanceTimersByTime(DEFAULT_RATE_LIMIT_BACKOFF_MS / 2);
-      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBe(false);
+      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBeTypeOf("number");
       expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(1);
     });
 
