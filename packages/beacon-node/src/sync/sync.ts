@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
 import {GENESIS_SLOT} from "../constants/constants.js";
 import {ExecutionEngineState} from "../execution/index.js";
@@ -188,6 +188,18 @@ export class BeaconSync implements IBeaconSync {
   private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
     const syncType = getPeerSyncType(localStatus, data.status, this.chain.forkChoice, this.slotImportTolerance);
+    this.logger.verbose("Peer sync type classified", {
+      peer: data.peer,
+      syncType,
+      localFinalizedEpoch: localStatus.finalizedEpoch,
+      localFinalizedRoot: toRootHex(localStatus.finalizedRoot),
+      localHeadSlot: localStatus.headSlot,
+      localHeadRoot: toRootHex(localStatus.headRoot),
+      remoteFinalizedEpoch: data.status.finalizedEpoch,
+      remoteFinalizedRoot: toRootHex(data.status.finalizedRoot),
+      remoteHeadSlot: data.status.headSlot,
+      remoteHeadRoot: toRootHex(data.status.headRoot),
+    });
 
     // For metrics only
     this.peerSyncType.set(data.peer, syncType);

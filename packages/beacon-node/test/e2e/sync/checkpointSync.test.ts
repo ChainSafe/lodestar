@@ -54,8 +54,83 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
   });
 
   /**
-   * This is a superset of regular checkpoint sync so no need a separate test for it.
+   * Asserts every gloas variant of every block on Node B's chain is in `Syncing` state and
+   * returns the list of (blockRoot, slot, variant) tuples for reuse in the back-validation step.
    */
+  function assertNodeBChainIsSyncing(
+    bn2: Awaited<ReturnType<typeof getDevBeaconNode>>,
+    loggerNodeB: ReturnType<typeof testLogger>
+  ): Array<{blockRoot: string; slot: Slot; variant: PayloadStatus}> {
+    // For ancestors below head: check all 3 variants (PENDING, EMPTY, FULL).
+    // For the head: range sync may have delivered the block but not its envelope yet.
+    const bn2Head = bn2.chain.forkChoice.getHead();
+    const gloasFirstSlot = GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
+    const bn2Ancestors = bn2.chain.forkChoice.getAllAncestorBlocks(bn2Head.blockRoot, bn2Head.payloadStatus);
+
+    const variantsToCheck: Array<{blockRoot: string; slot: Slot; variant: PayloadStatus}> = [];
+    for (const ancestor of bn2Ancestors) {
+      if (ancestor.slot < gloasFirstSlot) continue;
+      if (ancestor.blockRoot === bn2Head.blockRoot) continue;
+      for (const variant of [PayloadStatus.PENDING, PayloadStatus.EMPTY, PayloadStatus.FULL]) {
+        variantsToCheck.push({blockRoot: ancestor.blockRoot, slot: ancestor.slot, variant});
+      }
+    }
+    variantsToCheck.push(
+      {blockRoot: bn2Head.blockRoot, slot: bn2Head.slot, variant: PayloadStatus.PENDING},
+      {blockRoot: bn2Head.blockRoot, slot: bn2Head.slot, variant: PayloadStatus.EMPTY}
+    );
+
+    for (const {blockRoot, slot, variant} of variantsToCheck) {
+      const node = bn2.chain.forkChoice.getBlockHex(blockRoot, variant);
+      expect(node?.executionStatus).toBeWithMessage(
+        ExecutionStatus.Syncing,
+        `expected gloas variant ${variant} of slot=${slot} root=${blockRoot} to be Syncing pre-validation`
+      );
+    }
+    loggerNodeB.info("Node B fork-choice: all gloas variants on chain are Syncing (optimistic)");
+
+    return variantsToCheck;
+  }
+
+  /**
+   * Injects Node A's known VALID payload for Node B's synced head, then asserts all the variants
+   * passed in (plus the head's FULL variant created by the injection) are now `Valid`.
+   */
+  function injectValidAndAssertBackValidated(
+    bn: Awaited<ReturnType<typeof getDevBeaconNode>>,
+    bn2: Awaited<ReturnType<typeof getDevBeaconNode>>,
+    variantsToCheck: Array<{blockRoot: string; slot: Slot; variant: PayloadStatus}>,
+    loggerNodeB: ReturnType<typeof testLogger>
+  ): void {
+    const bn2Head = bn2.chain.forkChoice.getHead();
+    const nodeAHeadFull = bn.chain.forkChoice.getBlockHex(bn2Head.blockRoot, PayloadStatus.FULL);
+    if (nodeAHeadFull === null || nodeAHeadFull.executionPayloadBlockHash === null) {
+      throw Error(`No FULL variant found on Node A for synced head root=${bn2Head.blockRoot}`);
+    }
+    bn2.chain.forkChoice.onExecutionPayload(
+      bn2Head.blockRoot,
+      nodeAHeadFull.executionPayloadBlockHash,
+      nodeAHeadFull.executionPayloadNumber,
+      ExecutionStatus.Valid,
+      DataAvailabilityStatus.Available
+    );
+    loggerNodeB.info("Injected VALID payload for synced head to trigger back-validation");
+
+    // The head's FULL variant is created by the onExecutionPayload call above.
+    const allVariants = [
+      ...variantsToCheck,
+      {blockRoot: bn2Head.blockRoot, slot: bn2Head.slot, variant: PayloadStatus.FULL},
+    ];
+    for (const {blockRoot, slot, variant} of allVariants) {
+      const node = bn2.chain.forkChoice.getBlockHex(blockRoot, variant);
+      expect(node?.executionStatus).toBeWithMessage(
+        ExecutionStatus.Valid,
+        `expected gloas variant ${variant} of slot=${slot} root=${blockRoot} to be Valid post-validation`
+      );
+    }
+    loggerNodeB.info("All gloas variants on chain back-validated to Valid");
+  }
+
   it("Checkpoint sync from skipped-slot checkpoint", async () => {
     const genesisSlotsDelay = 4;
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (SLOT_DURATION_MS / 1000);
@@ -109,19 +184,23 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     });
     afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
 
-    // Wait for Node A to finalize epoch 3 — the skipped-slot epoch.
-    //
-    // Strict equality on the target epoch + capturing finalizedCp from the resolved event
-    // payload (NOT a fresh forkChoice.getFinalizedCheckpoint() read after the await) is
-    // important: by the time the microtask queue resumes, the chain may already have
-    // finalized the next epoch and pruned the just-finalized checkpoint state.
+    // need to make sure head of A is at least 40, ie the local status of network is up to date
     const TARGET_FINALIZED_EPOCH = GLOAS_FORK_EPOCH + 1; // 3
-    const finalizedCp = await waitForEvent<CheckpointWithHex>(
-      bn.chain.emitter,
-      ChainEvent.forkChoiceFinalized,
-      150000,
-      (finalized) => finalized.epoch === TARGET_FINALIZED_EPOCH
-    );
+    const HEAD_SLOT_AFTER_FINALIZE = (TARGET_FINALIZED_EPOCH + 2) * SLOTS_PER_EPOCH; // 40
+    const [finalizedCp] = await Promise.all([
+      waitForEvent<CheckpointWithHex>(
+        bn.chain.emitter,
+        ChainEvent.forkChoiceFinalized,
+        150000,
+        (finalized) => finalized.epoch === TARGET_FINALIZED_EPOCH
+      ),
+      waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
+        bn.chain.emitter,
+        routes.events.EventType.head,
+        150000,
+        ({slot}) => slot >= HEAD_SLOT_AFTER_FINALIZE
+      ),
+    ]);
     loggerNodeA.info("Node A reached the epoch-3 skipped-slot finalized checkpoint");
 
     // Confirm the finalized checkpoint is the skipped-slot one: root must resolve to the
@@ -196,68 +275,125 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
       expect.fail("Node B failed to sync to Node A's head in time");
     }
 
-    // 4. Confirm optimistic state: every gloas variant on Node B's chain should be Syncing.
-    // - For ancestors below head: check all 3 variants (PENDING, EMPTY, FULL).
-    // - For the head: range sync may have delivered the block but not its envelope yet
-    const bn2Head = bn2.chain.forkChoice.getHead();
-    const gloasFirstSlot = GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
-    const bn2Ancestors = bn2.chain.forkChoice.getAllAncestorBlocks(bn2Head.blockRoot, bn2Head.payloadStatus);
+    const variants = assertNodeBChainIsSyncing(bn2, loggerNodeB);
+    injectValidAndAssertBackValidated(bn, bn2, variants, loggerNodeB);
+  });
 
-    // Build the (blockRoot, slot, variant) tuples once and reuse for both pre- and
-    // post-validation assertions.
-    const variantsToCheck: Array<{blockRoot: string; slot: Slot; variant: PayloadStatus}> = [];
-    for (const ancestor of bn2Ancestors) {
-      if (ancestor.slot < gloasFirstSlot) continue;
-      if (ancestor.blockRoot === bn2Head.blockRoot) continue;
-      for (const variant of [PayloadStatus.PENDING, PayloadStatus.EMPTY, PayloadStatus.FULL]) {
-        variantsToCheck.push({blockRoot: ancestor.blockRoot, slot: ancestor.slot, variant});
-      }
-    }
-    variantsToCheck.push(
-      {blockRoot: bn2Head.blockRoot, slot: bn2Head.slot, variant: PayloadStatus.PENDING},
-      {blockRoot: bn2Head.blockRoot, slot: bn2Head.slot, variant: PayloadStatus.EMPTY}
-    );
+  it("Checkpoint sync from regular checkpoint (no skipped slot)", async () => {
+    const genesisSlotsDelay = 4;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * (SLOT_DURATION_MS / 1000);
 
-    const expectVariantStatus = (
-      blockRoot: string,
-      slot: Slot,
-      variant: PayloadStatus,
-      expected: ExecutionStatus,
-      phase: string
-    ): void => {
-      const node = bn2.chain.forkChoice.getBlockHex(blockRoot, variant);
-      expect(node?.executionStatus).toBeWithMessage(
-        expected,
-        `expected gloas variant ${variant} of slot=${slot} root=${blockRoot} to be ${expected} ${phase}`
-      );
+    const testLoggerOpts: TestLoggerOpts = {
+      level: LogLevel.debug,
+      timestampFormat: {
+        format: TimestampFormatCode.EpochSlot,
+        genesisTime,
+        slotsPerEpoch: SLOTS_PER_EPOCH,
+        secondsPerSlot: SLOT_DURATION_MS / 1000,
+      },
     };
 
-    for (const {blockRoot, slot, variant} of variantsToCheck) {
-      expectVariantStatus(blockRoot, slot, variant, ExecutionStatus.Syncing, "pre-validation");
-    }
-    loggerNodeB.info("Node B fork-choice: all gloas variants on chain are Syncing (optimistic)");
+    const loggerNodeA = testLogger("CheckpointSync-Node-A", testLoggerOpts);
+    const loggerNodeB = testLogger("CheckpointSync-Node-B", testLoggerOpts);
 
-    // 5. Trigger validation using Node A's known payload for Node B's synced head.
-    // This simulates EL returning VALID for the payload corresponding to the optimistic head.
-    const nodeAHeadFull = bn.chain.forkChoice.getBlockHex(bn2Head.blockRoot, PayloadStatus.FULL);
-    if (nodeAHeadFull === null || nodeAHeadFull.executionPayloadBlockHash === null) {
-      throw Error(`No FULL variant found on Node A for synced head root=${bn2Head.blockRoot}`);
-    }
-    bn2.chain.forkChoice.onExecutionPayload(
-      bn2Head.blockRoot,
-      nodeAHeadFull.executionPayloadBlockHash,
-      nodeAHeadFull.executionPayloadNumber,
-      ExecutionStatus.Valid,
-      DataAvailabilityStatus.Available
+    // Node A: full beacon node, no reorg. Anchor block will be at the epoch-3 boundary slot.
+    const bn = await getDevBeaconNode({
+      params: testParams,
+      options: {
+        sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true, useWorker: false},
+        chain: {blsVerifyAllMainThread: true},
+      },
+      validatorCount,
+      genesisTime,
+      logger: loggerNodeA,
+    });
+    afterEachCallbacks.push(() => bn.close());
+
+    const {validators} = await getAndInitDevValidators({
+      node: bn,
+      logPrefix: "CheckpointSyncVc",
+      validatorsPerClient: validatorCount,
+      validatorClientCount: 1,
+      startIndex: 0,
+      useRestApi: false,
+      testLoggerOpts,
+    });
+    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.close())));
+
+    // need to make sure head of A is at least 40, ie the local status of network is up to date
+    const TARGET_FINALIZED_EPOCH = GLOAS_FORK_EPOCH + 1; // 3
+    const EPOCH_3_BOUNDARY_SLOT = TARGET_FINALIZED_EPOCH * SLOTS_PER_EPOCH; // 24
+    const HEAD_SLOT_AFTER_FINALIZE = (TARGET_FINALIZED_EPOCH + 2) * SLOTS_PER_EPOCH; // 40
+    const [finalizedCp] = await Promise.all([
+      waitForEvent<CheckpointWithHex>(
+        bn.chain.emitter,
+        ChainEvent.forkChoiceFinalized,
+        150000,
+        (finalized) => finalized.epoch === TARGET_FINALIZED_EPOCH
+      ),
+      waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
+        bn.chain.emitter,
+        routes.events.EventType.head,
+        150000,
+        ({slot}) => slot >= HEAD_SLOT_AFTER_FINALIZE
+      ),
+    ]);
+    loggerNodeA.info("Node A reached the epoch-3 finalized checkpoint");
+
+    // Confirm the finalized checkpoint resolves to the block AT the boundary slot (regular case).
+    const finalizedBlock = bn.chain.forkChoice.getFinalizedBlock();
+    expect(finalizedBlock.slot, "Regular checkpoint expected: finalized block should be at the boundary slot").toEqual(
+      EPOCH_3_BOUNDARY_SLOT
     );
-    loggerNodeB.info("Injected VALID payload for synced head to trigger back-validation");
 
-    // 6. Confirm back-validation: same iteration, plus head's FULL (now created by the
-    // onExecutionPayload call above).
-    variantsToCheck.push({blockRoot: bn2Head.blockRoot, slot: bn2Head.slot, variant: PayloadStatus.FULL});
-    for (const {blockRoot, slot, variant} of variantsToCheck) {
-      expectVariantStatus(blockRoot, slot, variant, ExecutionStatus.Valid, "post-validation");
+    const finalizedStateRes = bn.chain.getStateByCheckpoint(finalizedCp);
+    if (!finalizedStateRes) {
+      throw Error("Node A finalized checkpoint state not available");
     }
-    loggerNodeB.info("All gloas variants on chain back-validated to Valid");
+    const anchorState = (finalizedStateRes.state as BeaconStateView).cachedState;
+    expect(anchorState.slot, "Anchor state should be at the epoch-3 boundary slot").toEqual(EPOCH_3_BOUNDARY_SLOT);
+    expect(
+      anchorState.latestBlockHeader.slot,
+      "Anchor's latestBlockHeader should be at the boundary slot (no skip)"
+    ).toEqual(EPOCH_3_BOUNDARY_SLOT);
+
+    // Node B: starts from Node A's finalized checkpoint state.
+    const eth1BlockHash = "0x4242424242424242424242424242424242424242";
+    const bn2 = await getDevBeaconNode({
+      params: testParams,
+      options: {
+        api: {rest: {enabled: false}},
+        network: {useWorker: false},
+        chain: {blsVerifyAllMainThread: true},
+        executionEngine: {mode: "mock", eth1BlockHash},
+      },
+      validatorCount,
+      genesisTime,
+      logger: loggerNodeB,
+      anchorState,
+    });
+    afterEachCallbacks.push(() => bn2.close());
+
+    const headSummary = bn.chain.forkChoice.getHead();
+    const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
+      bn2.chain.emitter,
+      routes.events.EventType.head,
+      30000,
+      ({slot}) => slot >= headSummary.slot - 1
+    );
+
+    await Promise.all([connect(bn2.network, bn.network), onPeerConnect(bn2.network), onPeerConnect(bn.network)]);
+    loggerNodeA.info("Node B connected to Node A");
+
+    try {
+      await waitForSynced;
+      loggerNodeB.info("Node B synced to Node A's head", {slot: headSummary.slot});
+    } catch (_e) {
+      expect.fail("Node B failed to sync to Node A's head in time");
+    }
+
+    const variants = assertNodeBChainIsSyncing(bn2, loggerNodeB);
+    injectValidAndAssertBackValidated(bn, bn2, variants, loggerNodeB);
   });
 });
