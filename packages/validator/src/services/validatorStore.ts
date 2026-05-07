@@ -9,6 +9,7 @@ import {
   DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
@@ -496,11 +497,13 @@ export class ValidatorStore {
     logger?: LoggerVc
   ): Promise<gloas.SignedExecutionPayloadEnvelope> {
     // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
-    if (envelope.slot > currentSlot) {
-      throw Error(`Not signing envelope with slot ${envelope.slot} greater than current slot ${currentSlot}`);
+    if (envelope.payload.slotNumber > currentSlot) {
+      throw Error(
+        `Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`
+      );
     }
 
-    const signingSlot = envelope.slot;
+    const signingSlot = envelope.payload.slotNumber;
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
     const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
 
@@ -662,6 +665,41 @@ export class ValidatorStore {
 
     return {
       message: contributionAndProof,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signPayloadAttestation(
+    duty: routes.validator.PtcDuty,
+    data: gloas.PayloadAttestationData,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<gloas.PayloadAttestationMessage> {
+    if (data.slot > currentSlot) {
+      throw Error(`Not signing payload attestation with slot ${data.slot} greater than current slot ${currentSlot}`);
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+    this.validatePtcDuty(duty, data);
+
+    const signingSlot = data.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_PTC_ATTESTER);
+    const signingRoot = computeSigningRoot(ssz.gloas.PayloadAttestationData, data, domain);
+
+    logger?.debug("Signing payload attestation message", {
+      slot: signingSlot,
+      beaconBlockRoot: toRootHex(data.beaconBlockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      data,
+    };
+
+    return {
+      validatorIndex: duty.validatorIndex,
+      data,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
   }
@@ -847,6 +885,12 @@ export class ValidatorStore {
       }
     } else if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
+    }
+  }
+
+  private validatePtcDuty(duty: routes.validator.PtcDuty, data: gloas.PayloadAttestationData): void {
+    if (duty.slot !== data.slot) {
+      throw Error(`Inconsistent PTC duties during signing: duty.slot ${duty.slot} != data.slot ${data.slot}`);
     }
   }
 

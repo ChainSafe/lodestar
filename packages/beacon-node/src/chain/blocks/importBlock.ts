@@ -9,14 +9,7 @@ import {
   NotReorgedReason,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {
-  ForkPostAltair,
-  ForkPostElectra,
-  ForkPostGloas,
-  ForkSeq,
-  MAX_SEED_LOOKAHEAD,
-  SLOTS_PER_EPOCH,
-} from "@lodestar/params";
+import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
   RootCache,
@@ -27,17 +20,7 @@ import {
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {
-  Attestation,
-  BeaconBlock,
-  SignedBeaconBlock,
-  altair,
-  capella,
-  electra,
-  isGloasBeaconBlock,
-  phase0,
-  ssz,
-} from "@lodestar/types";
+import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -86,8 +69,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
-    fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, dataAvailabilityStatus, indexedAttestations} = fullyVerifiedBlock;
+  let {executionStatus} = fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
@@ -122,44 +105,29 @@ export async function importBlock(
 
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
+  if (fork >= ForkSeq.gloas) {
+    const parentRootHex = toRootHex(block.message.parentRoot);
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+    if (parentBlock === null) {
+      throw Error(`Parent block not found in forkChoice, parentRoot=${parentRootHex}`);
+    }
+    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+      throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
+    }
+    executionStatus = parentBlock.executionStatus;
+  }
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
-    fork >= ForkSeq.gloas ? ExecutionStatus.PayloadSeparated : executionStatus,
+    executionStatus,
     dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
-
-  // For Gloas blocks, create PayloadEnvelopeInput so it's available for later payload import
-  if (fork >= ForkSeq.gloas) {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.add({
-      blockRootHex,
-      block: block as SignedBeaconBlock<ForkPostGloas>,
-      forkName: blockInput.forkName,
-      sampledColumns: this.custodyConfig.sampledColumns,
-      custodyColumns: this.custodyConfig.custodyColumns,
-      timeCreatedSec: fullyVerifiedBlock.seenTimestampSec,
-    });
-    this.logger.debug("Created PayloadEnvelopeInput for block", {
-      slot: blockSlot,
-      root: blockRootHex,
-      source: source.source,
-      ...(opts.seenTimestampSec !== undefined ? {recvToImport: Date.now() / 1000 - opts.seenTimestampSec} : {}),
-    });
-
-    // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
-    // which is all the information we need so there is no reason to delay until execution payload arrives
-    // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
-    // (for example later in the slot). Do not couple retries to incoming gossip columns.
-    // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
-    // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
-    this.getBlobsTracker.triggerGetBlobs(payloadInput);
-  }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});

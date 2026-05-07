@@ -27,6 +27,7 @@ export type CreateFromBlockProps = {
   sampledColumns: ColumnIndex[];
   custodyColumns: ColumnIndex[];
   timeCreatedSec: number;
+  daOutOfRange: boolean;
 };
 
 export type AddPayloadEnvelopeProps = SourceMeta & {

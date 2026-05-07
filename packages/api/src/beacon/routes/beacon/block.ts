@@ -606,7 +606,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       method: "POST",
       req: {
         writeReqJson: ({signedExecutionPayloadEnvelope}) => {
-          const fork = config.getForkName(signedExecutionPayloadEnvelope.message.slot);
+          const fork = config.getForkName(signedExecutionPayloadEnvelope.message.payload.slotNumber);
           return {
             body: getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.toJson(signedExecutionPayloadEnvelope),
             headers: {
@@ -621,7 +621,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           };
         },
         writeReqSsz: ({signedExecutionPayloadEnvelope}) => {
-          const fork = config.getForkName(signedExecutionPayloadEnvelope.message.slot);
+          const fork = config.getForkName(signedExecutionPayloadEnvelope.message.payload.slotNumber);
           return {
             body: getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.serialize(signedExecutionPayloadEnvelope),
             headers: {

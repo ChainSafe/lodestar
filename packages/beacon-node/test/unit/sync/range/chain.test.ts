@@ -1,7 +1,8 @@
-import {afterEach, describe, it} from "vitest";
+import {afterEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
@@ -117,7 +118,7 @@ describe("sync / range / chain", () => {
             })
           );
         }
-        return {result: blocks, warnings: null};
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
       };
 
       const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -172,7 +173,7 @@ describe("sync / range / chain", () => {
           })
         );
       }
-      return {result: blocks, warnings: null};
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
     };
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
@@ -205,6 +206,81 @@ describe("sync / range / chain", () => {
     });
   });
 
+  it("Should handle rate-limited peer without counting as a failed download attempt", async () => {
+    const startEpoch = 0;
+    const targetEpoch = 4;
+    const peer1 = peer;
+    const peer2 = "16Uiu2HAmRateLimitTestPeer2";
+    let peer1Downloads = 0;
+    let peer2Downloads = 0;
+
+    const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (peerMeta, request, _partialDownload) => {
+      if (peerMeta.peerId === peer1) {
+        peer1Downloads++;
+        throw new RequestError({code: RequestErrorCode.RESP_RATE_LIMITED});
+      }
+
+      // peer2 returns blocks normally
+      peer2Downloads++;
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {
+              message: generateEmptyBlock(i),
+              signature: ACCEPT_BLOCK,
+            },
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
+    const syncType = RangeSyncType.Finalized;
+
+    await new Promise<void>((resolve, reject) => {
+      const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const initialSync = new SyncChain(
+        startEpoch,
+        target,
+        syncType,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer,
+          pruneBlockInputs,
+          onEnd,
+        }),
+        {config, logger, clock, custodyConfig, metrics: null}
+      );
+
+      // Add peer1 first — it will get rate-limited
+      initialSync.addPeer(peer1, target);
+
+      // Add peer2 after a short delay — it will complete the sync.
+      // Without rate-limit handling, the chain would die from MAX_BATCH_DOWNLOAD_ATTEMPTS
+      // before peer2 is ever used, because rate-limit errors would rapidly exhaust the retry counter.
+      setTimeout(() => initialSync.addPeer(peer2, target), 50);
+
+      initialSync.startSyncing(startEpoch);
+    });
+
+    // peer1 should have been attempted at least once (rate-limited)
+    expect(peer1Downloads).toBeGreaterThanOrEqual(1);
+    // peer2 should have handled the actual downloads
+    expect(peer2Downloads).toBeGreaterThanOrEqual(1);
+  });
+
   function generateEmptyBlock(slot: Slot): phase0.BeaconBlock {
     return {
       slot,
@@ -218,9 +294,9 @@ describe("sync / range / chain", () => {
 
 function logSyncChainFns(logger: Logger, fns: SyncChainFns): SyncChainFns {
   return {
-    processChainSegment(blocks, syncType) {
+    processChainSegment(blocks, payloadEnvelopes, syncType) {
       logger.debug("mock processChainSegment", {blocks: blocks.map((b) => b.slot).join(",")});
-      return fns.processChainSegment(blocks, syncType);
+      return fns.processChainSegment(blocks, payloadEnvelopes, syncType);
     },
     downloadByRange(peer, request, syncType) {
       logger.debug("mock downloadBeaconBlocksByRange", request.state.status);

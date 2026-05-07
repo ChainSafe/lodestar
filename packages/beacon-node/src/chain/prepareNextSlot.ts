@@ -4,6 +4,7 @@ import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   IBeaconStateView,
+  IBeaconStateViewBellatrix,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
@@ -83,7 +84,7 @@ export class PrepareNextSlotScheduler {
       const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
       const {slot: headSlot, blockRoot: headRoot} = headBlock;
       // may be updated below if we predict a proposer-boost-reorg
-      let updatedHeadRoot = headRoot;
+      let updatedHead = headBlock;
 
       // PS: previously this was comparing slots, but that gave no leway on the skipped
       // slots on epoch bounday. Making it more fluid.
@@ -148,7 +149,7 @@ export class PrepareNextSlotScheduler {
               {dontTransferCache: !isEpochTransition},
               RegenCaller.predictProposerHead
             );
-            updatedHeadRoot = proposerHeadRoot;
+            updatedHead = proposerHead;
           }
 
           // Update the builder status, if enabled shoot an api call to check status
@@ -165,10 +166,22 @@ export class PrepareNextSlotScheduler {
         }
 
         let parentBlockHash: Bytes32;
+        // Apply parent payload once here as it's reused by EL prep and SSE emit below
+        let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
         if (isStatePostGloas(updatedPrepareState)) {
-          parentBlockHash = this.chain.forkChoice.shouldExtendPayload(updatedHeadRoot)
-            ? updatedPrepareState.latestExecutionPayloadBid.blockHash
-            : updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
+          if (this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot)) {
+            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
+            // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
+            if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
+              const parentExecutionRequests = await this.chain.getParentExecutionRequests(
+                updatedHead.slot,
+                updatedHead.blockRoot
+              );
+              stateAfterParentPayload = updatedPrepareState.withParentPayloadApplied(parentExecutionRequests);
+            }
+          } else {
+            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
+          }
         } else {
           parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
         }
@@ -189,11 +202,11 @@ export class PrepareNextSlotScheduler {
             this.chain,
             this.logger,
             fork as ForkPostBellatrix, // State is of execution type
-            fromHex(updatedHeadRoot),
+            fromHex(updatedHead.blockRoot),
             parentBlockHash,
             safeBlockHash,
             finalizedBlockHash,
-            updatedPrepareState,
+            stateAfterParentPayload,
             feeRecipient
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
@@ -203,21 +216,30 @@ export class PrepareNextSlotScheduler {
           });
         }
 
+        if (ForkSeq[fork] >= ForkSeq.gloas) {
+          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
+          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
+          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
+          const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
+          if (updatedHeadParent) {
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelowParent(updatedHeadParent);
+          }
+        }
+
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
 
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event
+        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
+        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
         if (
-          this.chain.opts.emitPayloadAttributes === true &&
+          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
         ) {
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
-            prepareState: updatedPrepareState,
+            prepareState: stateAfterParentPayload,
             prepareSlot,
-            parentBlockRoot: fromHex(headRoot),
+            parentBlockRoot: fromHex(updatedHead.blockRoot),
             parentBlockHash,
-            // The likely consumers of this API are builders and will anyway ignore the
-            // feeRecipient, so just pass zero hash for now till a real use case arises
-            feeRecipient: "0x0000000000000000000000000000000000000000000000000000000000000000",
+            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }

@@ -11,7 +11,7 @@ export function getExecutionPayloadEnvelopeSigningRoot(
   config: BeaconConfig,
   envelope: gloas.ExecutionPayloadEnvelope
 ): Uint8Array {
-  const domain = config.getDomain(envelope.slot, DOMAIN_BEACON_BUILDER);
+  const domain = config.getDomain(envelope.payload.slotNumber, DOMAIN_BEACON_BUILDER);
 
   return computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
 }

@@ -52,6 +52,8 @@ import {
   ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
+  PayloadAttestationError,
+  PayloadAttestationErrorCode,
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
@@ -79,6 +81,7 @@ import {
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {validateGossipPayloadAttestationMessage} from "../../chain/validation/payloadAttestationMessage.js";
+import {validateGossipProposerPreferences} from "../../chain/validation/proposerPreferences.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -182,6 +185,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     });
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex,
+          block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+          forkName: fork,
+          sampledColumns: chain.custodyConfig.sampledColumns,
+          custodyColumns: chain.custodyConfig.custodyColumns,
+          timeCreatedSec: seenTimestampSec,
+        });
+      }
+
       const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
@@ -198,7 +213,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     } catch (e) {
       if (e instanceof BlockGossipError) {
         logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
-        if (e.type.code === BlockErrorCode.PARENT_UNKNOWN && blockInput) {
+        if (
+          (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) &&
+          blockInput
+        ) {
           chain.emitter.emit(ChainEvent.blockUnknownParent, {
             blockInput,
             peer: peerIdStr,
@@ -589,6 +607,24 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
+
+        if (isForkPostGloas(blockInput.forkName)) {
+          const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockInput.blockRootHex);
+          // This payloadInput should have been created just after gossip validation
+          if (!payloadInput) {
+            throw Error(
+              `PayloadEnvelopeInput not seeded for block ${blockInput.blockRootHex} during gossip processing`
+            );
+          }
+
+          // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
+          // which is all the information we need so there is no reason to delay until execution payload arrives
+          // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
+          // (for example later in the slot). Do not couple retries to incoming gossip columns.
+          // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
+          // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+          chain.getBlobsTracker.triggerGetBlobs(payloadInput);
+        }
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -1057,24 +1093,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const signedEnvelope = sszDeserialize(topic, serializedData);
       const envelope = signedEnvelope.message;
 
-      // TODO GLOAS: consider optimistically create PayloadEnvelopeInput here similar to how we do that for beacon_block
-      // so that UnknownBlockSync can handle backward sync
-      // the problem now is we cannot create a PayloadEnvelopeInput without the beacon block being known, we need at least the proposer index
-      // we can achieve that by looking into the EpochCache
+      // unlike BlockInput, we send the envelope into UnknownBlockInput sync
+      // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
       try {
         await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
-          const {slot, beaconBlockRoot} = signedEnvelope.message;
+          const {beaconBlockRoot} = signedEnvelope.message;
+          const slot = signedEnvelope.message.payload.slotNumber;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
-          if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
-            // TODO GLOAS: UnknownBlockSync to handle this
-            chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
-              envelope: signedEnvelope,
-              peer: peerIdStr,
-              source: BlockInputSource.gossip,
-            });
-          }
 
           if (e.action === GossipAction.REJECT) {
             chain.persistInvalidSszValue(
@@ -1088,7 +1115,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         throw e;
       }
 
-      const slot = envelope.slot;
+      const slot = envelope.payload.slotNumber;
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
@@ -1118,7 +1145,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         builderIndex: envelope.builderIndex,
         blockHash: toRootHex(envelope.payload.blockHash),
         blockRoot: blockRootHex,
-        stateRoot: toRootHex(envelope.stateRoot),
       });
 
       chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
@@ -1169,6 +1195,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         version: config.getForkName(executionPayloadBid.message.slot),
         data: executionPayloadBid,
       });
+    },
+    [GossipType.proposer_preferences]: async ({
+      gossipData,
+      topic,
+    }: GossipHandlerParamGeneric<GossipType.proposer_preferences>) => {
+      const {serializedData} = gossipData;
+      const signedProposerPreferences = sszDeserialize(topic, serializedData);
+      await validateGossipProposerPreferences(chain, signedProposerPreferences);
     },
   };
 }
@@ -1292,10 +1326,12 @@ export async function validateGossipFnRetryUnknownRoot<T>(
     try {
       return await fn();
     } catch (e) {
-      if (
-        e instanceof AttestationError &&
-        e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
-      ) {
+      const isUnknownAttestationRoot =
+        e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT;
+      const isUnknownPayloadAttestationRoot =
+        e instanceof PayloadAttestationError && e.type.code === PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT;
+
+      if (isUnknownAttestationRoot || isUnknownPayloadAttestationRoot) {
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
           const rootHex = toRootHex(blockRoot);
