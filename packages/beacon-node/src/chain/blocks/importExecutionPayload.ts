@@ -1,11 +1,10 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, IBeaconStateView, isStatePostGloas} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
-import {wrapError} from "../../util/wrapError.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
@@ -129,16 +128,12 @@ export async function importExecutionPayload(
   }
 
   // 3. Regenerate state for envelope verification
-  let blockState: IBeaconStateView | null = null;
-  const blockStateRes = await wrapError(
-    this.regen.getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.processBlock)
-  );
-  if (blockStateRes.err) {
-    // only happen at the 1st batch of skipped slot checkpoint sync
-    blockState = this.regen.getClosestHeadState(protoBlock);
-  } else {
-    blockState = blockStateRes.result;
-  }
+  const blockState = await this.regen
+    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.processBlock)
+    .catch(() =>
+      // only happen at the 1st batch of skipped slot checkpoint sync
+      this.regen.getClosestHeadState(protoBlock)
+    );
 
   if (blockState == null) {
     throw new PayloadError({

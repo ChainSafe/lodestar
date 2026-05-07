@@ -126,8 +126,7 @@ export async function processBlocks(
       });
     }
 
-    const blockSlots = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
-    const slotSet = new Set<Slot>(blockSlots);
+    const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
     if (payloadEnvelopes) {
       for (const slot of payloadEnvelopes.keys()) slotSet.add(slot);
     }
