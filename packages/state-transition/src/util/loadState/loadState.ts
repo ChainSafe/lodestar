@@ -111,12 +111,12 @@ function loadInactivityScores(
   inactivityScoresBytes: Uint8Array
 ): void {
   // migratedState starts with the same inactivityScores as seed state.
-  // `clone(true)` (dontTransferCache) is REQUIRED: the default transfer-cache clone would alias
-  // the seed subview's internal `nodes[]` / `caches[]` arrays, and a subsequent
-  // `migratedState.commit()` would write the modified score nodes into those shared arrays,
-  // silently corrupting the seed container's cache snapshot. That corruption only surfaces on
-  // the next default `seedState.clone()` read, producing a "Withdrawal mismatch at index=0"-
-  // style divergence downstream.
+  // `clone(true)` (dontTransferCache) is REQUIRED: the default transfer-cache clone reuses the
+  // same `nodes[]` / `caches[]` arrays already referenced by the seed container's cached
+  // inactivityScores snapshot. A subsequent `migratedState.commit()` then writes modified score
+  // nodes into those shared arrays, silently corrupting the seed container cache. That
+  // corruption only surfaces on the next default `seedState.clone()` read, producing a
+  // "Withdrawal mismatch at index=0"-style divergence downstream.
   migratedState.inactivityScores = seedState.inactivityScores.clone(true);
   const oldValidator = migratedState.inactivityScores.length;
   // UintNum64 = 8 bytes
@@ -194,12 +194,12 @@ function loadValidators(
   const isMoreValidator = newValidatorCount >= seedValidatorCount;
   const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
   // migrated state starts with the same validators as seed state.
-  // `clone(true)` (dontTransferCache) is REQUIRED: the default transfer-cache clone would alias
-  // the seed subview's internal `nodes[]` / `caches[]` arrays, and a subsequent
-  // `migratedState.commit()` would write the modified validator nodes into those shared
-  // arrays, silently corrupting the seed container's cache snapshot. That corruption only
-  // surfaces on the next default `seedState.clone()` read, producing a "Withdrawal mismatch at
-  // index=0"-style divergence downstream.
+  // `clone(true)` (dontTransferCache) is REQUIRED: the default transfer-cache clone reuses the
+  // same `nodes[]` / `caches[]` arrays already referenced by the seed container's cached
+  // validators snapshot. A subsequent `migratedState.commit()` then writes modified validator
+  // nodes into those shared arrays, silently corrupting the seed container cache. That
+  // corruption only surfaces on the next default `seedState.clone()` read, producing a
+  // "Withdrawal mismatch at index=0"-style divergence downstream.
   migratedState.validators = seedState.validators.clone(true);
   // 80% of validators serialization time comes from memory allocation
   // seedStateValidatorsBytes is an optimization at beacon-node side to avoid memory allocation here

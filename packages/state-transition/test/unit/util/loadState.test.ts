@@ -41,15 +41,15 @@ describe("loadStateAndValidators", () => {
 });
 
 describe("loadState does not poison seed state's cache", () => {
-  // Regression test for a subtle SSZ TreeViewDU aliasing bug. loadState() used to clone the
-  // seed's validators / inactivityScores subviews with the default transfer-cache semantics:
-  // the clone shared the same internal `nodes[]` / `caches[]` arrays as the cache snapshot
-  // stored on the seed container at `seedState.caches[validatorsFieldIndex]`. A subsequent
-  // `migratedState.commit()` writes modified validator nodes into that shared array, silently
-  // corrupting the seed container's child-view cache snapshot. The corruption is only
-  // observed when the seed is later cloned with transfer-cache (the path verifyBlock takes
-  // via the default `preState.clone()`) and the new clone reads a modified index, at which
-  // point it returns the migrated state's validator instead of the seed's.
+  // Regression test for a subtle SSZ TreeViewDU cache-transfer bug. loadState() used to clone the
+  // seed's validators / inactivityScores subviews with the default transfer-cache semantics.
+  // That does transfer cache away from the source subview, but the transferred `nodes[]` /
+  // `caches[]` arrays are still the same ones referenced by the seed container's cached child
+  // snapshot. A subsequent `migratedState.commit()` writes modified validator nodes into those
+  // shared arrays, silently corrupting the seed container cache. The corruption is only
+  // observed when the seed is later cloned with transfer-cache (the path verifyBlock takes via
+  // the default `preState.clone()`) and the new clone reads a modified index, at which point
+  // it returns the migrated state's validator instead of the seed's.
   //
   // Fix: clone the seed's validators/inactivityScores subviews with `clone(true)` so the
   // migrated subview gets a fresh (empty) cache and its commit cannot reach into the seed's
