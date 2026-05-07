@@ -21,8 +21,6 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {
-  BeaconBlocksByHeadRequest,
-  BeaconBlocksByHeadRequestType,
   BeaconBlocksByRootRequest,
   BeaconBlocksByRootRequestType,
   BlobSidecarsByRootRequest,
@@ -65,7 +63,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.Metadata]: null;
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
-  [ReqRespMethod.BeaconBlocksByHead]: BeaconBlocksByHeadRequest;
+  [ReqRespMethod.BeaconBlocksByHead]: fulu.BeaconBlocksByHeadRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
@@ -116,7 +114,7 @@ export const requestSszTypeByMethod: (
 
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
-  [ReqRespMethod.BeaconBlocksByHead]: BeaconBlocksByHeadRequestType,
+  [ReqRespMethod.BeaconBlocksByHead]: ssz.fulu.BeaconBlocksByHeadRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,

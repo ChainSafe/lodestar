@@ -19,15 +19,6 @@ export const BeaconBlocksByRootRequestType = (fork: ForkName, config: BeaconConf
   new ListCompositeType(ssz.Root, isForkPostDeneb(fork) ? config.MAX_REQUEST_BLOCKS_DENEB : config.MAX_REQUEST_BLOCKS);
 export type BeaconBlocksByRootRequest = ValueOf<ReturnType<typeof BeaconBlocksByRootRequestType>>;
 
-export const BeaconBlocksByHeadRequestType = new ContainerType(
-  {
-    beaconRoot: ssz.Root,
-    count: ssz.UintNum64,
-  },
-  {typeName: "BeaconBlocksByHeadRequest", jsonCase: "eth2"}
-);
-export type BeaconBlocksByHeadRequest = ValueOf<typeof BeaconBlocksByHeadRequestType>;
-
 export const BlobSidecarsByRootRequestType = (fork: ForkName, config: BeaconConfig) =>
   new ListCompositeType(
     ssz.deneb.BlobIdentifier,

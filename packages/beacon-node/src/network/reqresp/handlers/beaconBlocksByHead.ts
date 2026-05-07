@@ -3,14 +3,14 @@ import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {fulu} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {getParentRootFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
-import {BeaconBlocksByHeadRequest} from "../../../util/types.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onBeaconBlocksByHead(
-  request: BeaconBlocksByHeadRequest,
+  request: fulu.BeaconBlocksByHeadRequest,
   chain: IBeaconChain,
   peerId: PeerId,
   peerClient: string
@@ -69,8 +69,8 @@ export async function* onBeaconBlocksByHead(
 
 export function validateBeaconBlocksByHeadRequest(
   config: BeaconConfig,
-  request: BeaconBlocksByHeadRequest
-): BeaconBlocksByHeadRequest {
+  request: fulu.BeaconBlocksByHeadRequest
+): fulu.BeaconBlocksByHeadRequest {
   const {beaconRoot} = request;
   let {count} = request;
 

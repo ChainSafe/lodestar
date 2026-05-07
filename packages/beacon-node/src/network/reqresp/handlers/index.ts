@@ -3,7 +3,6 @@ import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {
-  BeaconBlocksByHeadRequestType,
   BeaconBlocksByRootRequestType,
   BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequestType,
@@ -50,7 +49,7 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       return onBeaconBlocksByRoot(body, chain);
     },
     [ReqRespMethod.BeaconBlocksByHead]: (req, peerId, peerClient) => {
-      const body = BeaconBlocksByHeadRequestType.deserialize(req.data);
+      const body = ssz.fulu.BeaconBlocksByHeadRequest.deserialize(req.data);
       return onBeaconBlocksByHead(body, chain, peerId, peerClient);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
