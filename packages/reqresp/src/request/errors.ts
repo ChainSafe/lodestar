@@ -1,5 +1,6 @@
 import {LodestarError, LodestarErrorObject} from "@lodestar/utils";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
+import {DEFAULT_RATE_LIMIT_BACKOFF_MS} from "../rate_limiter/selfRateLimiter.js";
 import {ResponseError} from "../response/index.js";
 
 export enum RequestErrorCode {
@@ -35,7 +36,7 @@ export enum RequestErrorCode {
   SSZ_OVER_MAX_SIZE = "SSZ_SNAPPY_ERROR_OVER_SSZ_MAX_SIZE",
 }
 
-type RequestErrorType =
+export type RequestErrorType =
   | {code: RequestErrorCode.INVALID_REQUEST; errorMessage: string}
   | {code: RequestErrorCode.INVALID_RESPONSE_SSZ; errorMessage: string}
   | {code: RequestErrorCode.SERVER_ERROR; errorMessage: string}
@@ -48,8 +49,8 @@ type RequestErrorType =
   | {code: RequestErrorCode.EMPTY_RESPONSE}
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED}
-  | {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}
-  | {code: RequestErrorCode.RESP_RATE_LIMITED}
+  | {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED; rateLimitedUntilMs?: number}
+  | {code: RequestErrorCode.RESP_RATE_LIMITED; rateLimitedUntilMs: number}
   | {code: RequestErrorCode.SSZ_OVER_MAX_SIZE};
 
 export const REQUEST_ERROR_CLASS_NAME = "RequestError";
@@ -83,7 +84,7 @@ export function responseStatusErrorToRequestError(e: ResponseError): RequestErro
   // See https://github.com/ChainSafe/lodestar/issues/8065#issuecomment-3157266196
   const errorMessageLowercase = errorMessage.toLowerCase();
   if (errorMessageLowercase.includes("rate limit")) {
-    return {code: RequestErrorCode.RESP_RATE_LIMITED};
+    return {code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS};
   }
 
   // Grandine's eth2_libp2p fork uses the old Lighthouse GCRA inbound rate limiter which sends
@@ -92,7 +93,7 @@ export function responseStatusErrorToRequestError(e: ResponseError): RequestErro
   // is intentionally not parsed.
   // See https://github.com/ChainSafe/lodestar/issues/8110
   if (errorMessageLowercase.startsWith("wait ")) {
-    return {code: RequestErrorCode.RESP_RATE_LIMITED};
+    return {code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS};
   }
 
   switch (status) {

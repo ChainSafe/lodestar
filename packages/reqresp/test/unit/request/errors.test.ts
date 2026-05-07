@@ -15,6 +15,7 @@ describe("responseStatusErrorToRequestError", () => {
     it(`maps "${errorMessage}" to RESP_RATE_LIMITED`, () => {
       expect(responseStatusErrorToRequestError(new ResponseError(RespStatus.INVALID_REQUEST, errorMessage))).toEqual({
         code: RequestErrorCode.RESP_RATE_LIMITED,
+        rateLimitedUntilMs: expect.any(Number),
       });
     });
   }
