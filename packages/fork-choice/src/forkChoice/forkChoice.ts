@@ -66,9 +66,22 @@ export enum UpdateHeadOpt {
   GetPredictedProposerHead = "getPredictedProposerHead", // With predictProposerHead
 }
 
+/**
+ * Sum of effective-balance increments for validators that are members of any committee at
+ * `head.slot` and in `store.equivocating_indices`. Used by Gloas `is_head_weak`
+ * (https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/fork-choice.md#modified-is_head_weak).
+ * Computed by the chain layer since fork-choice has no committee access.
+ */
+export type GetEquivocatingCommitteeWeightIncrementsFn = (head: ProtoBlock) => number;
+
 export type UpdateAndGetHeadOpt =
   | {mode: UpdateHeadOpt.GetCanonicalHead}
-  | {mode: UpdateHeadOpt.GetProposerHead; secFromSlot: number; slot: Slot}
+  | {
+      mode: UpdateHeadOpt.GetProposerHead;
+      secFromSlot: number;
+      slot: Slot;
+      getEquivocatingCommitteeWeightIncrements?: GetEquivocatingCommitteeWeightIncrementsFn;
+    }
   | {mode: UpdateHeadOpt.GetPredictedProposerHead; secFromSlot: number; slot: Slot};
 
 // the initial vote epoch for all validators
@@ -229,11 +242,13 @@ export class ForkChoice implements IForkChoice {
       case UpdateHeadOpt.GetPredictedProposerHead:
         return {head: this.predictProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot)};
       case UpdateHeadOpt.GetProposerHead: {
+        const equivocatingCommitteeWeightIncrements =
+          opt.getEquivocatingCommitteeWeightIncrements?.(canonicalHeadBlock) ?? 0;
         const {
           proposerHead: head,
           isHeadTimely,
           notReorgedReason,
-        } = this.getProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot);
+        } = this.getProposerHead(canonicalHeadBlock, opt.secFromSlot, opt.slot, equivocatingCommitteeWeightIncrements);
         return {head, isHeadTimely, notReorgedReason};
       }
       case UpdateHeadOpt.GetCanonicalHead:
@@ -372,7 +387,8 @@ export class ForkChoice implements IForkChoice {
   getProposerHead(
     headBlock: ProtoBlock,
     secFromSlot: number,
-    slot: Slot
+    slot: Slot,
+    equivocatingCommitteeWeightIncrements = 0
   ): {proposerHead: ProtoBlock; isHeadTimely: boolean; notReorgedReason?: NotReorgedReason} {
     const isHeadTimely = headBlock.timeliness;
     let proposerHead = headBlock;
@@ -424,13 +440,15 @@ export class ForkChoice implements IForkChoice {
 
     // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak
+    // Gloas additionally counts weight from equivocating validators in head-slot committees.
+    // https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/fork-choice.md#modified-is_head_weak
     const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
     });
     const headNode = this.protoArray.getNode(headBlock.blockRoot, headBlock.payloadStatus);
     // If headNode is unavailable, give up reorg
-    if (headNode === undefined || headNode.weight >= reorgThreshold) {
+    if (headNode === undefined || headNode.weight + equivocatingCommitteeWeightIncrements >= reorgThreshold) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.HeadBlockNotWeak};
     }
 
@@ -569,6 +587,10 @@ export class ForkChoice implements IForkChoice {
 
   getJustifiedCheckpoint(): CheckpointWithHex {
     return this.fcStore.justified.checkpoint;
+  }
+
+  getEquivocatingIndices(): ReadonlySet<ValidatorIndex> {
+    return this.fcStore.equivocatingIndices;
   }
 
   /**

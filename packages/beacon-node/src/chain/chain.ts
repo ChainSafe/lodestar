@@ -1196,6 +1196,8 @@ export class BeaconChain implements IBeaconChain {
         mode: UpdateHeadOpt.GetProposerHead,
         secFromSlot,
         slot,
+        getEquivocatingCommitteeWeightIncrements: (headBlock) =>
+          this.computeEquivocatingCommitteeWeightIncrements(headBlock),
       });
 
       if (isHeadTimely && notReorgedReason !== undefined) {
@@ -1208,6 +1210,44 @@ export class BeaconChain implements IBeaconChain {
     } finally {
       timer?.();
     }
+  }
+
+  /**
+   * Sum effective-balance increments of validators that are both members of any committee at
+   * `headBlock.slot` and tracked as equivocators by fork choice. Returns 0 pre-Gloas, when there
+   * are no equivocators, or when head state is not synchronously available.
+   * https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/fork-choice.md#modified-is_head_weak
+   */
+  private computeEquivocatingCommitteeWeightIncrements(headBlock: ProtoBlock): number {
+    const headEpoch = computeEpochAtSlot(headBlock.slot);
+    if (!isForkPostGloas(this.config.getForkName(headBlock.slot))) {
+      return 0;
+    }
+    const equivocatingIndices = this.forkChoice.getEquivocatingIndices();
+    if (equivocatingIndices.size === 0) {
+      return 0;
+    }
+    const headState = this.regen.getStateSync(headBlock.stateRoot);
+    if (headState === null) {
+      return 0;
+    }
+    let shuffling: EpochShuffling;
+    try {
+      shuffling = headState.getShufflingAtEpoch(headEpoch);
+    } catch {
+      return 0;
+    }
+    const slotCommittees = shuffling.committees[headBlock.slot % SLOTS_PER_EPOCH];
+    const ebi = headState.effectiveBalanceIncrements;
+    let weight = 0;
+    for (const committee of slotCommittees) {
+      for (const validatorIndex of committee) {
+        if (equivocatingIndices.has(validatorIndex)) {
+          weight += ebi[validatorIndex] ?? 0;
+        }
+      }
+    }
+    return weight;
   }
 
   /**

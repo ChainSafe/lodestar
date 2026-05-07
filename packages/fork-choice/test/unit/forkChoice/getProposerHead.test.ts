@@ -151,6 +151,8 @@ describe("Forkchoice / GetProposerHead", () => {
     currentSlot?: Slot;
     secFromSlot?: number;
     expectedNotReorgedReason?: NotReorgedReason;
+    // Gloas-only: extra weight added to the head from equivocating committee members at head's slot
+    equivocatingCommitteeWeightIncrements?: number;
   }[] = [
     {
       id: "Case that meets all conditions to be re-orged",
@@ -232,6 +234,36 @@ describe("Forkchoice / GetProposerHead", () => {
       secFromSlot: config.getProposerReorgCutoffMs(ForkName.phase0) / 1000 + 1,
       expectedNotReorgedReason: NotReorgedReason.NotProposingOnTime,
     },
+    // Gloas: modified `is_head_weak` adds weight from equivocating committee members at head slot.
+    // Head with weight 29 (< threshold 30) is weak by phase0 rule, but with 2 increments of equivocator
+    // weight added (29 + 2 = 31 >= 30), head becomes "not weak" — no reorg.
+    // https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/fork-choice.md#modified-is_head_weak
+    {
+      id: "Gloas: no reorg when equivocator weight pushes head above threshold",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      expectReorg: false,
+      equivocatingCommitteeWeightIncrements: 2,
+      expectedNotReorgedReason: NotReorgedReason.HeadBlockNotWeak,
+    },
+    // Gloas monotonicity: equivocator weight that doesn't reach the threshold doesn't change the
+    // outcome — head still weak, reorg still proceeds (29 + 0 = 29 < 30).
+    {
+      id: "Gloas: zero equivocator weight matches phase0 reorg behavior",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      expectReorg: true,
+      equivocatingCommitteeWeightIncrements: 0,
+    },
+    // Gloas: equivocator weight that closes exactly to the threshold makes head not weak.
+    {
+      id: "Gloas: equivocator weight tying threshold makes head not weak",
+      parentBlock: {...baseParentHeadBlock},
+      headBlock: {...baseHeadBlock},
+      expectReorg: false,
+      equivocatingCommitteeWeightIncrements: 1, // 29 + 1 = 30, the threshold
+      expectedNotReorgedReason: NotReorgedReason.HeadBlockNotWeak,
+    },
   ];
 
   beforeEach(() => {
@@ -246,6 +278,7 @@ describe("Forkchoice / GetProposerHead", () => {
     currentSlot: proposalSlot,
     secFromSlot,
     expectedNotReorgedReason,
+    equivocatingCommitteeWeightIncrements,
   } of testCases) {
     it(`${id}`, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot, null);
@@ -271,7 +304,8 @@ describe("Forkchoice / GetProposerHead", () => {
       const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(
         headBlock,
         currentSecFromSlot,
-        currentSlot
+        currentSlot,
+        equivocatingCommitteeWeightIncrements
       );
 
       expect(isHeadTimely).toBe(headBlock.timeliness);

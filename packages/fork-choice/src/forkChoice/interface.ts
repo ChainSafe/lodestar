@@ -1,5 +1,14 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+} from "@lodestar/types";
 import {
   BlockExecutionStatus,
   LVHExecResponse,
@@ -123,6 +132,7 @@ export interface IForkChoice {
   getAllNodes(): ProtoNode[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
+  getEquivocatingIndices(): ReadonlySet<ValidatorIndex>;
   /**
    * Add `block` to the fork choice DAG.
    *
