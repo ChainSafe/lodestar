@@ -1,6 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {BeaconConfig} from "@lodestar/config";
-import {GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
+import {ForkName, GENESIS_EPOCH, GENESIS_SLOT, isForkPostDeneb} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {fulu} from "@lodestar/types";
@@ -9,13 +9,15 @@ import {IBeaconChain} from "../../../chain/index.js";
 import {getParentRootFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 import {prettyPrintPeerId} from "../../util.js";
 
+// See https://github.com/ethereum/consensus-specs/pull/5181
 export async function* onBeaconBlocksByHead(
   request: fulu.BeaconBlocksByHeadRequest,
   chain: IBeaconChain,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
-  const {beaconRoot, count} = validateBeaconBlocksByHeadRequest(chain.config, request);
+  const currentFork = chain.config.getForkName(chain.clock.currentSlot);
+  const {beaconRoot, count} = validateBeaconBlocksByHeadRequest(currentFork, chain.config, request);
 
   const requestedRootHex = toRootHex(beaconRoot);
   let blockRootHex = requestedRootHex;
@@ -68,18 +70,21 @@ export async function* onBeaconBlocksByHead(
 }
 
 export function validateBeaconBlocksByHeadRequest(
+  fork: ForkName,
   config: BeaconConfig,
   request: fulu.BeaconBlocksByHeadRequest
 ): fulu.BeaconBlocksByHeadRequest {
   const {beaconRoot} = request;
   let {count} = request;
 
-  if (count < 0) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 0");
+  if (count < 1) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
 
-  if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
-    count = config.MAX_REQUEST_BLOCKS_DENEB;
+  const maxRequestBlocks = isForkPostDeneb(fork) ? config.MAX_REQUEST_BLOCKS_DENEB : config.MAX_REQUEST_BLOCKS;
+
+  if (count > maxRequestBlocks) {
+    count = maxRequestBlocks;
   }
 
   return {beaconRoot, count};
