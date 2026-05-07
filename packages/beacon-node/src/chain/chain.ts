@@ -431,7 +431,7 @@ export class BeaconChain implements IBeaconChain {
 
     const anchorBlockSlot = anchorState.latestBlockHeader.slot;
     if (isStatePostGloas(anchorState) && anchorBlockSlot > 0) {
-      const anchorBid = (anchorState as IBeaconStateViewGloas).latestExecutionPayloadBid;
+      const anchorBid = anchorState.latestExecutionPayloadBid;
       this.seenPayloadEnvelopeInputCache.addFromBid({
         blockRootHex: toRootHex(checkpoint.root),
         slot: anchorBlockSlot,
