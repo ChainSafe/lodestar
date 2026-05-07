@@ -374,24 +374,28 @@ export class Batch {
       return this.requests;
     }
 
-    // post-fulu we need to ensure that we only request columns that the peer has advertised
-    const {columnsRequest} = this.requests;
-    if (columnsRequest == null) {
-      return this.requests;
-    }
+    // post-fulu we need to ensure that we only request columns that the peer has advertised.
+    const {columnsRequest, parentPayloadRequest} = this.requests;
 
     const peerColumns = new Set(peer.custodyColumns ?? []);
-    const requestedColumns = columnsRequest.columns.filter((c) => peerColumns.has(c));
-    if (requestedColumns.length === columnsRequest.columns.length) {
-      return this.requests;
-    }
+    const filteredColumnsRequest =
+      columnsRequest != null ? columnsRequest.columns.filter((c) => peerColumns.has(c)) : null;
+    const parentColumns = parentPayloadRequest?.columns;
+    const filteredParentColumns = parentColumns != null ? parentColumns.filter((c) => peerColumns.has(c)) : null;
+
+    const updatedColumnRequest =
+      columnsRequest != null && filteredColumnsRequest != null
+        ? {columnsRequest: {...columnsRequest, columns: filteredColumnsRequest}}
+        : {};
+    const updatedParentPayloadRequest =
+      parentPayloadRequest != null && filteredParentColumns != null
+        ? {parentPayloadRequest: {...parentPayloadRequest, columns: filteredParentColumns}}
+        : {};
 
     return {
       ...this.requests,
-      columnsRequest: {
-        ...columnsRequest,
-        columns: requestedColumns,
-      },
+      ...updatedColumnRequest,
+      ...updatedParentPayloadRequest,
     };
   }
 
