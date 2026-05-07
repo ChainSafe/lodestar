@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {RequestErrorCode} from "@lodestar/reqresp";
-import {Epoch, Root, Slot} from "@lodestar/types";
+import {Epoch, Root, Slot, gloas} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
@@ -145,6 +145,10 @@ export class SyncChain {
   private readonly batchProcessor = new ItTrigger();
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
+  /**
+   * `true` until the first `Batch` is constructed via `includeNextBatch`
+   */
+  private isFirstBatch = true;
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
   /**
    * Tracks peers that have rate-limited us, mapped to the timestamp (ms) until which we should avoid them.
@@ -158,13 +162,15 @@ export class SyncChain {
   private readonly clock: IClock;
   private readonly metrics: Metrics | null;
   private readonly custodyConfig: CustodyConfig;
+  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
 
   constructor(
     initialBatchEpoch: Epoch,
     initialTarget: ChainTarget,
     syncType: RangeSyncType,
     fns: SyncChainFns,
-    modules: SyncChainModules
+    modules: SyncChainModules,
+    latestBid: gloas.ExecutionPayloadBid | undefined
   ) {
     const {config, clock, custodyConfig, logger, metrics} = modules;
     this.firstBatchEpoch = initialBatchEpoch;
@@ -180,6 +186,7 @@ export class SyncChain {
     this.clock = clock;
     this.metrics = metrics;
     this.custodyConfig = custodyConfig;
+    this.latestBid = latestBid;
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
 
@@ -481,7 +488,17 @@ export class SyncChain {
       return null;
     }
 
-    const batch = new Batch(startEpoch, this.config, this.clock, this.custodyConfig);
+    const batch = new Batch(
+      startEpoch,
+      this.config,
+      this.clock,
+      this.custodyConfig,
+      this.isFirstBatch,
+      // `latestBid` is only meaningful for the first batch's parent-payload check
+      this.isFirstBatch ? this.latestBid : undefined,
+      this.target.slot
+    );
+    this.isFirstBatch = false;
     this.batches.set(startEpoch, batch);
     return batch;
   }
