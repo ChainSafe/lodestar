@@ -16,7 +16,6 @@ import {
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
-  IBeaconStateViewGloas,
   PubkeyCache,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
