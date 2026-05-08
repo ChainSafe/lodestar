@@ -222,7 +222,15 @@ describe("sync / range / batches", () => {
   });
 
   function createBatch(status: BatchStatus, startEpoch = 0): Batch {
-    const batch = new Batch(startEpoch, config, clock, new CustodyConfig({config, nodeId: Buffer.alloc(32)}));
+    const batch = new Batch(
+      startEpoch,
+      config,
+      clock,
+      new CustodyConfig({config, nodeId: Buffer.alloc(32)}),
+      false,
+      undefined,
+      Number.MAX_SAFE_INTEGER
+    );
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 

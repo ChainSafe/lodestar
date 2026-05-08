@@ -1,18 +1,19 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
-import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {LodestarError, prettyPrintIndices} from "@lodestar/utils";
+import {Epoch, RootHex, SignedBeaconBlock, Slot, gloas, phase0} from "@lodestar/types";
+import {LodestarError, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
+import {ZERO_HASH} from "../../constants/constants.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
+import {DownloadByRangeRequests, ParentPayloadCommitments} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
 /**
@@ -141,8 +142,18 @@ export class Batch {
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
+  private readonly isFirstBatchInChain: boolean;
+  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
 
-  constructor(startEpoch: Epoch, config: ChainForkConfig, clock: IClock, custodyConfig: CustodyConfig) {
+  constructor(
+    startEpoch: Epoch,
+    config: ChainForkConfig,
+    clock: IClock,
+    custodyConfig: CustodyConfig,
+    isFirstBatchInChain: boolean,
+    latestBid: gloas.ExecutionPayloadBid | undefined,
+    targetSlot: Slot
+  ) {
     this.config = config;
     this.clock = clock;
     this.custodyConfig = custodyConfig;
@@ -151,8 +162,38 @@ export class Batch {
     this.forkName = this.config.getForkName(startSlot);
     this.startEpoch = startEpoch;
     this.startSlot = startSlot;
-    this.count = count;
+    this.count = Math.min(count, targetSlot - startSlot + 1);
+    this.isFirstBatchInChain = isFirstBatchInChain;
+    this.latestBid = latestBid;
     this.requests = this.getRequests([]);
+  }
+
+  private shouldDownloadParentEnvelope(firstBlock?: SignedBeaconBlock): boolean {
+    if (!this.isFirstBatchInChain) return false;
+
+    if (this.startSlot === 0 || !isForkPostGloas(this.config.getForkName(this.startSlot - 1))) {
+      return false;
+    }
+
+    // we only know if we should download parent envelope if firstBlock is downloaded
+    if (firstBlock === undefined) return false;
+    if (this.latestBid === undefined) return false;
+    const firstBlockBidParentHash = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
+      .parentBlockHash;
+    return byteArrayEquals(firstBlockBidParentHash, this.latestBid.blockHash);
+  }
+
+  getParentPayloadCommitments(parentBlockRoot: Uint8Array): ParentPayloadCommitments {
+    if (this.latestBid === undefined) {
+      throw new Error(
+        `Coding error: getParentPayloadCommitments called without latestBid for parentBlockRoot=${toRootHex(parentBlockRoot)}`
+      );
+    }
+    return {
+      blockRoot: parentBlockRoot,
+      blockRootHex: toRootHex(parentBlockRoot),
+      kzgCommitments: this.latestBid.blobKzgCommitments,
+    };
   }
 
   /**
@@ -292,6 +333,36 @@ export class Batch {
       };
     }
 
+    // Only the first batch of a SyncChain may need the dangling-parent payload by-root.
+    if (blocks.length > 0 && this.shouldDownloadParentEnvelope(blocks[0].getBlock())) {
+      // shouldDownloadParentEnvelope() = true means there are at least 1 block
+      const parentRoot = blocks[0].getBlock().message.parentRoot;
+      if (!byteArrayEquals(parentRoot, ZERO_HASH)) {
+        const parentRootHex = toRootHex(parentRoot);
+        let parentPayloadInput: PayloadEnvelopeInput | undefined;
+        if (this.state.payloadEnvelopes) {
+          for (const pi of this.state.payloadEnvelopes.values()) {
+            if (pi.blockRootHex === parentRootHex) {
+              parentPayloadInput = pi;
+              break;
+            }
+          }
+        }
+
+        const needsEnvelope = !parentPayloadInput?.hasPayloadEnvelope();
+        const missingColumns = parentPayloadInput
+          ? parentPayloadInput.getMissingSampledColumnMeta().missing
+          : this.custodyConfig.sampledColumns;
+
+        if (needsEnvelope || missingColumns.length > 0) {
+          requests.parentPayloadRequest = {
+            ...(needsEnvelope ? {envelopeBlockRoot: parentRoot} : {}),
+            ...(missingColumns.length > 0 ? {blockRoot: parentRoot, columns: missingColumns} : {}),
+          };
+        }
+      }
+    }
+
     return requests;
   }
 
@@ -303,24 +374,28 @@ export class Batch {
       return this.requests;
     }
 
-    // post-fulu we need to ensure that we only request columns that the peer has advertised
-    const {columnsRequest} = this.requests;
-    if (columnsRequest == null) {
-      return this.requests;
-    }
+    // post-fulu we need to ensure that we only request columns that the peer has advertised.
+    const {columnsRequest, parentPayloadRequest} = this.requests;
 
     const peerColumns = new Set(peer.custodyColumns ?? []);
-    const requestedColumns = columnsRequest.columns.filter((c) => peerColumns.has(c));
-    if (requestedColumns.length === columnsRequest.columns.length) {
-      return this.requests;
-    }
+    const filteredColumnsRequest =
+      columnsRequest != null ? columnsRequest.columns.filter((c) => peerColumns.has(c)) : null;
+    const parentColumns = parentPayloadRequest?.columns;
+    const filteredParentColumns = parentColumns != null ? parentColumns.filter((c) => peerColumns.has(c)) : null;
+
+    const updatedColumnRequest =
+      columnsRequest != null && filteredColumnsRequest != null
+        ? {columnsRequest: {...columnsRequest, columns: filteredColumnsRequest}}
+        : {};
+    const updatedParentPayloadRequest =
+      parentPayloadRequest != null && filteredParentColumns != null
+        ? {parentPayloadRequest: {...parentPayloadRequest, columns: filteredParentColumns}}
+        : {};
 
     return {
       ...this.requests,
-      columnsRequest: {
-        ...columnsRequest,
-        columns: requestedColumns,
-      },
+      ...updatedColumnRequest,
+      ...updatedParentPayloadRequest,
     };
   }
 
@@ -422,10 +497,33 @@ export class Batch {
     if (allComplete && isForkPostGloas(this.forkName)) {
       for (const block of blocks) {
         const payloadInput = newPayloadEnvelopes?.get(block.slot);
-        // by_range needs to download all columns
+        // by_range needs every block's envelope and all sampled columns.
         if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
           allComplete = false;
           break;
+        }
+      }
+    }
+
+    // First batch of a sync chain must additionally have the dangling-parent payload fully
+    // present, otherwise `processBlocks` will throw PARENT_PAYLOAD_UNKNOWN. The parent's
+    // `PayloadEnvelopeInput` is identified by `blockRootHex` matching `blocks[0].parentRoot`.
+    if (allComplete && blocks.length > 0 && this.shouldDownloadParentEnvelope(blocks[0].getBlock())) {
+      const parentRoot = blocks[0].getBlock().message.parentRoot;
+      // Genesis has no parent payload — nothing to wait for.
+      if (!byteArrayEquals(parentRoot, ZERO_HASH)) {
+        const parentRootHex = toRootHex(parentRoot);
+        let parentPayloadComplete = false;
+        if (newPayloadEnvelopes) {
+          for (const payloadInput of newPayloadEnvelopes.values()) {
+            if (payloadInput.blockRootHex === parentRootHex) {
+              parentPayloadComplete = payloadInput.hasPayloadEnvelope() && payloadInput.hasComputedAllData();
+              break;
+            }
+          }
+        }
+        if (!parentPayloadComplete) {
+          allComplete = false;
         }
       }
     }
@@ -451,6 +549,22 @@ export class Batch {
     this.failedDownloadAttempts.push(peer);
     if (this.failedDownloadAttempts.length > MAX_BATCH_DOWNLOAD_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}));
+    }
+
+    this.state = {
+      status: BatchStatus.AwaitingDownload,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+    };
+  }
+
+  /**
+   * Downloading -> AwaitingDownload (without counting as a failed attempt).
+   * Used when the peer rate-limited us — the request was never actually served.
+   */
+  downloadingRateLimited(): void {
+    if (this.state.status !== BatchStatus.Downloading) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
 
     this.state = {
