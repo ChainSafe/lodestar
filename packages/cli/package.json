@@ -73,7 +73,6 @@
     "@lodestar/beacon-node": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",
-    "@lodestar/light-client": "workspace:^",
     "@lodestar/logger": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/state-transition": "workspace:^",

@@ -22,10 +22,8 @@ COPY packages/db/package.json packages/db/
 COPY packages/era/package.json packages/era/
 COPY packages/flare/package.json packages/flare/
 COPY packages/fork-choice/package.json packages/fork-choice/
-COPY packages/light-client/package.json packages/light-client/
 COPY packages/logger/package.json packages/logger/
 COPY packages/params/package.json packages/params/
-COPY packages/prover/package.json packages/prover/
 COPY packages/reqresp/package.json packages/reqresp/
 COPY packages/spec-test-util/package.json packages/spec-test-util/
 COPY packages/state-transition/package.json packages/state-transition/

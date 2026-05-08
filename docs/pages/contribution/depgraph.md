@@ -13,8 +13,6 @@ This dependency graph only applies to dependencies as they are used in the `src/
 ```mermaid
 graph TD
     api["api"]:::nodemodule
-    light-client["light-client"]:::nodemodule
-    prover["prover"]:::nodemodule
     logger["logger"]:::nodemodule
     reqresp["reqresp"]:::nodemodule
     beacon-node["beacon-node"]:::nodemodule
@@ -40,7 +38,6 @@ graph TD
     ssz-->types
     ssz-->beacon-node
     ssz-->validator
-    ssz-->light-client
     ssz-->state-transition
 
     blst-->beacon-node
@@ -56,17 +53,11 @@ graph TD
 
     api-->beacon-node
     api-->validator
-    api-->light-client
-
-    light-client-->prover
-
     params-->api
     params-->config
     params-->types
     params-->beacon-node
     params-->validator
-    params-->light-client
-    params-->prover
 
     types-->api
     types-->beacon-node
@@ -74,8 +65,6 @@ graph TD
     types-->config
     types-->validator
     types-->fork-choice
-    types-->light-client
-    types-->prover
 
     config-->api
     config-->beacon-node
@@ -84,8 +73,6 @@ graph TD
     config-->fork-choice
     config-->state-transition
     config-->db
-    config-->light-client
-    config-->prover
 
     utils-->api
     utils-->beacon-node
@@ -94,12 +81,9 @@ graph TD
     utils-->validator
     utils-->fork-choice
     utils-->state-transition
-    utils-->light-client
 
     logger-->beacon-node
     logger-->validator
-    logger-->light-client
-    logger-->prover
     logger-->cli
 
     reqresp-->beacon-node
@@ -115,11 +99,8 @@ graph TD
 
     beacon-node-->cli
     validator-->cli
-    light-client-->cli
 
     click api "https://github.com/ChainSafe/lodestar/tree/unstable/packages/api"
-    click light-client "https://github.com/ChainSafe/lodestar/tree/unstable/packages/light-client"
-    click prover "https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover"
     click logger "https://github.com/ChainSafe/lodestar/tree/unstable/packages/logger"
     click reqresp "https://github.com/ChainSafe/lodestar/tree/unstable/packages/reqresp"
     click cli "https://github.com/ChainSafe/lodestar/tree/unstable/packages/cli"
@@ -178,10 +159,6 @@ Below is a brief summary of each package in alphabetical order.
 [@lodestar/fork-choice](https://github.com/ChainSafe/lodestar/tree/unstable/packages/fork-choice) holds the methods for reading/writing the fork choice DAG. The `@lodestar/beacon-node` package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
 For a good explanation on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md). This is an annotated version of the [Ethereum Consensus fork choice spec](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/fork-choice.md) which `@lodestar/fork-choice` is based on.
 
-### `@lodestar/light-client`
-
-[@lodestar/light-client](https://github.com/ChainSafe/lodestar/tree/unstable/packages/light-client) is our light client designed to interact with the Ethereum blockchain in a trust-minimized matter via the sync committee and the [light-client protocol](https://github.com/ethereum/consensus-specs/tree/v1.4.0/specs/altair/light-client).
-
 ### `@lodestar/logger`
 
 [@lodestar/logger](https://github.com/ChainSafe/lodestar/tree/unstable/packages/logger) is a common NodeJS logger for Lodestar binaries, which is required for worker threads to instantiate new loggers with consistent settings.
@@ -189,10 +166,6 @@ For a good explanation on how the fork choice itself works, see the [annotated f
 ### `@lodestar/params`
 
 [@lodestar/params](https://github.com/ChainSafe/lodestar/tree/unstable/packages/params) contains the parameters for configuring an Ethereum Consensus network. For example, the [mainnet params](https://github.com/ethereum/consensus-specs/blob/v1.4.0/specs/phase0/beacon-chain.md#configuration).
-
-### `@lodestar/prover`
-
-[@lodestar/prover](https://github.com/ChainSafe/lodestar/tree/unstable/packages/prover) is a web3 provider and a proxy to enable verification of JSON-RPC calls to the execution client using the [light-client protocol](https://github.com/ethereum/consensus-specs/tree/v1.4.0/specs/altair/light-client).
 
 ### `@lodestar/reqresp`
 

@@ -34,10 +34,8 @@ and serves as:
   era/              # Era file handling for historical data
   flare/            # CLI debugging/testing tool
   fork-choice/      # Fork choice implementation (proto-array)
-  light-client/     # Light client implementation
   logger/           # Logging utilities
   params/           # Consensus parameters and presets
-  prover/           # Execution API prover
   reqresp/          # libp2p request/response protocol
   spec-test-util/   # Test harness for consensus spec tests
   state-transition/ # State transition functions

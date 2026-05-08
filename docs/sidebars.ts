@@ -58,27 +58,6 @@ const sidebars: SidebarsConfig = {
         },
       ],
     },
-    {
-      type: "category",
-      label: "Developer Tools",
-      collapsed: false,
-      items: [
-        {
-          type: "category",
-          label: "Light Client",
-          items: [
-            {type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/lightclient"},
-            "libraries/lightclient-prover/lightclient-cli",
-          ],
-        },
-        {
-          type: "category",
-          label: "Prover",
-          items: [{type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/prover"}],
-        },
-      ],
-    },
-
     "supporting-libraries/index",
     {
       type: "category",

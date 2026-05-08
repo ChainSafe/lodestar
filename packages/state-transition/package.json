@@ -34,6 +34,11 @@
       "types": "./lib/slot/index.d.ts",
       "import": "./lib/slot/index.js"
     },
+    "./light-client": {
+      "bun": "./src/lightClient/spec/index.ts",
+      "types": "./lib/lightClient/spec/index.d.ts",
+      "import": "./lib/lightClient/spec/index.js"
+    },
     "./test-utils": {
       "bun": "./src/testUtils/index.ts",
       "types": "./lib/testUtils/index.d.ts",

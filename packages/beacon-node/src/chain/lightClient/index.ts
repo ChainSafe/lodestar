@@ -2,12 +2,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  LightClientUpdateSummary,
-  isBetterUpdate,
-  toLightClientUpdateSummary,
-  upgradeLightClientHeader,
-} from "@lodestar/light-client/spec";
-import {
   ForkName,
   ForkPostAltair,
   ForkPostBellatrix,
@@ -27,6 +21,12 @@ import {
   computeSyncPeriodAtSlot,
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
+import {
+  LightClientUpdateSummary,
+  isBetterUpdate,
+  toLightClientUpdateSummary,
+  upgradeLightClientHeader,
+} from "@lodestar/state-transition/light-client";
 import {
   BeaconBlock,
   BeaconBlockBody,
