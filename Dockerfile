@@ -1,7 +1,21 @@
 FROM node:24-slim AS build_src
 ARG COMMIT
+ARG TARGETARCH
+ARG ZIG_VERSION=0.16.0
 WORKDIR /usr/app
-RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools curl xz-utils && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# zig is required by @chainsafe/lodestar-z's `prepare` script (git-hosted dep)
+RUN case "${TARGETARCH}" in \
+      amd64) ZIG_ARCH=x86_64 ;; \
+      arm64) ZIG_ARCH=aarch64 ;; \
+      *) echo "unsupported TARGETARCH=${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz" -o /tmp/zig.tar.xz && \
+    tar -xJf /tmp/zig.tar.xz -C /opt && \
+    ln -s /opt/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig /usr/local/bin/zig && \
+    rm /tmp/zig.tar.xz && \
+    zig version
 
 COPY . .
 
