@@ -6,7 +6,7 @@ inputs:
     required: true
   zig:
     description: Zig version
-    default: "0.14.1"
+    default: "0.16.0"
     required: false
 
 runs:
