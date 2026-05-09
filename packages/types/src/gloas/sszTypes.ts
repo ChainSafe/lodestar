@@ -71,7 +71,8 @@ export const BuilderPendingWithdrawal = new ContainerType(
 
 export const BuilderPendingPayment = new ContainerType(
   {
-    weight: UintNum64,
+    // bigint to avoid f64 precision loss when accumulating gwei weight at mainnet-scale stake
+    weight: UintBn64,
     withdrawal: BuilderPendingWithdrawal,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}

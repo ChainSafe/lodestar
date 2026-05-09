@@ -25,12 +25,14 @@ export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array)
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
 }
 
-export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): number {
-  const quorum =
-    Math.floor((state.epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT) / SLOTS_PER_EPOCH) *
-    BUILDER_PAYMENT_THRESHOLD_NUMERATOR;
-
-  return Math.floor(quorum / BUILDER_PAYMENT_THRESHOLD_DENOMINATOR);
+export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): bigint {
+  // bigint to avoid f64 precision loss: totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT
+  // exceeds Number.MAX_SAFE_INTEGER once total active stake passes ~9M ETH.
+  const totalGwei = BigInt(state.epochCtx.totalActiveBalanceIncrements) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
+  return (
+    ((totalGwei / BigInt(SLOTS_PER_EPOCH)) * BigInt(BUILDER_PAYMENT_THRESHOLD_NUMERATOR)) /
+    BigInt(BUILDER_PAYMENT_THRESHOLD_DENOMINATOR)
+  );
 }
 
 function hasBuilderIndexFlag(index: number): boolean {
