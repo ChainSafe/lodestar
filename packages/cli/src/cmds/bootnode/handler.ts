@@ -142,7 +142,7 @@ export async function bootnodeHandler(args: BootnodeArgs & GlobalArgs): Promise<
 
           await metricsServer?.close();
           await discv5.stop();
-          logger.debug("Bootnode closed");
+          logger.info("Bootnode closed");
         } catch (e) {
           logger.error("Error closing bootnode", {}, e as Error);
           // Must explicitly exit process due to potential active handles
