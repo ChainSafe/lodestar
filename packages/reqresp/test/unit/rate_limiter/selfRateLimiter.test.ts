@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {
   CHECK_DISCONNECTED_PEERS_INTERVAL_MS,
+  DEFAULT_RATE_LIMIT_BACKOFF_MS,
   REQUEST_TIMEOUT_MS,
   SelfRateLimiter,
 } from "../../../src/rate_limiter/selfRateLimiter.js";
@@ -54,5 +55,58 @@ describe("SelfRateLimiter", () => {
 
     vi.advanceTimersByTime(CHECK_DISCONNECTED_PEERS_INTERVAL_MS + 1);
     expect(selfRateLimiter.allows("peer1", "protocol1", 4)).toBe(true);
+  });
+
+  describe("rate limit backoff", () => {
+    it("should block requests to a peer after onRateLimited", () => {
+      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBe(true);
+      selfRateLimiter.requestCompleted("peer1", "protocol1", 1);
+
+      selfRateLimiter.onRateLimited("peer1", "protocol1");
+
+      // The rate-limited protocol should be blocked for this peer
+      expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBeTypeOf("number");
+
+      // Other peers and protocols should not be affected
+      expect(selfRateLimiter.allows("peer1", "protocol2", 3)).toBe(true);
+      expect(selfRateLimiter.allows("peer2", "protocol1", 4)).toBe(true);
+    });
+
+    it("should allow requests after backoff expires", () => {
+      selfRateLimiter.onRateLimited("peer1", "protocol1");
+      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBeTypeOf("number");
+
+      vi.advanceTimersByTime(DEFAULT_RATE_LIMIT_BACKOFF_MS);
+      expect(selfRateLimiter.allows("peer1", "protocol1", 2)).toBe(true);
+    });
+
+    it("should track rate limited peer count", () => {
+      expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(0);
+
+      selfRateLimiter.onRateLimited("peer1", "protocol1");
+      selfRateLimiter.onRateLimited("peer2", "protocol1");
+      expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(2);
+
+      vi.advanceTimersByTime(DEFAULT_RATE_LIMIT_BACKOFF_MS);
+      // Entries cleaned up on next allows() call or cleanup interval
+      selfRateLimiter.allows("peer1", "protocol1", 1);
+      expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(1);
+    });
+
+    it("should keep backoff tracked during blocked attempts", () => {
+      selfRateLimiter.onRateLimited("peer1", "protocol1");
+
+      vi.advanceTimersByTime(DEFAULT_RATE_LIMIT_BACKOFF_MS / 2);
+      expect(selfRateLimiter.allows("peer1", "protocol1", 1)).toBeTypeOf("number");
+      expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(1);
+    });
+
+    it("should clean up expired backoff entries on disconnected peer check", () => {
+      selfRateLimiter.onRateLimited("peer1", "protocol1");
+      expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(1);
+
+      vi.advanceTimersByTime(CHECK_DISCONNECTED_PEERS_INTERVAL_MS + 1);
+      expect(selfRateLimiter.getRateLimitedPeerCount()).toBe(0);
+    });
   });
 });

@@ -31,8 +31,6 @@ jobs:
       - name: Install arm64 specifics
         if: matrix.arch == 'arm64'
         run: |-
-          # Install missing pnpm
-          curl -fsSL https://get.pnpm.io/install.sh | sh -
           # Install missing build-essential
           sudo apt-get update
           sudo apt-get install -y build-essential python3

@@ -222,7 +222,7 @@ export class PrepareNextSlotScheduler {
           // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
           const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
           if (updatedHeadParent) {
-            this.chain.seenPayloadEnvelopeInputCache.pruneBelow(updatedHeadParent.slot);
+            this.chain.seenPayloadEnvelopeInputCache.pruneBelowParent(updatedHeadParent);
           }
         }
 
