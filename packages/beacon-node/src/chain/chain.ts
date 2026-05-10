@@ -23,6 +23,7 @@ import {
   getEffectiveBalancesFromStateBytes,
   isStatePostAltair,
   isStatePostElectra,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -338,15 +339,6 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
-      config,
-      clock,
-      chainEvents: emitter,
-      signal,
-      serializedCache: this.serializedCache,
-      metrics,
-      logger,
-    });
 
     this._earliestAvailableSlot = anchorState.slot;
 
@@ -402,6 +394,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger
     );
+
     const regen = new QueuedStateRegenerator({
       config,
       forkChoice,
@@ -426,6 +419,33 @@ export class BeaconChain implements IBeaconChain {
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
+
+    this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
+      config,
+      clock,
+      forkChoice,
+      chainEvents: emitter,
+      signal,
+      serializedCache: this.serializedCache,
+      metrics,
+      logger,
+    });
+
+    const anchorBlockSlot = anchorState.latestBlockHeader.slot;
+    if (isStatePostGloas(anchorState) && anchorBlockSlot > 0) {
+      const anchorBid = anchorState.latestExecutionPayloadBid;
+      this.seenPayloadEnvelopeInputCache.addFromBid({
+        blockRootHex: toRootHex(checkpoint.root),
+        slot: anchorBlockSlot,
+        forkName: anchorState.forkName,
+        proposerIndex: anchorState.latestBlockHeader.proposerIndex,
+        bid: anchorBid,
+        sampledColumns: this.custodyConfig.sampledColumns,
+        custodyColumns: this.custodyConfig.custodyColumns,
+        timeCreatedSec: Math.floor(Date.now() / 1000),
+      });
+    }
+
     this.clock = clock;
     this.regen = regen;
     this.bls = bls;

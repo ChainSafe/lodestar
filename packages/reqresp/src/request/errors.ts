@@ -1,5 +1,6 @@
 import {LodestarError, LodestarErrorObject} from "@lodestar/utils";
 import {RespStatus, RpcResponseStatusError} from "../interface.js";
+import {DEFAULT_RATE_LIMIT_BACKOFF_MS} from "../rate_limiter/selfRateLimiter.js";
 import {ResponseError} from "../response/index.js";
 
 export enum RequestErrorCode {
@@ -35,7 +36,7 @@ export enum RequestErrorCode {
   SSZ_OVER_MAX_SIZE = "SSZ_SNAPPY_ERROR_OVER_SSZ_MAX_SIZE",
 }
 
-type RequestErrorType =
+export type RequestErrorType =
   | {code: RequestErrorCode.INVALID_REQUEST; errorMessage: string}
   | {code: RequestErrorCode.INVALID_RESPONSE_SSZ; errorMessage: string}
   | {code: RequestErrorCode.SERVER_ERROR; errorMessage: string}
@@ -48,8 +49,8 @@ type RequestErrorType =
   | {code: RequestErrorCode.EMPTY_RESPONSE}
   | {code: RequestErrorCode.RESP_TIMEOUT}
   | {code: RequestErrorCode.REQUEST_RATE_LIMITED}
-  | {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED}
-  | {code: RequestErrorCode.RESP_RATE_LIMITED}
+  | {code: RequestErrorCode.REQUEST_SELF_RATE_LIMITED; rateLimitedUntilMs?: number}
+  | {code: RequestErrorCode.RESP_RATE_LIMITED; rateLimitedUntilMs: number}
   | {code: RequestErrorCode.SSZ_OVER_MAX_SIZE};
 
 export const REQUEST_ERROR_CLASS_NAME = "RequestError";
@@ -73,17 +74,26 @@ export class RequestError extends LodestarError<RequestErrorType> {
  */
 export function responseStatusErrorToRequestError(e: ResponseError): RequestErrorType {
   const {errorMessage, status} = e;
-  // rate limited error from clients have different status, for example: lighthouse responds with 139, teku responds with 1
-  // but all of them has "rate limit" in the error message
-  // refer to https://github.com/ChainSafe/lodestar/issues/8065#issuecomment-3157266196
+  // Rate limit error detection: clients use different status codes and messages.
+  // We match on the error message text because status codes are inconsistent:
+  //   - Lighthouse/Grandine: status 139 (non-standard RateLimited code)
+  //     message: "Rate limited. There are already 2 active requests with the same protocol"
+  //   - Prysm: status 1 (INVALID_REQUEST), message: "rate limited"
+  //   - Teku: status 1 (INVALID_REQUEST), message: "Peer has been rate limited"
+  //   - Nimbus: never sends rate limit errors (silently throttles via token bucket)
+  // See https://github.com/ChainSafe/lodestar/issues/8065#issuecomment-3157266196
   const errorMessageLowercase = errorMessage.toLowerCase();
   if (errorMessageLowercase.includes("rate limit")) {
-    return {code: RequestErrorCode.RESP_RATE_LIMITED};
+    return {code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS};
   }
 
-  // Grandine may return this without standard RespStatus, see https://github.com/ChainSafe/lodestar/issues/8110
-  if (errorMessageLowercase.includes("wait ")) {
-    return {code: RequestErrorCode.RESP_TIMEOUT};
+  // Grandine's eth2_libp2p fork uses the old Lighthouse GCRA inbound rate limiter which sends
+  // "Wait <Duration>" with an explicit backoff (e.g. "Wait 2.816488536s") using Rust's
+  // Debug format for Duration. We only use this as a rate-limit signal; the backoff duration
+  // is intentionally not parsed.
+  // See https://github.com/ChainSafe/lodestar/issues/8110
+  if (errorMessageLowercase.startsWith("wait ")) {
+    return {code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS};
   }
 
   switch (status) {

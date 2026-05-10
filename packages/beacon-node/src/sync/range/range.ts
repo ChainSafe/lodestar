@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -206,14 +206,18 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
+    const requests = batch.getRequestsForPeer(peer);
+    const parentRoot = requests.parentPayloadRequest?.envelopeBlockRoot ?? requests.parentPayloadRequest?.blockRoot;
+    const parentPayloadCommitments = parentRoot ? batch.getParentPayloadCommitments(parentRoot) : undefined;
     const {result, warnings} = await downloadByRange({
       config: this.config,
       network: this.network,
       logger: this.logger,
       peerIdStr: peer.peerId,
       batchBlocks,
+      parentPayloadCommitments,
       peerDasMetrics: this.chain.metrics?.peerDas,
-      ...batch.getRequestsForPeer(peer),
+      ...requests,
     });
     const {responses, payloadEnvelopes: downloadedPayloadEnvelopes} = result;
     const {blocks, payloadEnvelopes} = cacheByRangeResponses({
@@ -258,6 +262,14 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
+      // The first batch of a new sync chain may need to detect whether the parent block was an
+      // gloas "empty" block (no envelope produced). It does so by comparing the first
+      // downloaded block's `bid.parentBlockHash` against the head state's `latestExecutionPayloadBid.blockHash`.
+      const headState = this.chain.getHeadState();
+      const latestBid = isStatePostGloas(headState)
+        ? (headState as IBeaconStateViewGloas).latestExecutionPayloadBid
+        : undefined;
+
       syncChain = new SyncChain(
         startEpoch,
         target,
@@ -276,7 +288,8 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           logger: this.logger,
           custodyConfig: this.chain.custodyConfig,
           metrics: this.metrics,
-        }
+        },
+        latestBid
       );
       this.chains.set(syncType, syncChain);
 
