@@ -142,6 +142,16 @@ export type ProtoBlock = BlockExtraMeta & {
   // Used to determine if this block extends EMPTY or FULL parent variant
   // Spec: gloas/fork-choice.md#new-get_parent_payload_status
   parentBlockHash: RootHex | null;
+
+  /**
+   * Post-Gloas only: this block's bid `message.blockHash` — the execution payload block hash
+   * that THIS block's FULL variant would have if/when the builder reveals.
+   * Used by the fork-choice to resolve the FULL variant of a block before its envelope
+   * arrives: when a child block N+1 carries `bid.parentBlockHash == parent.bidBlockHash`,
+   * the parent's FULL variant is implied even if `onExecutionPayload` hasn't run for it.
+   * Null for pre-Gloas blocks. See ChainSafe/lodestar#9060.
+   */
+  bidBlockHash: RootHex | null;
 };
 
 /**

@@ -809,6 +809,10 @@ export class ForkChoice implements IForkChoice {
 
       payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
       parentBlockHash: parentHashHex,
+      // Post-Gloas: this block's bid commits to a future blockHash (revealed FULL variant).
+      // Stored so future child blocks can resolve our FULL variant via bid comparison even
+      // before our envelope arrives (ChainSafe/lodestar#9060).
+      bidBlockHash: isGloasBeaconBlock(block) ? toRootHex(block.body.signedExecutionPayloadBid.message.blockHash) : null,
     };
 
     this.protoArray.onBlock(protoBlock, currentSlot, this.proposerBoostRoot);

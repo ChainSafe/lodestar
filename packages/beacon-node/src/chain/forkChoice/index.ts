@@ -150,6 +150,9 @@ export function initializeForkChoiceFromFinalizedState(
         dataAvailabilityStatus: DataAvailabilityStatus.PreData,
         payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
         parentBlockHash: isStatePostGloas(state) ? toRootHex(state.latestBlockHash) : null,
+        // No bid available for the anchor block (initialized from state, not block body).
+        // ChainSafe/lodestar#9060.
+        bidBlockHash: null,
       },
       currentSlot
     ),
@@ -242,6 +245,10 @@ export function initializeForkChoiceFromUnfinalizedState(
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus: isForkPostGloas ? PayloadStatus.PENDING : PayloadStatus.FULL,
     parentBlockHash: isStatePostGloas(unfinalizedState) ? toRootHex(unfinalizedState.latestBlockHash) : null,
+    // No bid available for the anchor block (we initialize from a state, not a block body),
+    // so children that claim FULL parent must rely on the envelope-arrival path. See
+    // ChainSafe/lodestar#9060.
+    bidBlockHash: null,
   };
 
   const parentSlot = blockHeader.slot - 1;

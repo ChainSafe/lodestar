@@ -1,4 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {
   ForkPostDeneb,
   ForkPostFulu,
@@ -342,9 +343,26 @@ export async function downloadByRange({
       parentPayloadRequest,
     });
   } catch (err) {
+    // Preserve the inner reqresp error code so the sync chain can recognize wrapped
+    // rate-limit errors. Without this, every wrapped reqresp error becomes a generic
+    // REQ_RESP_ERROR at the chain layer and rate-limit hits get miscategorized as
+    // failed download attempts → MAX_BATCH_DOWNLOAD_ATTEMPTS → chain dies → restart loop.
+    let innerCode: RequestErrorCode | undefined;
+    let rateLimitedUntilMs: number | undefined;
+    if (err instanceof RequestError) {
+      innerCode = err.type.code;
+      if (
+        err.type.code === RequestErrorCode.RESP_RATE_LIMITED ||
+        err.type.code === RequestErrorCode.REQUEST_SELF_RATE_LIMITED
+      ) {
+        rateLimitedUntilMs = err.type.rateLimitedUntilMs;
+      }
+    }
     throw new DownloadByRangeError({
       code: DownloadByRangeErrorCode.REQ_RESP_ERROR,
       reason: (err as Error).message,
+      innerCode,
+      rateLimitedUntilMs,
       ...requestsLogMeta({blocksRequest, blobsRequest, columnsRequest}),
     });
   }
@@ -1192,6 +1210,8 @@ export type DownloadByRangeErrorType =
       columnStartSlot?: number;
       columnCount?: number;
       reason: string;
+      innerCode?: RequestErrorCode;
+      rateLimitedUntilMs?: number;
     }
   | {
       code: DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH;

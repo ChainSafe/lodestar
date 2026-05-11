@@ -156,6 +156,19 @@ export class SyncChain {
    * The reqresp SelfRateLimiter independently enforces backoff at the protocol level as a safety net.
    */
   private readonly rateLimitedPeers = new Map<PeerIdStr, number>();
+  /**
+   * Tracks peers that have a track record of returning empty envelopes (`envelopeSlots=[]`)
+   * for ranges we've requested. Mapped to the timestamp until which we should avoid them for
+   * envelope-bearing batches. On devnet-3 we observed Lighthouse/Teku/Prysm peers returning
+   * empty for envelopes that ARE canonically revealed (only Lodestar peers serve them past
+   * the DA window). Without this backoff, the chain repeatedly retries the same peers and
+   * burns MAX_BATCH_DOWNLOAD_ATTEMPTS → chain restart → sync stall.
+   * The strike counter is incremented when a peer returns a successful download but contributed
+   * 0 envelopes to a Gloas batch that still has missing envelopes; after `EMPTY_ENVELOPE_STRIKES`
+   * strikes, the peer is backed off for `EMPTY_ENVELOPE_BACKOFF_MS`.
+   */
+  private readonly emptyEnvelopePeers = new Map<PeerIdStr, number>();
+  private readonly emptyEnvelopeStrikes = new Map<PeerIdStr, number>();
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
@@ -268,6 +281,8 @@ export class SyncChain {
   removePeer(peerId: PeerIdStr): boolean {
     const deleted = this.peerset.delete(peerId);
     this.rateLimitedPeers.delete(peerId);
+    this.emptyEnvelopePeers.delete(peerId);
+    this.emptyEnvelopeStrikes.delete(peerId);
     this.computeTarget();
     return deleted;
   }
@@ -414,6 +429,16 @@ export class SyncChain {
         }
         this.rateLimitedPeers.delete(peerId);
       }
+      // Skip peers that have repeatedly returned empty envelope responses for required
+      // envelopes (see emptyEnvelopePeers comment).
+      const emptyEnvUntil = this.emptyEnvelopePeers.get(peerId);
+      if (emptyEnvUntil !== undefined) {
+        if (now < emptyEnvUntil) {
+          continue;
+        }
+        this.emptyEnvelopePeers.delete(peerId);
+        this.emptyEnvelopeStrikes.delete(peerId);
+      }
 
       try {
         peersSyncInfo.push({...this.getConnectedPeerSyncMeta(peerId), target});
@@ -556,8 +581,32 @@ export class SyncChain {
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        if (errCode === RequestErrorCode.RESP_RATE_LIMITED || errCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED) {
+        // The wire layer wraps reqresp errors as `DownloadByRangeErrorCode.REQ_RESP_ERROR`,
+        // so check the inner code propagated through that wrap as well as direct codes.
+        // Without this, every wrapped rate-limit hit is treated as a failed download attempt
+        // (5 hits → batch dies → chain restart loop).
+        let innerCode: RequestErrorCode | undefined;
+        if (res.err instanceof DownloadByRangeError && res.err.type.code === DownloadByRangeErrorCode.REQ_RESP_ERROR) {
+          innerCode = res.err.type.innerCode;
+        }
+        const isRateLimited =
+          errCode === RequestErrorCode.RESP_RATE_LIMITED ||
+          errCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED ||
+          innerCode === RequestErrorCode.RESP_RATE_LIMITED ||
+          innerCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED;
+        if (isRateLimited) {
           // Peer rate-limited us — don't count as a failed download attempt and mark peer for backoff
+          this.rateLimitedPeers.set(peer.peerId, Date.now() + RATE_LIMITED_PEER_BACKOFF_MS);
+          batch.downloadingRateLimited();
+          this.triggerBatchDownloader();
+        } else if (errCode === DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE) {
+          // Peer returned 0 blocks for a sub-range. Per the by-range spec, missing slots
+          // in a successful response are skip slots (peer is correctly reporting "no proposal
+          // here"). With `<=` cursor advance, this happens at the trailing edge of a batch
+          // where the last requested slot is a skip slot. Don't count as a failed attempt;
+          // backoff this peer briefly so we don't immediately re-hit them with the same
+          // empty range. After backoff expires we either find a peer with the block (unlikely
+          // — confirmed empty) or the batch's allComplete check determines we're done.
           this.rateLimitedPeers.set(peer.peerId, Date.now() + RATE_LIMITED_PEER_BACKOFF_MS);
           batch.downloadingRateLimited();
           this.triggerBatchDownloader();
@@ -573,7 +622,52 @@ export class SyncChain {
         this.metrics?.syncRange.downloadByRange.success.inc();
         const {warnings, result} = res.result;
         const {blocks: downloadedBlocks, payloadEnvelopes} = result;
+
+        // Empty-envelope peer-backoff: if this download was for a Gloas batch that requested
+        // envelopes (envelopesRequest set on the batch) but the peer returned 0 envelopes,
+        // count a strike against the peer. After `EMPTY_ENVELOPE_STRIKES`, back off the peer
+        // for `EMPTY_ENVELOPE_BACKOFF_MS`. Reset strikes on any non-empty envelope response.
+        // On devnet-3 we observed Lighthouse/Teku/Prysm peers consistently returning empty
+        // for envelopes that ARE canonical, exhausting MAX_BATCH_DOWNLOAD_ATTEMPTS quickly.
+        if (batch.requests.envelopesRequest !== undefined) {
+          const envelopesReceived = payloadEnvelopes !== null && payloadEnvelopes.size > 0;
+          if (envelopesReceived) {
+            this.emptyEnvelopeStrikes.delete(peer.peerId);
+          } else {
+            const strikes = (this.emptyEnvelopeStrikes.get(peer.peerId) ?? 0) + 1;
+            const EMPTY_ENVELOPE_STRIKES = 2;
+            const EMPTY_ENVELOPE_BACKOFF_MS = 30_000;
+            this.emptyEnvelopeStrikes.set(peer.peerId, strikes);
+            if (strikes >= EMPTY_ENVELOPE_STRIKES) {
+              this.emptyEnvelopePeers.set(peer.peerId, Date.now() + EMPTY_ENVELOPE_BACKOFF_MS);
+              this.logger.debug("Peer backed off for empty envelope responses", {
+                id: this.logId,
+                peer: prettyPrintPeerIdStr(peer.peerId),
+                strikes,
+                backoffMs: EMPTY_ENVELOPE_BACKOFF_MS,
+              });
+            }
+          }
+        }
+
         const downloadSuccessOutput = batch.downloadingSuccess(peer.peerId, downloadedBlocks, payloadEnvelopes);
+
+        // Cross-batch FULL/EMPTY resolution (#9060): if this batch has a previous batch in
+        // `AwaitingDownload` waiting on its LAST block's envelope, our first block's
+        // bid.parentBlockHash may prove that last block is EMPTY — letting the previous batch
+        // transition to processing without that envelope.
+        const firstBlock = downloadSuccessOutput.blocks[0];
+        if (firstBlock?.hasBlock()) {
+          const prevBatch = this.batches.get(batch.startEpoch - EPOCHS_PER_BATCH);
+          if (prevBatch !== undefined && prevBatch.tryResolveLastBlockWithNext(firstBlock)) {
+            this.logger.debug(
+              "Resolved previous batch last-block as EMPTY via next-batch bid",
+              {id: this.logId, ...prevBatch.getMetadata()}
+            );
+            this.triggerBatchProcessor();
+          }
+        }
+
         const logMeta: Record<string, number> = {
           blockCount: downloadSuccessOutput.blocks.length,
         };

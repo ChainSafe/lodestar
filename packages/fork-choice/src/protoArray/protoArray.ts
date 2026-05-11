@@ -221,6 +221,19 @@ export class ProtoArray {
 
     const parentBlock = this.getBlockHexAndBlockHash(block.parentRoot, parentBlockHash);
     if (parentBlock == null) {
+      // Bid-match fallback (ChainSafe/lodestar#9060): if FULL variant isn't indexed yet but
+      // the parent's bid commits to this exact blockHash, the parent is FULL by spec — we
+      // can answer without materializing the variant. Materialization happens at onBlock time.
+      const parentVariants = this.indices.get(block.parentRoot);
+      if (Array.isArray(parentVariants)) {
+        const anyParentIdx = parentVariants[PayloadStatus.PENDING] ?? parentVariants[PayloadStatus.EMPTY];
+        if (anyParentIdx !== undefined) {
+          const anyParent = this.nodes[anyParentIdx];
+          if (anyParent.bidBlockHash !== null && parentBlockHash === anyParent.bidBlockHash) {
+            return PayloadStatus.FULL;
+          }
+        }
+      }
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.UNKNOWN_PARENT_BLOCK,
         parentRoot: block.parentRoot,
@@ -280,6 +293,19 @@ export class ProtoArray {
     const emptyNodeIndex = variantIndices[PayloadStatus.EMPTY];
     if (this.nodes[emptyNodeIndex].executionPayloadBlockHash === blockHash) {
       return emptyNodeIndex;
+    }
+
+    // Bid-match fallback (ChainSafe/lodestar#9060): the requested `blockHash` is the
+    // hypothetical FULL-variant blockHash committed by this block's own bid. If it matches
+    // any variant's `bidBlockHash`, treat as FULL by spec — return the PENDING node so the
+    // caller has a valid ProtoBlock to read slot/root/etc. The actual FULL variant gets
+    // materialized when the next block (which proves FULL via its own bid) is imported.
+    const pendingNodeIndex = variantIndices[PayloadStatus.PENDING];
+    if (pendingNodeIndex !== undefined) {
+      const pendingNode = this.nodes[pendingNodeIndex];
+      if (pendingNode.bidBlockHash !== null && pendingNode.bidBlockHash === blockHash) {
+        return pendingNodeIndex;
+      }
     }
 
     // PENDING is the same to EMPTY so not likely we can return it
@@ -465,7 +491,45 @@ export class ProtoArray {
           // Fork transition: parent is pre-Gloas, so it only has FULL variant at variants[0]
           parentIndex = anyParentIndex;
         } else {
-          // Both blocks are Gloas: determine which parent payload status to extend
+          // Both blocks are Gloas: this block's `parentBlockHash` (from its bid) tells us
+          // whether the parent is FULL (revealed) or EMPTY (orphaned/non-revealed). Per the spec
+          // (`get_parent_payload_status`) and ChainSafe/lodestar#9060: parent is FULL iff
+          // `block.parentBlockHash == anyParentNode.bidBlockHash`. If parent is FULL but its
+          // FULL variant is not indexed yet (envelope hasn't arrived during sync), materialize
+          // it from the parent's own bid so the new block can attach correctly. Otherwise we'd
+          // throw PARENT_PAYLOAD_UNKNOWN here even though the bid relationship is unambiguous.
+          if (
+            Array.isArray(parentVariants) &&
+            parentVariants[PayloadStatus.FULL] === undefined &&
+            anyParentNode.bidBlockHash !== null &&
+            block.parentBlockHash === anyParentNode.bidBlockHash &&
+            anyParentNode.executionStatus !== ExecutionStatus.PreMerge
+          ) {
+            const pendingParentIndex = parentVariants[PayloadStatus.PENDING];
+            if (pendingParentIndex !== undefined) {
+              const pendingParent = this.nodes[pendingParentIndex];
+              if (pendingParent.executionStatus !== ExecutionStatus.PreMerge) {
+                const fullParent: ProtoNode = {
+                  ...pendingParent,
+                  parent: pendingParentIndex,
+                  payloadStatus: PayloadStatus.FULL,
+                  weight: 0,
+                  bestChild: undefined,
+                  bestDescendant: undefined,
+                  executionPayloadBlockHash: anyParentNode.bidBlockHash,
+                };
+                const fullParentIdx = this.nodes.length;
+                this.nodes.push(fullParent);
+                parentVariants[PayloadStatus.FULL] = fullParentIdx;
+                this.maybeUpdateBestChildAndDescendant(
+                  pendingParentIndex,
+                  fullParentIdx,
+                  currentSlot,
+                  proposerBoostRoot
+                );
+              }
+            }
+          }
           const parentPayloadStatus = this.getParentPayloadStatus(block);
           parentIndex = this.getNodeIndexByRootAndStatus(block.parentRoot, parentPayloadStatus);
         }

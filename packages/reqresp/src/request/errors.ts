@@ -82,8 +82,10 @@ export function responseStatusErrorToRequestError(e: ResponseError): RequestErro
   //   - Teku: status 1 (INVALID_REQUEST), message: "Peer has been rate limited"
   //   - Nimbus: never sends rate limit errors (silently throttles via token bucket)
   // See https://github.com/ChainSafe/lodestar/issues/8065#issuecomment-3157266196
-  const errorMessageLowercase = errorMessage.toLowerCase();
-  if (errorMessageLowercase.includes("rate limit")) {
+  // Normalize underscores/hyphens to spaces so we catch underscore-form messages like
+  // `REQUEST_ERROR_RATE_LIMITED` (Lodestar peer echo) and hyphenated `rate-limited`.
+  const errorMessageLowercase = errorMessage.toLowerCase().replace(/[_-]+/g, " ");
+  if (errorMessageLowercase.includes("rate limit") || errorMessageLowercase.includes("too many requests")) {
     return {code: RequestErrorCode.RESP_RATE_LIMITED, rateLimitedUntilMs: Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS};
   }
 

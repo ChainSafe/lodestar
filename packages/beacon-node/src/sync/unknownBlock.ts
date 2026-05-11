@@ -644,13 +644,16 @@ export class BlockInputSync {
       return;
     }
 
+    // Floor the delay so a stale or near-`now` retry timestamp can't produce
+    // `setTimeout(callback, 0)` recursion that pegs the event loop and OOMs.
+    const MIN_RETRY_DELAY_MS = 1_000;
     this.rateLimitBackoffTimeout = setTimeout(
       () => {
         this.rateLimitBackoffTimeout = undefined;
         this.triggerUnknownBlockSearch();
         this.scheduleRateLimitBackoffRetry();
       },
-      Math.max(0, retryAt - now)
+      Math.max(retryAt - now, MIN_RETRY_DELAY_MS)
     );
   }
 

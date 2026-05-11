@@ -256,7 +256,11 @@ export class Batch {
       //
       // if all slot have already been pulled then the startSlot will eventually get incremented to the slot after
       // the desired end slot
-      if (blockInput.hasBlock() && blockStartSlot === blockSlot) {
+      // Use `<=` so skip slots (missing slots in a successful by-range response) advance the
+      // cursor too. Blocks are sorted in `downloadingSuccess`, so iteration is strictly in
+      // slot order: `<=` cannot skip past blocks we haven't received. Without this, a single
+      // skip slot wedges the block cursor and the batch retries the skip-slot range forever.
+      if (blockInput.hasBlock() && blockStartSlot <= blockSlot) {
         blockStartSlot = blockSlot + 1;
       }
 
@@ -266,6 +270,12 @@ export class Batch {
       if (isPostGloas) {
         // Post-Gloas: column data lives on PayloadEnvelopeInput, not on BlockInputNoData.
         const payloadInput = envelopesBySlot.get(blockSlot);
+        // KEEP envelope cursor strict (`===`) because: advancing the envelope cursor on a
+        // missing envelope assumes that slot is EMPTY (non-revealed). The chain processor
+        // can correctly handle EMPTY slots at processing time, but advancing the cursor
+        // prematurely here can produce wrong batch shapes for FULL slots whose envelope
+        // simply hasn't arrived yet → premature `AwaitingProcessing` → chain rejects → OOM
+        // cascade observed earlier in this debugging session.
         if (blockInput.hasBlock() && envelopeStartSlot === blockSlot && payloadInput?.hasPayloadEnvelope()) {
           envelopeStartSlot = blockSlot + 1;
         }
@@ -273,10 +283,10 @@ export class Batch {
           for (const index of payloadInput.getMissingSampledColumnMeta().missing) {
             neededColumns.add(index);
           }
-        } else if (payloadInput?.hasComputedAllData() && dataStartSlot === blockSlot) {
-          // Only advance dataStartSlot when we know columns for this slot are complete. If
-          // payloadInput is missing entirely we cannot tell, so stop here so the next round
-          // re-requests columns (and envelopes) starting at this slot.
+        } else if (payloadInput?.hasComputedAllData() && dataStartSlot <= blockSlot) {
+          // `<=` so skip slots advance data cursor too. Only advances when columns are
+          // present for the BLOCK at this slot; for skip slots there are no columns to wait
+          // for so we can safely advance past.
           dataStartSlot = blockSlot + 1;
         }
       } else {
@@ -286,7 +296,7 @@ export class Batch {
               neededColumns.add(index);
             }
           }
-        } else if (dataStartSlot === blockSlot) {
+        } else if (dataStartSlot <= blockSlot) {
           dataStartSlot = blockSlot + 1;
         }
       }
@@ -495,12 +505,46 @@ export class Batch {
     const newPayloadEnvelopes = payloadEnvelopes ?? this.state.payloadEnvelopes;
 
     if (allComplete && isForkPostGloas(this.forkName)) {
-      for (const block of blocks) {
+      // EPBS payload variant detection per spec/issue #9060:
+      //   parent_block_hash = block[N+1].body.signed_execution_payload_bid.message.parent_block_hash
+      //   message_block_hash = block[N].body.signed_execution_payload_bid.message.block_hash
+      //   N is FULL (envelope canonical) iff parent_block_hash == message_block_hash, else EMPTY.
+      //
+      // - FULL non-last blocks: require envelope + columns (canonical revealed payload)
+      // - EMPTY non-last blocks: no envelope expected — chain processor's
+      //   `assertLinearChainSegment` treats this as the EMPTY variant correctly
+      // - LAST block: require envelope (peer-confirmed FULL) to avoid premature transition.
+      //   If the last block is genuinely EMPTY, the next batch's first block proves it via bid
+      //   match. We don't transition here, but the chain processor + fork-choice's bid-based
+      //   FULL variant materialization handle the cross-batch case at processing time.
+      for (let i = 0; i < blocks.length; i++) {
+        const block = blocks[i];
+        const nextBlock = blocks[i + 1];
+        const isLastBlock = nextBlock === undefined;
+
+        let isFullVariant = true; // default to FULL = require envelope (safest)
+        if (!isLastBlock && nextBlock?.hasBlock() && block.hasBlock()) {
+          const thisBidHash = (block.getBlock().message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
+            .blockHash;
+          const nextBidParentHash = (nextBlock.getBlock().message.body as gloas.BeaconBlockBody)
+            .signedExecutionPayloadBid.message.parentBlockHash;
+          isFullVariant = byteArrayEquals(thisBidHash, nextBidParentHash);
+        }
+
         const payloadInput = newPayloadEnvelopes?.get(block.slot);
-        // by_range needs every block's envelope and all sampled columns.
-        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
-          allComplete = false;
-          break;
+        if (isFullVariant) {
+          // FULL (or last block, defaulting to FULL): require envelope and columns
+          if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
+            allComplete = false;
+            break;
+          }
+        } else {
+          // EMPTY (proven by bid): envelope optional. If envelope IS present (orphaned),
+          // columns must still be complete for the present envelope.
+          if (payloadInput?.hasPayloadEnvelope() && !payloadInput.hasComputedAllData()) {
+            allComplete = false;
+            break;
+          }
         }
       }
     }
@@ -536,6 +580,89 @@ export class Batch {
     }
 
     return this.state as DownloadSuccessState;
+  }
+
+  /**
+   * Cross-batch FULL/EMPTY resolution (ChainSafe/lodestar#9060).
+   *
+   * The bid-comparison logic in `downloadingSuccess` defaults the LAST block of a batch to
+   * FULL because we don't yet know whether the next batch's first block was built on it (FULL)
+   * or skipped its payload (EMPTY). When the next batch arrives and we can see its first
+   * block's `bid.parentBlockHash`, we can resolve this: if it matches our last block's
+   * `bid.blockHash`, our last block is FULL; otherwise it's EMPTY.
+   *
+   * If proven EMPTY, the missing envelope on our last block is canonically absent, and the
+   * batch can transition to `AwaitingProcessing` even without that envelope. The chain
+   * processor handles the EMPTY variant correctly via `assertLinearChainSegment`.
+   *
+   * Returns `true` if the batch was transitioned to `AwaitingProcessing`, `false` otherwise.
+   */
+  tryResolveLastBlockWithNext(nextBatchFirstBlock: IBlockInput): boolean {
+    if (this.state.status !== BatchStatus.AwaitingDownload) return false;
+    if (!isForkPostGloas(this.forkName)) return false;
+    if (!nextBatchFirstBlock.hasBlock()) return false;
+
+    const blocks = this.state.blocks;
+    if (blocks.length === 0) return false;
+    const lastBlock = blocks[blocks.length - 1];
+    if (!lastBlock.hasBlock()) return false;
+
+    const lastBidHash = (lastBlock.getBlock().message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
+      .blockHash;
+    const nextBidParentHash = (nextBatchFirstBlock.getBlock().message.body as gloas.BeaconBlockBody)
+      .signedExecutionPayloadBid.message.parentBlockHash;
+    const lastBlockIsFull = byteArrayEquals(lastBidHash, nextBidParentHash);
+
+    // If last block is FULL we still need its envelope (no change). Only act if EMPTY.
+    if (lastBlockIsFull) return false;
+
+    // Re-check allComplete with the last block now known to be EMPTY. For all earlier blocks,
+    // the in-batch bid comparison already determined FULL/EMPTY in downloadingSuccess. We
+    // only need to verify those blocks here too — re-using the same per-block rule.
+    const newPayloadEnvelopes = this.state.payloadEnvelopes;
+    for (let i = 0; i < blocks.length; i++) {
+      const block = blocks[i];
+      const nextBlock: IBlockInput | undefined = blocks[i + 1] ?? nextBatchFirstBlock;
+      let isFullVariant = true;
+      if (nextBlock?.hasBlock() && block.hasBlock()) {
+        const thisBidHash = (block.getBlock().message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
+          .blockHash;
+        const nextBidParent = (nextBlock.getBlock().message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid
+          .message.parentBlockHash;
+        isFullVariant = byteArrayEquals(thisBidHash, nextBidParent);
+      }
+      const payloadInput = newPayloadEnvelopes?.get(block.slot);
+      if (isFullVariant) {
+        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) return false;
+      } else {
+        if (payloadInput?.hasPayloadEnvelope() && !payloadInput.hasComputedAllData()) return false;
+      }
+    }
+
+    // Also handle dangling parent envelope requirement (same as in downloadingSuccess).
+    if (this.shouldDownloadParentEnvelope(blocks[0].getBlock())) {
+      const parentRoot = blocks[0].getBlock().message.parentRoot;
+      if (!byteArrayEquals(parentRoot, ZERO_HASH)) {
+        const parentRootHex = toRootHex(parentRoot);
+        let parentPayloadComplete = false;
+        if (newPayloadEnvelopes) {
+          for (const pi of newPayloadEnvelopes.values()) {
+            if (pi.blockRootHex === parentRootHex) {
+              parentPayloadComplete = pi.hasPayloadEnvelope() && pi.hasComputedAllData();
+              break;
+            }
+          }
+        }
+        if (!parentPayloadComplete) return false;
+      }
+    }
+
+    this.state = {
+      status: BatchStatus.AwaitingProcessing,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+    };
+    return true;
   }
 
   /**
