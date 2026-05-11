@@ -2,7 +2,7 @@ packages:
   - packages/*
 
 catalog:
-  '@chainsafe/lodestar-z': 0.1.2-rc.0
+  '@chainsafe/lodestar-z': 0.1.2-rc.1
   '@vitest/browser': ^4.0.7
   '@vitest/browser-playwright': ^4.0.7
   '@vitest/coverage-v8': ^4.0.7
