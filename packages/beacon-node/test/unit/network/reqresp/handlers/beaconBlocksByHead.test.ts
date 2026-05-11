@@ -121,15 +121,13 @@ describe("onBeaconBlocksByHead", () => {
     expect(chain.logger.verbose).toHaveBeenCalledOnce();
   });
 
-  it("allows zero-count requests", async () => {
+  it("rejects zero-count requests", async () => {
     const blocks = createBlocks([10]);
     const chain = createChain(blocks);
 
-    const responses = await Array.fromAsync(
-      onBeaconBlocksByHead({beaconRoot: blocks[0].root, count: 0}, chain, peerId, "test-client")
-    );
-
-    expect(responses).toEqual([]);
+    await expect(
+      Array.fromAsync(onBeaconBlocksByHead({beaconRoot: blocks[0].root, count: 0}, chain, peerId, "test-client"))
+    ).rejects.toMatchObject({status: RespStatus.INVALID_REQUEST});
     expect(chain.getSerializedBlockByRoot).not.toHaveBeenCalled();
   });
 
@@ -190,7 +188,7 @@ function createChain(blocks: TestBlock[], currentEpoch = 0, testConfig = config)
 
   return {
     config: testConfig,
-    clock: {currentEpoch},
+    clock: {currentEpoch, currentSlot: computeStartSlotAtEpoch(currentEpoch)},
     getSerializedBlockByRoot: vi.fn(async (rootHex: string) => {
       const block = blocksByRoot.get(rootHex);
       return block ? {block: block.bytes, executionOptimistic: false, finalized: false, slot: block.slot} : null;
