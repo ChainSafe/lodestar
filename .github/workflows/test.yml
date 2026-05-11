@@ -101,7 +101,7 @@ jobs:
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
@@ -156,7 +156,7 @@ jobs:
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
@@ -199,7 +199,7 @@ jobs:
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: packages/beacon-node/spec-tests
           key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
