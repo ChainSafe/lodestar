@@ -65,7 +65,7 @@ export async function processBlocks(
   }
 
   try {
-    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, opts);
+    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, payloadEnvelopes, opts);
 
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
@@ -109,8 +109,10 @@ export async function processBlocks(
     }
 
     const {executionStatuses} = segmentExecStatus;
-    const fullyVerifiedBlocks = relevantBlocks.map(
-      (block, i): FullyVerifiedBlock => ({
+    const verifiedBlocksBySlot = new Map<Slot, FullyVerifiedBlock>();
+    for (let i = 0; i < relevantBlocks.length; i++) {
+      const block = relevantBlocks[i];
+      verifiedBlocksBySlot.set(block.getBlock().message.slot, {
         blockInput: block,
         postState: postStates[i],
         parentBlockSlot: parentSlots[i],
@@ -121,14 +123,21 @@ export async function processBlocks(
         indexedAttestations: indexedAttestationsByBlock[i],
         // TODO: Make this param mandatory and capture in gossip
         seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-      })
-    );
+      });
+    }
 
-    for (const fullyVerifiedBlock of fullyVerifiedBlocks) {
-      // TODO: Consider batching importBlock too if it takes significant time
-      await importBlock.call(this, fullyVerifiedBlock, opts);
+    const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
+    if (payloadEnvelopes) {
+      for (const slot of payloadEnvelopes.keys()) slotSet.add(slot);
+    }
+    const slots = Array.from(slotSet).sort((a, b) => a - b);
+    for (const slot of slots) {
+      const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
+      if (fullyVerifiedBlock !== undefined) {
+        // TODO: Consider batching importBlock too if it takes significant time
+        await importBlock.call(this, fullyVerifiedBlock, opts);
+      }
 
-      const slot = fullyVerifiedBlock.blockInput.getBlock().message.slot;
       const payloadInput = payloadEnvelopes?.get(slot);
       if (payloadInput?.hasPayloadEnvelope()) {
         if (!payloadInput.isComplete()) {

@@ -185,6 +185,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     });
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
+
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex,
+          block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+          forkName: fork,
+          sampledColumns: chain.custodyConfig.sampledColumns,
+          custodyColumns: chain.custodyConfig.custodyColumns,
+          timeCreatedSec: seenTimestampSec,
+        });
+      }
+
       const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
@@ -595,6 +607,24 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
+
+        if (isForkPostGloas(blockInput.forkName)) {
+          const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockInput.blockRootHex);
+          // This payloadInput should have been created just after gossip validation
+          if (!payloadInput) {
+            throw Error(
+              `PayloadEnvelopeInput not seeded for block ${blockInput.blockRootHex} during gossip processing`
+            );
+          }
+
+          // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
+          // which is all the information we need so there is no reason to delay until execution payload arrives
+          // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
+          // (for example later in the slot). Do not couple retries to incoming gossip columns.
+          // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
+          // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+          chain.getBlobsTracker.triggerGetBlobs(payloadInput);
+        }
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -1072,13 +1102,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const {beaconBlockRoot} = signedEnvelope.message;
           const slot = signedEnvelope.message.payload.slotNumber;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
-          if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
-            chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
-              envelope: signedEnvelope,
-              peer: peerIdStr,
-              source: BlockInputSource.gossip,
-            });
-          }
 
           if (e.action === GossipAction.REJECT) {
             chain.persistInvalidSszValue(

@@ -7,6 +7,7 @@ import {IClock} from "../../util/clock.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {IChainOptions} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
+import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ImportBlockOpts} from "./types.js";
 
 /**
@@ -30,6 +31,7 @@ export function verifyBlocksSanityChecks(
     blacklistedBlocks: Map<RootHex, Slot | null>;
   },
   blocks: IBlockInput[],
+  payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
   opts: ImportBlockOpts
 ): {
   relevantBlocks: IBlockInput[];
@@ -100,13 +102,21 @@ export function verifyBlocksSanityChecks(
         const parentBlockHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
         const parentBlockWithPayload = chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash);
         if (!parentBlockWithPayload) {
-          throw new BlockError(block, {
-            code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
-            parentRoot,
-            parentBlockHash,
-          });
+          // Checkpoint sync: parent's FULL variant may not be in fork-choice yet because the
+          // anchor block is initialized with PENDING+EMPTY only. The parent's payload arrives
+          // in the same batch via payloadEnvelopes and will be imported by processBlocks. If
+          // a matching payload is in the Map, accept the parent as known.
+          const parentPayloadInput = payloadEnvelopes?.get(parentBlockDefaultStatus.slot);
+          if (parentPayloadInput?.getBlockHashHex() !== parentBlockHash) {
+            throw new BlockError(block, {
+              code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+              parentRoot,
+              parentBlockHash,
+            });
+          }
+        } else {
+          parentBlock = parentBlockWithPayload;
         }
-        parentBlock = parentBlockWithPayload;
       }
       // Parent is known to the fork-choice
       parentBlockSlot = parentBlock.slot;

@@ -20,7 +20,7 @@ export type VerifyExecutionPayloadEnvelopeOpts = {
  * performed outside this function, see `verifyExecutionPayloadEnvelopeSignature` and
  * `importExecutionPayload` which run both in parallel with this check.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope
  */
 export function verifyExecutionPayloadEnvelope(
   config: BeaconConfig,
@@ -41,6 +41,11 @@ export function verifyExecutionPayloadEnvelope(
   if (!byteArrayEquals(envelope.beaconBlockRoot, headerRoot)) {
     throw new Error(
       `Envelope's block is not the latest block header envelope=${toRootHex(envelope.beaconBlockRoot)} latestBlockHeader=${toRootHex(headerRoot)}`
+    );
+  }
+  if (!byteArrayEquals(envelope.parentBeaconBlockRoot, state.latestBlockHeader.parentRoot)) {
+    throw new Error(
+      `Envelope's parent_beacon_block_root mismatch envelope=${toRootHex(envelope.parentBeaconBlockRoot)} state=${toRootHex(state.latestBlockHeader.parentRoot)}`
     );
   }
 
@@ -77,16 +82,19 @@ export function verifyExecutionPayloadEnvelope(
     }
   }
 
-  // Verify the execution payload is valid
-  if (payload.slotNumber !== state.slot) {
-    throw new Error(`Slot mismatch between payload and state payload=${payload.slotNumber} state=${state.slot}`);
+  // should not use state.slot, it does not work for skipped slot checkpoint sync
+  const blockSlot = state.latestBlockHeader.slot;
+  if (payload.slotNumber !== blockSlot) {
+    throw new Error(
+      `Slot mismatch between payload and latest block header payload=${payload.slotNumber} latestBlockHeader=${blockSlot}`
+    );
   }
   if (!byteArrayEquals(payload.parentHash, state.latestBlockHash)) {
     throw new Error(
       `Parent hash mismatch between payload and state payload=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)}`
     );
   }
-  const expectedTimestamp = computeTimeAtSlot(config, state.slot, state.genesisTime);
+  const expectedTimestamp = computeTimeAtSlot(config, blockSlot, state.genesisTime);
   if (payload.timestamp !== expectedTimestamp) {
     throw new Error(
       `Timestamp mismatch between payload and state payload=${payload.timestamp} state=${expectedTimestamp}`
@@ -108,7 +116,7 @@ export function verifyExecutionPayloadEnvelope(
 /**
  * Verify the BLS signature of an execution payload envelope.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope_signature
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/fork-choice.md#new-verify_execution_payload_envelope_signature
  */
 export async function verifyExecutionPayloadEnvelopeSignature(
   config: BeaconConfig,

@@ -52,6 +52,9 @@ jobs:
       - name: Assert pnpm prints no warnings
         run: scripts/assert_no_pnpm_warnings.sh
 
+      - name: Assert @chainsafe/persistent-merkle-tree is not duplicated
+        run: scripts/assert_persistent_merkle_tree_dedup.sh
+
       - name: Lint Code
         run: pnpm lint
 
