@@ -314,6 +314,23 @@ export const DataColumnSidecar = new ContainerType(
 
 export const DataColumnSidecars = new ListCompositeType(DataColumnSidecar, NUMBER_OF_COLUMNS);
 
+export const PartialDataColumnGroupID = new ContainerType(
+  {
+    slot: Slot,
+    beaconBlockRoot: Root,
+  },
+  {typeName: "PartialDataColumnGroupID", jsonCase: "eth2"}
+);
+
+export const PartialDataColumnSidecar = new ContainerType(
+  {
+    cellsPresentBitmap: fuluSsz.PartialDataColumnSidecar.fields.cellsPresentBitmap,
+    partialColumn: fuluSsz.PartialDataColumnSidecar.fields.partialColumn,
+    kzgProofs: fuluSsz.PartialDataColumnSidecar.fields.kzgProofs,
+  },
+  {typeName: "PartialDataColumnSidecar", jsonCase: "eth2"}
+);
+
 export const ExecutionPayloadEnvelopesByRangeRequest = new ContainerType(
   {startSlot: Slot, count: UintNum64},
   {typeName: "ExecutionPayloadEnvelopesByRangeRequest", jsonCase: "eth2"}
