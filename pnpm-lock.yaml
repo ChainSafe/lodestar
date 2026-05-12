@@ -24,8 +24,9 @@ catalogs:
 
 overrides:
   dns-over-http-resolver: ^2.1.1
-  loupe: ^2.3.6
   elliptic: '>=6.6.1'
+  loupe: ^2.3.6
+  nan: ^2.19.0
 
 importers:
 
@@ -180,8 +181,8 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
         specifier: ^1.4.0
         version: 1.4.0
@@ -241,8 +242,8 @@ importers:
         specifier: 'catalog:'
         version: 0.1.2-rc.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -455,8 +456,8 @@ importers:
         specifier: 'catalog:'
         version: 0.1.2-rc.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/pubkey-index-map':
         specifier: ^3.0.0
         version: 3.0.0
@@ -719,8 +720,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
         specifier: ^1.4.0
         version: 1.4.0
@@ -811,8 +812,8 @@ importers:
   packages/prover:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@ethereumjs/block':
         specifier: ^4.2.2
         version: 4.2.2
@@ -987,8 +988,8 @@ importers:
         specifier: 'catalog:'
         version: 0.1.2-rc.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/persistent-ts':
         specifier: ^1.0.0
         version: 1.0.0
@@ -1322,6 +1323,9 @@ packages:
   '@chainsafe/as-sha256@1.2.0':
     resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
 
+  '@chainsafe/as-sha256@1.2.4':
+    resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
+
   '@chainsafe/benchmark@2.0.2':
     resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
     hasBin: true
@@ -1544,9 +1548,6 @@ packages:
 
   '@chainsafe/persistent-merkle-tree@0.6.1':
     resolution: {integrity: sha512-gcENLemRR13+1MED2NeZBMA7FRS0xQPM7L2vhMqvKkjqtFT4YfjSVADq5U0iLuQLhFUJEMVuA8fbv5v+TN6O9A==}
-
-  '@chainsafe/persistent-merkle-tree@1.2.1':
-    resolution: {integrity: sha512-AOSEVLfaqwb9eTCKuY1ri0DrRxVQ3Rh+we1VBj1GahUGfEdE8OC3Vkbca7Up6RoI9Ip9FLnI31Y7AjKH9ZqAGA==}
 
   '@chainsafe/persistent-merkle-tree@1.2.5':
     resolution: {integrity: sha512-uyv3/nHkD8vNXjdez6q89rhXwGDUp3YX2mBbOwB7/xelgZ9E7hc3HQgOuq1EdfM9Vyh09jiwimXF/hskmymOfQ==}
@@ -7785,6 +7786,8 @@ snapshots:
 
   '@chainsafe/as-sha256@1.2.0': {}
 
+  '@chainsafe/as-sha256@1.2.4': {}
+
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
     dependencies:
       '@actions/cache': 4.0.0(encoding@0.1.13)
@@ -8010,15 +8013,9 @@ snapshots:
       '@chainsafe/as-sha256': 0.4.1
       '@noble/hashes': 1.8.0
 
-  '@chainsafe/persistent-merkle-tree@1.2.1':
-    dependencies:
-      '@chainsafe/as-sha256': 1.2.0
-      '@chainsafe/hashtree': 1.0.2
-      '@noble/hashes': 1.8.0
-
   '@chainsafe/persistent-merkle-tree@1.2.5':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.0
+      '@chainsafe/as-sha256': 1.2.4
       '@chainsafe/hashtree': 1.0.2
       '@noble/hashes': 1.8.0
 
