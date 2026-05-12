@@ -1,7 +1,6 @@
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {BeaconConfig} from "@lodestar/config";
 import type {DataColumnSidecar} from "@lodestar/types";
-import {isGloasDataColumnSidecar} from "@lodestar/types";
 import type {INetworkCore} from "./core/types.js";
 import {type GossipTopicMap, GossipType} from "./gossip/interface.js";
 import {stringifyGossipTopic} from "./gossip/topic.js";
@@ -12,8 +11,8 @@ export async function getFullDataColumnPublishOpts(
   topic: GossipTopicMap[GossipType.data_column_sidecar],
   dataColumnSidecar: DataColumnSidecar,
   enablePartialColumns: boolean
-): Promise<Pick<PublishOpts, "excludePeerIds">> {
-  if (!enablePartialColumns || isGloasDataColumnSidecar(dataColumnSidecar)) {
+): Promise<Partial<Pick<PublishOpts, "excludePeerIds">>> {
+  if (!enablePartialColumns) {
     return {};
   }
 
@@ -23,9 +22,8 @@ export async function getFullDataColumnPublishOpts(
 }
 
 export function shouldPublishPartialDataColumn(
-  dataColumnSidecar: DataColumnSidecar,
   enablePartialColumns: boolean,
   publishPartial: boolean
 ): boolean {
-  return publishPartial && enablePartialColumns && !isGloasDataColumnSidecar(dataColumnSidecar);
+  return publishPartial && enablePartialColumns;
 }

@@ -100,7 +100,7 @@ export type ChainEventData = {
 export type PublishDataColumnsPartialTrigger = "full_column" | "post_getblobs" | "recovery";
 
 export type PublishDataColumnsEventData = {
-  columns: DataColumnSidecars;
+  columns: DataColumnSidecar[];
   publishPartial?: boolean;
   partialTrigger?: PublishDataColumnsPartialTrigger;
 };

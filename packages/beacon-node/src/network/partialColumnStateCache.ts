@@ -1,7 +1,21 @@
 import {BitArray} from "@chainsafe/ssz";
-import {RootHex, SubnetID, fulu, ssz} from "@lodestar/types";
+import {
+  DataColumnSidecar,
+  Root,
+  RootHex,
+  SubnetID,
+  deneb,
+  fulu,
+  isGloasDataColumnSidecar,
+  ssz,
+} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
-import {buildPartsMetadataBytes} from "../util/dataColumns.js";
+import {
+  PartialDataColumnSidecar,
+  buildPartsMetadataBytes,
+  getDataColumnSidecarBlockRoot,
+  isFuluPartialDataColumnSidecar,
+} from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 
 const DEFAULT_MAX_BLOCKS = 64;
@@ -22,8 +36,10 @@ type PartialColumnData = {
 };
 
 type PartialBlockState = {
-  header: fulu.PartialDataColumnHeader;
   slot: number;
+  blockRoot: Root;
+  kzgCommitments: deneb.BlobKzgCommitments;
+  header?: fulu.PartialDataColumnHeader;
   columns: Map<SubnetID, PartialColumnData>;
   peersWithHeader: Set<PeerIdStr>;
 };
@@ -39,20 +55,60 @@ export class PartialColumnStateCache {
   }
 
   upsertHeader(blockRootHex: RootHex, header: fulu.PartialDataColumnHeader): void {
+    this.upsertBlockContext(blockRootHex, {
+      slot: header.signedBlockHeader.message.slot,
+      blockRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.signedBlockHeader.message),
+      kzgCommitments: header.kzgCommitments,
+      header,
+    });
+  }
+
+  upsertGloasContext(
+    blockRootHex: RootHex,
+    blockRoot: Root,
+    slot: number,
+    kzgCommitments: deneb.BlobKzgCommitments
+  ): void {
+    this.upsertBlockContext(blockRootHex, {slot, blockRoot, kzgCommitments});
+  }
+
+  private upsertBlockContext(
+    blockRootHex: RootHex,
+    context: {
+      slot: number;
+      blockRoot: Root;
+      kzgCommitments: deneb.BlobKzgCommitments;
+      header?: fulu.PartialDataColumnHeader;
+    }
+  ): void {
     const existing = this.blocks.get(blockRootHex);
     if (existing !== undefined) {
-      const existingRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(existing.header.signedBlockHeader.message);
-      const incomingRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.signedBlockHeader.message);
-      if (!byteArrayEquals(existingRoot, incomingRoot)) {
-        throw Error("PartialColumnStateCache header mismatch");
+      if (
+        existing.slot !== context.slot ||
+        !byteArrayEquals(existing.blockRoot, context.blockRoot) ||
+        !byteArrayEquals(
+          ssz.deneb.BlobKzgCommitments.hashTreeRoot(existing.kzgCommitments),
+          ssz.deneb.BlobKzgCommitments.hashTreeRoot(context.kzgCommitments)
+        )
+      ) {
+        throw Error("PartialColumnStateCache block context mismatch");
+      }
+      if (existing.header !== undefined && context.header !== undefined) {
+        const existingRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(existing.header.signedBlockHeader.message);
+        const incomingRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(context.header.signedBlockHeader.message);
+        if (!byteArrayEquals(existingRoot, incomingRoot)) {
+          throw Error("PartialColumnStateCache header mismatch");
+        }
+      }
+      if (existing.header === undefined && context.header !== undefined) {
+        existing.header = context.header;
       }
       this.touch(blockRootHex, existing);
       return;
     }
 
     this.blocks.set(blockRootHex, {
-      header,
-      slot: header.signedBlockHeader.message.slot,
+      ...context,
       columns: new Map(),
       peersWithHeader: new Set(),
     });
@@ -81,8 +137,8 @@ export class PartialColumnStateCache {
     return this.blocks.has(blockRootHex);
   }
 
-  storePartialSidecar(blockRootHex: RootHex, subnet: SubnetID, sidecar: fulu.PartialDataColumnSidecar): number {
-    if (sidecar.header.length > 0) {
+  storePartialSidecar(blockRootHex: RootHex, subnet: SubnetID, sidecar: PartialDataColumnSidecar): number {
+    if (isFuluPartialDataColumnSidecar(sidecar) && sidecar.header.length > 0) {
       this.upsertHeader(blockRootHex, sidecar.header[0]);
     }
 
@@ -91,7 +147,7 @@ export class PartialColumnStateCache {
       return 0;
     }
 
-    const bitLen = state.header.kzgCommitments.length;
+    const bitLen = state.kzgCommitments.length;
     const column = this.getOrCreateColumn(state, subnet, bitLen);
     let addedCells = 0;
     let cellIndex = 0;
@@ -115,15 +171,22 @@ export class PartialColumnStateCache {
     return addedCells;
   }
 
-  storeFullColumn(column: fulu.DataColumnSidecar): number {
-    const header: fulu.PartialDataColumnHeader = {
-      kzgCommitments: column.kzgCommitments,
-      signedBlockHeader: column.signedBlockHeader,
-      kzgCommitmentsInclusionProof: column.kzgCommitmentsInclusionProof,
-    };
-    const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(column.signedBlockHeader.message));
-
-    this.upsertHeader(blockRootHex, header);
+  storeFullColumn(column: DataColumnSidecar, kzgCommitments?: deneb.BlobKzgCommitments): number {
+    const blockRoot = getDataColumnSidecarBlockRoot(column);
+    const blockRootHex = toRootHex(blockRoot);
+    if (isGloasDataColumnSidecar(column)) {
+      if (kzgCommitments === undefined) {
+        return 0;
+      }
+      this.upsertGloasContext(blockRootHex, blockRoot, column.slot, kzgCommitments);
+    } else {
+      const header: fulu.PartialDataColumnHeader = {
+        kzgCommitments: column.kzgCommitments,
+        signedBlockHeader: column.signedBlockHeader,
+        kzgCommitmentsInclusionProof: column.kzgCommitmentsInclusionProof,
+      };
+      this.upsertHeader(blockRootHex, header);
+    }
 
     const state = this.blocks.get(blockRootHex);
     if (state === undefined) {
@@ -148,13 +211,13 @@ export class PartialColumnStateCache {
     blockRootHex: RootHex,
     subnet: SubnetID,
     opts: {includeHeader: boolean}
-  ): fulu.PartialDataColumnSidecar | null {
+  ): PartialDataColumnSidecar | null {
     const state = this.blocks.get(blockRootHex);
     if (state === undefined) {
       return null;
     }
 
-    const header = opts.includeHeader ? [state.header] : [];
+    const header = opts.includeHeader && state.header !== undefined ? [state.header] : [];
     const column = state.columns.get(subnet);
     if (column === undefined || column.cells.size === 0) {
       if (header.length === 0) {
@@ -184,17 +247,18 @@ export class PartialColumnStateCache {
       kzgProofs.push(cell.proof);
     }
 
-    return {
+    const sidecar = {
       cellsPresentBitmap: BitArray.fromBoolArray(bitmap),
       partialColumn,
       kzgProofs,
-      header,
     };
+
+    return state.header !== undefined ? {...sidecar, header} : sidecar;
   }
 
   buildHeaderOnlySidecar(blockRootHex: RootHex): fulu.PartialDataColumnSidecar | null {
     const state = this.blocks.get(blockRootHex);
-    if (state === undefined) {
+    if (state === undefined || state.header === undefined) {
       return null;
     }
 
@@ -214,7 +278,7 @@ export class PartialColumnStateCache {
 
     const column = state.columns.get(subnet);
     const available = Array.from(
-      {length: state.header.kzgCommitments.length},
+      {length: state.kzgCommitments.length},
       (_v, index) => column?.cells.has(index) ?? false
     );
     const requests = available.map((hasCell) => !hasCell);

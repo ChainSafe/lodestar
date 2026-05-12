@@ -776,6 +776,7 @@ export function getBeaconBlockApi({
         ...dataColumnSidecars.map(
           (dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar, {publishPartial: false})
         ),
+        () => network.publishBlockProductionPartialColumns(dataColumnSidecars),
         // Import execution payload. Signature already verified above
         () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];

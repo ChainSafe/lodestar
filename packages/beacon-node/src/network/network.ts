@@ -29,7 +29,7 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {prettyPrintIndices, sleep} from "@lodestar/utils";
+import {prettyPrintIndices, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {
   ChainEvent,
@@ -419,24 +419,21 @@ export class Network implements INetwork {
 
     if (
       shouldPublishPartialDataColumn(
-        dataColumnSidecar,
         this.opts.enablePartialColumns ?? false,
         opts?.publishPartial ?? true
       )
     ) {
-      if (isGloasDataColumnSidecar(dataColumnSidecar)) {
-        return sentPeers;
-      }
       await this.partialColumnPublisher.publishAvailableColumn(
         dataColumnSidecar,
-        opts?.partialTrigger ?? "full_column"
+        opts?.partialTrigger ?? "full_column",
+        this.getPartialColumnKzgCommitments(dataColumnSidecar)
       );
     }
 
     return sentPeers;
   }
 
-  async publishBlockProductionPartialColumns(columns: fulu.DataColumnSidecars): Promise<void> {
+  async publishBlockProductionPartialColumns(columns: DataColumnSidecar[]): Promise<void> {
     if (!this.opts.enablePartialColumns || columns.length === 0) {
       return;
     }
@@ -444,8 +441,17 @@ export class Network implements INetwork {
     await this.partialColumnPublisher.publishBlockProductionColumns(
       columns,
       getCustodySubnets(this.config, this.custodyConfig.custodyColumns),
-      this.opts.eagerlyPublishCells ?? false
+      this.opts.eagerlyPublishCells ?? false,
+      this.getPartialColumnKzgCommitments(columns[0])
     );
+  }
+
+  private getPartialColumnKzgCommitments(column: DataColumnSidecar): deneb.BlobKzgCommitments | undefined {
+    if (!isGloasDataColumnSidecar(column)) {
+      return column.kzgCommitments;
+    }
+
+    return this.chain.seenPayloadEnvelopeInputCache.get(toRootHex(column.beaconBlockRoot))?.getBlobKzgCommitments();
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {

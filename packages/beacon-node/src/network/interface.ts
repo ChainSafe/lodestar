@@ -107,7 +107,7 @@ export interface INetwork extends INetworkCorePublic {
     dataColumnSideCar: DataColumnSidecar,
     opts?: {publishPartial?: boolean; partialTrigger?: PublishDataColumnsPartialTrigger}
   ): Promise<number>;
-  publishBlockProductionPartialColumns(columns: fulu.DataColumnSidecars): Promise<void>;
+  publishBlockProductionPartialColumns(columns: DataColumnSidecar[]): Promise<void>;
   publishVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<number>;
   publishBlsToExecutionChange(blsToExecutionChange: capella.SignedBLSToExecutionChange): Promise<number>;
   publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<number>;

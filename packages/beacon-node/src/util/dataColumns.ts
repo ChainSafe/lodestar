@@ -392,6 +392,14 @@ export function getDataColumnSidecarSlot(sidecar: DataColumnSidecar): Slot {
   return sidecar.signedBlockHeader.message.slot;
 }
 
+export function getDataColumnSidecarBlockRoot(sidecar: DataColumnSidecar): Root {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return sidecar.beaconBlockRoot;
+  }
+
+  return ssz.phase0.BeaconBlockHeader.hashTreeRoot(sidecar.signedBlockHeader.message);
+}
+
 /**
  * In Gloas, data column sidecars have a simplified structure with `slot` and `beaconBlockRoot`
  * instead of `signedBlockHeader`, `kzgCommitments`, and `kzgCommitmentsInclusionProof`.
@@ -481,7 +489,7 @@ export async function recoverDataColumnSidecars(
   // it SHOULD still expose the availability of the DataColumnSidecar as part of the gossip emission process.
   // After exposing the reconstructed DataColumnSidecar to the network,
   // the node MAY delete the DataColumnSidecar if it is not part of the node's custody requirement.
-  const sidecarsToPublish = [];
+  const sidecarsToPublish: DataColumnSidecar[] = [];
   for (const columnSidecar of fullSidecars) {
     if (!input.hasColumn(columnSidecar.index)) {
       if (input instanceof PayloadEnvelopeInput) {
@@ -527,17 +535,46 @@ export enum DataColumnReconstructionCode {
 
 const PARTIAL_MESSAGE_GROUP_ID_VERSION = 0x00;
 
+export type PartialDataColumnSidecar = fulu.PartialDataColumnSidecar | gloas.PartialDataColumnSidecar;
+
+export function isFuluPartialDataColumnSidecar(
+  sidecar: PartialDataColumnSidecar
+): sidecar is fulu.PartialDataColumnSidecar {
+  return "header" in sidecar;
+}
+
+export function getPartialDataColumnSidecarHeaderCount(sidecar: PartialDataColumnSidecar): number {
+  return isFuluPartialDataColumnSidecar(sidecar) ? sidecar.header.length : 0;
+}
+
+export function serializePartialDataColumnSidecar(
+  fork: ForkName,
+  sidecar: PartialDataColumnSidecar
+): Uint8Array {
+  return isForkPostGloas(fork)
+    ? ssz.gloas.PartialDataColumnSidecar.serialize(sidecar as gloas.PartialDataColumnSidecar)
+    : ssz.fulu.PartialDataColumnSidecar.serialize(sidecar as fulu.PartialDataColumnSidecar);
+}
+
 /**
  * Construct a PartialDataColumnSidecar from a full DataColumnSidecar.
  * The caller decides whether to include the header, the cells, or both.
  */
 export function dataColumnToPartialSidecar(
-  columnSidecar: fulu.DataColumnSidecar,
+  columnSidecar: DataColumnSidecar,
   opts: {includeHeader: boolean; includeCells: boolean}
-): fulu.PartialDataColumnSidecar {
+): PartialDataColumnSidecar {
   const cellCount = columnSidecar.column.length;
   const includeCells = opts.includeCells;
   const bitmap = BitArray.fromBoolArray(includeCells ? Array.from({length: cellCount}, () => true) : []);
+
+  if (isGloasDataColumnSidecar(columnSidecar)) {
+    return {
+      cellsPresentBitmap: bitmap,
+      partialColumn: includeCells ? columnSidecar.column : [],
+      kzgProofs: includeCells ? columnSidecar.kzgProofs : [],
+    };
+  }
 
   const header: fulu.PartialDataColumnHeader[] = opts.includeHeader
     ? [
@@ -558,27 +595,52 @@ export function dataColumnToPartialSidecar(
 }
 
 /**
- * Compute the partial message group ID for a block root.
- * Per spec: version byte (0x00) + block root.
+ * Compute the partial message group ID.
+ *
+ * Fulu uses version byte (0x00) + block root. Gloas uses
+ * PartialDataColumnGroupID(slot, beacon_block_root).
  */
-export function computePartialMessageGroupId(blockRoot: Uint8Array): Uint8Array {
+export function computePartialMessageGroupId(blockRoot: Uint8Array, fork?: ForkName, slot?: Slot): Uint8Array {
+  if (fork !== undefined && isForkPostGloas(fork)) {
+    if (slot === undefined) {
+      throw new Error("slot is required for Gloas partial message group ID");
+    }
+    return ssz.gloas.PartialDataColumnGroupID.serialize({slot, beaconBlockRoot: blockRoot});
+  }
+
   const groupId = new Uint8Array(1 + blockRoot.length);
   groupId[0] = PARTIAL_MESSAGE_GROUP_ID_VERSION;
   groupId.set(blockRoot, 1);
   return groupId;
 }
 
-export function getBlockRootHexFromPartialMessageGroupId(groupId: Uint8Array): RootHex | null {
+export type PartialMessageGroupId = {
+  blockRoot: Root;
+  blockRootHex: RootHex;
+  slot?: Slot;
+};
+
+export function parsePartialMessageGroupId(groupId: Uint8Array): PartialMessageGroupId | null {
   const rootLength = ssz.Root.fixedSize as number;
-  if (groupId.length !== rootLength + 1) {
-    return null;
+  if (groupId.length === rootLength + 1) {
+    if (groupId[0] !== PARTIAL_MESSAGE_GROUP_ID_VERSION) {
+      return null;
+    }
+
+    const blockRoot = groupId.slice(1);
+    return {blockRoot, blockRootHex: toRootHex(blockRoot)};
   }
 
-  if (groupId[0] !== PARTIAL_MESSAGE_GROUP_ID_VERSION) {
-    return null;
+  if (groupId.length === ssz.gloas.PartialDataColumnGroupID.fixedSize) {
+    const {slot, beaconBlockRoot} = ssz.gloas.PartialDataColumnGroupID.deserialize(groupId);
+    return {slot, blockRoot: beaconBlockRoot, blockRootHex: toRootHex(beaconBlockRoot)};
   }
 
-  return toRootHex(groupId.subarray(1));
+  return null;
+}
+
+export function getBlockRootHexFromPartialMessageGroupId(groupId: Uint8Array): RootHex | null {
+  return parsePartialMessageGroupId(groupId)?.blockRootHex ?? null;
 }
 
 /**

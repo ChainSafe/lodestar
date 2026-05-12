@@ -1,15 +1,21 @@
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {RootHex, SubnetID, fulu, ssz} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, SubnetID, deneb, fulu, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {Metrics} from "../metrics/index.js";
 import {
+  PartialDataColumnSidecar,
   buildPartsMetadataBytes,
   computePartialMessageGroupId,
   dataColumnToPartialSidecar,
-  getBlockRootHexFromPartialMessageGroupId,
+  getDataColumnSidecarBlockRoot,
+  getDataColumnSidecarSlot,
+  getPartialDataColumnSidecarHeaderCount,
+  isFuluPartialDataColumnSidecar,
+  parsePartialMessageGroupId,
+  serializePartialDataColumnSidecar,
 } from "../util/dataColumns.js";
 import {PeerIdStr} from "../util/peerId.js";
 import type {INetworkCore} from "./core/types.js";
@@ -73,57 +79,72 @@ export class PartialColumnPublisher {
 
   async handleMetadataOnlyMessage(groupID: Uint8Array, subnet: SubnetID, peerId: PeerIdStr): Promise<void> {
     this.metrics?.partialPublish.metadataOnlyReceived.inc();
-    const blockRootHex = getBlockRootHexFromPartialMessageGroupId(groupID);
-    if (blockRootHex === null) {
+    const group = parsePartialMessageGroupId(groupID);
+    if (group === null) {
       return;
     }
 
-    const slot = this.stateCache.getSlot(blockRootHex);
+    const slot = this.stateCache.getSlot(group.blockRootHex);
     if (slot === null) {
       return;
     }
 
-    this.stateCache.markPeerHasHeader(blockRootHex, peerId);
-    await this.publishTrackedPartialToPeer(peerId, subnet, groupID.subarray(1), blockRootHex, slot, "metadata_request");
+    this.stateCache.markPeerHasHeader(group.blockRootHex, peerId);
+    await this.publishTrackedPartialToPeer(
+      peerId,
+      subnet,
+      group.blockRoot,
+      group.blockRootHex,
+      slot,
+      "metadata_request"
+    );
   }
 
   async publishAvailableColumn(
-    column: fulu.DataColumnSidecar,
-    trigger: Exclude<PartialPublishTrigger, "block_production" | "gossip_merge">
+    column: DataColumnSidecar,
+    trigger: Exclude<PartialPublishTrigger, "block_production" | "gossip_merge">,
+    kzgCommitments?: deneb.BlobKzgCommitments
   ): Promise<void> {
-    this.stateCache.storeFullColumn(column);
+    if (this.stateCache.storeFullColumn(column, kzgCommitments) === 0) {
+      return;
+    }
     this.observeStateCache();
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(column.signedBlockHeader.message);
+    const blockRoot = getDataColumnSidecarBlockRoot(column);
+    const slot = getDataColumnSidecarSlot(column);
     await this.publishTrackedPartialOnSubnet(
       computeSubnetForDataColumnSidecar(this.config, column),
       blockRoot,
       toRootHex(blockRoot),
-      column.signedBlockHeader.message.slot,
+      slot,
       new Set(),
       trigger
     );
   }
 
   async publishBlockProductionColumns(
-    columns: fulu.DataColumnSidecars,
+    columns: DataColumnSidecar[],
     custodySubnets: SubnetID[],
-    includeCells: boolean
+    includeCells: boolean,
+    kzgCommitments?: deneb.BlobKzgCommitments
   ): Promise<void> {
     if (columns.length === 0 || custodySubnets.length === 0) {
       return;
     }
 
     const firstColumn = columns[0];
-    const slot = firstColumn.signedBlockHeader.message.slot;
+    if (isGloasDataColumnSidecar(firstColumn) && kzgCommitments === undefined) {
+      return;
+    }
+    const slot = getDataColumnSidecarSlot(firstColumn);
     const epoch = computeEpochAtSlot(slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
-    const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(firstColumn.signedBlockHeader.message);
+    const blockRoot = getDataColumnSidecarBlockRoot(firstColumn);
     const headerOnlySidecar = dataColumnToPartialSidecar(firstColumn, {includeHeader: true, includeCells: false});
-    const columnsBySubnet = new Map<SubnetID, fulu.DataColumnSidecar>();
+    const columnsBySubnet = new Map<SubnetID, DataColumnSidecar>();
     const sentPeers = new Set<PeerIdStr>();
 
     for (const column of columns) {
-      this.stateCache.storeFullColumn(column);
+      this.stateCache.storeFullColumn(column, kzgCommitments);
       columnsBySubnet.set(computeSubnetForDataColumnSidecar(this.config, column), column);
     }
     this.observeStateCache();
@@ -213,7 +234,7 @@ export class PartialColumnPublisher {
   }
 
   async publishFilteredPartialOnSubnet(
-    partialSidecar: fulu.PartialDataColumnSidecar,
+    partialSidecar: PartialDataColumnSidecar,
     subnet: SubnetID,
     blockRoot: Uint8Array,
     slot: number,
@@ -232,28 +253,30 @@ export class PartialColumnPublisher {
     blockRoot: Uint8Array,
     blockRootHex: RootHex,
     slot: number,
-    partialSidecar: fulu.PartialDataColumnSidecar,
+    partialSidecar: PartialDataColumnSidecar,
     trigger?: PartialPublishTrigger
   ): Promise<void> {
-    const {topic} = this.getTopicForSubnet(subnet, slot);
+    const {boundary, topic} = this.getTopicForSubnet(subnet, slot);
     const partsMetadata =
       this.stateCache.buildPartsMetadataBytes(blockRootHex, subnet) ??
       buildPartsMetadataBytes(partialSidecar.cellsPresentBitmap);
+    const headerCount = getPartialDataColumnSidecarHeaderCount(partialSidecar);
+    const hasPayload = headerCount > 0 || partialSidecar.partialColumn.length > 0;
 
     await this.core.publishPartialMessageToPeer(peerId, {
       topic,
-      groupID: computePartialMessageGroupId(blockRoot),
-      partialMessage: ssz.fulu.PartialDataColumnSidecar.serialize(partialSidecar),
+      groupID: computePartialMessageGroupId(blockRoot, boundary.fork, slot),
+      partialMessage: hasPayload ? serializePartialDataColumnSidecar(boundary.fork, partialSidecar) : undefined,
       partsMetadata,
     });
 
-    if (partialSidecar.header.length > 0) {
+    if (headerCount > 0) {
       this.stateCache.markPeerHasHeader(blockRootHex, peerId);
     }
-    this.metrics?.partialColumns.headersPublished.inc(partialSidecar.header.length);
+    this.metrics?.partialColumns.headersPublished.inc(headerCount);
     this.metrics?.partialColumns.cellsPublished.inc(partialSidecar.partialColumn.length);
-    if (trigger !== undefined && partialSidecar.header.length > 0) {
-      this.metrics?.partialPublish.headerBroadcast.inc({trigger}, partialSidecar.header.length);
+    if (trigger !== undefined && headerCount > 0) {
+      this.metrics?.partialPublish.headerBroadcast.inc({trigger}, headerCount);
     }
     if (trigger !== undefined && partialSidecar.partialColumn.length > 0) {
       this.metrics?.partialPublish.cellsSent.inc({trigger}, partialSidecar.partialColumn.length);
@@ -276,9 +299,9 @@ export class PartialColumnPublisher {
   }
 
   private filterCellsForPeer(
-    partialSidecar: fulu.PartialDataColumnSidecar,
+    partialSidecar: PartialDataColumnSidecar,
     metadataBytes: Uint8Array | undefined
-  ): {partialSidecar: fulu.PartialDataColumnSidecar | null; hadMetadata: boolean; filteredCellCount: number} {
+  ): {partialSidecar: PartialDataColumnSidecar | null; hadMetadata: boolean; filteredCellCount: number} {
     if (metadataBytes === undefined) {
       return {partialSidecar, hadMetadata: false, filteredCellCount: 0};
     }
@@ -313,13 +336,16 @@ export class PartialColumnPublisher {
       return {partialSidecar: null, hadMetadata: true, filteredCellCount: partialSidecar.partialColumn.length};
     }
 
+    const filteredPartial = {
+      cellsPresentBitmap: BitArray.fromBoolArray(filteredBitmap),
+      partialColumn: filteredCells,
+      kzgProofs: filteredProofs,
+    };
+
     return {
-      partialSidecar: {
-        cellsPresentBitmap: BitArray.fromBoolArray(filteredBitmap),
-        partialColumn: filteredCells,
-        kzgProofs: filteredProofs,
-        header: partialSidecar.header,
-      },
+      partialSidecar: isFuluPartialDataColumnSidecar(partialSidecar)
+        ? {...filteredPartial, header: partialSidecar.header}
+        : filteredPartial,
       hadMetadata: true,
       filteredCellCount: partialSidecar.partialColumn.length - filteredCells.length,
     };
@@ -353,10 +379,11 @@ export class PartialColumnPublisher {
     slot: number,
     trigger: PartialPublishTrigger
   ): Promise<void> {
-    const {topic} = this.getTopicForSubnet(subnet, slot);
+    const {boundary, topic} = this.getTopicForSubnet(subnet, slot);
+    const groupID = computePartialMessageGroupId(blockRoot, boundary.fork, slot);
     const metadataBytes = await this.core.getPeerPartialMetadata(
       topic,
-      computePartialMessageGroupId(blockRoot),
+      groupID,
       peerId
     );
 
@@ -369,7 +396,17 @@ export class PartialColumnPublisher {
 
       const headerOnlySidecar = this.stateCache.buildHeaderOnlySidecar(blockRootHex);
       if (headerOnlySidecar === null) {
-        this.metrics?.partialPublish.peerSkip.inc();
+        const partsMetadata = this.stateCache.buildPartsMetadataBytes(blockRootHex, subnet);
+        if (partsMetadata === null) {
+          this.metrics?.partialPublish.peerSkip.inc();
+          return;
+        }
+
+        await this.core.publishPartialMessageToPeer(peerId, {
+          topic,
+          groupID,
+          partsMetadata,
+        });
         return;
       }
 
@@ -413,7 +450,7 @@ export class PartialColumnPublisher {
   ): Promise<void[]> {
     return Promise.all(
       this.custodySubnets.map(async (subnet) => {
-        const {topic} = this.getTopicForSubnet(subnet, slot);
+        const {boundary, topic} = this.getTopicForSubnet(subnet, slot);
         const partsMetadata = this.stateCache.buildPartsMetadataBytes(blockRootHex, subnet);
         if (partsMetadata === null) {
           return;
@@ -421,7 +458,7 @@ export class PartialColumnPublisher {
 
         await this.core.publishPartialMessage({
           topic,
-          groupID: computePartialMessageGroupId(blockRoot),
+          groupID: computePartialMessageGroupId(blockRoot, boundary.fork, slot),
           partsMetadata,
         });
         this.metrics?.partialPublish.requestMetadataSent.inc();

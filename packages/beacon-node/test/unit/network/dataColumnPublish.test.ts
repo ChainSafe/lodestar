@@ -58,10 +58,8 @@ describe("data column publish helpers", () => {
   });
 
   it("should only publish replacement partial messages when the caller allows it", () => {
-    const sidecar = createFuluSidecar();
-
-    expect(shouldPublishPartialDataColumn(sidecar, true, true)).toBe(true);
-    expect(shouldPublishPartialDataColumn(sidecar, true, false)).toBe(false);
-    expect(shouldPublishPartialDataColumn(sidecar, false, true)).toBe(false);
+    expect(shouldPublishPartialDataColumn(true, true)).toBe(true);
+    expect(shouldPublishPartialDataColumn(true, false)).toBe(false);
+    expect(shouldPublishPartialDataColumn(false, true)).toBe(false);
   });
 });
