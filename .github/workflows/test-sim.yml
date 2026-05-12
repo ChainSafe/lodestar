@@ -57,7 +57,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sim-test-multifork-logs
           path: packages/cli/test-logs
@@ -86,7 +86,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sim-test-endpoints-logs
           path: packages/cli/test-logs
@@ -115,7 +115,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sim-test-eth-backup-provider-logs
           path: packages/cli/test-logs
@@ -144,7 +144,7 @@ jobs:
           GENESIS_DELAY_SLOTS: ${{github.event.inputs.genesisDelaySlots}}
       - name: Upload debug log test files for "packages/cli"
         if: ${{ always() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sim-test-mixed-clients-logs
           path: packages/cli/test-logs
