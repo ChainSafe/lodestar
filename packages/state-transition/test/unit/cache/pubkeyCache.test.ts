@@ -1,9 +1,9 @@
 import path from "node:path";
-import { Worker } from "node:worker_threads";
-import { beforeAll, describe, expect, it } from "vitest";
-import { PubkeyCache } from "@chainsafe/lodestar-z/pubkeys";
-import { getPubkeyCache, syncPubkeys } from "../../../src/cache/pubkeyCache.js";
-import { interopSecretKey } from "../../../src/util/interop.js";
+import {Worker} from "node:worker_threads";
+import {beforeAll, describe, expect, it} from "vitest";
+import {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {getPubkeyCache, syncPubkeys} from "../../../src/cache/pubkeyCache.js";
+import {interopSecretKey} from "../../../src/util/interop.js";
 
 /**
  * Tests for the global native pubkey cache (getPubkeyCache) with multithreaded access.
@@ -70,11 +70,11 @@ describe("Global native pubkey cache - multithreaded access", () => {
   });
 
   it("worker thread can read pubkeys populated by main thread via get()", async () => {
-    const indices = Array.from({ length: COUNT }, (_, i) => BASE_INDEX + i);
+    const indices = Array.from({length: COUNT}, (_, i) => BASE_INDEX + i);
 
     const worker = spawnWorker();
     try {
-      const result = await sendTask(worker, { type: "get", indices });
+      const result = await sendTask(worker, {type: "get", indices});
 
       for (const idx of indices) {
         const expected = generatePubkeyHex(idx);
@@ -93,7 +93,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
 
     const worker = spawnWorker();
     try {
-      const result = await sendTask(worker, { type: "getIndex", pubkeys });
+      const result = await sendTask(worker, {type: "getIndex", pubkeys});
 
       for (let i = 0; i < COUNT; i++) {
         const expectedIndex = BASE_INDEX + i;
@@ -109,7 +109,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
 
     const worker = spawnWorker();
     try {
-      const result = await sendTask(worker, { type: "get", indices: [] });
+      const result = await sendTask(worker, {type: "get", indices: []});
       expect(result.size).toBe(mainSize);
     } finally {
       await worker.terminate();
@@ -118,7 +118,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
 
   it("multiple worker threads can read concurrently", async () => {
     const workersCount = 4;
-    const indices = Array.from({ length: COUNT }, (_, i) => BASE_INDEX + i);
+    const indices = Array.from({length: COUNT}, (_, i) => BASE_INDEX + i);
 
     const workers: Worker[] = [];
     try {
@@ -130,7 +130,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
       // than the first worker finishing before the last one comes online.
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      const promises = workers.map((worker) => sendTask(worker, { type: "get", indices }));
+      const promises = workers.map((worker) => sendTask(worker, {type: "get", indices}));
       const results = await Promise.all(promises);
 
       for (const result of results) {
@@ -152,9 +152,9 @@ describe("Global native pubkey cache - multithreaded access", () => {
     const writer = spawnWorker();
     const reader = spawnWorker();
     try {
-      await sendTask(writer, { type: "set", startIndex, count });
+      await sendTask(writer, {type: "set", startIndex, count});
 
-      const indices = Array.from({ length: count }, (_, i) => startIndex + i);
+      const indices = Array.from({length: count}, (_, i) => startIndex + i);
 
       // Verify from main thread — both get() and getIndex() directions
       for (const idx of indices) {
@@ -167,7 +167,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
       }
 
       // Verify from a different worker thread
-      const result = await sendTask(reader, { type: "get", indices });
+      const result = await sendTask(reader, {type: "get", indices});
       for (const idx of indices) {
         expect(result.entries?.[idx]).toBe(generatePubkeyHex(idx));
       }
@@ -182,18 +182,18 @@ describe("Global native pubkey cache - multithreaded access", () => {
     const syncCount = 10;
 
     // Build a validators array for syncPubkeys
-    const validators: { pubkey: Uint8Array }[] = new Array(syncStart + syncCount);
+    const validators: {pubkey: Uint8Array}[] = new Array(syncStart + syncCount);
     for (let i = syncStart; i < syncStart + syncCount; i++) {
       const sk = interopSecretKey(i);
-      validators[i] = { pubkey: sk.toPublicKey().toBytes() };
+      validators[i] = {pubkey: sk.toPublicKey().toBytes()};
     }
     syncPubkeys(cache, validators as any);
 
     // Worker should see the newly synced entries
-    const indices = Array.from({ length: syncCount }, (_, i) => syncStart + i);
+    const indices = Array.from({length: syncCount}, (_, i) => syncStart + i);
     const worker = spawnWorker();
     try {
-      const result = await sendTask(worker, { type: "get", indices });
+      const result = await sendTask(worker, {type: "get", indices});
 
       for (const idx of indices) {
         const expected = generatePubkeyHex(idx);
@@ -213,9 +213,9 @@ describe("Global native pubkey cache - multithreaded access", () => {
     const writer = spawnWorker();
     const reader = spawnWorker();
     try {
-      await sendTask(writer, { type: "syncPubkeys", totalCount });
+      await sendTask(writer, {type: "syncPubkeys", totalCount});
 
-      const indices = Array.from({ length: extraCount }, (_, i) => currentSize + i);
+      const indices = Array.from({length: extraCount}, (_, i) => currentSize + i);
 
       // Verify from main thread
       for (const idx of indices) {
@@ -225,7 +225,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
       }
 
       // Verify from a different worker thread
-      const result = await sendTask(reader, { type: "get", indices });
+      const result = await sendTask(reader, {type: "get", indices});
       for (const idx of indices) {
         expect(result.entries?.[idx]).toBe(generatePubkeyHex(idx));
       }

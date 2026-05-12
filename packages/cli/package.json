@@ -63,7 +63,7 @@
     "@chainsafe/blst": "^2.2.0",
     "@chainsafe/discv5": "^12.0.1",
     "@chainsafe/enr": "^6.0.1",
-    "@chainsafe/persistent-merkle-tree": "^1.2.1",
+    "@chainsafe/persistent-merkle-tree": "^1.2.5",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.4.0",
     "@chainsafe/threads": "^1.11.3",
