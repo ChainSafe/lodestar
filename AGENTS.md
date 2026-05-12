@@ -32,7 +32,6 @@ and serves as:
   config/           # Network configuration (mainnet, sepolia, etc.)
   db/               # Database abstraction (LevelDB)
   era/              # Era file handling for historical data
-  flare/            # CLI debugging/testing tool
   fork-choice/      # Fork choice implementation (proto-array)
   logger/           # Logging utilities
   params/           # Consensus parameters and presets

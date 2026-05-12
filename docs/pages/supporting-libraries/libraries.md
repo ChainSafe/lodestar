@@ -10,7 +10,6 @@ Several useful Ethereum consensus libraries are developed as part of the [Lodest
 - [`types`](https://github.com/ChainSafe/lodestar/tree/unstable/packages/types) - Ethereum consensus types, TypeScript interfaces and SSZ type objects
 - [`config`](https://github.com/ChainSafe/lodestar/tree/unstable/packages/config) - Ethereum consensus run-time network configuration
 - [`api`](https://github.com/ChainSafe/lodestar/tree/unstable/packages/api) - Ethereum consensus REST API client
-- [`flare`](https://github.com/ChainSafe/lodestar/tree/unstable/packages/flare) - Beacon chain multi-purpose and debugging tool
 
 ## Light client and prover
 

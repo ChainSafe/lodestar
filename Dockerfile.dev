@@ -20,7 +20,6 @@ COPY packages/cli/package.json packages/cli/
 COPY packages/config/package.json packages/config/
 COPY packages/db/package.json packages/db/
 COPY packages/era/package.json packages/era/
-COPY packages/flare/package.json packages/flare/
 COPY packages/fork-choice/package.json packages/fork-choice/
 COPY packages/logger/package.json packages/logger/
 COPY packages/params/package.json packages/params/

@@ -239,7 +239,7 @@
     },
     // Code using console output
     {
-      "includes": ["**/packages/cli/src/**", "**/packages/test-utils/src/**", "**/packages/flare/src/**"],
+      "includes": ["**/packages/cli/src/**", "**/packages/test-utils/src/**"],
       "linter": {
         "rules": {
           "suspicious": {

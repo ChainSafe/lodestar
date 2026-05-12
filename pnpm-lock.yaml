@@ -21,8 +21,9 @@ catalogs:
 
 overrides:
   dns-over-http-resolver: ^2.1.1
-  loupe: ^2.3.6
   elliptic: '>=6.6.1'
+  loupe: ^2.3.6
+  nan: ^2.19.0
 
 importers:
 
@@ -177,8 +178,8 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
         specifier: ^1.4.0
         version: 1.4.0
@@ -235,8 +236,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -443,8 +444,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/pubkey-index-map':
         specifier: ^3.0.0
         version: 3.0.0
@@ -637,43 +638,6 @@ importers:
         specifier: ^2.4.7
         version: 2.4.8
 
-  packages/flare:
-    dependencies:
-      '@chainsafe/bls-keygen':
-        specifier: ^0.4.0
-        version: 0.4.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
-      '@lodestar/api':
-        specifier: workspace:^
-        version: link:../api
-      '@lodestar/config':
-        specifier: workspace:^
-        version: link:../config
-      '@lodestar/params':
-        specifier: workspace:^
-        version: link:../params
-      '@lodestar/state-transition':
-        specifier: workspace:^
-        version: link:../state-transition
-      '@lodestar/types':
-        specifier: workspace:^
-        version: link:../types
-      '@lodestar/utils':
-        specifier: workspace:^
-        version: link:../utils
-      source-map-support:
-        specifier: ^0.5.21
-        version: 0.5.21
-      yargs:
-        specifier: ^17.7.1
-        version: 17.7.2
-    devDependencies:
-      '@types/yargs':
-        specifier: ^17.0.24
-        version: 17.0.24
-
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
@@ -823,8 +787,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/persistent-ts':
         specifier: ^1.0.0
         version: 1.0.0
@@ -1155,6 +1119,9 @@ packages:
   '@chainsafe/as-sha256@1.2.0':
     resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
 
+  '@chainsafe/as-sha256@1.2.4':
+    resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
+
   '@chainsafe/benchmark@2.0.2':
     resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
     hasBin: true
@@ -1334,9 +1301,6 @@ packages:
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
-
-  '@chainsafe/persistent-merkle-tree@1.2.1':
-    resolution: {integrity: sha512-AOSEVLfaqwb9eTCKuY1ri0DrRxVQ3Rh+we1VBj1GahUGfEdE8OC3Vkbca7Up6RoI9Ip9FLnI31Y7AjKH9ZqAGA==}
 
   '@chainsafe/persistent-merkle-tree@1.2.5':
     resolution: {integrity: sha512-uyv3/nHkD8vNXjdez6q89rhXwGDUp3YX2mBbOwB7/xelgZ9E7hc3HQgOuq1EdfM9Vyh09jiwimXF/hskmymOfQ==}
@@ -7395,6 +7359,8 @@ snapshots:
 
   '@chainsafe/as-sha256@1.2.0': {}
 
+  '@chainsafe/as-sha256@1.2.4': {}
+
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
     dependencies:
       '@actions/cache': 4.0.0(encoding@0.1.13)
@@ -7583,15 +7549,9 @@ snapshots:
     dependencies:
       '@chainsafe/is-ip': 2.1.0
 
-  '@chainsafe/persistent-merkle-tree@1.2.1':
-    dependencies:
-      '@chainsafe/as-sha256': 1.2.0
-      '@chainsafe/hashtree': 1.0.2
-      '@noble/hashes': 1.8.0
-
   '@chainsafe/persistent-merkle-tree@1.2.5':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.0
+      '@chainsafe/as-sha256': 1.2.4
       '@chainsafe/hashtree': 1.0.2
       '@noble/hashes': 1.8.0
 
@@ -11955,7 +11915,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.7.3
+      semver: 7.7.4
 
   make-error@1.3.6: {}
 
