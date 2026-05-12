@@ -44,6 +44,15 @@ export enum DataColumnSidecarErrorCode {
   INCLUSION_PROOF_INVALID = "DATA_COLUMN_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
   INCORRECT_PROPOSER = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_PROPOSER",
   PAYLOAD_ENVELOPE_INPUT_MISSING = "DATA_COLUMN_SIDECAR_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
+
+  // Partial column errors
+  EMPTY_PARTIAL_MESSAGE = "DATA_COLUMN_SIDECAR_ERROR_EMPTY_PARTIAL_MESSAGE",
+  PARTIAL_CELL_PROOF_COUNT_MISMATCH = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_CELL_PROOF_COUNT_MISMATCH",
+  PARTIAL_BITMAP_LENGTH_MISMATCH = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_BITMAP_LENGTH_MISMATCH",
+  PARTIAL_HEADER_MISMATCH = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_HEADER_MISMATCH",
+  PARTIAL_INVALID_GROUP_ID = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_INVALID_GROUP_ID",
+  PARTIAL_NO_HEADER = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_NO_HEADER",
+  PARTIAL_INVALID_KZG_PROOF = "DATA_COLUMN_SIDECAR_ERROR_PARTIAL_INVALID_KZG_PROOF",
 }
 
 export type DataColumnSidecarErrorType =
@@ -128,7 +137,14 @@ export type DataColumnSidecarErrorType =
     }
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
   | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number}
-  | {code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; slot: Slot; blockRoot: RootHex};
+  | {code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; slot: Slot; blockRoot: RootHex}
+  | {code: DataColumnSidecarErrorCode.EMPTY_PARTIAL_MESSAGE; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.PARTIAL_HEADER_MISMATCH; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.PARTIAL_INVALID_GROUP_ID; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.PARTIAL_NO_HEADER; slot: Slot; columnIndex: number}
+  | {code: DataColumnSidecarErrorCode.PARTIAL_INVALID_KZG_PROOF; slot: Slot; columnIndex: number};
 
 export class DataColumnSidecarGossipError extends GossipActionError<DataColumnSidecarErrorType> {}
 export class DataColumnSidecarValidationError extends LodestarError<DataColumnSidecarErrorType> {}

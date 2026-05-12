@@ -143,6 +143,12 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
   // sendReqRespRequest - handled via events with AsyncIterableBridgeHandler
   publishGossip: (topic, data, opts) => core.publishGossip(topic, data, opts),
+  publishPartialMessage: (partialMsg) => core.publishPartialMessage(partialMsg),
+  publishPartialMessageToPeer: (peerId, partialMsg) => core.publishPartialMessageToPeer(peerId, partialMsg),
+  getPartialPeers: (topic) => core.getPartialPeers(topic),
+  getPeerPartialMetadata: (topic, groupID, peerId) => core.getPeerPartialMetadata(topic, groupID, peerId),
+  reportInvalidPartialMessage: (peerId, topic) => core.reportInvalidPartialMessage(peerId, topic),
+  reportUsefulPartialMessage: (peerId, topic, groupID) => core.reportUsefulPartialMessage(peerId, topic, groupID),
 
   setTargetGroupCount: (count) => core.setTargetGroupCount(count),
 

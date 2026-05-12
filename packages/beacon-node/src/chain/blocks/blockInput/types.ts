@@ -90,6 +90,19 @@ export type AddColumn = ColumnWithSource & {
   blockRootHex: RootHex;
 };
 
+export type CellWithProof = {
+  cell: Uint8Array;
+  proof: Uint8Array;
+};
+
+export type AddPartialHeader = {
+  blockRootHex: string;
+  partialHeader: fulu.PartialDataColumnHeader;
+  source: BlockInputSource;
+  seenTimestampSec: number;
+  peerIdStr?: string;
+};
+
 export type BlobMeta = {
   index: number;
   blockRoot: Uint8Array;

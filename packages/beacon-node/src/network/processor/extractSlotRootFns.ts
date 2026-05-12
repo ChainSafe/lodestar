@@ -90,6 +90,11 @@ export function createExtractBlockSlotRootFns(): ExtractSlotRootFns {
       }
       return {slot, root};
     },
+    [GossipType.partial_data_column_sidecar]: (): SlotRootHex | null => {
+      // Partial data column messages may be header-only or cell-only, so the slot cannot be extracted reliably
+      // without fully deserializing the body and consulting cached header state.
+      return null;
+    },
     [GossipType.execution_payload_bid]: (data: Uint8Array): SlotOptionalRoot | null => {
       const slot = getSlotFromSignedExecutionPayloadBidSerialized(data);
 

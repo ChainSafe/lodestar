@@ -1,6 +1,8 @@
 import {
   type GossipSub,
   type GossipSubEvents,
+  type PartialMessage,
+  type PartialSubscriptionOpts,
   type PublishResult,
   StrictNoSign,
   type TopicValidatorResult,
@@ -17,9 +19,10 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
-import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
+import {Logger, Map2d, Map2dArr, toHex} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
+import type {PeerIdStr} from "../../util/peerId.js";
 import {NetworkEvent, NetworkEventBus, NetworkEventData} from "../events.js";
 import {Libp2p} from "../interface.js";
 import {NetworkConfig} from "../networkConfig.js";
@@ -41,6 +44,7 @@ import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./top
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
 
 const MAX_OUTBOUND_BUFFER_SIZE = 2 ** 24; // 16MB
+const PARTIAL_SCORE_CACHE_MAX_ENTRIES = 16_384;
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -83,7 +87,11 @@ export type ForkBoundaryLabel = string;
 type GossipSubInternal = GossipSub & {
   mesh: Map<string, Set<string>>;
   peers: Map<string, PeerId>;
-  score: {score: (peerIdStr: string) => number};
+  score: {
+    score: (peerIdStr: string) => number;
+    markFirstMessageDelivery: (peerIdStr: string, topic: TopicStr) => void;
+    rejectInvalidMessage: (peerIdStr: string, topic: TopicStr) => void;
+  };
   direct: Set<string>;
   topics: Map<string, Set<string>>;
   start: () => Promise<void>;
@@ -92,7 +100,17 @@ type GossipSubInternal = GossipSub & {
   getMeshPeers: (topic: TopicStr) => string[];
   dumpPeerScoreStats: () => PeerScoreStatsDump;
   getScore: (peerIdStr: string) => number;
-  reportMessageValidationResult: (msgId: string, propagationSource: string, acceptance: TopicValidatorResult) => void;
+  reportMessageValidationResult: (
+    msgId: string,
+    propagationSource: string,
+    acceptance: TopicValidatorResult,
+    excludePeerIds?: PeerIdStr[]
+  ) => void;
+  subscribePartial: (topic: TopicStr, opts: PartialSubscriptionOpts) => void;
+  publishPartial: (partialMsg: PartialMessage) => void;
+  publishPartialToPeer: (peerIdStr: string, partialMsg: PartialMessage) => void;
+  getPartialPeers: (topic: TopicStr) => string[];
+  getPeerPartialMetadata: (topic: TopicStr, groupID: Uint8Array, peerIdStr: string) => Uint8Array | undefined;
 };
 
 /**
@@ -116,9 +134,12 @@ export class Eth2Gossipsub {
   private readonly events: NetworkEventBus;
   private readonly libp2p: Libp2p;
   private readonly gossipsub: GossipSubInternal;
+  private readonly networkConfig: NetworkConfig;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
+  private readonly rewardedPartialDeliveries = new Map<string, number>();
+  private lastPartialScorePruneMs = 0;
 
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const {allowPublishToZeroPeers, gossipsubD, gossipsubDLow, gossipsubDHigh} = opts;
@@ -179,7 +200,9 @@ export class Eth2Gossipsub {
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
       idontwantMinDataSize: 16829,
-    })(modules.libp2p.services.components) as GossipSubInternal;
+    })(
+      modules.libp2p.services.components as unknown as Parameters<ReturnType<typeof gossipsub>>[0]
+    ) as GossipSubInternal;
 
     if (metrics) {
       metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics, networkConfig));
@@ -192,9 +215,15 @@ export class Eth2Gossipsub {
     this.events = events;
     this.libp2p = modules.libp2p;
     this.gossipTopicCache = gossipTopicCache;
+    this.networkConfig = networkConfig;
 
     this.gossipsub.addEventListener("gossipsub:message", this.onGossipsubMessage.bind(this));
     this.events.on(NetworkEvent.gossipMessageValidationResult, this.onValidationResult.bind(this));
+
+    // Listen for partial messages when feature is enabled
+    if (networkConfig.enablePartialColumns) {
+      this.gossipsub.addEventListener("gossipsub:partial-message", this.onPartialMessage.bind(this));
+    }
 
     // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
     // Scoring issues require this dump + current peer score stats to re-calculate scores.
@@ -245,6 +274,15 @@ export class Eth2Gossipsub {
 
     this.logger.verbose("Subscribe to gossipsub topic", {topic: topicStr});
     this.gossipsub.subscribe(topicStr);
+
+    // Subscribe with partial message support for data column topics when enabled
+    if (this.networkConfig.enablePartialColumns && topic.type === GossipType.data_column_sidecar) {
+      this.gossipsub.subscribePartial(topicStr, {
+        requestsPartial: true,
+        supportsSendingPartial: true,
+      });
+      this.logger.verbose("Subscribed with partial message support", {topic: topicStr});
+    }
   }
 
   /**
@@ -401,8 +439,108 @@ export class Eth2Gossipsub {
     // Without this we'll have huge event loop lag
     // See https://github.com/ChainSafe/lodestar/issues/5604
     callInNextEventLoop(() => {
-      this.gossipsub.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance);
+      const excludePeerIds =
+        data.excludePartialPeers && data.topic?.type === GossipType.data_column_sidecar
+          ? this.gossipsub.getPartialPeers(stringifyGossipTopic(this.config, data.topic))
+          : undefined;
+      this.gossipsub.reportMessageValidationResult(data.msgId, data.propagationSource, data.acceptance, excludePeerIds);
     });
+  }
+
+  private onPartialMessage(event: GossipSubEvents["gossipsub:partial-message"]): void {
+    const {
+      propagationSource,
+      partialMsg: {topic: topicStr, groupID, partialMessage, partsMetadata},
+    } = event.detail;
+
+    // Parse the base topic to check it's a data column sidecar topic
+    const baseTopic = this.gossipTopicCache.getTopic(topicStr);
+    if (baseTopic.type !== GossipType.data_column_sidecar) {
+      return;
+    }
+
+    // Re-type topic as partial for routing to the partial handler
+    const partialTopic: GossipTopic = {
+      ...baseTopic,
+      type: GossipType.partial_data_column_sidecar,
+    };
+
+    const seenTimestampSec = Date.now() / 1000;
+    const peerIdStr = propagationSource.toString();
+    const clientAgent = this.peersData.getPeerKind(peerIdStr) ?? "Unknown";
+    const clientVersion = this.peersData.getAgentVersion(peerIdStr);
+
+    // Route partial message data through the standard gossip pipeline
+    if (partialMessage !== undefined && partialMessage.length > 0) {
+      callInNextEventLoop(() => {
+        this.events.emit(NetworkEvent.pendingGossipsubMessage, {
+          topic: partialTopic,
+          msg: {topic: topicStr, data: partialMessage, type: "unsigned"},
+          partialMessageGroupId: groupID,
+          msgId: toHex(groupID),
+          propagationSource: peerIdStr,
+          clientVersion,
+          clientAgent,
+          seenTimestampSec,
+          startProcessUnixSec: null,
+        });
+      });
+      return;
+    }
+
+    callInNextEventLoop(() => {
+      this.events.emit(NetworkEvent.pendingPartialMessageMetadata, {
+        topic: partialTopic,
+        groupID,
+        partsMetadata,
+        propagationSource: peerIdStr,
+        clientVersion,
+        clientAgent,
+        seenTimestampSec,
+      });
+    });
+  }
+
+  publishPartialMessage(partialMsg: PartialMessage): void {
+    this.gossipsub.publishPartial(partialMsg);
+  }
+
+  publishPartialMessageToPeer(peerIdStr: string, partialMsg: PartialMessage): void {
+    this.gossipsub.publishPartialToPeer(peerIdStr, partialMsg);
+  }
+
+  getPartialPeers(topic: TopicStr): string[] {
+    return this.gossipsub.getPartialPeers(topic);
+  }
+
+  getPeerPartialMetadata(topic: TopicStr, groupID: Uint8Array, peerIdStr: string): Uint8Array | undefined {
+    return this.gossipsub.getPeerPartialMetadata(topic, groupID, peerIdStr);
+  }
+
+  reportInvalidPartialMessage(peerIdStr: string, topic: TopicStr): void {
+    if (!this.hasTopicScoreParams(topic)) {
+      return;
+    }
+
+    this.gossipsub.score.rejectInvalidMessage(peerIdStr, topic);
+  }
+
+  reportUsefulPartialMessage(peerIdStr: string, topic: TopicStr, groupID: Uint8Array): void {
+    if (!this.hasTopicScoreParams(topic)) {
+      return;
+    }
+
+    const nowMs = Date.now();
+    this.pruneRewardedPartialDeliveries(nowMs);
+
+    const rewardKey = `${peerIdStr}:${topic}:${toHex(groupID)}`;
+    const lastRewardMs = this.rewardedPartialDeliveries.get(rewardKey);
+    if (lastRewardMs !== undefined && nowMs - lastRewardMs < this.partialScoreCacheTtlMs) {
+      return;
+    }
+
+    this.rewardedPartialDeliveries.set(rewardKey, nowMs);
+    this.gossipsub.score.markFirstMessageDelivery(peerIdStr, topic);
   }
 
   /**
@@ -454,6 +592,39 @@ export class Eth2Gossipsub {
       this.logger.info("Removed direct peer via API", {peerId: peerIdStr});
     }
     return removed;
+  }
+
+  private get partialScoreCacheTtlMs(): number {
+    return this.config.SLOT_DURATION_MS * SLOTS_PER_EPOCH * 2;
+  }
+
+  private hasTopicScoreParams(topic: TopicStr): boolean {
+    return this.scoreParams.topics?.[topic] !== undefined;
+  }
+
+  private pruneRewardedPartialDeliveries(nowMs: number): void {
+    if (
+      this.rewardedPartialDeliveries.size < PARTIAL_SCORE_CACHE_MAX_ENTRIES &&
+      nowMs - this.lastPartialScorePruneMs < this.partialScoreCacheTtlMs / 2
+    ) {
+      return;
+    }
+
+    this.lastPartialScorePruneMs = nowMs;
+    for (const [rewardKey, lastRewardMs] of this.rewardedPartialDeliveries) {
+      if (nowMs - lastRewardMs > this.partialScoreCacheTtlMs) {
+        this.rewardedPartialDeliveries.delete(rewardKey);
+      }
+    }
+
+    while (this.rewardedPartialDeliveries.size > PARTIAL_SCORE_CACHE_MAX_ENTRIES) {
+      const oldestRewardKey = this.rewardedPartialDeliveries.keys().next().value;
+      if (oldestRewardKey === undefined) {
+        return;
+      }
+
+      this.rewardedPartialDeliveries.delete(oldestRewardKey);
+    }
   }
 
   /**

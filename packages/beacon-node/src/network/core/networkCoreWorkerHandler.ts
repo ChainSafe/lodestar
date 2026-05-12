@@ -1,6 +1,7 @@
 import path from "node:path";
 import workerThreads from "node:worker_threads";
 import {privateKeyToProtobuf} from "@libp2p/crypto/keys";
+import type {PartialMessage} from "@libp2p/gossipsub";
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {PrivateKey} from "@libp2p/interface";
@@ -231,6 +232,24 @@ export class WorkerNetworkCore implements INetworkCore {
   }
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.getApi().publishGossip(topic, data, opts);
+  }
+  publishPartialMessage(partialMsg: PartialMessage): Promise<void> {
+    return this.getApi().publishPartialMessage(partialMsg);
+  }
+  publishPartialMessageToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): Promise<void> {
+    return this.getApi().publishPartialMessageToPeer(peerId, partialMsg);
+  }
+  getPartialPeers(topic: string): Promise<PeerIdStr[]> {
+    return this.getApi().getPartialPeers(topic);
+  }
+  getPeerPartialMetadata(topic: string, groupID: Uint8Array, peerId: PeerIdStr): Promise<Uint8Array | undefined> {
+    return this.getApi().getPeerPartialMetadata(topic, groupID, peerId);
+  }
+  reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void> {
+    return this.getApi().reportInvalidPartialMessage(peerId, topic);
+  }
+  reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void> {
+    return this.getApi().reportUsefulPartialMessage(peerId, topic, groupID);
   }
 
   // Custody

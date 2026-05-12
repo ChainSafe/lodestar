@@ -43,6 +43,8 @@ export type NetworkArgs = {
   "network.useWorker"?: boolean;
   "network.maxYoungGenerationSizeMb"?: number;
   "network.targetGroupPeers"?: number;
+  "network.enablePartialColumns"?: boolean;
+  "network.eagerlyPublishCells"?: boolean;
 
   /** @deprecated This option is deprecated and should be removed in next major release. */
   "network.requestCountPeerLimit"?: number;
@@ -201,6 +203,8 @@ export function parseArgs(args: NetworkArgs): IBeaconNodeOptions["network"] {
     maxYoungGenerationSizeMb: args["network.maxYoungGenerationSizeMb"],
     targetGroupPeers: args["network.targetGroupPeers"] ?? defaultOptions.network.targetGroupPeers,
     directPeers: args.directPeers,
+    enablePartialColumns: args["network.enablePartialColumns"],
+    eagerlyPublishCells: args["network.eagerlyPublishCells"],
   };
 }
 
@@ -487,5 +491,21 @@ export const options: CliCommandOptions<NetworkArgs> = {
     group: "network",
     description: "Target number of peers per sampling group",
     defaultDescription: String(defaultOptions.network.targetGroupPeers),
+  },
+
+  "network.enablePartialColumns": {
+    type: "boolean",
+    hidden: true,
+    group: "network",
+    description: "Enable cell-level DAS via gossipsub partial messages extension",
+    defaultDescription: String(defaultOptions.network.enablePartialColumns),
+  },
+
+  "network.eagerlyPublishCells": {
+    type: "boolean",
+    hidden: true,
+    group: "network",
+    description: "When publishing partial columns, eagerly include all cells (not just header)",
+    defaultDescription: String(defaultOptions.network.eagerlyPublishCells),
   },
 };

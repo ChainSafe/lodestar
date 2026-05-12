@@ -855,6 +855,9 @@ describe("Gloas Fork Choice", () => {
       expect(pendingIdx).not.toBeUndefined();
       expect(emptyIdx).not.toBeUndefined();
       expect(fullIdx).not.toBeUndefined();
+      if (pendingIdx === undefined || emptyIdx === undefined || fullIdx === undefined) {
+        expect.fail("Expected all payload-status variants to be indexed");
+      }
 
       if (pendingIdx === undefined || emptyIdx === undefined || fullIdx === undefined) {
         throw new Error("Expected pending/empty/full variants to exist");

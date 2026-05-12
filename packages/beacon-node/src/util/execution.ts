@@ -8,6 +8,7 @@ import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
+import {emitPublishedDataColumns} from "../chain/publishDataColumns.js";
 import {IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "./blobs.js";
@@ -200,7 +201,7 @@ export async function getDataColumnSidecarsFromExecution(
   const sampledColumns = previouslyMissingColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
   // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
-  emitter.emit(ChainEvent.publishDataColumns, sampledColumns);
+  emitPublishedDataColumns(emitter, sampledColumns, "post_getblobs");
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric here somehow
 
   // add all sampled columns to the input, even if we didn't sample them

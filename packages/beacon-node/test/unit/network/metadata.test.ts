@@ -55,6 +55,8 @@ describe("network / metadata", () => {
           nodeId,
           config,
         }),
+        enablePartialColumns: false,
+        eagerlyPublishCells: false,
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
 
@@ -73,6 +75,8 @@ describe("network / metadata", () => {
           nodeId,
           config,
         }),
+        enablePartialColumns: false,
+        eagerlyPublishCells: false,
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       metadata.custodyGroupCount = 128;
@@ -89,6 +93,8 @@ describe("network / metadata", () => {
           nodeId,
           config,
         }),
+        enablePartialColumns: false,
+        eagerlyPublishCells: false,
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       const initialSeqNumber = metadata.seqNumber;
@@ -106,6 +112,8 @@ describe("network / metadata", () => {
           nodeId,
           config,
         }),
+        enablePartialColumns: false,
+        eagerlyPublishCells: false,
       };
       const metadata = new MetadataController({}, {onSetValue, networkConfig, logger});
       metadata.custodyGroupCount = 128;

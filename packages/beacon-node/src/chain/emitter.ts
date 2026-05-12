@@ -97,6 +97,14 @@ export type ChainEventData = {
   [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
 };
 
+export type PublishDataColumnsPartialTrigger = "full_column" | "post_getblobs" | "recovery";
+
+export type PublishDataColumnsEventData = {
+  columns: DataColumnSidecar[];
+  publishPartial?: boolean;
+  partialTrigger?: PublishDataColumnsPartialTrigger;
+};
+
 export type IChainEvents = ApiEvents & {
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
 
@@ -105,7 +113,7 @@ export type IChainEvents = ApiEvents & {
 
   [ChainEvent.updateTargetCustodyGroupCount]: (targetGroupCount: number) => void;
 
-  [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
+  [ChainEvent.publishDataColumns]: (data: PublishDataColumnsEventData) => void;
 
   [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
 

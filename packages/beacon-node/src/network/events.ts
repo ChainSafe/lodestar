@@ -4,6 +4,7 @@ import type {PeerId} from "@libp2p/interface";
 import {CustodyIndex, Status} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {StrictEventEmitterSingleArg} from "../util/strictEvents.js";
+import {GossipTopicMap, GossipType} from "./gossip/interface.js";
 import {PendingGossipsubMessage} from "./processor/types.js";
 import {RequestTypedContainer} from "./reqresp/ReqRespBeaconNode.js";
 
@@ -17,6 +18,8 @@ export enum NetworkEvent {
   // Network processor events
   /** (Network -> App) A gossip message is ready for validation */
   pendingGossipsubMessage = "gossip.pendingGossipsubMessage",
+  /** (Network -> App) A metadata-only partial message was received */
+  pendingPartialMessageMetadata = "gossip.pendingPartialMessageMetadata",
   /** (App -> Network) A gossip message has been validated */
   gossipMessageValidationResult = "gossip.messageValidationResult",
 }
@@ -31,10 +34,21 @@ export type NetworkEventData = {
   [NetworkEvent.peerDisconnected]: {peer: PeerIdStr};
   [NetworkEvent.reqRespRequest]: {request: RequestTypedContainer; peer: PeerId; peerClient: string};
   [NetworkEvent.pendingGossipsubMessage]: PendingGossipsubMessage;
+  [NetworkEvent.pendingPartialMessageMetadata]: {
+    topic: GossipTopicMap[GossipType.partial_data_column_sidecar];
+    groupID: Uint8Array;
+    partsMetadata: Uint8Array;
+    propagationSource: PeerIdStr;
+    clientAgent: string;
+    clientVersion: string;
+    seenTimestampSec: number;
+  };
   [NetworkEvent.gossipMessageValidationResult]: {
     msgId: string;
     propagationSource: PeerIdStr;
     acceptance: TopicValidatorResult;
+    topic?: GossipTopicMap[keyof GossipTopicMap];
+    excludePartialPeers?: boolean;
   };
 };
 
@@ -50,6 +64,7 @@ export const networkEventDirection: Record<NetworkEvent, EventDirection> = {
   [NetworkEvent.peerDisconnected]: EventDirection.workerToMain,
   [NetworkEvent.reqRespRequest]: EventDirection.none, // Only used internally in NetworkCore
   [NetworkEvent.pendingGossipsubMessage]: EventDirection.workerToMain,
+  [NetworkEvent.pendingPartialMessageMetadata]: EventDirection.workerToMain,
   [NetworkEvent.gossipMessageValidationResult]: EventDirection.mainToWorker,
 };
 

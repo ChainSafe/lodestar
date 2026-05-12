@@ -13,6 +13,8 @@ export type PendingGossipsubMessage = {
   msg: Message;
   // only available for beacon_attestation and aggregate_and_proof
   msgSlot?: Slot;
+  // only available for partial data column messages
+  partialMessageGroupId?: Uint8Array;
   msgId: string;
   propagationSource: PeerIdStr;
   clientAgent: string;

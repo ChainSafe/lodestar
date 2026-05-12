@@ -1,3 +1,4 @@
+import type {PartialMessage} from "@libp2p/gossipsub";
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import {routes} from "@lodestar/api";
@@ -66,6 +67,12 @@ export interface INetworkCore extends INetworkCorePublic {
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming>;
   /** Publish gossip message to peers */
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
+  publishPartialMessage(partialMsg: PartialMessage): Promise<void>;
+  publishPartialMessageToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): Promise<void>;
+  getPartialPeers(topic: string): Promise<PeerIdStr[]>;
+  getPeerPartialMetadata(topic: string, groupID: Uint8Array, peerId: PeerIdStr): Promise<Uint8Array | undefined>;
+  reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void>;
+  reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
@@ -114,6 +121,12 @@ export type NetworkWorkerApi = INetworkCorePublic & {
 
   // sendReqRespRequest - implemented via events
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
+  publishPartialMessage(partialMsg: PartialMessage): Promise<void>;
+  publishPartialMessageToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): Promise<void>;
+  getPartialPeers(topic: string): Promise<PeerIdStr[]>;
+  getPeerPartialMetadata(topic: string, groupID: Uint8Array, peerId: PeerIdStr): Promise<Uint8Array | undefined>;
+  reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void>;
+  reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;

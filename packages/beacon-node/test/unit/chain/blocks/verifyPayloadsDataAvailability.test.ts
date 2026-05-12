@@ -320,3 +320,46 @@ describe("PayloadEnvelopeInput.waitForAllData", () => {
     await new Promise((resolve) => setTimeout(resolve, 5));
   });
 });
+
+describe("PayloadEnvelopeInput partial columns", () => {
+  it("builds a partial sidecar from accumulated cells and from the completed column", () => {
+    const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 2, sampledColumns: [0]});
+    const columnIndex = 0;
+    const firstCell = new Uint8Array([1]);
+    const secondCell = new Uint8Array([2]);
+    const firstProof = new Uint8Array([3]);
+    const secondProof = new Uint8Array([4]);
+
+    const incompleteColumn = payloadInput.addCells(
+      columnIndex,
+      [true, false],
+      [firstCell],
+      [firstProof],
+      PayloadEnvelopeInputSource.gossip,
+      Date.now() / 1000,
+      "peer-a"
+    );
+    expect(incompleteColumn).toBeNull();
+
+    const accumulatedPartial = payloadInput.getPartialColumnSidecar(columnIndex);
+    expect(accumulatedPartial?.cellsPresentBitmap.toBoolArray()).toEqual([true, false]);
+    expect(accumulatedPartial?.partialColumn).toEqual([firstCell]);
+    expect(accumulatedPartial?.kzgProofs).toEqual([firstProof]);
+
+    const completedColumn = payloadInput.addCells(
+      columnIndex,
+      [false, true],
+      [secondCell],
+      [secondProof],
+      PayloadEnvelopeInputSource.gossip,
+      Date.now() / 1000,
+      "peer-b"
+    );
+    expect(completedColumn).not.toBeNull();
+
+    const completedPartial = payloadInput.getPartialColumnSidecar(columnIndex);
+    expect(completedPartial?.cellsPresentBitmap.toBoolArray()).toEqual([true, true]);
+    expect(completedPartial?.partialColumn).toEqual([firstCell, secondCell]);
+    expect(completedPartial?.kzgProofs).toEqual([firstProof, secondProof]);
+  });
+});

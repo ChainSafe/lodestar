@@ -891,6 +891,86 @@ export function createLodestarMetrics(
         buckets: [0.5, 1, 2, 4, 6, 12],
       }),
     },
+    partialColumns: {
+      cellsReceived: register.counter({
+        name: "lodestar_partial_column_cells_received_total",
+        help: "Total cells received via partial messages",
+      }),
+      usefulCells: register.counter({
+        name: "lodestar_partial_column_useful_cells_total",
+        help: "Cells received via partial messages that extended local partial-column state",
+      }),
+      columnsCompleted: register.counter({
+        name: "lodestar_partial_column_columns_completed_total",
+        help: "Columns completed from partial cells",
+      }),
+      headerValidationTime: register.histogram({
+        name: "lodestar_partial_column_header_validation_seconds",
+        help: "Time to validate partial column headers",
+        buckets: [0.001, 0.002, 0.004, 0.008, 0.016, 0.05, 0.1, 0.25, 0.5, 1],
+      }),
+      cellValidationTime: register.histogram({
+        name: "lodestar_partial_column_cell_validation_seconds",
+        help: "Time to validate partial column cells",
+        buckets: [0.001, 0.002, 0.004, 0.008, 0.016, 0.05, 0.1, 0.25, 0.5, 1],
+      }),
+      cellsPublished: register.counter({
+        name: "lodestar_partial_column_cells_published_total",
+        help: "Cells published via partial messages",
+      }),
+      headersPublished: register.counter({
+        name: "lodestar_partial_column_headers_published_total",
+        help: "Headers published via partial messages",
+      }),
+    },
+    partialPublish: {
+      headerBroadcast: register.counter<{trigger: string}>({
+        name: "lodestar_partial_publish_header_broadcast_total",
+        help: "Header broadcasts emitted by the partial column publisher",
+        labelNames: ["trigger"],
+      }),
+      headerDedup: register.counter({
+        name: "lodestar_partial_publish_header_dedup_total",
+        help: "Peers skipped during header fan-out because they were already reached on another custody subnet",
+      }),
+      requestMetadataSent: register.counter({
+        name: "lodestar_partial_publish_request_metadata_sent_total",
+        help: "Metadata-only request advertisements sent by the partial column publisher",
+      }),
+      metadataOnlyReceived: register.counter({
+        name: "lodestar_partial_publish_metadata_only_received_total",
+        help: "Metadata-only partial messages received from peers",
+      }),
+      cellsSent: register.counter<{trigger: string}>({
+        name: "lodestar_partial_publish_cells_sent_total",
+        help: "Cells sent by the partial column publisher",
+        labelNames: ["trigger"],
+      }),
+      cellsFiltered: register.counter({
+        name: "lodestar_partial_publish_cells_filtered_total",
+        help: "Cells held locally but filtered out because the peer did not request them",
+      }),
+      peerNoMetadata: register.counter({
+        name: "lodestar_partial_publish_peer_no_metadata_total",
+        help: "Peers that required a header-only fallback because no partial metadata was known for them",
+      }),
+      peerSkip: register.counter({
+        name: "lodestar_partial_publish_peer_skip_total",
+        help: "Peers skipped because there were no cells to send after filtering",
+      }),
+      fullPeersSkipped: register.counter({
+        name: "lodestar_partial_publish_full_peers_skipped_total",
+        help: "Partial-capable peers excluded from full data column gossip",
+      }),
+      stateCacheBlocks: register.gauge({
+        name: "lodestar_partial_publish_state_cache_blocks",
+        help: "Number of block entries currently retained in the partial availability cache",
+      }),
+      stateCachePruned: register.counter({
+        name: "lodestar_partial_publish_state_cache_pruned_total",
+        help: "Partial availability cache entries pruned because the bounded cache was full",
+      }),
+    },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {
       blobsReconstructed: register.counter({

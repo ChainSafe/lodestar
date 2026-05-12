@@ -29,9 +29,14 @@ import {
   isGloasDataColumnSidecar,
   phase0,
 } from "@lodestar/types";
-import {prettyPrintIndices, sleep} from "@lodestar/utils";
+import {prettyPrintIndices, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
-import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {
+  ChainEvent,
+  IBeaconChain,
+  PublishDataColumnsEventData,
+  PublishDataColumnsPartialTrigger,
+} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
 import {IBeaconDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
@@ -46,12 +51,14 @@ import {
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
 import {INetworkCore, NetworkCore, WorkerNetworkCore} from "./core/index.js";
+import {getFullDataColumnPublishOpts, shouldPublishPartialDataColumn} from "./dataColumnPublish.js";
 import {INetworkEventBus, NetworkEvent, NetworkEventBus, NetworkEventData} from "./events.js";
 import {getActiveForkBoundaries} from "./forks.js";
 import {GossipHandlers, GossipTopicMap, GossipType, GossipTypeMap} from "./gossip/index.js";
 import {getGossipSSZType, gossipTopicIgnoreDuplicatePublishError, stringifyGossipTopic} from "./gossip/topic.js";
 import {INetwork} from "./interface.js";
 import {NetworkOptions} from "./options.js";
+import {PartialColumnPublisher} from "./partialColumnPublisher.js";
 import {PeerAction, PeerScoreStats} from "./peers/index.js";
 import {PeerSyncMeta} from "./peers/peersData.js";
 import {AggregatorTracker} from "./processor/aggregatorTracker.js";
@@ -77,6 +84,7 @@ type NetworkModules = {
   aggregatorTracker: AggregatorTracker;
   networkProcessor: NetworkProcessor;
   core: INetworkCore;
+  partialColumnPublisher: PartialColumnPublisher;
 };
 
 export type NetworkInitModules = {
@@ -108,9 +116,11 @@ export class Network implements INetwork {
   readonly events: INetworkEventBus;
 
   private readonly logger: LoggerNode;
+  private readonly opts: NetworkOptions;
   private readonly config: BeaconConfig;
   private readonly clock: IClock;
   private readonly chain: IBeaconChain;
+  private readonly metrics: Metrics | null;
   // Used only for sleep() statements
   private readonly controller: AbortController;
 
@@ -118,25 +128,30 @@ export class Network implements INetwork {
   private readonly networkProcessor: NetworkProcessor;
   private readonly core: INetworkCore;
   private readonly aggregatorTracker: AggregatorTracker;
+  private readonly partialColumnPublisher: PartialColumnPublisher;
 
   private subscribedToCoreTopics = false;
   private connectedPeersSyncMeta = new Map<PeerIdStr, Omit<PeerSyncMeta, "peerId">>();
 
   constructor(modules: NetworkModules) {
     this.peerId = peerIdFromPrivateKey(modules.privateKey);
+    this.opts = modules.opts;
     this.config = modules.config;
     this.custodyConfig = modules.chain.custodyConfig;
     this.logger = modules.logger;
     this.chain = modules.chain;
+    this.metrics = modules.chain.metrics;
     this.clock = modules.chain.clock;
     this.controller = new AbortController();
     this.events = modules.networkEventBus;
     this.networkProcessor = modules.networkProcessor;
     this.core = modules.core;
     this.aggregatorTracker = modules.aggregatorTracker;
+    this.partialColumnPublisher = modules.partialColumnPublisher;
 
     this.events.on(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.on(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+    this.events.on(NetworkEvent.pendingPartialMessageMetadata, this.onPendingPartialMessageMetadata);
     this.chain.emitter.on(routes.events.EventType.head, this.onHead);
     this.chain.emitter.on(routes.events.EventType.lightClientFinalityUpdate, ({data}) =>
       this.onLightClientFinalityUpdate(data)
@@ -168,6 +183,7 @@ export class Network implements INetwork {
     const activeValidatorCount = chain.getHeadState().activeValidatorCount;
     const initialStatus = chain.getStatus();
     const initialCustodyGroupCount = chain.custodyConfig.targetCustodyGroupCount;
+    const custodySubnets = getCustodySubnets(config, chain.custodyConfig.custodyColumns);
 
     if (opts.useWorker) {
       logger.info("running libp2p instance in worker thread");
@@ -206,8 +222,9 @@ export class Network implements INetwork {
           activeValidatorCount,
         });
 
+    const partialColumnPublisher = new PartialColumnPublisher({config, core, metrics, custodySubnets});
     const networkProcessor = new NetworkProcessor(
-      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker},
+      {chain, db, config, logger, metrics, events, gossipHandlers, core, aggregatorTracker, partialColumnPublisher},
       opts
     );
 
@@ -225,6 +242,7 @@ export class Network implements INetwork {
       aggregatorTracker,
       networkProcessor,
       core,
+      partialColumnPublisher,
     });
   }
 
@@ -238,6 +256,7 @@ export class Network implements INetwork {
 
     this.events.off(NetworkEvent.peerConnected, this.onPeerConnected);
     this.events.off(NetworkEvent.peerDisconnected, this.onPeerDisconnected);
+    this.events.off(NetworkEvent.pendingPartialMessageMetadata, this.onPendingPartialMessageMetadata);
     this.chain.emitter.off(routes.events.EventType.head, this.onHead);
     this.chain.emitter.off(routes.events.EventType.lightClientFinalityUpdate, this.onLightClientFinalityUpdate);
     this.chain.emitter.off(routes.events.EventType.lightClientOptimisticUpdate, this.onLightClientOptimisticUpdate);
@@ -366,7 +385,10 @@ export class Network implements INetwork {
     });
   }
 
-  async publishDataColumnSidecar(dataColumnSidecar: DataColumnSidecar): Promise<number> {
+  async publishDataColumnSidecar(
+    dataColumnSidecar: DataColumnSidecar,
+    opts?: {publishPartial?: boolean; partialTrigger?: PublishDataColumnsPartialTrigger}
+  ): Promise<number> {
     const slot = isGloasDataColumnSidecar(dataColumnSidecar)
       ? dataColumnSidecar.slot
       : dataColumnSidecar.signedBlockHeader.message.slot;
@@ -374,18 +396,56 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
-    return this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, boundary, subnet},
-      dataColumnSidecar,
-      {
-        ignoreDuplicatePublishError: true,
-        // we ensure having all topic peers via prioritizePeers() function
-        // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
-        // because supernode will rebuild and publish missing data column sidecars for us
-        // hence we want to track sent peers as 0 instead of an error
-        allowPublishToZeroTopicPeers: true,
-      }
+    const topic = {type: GossipType.data_column_sidecar, boundary, subnet} as const;
+    const publishOpts = await getFullDataColumnPublishOpts(
+      this.config,
+      this.core,
+      topic,
+      this.opts.enablePartialColumns ?? false
     );
+    if (publishOpts.excludePeerIds !== undefined) {
+      this.metrics?.partialPublish.fullPeersSkipped.inc(publishOpts.excludePeerIds.length);
+    }
+    const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(topic, dataColumnSidecar, {
+      ignoreDuplicatePublishError: true,
+      // we ensure having all topic peers via prioritizePeers() function
+      // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
+      // because supernode will rebuild and publish missing data column sidecars for us
+      // hence we want to track sent peers as 0 instead of an error
+      allowPublishToZeroTopicPeers: true,
+      ...publishOpts,
+    });
+
+    if (shouldPublishPartialDataColumn(this.opts.enablePartialColumns ?? false, opts?.publishPartial ?? true)) {
+      await this.partialColumnPublisher.publishAvailableColumn(
+        dataColumnSidecar,
+        opts?.partialTrigger ?? "full_column",
+        this.getPartialColumnKzgCommitments(dataColumnSidecar)
+      );
+    }
+
+    return sentPeers;
+  }
+
+  async publishBlockProductionPartialColumns(columns: DataColumnSidecar[]): Promise<void> {
+    if (!this.opts.enablePartialColumns || columns.length === 0) {
+      return;
+    }
+
+    await this.partialColumnPublisher.publishBlockProductionColumns(
+      columns,
+      getCustodySubnets(this.config, this.custodyConfig.custodyColumns),
+      this.opts.eagerlyPublishCells ?? false,
+      this.getPartialColumnKzgCommitments(columns[0])
+    );
+  }
+
+  private getPartialColumnKzgCommitments(column: DataColumnSidecar): deneb.BlobKzgCommitments | undefined {
+    if (!isGloasDataColumnSidecar(column)) {
+      return column.kzgCommitments;
+    }
+
+    return this.chain.seenPayloadEnvelopeInputCache.get(toRootHex(column.beaconBlockRoot))?.getBlobKzgCommitments();
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
@@ -823,11 +883,25 @@ export class Network implements INetwork {
   };
 
   private onTargetGroupCountUpdated = (count: number): void => {
-    this.core.setTargetGroupCount(count);
+    void this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecar[]): Promise<number[]> => {
-    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  private onPendingPartialMessageMetadata = ({
+    topic,
+    groupID,
+    propagationSource,
+  }: NetworkEventData[NetworkEvent.pendingPartialMessageMetadata]): void => {
+    void this.partialColumnPublisher.handleMetadataOnlyMessage(groupID, topic.subnet, propagationSource);
+  };
+
+  private onPublishDataColumns = ({
+    columns,
+    publishPartial = false,
+    partialTrigger = "full_column",
+  }: PublishDataColumnsEventData): Promise<number[]> => {
+    return promiseAllMaybeAsync(
+      columns.map((sidecar) => () => this.publishDataColumnSidecar(sidecar, {publishPartial, partialTrigger}))
+    );
   };
 
   private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {
@@ -837,4 +911,10 @@ export class Network implements INetwork {
   private onUpdateStatus = async (): Promise<void> => {
     await this.core.updateStatus(this.chain.getStatus());
   };
+}
+
+function getCustodySubnets(config: BeaconConfig, custodyColumns: number[]): SubnetID[] {
+  return Array.from(
+    new Set(custodyColumns.map((columnIndex) => columnIndex % config.DATA_COLUMN_SIDECAR_SUBNET_COUNT))
+  ).sort((a, b) => a - b);
 }

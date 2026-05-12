@@ -1,8 +1,8 @@
 import type {Message, TopicValidatorResult} from "@libp2p/gossipsub";
 import type {PeerIdStr} from "@libp2p/gossipsub/types";
 import type {Libp2p} from "libp2p";
-import {BeaconConfig, ForkBoundary} from "@lodestar/config";
-import {
+import type {BeaconConfig, ForkBoundary} from "@lodestar/config";
+import type {
   AttesterSlashing,
   DataColumnSidecar,
   LightClientFinalityUpdate,
@@ -15,14 +15,15 @@ import {
   altair,
   capella,
   deneb,
+  fulu,
   gloas,
   phase0,
 } from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
-import {AttestationError, AttestationErrorType} from "../../chain/errors/attestationError.js";
-import {GossipActionError} from "../../chain/errors/gossipValidation.js";
-import {IBeaconChain} from "../../chain/index.js";
-import {JobItemQueue} from "../../util/queue/index.js";
+import type {Logger} from "@lodestar/utils";
+import type {AttestationErrorType} from "../../chain/errors/attestationError.js";
+import type {GossipActionError} from "../../chain/errors/gossipValidation.js";
+import type {IBeaconChain} from "../../chain/index.js";
+import type {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   beacon_block = "beacon_block",
@@ -42,6 +43,7 @@ export enum GossipType {
   payload_attestation_message = "payload_attestation_message",
   execution_payload_bid = "execution_payload_bid",
   proposer_preferences = "proposer_preferences",
+  partial_data_column_sidecar = "partial_data_column_sidecar",
 }
 
 export type SequentialGossipType = Exclude<GossipType, GossipType.beacon_attestation>;
@@ -80,6 +82,7 @@ export type GossipTopicTypeMap = {
   [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
   [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
   [GossipType.proposer_preferences]: {type: GossipType.proposer_preferences};
+  [GossipType.partial_data_column_sidecar]: {type: GossipType.partial_data_column_sidecar; subnet: SubnetID};
 };
 
 export type GossipTopicMap = {
@@ -113,6 +116,7 @@ export type GossipTypeMap = {
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
   [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
+  [GossipType.partial_data_column_sidecar]: fulu.PartialDataColumnSidecar | gloas.PartialDataColumnSidecar;
 };
 
 export type GossipFnByType = {
@@ -147,6 +151,9 @@ export type GossipFnByType = {
   [GossipType.proposer_preferences]: (
     signedProposerPreferences: gloas.SignedProposerPreferences
   ) => Promise<void> | void;
+  [GossipType.partial_data_column_sidecar]: (
+    partialSidecar: fulu.PartialDataColumnSidecar | gloas.PartialDataColumnSidecar
+  ) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];
@@ -177,6 +184,7 @@ export type GossipMessageInfo = {
   clientVersion: string;
   seenTimestampSec: number;
   msgSlot: Slot | null;
+  partialMessageGroupId?: Uint8Array;
   indexed?: string;
 };
 
@@ -193,6 +201,7 @@ export type GossipJobQueues = {
 export type GossipData = {
   serializedData: Uint8Array;
   msgSlot?: Slot | null;
+  partialMessageGroupId?: Uint8Array;
   indexed?: string;
 };
 
@@ -205,7 +214,9 @@ export type GossipHandlerParam = {
 
 export type GossipHandlerFn = (gossipHandlerParam: GossipHandlerParam) => Promise<void>;
 
-export type BatchGossipHandlerFn = (gossipHandlerParam: GossipHandlerParam[]) => Promise<(null | AttestationError)[]>;
+export type BatchGossipHandlerFn = (
+  gossipHandlerParam: GossipHandlerParam[]
+) => Promise<(null | GossipActionError<AttestationErrorType>)[]>;
 
 export type GossipHandlerParamGeneric<T extends GossipType> = {
   gossipData: GossipData;

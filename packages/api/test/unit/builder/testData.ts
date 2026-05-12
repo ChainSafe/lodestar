@@ -19,11 +19,11 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getHeader: {
     args: {slot: 1, parentHash: root, proposerPubkey: fromHexString(pubkeyRand)},
-    res: {data: ssz.electra.SignedBuilderBid.defaultValue(), meta: {version: ForkName.electra}},
+    res: {data: ssz.deneb.SignedBuilderBid.defaultValue(), meta: {version: ForkName.deneb}},
   },
   submitBlindedBlock: {
     args: {signedBlindedBlock: {data: ssz.electra.SignedBlindedBeaconBlock.defaultValue()}},
-    res: {data: ssz.deneb.ExecutionPayloadAndBlobsBundle.defaultValue(), meta: {version: ForkName.electra}},
+    res: {data: ssz.bellatrix.ExecutionPayload.defaultValue(), meta: {version: ForkName.bellatrix}},
   },
   submitBlindedBlockV2: {
     args: {signedBlindedBlock: {data: ssz.fulu.SignedBlindedBeaconBlock.defaultValue()}},

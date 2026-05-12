@@ -50,6 +50,8 @@ export type NetworkProcessorModules = ValidatorFnsModules &
   };
 
 export type NetworkProcessorOpts = GossipHandlerOpts & {
+  enablePartialColumns?: boolean;
+  eagerlyPublishCells?: boolean;
   maxGossipTopicConcurrency?: number;
 };
 
@@ -91,6 +93,7 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.light_client_optimistic_update]: {},
   [GossipType.payload_attestation_message]: {},
   [GossipType.execution_payload_bid]: {},
+  [GossipType.partial_data_column_sidecar]: {bypassQueue: true},
   [GossipType.proposer_preferences]: {},
 };
 const executeGossipWorkOrder = Object.keys(executeGossipWorkOrderObj) as (keyof typeof executeGossipWorkOrderObj)[];
@@ -742,6 +745,9 @@ export class NetworkProcessor {
             msgId: msg.msgId,
             propagationSource: msg.propagationSource,
             acceptance: acceptanceArr[i],
+            topic: msg.topic,
+            excludePartialPeers:
+              this.opts.enablePartialColumns === true && msg.topic.type === GossipType.data_column_sidecar,
           });
         });
       }
@@ -751,6 +757,9 @@ export class NetworkProcessor {
           msgId: messageOrArray.msgId,
           propagationSource: messageOrArray.propagationSource,
           acceptance: acceptanceArr[0],
+          topic: messageOrArray.topic,
+          excludePartialPeers:
+            this.opts.enablePartialColumns === true && messageOrArray.topic.type === GossipType.data_column_sidecar,
         });
       });
     }

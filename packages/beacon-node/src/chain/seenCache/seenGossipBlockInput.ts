@@ -385,6 +385,47 @@ export class SeenBlockInput {
     return blockInput;
   }
 
+  getByPartialHeader({
+    blockRootHex,
+    partialHeader,
+    seenTimestampSec,
+    source,
+    peerIdStr,
+  }: SourceMeta & {blockRootHex: RootHex; partialHeader: fulu.PartialDataColumnHeader}): BlockInputColumns {
+    let blockInput = this.blockInputs.get(blockRootHex);
+    if (!blockInput) {
+      const {forkName} = this.buildCommonProps(partialHeader.signedBlockHeader.message.slot);
+      blockInput = BlockInputColumns.createFromPartialHeader({
+        blockRootHex,
+        partialHeader,
+        source,
+        seenTimestampSec,
+        peerIdStr,
+        forkName,
+        daOutOfRange: false,
+        custodyColumns: this.custodyConfig.custodyColumns,
+        sampledColumns: this.custodyConfig.sampledColumns,
+      });
+      this.blockInputs.set(blockRootHex, blockInput);
+    }
+
+    if (!isBlockInputColumns(blockInput)) {
+      throw new SeenBlockInputCacheError(
+        {
+          code: SeenBlockInputCacheErrorCode.WRONG_BLOCK_INPUT_TYPE,
+          cachedType: blockInput.type,
+          requestedType: DAType.Columns,
+          ...blockInput.getLogMeta(),
+        },
+        "BlockInputType mismatch adding partial header"
+      );
+    }
+
+    blockInput.addPartialHeader(partialHeader);
+
+    return blockInput;
+  }
+
   /**
    * Check if a proposer signature has already been verified for this slot and block root.
    */

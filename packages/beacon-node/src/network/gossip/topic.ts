@@ -7,6 +7,7 @@ import {
   isForkPostAltair,
   isForkPostElectra,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -82,6 +83,8 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
       return `${topic.type}_${topic.subnet}`;
     case GossipType.data_column_sidecar:
       return `${topic.type}_${topic.subnet}`;
+    case GossipType.partial_data_column_sidecar:
+      return `data_column_sidecar_${topic.subnet}`;
   }
 }
 
@@ -127,6 +130,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
+    case GossipType.partial_data_column_sidecar:
+      return isForkPostGloas(fork) ? ssz.gloas.PartialDataColumnSidecar : ssz.fulu.PartialDataColumnSidecar;
   }
 }
 
@@ -357,4 +362,5 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
+  [GossipType.partial_data_column_sidecar]: true,
 };

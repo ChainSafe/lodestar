@@ -1,3 +1,4 @@
+import type {PartialMessage} from "@libp2p/gossipsub";
 import type {PeerScoreStatsDump} from "@libp2p/gossipsub/score";
 import type {PublishOpts} from "@libp2p/gossipsub/types";
 import type {Connection, PrivateKey} from "@libp2p/interface";
@@ -166,6 +167,8 @@ export class NetworkCore implements INetworkCore {
       nodeId,
       config,
       custodyConfig: new CustodyConfig({nodeId, config, initialCustodyGroupCount}),
+      enablePartialColumns: opts.enablePartialColumns ?? false,
+      eagerlyPublishCells: opts.eagerlyPublishCells ?? false,
     };
     const metadata = new MetadataController({}, {networkConfig, logger, onSetValue: onMetadataSetValue});
 
@@ -367,6 +370,30 @@ export class NetworkCore implements INetworkCore {
   async publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts | undefined): Promise<number> {
     const {recipients} = await this.gossip.publish(topic, data, opts);
     return recipients.length;
+  }
+
+  async publishPartialMessage(partialMsg: PartialMessage): Promise<void> {
+    this.gossip.publishPartialMessage(partialMsg);
+  }
+
+  async publishPartialMessageToPeer(peerId: PeerIdStr, partialMsg: PartialMessage): Promise<void> {
+    this.gossip.publishPartialMessageToPeer(peerId, partialMsg);
+  }
+
+  async getPartialPeers(topic: string): Promise<PeerIdStr[]> {
+    return this.gossip.getPartialPeers(topic);
+  }
+
+  async getPeerPartialMetadata(topic: string, groupID: Uint8Array, peerId: PeerIdStr): Promise<Uint8Array | undefined> {
+    return this.gossip.getPeerPartialMetadata(topic, groupID, peerId);
+  }
+
+  async reportInvalidPartialMessage(peerId: PeerIdStr, topic: string): Promise<void> {
+    this.gossip.reportInvalidPartialMessage(peerId, topic);
+  }
+
+  async reportUsefulPartialMessage(peerId: PeerIdStr, topic: string, groupID: Uint8Array): Promise<void> {
+    this.gossip.reportUsefulPartialMessage(peerId, topic, groupID);
   }
 
   /**
