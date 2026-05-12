@@ -19,6 +19,7 @@ import {
   capella,
   deneb,
   electra,
+  gloas,
   ssz,
 } from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
@@ -50,6 +51,7 @@ export type EngineApiRpcParamTypes = {
   engine_newPayloadV2: [ExecutionPayloadRpc];
   engine_newPayloadV3: [ExecutionPayloadRpc, VersionedHashesRpc, DATA];
   engine_newPayloadV4: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
+  engine_newPayloadV5: [ExecutionPayloadRpc, VersionedHashesRpc, DATA, ExecutionRequestsRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -67,6 +69,10 @@ export type EngineApiRpcParamTypes = {
     forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
     payloadAttributes?: PayloadAttributesRpc,
   ];
+  engine_forkchoiceUpdatedV4: [
+    forkChoiceData: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: PayloadAttributesRpc,
+  ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -75,6 +81,7 @@ export type EngineApiRpcParamTypes = {
   engine_getPayloadV3: [QUANTITY];
   engine_getPayloadV4: [QUANTITY];
   engine_getPayloadV5: [QUANTITY];
+  engine_getPayloadV6: [QUANTITY];
 
   /**
    * 1. Array of DATA - Array of block_hash field values of the ExecutionPayload structure
@@ -111,6 +118,7 @@ export type EngineApiRpcReturnTypes = {
   engine_newPayloadV2: PayloadStatus;
   engine_newPayloadV3: PayloadStatus;
   engine_newPayloadV4: PayloadStatus;
+  engine_newPayloadV5: PayloadStatus;
   engine_forkchoiceUpdatedV1: {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
@@ -123,6 +131,10 @@ export type EngineApiRpcReturnTypes = {
     payloadStatus: PayloadStatus;
     payloadId: QUANTITY | null;
   };
+  engine_forkchoiceUpdatedV4: {
+    payloadStatus: PayloadStatus;
+    payloadId: QUANTITY | null;
+  };
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
@@ -131,6 +143,7 @@ export type EngineApiRpcReturnTypes = {
   engine_getPayloadV3: ExecutionPayloadResponse;
   engine_getPayloadV4: ExecutionPayloadResponse;
   engine_getPayloadV5: ExecutionPayloadResponse;
+  engine_getPayloadV6: ExecutionPayloadResponse;
 
   engine_getPayloadBodiesByHashV1: (ExecutionPayloadBodyRpc | null)[];
 
@@ -180,6 +193,8 @@ export type ExecutionPayloadRpc = {
   withdrawals?: WithdrawalRpc[]; // Capella hardfork
   blobGasUsed?: QUANTITY; // DENEB
   excessBlobGas?: QUANTITY; // DENEB
+  blockAccessList?: DATA; // GLOAS:EIP-7928
+  slotNumber?: QUANTITY; // GLOAS:EIP-7843
 };
 
 export type WithdrawalRpc = {
@@ -228,6 +243,8 @@ export type PayloadAttributesRpc = {
   withdrawals?: WithdrawalRpc[];
   /** DATA, 32 Bytes - value for the parentBeaconBlockRoot to be used for building block */
   parentBeaconBlockRoot?: DATA;
+  /** QUANTITY, 64 Bits - value for the slot number field of the new payload (EIP-7843) */
+  slotNumber?: QUANTITY;
 };
 
 export type ClientVersionRpc = {
@@ -279,6 +296,12 @@ export function serializeExecutionPayload(fork: ForkName, data: ExecutionPayload
   }
 
   // No changes in Electra
+
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blockAccessList, slotNumber} = data as gloas.ExecutionPayload;
+    payload.blockAccessList = bytesToData(blockAccessList);
+    payload.slotNumber = numToQuantity(slotNumber);
+  }
 
   return payload;
 }
@@ -375,6 +398,22 @@ export function parseExecutionPayload(
 
   // No changes in Electra
 
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {blockAccessList, slotNumber} = data;
+    if (blockAccessList == null) {
+      throw Error(
+        `blockAccessList missing for ${fork} >= gloas executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    if (slotNumber == null) {
+      throw Error(
+        `slotNumber missing for ${fork} >= gloas executionPayload number=${executionPayload.blockNumber} hash=${data.blockHash}`
+      );
+    }
+    (executionPayload as gloas.ExecutionPayload).blockAccessList = dataToBytes(blockAccessList, null);
+    (executionPayload as gloas.ExecutionPayload).slotNumber = quantityToNum(slotNumber);
+  }
+
   return {executionPayload, executionPayloadValue, blobsBundle, executionRequests, shouldOverrideBuilder};
 }
 
@@ -385,6 +424,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map(serializeWithdrawal),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
+    slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
   };
 }
 
@@ -401,6 +441,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     suggestedFeeRecipient: data.suggestedFeeRecipient,
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
+    slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
   };
 }
 

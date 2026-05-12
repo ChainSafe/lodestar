@@ -2,6 +2,7 @@ import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -17,7 +18,8 @@ export async function validateApiPayloadAttestationMessage(
   chain: IBeaconChain,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
-  return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
+  const prioritizeBls = true;
+  return validatePayloadAttestationMessage(chain, payloadAttestationMessage, prioritizeBls);
 }
 
 export async function validateGossipPayloadAttestationMessage(
@@ -29,7 +31,8 @@ export async function validateGossipPayloadAttestationMessage(
 
 async function validatePayloadAttestationMessage(
   chain: IBeaconChain,
-  payloadAttestationMessage: gloas.PayloadAttestationMessage
+  payloadAttestationMessage: gloas.PayloadAttestationMessage,
+  prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
   const epoch = computeEpochAtSlot(data.slot);
@@ -66,6 +69,9 @@ async function validatePayloadAttestationMessage(
   }
 
   const state = chain.getHeadState();
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
+  }
 
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
@@ -98,7 +104,7 @@ async function validatePayloadAttestationMessage(
     payloadAttestationMessage.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_SIGNATURE,
     });

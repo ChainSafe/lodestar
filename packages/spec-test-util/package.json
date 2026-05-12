@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/spec-test-util",
-  "version": "1.41.1",
+  "version": "1.42.0",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -19,6 +19,11 @@
       "bun": "./src/downloadTests.ts",
       "types": "./lib/downloadTests.d.ts",
       "import": "./lib/downloadTests.js"
+    },
+    "./downloadNightlyTests": {
+      "bun": "./src/downloadNightlyTests.ts",
+      "types": "./lib/downloadNightlyTests.d.ts",
+      "import": "./lib/downloadNightlyTests.js"
     }
   },
   "files": [
@@ -60,7 +65,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/ssz": "^1.4.0",
     "@lodestar/types": "workspace:^",
     "vitest": "catalog:"
   }

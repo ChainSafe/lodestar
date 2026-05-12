@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.41.1",
+  "version": "1.42.0",
   "type": "module",
   "exports": {
     ".": {
@@ -114,11 +114,11 @@
     "@chainsafe/enr": "^6.0.1",
     "@chainsafe/libp2p-noise": "^17.0.0",
     "@chainsafe/libp2p-quic": "^2.0.1",
-    "@chainsafe/persistent-merkle-tree": "^1.2.1",
+    "@chainsafe/persistent-merkle-tree": "^1.2.5",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/snappy-wasm": "^0.5.0",
-    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/ssz": "^1.4.0",
     "@chainsafe/threads": "^1.11.3",
     "@crate-crypto/node-eth-kzg": "0.9.1",
     "@fastify/bearer-auth": "^10.0.1",
@@ -173,6 +173,7 @@
     "@types/js-yaml": "^4.0.5",
     "@types/qs": "^6.9.7",
     "@types/tmp": "^0.2.3",
+    "dotenv": "^16.4.5",
     "js-yaml": "^4.1.0",
     "rewiremock": "^3.14.5",
     "rimraf": "^4.4.1",

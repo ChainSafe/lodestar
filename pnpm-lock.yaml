@@ -21,8 +21,9 @@ catalogs:
 
 overrides:
   dns-over-http-resolver: ^2.1.1
-  loupe: ^2.3.6
   elliptic: '>=6.6.1'
+  loupe: ^2.3.6
+  nan: ^2.19.0
 
 importers:
 
@@ -177,11 +178,11 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -212,7 +213,7 @@ importers:
         version: 8.18.0
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
 
   packages/beacon-node:
     dependencies:
@@ -235,8 +236,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -247,8 +248,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -350,7 +351,7 @@ importers:
         version: 4.3.1
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
       interface-datastore:
         specifier: ^9.0.2
         version: 9.0.2
@@ -406,6 +407,9 @@ importers:
       '@types/tmp':
         specifier: ^0.2.3
         version: 0.2.3
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.4.5
       js-yaml:
         specifier: ^4.1.0
         version: 4.1.1
@@ -443,14 +447,14 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/pubkey-index-map':
         specifier: ^3.0.0
         version: 3.0.0
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -565,7 +569,7 @@ importers:
         version: 2.2.1
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
       tmp:
         specifier: ^0.2.4
         version: 0.2.4
@@ -582,8 +586,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -600,8 +604,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -680,8 +684,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -816,11 +820,11 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -854,7 +858,7 @@ importers:
         version: 6.9.7
       fastify:
         specifier: ^5.8.1
-        version: 5.8.3
+        version: 5.8.5
       qs:
         specifier: ^6.11.1
         version: 6.14.1
@@ -881,8 +885,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -908,8 +912,8 @@ importers:
   packages/prover:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@ethereumjs/block':
         specifier: ^4.2.2
         version: 4.2.2
@@ -1033,8 +1037,8 @@ importers:
         version: 2.4.8
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@libp2p/crypto':
         specifier: ^5.1.13
         version: 5.1.13
@@ -1057,8 +1061,8 @@ importers:
   packages/spec-test-util:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -1073,7 +1077,7 @@ importers:
         version: 0.7.0
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
+        version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
 
   packages/state-transition:
     dependencies:
@@ -1084,8 +1088,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/persistent-ts':
         specifier: ^1.0.0
         version: 1.0.0
@@ -1093,8 +1097,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -1140,7 +1144,7 @@ importers:
         version: 0.2.4
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
+        version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
     devDependencies:
       '@types/tmp':
         specifier: ^0.2.3
@@ -1152,8 +1156,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -1180,8 +1184,8 @@ importers:
         version: 4.1.1
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@types/js-yaml':
         specifier: ^4.0.5
         version: 4.0.5
@@ -1198,8 +1202,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/ssz':
-        specifier: ^1.2.2
-        version: 1.2.2
+        specifier: ^1.4.0
+        version: 1.4.0
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1443,10 +1447,6 @@ packages:
 
   '@babel/helper-skip-transparent-expression-wrappers@7.27.1':
     resolution: {integrity: sha512-Tub4ZKEXqbPjXgWLl2+3JpQAYBJ8+ikpQ2Ocj/q/r0LwE3UhENh7EUabyHjz2kCEsrRY83ew2DQdHluuiDQFzg==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/helper-string-parser@7.25.9':
-    resolution: {integrity: sha512-4A/SCr/2KLd5jrtOMFzaKjVtAei3+2r/NChoBNoZ3EyP/+GlhoaEGoWOZUmFmoITP7zOJyHIMm+DYRd8o3PvHA==}
     engines: {node: '>=6.9.0'}
 
   '@babel/helper-string-parser@7.27.1':
@@ -1739,10 +1739,6 @@ packages:
     resolution: {integrity: sha512-4HPiQr0X7+waHfyXPZpWPfWL/J7dcN1mx9gL6WdQVMbPnF3+ZhSMs8tCxN7oHddJE9fhNE7+lxdnlyemKfJRuA==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/types@7.26.7':
-    resolution: {integrity: sha512-t8kDRGrKXyp6+tjUh7hw2RLyclsW4TRoRvRHtSyAX9Bb5ldlFh+90YAYY6awRXrlB4G5G2izNeGySpATlFzmOg==}
-    engines: {node: '>=6.9.0'}
-
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
@@ -1816,6 +1812,9 @@ packages:
 
   '@chainsafe/as-sha256@1.2.0':
     resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
+
+  '@chainsafe/as-sha256@1.2.4':
+    resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
 
   '@chainsafe/benchmark@2.0.2':
     resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
@@ -2009,8 +2008,8 @@ packages:
   '@chainsafe/persistent-merkle-tree@0.6.1':
     resolution: {integrity: sha512-gcENLemRR13+1MED2NeZBMA7FRS0xQPM7L2vhMqvKkjqtFT4YfjSVADq5U0iLuQLhFUJEMVuA8fbv5v+TN6O9A==}
 
-  '@chainsafe/persistent-merkle-tree@1.2.1':
-    resolution: {integrity: sha512-AOSEVLfaqwb9eTCKuY1ri0DrRxVQ3Rh+we1VBj1GahUGfEdE8OC3Vkbca7Up6RoI9Ip9FLnI31Y7AjKH9ZqAGA==}
+  '@chainsafe/persistent-merkle-tree@1.2.5':
+    resolution: {integrity: sha512-uyv3/nHkD8vNXjdez6q89rhXwGDUp3YX2mBbOwB7/xelgZ9E7hc3HQgOuq1EdfM9Vyh09jiwimXF/hskmymOfQ==}
 
   '@chainsafe/persistent-ts@1.0.0':
     resolution: {integrity: sha512-Xwu59vDQwJWcF4QbIdi9gvRVnkLBOc7Y5JUpINS4TVRtp4omhjEsqO4rFSCUhC8opyg1HcNSQEjL4IgYLGouuw==}
@@ -2083,8 +2082,8 @@ packages:
   '@chainsafe/ssz@0.11.1':
     resolution: {integrity: sha512-cB8dBkgGN6ZoeOKuk+rIRHKN0L5i9JLGeC0Lui71QX0TuLcQKwgbfkUexpyJxnGFatWf8yeJxlOjozMn/OTP0g==}
 
-  '@chainsafe/ssz@1.2.2':
-    resolution: {integrity: sha512-kIA3fJO6h2RsQndsNBlCSQYB4xfdZGMQvNPKPgbiB0mysV6okuxeJU3Nyl16xDCKv3tqej76eGYHcyjMVt7V1w==}
+  '@chainsafe/ssz@1.4.0':
+    resolution: {integrity: sha512-DRje073CIU0lvIdNKmW89jAo4UAidoKpgYco5wvQve8WK1DUk/YS/54c5FX/e/iiKiJ1mo44CNCg4xiKWY3/yQ==}
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     resolution: {integrity: sha512-kTewLZe1KqMAJ1gHfagOxo0BI4kTcMOAkGJ7pRLFM5ZkL2P7sh3/4ixnjdbtMkO207vMZEZL3fxJSSs14kg9Kg==}
@@ -4611,9 +4610,6 @@ packages:
   '@types/node@24.10.1':
     resolution: {integrity: sha512-GNWcUTRBgIRJD5zj+Tq0fKOJ5XZajIiBroOF0yvj2bSU1WvNdYS/dn9UxwsujGW4JX06dnHyjV2y9rRaybH0iQ==}
 
-  '@types/node@25.4.0':
-    resolution: {integrity: sha512-9wLpoeWuBlcbBpOY3XmzSTG3oscB6xjBEEtn+pYXTfhyXhIxC5FsBer2KTopBlvKEiW9l13po9fq+SJY/5lkhw==}
-
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
 
@@ -6888,8 +6884,8 @@ packages:
   fastify-plugin@5.0.1:
     resolution: {integrity: sha512-HCxs+YnRaWzCl+cWRYFnHmeRFyR5GVnJTAaCJQiYzQSDwK9MgJdyAsuL3nh0EWRCYMgQ5MeziymvmAhUHYHDUQ==}
 
-  fastify@5.8.3:
-    resolution: {integrity: sha512-XJXpRQ41+rsJ/GLeP9vyDC+fBXilcTlEXokMSexkdEkla4uf7ZQNaI5xl3el+kW5TZQulqYxLr659ey/KX7XmQ==}
+  fastify@5.8.5:
+    resolution: {integrity: sha512-Yqptv59pQzPgQUSIm87hMqHJmdkb1+GPxdE6vW6FRyVE9G86mt7rOghitiU4JHRaTyDUk9pfeKmDeu70lAwM4Q==}
 
   fastq@1.17.1:
     resolution: {integrity: sha512-sRVD3lWVIXWg6By68ZN7vho9a1pQcN/WBFaAAsDDFzlJjvoGx0P8z7V1t72grFJfJhu3YPZBuu25f7Kaw2jN1w==}
@@ -9821,11 +9817,6 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.58.2:
-    resolution: {integrity: sha512-vA30H8Nvkq/cPBnNw4Q8TWz1EJyqgpuinBcHET0YVJVFldr8JDNiU9LaWAE1KqSkRYazuaBhTpB5ZzShOezQ6A==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   please-upgrade-node@3.2.0:
     resolution: {integrity: sha512-gQR3WpIgNIKwBMVLkpMUeR3e1/E1y42bqDQZfql+kDeXd8COYfM8PQA4X6y7a8u9Ua9FHmsrrmirW2vHs45hWg==}
 
@@ -10399,8 +10390,8 @@ packages:
     resolution: {integrity: sha512-x/+Cz4YrimQxQccJf5mKEbIa1NzeCRNI5Ecl/ekmlYaampdNLPalVyIcCZNNH3MvmqBugV5TMYZXv0ljslUlaw==}
     engines: {node: '>= 0.4'}
 
-  safe-regex2@5.1.0:
-    resolution: {integrity: sha512-pNHAuBW7TrcleFHsxBr5QMi/Iyp0ENjUKz7GCcX1UO7cMh+NmVK6HxQckNL1tJp1XAJVjG6B8OKIPqodqj9rtw==}
+  safe-regex2@5.1.1:
+    resolution: {integrity: sha512-mOSBvHGDZMuIEZMdOz/aCEYDCv0E7nfcNsIhUF+/P+xC7Hyf3FkvymqgPbg9D1EdSGu+uKbJgy09K/RKKc7kJA==}
     hasBin: true
 
   safe-stable-stringify@2.4.2:
@@ -11368,9 +11359,6 @@ packages:
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
-  undici-types@7.18.2:
-    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
-
   undici@5.29.0:
     resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
@@ -11530,7 +11518,7 @@ packages:
 
   uuid@3.4.0:
     resolution: {integrity: sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==}
-    deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@8.3.2:
@@ -12408,7 +12396,7 @@ snapshots:
 
   '@babel/helper-environment-visitor@7.24.7':
     dependencies:
-      '@babel/types': 7.26.7
+      '@babel/types': 7.29.0
 
   '@babel/helper-globals@7.28.0': {}
 
@@ -12466,8 +12454,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@babel/helper-string-parser@7.25.9': {}
-
   '@babel/helper-string-parser@7.27.1': {}
 
   '@babel/helper-validator-identifier@7.28.5': {}
@@ -12489,7 +12475,7 @@ snapshots:
 
   '@babel/parser@7.26.7':
     dependencies:
-      '@babel/types': 7.26.7
+      '@babel/types': 7.29.0
 
   '@babel/parser@7.29.2':
     dependencies:
@@ -12786,11 +12772,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@babel/types@7.26.7':
-    dependencies:
-      '@babel/helper-string-parser': 7.25.9
-      '@babel/helper-validator-identifier': 7.28.5
-
   '@babel/types@7.29.0':
     dependencies:
       '@babel/helper-string-parser': 7.27.1
@@ -12838,6 +12819,8 @@ snapshots:
   '@chainsafe/as-sha256@0.4.1': {}
 
   '@chainsafe/as-sha256@1.2.0': {}
+
+  '@chainsafe/as-sha256@1.2.4': {}
 
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
     dependencies:
@@ -13039,9 +13022,9 @@ snapshots:
       '@chainsafe/as-sha256': 0.4.1
       '@noble/hashes': 1.8.0
 
-  '@chainsafe/persistent-merkle-tree@1.2.1':
+  '@chainsafe/persistent-merkle-tree@1.2.5':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.0
+      '@chainsafe/as-sha256': 1.2.4
       '@chainsafe/hashtree': 1.0.2
       '@noble/hashes': 1.8.0
 
@@ -13093,10 +13076,10 @@ snapshots:
       '@chainsafe/as-sha256': 0.4.1
       '@chainsafe/persistent-merkle-tree': 0.6.1
 
-  '@chainsafe/ssz@1.2.2':
+  '@chainsafe/ssz@1.4.0':
     dependencies:
       '@chainsafe/as-sha256': 1.2.0
-      '@chainsafe/persistent-merkle-tree': 1.2.1
+      '@chainsafe/persistent-merkle-tree': 1.2.5
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     optional: true
@@ -16092,11 +16075,6 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/node@25.4.0':
-    dependencies:
-      undici-types: 7.18.2
-    optional: true
-
   '@types/normalize-package-data@2.4.4': {}
 
   '@types/parse-json@4.0.2': {}
@@ -16355,20 +16333,6 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.58.2)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
-    dependencies:
-      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
-      playwright: 1.58.2
-      tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
-    transitivePeerDependencies:
-      - bufferutil
-      - msw
-      - utf-8-validate
-      - vite
-    optional: true
-
   '@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
       '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))
@@ -16385,24 +16349,6 @@ snapshots:
       - msw
       - utf-8-validate
       - vite
-
-  '@vitest/browser@4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
-    dependencies:
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
-      '@vitest/utils': 4.0.7
-      magic-string: 0.30.21
-      pixelmatch: 7.1.0
-      pngjs: 7.0.0
-      sirv: 3.0.2
-      tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2)
-      ws: 8.18.3
-    transitivePeerDependencies:
-      - bufferutil
-      - msw
-      - utf-8-validate
-      - vite
-    optional: true
 
   '@vitest/coverage-v8@4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)':
     dependencies:
@@ -16439,14 +16385,6 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 6.1.6(@types/node@24.10.1)(yaml@2.8.2)
-
-  '@vitest/mocker@4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))':
-    dependencies:
-      '@vitest/spy': 4.0.7
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 6.1.6(@types/node@25.4.0)(yaml@2.8.2)
 
   '@vitest/pretty-format@2.1.8':
     dependencies:
@@ -19047,7 +18985,7 @@ snapshots:
 
   fastify-plugin@5.0.1: {}
 
-  fastify@5.8.3:
+  fastify@5.8.5:
     dependencies:
       '@fastify/ajv-compiler': 4.0.5
       '@fastify/error': 4.2.0
@@ -19137,7 +19075,7 @@ snapshots:
     dependencies:
       fast-deep-equal: 3.1.3
       fast-querystring: 1.1.2
-      safe-regex2: 5.1.0
+      safe-regex2: 5.1.1
 
   find-up-simple@1.0.1: {}
 
@@ -20236,7 +20174,7 @@ snapshots:
   istanbul-lib-instrument@6.0.3:
     dependencies:
       '@babel/core': 7.29.0
-      '@babel/parser': 7.26.7
+      '@babel/parser': 7.29.2
       '@istanbuljs/schema': 0.1.3
       istanbul-lib-coverage: 3.2.2
       semver: 7.7.4
@@ -20840,8 +20778,8 @@ snapshots:
 
   magicast@0.3.5:
     dependencies:
-      '@babel/parser': 7.26.7
-      '@babel/types': 7.26.7
+      '@babel/parser': 7.29.2
+      '@babel/types': 7.29.0
       source-map-js: 1.2.1
 
   main-event@1.0.1: {}
@@ -20858,7 +20796,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.7.3
+      semver: 7.7.4
 
   make-error@1.3.6: {}
 
@@ -22525,13 +22463,6 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  playwright@1.58.2:
-    dependencies:
-      playwright-core: 1.58.2
-    optionalDependencies:
-      fsevents: 2.3.2
-    optional: true
-
   please-upgrade-node@3.2.0:
     dependencies:
       semver-compare: 1.0.0
@@ -23196,7 +23127,7 @@ snapshots:
       es-errors: 1.3.0
       is-regex: 1.2.1
 
-  safe-regex2@5.1.0:
+  safe-regex2@5.1.1:
     dependencies:
       ret: 0.5.0
 
@@ -24267,9 +24198,6 @@ snapshots:
 
   undici-types@7.16.0: {}
 
-  undici-types@7.18.2:
-    optional: true
-
   undici@5.29.0:
     dependencies:
       '@fastify/busboy': 2.1.1
@@ -24504,16 +24432,6 @@ snapshots:
       fsevents: 2.3.3
       yaml: 2.8.2
 
-  vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2):
-    dependencies:
-      esbuild: 0.24.2
-      postcss: 8.5.6
-      rollup: 4.52.5
-    optionalDependencies:
-      '@types/node': 25.4.0
-      fsevents: 2.3.3
-      yaml: 2.8.2
-
   vitest-when@0.9.0(@vitest/expect@4.0.7)(vitest@4.0.7):
     dependencies:
       pretty-format: 30.2.0
@@ -24546,46 +24464,6 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.10.1
       '@vitest/browser-playwright': 4.0.7(playwright@1.56.1)(vite@6.1.6(@types/node@24.10.1)(yaml@2.8.2))(vitest@4.0.7)
-      jsdom: 23.0.1
-    transitivePeerDependencies:
-      - jiti
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vitest@4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(jsdom@23.0.1)(yaml@2.8.2):
-    dependencies:
-      '@vitest/expect': 4.0.7
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
-      '@vitest/pretty-format': 4.0.7
-      '@vitest/runner': 4.0.7
-      '@vitest/snapshot': 4.0.7
-      '@vitest/spy': 4.0.7
-      '@vitest/utils': 4.0.7
-      debug: 4.4.3(supports-color@8.1.1)
-      es-module-lexer: 1.7.0
-      expect-type: 1.2.2
-      magic-string: 0.30.21
-      pathe: 2.0.3
-      picomatch: 4.0.3
-      std-env: 3.10.0
-      tinybench: 2.9.0
-      tinyexec: 0.3.2
-      tinyglobby: 0.2.15
-      tinyrainbow: 3.0.3
-      vite: 6.1.6(@types/node@25.4.0)(yaml@2.8.2)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/node': 25.4.0
-      '@vitest/browser-playwright': 4.0.7(playwright@1.58.2)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
       jsdom: 23.0.1
     transitivePeerDependencies:
       - jiti

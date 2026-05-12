@@ -10,6 +10,9 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   // This constant can also be derived from existing constants so it's not critical.
   // PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
   "PARTICIPATION_FLAG_WEIGHTS",
+  "PAYLOAD_STATUS_VALID",
+  "PAYLOAD_STATUS_INVALIDATED",
+  "PAYLOAD_STATUS_NOT_VALIDATED",
 ]);
 
 describe("api / impl / config", () => {

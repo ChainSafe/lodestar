@@ -76,7 +76,6 @@ export enum StateHashTreeRootSource {
   prepareNextEpoch = "prepare_next_epoch",
   regenState = "regen_state",
   computeNewStateRoot = "compute_new_state_root",
-  computeEnvelopeStateRoot = "compute_envelope_state_root",
 }
 
 /**
@@ -283,7 +282,7 @@ function processSlotsWithTransientCache(
       {
         const timer = metrics?.epochTransitionStepTime.startTimer({step: EpochTransitionStep.finalProcessEpoch});
         // last step to prepare epoch data that depends on the upgraded state, for example proposerLookahead of BeaconStateFulu
-        postState.epochCtx.finalProcessEpoch(postState);
+        postState.epochCtx.finalProcessEpoch(postState, epochTransitionCache);
         timer?.();
       }
 
