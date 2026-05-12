@@ -58,6 +58,35 @@ const sidebars: SidebarsConfig = {
         },
       ],
     },
+    {
+      type: "category",
+      label: "Developer Tools",
+      collapsed: false,
+      items: [
+        {
+          type: "category",
+          label: "Light Client",
+          items: [
+            {
+              type: "link",
+              label: "Documentation",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/light-client",
+            },
+          ],
+        },
+        {
+          type: "category",
+          label: "Prover",
+          items: [
+            {
+              type: "link",
+              label: "Documentation",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/prover",
+            },
+          ],
+        },
+      ],
+    },
     "supporting-libraries/index",
     {
       type: "category",
