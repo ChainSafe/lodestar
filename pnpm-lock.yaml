@@ -644,43 +644,6 @@ importers:
         specifier: ^2.4.7
         version: 2.4.8
 
-  packages/flare:
-    dependencies:
-      '@chainsafe/bls-keygen':
-        specifier: ^0.4.0
-        version: 0.4.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
-      '@lodestar/api':
-        specifier: workspace:^
-        version: link:../api
-      '@lodestar/config':
-        specifier: workspace:^
-        version: link:../config
-      '@lodestar/params':
-        specifier: workspace:^
-        version: link:../params
-      '@lodestar/state-transition':
-        specifier: workspace:^
-        version: link:../state-transition
-      '@lodestar/types':
-        specifier: workspace:^
-        version: link:../types
-      '@lodestar/utils':
-        specifier: workspace:^
-        version: link:../utils
-      source-map-support:
-        specifier: ^0.5.21
-        version: 0.5.21
-      yargs:
-        specifier: ^17.7.1
-        version: 17.7.2
-    devDependencies:
-      '@types/yargs':
-        specifier: ^17.0.24
-        version: 17.0.24
-
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
