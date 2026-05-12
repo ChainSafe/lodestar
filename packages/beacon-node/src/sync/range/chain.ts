@@ -266,7 +266,6 @@ export class SyncChain {
   removePeer(peerId: PeerIdStr): boolean {
     const deleted = this.peerset.delete(peerId);
     this.rateLimitedPeers.delete(peerId);
-    this.scheduleRateLimitBackoffRetry();
     this.computeTarget();
     return deleted;
   }

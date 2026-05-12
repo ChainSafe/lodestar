@@ -8,6 +8,13 @@ export const MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS = 10;
 export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
 
 /**
+ * Backoff before assigning more range-sync batches to a peer that rate-limited us.
+ *
+ * Note: this is used when rate limited due to MAX_CONCURRENT_REQUESTS
+ */
+export const RATE_LIMITED_PEER_BACKOFF_MS = 5_000;
+
+/**
  * Consider batch faulty after downloading and processing this number of times
  * as in https://github.com/ChainSafe/lodestar/issues/8147 we cannot proceed the sync chain if there is unknown parent
  * from prior batch. For example a peer may send us a non-canonical chain segment or not returning all blocks
