@@ -4,7 +4,16 @@ import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode, RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
+import {
+  DataColumnSidecar,
+  Root,
+  SignedBeaconBlock,
+  altair,
+  fulu,
+  isGloasDataColumnSidecar,
+  phase0,
+  ssz,
+} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {Network, ReqRespBeaconNodeOpts} from "../../../src/network/index.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../../../src/network/reqresp/types.js";
@@ -14,6 +23,12 @@ import {connect, getPeerIdOf, onPeerConnect} from "../../utils/network.js";
 import {NetworkForTestModules, getNetworkForTest, getNetworkForTestModules} from "../../utils/networkWithMockDb.js";
 import {buildDataColumnSidecarFixture} from "../../utils/partialColumns.js";
 import {zeroProtoBlock} from "../../utils/state.js";
+
+function expectFuluDataColumnSidecar(sidecar: DataColumnSidecar): asserts sidecar is fulu.DataColumnSidecar {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    expect.fail("Expected Fulu data column sidecar");
+  }
+}
 
 describe("network / reqresp / main thread", () => {
   vi.setConfig({testTimeout: 3000});
@@ -393,6 +408,8 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     ]);
 
     expect(response).toHaveLength(2);
+    expectFuluDataColumnSidecar(response[0]);
+    expectFuluDataColumnSidecar(response[1]);
     expect(ssz.fulu.DataColumnSidecar.equals(response[0], column3)).toBe(true);
     expect(ssz.fulu.DataColumnSidecar.equals(response[1], column0)).toBe(true);
     expect(dbB.dataColumnSidecar.getManyBinary).toHaveBeenCalledOnce();
@@ -444,6 +461,8 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     });
 
     expect(response).toHaveLength(2);
+    expectFuluDataColumnSidecar(response[0]);
+    expectFuluDataColumnSidecar(response[1]);
     expect(ssz.fulu.DataColumnSidecar.equals(response[0], column1)).toBe(true);
     expect(ssz.fulu.DataColumnSidecar.equals(response[1], column2)).toBe(true);
     expect(dbB.dataColumnSidecarArchive.getManyBinary).toHaveBeenCalledOnce();
@@ -519,6 +538,8 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     });
 
     expect(response).toHaveLength(2);
+    expectFuluDataColumnSidecar(response[0]);
+    expectFuluDataColumnSidecar(response[1]);
     expect(ssz.fulu.DataColumnSidecar.equals(response[0], blockAColumn)).toBe(true);
     expect(ssz.fulu.DataColumnSidecar.equals(response[1], blockBColumn)).toBe(true);
     expect(dbB.dataColumnSidecar.getManyBinary).toHaveBeenCalledTimes(2);

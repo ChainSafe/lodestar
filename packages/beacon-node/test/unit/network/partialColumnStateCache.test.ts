@@ -8,6 +8,7 @@ import {signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {fulu, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {PartialColumnStateCache} from "../../../src/network/partialColumnStateCache.js";
+import {isFuluPartialDataColumnSidecar} from "../../../src/util/dataColumns.js";
 import {kzg} from "../../../src/util/kzg.js";
 
 describe("PartialColumnStateCache", () => {
@@ -72,9 +73,12 @@ describe("PartialColumnStateCache", () => {
 
     const mergedSidecar = cache.buildPartialSidecar(blockRootHex, fullColumn.index, {includeHeader: true});
     expect(mergedSidecar).not.toBeNull();
-    expect(mergedSidecar?.cellsPresentBitmap.toBoolArray()).toEqual([true, false, true]);
-    expect(mergedSidecar?.partialColumn).toEqual([fullColumn.column[0], fullColumn.column[2]]);
-    expect(mergedSidecar?.header).toHaveLength(1);
+    if (mergedSidecar === null || !isFuluPartialDataColumnSidecar(mergedSidecar)) {
+      expect.fail("Expected Fulu partial data column sidecar");
+    }
+    expect(mergedSidecar.cellsPresentBitmap.toBoolArray()).toEqual([true, false, true]);
+    expect(mergedSidecar.partialColumn).toEqual([fullColumn.column[0], fullColumn.column[2]]);
+    expect(mergedSidecar.header).toHaveLength(1);
 
     const metadataBytes = cache.buildPartsMetadataBytes(blockRootHex, fullColumn.index);
     expect(metadataBytes).not.toBeNull();
