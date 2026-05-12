@@ -1,6 +1,7 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ColumnIndex, RootHex, Slot, ValidatorIndex, deneb, gloas} from "@lodestar/types";
-import {toRootHex, withTimeout} from "@lodestar/utils";
+import {fromHex, toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {MissingColumnMeta} from "../blockInput/types.js";
@@ -45,6 +46,16 @@ type PromiseParts<T> = {
   reject: (e: Error) => void;
 };
 
+type CellWithProof = {
+  cell: Uint8Array;
+  proof: Uint8Array;
+};
+
+type PartialColumnData = {
+  bitLen: number;
+  cells: Map<number, CellWithProof>;
+};
+
 function createPromise<T>(): PromiseParts<T> {
   let resolve!: (value: T) => void;
   let reject!: (e: Error) => void;
@@ -73,6 +84,7 @@ export class PayloadEnvelopeInput {
   readonly daOutOfRange: boolean;
 
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
+  private partialColumnsCache = new Map<ColumnIndex, PartialColumnData>();
 
   private readonly sampledColumns: ColumnIndex[];
   private readonly custodyColumns: ColumnIndex[];
@@ -278,6 +290,105 @@ export class PayloadEnvelopeInput {
     return this.columnsCache.get(index)?.columnSidecar;
   }
 
+  getCellCount(index: ColumnIndex): number {
+    const fullColumn = this.columnsCache.get(index);
+    if (fullColumn !== undefined) {
+      return fullColumn.columnSidecar.column.length;
+    }
+
+    return this.partialColumnsCache.get(index)?.cells.size ?? 0;
+  }
+
+  addCells(
+    columnIndex: ColumnIndex,
+    cellsPresentBitmap: boolean[],
+    partialColumn: Uint8Array[],
+    kzgProofs: Uint8Array[],
+    source: SourceMeta["source"],
+    seenTimestampSec: number,
+    peerIdStr?: string
+  ): gloas.DataColumnSidecar | null {
+    if (this.columnsCache.has(columnIndex)) {
+      return null;
+    }
+
+    const partialColumnState = this.getOrCreatePartialColumn(columnIndex, this.bid.blobKzgCommitments.length);
+    let cellIndex = 0;
+    for (let i = 0; i < cellsPresentBitmap.length; i++) {
+      if (!cellsPresentBitmap[i]) {
+        continue;
+      }
+
+      if (!partialColumnState.cells.has(i)) {
+        partialColumnState.cells.set(i, {cell: partialColumn[cellIndex], proof: kzgProofs[cellIndex]});
+      }
+      cellIndex++;
+    }
+
+    if (partialColumnState.cells.size !== partialColumnState.bitLen) {
+      return null;
+    }
+
+    const column: Uint8Array[] = [];
+    const proofs: Uint8Array[] = [];
+    for (let i = 0; i < partialColumnState.bitLen; i++) {
+      const cell = partialColumnState.cells.get(i);
+      if (cell === undefined) {
+        return null;
+      }
+      column.push(cell.cell);
+      proofs.push(cell.proof);
+    }
+
+    const columnSidecar: gloas.DataColumnSidecar = {
+      index: columnIndex,
+      column,
+      kzgProofs: proofs,
+      slot: this.slot,
+      beaconBlockRoot: fromHex(this.blockRootHex),
+    };
+
+    this.addColumn({columnSidecar, source, seenTimestampSec, peerIdStr});
+    this.partialColumnsCache.delete(columnIndex);
+    return columnSidecar;
+  }
+
+  getPartialColumnSidecar(columnIndex: ColumnIndex): gloas.PartialDataColumnSidecar | null {
+    const fullColumn = this.getColumn(columnIndex);
+    if (fullColumn !== undefined) {
+      return {
+        cellsPresentBitmap: BitArray.fromBoolArray(Array.from({length: fullColumn.column.length}, () => true)),
+        partialColumn: fullColumn.column,
+        kzgProofs: fullColumn.kzgProofs,
+      };
+    }
+
+    const partialColumnState = this.partialColumnsCache.get(columnIndex);
+    if (partialColumnState === undefined || partialColumnState.cells.size === 0) {
+      return null;
+    }
+
+    const bitmap = Array.from({length: partialColumnState.bitLen}, () => false);
+    const partialColumn: Uint8Array[] = [];
+    const kzgProofs: Uint8Array[] = [];
+    for (let i = 0; i < partialColumnState.bitLen; i++) {
+      const cell = partialColumnState.cells.get(i);
+      if (cell === undefined) {
+        continue;
+      }
+
+      bitmap[i] = true;
+      partialColumn.push(cell.cell);
+      kzgProofs.push(cell.proof);
+    }
+
+    return {
+      cellsPresentBitmap: BitArray.fromBoolArray(bitmap),
+      partialColumn,
+      kzgProofs,
+    };
+  }
+
   getAllColumns(): gloas.DataColumnSidecar[] {
     return [...this.columnsCache.values()].map(({columnSidecar}) => columnSidecar);
   }
@@ -412,6 +523,17 @@ export class PayloadEnvelopeInput {
     }
 
     return objects;
+  }
+
+  private getOrCreatePartialColumn(columnIndex: ColumnIndex, bitLen: number): PartialColumnData {
+    const existing = this.partialColumnsCache.get(columnIndex);
+    if (existing !== undefined) {
+      return existing;
+    }
+
+    const partialColumnState = {bitLen, cells: new Map<number, CellWithProof>()};
+    this.partialColumnsCache.set(columnIndex, partialColumnState);
+    return partialColumnState;
   }
 
   getLogMeta(): {

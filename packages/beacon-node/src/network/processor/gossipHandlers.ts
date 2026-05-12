@@ -94,8 +94,9 @@ import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
 import {
   getBlobKzgCommitments,
-  getBlockRootHexFromPartialMessageGroupId,
   getDataColumnSidecarSlot,
+  isFuluPartialDataColumnSidecar,
+  parsePartialMessageGroupId,
 } from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {INetworkCore} from "../core/index.js";
@@ -767,6 +768,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           seenTimestampSec
         );
         chain.serializedCache.set(dataColumnSidecar, serializedData);
+        await partialColumnPublisher.publishAvailableColumn(
+          dataColumnSidecar,
+          "full_gossip",
+          payloadInput.getBlobKzgCommitments()
+        );
 
         const payloadInputMeta = payloadInput.getLogMeta();
         const {receivedColumns} = payloadInputMeta;
@@ -1230,26 +1236,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       try {
         const {serializedData, partialMessageGroupId} = gossipData;
-        const partialSidecar = sszDeserialize(topic, serializedData) as fulu.PartialDataColumnSidecar;
+        const partialSidecar = sszDeserialize(topic, serializedData);
         const columnIndex = topic.subnet;
 
-        const hasHeader = partialSidecar.header.length > 0;
         const hasCells = partialSidecar.partialColumn.length > 0;
-        const header = hasHeader ? partialSidecar.header[0] : undefined;
-        const blockRootHex =
-          partialMessageGroupId !== undefined ? getBlockRootHexFromPartialMessageGroupId(partialMessageGroupId) : null;
+        const group = partialMessageGroupId !== undefined ? parsePartialMessageGroupId(partialMessageGroupId) : null;
 
         if (hasCells) {
           metrics?.partialColumns.cellsReceived.inc(partialSidecar.partialColumn.length);
-        }
-
-        // [REJECT] A header and/or cells are present (not semantically empty)
-        if (!hasHeader && !hasCells) {
-          throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
-            code: DataColumnSidecarErrorCode.EMPTY_PARTIAL_MESSAGE,
-            slot: 0,
-            columnIndex,
-          });
         }
 
         // [REJECT] Same number of cells and proofs
@@ -1261,10 +1255,145 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           });
         }
 
-        if (blockRootHex === null) {
+        if (group === null) {
           throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
             code: DataColumnSidecarErrorCode.PARTIAL_INVALID_GROUP_ID,
-            slot: header?.signedBlockHeader.message.slot ?? 0,
+            slot: 0,
+            columnIndex,
+          });
+        }
+
+        if (isForkPostGloas(topic.boundary.fork)) {
+          // Gloas partial column messages carry their block context in the group id and
+          // validate cells against the block's payload bid commitments.
+          if (group.slot === undefined) {
+            throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+              code: DataColumnSidecarErrorCode.PARTIAL_INVALID_GROUP_ID,
+              slot: 0,
+              columnIndex,
+            });
+          }
+
+          if (!hasCells) {
+            throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+              code: DataColumnSidecarErrorCode.EMPTY_PARTIAL_MESSAGE,
+              slot: group.slot,
+              columnIndex,
+            });
+          }
+
+          const payloadInput = chain.seenPayloadEnvelopeInputCache.get(group.blockRootHex);
+          if (payloadInput === undefined) {
+            throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+              code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING,
+              slot: group.slot,
+              blockRoot: group.blockRootHex,
+            });
+          }
+
+          if (group.slot !== payloadInput.slot) {
+            throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+              code: DataColumnSidecarErrorCode.PARTIAL_INVALID_GROUP_ID,
+              slot: group.slot,
+              columnIndex,
+            });
+          }
+
+          if (payloadInput.hasColumn(columnIndex)) {
+            return;
+          }
+
+          await validateGossipPartialDataColumnCells(
+            partialSidecar,
+            {slot: payloadInput.slot, kzgCommitments: payloadInput.getBlobKzgCommitments()},
+            columnIndex,
+            metrics
+          );
+
+          const existingCellCount = payloadInput.getCellCount(columnIndex);
+          const expectedCellCount = payloadInput.getBlobKzgCommitments().length;
+          const completedColumn = payloadInput.addCells(
+            columnIndex,
+            partialSidecar.cellsPresentBitmap.toBoolArray(),
+            Array.from(partialSidecar.partialColumn),
+            Array.from(partialSidecar.kzgProofs),
+            PayloadEnvelopeInputSource.gossip,
+            seenTimestampSec,
+            peerIdStr
+          );
+
+          const usefulCellCount =
+            completedColumn !== null
+              ? expectedCellCount - existingCellCount
+              : payloadInput.getCellCount(columnIndex) - existingCellCount;
+
+          if (usefulCellCount > 0) {
+            metrics?.partialColumns.usefulCells.inc(usefulCellCount);
+            if (partialMessageGroupId !== undefined) {
+              await core.reportUsefulPartialMessage(peerIdStr, partialTopicStr, partialMessageGroupId);
+            }
+
+            const accumulatedPartial = payloadInput.getPartialColumnSidecar(columnIndex);
+            if (accumulatedPartial !== null) {
+              await partialColumnPublisher.publishFilteredPartialOnSubnet(
+                accumulatedPartial,
+                columnIndex,
+                group.blockRoot,
+                payloadInput.slot,
+                "gossip_merge"
+              );
+            }
+          }
+
+          if (completedColumn !== null) {
+            metrics?.partialColumns.columnsCompleted.inc();
+            emitPublishedDataColumns(chain.emitter, [completedColumn]);
+
+            if (payloadInput.getAllColumns().length >= NUMBER_OF_COLUMNS / 2) {
+              chain.columnReconstructionTracker.triggerColumnReconstruction(payloadInput);
+            }
+          }
+
+          if (!payloadInput.isComplete()) {
+            const cutoffTimeMs = getCutoffTimeMs(chain, payloadInput.slot, BLOCK_AVAILABILITY_CUTOFF_MS);
+            payloadInput.waitForEnvelopeAndAllData(cutoffTimeMs).catch((_e) => {
+              chain.emitter.emit(ChainEvent.incompletePayloadEnvelope, {
+                payloadInput,
+                peer: peerIdStr,
+                source: BlockInputSource.gossip,
+              });
+            });
+          }
+
+          return;
+        }
+
+        if (group.slot !== undefined) {
+          throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+            code: DataColumnSidecarErrorCode.PARTIAL_INVALID_GROUP_ID,
+            slot: group.slot,
+            columnIndex,
+          });
+        }
+
+        if (!isFuluPartialDataColumnSidecar(partialSidecar)) {
+          throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+            code: DataColumnSidecarErrorCode.INCORRECT_TYPE,
+            slot: group.slot ?? 0,
+            columnIndex,
+            fork: topic.boundary.fork,
+          });
+        }
+
+        const hasHeader = partialSidecar.header.length > 0;
+        const header = hasHeader ? partialSidecar.header[0] : undefined;
+        const blockRootHex = group.blockRootHex;
+
+        // [REJECT] A header and/or cells are present (not semantically empty)
+        if (!hasHeader && !hasCells) {
+          throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+            code: DataColumnSidecarErrorCode.EMPTY_PARTIAL_MESSAGE,
+            slot: 0,
             columnIndex,
           });
         }
@@ -1370,7 +1499,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           }
 
           // Validate cells against the stored header
-          await validateGossipPartialDataColumnCells(partialSidecar, storedHeader, columnIndex, metrics);
+          await validateGossipPartialDataColumnCells(
+            partialSidecar,
+            {slot: storedHeader.signedBlockHeader.message.slot, kzgCommitments: storedHeader.kzgCommitments},
+            columnIndex,
+            metrics
+          );
 
           if (shouldBroadcastHeader) {
             broadcastedPeers = await partialColumnPublisher.broadcastHeaderAcrossCustodySubnets(

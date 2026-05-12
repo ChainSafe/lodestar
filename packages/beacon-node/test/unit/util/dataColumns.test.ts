@@ -1,10 +1,13 @@
 import {describe, expect, it} from "vitest";
+import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   computePartialMessageGroupId,
   dataColumnToPartialSidecar,
   getBlockRootHexFromPartialMessageGroupId,
+  isFuluPartialDataColumnSidecar,
+  parsePartialMessageGroupId,
 } from "../../../src/util/dataColumns.js";
 
 describe("partial message group ID helpers", () => {
@@ -29,6 +32,17 @@ describe("partial message group ID helpers", () => {
   it("returns null for an invalid group ID length", () => {
     expect(getBlockRootHexFromPartialMessageGroupId(new Uint8Array(16))).toBeNull();
   });
+
+  it("round-trips the Gloas group ID container", () => {
+    const blockRoot = new Uint8Array(32);
+    blockRoot[0] = 2;
+    const slot = 12;
+
+    const groupId = computePartialMessageGroupId(blockRoot, ForkName.gloas, slot);
+    const parsed = parsePartialMessageGroupId(groupId);
+
+    expect(parsed).toEqual({slot, blockRoot, blockRootHex: toRootHex(blockRoot)});
+  });
 });
 
 describe("dataColumnToPartialSidecar", () => {
@@ -43,6 +57,10 @@ describe("dataColumnToPartialSidecar", () => {
       includeCells: false,
     });
 
+    expect(isFuluPartialDataColumnSidecar(partialSidecar)).toBe(true);
+    if (!isFuluPartialDataColumnSidecar(partialSidecar)) {
+      expect.fail("Expected Fulu partial sidecar");
+    }
     expect(partialSidecar.header).toHaveLength(1);
     expect(partialSidecar.cellsPresentBitmap.toBoolArray()).toEqual([]);
     expect(partialSidecar.partialColumn).toEqual([]);
@@ -60,7 +78,27 @@ describe("dataColumnToPartialSidecar", () => {
       includeCells: true,
     });
 
+    expect(isFuluPartialDataColumnSidecar(partialSidecar)).toBe(true);
+    if (!isFuluPartialDataColumnSidecar(partialSidecar)) {
+      expect.fail("Expected Fulu partial sidecar");
+    }
     expect(partialSidecar.header).toHaveLength(1);
+    expect(partialSidecar.cellsPresentBitmap.toBoolArray()).toEqual([true]);
+    expect(partialSidecar.partialColumn).toEqual(sidecar.column);
+    expect(partialSidecar.kzgProofs).toEqual(sidecar.kzgProofs);
+  });
+
+  it("builds a Gloas partial sidecar without a header", () => {
+    const sidecar = ssz.gloas.DataColumnSidecar.defaultValue();
+    sidecar.column = [new Uint8Array(32)];
+    sidecar.kzgProofs = [new Uint8Array(48)];
+
+    const partialSidecar = dataColumnToPartialSidecar(sidecar, {
+      includeHeader: true,
+      includeCells: true,
+    });
+
+    expect(isFuluPartialDataColumnSidecar(partialSidecar)).toBe(false);
     expect(partialSidecar.cellsPresentBitmap.toBoolArray()).toEqual([true]);
     expect(partialSidecar.partialColumn).toEqual(sidecar.column);
     expect(partialSidecar.kzgProofs).toEqual(sidecar.kzgProofs);

@@ -1,8 +1,9 @@
 import {KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH, KZG_COMMITMENTS_SUBTREE_INDEX} from "@lodestar/params";
 import {computeStartSlotAtEpoch, getBlockHeaderProposerSignatureSetByParentStateSlot} from "@lodestar/state-transition";
-import {ColumnIndex, fulu, ssz} from "@lodestar/types";
+import {ColumnIndex, Slot, deneb, fulu, ssz} from "@lodestar/types";
 import {toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
+import {PartialDataColumnSidecar} from "../../util/dataColumns.js";
 import {kzg} from "../../util/kzg.js";
 import {DataColumnSidecarErrorCode, DataColumnSidecarGossipError} from "../errors/dataColumnSidecarError.js";
 import {GossipAction} from "../errors/gossipValidation.js";
@@ -33,7 +34,7 @@ export function verifyPartialDataColumnHeaderInclusionProof(header: fulu.Partial
  * https://github.com/ethereum/consensus-specs/pull/4558
  */
 export async function verifyPartialDataColumnSidecarKzgProofs(
-  sidecar: fulu.PartialDataColumnSidecar,
+  sidecar: PartialDataColumnSidecar,
   allCommitments: Uint8Array[],
   columnIndex: ColumnIndex
 ): Promise<void> {
@@ -206,8 +207,8 @@ export async function validateGossipPartialDataColumnHeader(
  * https://github.com/ethereum/consensus-specs/pull/4558
  */
 export async function validateGossipPartialDataColumnCells(
-  sidecar: fulu.PartialDataColumnSidecar,
-  header: fulu.PartialDataColumnHeader,
+  sidecar: PartialDataColumnSidecar,
+  context: {slot: Slot; kzgCommitments: deneb.BlobKzgCommitments},
   columnIndex: ColumnIndex,
   metrics: Metrics | null
 ): Promise<void> {
@@ -215,10 +216,10 @@ export async function validateGossipPartialDataColumnCells(
 
   try {
     // [REJECT] bitmap length equals number of commitments
-    if (sidecar.cellsPresentBitmap.bitLen !== header.kzgCommitments.length) {
+    if (sidecar.cellsPresentBitmap.bitLen !== context.kzgCommitments.length) {
       throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
         code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH,
-        slot: header.signedBlockHeader.message.slot,
+        slot: context.slot,
         columnIndex,
       });
     }
@@ -227,7 +228,7 @@ export async function validateGossipPartialDataColumnCells(
     if (sidecar.partialColumn.length !== sidecar.kzgProofs.length) {
       throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
         code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH,
-        slot: header.signedBlockHeader.message.slot,
+        slot: context.slot,
         columnIndex,
       });
     }
@@ -240,7 +241,7 @@ export async function validateGossipPartialDataColumnCells(
     if (sidecar.partialColumn.length !== bitmapPopcount) {
       throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
         code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH,
-        slot: header.signedBlockHeader.message.slot,
+        slot: context.slot,
         columnIndex,
       });
     }
@@ -249,11 +250,11 @@ export async function validateGossipPartialDataColumnCells(
     if (sidecar.partialColumn.length > 0) {
       const kzgTimer = metrics?.peerDas.dataColumnSidecarKzgProofsVerificationTime.startTimer();
       try {
-        await verifyPartialDataColumnSidecarKzgProofs(sidecar, header.kzgCommitments, columnIndex);
+        await verifyPartialDataColumnSidecarKzgProofs(sidecar, context.kzgCommitments, columnIndex);
       } catch {
         throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
           code: DataColumnSidecarErrorCode.PARTIAL_INVALID_KZG_PROOF,
-          slot: header.signedBlockHeader.message.slot,
+          slot: context.slot,
           columnIndex,
         });
       } finally {

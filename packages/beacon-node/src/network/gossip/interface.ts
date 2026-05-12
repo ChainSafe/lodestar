@@ -116,7 +116,7 @@ export type GossipTypeMap = {
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
   [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
-  [GossipType.partial_data_column_sidecar]: fulu.PartialDataColumnSidecar;
+  [GossipType.partial_data_column_sidecar]: fulu.PartialDataColumnSidecar | gloas.PartialDataColumnSidecar;
 };
 
 export type GossipFnByType = {
@@ -151,7 +151,9 @@ export type GossipFnByType = {
   [GossipType.proposer_preferences]: (
     signedProposerPreferences: gloas.SignedProposerPreferences
   ) => Promise<void> | void;
-  [GossipType.partial_data_column_sidecar]: (partialSidecar: fulu.PartialDataColumnSidecar) => Promise<void> | void;
+  [GossipType.partial_data_column_sidecar]: (
+    partialSidecar: fulu.PartialDataColumnSidecar | gloas.PartialDataColumnSidecar
+  ) => Promise<void> | void;
 };
 
 export type GossipFn = GossipFnByType[keyof GossipFnByType];

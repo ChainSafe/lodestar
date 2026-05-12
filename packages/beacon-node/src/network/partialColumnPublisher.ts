@@ -381,11 +381,7 @@ export class PartialColumnPublisher {
   ): Promise<void> {
     const {boundary, topic} = this.getTopicForSubnet(subnet, slot);
     const groupID = computePartialMessageGroupId(blockRoot, boundary.fork, slot);
-    const metadataBytes = await this.core.getPeerPartialMetadata(
-      topic,
-      groupID,
-      peerId
-    );
+    const metadataBytes = await this.core.getPeerPartialMetadata(topic, groupID, peerId);
 
     if (metadataBytes === undefined) {
       this.metrics?.partialPublish.peerNoMetadata.inc();

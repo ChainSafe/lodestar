@@ -1,14 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {
-  DataColumnSidecar,
-  Root,
-  RootHex,
-  SubnetID,
-  deneb,
-  fulu,
-  isGloasDataColumnSidecar,
-  ssz,
-} from "@lodestar/types";
+import {DataColumnSidecar, Root, RootHex, SubnetID, deneb, fulu, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {
   PartialDataColumnSidecar,

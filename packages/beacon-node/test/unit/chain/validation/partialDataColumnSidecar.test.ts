@@ -69,6 +69,10 @@ function buildColumnSidecarFixture(): fulu.DataColumnSidecar {
 describe("partialDataColumnSidecar validation", () => {
   const columnSidecar = buildColumnSidecarFixture();
   const header = buildPartialHeader(columnSidecar);
+  const cellValidationContext = {
+    slot: header.signedBlockHeader.message.slot,
+    kzgCommitments: header.kzgCommitments,
+  };
   const partialSidecar = buildPartialSidecar(columnSidecar);
 
   describe("verifyPartialDataColumnHeaderInclusionProof", () => {
@@ -90,7 +94,7 @@ describe("partialDataColumnSidecar validation", () => {
       invalidSidecar.cellsPresentBitmap = BitArray.fromBoolArray([true]);
 
       await expect(
-        validateGossipPartialDataColumnCells(invalidSidecar, header, columnSidecar.index, null)
+        validateGossipPartialDataColumnCells(invalidSidecar, cellValidationContext, columnSidecar.index, null)
       ).rejects.toMatchObject({
         action: GossipAction.REJECT,
         type: {code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH},
@@ -102,7 +106,7 @@ describe("partialDataColumnSidecar validation", () => {
       invalidSidecar.kzgProofs = invalidSidecar.kzgProofs.slice(1);
 
       await expect(
-        validateGossipPartialDataColumnCells(invalidSidecar, header, columnSidecar.index, null)
+        validateGossipPartialDataColumnCells(invalidSidecar, cellValidationContext, columnSidecar.index, null)
       ).rejects.toMatchObject({
         action: GossipAction.REJECT,
         type: {code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH},
@@ -116,7 +120,7 @@ describe("partialDataColumnSidecar validation", () => {
       invalidSidecar.kzgProofs = invalidSidecar.kzgProofs.slice(1);
 
       await expect(
-        validateGossipPartialDataColumnCells(invalidSidecar, header, columnSidecar.index, null)
+        validateGossipPartialDataColumnCells(invalidSidecar, cellValidationContext, columnSidecar.index, null)
       ).rejects.toMatchObject({
         action: GossipAction.REJECT,
         type: {code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH},
@@ -125,7 +129,7 @@ describe("partialDataColumnSidecar validation", () => {
 
     it("accepts valid cells, bitmap, and proofs", async () => {
       await expect(
-        validateGossipPartialDataColumnCells(partialSidecar, header, columnSidecar.index, null)
+        validateGossipPartialDataColumnCells(partialSidecar, cellValidationContext, columnSidecar.index, null)
       ).resolves.toBeUndefined();
     });
   });

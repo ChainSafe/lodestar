@@ -401,7 +401,6 @@ export class Network implements INetwork {
       this.config,
       this.core,
       topic,
-      dataColumnSidecar,
       this.opts.enablePartialColumns ?? false
     );
     if (publishOpts.excludePeerIds !== undefined) {
@@ -417,12 +416,7 @@ export class Network implements INetwork {
       ...publishOpts,
     });
 
-    if (
-      shouldPublishPartialDataColumn(
-        this.opts.enablePartialColumns ?? false,
-        opts?.publishPartial ?? true
-      )
-    ) {
+    if (shouldPublishPartialDataColumn(this.opts.enablePartialColumns ?? false, opts?.publishPartial ?? true)) {
       await this.partialColumnPublisher.publishAvailableColumn(
         dataColumnSidecar,
         opts?.partialTrigger ?? "full_column",

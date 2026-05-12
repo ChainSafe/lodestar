@@ -547,10 +547,7 @@ export function getPartialDataColumnSidecarHeaderCount(sidecar: PartialDataColum
   return isFuluPartialDataColumnSidecar(sidecar) ? sidecar.header.length : 0;
 }
 
-export function serializePartialDataColumnSidecar(
-  fork: ForkName,
-  sidecar: PartialDataColumnSidecar
-): Uint8Array {
+export function serializePartialDataColumnSidecar(fork: ForkName, sidecar: PartialDataColumnSidecar): Uint8Array {
   return isForkPostGloas(fork)
     ? ssz.gloas.PartialDataColumnSidecar.serialize(sidecar as gloas.PartialDataColumnSidecar)
     : ssz.fulu.PartialDataColumnSidecar.serialize(sidecar as fulu.PartialDataColumnSidecar);

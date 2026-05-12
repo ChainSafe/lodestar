@@ -32,7 +32,6 @@ describe("data column publish helpers", () => {
       config,
       core,
       {type: GossipType.data_column_sidecar, boundary: config.getForkBoundaryAtEpoch(0), subnet: sidecar.index},
-      sidecar,
       true
     );
 
@@ -49,7 +48,6 @@ describe("data column publish helpers", () => {
       config,
       core,
       {type: GossipType.data_column_sidecar, boundary: config.getForkBoundaryAtEpoch(0), subnet: sidecar.index},
-      sidecar,
       false
     );
 

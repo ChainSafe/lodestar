@@ -7,6 +7,7 @@ import {
   isForkPostAltair,
   isForkPostElectra,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -130,7 +131,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
     case GossipType.partial_data_column_sidecar:
-      return ssz.fulu.PartialDataColumnSidecar;
+      return isForkPostGloas(fork) ? ssz.gloas.PartialDataColumnSidecar : ssz.fulu.PartialDataColumnSidecar;
   }
 }
 
