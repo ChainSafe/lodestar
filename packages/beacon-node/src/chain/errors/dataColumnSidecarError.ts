@@ -1,3 +1,4 @@
+import {ForkName} from "@lodestar/params";
 import {RootHex, Slot, SubnetID} from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
 import {GossipActionError} from "./gossipValidation.js";
@@ -6,6 +7,7 @@ export enum DataColumnSidecarErrorCode {
   INVALID_INDEX = "DATA_COLUMN_SIDECAR_ERROR_INVALID_INDEX",
   NO_COMMITMENTS = "DATA_COLUMN_SIDECAR_ERROR_NO_COMMITMENTS",
   MISMATCHED_LENGTHS = "DATA_COLUMN_SIDECAR_ERROR_MISMATCHED_LENGTHS",
+  INCORRECT_TYPE = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_TYPE",
   INVALID_SUBNET = "DATA_COLUMN_SIDECAR_ERROR_INVALID_SUBNET",
   INVALID_KZG_PROOF = "DATA_COLUMN_SIDECAR_ERROR_INVALID_KZG_PROOF",
   TOO_MANY_KZG_COMMITMENTS = "DATA_COLUMN_SIDECAR_ERROR_TOO_MANY_KZG_COMMITMENTS",
@@ -18,6 +20,10 @@ export enum DataColumnSidecarErrorCode {
   INCORRECT_SIDECAR_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_SIDECAR_COUNT",
   /** Sidecar doesn't match block */
   INCORRECT_BLOCK = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK",
+  /** Sidecar slot doesn't match block slot */
+  INCORRECT_SIDECAR_SLOT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_SIDECAR_SLOT",
+  /** Sidecar referenced block is not the expected block type */
+  INCORRECT_BLOCK_TYPE = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_BLOCK_TYPE",
   /** Sidecar cell count not as expected */
   INCORRECT_CELL_COUNT = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_CELL_COUNT",
   /** Sidecar kzg proof count not as expected */
@@ -32,10 +38,12 @@ export enum DataColumnSidecarErrorCode {
   FUTURE_SLOT = "DATA_COLUMN_SIDECAR_ERROR_FUTURE_SLOT",
   WOULD_REVERT_FINALIZED_SLOT = "DATA_COLUMN_SIDECAR_ERROR_WOULD_REVERT_FINALIZED_SLOT",
   PARENT_UNKNOWN = "DATA_COLUMN_SIDECAR_ERROR_PARENT_UNKNOWN",
+  BLOCK_UNKNOWN = "DATA_COLUMN_SIDECAR_ERROR_BLOCK_UNKNOWN",
   NOT_LATER_THAN_PARENT = "DATA_COLUMN_SIDECAR_ERROR_NOT_LATER_THAN_PARENT",
   PROPOSAL_SIGNATURE_INVALID = "DATA_COLUMN_SIDECAR_ERROR_PROPOSAL_SIGNATURE_INVALID",
   INCLUSION_PROOF_INVALID = "DATA_COLUMN_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
   INCORRECT_PROPOSER = "DATA_COLUMN_SIDECAR_ERROR_INCORRECT_PROPOSER",
+  PAYLOAD_ENVELOPE_INPUT_MISSING = "DATA_COLUMN_SIDECAR_ERROR_PAYLOAD_ENVELOPE_INPUT_MISSING",
 
   // Partial column errors
   EMPTY_PARTIAL_MESSAGE = "DATA_COLUMN_SIDECAR_ERROR_EMPTY_PARTIAL_MESSAGE",
@@ -56,6 +64,12 @@ export type DataColumnSidecarErrorType =
       commitmentsLength: number;
       proofsLength: number;
     }
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_TYPE;
+      slot: Slot;
+      columnIndex: number;
+      fork: ForkName;
+    }
   | {code: DataColumnSidecarErrorCode.INVALID_SUBNET; columnIndex: number; gossipSubnet: SubnetID}
   | {
       code: DataColumnSidecarErrorCode.TOO_MANY_KZG_COMMITMENTS;
@@ -70,6 +84,11 @@ export type DataColumnSidecarErrorType =
   | {
       code: DataColumnSidecarErrorCode.PARENT_UNKNOWN;
       parentRoot: RootHex;
+      slot: Slot;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.BLOCK_UNKNOWN;
+      blockRoot: RootHex;
       slot: Slot;
     }
   | {
@@ -90,6 +109,17 @@ export type DataColumnSidecarErrorType =
       actual: string;
     }
   | {
+      code: DataColumnSidecarErrorCode.INCORRECT_BLOCK_TYPE;
+      slot: Slot;
+      columnIndex: number;
+    }
+  | {
+      code: DataColumnSidecarErrorCode.INCORRECT_SIDECAR_SLOT;
+      columnIndex: number;
+      expected: Slot;
+      actual: Slot;
+    }
+  | {
       code: DataColumnSidecarErrorCode.INCORRECT_HEADER_ROOT;
       slot: number;
       expected: string;
@@ -107,6 +137,7 @@ export type DataColumnSidecarErrorType =
     }
   | {code: DataColumnSidecarErrorCode.INVALID_KZG_PROOF_BATCH; slot: number; reason: string}
   | {code: DataColumnSidecarErrorCode.INCORRECT_PROPOSER; actualProposerIndex: number; expectedProposerIndex: number}
+  | {code: DataColumnSidecarErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING; slot: Slot; blockRoot: RootHex}
   | {code: DataColumnSidecarErrorCode.EMPTY_PARTIAL_MESSAGE; slot: Slot; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.PARTIAL_CELL_PROOF_COUNT_MISMATCH; slot: Slot; columnIndex: number}
   | {code: DataColumnSidecarErrorCode.PARTIAL_BITMAP_LENGTH_MISMATCH; slot: Slot; columnIndex: number}

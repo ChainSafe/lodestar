@@ -186,6 +186,16 @@ describe("network / gossip / topic", () => {
         topicStr: "/eth2/a41d57bd/execution_payload_bid/ssz_snappy",
       },
     ],
+    [GossipType.proposer_preferences]: [
+      {
+        topic: {
+          type: GossipType.proposer_preferences,
+          boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+          encoding,
+        },
+        topicStr: "/eth2/a41d57bd/proposer_preferences/ssz_snappy",
+      },
+    ],
   };
 
   for (const topics of Object.values(testCases)) {

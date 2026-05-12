@@ -1,4 +1,4 @@
-import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
@@ -9,7 +9,6 @@ import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {IStateRegenerator} from "../../regen/interface.js";
 import {serializeState} from "../../serializeState.js";
-import {fcCheckpointToHexPayload} from "../../stateCache/persistentCheckpointsCache.js";
 import {StateArchiveStrategy, StatesArchiveOpts} from "../interface.js";
 
 /**
@@ -41,7 +40,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
     private readonly bufferPool?: BufferPool | null
   ) {}
 
-  async onFinalizedCheckpoint(_finalized: CheckpointWithPayloadStatus, _metrics?: Metrics | null): Promise<void> {}
+  async onFinalizedCheckpoint(_finalized: CheckpointWithHex, _metrics?: Metrics | null): Promise<void> {}
   async onCheckpoint(_stateRoot: RootHex, _metrics?: Metrics | null): Promise<void> {}
 
   /**
@@ -56,7 +55,7 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
    * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
    * ```
    */
-  async maybeArchiveState(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void> {
+  async maybeArchiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     timer?.({step: FrequencyStateArchiveStep.LoadLastStoredSlot});
@@ -105,12 +104,11 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
    * Archives finalized states from active bucket to archive bucket.
    * Only the new finalized state is stored to disk
    */
-  async archiveState(finalized: CheckpointWithPayloadStatus, metrics?: Metrics | null): Promise<void> {
+  async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
-    // Convert fork-choice checkpoint to beacon-node checkpoint with payloadPresent
-    const finalizedHexPayload = fcCheckpointToHexPayload(finalized);
-    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalizedHexPayload);
+    const finalizedHex = {epoch: finalized.epoch, rootHex: finalized.rootHex};
+    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalizedHex);
     timer?.({step: FrequencyStateArchiveStep.GetFinalizedState});
 
     const {rootHex} = finalized;

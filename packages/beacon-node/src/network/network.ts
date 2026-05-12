@@ -304,6 +304,10 @@ export class Network implements INetwork {
     this.networkProcessor.searchUnknownBlock(slotRoot, source, peer);
   }
 
+  searchUnknownEnvelope(slotRoot: SlotRootHex, source: BlockInputSource, peer?: PeerIdStr): void {
+    this.networkProcessor.searchUnknownEnvelope(slotRoot, source, peer);
+  }
+
   async reportPeer(peer: PeerIdStr, action: PeerAction, actionName: string): Promise<void> {
     return this.core.reportPeer(peer, action, actionName);
   }
@@ -561,12 +565,23 @@ export class Network implements INetwork {
   }
 
   async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
-    const epoch = computeEpochAtSlot(signedEnvelope.message.slot);
+    const epoch = computeEpochAtSlot(signedEnvelope.message.payload.slotNumber);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.execution_payload>(
       {type: GossipType.execution_payload, boundary},
       signedEnvelope,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
+  async publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number> {
+    const epoch = computeEpochAtSlot(payloadAttestationMessage.data.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.payload_attestation_message>(
+      {type: GossipType.payload_attestation_message, boundary},
+      payloadAttestationMessage,
       {ignoreDuplicatePublishError: true}
     );
   }
@@ -680,7 +695,7 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRange(
     peerId: PeerIdStr,
     request: fulu.DataColumnSidecarsByRangeRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRange, [Version.V1], request),
       request.count * request.columns.length,
@@ -691,7 +706,7 @@ export class Network implements INetwork {
   async sendDataColumnSidecarsByRoot(
     peerId: PeerIdStr,
     request: DataColumnSidecarsByRootRequest
-  ): Promise<fulu.DataColumnSidecar[]> {
+  ): Promise<DataColumnSidecar[]> {
     return collectMaxResponseTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.DataColumnSidecarsByRoot, [Version.V1], request),
       request.reduce((total, {columns}) => total + columns.length, 0),

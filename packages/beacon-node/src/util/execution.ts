@@ -2,10 +2,11 @@ import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu, ForkPreFulu} from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {deneb, fulu} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {DataColumnSidecar, SignedBeaconBlock, deneb, isGloasDataColumnSidecar} from "@lodestar/types";
+import {fromHex, toHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../chain/emitter.js";
 import {emitPublishedDataColumns} from "../chain/publishDataColumns.js";
 import {IExecutionEngine} from "../execution/index.js";
@@ -15,6 +16,7 @@ import {
   getCellsAndProofs,
   getDataColumnSidecarsFromBlock,
   getDataColumnSidecarsFromColumnSidecar,
+  getGloasDataColumnSidecars,
 } from "./dataColumns.js";
 
 export enum DataColumnEngineResult {
@@ -125,27 +127,32 @@ export async function getBlobSidecarsFromExecution(
 }
 
 /**
- * Post fulu, call getBlobsV2 from execution engine once per slot whenever we see either beacon_block or data_column_sidecar gossip message
+ * Call getBlobsV2 from execution engine once per slot to fetch blobs and compute data columns.
+ *
+ * Post fulu, whenever we see either beacon_block or data_column_sidecar gossip message and data isn't complete.
+ * Post gloas, immediately when beacon block is successfully imported and PayloadEnvelopeInput is created.
  */
 export async function getDataColumnSidecarsFromExecution(
   config: ChainForkConfig,
   executionEngine: IExecutionEngine,
   emitter: ChainEventEmitter,
-  blockInput: IBlockInput,
+  input: IBlockInput | PayloadEnvelopeInput,
   metrics: Metrics | null,
   blobAndProofBuffers?: Uint8Array[]
 ): Promise<DataColumnEngineResult> {
-  // If its not a column block input, exit
-  if (!isBlockInputColumns(blockInput)) {
+  const isPayloadInput = input instanceof PayloadEnvelopeInput;
+
+  // Pre gloas, ensure it's a column block input
+  if (!isPayloadInput && !isBlockInputColumns(input)) {
     return DataColumnEngineResult.PreFulu;
   }
 
   // If already have all columns, exit
-  if (blockInput.hasAllData()) {
+  if (input.hasAllData()) {
     return DataColumnEngineResult.NotAttemptedFull;
   }
 
-  const versionedHashes = blockInput.getVersionedHashes();
+  const versionedHashes = input.getVersionedHashes();
 
   // If there are no blobs in this block, exit
   if (versionedHashes.length === 0) {
@@ -155,11 +162,7 @@ export async function getDataColumnSidecarsFromExecution(
   // Get blobs from execution engine
   metrics?.peerDas.getBlobsV2Requests.inc();
   const timer = metrics?.peerDas.getBlobsV2RequestDuration.startTimer();
-  const blobs = await executionEngine.getBlobs(
-    blockInput.forkName as ForkPostFulu,
-    versionedHashes,
-    blobAndProofBuffers
-  );
+  const blobs = await executionEngine.getBlobs(input.forkName as ForkPostFulu, versionedHashes, blobAndProofBuffers);
   timer?.();
 
   // Execution engine was unable to find one or more blobs
@@ -169,22 +172,24 @@ export async function getDataColumnSidecarsFromExecution(
   metrics?.peerDas.getBlobsV2Responses.inc();
 
   // Return if we received all data columns while waiting for getBlobs
-  if (blockInput.hasAllData()) {
+  if (input.hasAllData()) {
     return DataColumnEngineResult.SuccessLate;
   }
 
-  let dataColumnSidecars: fulu.DataColumnSidecars;
+  let dataColumnSidecars: DataColumnSidecar[];
   const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
   try {
     const cellsAndProofs = await getCellsAndProofs(blobs);
-    if (blockInput.hasBlock()) {
+    if (isPayloadInput) {
+      dataColumnSidecars = getGloasDataColumnSidecars(input.slot, fromHex(input.blockRootHex), cellsAndProofs);
+    } else if (input.hasBlock()) {
       dataColumnSidecars = getDataColumnSidecarsFromBlock(
         config,
-        blockInput.getBlock() as fulu.SignedBeaconBlock,
+        input.getBlock() as SignedBeaconBlock<ForkPostFulu>,
         cellsAndProofs
       );
     } else {
-      const firstSidecar = blockInput.getAllColumns()[0];
+      const firstSidecar = input.getAllColumns()[0];
       dataColumnSidecars = getDataColumnSidecarsFromColumnSidecar(firstSidecar, cellsAndProofs);
     }
   } finally {
@@ -192,36 +197,50 @@ export async function getDataColumnSidecarsFromExecution(
   }
 
   // Publish columns if and only if subscribed to them
-  const previouslyMissingColumns = blockInput.getMissingSampledColumnMeta().missing;
+  const previouslyMissingColumns = input.getMissingSampledColumnMeta().missing;
   const sampledColumns = previouslyMissingColumns.map((columnIndex) => dataColumnSidecars[columnIndex]);
 
   // for columns that we already seen, it will be ignored through `ignoreDuplicatePublishError` gossip option
   emitPublishedDataColumns(emitter, sampledColumns, "post_getblobs");
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric here somehow
 
-  // add all sampled columns to the block input, even if we didn't sample them
+  // add all sampled columns to the input, even if we didn't sample them
   const seenTimestampSec = Date.now() / 1000;
   let alreadyAddedColumnsCount = 0;
   for (const columnSidecar of sampledColumns) {
-    if (blockInput.hasColumn(columnSidecar.index)) {
+    if (input.hasColumn(columnSidecar.index)) {
       // columns may have been added while waiting
       alreadyAddedColumnsCount++;
       continue;
     }
 
-    blockInput.addColumn({
-      columnSidecar,
-      blockRootHex: blockInput.blockRootHex,
-      source: BlockInputSource.engine,
-      seenTimestampSec,
-    });
+    if (isPayloadInput) {
+      if (!isGloasDataColumnSidecar(columnSidecar)) {
+        throw new Error(`Expected gloas DataColumnSidecar for block ${input.blockRootHex}`);
+      }
+      input.addColumn({
+        columnSidecar,
+        source: PayloadEnvelopeInputSource.engine,
+        seenTimestampSec,
+      });
+    } else {
+      if (isGloasDataColumnSidecar(columnSidecar)) {
+        throw new Error(`Expected fulu DataColumnSidecar for block ${input.blockRootHex}`);
+      }
+      input.addColumn({
+        columnSidecar,
+        blockRootHex: input.blockRootHex,
+        source: BlockInputSource.engine,
+        seenTimestampSec,
+      });
+    }
 
     if (emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
       emitter.emit(routes.events.EventType.dataColumnSidecar, {
-        blockRoot: blockInput.blockRootHex,
-        slot: blockInput.slot,
+        blockRoot: input.blockRootHex,
+        slot: input.slot,
         index: columnSidecar.index,
-        kzgCommitments: columnSidecar.kzgCommitments.map(toHex),
+        kzgCommitments: !isGloasDataColumnSidecar(columnSidecar) ? columnSidecar.kzgCommitments.map(toHex) : undefined,
       });
     }
   }

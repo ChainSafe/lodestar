@@ -11,6 +11,7 @@ import {
   getDataColumnSidecarsFromExecution,
 } from "../util/execution.js";
 import {IBlockInput, isBlockInputBlobs} from "./blocks/blockInput/index.js";
+import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "./emitter.js";
 
 export type GetBlobsTrackerInit = {
@@ -43,22 +44,22 @@ export class GetBlobsTracker {
     this.config = init.config;
   }
 
-  triggerGetBlobs(blockInput: IBlockInput): void {
-    if (this.activeReconstructions.has(blockInput.blockRootHex)) {
+  triggerGetBlobs(input: IBlockInput | PayloadEnvelopeInput): void {
+    if (this.activeReconstructions.has(input.blockRootHex)) {
       return;
     }
 
-    if (isBlockInputBlobs(blockInput)) {
+    if (!(input instanceof PayloadEnvelopeInput) && isBlockInputBlobs(input)) {
       // there is not preallocation for blob sidecars like there is for columns sidecars so no need to
       // store the index for the preallocated buffers
-      this.activeReconstructions.add(blockInput.blockRootHex);
+      this.activeReconstructions.add(input.blockRootHex);
       callInNextEventLoop(() => {
-        const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
+        const logCtx = {slot: input.slot, root: input.blockRootHex};
         this.logger.verbose("Trigger getBlobsV1 for block", logCtx);
-        getBlobSidecarsFromExecution(this.config, this.executionEngine, this.metrics, this.emitter, blockInput).finally(
+        getBlobSidecarsFromExecution(this.config, this.executionEngine, this.metrics, this.emitter, input).finally(
           () => {
             this.logger.verbose("Completed getBlobsV1 for block", logCtx);
-            this.activeReconstructions.delete(blockInput.blockRootHex);
+            this.activeReconstructions.delete(input.blockRootHex);
           }
         );
       });
@@ -72,7 +73,7 @@ export class GetBlobsTracker {
       this.blobsAndProofsBuffers[freeIndex] = {inUse: false, buffers: []};
     }
 
-    const maxBlobs = this.config.getMaxBlobsPerBlock(computeEpochAtSlot(blockInput.slot));
+    const maxBlobs = this.config.getMaxBlobsPerBlock(computeEpochAtSlot(input.slot));
     // double check that there is enough pre-allocated space (blob schedule may have changed since the last use)
     const timer = this.metrics?.peerDas.getBlobsV2PreAllocationTime.startTimer();
     for (let i = 0; i < maxBlobs; i++) {
@@ -84,16 +85,16 @@ export class GetBlobsTracker {
 
     // We don't care about the outcome of this call,
     // just that it has been triggered for this block root.
-    this.activeReconstructions.add(blockInput.blockRootHex);
+    this.activeReconstructions.add(input.blockRootHex);
     this.blobsAndProofsBuffers[freeIndex].inUse = true;
     callInNextEventLoop(() => {
-      const logCtx = {slot: blockInput.slot, root: blockInput.blockRootHex};
+      const logCtx = {slot: input.slot, root: input.blockRootHex};
       this.logger.verbose("Trigger getBlobsV2 for block", logCtx);
       getDataColumnSidecarsFromExecution(
         this.config,
         this.executionEngine,
         this.emitter,
-        blockInput,
+        input,
         this.metrics,
         this.blobsAndProofsBuffers[freeIndex].buffers
       )
@@ -107,7 +108,7 @@ export class GetBlobsTracker {
         })
         .finally(() => {
           this.logger.verbose("Completed getBlobsV2 for block", logCtx);
-          this.activeReconstructions.delete(blockInput.blockRootHex);
+          this.activeReconstructions.delete(input.blockRootHex);
           this.blobsAndProofsBuffers[freeIndex].inUse = false;
         });
     });

@@ -88,6 +88,11 @@ const linearGossipQueueOpts: {
     type: QueueType.FIFO,
     dropOpts: {type: DropType.count, count: 1},
   },
+  [GossipType.proposer_preferences]: {
+    maxLength: 1024,
+    type: QueueType.FIFO,
+    dropOpts: {type: DropType.count, count: 1},
+  },
 };
 
 const indexedGossipQueueOpts: {

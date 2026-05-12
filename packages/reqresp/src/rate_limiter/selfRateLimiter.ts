@@ -17,15 +17,28 @@ const DISCONNECTED_TIMEOUT_MS = 60 * 1000;
  **/
 export const REQUEST_TIMEOUT_MS = 30 * 1000;
 
+/** Default backoff when a peer rate limits us. */
+export const DEFAULT_RATE_LIMIT_BACKOFF_MS = 2_000;
+
 type RequestId = number;
 type RequestIdMs = number;
 
+type ProtocolRateLimiter = {
+  activeRequests: Map<RequestId, RequestIdMs>;
+  /** Tracks the timestamp (ms) until which we should not send requests to a peer */
+  rateLimitedUntilMs?: number;
+};
+
 /**
  * Simple rate limiter that allows a maximum of 2 concurrent requests per protocol per peer.
+ * Also tracks when a peer has rate-limited us and enforces a backoff period before allowing new requests.
  * The consumer should either prevent requests from being sent when the limit is reached or handle the case when the request is not allowed.
+ *
+ * Note: SyncChain maintains its own rate-limit backoff map to avoid assigning batches to backed-off
+ * peers. This class acts as the authoritative safety net at the protocol level.
  */
 export class SelfRateLimiter {
-  private readonly rateLimitersPerPeer: MapDef<PeerIdStr, MapDef<ProtocolID, Map<RequestId, RequestIdMs>>>;
+  private readonly rateLimitersPerPeer: MapDef<PeerIdStr, MapDef<ProtocolID, ProtocolRateLimiter>>;
   /**
    * It's not convenient to handle a peer disconnected event so we track the last seen requests by peer.
    * This is the same design to `ReqRespRateLimiter`.
@@ -35,8 +48,9 @@ export class SelfRateLimiter {
   private cleanupInterval: NodeJS.Timeout | undefined = undefined;
 
   constructor(private readonly logger?: Logger) {
-    this.rateLimitersPerPeer = new MapDef<PeerIdStr, MapDef<ProtocolID, Map<RequestId, RequestIdMs>>>(
-      () => new MapDef<ProtocolID, Map<RequestId, RequestIdMs>>(() => new Map())
+    this.rateLimitersPerPeer = new MapDef<PeerIdStr, MapDef<ProtocolID, ProtocolRateLimiter>>(
+      () =>
+        new MapDef<ProtocolID, ProtocolRateLimiter>(() => ({activeRequests: new Map(), rateLimitedUntilMs: undefined}))
     );
     this.lastSeenRequestsByPeer = new Map();
   }
@@ -54,18 +68,33 @@ export class SelfRateLimiter {
 
   /**
    * called before we send a request to a peer.
+   * Returns one of three outcomes:
+   * - if the peer has rate-limited us and we're still in backoff, returns the timestamp until which we should back off,
+   * - if we've reached the concurrent request limit, returns false,
+   * - otherwise, returns true.
    */
-  allows(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): boolean {
+  allows(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): number | boolean {
     const now = Date.now();
+
     const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
     const trackedRequests = peerRateLimiter.getOrDefault(protocolId);
     this.lastSeenRequestsByPeer.set(peerId, now);
 
+    // Check if peer has rate-limited us and we're still in backoff
+    const rateLimitedUntil = trackedRequests.rateLimitedUntilMs;
+    if (rateLimitedUntil !== undefined) {
+      if (now < rateLimitedUntil) {
+        return rateLimitedUntil;
+      }
+      // Backoff expired, clean up
+      trackedRequests.rateLimitedUntilMs = undefined;
+    }
+
     let inProgressRequests = 0;
-    for (const [trackedRequestId, trackedRequestTimeMs] of trackedRequests.entries()) {
+    for (const [trackedRequestId, trackedRequestTimeMs] of trackedRequests.activeRequests.entries()) {
       if (trackedRequestTimeMs + REQUEST_TIMEOUT_MS <= now) {
         // request timed out, remove it
-        trackedRequests.delete(trackedRequestId);
+        trackedRequests.activeRequests.delete(trackedRequestId);
         this.logger?.debug("SelfRateLimiter: request timed out, removing it", {
           requestId: trackedRequestId,
           requestTime: trackedRequestTimeMs,
@@ -81,7 +110,7 @@ export class SelfRateLimiter {
       return false;
     }
 
-    trackedRequests.set(requestId, now);
+    trackedRequests.activeRequests.set(requestId, now);
     return true;
   }
 
@@ -92,11 +121,38 @@ export class SelfRateLimiter {
   requestCompleted(peerId: PeerIdStr, protocolId: ProtocolID, requestId: RequestId): void {
     const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
     const trackedRequests = peerRateLimiter.getOrDefault(protocolId);
-    trackedRequests.delete(requestId);
+    trackedRequests.activeRequests.delete(requestId);
+  }
+
+  /**
+   * Called when a peer responds with a rate-limit error, to enforce a backoff period before retrying.
+   */
+  onRateLimited(
+    peerId: PeerIdStr,
+    protocolId: ProtocolID,
+    rateLimitedUntilMs = Date.now() + DEFAULT_RATE_LIMIT_BACKOFF_MS
+  ): void {
+    const peerRateLimiter = this.rateLimitersPerPeer.getOrDefault(peerId);
+    const trackedRequests = peerRateLimiter.getOrDefault(protocolId);
+    trackedRequests.rateLimitedUntilMs = rateLimitedUntilMs;
+    this.logger?.debug("SelfRateLimiter: peer rate limited us, backing off", {peerId, protocolId});
   }
 
   getPeerCount(): number {
     return this.rateLimitersPerPeer.size;
+  }
+
+  getRateLimitedPeerCount(): number {
+    let count = 0;
+    for (const peerRateLimiter of this.rateLimitersPerPeer.values()) {
+      for (const trackedRequests of peerRateLimiter.values()) {
+        if (trackedRequests.rateLimitedUntilMs !== undefined) {
+          count++;
+          break;
+        }
+      }
+    }
+    return count;
   }
 
   private checkDisconnectedPeers(): void {
@@ -105,6 +161,13 @@ export class SelfRateLimiter {
       if (now - lastSeenTime >= DISCONNECTED_TIMEOUT_MS) {
         this.rateLimitersPerPeer.delete(peerIdStr);
         this.lastSeenRequestsByPeer.delete(peerIdStr);
+      }
+    }
+    for (const peerRateLimiter of this.rateLimitersPerPeer.values()) {
+      for (const trackedRequests of peerRateLimiter.values()) {
+        if (trackedRequests.rateLimitedUntilMs !== undefined && now >= trackedRequests.rateLimitedUntilMs) {
+          trackedRequests.rateLimitedUntilMs = undefined;
+        }
       }
     }
   }

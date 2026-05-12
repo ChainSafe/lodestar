@@ -216,13 +216,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     executionRequests?: ExecutionRequests
   ): Promise<ExecutePayloadResponse> {
     const method =
-      ForkSeq[fork] >= ForkSeq.electra
-        ? "engine_newPayloadV4"
-        : ForkSeq[fork] >= ForkSeq.deneb
-          ? "engine_newPayloadV3"
-          : ForkSeq[fork] >= ForkSeq.capella
-            ? "engine_newPayloadV2"
-            : "engine_newPayloadV1";
+      ForkSeq[fork] >= ForkSeq.gloas
+        ? "engine_newPayloadV5"
+        : ForkSeq[fork] >= ForkSeq.electra
+          ? "engine_newPayloadV4"
+          : ForkSeq[fork] >= ForkSeq.deneb
+            ? "engine_newPayloadV3"
+            : ForkSeq[fork] >= ForkSeq.capella
+              ? "engine_newPayloadV2"
+              : "engine_newPayloadV1";
 
     const serializedExecutionPayload = serializeExecutionPayload(fork, executionPayload);
 
@@ -244,7 +246,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
         const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
         engineRequest = {
-          method: "engine_newPayloadV4",
+          method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
           params: [
             serializedExecutionPayload,
             serializedVersionedHashes,
@@ -348,11 +350,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // Once on capella, should this need to be permanently switched to v2 when payload attrs
     // not provided
     const method =
-      ForkSeq[fork] >= ForkSeq.deneb
-        ? "engine_forkchoiceUpdatedV3"
-        : ForkSeq[fork] >= ForkSeq.capella
-          ? "engine_forkchoiceUpdatedV2"
-          : "engine_forkchoiceUpdatedV1";
+      ForkSeq[fork] >= ForkSeq.gloas
+        ? "engine_forkchoiceUpdatedV4"
+        : ForkSeq[fork] >= ForkSeq.deneb
+          ? "engine_forkchoiceUpdatedV3"
+          : ForkSeq[fork] >= ForkSeq.capella
+            ? "engine_forkchoiceUpdatedV2"
+            : "engine_forkchoiceUpdatedV1";
     const payloadAttributesRpc = payloadAttributes ? serializePayloadAttributes(payloadAttributes) : undefined;
     // If we are just fcUing and not asking execution for payload, retry is not required
     // and we can move on, as the next fcU will be issued soon on the new slot
@@ -438,8 +442,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ForkName.electra:
         method = "engine_getPayloadV4";
         break;
-      default:
+      case ForkName.fulu:
         method = "engine_getPayloadV5";
+        break;
+      default:
+        method = "engine_getPayloadV6";
         break;
     }
     const payloadResponse = await this.rpc.fetchWithRetries<

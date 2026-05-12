@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
-import {RequestError, RequestErrorCode, ResponseOutgoing} from "@lodestar/reqresp";
+import {RequestError, RequestErrorCode, RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, altair, phase0, ssz} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
@@ -529,6 +529,45 @@ function runTests({useWorker}: {useWorker: boolean}): void {
       firstCustodyColumn,
     ]);
   });
+
+  it("should detect a rate-limit response and back off the peer", async () => {
+    // Simulates a Lighthouse/Grandine-style rate limit response (status 139)
+    const rateLimitMessage = "Rate limited. There are already 2 active requests with the same protocol";
+
+    const [netA, _, _0, peerIdB] = await createAndConnectPeers(
+      (method) =>
+        // biome-ignore lint/correctness/useYield: No need for yield in test context
+        async function* onRequest() {
+          if (method === ReqRespMethod.BeaconBlocksByRange) {
+            throw new ResponseError(RespStatus.RATE_LIMITED, rateLimitMessage);
+          }
+        }
+    );
+
+    // First request: responder sends RATE_LIMITED → detected as RESP_RATE_LIMITED
+    await expectRejectedWithRateLimitError(
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
+      RequestErrorCode.RESP_RATE_LIMITED
+    );
+
+    // Second request: SelfRateLimiter has the peer in backoff → blocked before sending
+    await expectRejectedWithRateLimitError(
+      netA.sendBeaconBlocksByRange(peerIdB, {startSlot: 0, step: 1, count: 1}),
+      RequestErrorCode.REQUEST_SELF_RATE_LIMITED
+    );
+  });
+}
+
+async function expectRejectedWithRateLimitError(promise: Promise<unknown>, code: RequestErrorCode): Promise<void> {
+  try {
+    const value = await promise;
+    throw Error(`Expected promise to reject but returned value: \n\n\t${JSON.stringify(value, null, 2)}`);
+  } catch (e) {
+    expect(e).toBeInstanceOf(RequestError);
+    const type = (e as RequestError).type as {code: RequestErrorCode; rateLimitedUntilMs?: number};
+    expect(type.code).toBe(code);
+    expect(type.rateLimitedUntilMs).toEqual(expect.any(Number));
+  }
 }
 
 function getEmptyEncodedPayloadSignedBeaconBlock(config: ChainForkConfig): ResponseOutgoing {

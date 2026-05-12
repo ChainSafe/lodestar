@@ -1,5 +1,8 @@
 import {RootHex, Slot} from "@lodestar/types";
+import {SignedExecutionPayloadEnvelope} from "@lodestar/types/gloas";
+import {toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInput} from "../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 
 export enum PendingBlockType {
   /**
@@ -26,6 +29,14 @@ export enum PendingBlockInputStatus {
   processing = "processing",
 }
 
+export enum PendingPayloadInputStatus {
+  pending = "pending",
+  fetching = "fetching",
+  waitingForBlock = "waiting_for_block",
+  downloaded = "downloaded",
+  processing = "processing",
+}
+
 export type PendingBlockInput = {
   status: PendingBlockInputStatus;
   blockInput: IBlockInput;
@@ -44,8 +55,45 @@ export type PendingRootHex = {
 
 export type BlockInputSyncCacheItem = PendingBlockInput | PendingRootHex;
 
+export type PendingPayloadInput = {
+  status:
+    | PendingPayloadInputStatus.pending
+    | PendingPayloadInputStatus.fetching
+    | PendingPayloadInputStatus.downloaded
+    | PendingPayloadInputStatus.processing;
+  payloadInput: PayloadEnvelopeInput;
+  timeAddedSec: number;
+  timeSyncedSec?: number;
+  peerIdStrings: Set<string>;
+};
+
+export type PendingPayloadRootHex = {
+  status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
+  rootHex: RootHex;
+  timeAddedSec: number;
+  timeSyncedSec?: number;
+  peerIdStrings: Set<string>;
+};
+
+export type PendingPayloadEnvelope = {
+  status: PendingPayloadInputStatus.waitingForBlock;
+  envelope: SignedExecutionPayloadEnvelope;
+  timeAddedSec: number;
+  peerIdStrings: Set<string>;
+};
+
+export type PayloadSyncCacheItem = PendingPayloadInput | PendingPayloadRootHex | PendingPayloadEnvelope;
+
 export function isPendingBlockInput(pending: BlockInputSyncCacheItem): pending is PendingBlockInput {
   return "blockInput" in pending;
+}
+
+export function isPendingPayloadInput(pending: PayloadSyncCacheItem): pending is PendingPayloadInput {
+  return "payloadInput" in pending;
+}
+
+export function isPendingPayloadEnvelope(pending: PayloadSyncCacheItem): pending is PendingPayloadEnvelope {
+  return "envelope" in pending;
 }
 
 export function getBlockInputSyncCacheItemRootHex(block: BlockInputSyncCacheItem): RootHex {
@@ -54,4 +102,28 @@ export function getBlockInputSyncCacheItemRootHex(block: BlockInputSyncCacheItem
 
 export function getBlockInputSyncCacheItemSlot(block: BlockInputSyncCacheItem): Slot | string {
   return isPendingBlockInput(block) ? block.blockInput.slot : "unknown";
+}
+
+export function getPayloadSyncCacheItemRootHex(payload: PayloadSyncCacheItem): RootHex {
+  if (isPendingPayloadInput(payload)) {
+    return payload.payloadInput.blockRootHex;
+  }
+
+  if (isPendingPayloadEnvelope(payload)) {
+    return toRootHex(payload.envelope.message.beaconBlockRoot);
+  }
+
+  return payload.rootHex;
+}
+
+export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot | string {
+  if (isPendingPayloadInput(payload)) {
+    return payload.payloadInput.slot;
+  }
+
+  if (isPendingPayloadEnvelope(payload)) {
+    return payload.envelope.message.payload.slotNumber;
+  }
+
+  return "unknown";
 }

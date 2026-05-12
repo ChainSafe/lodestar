@@ -42,6 +42,7 @@ export enum GossipType {
   execution_payload = "execution_payload",
   payload_attestation_message = "payload_attestation_message",
   execution_payload_bid = "execution_payload_bid",
+  proposer_preferences = "proposer_preferences",
   partial_data_column_sidecar = "partial_data_column_sidecar",
 }
 
@@ -80,6 +81,7 @@ export type GossipTopicTypeMap = {
   [GossipType.execution_payload]: {type: GossipType.execution_payload};
   [GossipType.payload_attestation_message]: {type: GossipType.payload_attestation_message};
   [GossipType.execution_payload_bid]: {type: GossipType.execution_payload_bid};
+  [GossipType.proposer_preferences]: {type: GossipType.proposer_preferences};
   [GossipType.partial_data_column_sidecar]: {type: GossipType.partial_data_column_sidecar; subnet: SubnetID};
 };
 
@@ -113,6 +115,7 @@ export type GossipTypeMap = {
   [GossipType.execution_payload]: gloas.SignedExecutionPayloadEnvelope;
   [GossipType.payload_attestation_message]: gloas.PayloadAttestationMessage;
   [GossipType.execution_payload_bid]: gloas.SignedExecutionPayloadBid;
+  [GossipType.proposer_preferences]: gloas.SignedProposerPreferences;
   [GossipType.partial_data_column_sidecar]: fulu.PartialDataColumnSidecar;
 };
 
@@ -145,6 +148,9 @@ export type GossipFnByType = {
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ) => Promise<void> | void;
   [GossipType.execution_payload_bid]: (executionPayloadBid: gloas.SignedExecutionPayloadBid) => Promise<void> | void;
+  [GossipType.proposer_preferences]: (
+    signedProposerPreferences: gloas.SignedProposerPreferences
+  ) => Promise<void> | void;
   [GossipType.partial_data_column_sidecar]: (partialSidecar: fulu.PartialDataColumnSidecar) => Promise<void> | void;
 };
 

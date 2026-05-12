@@ -1,5 +1,5 @@
 import {ForkName} from "@lodestar/params";
-import {ColumnIndex, DataColumnSidecars, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
+import {ColumnIndex, DataColumnSidecar, RootHex, SignedBeaconBlock, Slot, deneb, fulu} from "@lodestar/types";
 import {VersionedHashes} from "../../../execution/index.js";
 
 export enum DAType {
@@ -9,7 +9,7 @@ export enum DAType {
   NoData = "no-data",
 }
 
-export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecars;
+export type DAData = null | deneb.BlobSidecars | fulu.DataColumnSidecar[];
 
 /**
  * Represents were input originated. Blocks and Data can come from different
@@ -121,9 +121,9 @@ export type MissingColumnMeta = {
 export interface IDataColumnsInput {
   readonly slot: Slot;
   readonly blockRootHex: string;
-  getCustodyColumns(): DataColumnSidecars;
+  getCustodyColumns(): DataColumnSidecar[];
   hasComputedAllData(): boolean;
-  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecars>;
+  waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<DataColumnSidecar[]>;
 }
 
 /**

@@ -17,6 +17,7 @@ import {
   BeaconBlockBody,
   ColumnIndex,
   CustodyIndex,
+  DataColumnSidecar,
   Root,
   RootHex,
   SSZTypesFor,
@@ -26,11 +27,13 @@ import {
   deneb,
   fulu,
   gloas,
+  isGloasDataColumnSidecar,
   ssz,
 } from "@lodestar/types";
 import {bytesToBigInt, toRootHex} from "@lodestar/utils";
 import {BlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../chain/emitter.js";
 import {emitPublishedDataColumns} from "../chain/publishDataColumns.js";
 import {Metrics} from "../metrics/metrics.js";
@@ -290,17 +293,17 @@ export function getBlobKzgCommitments(
  * SPEC FUNCTION
  * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars
  */
-export function getDataColumnSidecars(
+export function getFuluDataColumnSidecars(
   signedBlockHeader: SignedBeaconBlockHeader,
   kzgCommitments: deneb.KZGCommitment[],
   kzgCommitmentsInclusionProof: fulu.KzgCommitmentsInclusionProof,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
+): fulu.DataColumnSidecar[] {
   if (cellsAndKzgProofs.length !== kzgCommitments.length) {
     throw Error("Invalid cellsAndKzgProofs length for getDataColumnSidecars");
   }
 
-  const sidecars: fulu.DataColumnSidecars = [];
+  const sidecars: fulu.DataColumnSidecar[] = [];
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const columnCells = [];
     const columnProofs = [];
@@ -325,13 +328,14 @@ export function getDataColumnSidecars(
  * block, assemble the sidecars which can be distributed to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_block
+ * fulu: https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_block
+ * gloas: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/builder.md#modified-get_data_column_sidecars_from_block
  */
 export function getDataColumnSidecarsFromBlock(
   config: ChainForkConfig,
   signedBlock: SignedBeaconBlock<ForkPostFulu>,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
+): DataColumnSidecar[] {
   const fork = config.getForkName(signedBlock.message.slot);
   const blobKzgCommitments = getBlobKzgCommitments(fork, signedBlock);
 
@@ -339,11 +343,21 @@ export function getDataColumnSidecarsFromBlock(
   if (blobKzgCommitments.length === 0) {
     return [];
   }
-  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
 
+  if (isForkPostGloas(fork)) {
+    const beaconBlockRoot = config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message);
+    return getGloasDataColumnSidecars(signedBlock.message.slot, beaconBlockRoot, cellsAndKzgProofs);
+  }
+
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
   const kzgCommitmentsInclusionProof = computePostFuluKzgCommitmentsInclusionProof(fork, signedBlock.message.body);
 
-  return getDataColumnSidecars(signedBlockHeader, blobKzgCommitments, kzgCommitmentsInclusionProof, cellsAndKzgProofs);
+  return getFuluDataColumnSidecars(
+    signedBlockHeader,
+    blobKzgCommitments,
+    kzgCommitmentsInclusionProof,
+    cellsAndKzgProofs
+  );
 }
 
 /**
@@ -351,13 +365,18 @@ export function getDataColumnSidecarsFromBlock(
  * to the commitments it contains, assemble all sidecars for distribution to peers.
  *
  * SPEC FUNCTION
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
+ * fulu: https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/validator.md#get_data_column_sidecars_from_column_sidecar
+ * gloas: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/validator.md#modified-get_data_column_sidecars_from_column_sidecar
  */
 export function getDataColumnSidecarsFromColumnSidecar(
-  sidecar: fulu.DataColumnSidecar,
+  sidecar: DataColumnSidecar,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): fulu.DataColumnSidecars {
-  return getDataColumnSidecars(
+): DataColumnSidecar[] {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return getGloasDataColumnSidecars(sidecar.slot, sidecar.beaconBlockRoot, cellsAndKzgProofs);
+  }
+
+  return getFuluDataColumnSidecars(
     sidecar.signedBlockHeader,
     sidecar.kzgCommitments,
     sidecar.kzgCommitmentsInclusionProof,
@@ -365,21 +384,32 @@ export function getDataColumnSidecarsFromColumnSidecar(
   );
 }
 
+export function getDataColumnSidecarSlot(sidecar: DataColumnSidecar): Slot {
+  if (isGloasDataColumnSidecar(sidecar)) {
+    return sidecar.slot;
+  }
+
+  return sidecar.signedBlockHeader.message.slot;
+}
+
 /**
  * In Gloas, data column sidecars have a simplified structure with `slot` and `beaconBlockRoot`
  * instead of `signedBlockHeader`, `kzgCommitments`, and `kzgCommitmentsInclusionProof`.
+ *
+ * SPEC FUNCTION
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/builder.md#modified-get_data_column_sidecars
  */
-export function getDataColumnSidecarsForGloas(
+export function getGloasDataColumnSidecars(
   slot: Slot,
   beaconBlockRoot: Root,
   cellsAndKzgProofs: {cells: Uint8Array[]; proofs: Uint8Array[]}[]
-): gloas.DataColumnSidecars {
+): gloas.DataColumnSidecar[] {
   // No need to create data column sidecars if there are no blobs
   if (cellsAndKzgProofs.length === 0) {
     return [];
   }
 
-  const sidecars: gloas.DataColumnSidecars = [];
+  const sidecars: gloas.DataColumnSidecar[] = [];
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     const column: Uint8Array[] = [];
     const kzgProofs: Uint8Array[] = [];
@@ -402,11 +432,11 @@ export function getDataColumnSidecarsForGloas(
  * If we receive more than half of NUMBER_OF_COLUMNS (64) we should recover all remaining columns
  */
 export async function recoverDataColumnSidecars(
-  blockInput: BlockInputColumns,
+  input: BlockInputColumns | PayloadEnvelopeInput,
   emitter: ChainEventEmitter,
   metrics: Metrics | null
 ): Promise<DataColumnReconstructionCode> {
-  const existingColumns = blockInput.getAllColumns();
+  const existingColumns = input.getAllColumns();
   const columnCount = existingColumns.length;
   if (columnCount >= NUMBER_OF_COLUMNS) {
     // We have all columns
@@ -419,7 +449,7 @@ export async function recoverDataColumnSidecars(
   }
 
   metrics?.recoverDataColumnSidecars.custodyBeforeReconstruction.set(columnCount);
-  const partialSidecars = new Map<number, fulu.DataColumnSidecar>();
+  const partialSidecars = new Map<number, DataColumnSidecar>();
   for (const columnSidecar of existingColumns) {
     // the more columns we put, the slower the recover
     if (partialSidecars.size >= NUMBER_OF_COLUMNS / 2) {
@@ -437,7 +467,7 @@ export async function recoverDataColumnSidecars(
     return DataColumnReconstructionCode.NullReturned;
   }
 
-  if (blockInput.getAllColumns().length === NUMBER_OF_COLUMNS) {
+  if (input.getAllColumns().length === NUMBER_OF_COLUMNS) {
     // either gossip or getBlobsV2 resolved availability while we were recovering
     metrics?.dataColumns.alreadyAdded.inc(fullSidecars.length);
     return DataColumnReconstructionCode.SuccessLate;
@@ -453,13 +483,27 @@ export async function recoverDataColumnSidecars(
   // the node MAY delete the DataColumnSidecar if it is not part of the node's custody requirement.
   const sidecarsToPublish = [];
   for (const columnSidecar of fullSidecars) {
-    if (!blockInput.hasColumn(columnSidecar.index)) {
-      blockInput.addColumn({
-        blockRootHex: blockInput.blockRootHex,
-        columnSidecar,
-        seenTimestampSec: Date.now() / 1000,
-        source: BlockInputSource.recovery,
-      });
+    if (!input.hasColumn(columnSidecar.index)) {
+      if (input instanceof PayloadEnvelopeInput) {
+        if (!isGloasDataColumnSidecar(columnSidecar)) {
+          throw new Error(`Expected gloas DataColumnSidecar for block ${input.blockRootHex}`);
+        }
+        input.addColumn({
+          columnSidecar,
+          seenTimestampSec: Date.now() / 1000,
+          source: PayloadEnvelopeInputSource.recovery,
+        });
+      } else {
+        if (isGloasDataColumnSidecar(columnSidecar)) {
+          throw new Error(`Expected fulu DataColumnSidecar for block ${input.blockRootHex}`);
+        }
+        input.addColumn({
+          blockRootHex: input.blockRootHex,
+          columnSidecar,
+          seenTimestampSec: Date.now() / 1000,
+          source: BlockInputSource.recovery,
+        });
+      }
       sidecarsToPublish.push(columnSidecar);
     }
   }
