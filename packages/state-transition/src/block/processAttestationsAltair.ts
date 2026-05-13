@@ -51,7 +51,8 @@ export function processAttestationsAltair(
   let newSeenAttesters = 0;
   let newSeenAttestersEffectiveBalance = 0;
 
-  const builderWeightMap: Map<number, number> = new Map();
+  // bigint accumulator: per-slot gwei weight can exceed Number.MAX_SAFE_INTEGER at mainnet-scale stake
+  const builderWeightMap: Map<number, bigint> = new Map();
 
   for (const attestation of attestations) {
     const data = attestation.data;
@@ -150,7 +151,7 @@ export function processAttestationsAltair(
       const existingWeight =
         builderWeightMap.get(builderPendingPaymentIndex) ??
         (state as CachedBeaconStateGloas).builderPendingPayments.get(builderPendingPaymentIndex).weight;
-      const updatedWeight = existingWeight + paymentWeightToAdd * EFFECTIVE_BALANCE_INCREMENT;
+      const updatedWeight = existingWeight + BigInt(paymentWeightToAdd) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
       builderWeightMap.set(builderPendingPaymentIndex, updatedWeight);
     }
   }

@@ -73,7 +73,7 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
 
   if (amount > 0) {
     const pendingPaymentView = ssz.gloas.BuilderPendingPayment.toViewDU({
-      weight: 0,
+      weight: 0n,
       withdrawal: ssz.gloas.BuilderPendingWithdrawal.toViewDU({
         feeRecipient: bid.feeRecipient,
         amount,
