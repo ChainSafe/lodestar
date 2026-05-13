@@ -5702,6 +5702,101 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 236
+      },
+      "id": 630,
+      "panels": [],
+      "title": "Gossip Execution Payload Envelope Validation",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 237
+      },
+      "id": 631,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_execution_payload_envelope_process_payload_errors[$rate_interval]) * 12",
+          "legendFormat": "{{error}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Process Error",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
       "datasource": {
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
@@ -5710,7 +5805,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 236
+        "y": 245
       },
       "id": 188,
       "panels": [],
@@ -5777,7 +5872,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 237
+        "y": 246
       },
       "id": 180,
       "options": {
@@ -5860,7 +5955,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 237
+        "y": 246
       },
       "id": 176,
       "options": {
@@ -5943,7 +6038,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 245
+        "y": 254
       },
       "id": 182,
       "options": {
@@ -6026,7 +6121,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 245
+        "y": 254
       },
       "id": 178,
       "options": {
@@ -6109,7 +6204,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 253
+        "y": 262
       },
       "id": 605,
       "options": {
@@ -6192,7 +6287,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 253
+        "y": 262
       },
       "id": 629,
       "options": {
@@ -6276,7 +6371,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 261
+        "y": 270
       },
       "id": 498,
       "options": {
@@ -6359,7 +6454,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 261
+        "y": 270
       },
       "id": 606,
       "options": {
@@ -6444,7 +6539,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 269
+        "y": 278
       },
       "id": 184,
       "options": {
@@ -6527,7 +6622,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 269
+        "y": 278
       },
       "id": 500,
       "options": {
@@ -6610,7 +6705,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 277
+        "y": 286
       },
       "id": 501,
       "options": {
