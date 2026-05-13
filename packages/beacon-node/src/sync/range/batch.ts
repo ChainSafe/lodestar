@@ -406,6 +406,14 @@ export class Batch {
     return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
   }
 
+  /**
+   * Gives a list of peers that have already returned a successful (possibly partial) download for
+   * this batch.
+   */
+  getSuccessPeers(): PeerIdStr[] {
+    return [...this.goodPeers];
+  }
+
   getMetadata(): BatchMetadata {
     const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
     const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
@@ -497,8 +505,9 @@ export class Batch {
     if (allComplete && isForkPostGloas(this.forkName)) {
       for (const block of blocks) {
         const payloadInput = newPayloadEnvelopes?.get(block.slot);
-        // by_range needs every block's envelope and all sampled columns.
-        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
+        // only need to make sure envelope has all columns, not all blocks have payload
+        // assertLinearChainSegment() was called before reaching this
+        if (payloadInput?.hasPayloadEnvelope() && !payloadInput.hasComputedAllData()) {
           allComplete = false;
           break;
         }

@@ -166,6 +166,46 @@ describe("sync / range / peerBalancer", () => {
       });
     }
 
+    it("should not retry with a peer that already returned a (partial) success for this batch (#9357)", async () => {
+      const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
+      const batch0 = new Batch(1, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+      const blocksRequest = batch0.requests.blocksRequest as {startSlot: number; count: number};
+
+      // peer1 returns a partial success — block but no envelope/columns required for completion.
+      batch0.startDownloading(peer1.peerId);
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = blocksRequest.startSlot + blocksRequest.count - 1;
+      block.message.body.blobKzgCommitments = [ssz.fulu.KZGCommitment.defaultValue()];
+      const blockInput = BlockInputColumns.createFromBlock({
+        block,
+        blockRootHex: "0x00",
+        source: BlockInputSource.gossip,
+        seenTimestampSec: Math.floor(Date.now() / 1000),
+        forkName: config.getForkName(block.message.slot),
+        daOutOfRange: false,
+        custodyColumns: [0, 1, 2, 3],
+        sampledColumns: [0, 1, 2, 3],
+      });
+      batch0.downloadingSuccess(peer1.peerId, [blockInput], null);
+      // Partial download (only 1 block of `count`) — batch must be back in AwaitingDownload.
+      expect(batch0.state.status).toBe("AwaitingDownload");
+      // peer1 must be tracked as a success peer (not a failure).
+      expect(batch0.getSuccessPeers()).toContain(peer1.peerId);
+      expect(batch0.getFailedPeers()).not.toContain(peer1.peerId);
+
+      const peerInfos: PeerSyncInfo[] = [peer1, peer2].map((p) => ({
+        ...p,
+        custodyColumns: [0, 1, 2, 3],
+        target: {slot: blocksRequest.startSlot + blocksRequest.count - 1, root: ZERO_HASH},
+        earliestAvailableSlot: 0,
+      }));
+
+      const peerBalancer = new ChainPeersBalancer(peerInfos, [batch0], custodyConfig, RangeSyncType.Head);
+
+      // peer1 succeeded — must be excluded; peer2 is the only eligible peer.
+      expect(peerBalancer.bestPeerToRetryBatch(batch0)?.peerId).toBe(peer2.peerId);
+    });
+
     it("should not retry the batch with a not as up-to-date peer", async () => {
       const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0});
       const batch0 = new Batch(1, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);

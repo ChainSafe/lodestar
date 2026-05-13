@@ -13,6 +13,7 @@ import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelope
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
+import {getBatchSlotRange} from "../../../../src/sync/range/utils/index.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {clock, config} from "../../../utils/blocksAndData.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
@@ -355,19 +356,36 @@ describe("sync / range / batch", async () => {
         expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
       });
 
-      it("stays AwaitingDownload when a block has no payload envelope", () => {
+      it("transitions to AwaitingProcessing when a block has no payload envelope (EMPTY variant)", () => {
+        // Regression test for https://github.com/ChainSafe/lodestar/issues/9357
+        // For post-Gloas, a block without an envelope is a valid EMPTY-variant slot. The download
+        // path cannot distinguish "EMPTY" from "peer doesn't have the envelope", so we accept it
+        // as complete here and let `assertLinearChainSegment` (run during processing with the real
+        // parent execution hash) decide whether the variant is correct.
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
         batch.startDownloading(peer);
 
         const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot});
-        // Block downloaded but envelope is missing for this slot
         const {blockInput: bi2} = buildGloasBlockWithEnvelope({slot: batch.startSlot + 1, addEnvelope: false});
         const payloadEnvelopes = new Map([[bi1.slot, pi1]]);
 
         batch.downloadingSuccess(peer, [bi1, bi2], payloadEnvelopes);
 
-        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
-        expect(batch.requests.envelopesRequest).toBeDefined();
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+      });
+
+      it("transitions to AwaitingProcessing for count=1 with only the block (no envelope)", () => {
+        // The exact scenario from #9357: count=1 batch, peer returns block but no envelope.
+        const {startSlot} = getBatchSlotRange(startEpoch);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, startSlot);
+        expect(batch.count).toBe(1);
+        batch.startDownloading(peer);
+
+        const {blockInput: bi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot, addEnvelope: false});
+
+        batch.downloadingSuccess(peer, [bi1], null);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
       });
 
       it("stays AwaitingDownload when a payload envelope is missing sampled columns", () => {
