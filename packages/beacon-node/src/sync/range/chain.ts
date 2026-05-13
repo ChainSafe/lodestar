@@ -1,5 +1,4 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {RequestErrorCode} from "@lodestar/reqresp";
 import {Epoch, Root, Slot, gloas} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
@@ -16,13 +15,9 @@ import {CustodyConfig} from "../../util/dataColumns.js";
 import {ItTrigger} from "../../util/itTrigger.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
-import {
-  BATCH_BUFFER_SIZE,
-  EPOCHS_PER_BATCH,
-  MAX_LOOK_AHEAD_EPOCHS,
-  RATE_LIMITED_PEER_BACKOFF_MS,
-} from "../constants.js";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
 import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {getRateLimitedUntilMs} from "../utils/rateLimit.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -156,6 +151,7 @@ export class SyncChain {
    * The reqresp SelfRateLimiter independently enforces backoff at the protocol level as a safety net.
    */
   private readonly rateLimitedPeers = new Map<PeerIdStr, number>();
+  private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
@@ -241,6 +237,7 @@ export class SyncChain {
    */
   stopSyncing(): void {
     this.status = SyncChainStatus.Stopped;
+    this.clearRateLimitBackoffTimer();
     this.logger.debug("SyncChain stopSyncing", {id: this.logId});
   }
 
@@ -249,6 +246,7 @@ export class SyncChain {
    */
   remove(): void {
     this.logger.debug("SyncChain remove", {id: this.logId});
+    this.clearRateLimitBackoffTimer();
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
   }
 
@@ -371,6 +369,8 @@ export class SyncChain {
       }
 
       throw e;
+    } finally {
+      this.clearRateLimitBackoffTimer();
     }
   }
 
@@ -391,6 +391,44 @@ export class SyncChain {
     } catch (e) {
       // bubble the error up to the main async iterable loop
       this.batchProcessor.end(e as Error);
+    }
+  }
+
+  private scheduleRateLimitBackoffRetry(): void {
+    this.clearRateLimitBackoffTimer();
+
+    if (this.status !== SyncChainStatus.Syncing || this.rateLimitedPeers.size === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    let retryAt: number | null = null;
+    for (const [peerId, rateLimitedUntil] of this.rateLimitedPeers.entries()) {
+      if (rateLimitedUntil <= now) {
+        this.rateLimitedPeers.delete(peerId);
+        continue;
+      }
+      retryAt = Math.min(retryAt ?? rateLimitedUntil, rateLimitedUntil);
+    }
+
+    if (retryAt === null) {
+      return;
+    }
+
+    this.rateLimitBackoffTimeout = setTimeout(
+      () => {
+        this.rateLimitBackoffTimeout = undefined;
+        this.triggerBatchDownloader();
+        this.scheduleRateLimitBackoffRetry();
+      },
+      Math.max(0, retryAt - now)
+    );
+  }
+
+  private clearRateLimitBackoffTimer(): void {
+    if (this.rateLimitBackoffTimeout !== undefined) {
+      clearTimeout(this.rateLimitBackoffTimeout);
+      this.rateLimitBackoffTimeout = undefined;
     }
   }
 
@@ -556,9 +594,11 @@ export class SyncChain {
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        if (errCode === RequestErrorCode.RESP_RATE_LIMITED || errCode === RequestErrorCode.REQUEST_SELF_RATE_LIMITED) {
+        const rateLimitedUntilMs = getRateLimitedUntilMs(res.err);
+        if (rateLimitedUntilMs !== null) {
           // Peer rate-limited us — don't count as a failed download attempt and mark peer for backoff
-          this.rateLimitedPeers.set(peer.peerId, Date.now() + RATE_LIMITED_PEER_BACKOFF_MS);
+          this.rateLimitedPeers.set(peer.peerId, rateLimitedUntilMs);
+          this.scheduleRateLimitBackoffRetry();
           batch.downloadingRateLimited();
           this.triggerBatchDownloader();
         } else {
