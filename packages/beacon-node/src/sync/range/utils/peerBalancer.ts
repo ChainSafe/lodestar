@@ -53,7 +53,7 @@ export class ChainPeersBalancer {
   /**
    * Return the most suitable peer to retry
    * Sort peers by (1) less active requests (2) most columns we need.
-   * Peers that have already succeeded or failed for this batch are excluded inside `filterPeers`.
+   * Peers that failed this batch or already succeeded for the same request are excluded inside `filterPeers`.
    */
   bestPeerToRetryBatch(batch: Batch): PeerSyncMeta | undefined {
     if (batch.state.status !== BatchStatus.AwaitingDownload) {
@@ -116,13 +116,13 @@ export class ChainPeersBalancer {
       return eligiblePeers;
     }
 
-    // Skip peers that have already attempted this batch (success OR failure)
-    const excludedPeers = new Set<PeerIdStr>([...batch.getFailedPeers(), ...batch.getSuccessPeers()]);
+    // Skip peers that failed this batch, or that already returned the exact current request shape.
+    const failedPeers = new Set<PeerIdStr>(batch.getFailedPeers());
 
     for (const peer of this.peers) {
       const {earliestAvailableSlot, target, peerId} = peer;
 
-      if (excludedPeers.has(peerId)) {
+      if (failedPeers.has(peerId) || batch.hasPeerSucceededCurrentRequest(peer)) {
         continue;
       }
 

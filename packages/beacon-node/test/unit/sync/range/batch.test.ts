@@ -131,6 +131,7 @@ describe("sync / range / batch", async () => {
   const nodeId = computeNodeIdFromPrivateKey(privateKey);
   const custodyConfig = new CustodyConfig({config, nodeId});
   const peer = validPeerIdStr;
+  const peerSyncMeta = {peerId: peer, client: "lodestar", custodyColumns: custodyConfig.sampledColumns};
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -342,7 +343,7 @@ describe("sync / range / batch", async () => {
 
       it("transitions to AwaitingProcessing when every block has a complete payload envelope", () => {
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-        batch.startDownloading(peer);
+        batch.startDownloading(peerSyncMeta);
 
         const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot});
         const {blockInput: bi2, payloadInput: pi2} = buildGloasBlockWithEnvelope({slot: batch.startSlot + 1});
@@ -363,7 +364,7 @@ describe("sync / range / batch", async () => {
         // as complete here and let `assertLinearChainSegment` (run during processing with the real
         // parent execution hash) decide whether the variant is correct.
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-        batch.startDownloading(peer);
+        batch.startDownloading(peerSyncMeta);
 
         const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot});
         const {blockInput: bi2} = buildGloasBlockWithEnvelope({slot: batch.startSlot + 1, addEnvelope: false});
@@ -379,7 +380,7 @@ describe("sync / range / batch", async () => {
         const {startSlot} = getBatchSlotRange(startEpoch);
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, startSlot);
         expect(batch.count).toBe(1);
-        batch.startDownloading(peer);
+        batch.startDownloading(peerSyncMeta);
 
         const {blockInput: bi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot, addEnvelope: false});
 
@@ -390,7 +391,7 @@ describe("sync / range / batch", async () => {
 
       it("stays AwaitingDownload when a payload envelope is missing sampled columns", () => {
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-        batch.startDownloading(peer);
+        batch.startDownloading(peerSyncMeta);
 
         const sampledColumns = [0, 1];
         const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({
@@ -428,7 +429,7 @@ describe("sync / range / batch", async () => {
 
       it("stays AwaitingDownload when reconstruction threshold reached but sampled columns missing", () => {
         const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
-        batch.startDownloading(peer);
+        batch.startDownloading(peerSyncMeta);
 
         // Pick sampled indices outside the range we'll fill so they stay physically missing
         const sampledColumns = [100, 101, 102, 103];
@@ -486,7 +487,7 @@ describe("sync / range / batch", async () => {
     expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // startDownloading: AwaitingDownload -> Downloading
-    batch.startDownloading(peer);
+    batch.startDownloading(peerSyncMeta);
     expect(batch.state.status).toBe(BatchStatus.Downloading);
 
     // downloadingError: Downloading -> AwaitingDownload
@@ -499,7 +500,7 @@ describe("sync / range / batch", async () => {
 
     // retry download: AwaitingDownload -> Downloading
     // downloadingSuccess: Downloading -> AwaitingProcessing
-    batch.startDownloading(peer);
+    batch.startDownloading(peerSyncMeta);
     batch.downloadingSuccess(
       peer,
       [
@@ -528,7 +529,7 @@ describe("sync / range / batch", async () => {
 
     // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
     // processingSuccess: Processing -> AwaitingValidation
-    // batch.startDownloading(peer);
+    // batch.startDownloading(peerSyncMeta);
     // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     // batch.startProcessing();
     // batch.processingSuccess();
@@ -540,7 +541,7 @@ describe("sync / range / batch", async () => {
     // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation
-    // batch.startDownloading(peer);
+    // batch.startDownloading(peerSyncMeta);
     // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     batch.startProcessing();
     batch.processingSuccess();

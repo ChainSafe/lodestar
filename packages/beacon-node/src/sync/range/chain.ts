@@ -513,7 +513,7 @@ export class SyncChain {
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
     try {
-      batch.startDownloading(peer.peerId);
+      batch.startDownloading(peer);
 
       // wrapError ensures to never call both batch success() and batch error()
       const res = await wrapError(this.downloadByRange(peer, batch, this.syncType));
