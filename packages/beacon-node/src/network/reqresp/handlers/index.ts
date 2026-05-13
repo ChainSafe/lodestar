@@ -9,6 +9,7 @@ import {
   ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../../util/types.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
+import {onBeaconBlocksByHead} from "./beaconBlocksByHead.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
@@ -46,6 +47,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       const fork = chain.config.getForkName(chain.clock.currentSlot);
       const body = BeaconBlocksByRootRequestType(fork, chain.config).deserialize(req.data);
       return onBeaconBlocksByRoot(body, chain);
+    },
+    [ReqRespMethod.BeaconBlocksByHead]: (req, peerId, peerClient) => {
+      const body = ssz.fulu.BeaconBlocksByHeadRequest.deserialize(req.data);
+      return onBeaconBlocksByHead(body, chain, peerId, peerClient);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);

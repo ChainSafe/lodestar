@@ -287,6 +287,70 @@ describe("sync / range / chain", () => {
     expect(peer2Downloads).toBeGreaterThanOrEqual(1);
   });
 
+  it("Should retry a rate-limited peer after metadata backoff expires", async () => {
+    const startEpoch = 0;
+    const targetEpoch = 2;
+    let downloads = 0;
+
+    const processChainSegment: SyncChainFns["processChainSegment"] = async () => {};
+
+    const downloadByRange: SyncChainFns["downloadByRange"] = async (_peerMeta, request, _partialDownload) => {
+      downloads++;
+      if (downloads === 1) {
+        throw new RequestError({
+          code: RequestErrorCode.RESP_RATE_LIMITED,
+          rateLimitedUntilMs: Date.now() + 50,
+        });
+      }
+
+      const blocks: IBlockInput[] = [];
+      for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+        blocks.push(
+          BlockInputPreData.createFromBlock({
+            block: {
+              message: generateEmptyBlock(i),
+              signature: ACCEPT_BLOCK,
+            },
+            blockRootHex: "0x00",
+            forkName: config.getForkName(i),
+            seenTimestampSec: Math.floor(Date.now() / 1000),
+            daOutOfRange: false,
+            source: BlockInputSource.byRange,
+          })
+        );
+      }
+      return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+    };
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(targetEpoch), root: ZERO_HASH};
+    const syncType = RangeSyncType.Finalized;
+
+    await new Promise<void>((resolve, reject) => {
+      const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const initialSync = new SyncChain(
+        startEpoch,
+        target,
+        syncType,
+        logSyncChainFns(logger, {
+          processChainSegment,
+          downloadByRange,
+          getConnectedPeerSyncMeta,
+          reportPeer,
+          pruneBlockInputs,
+          onEnd,
+        }),
+        {config, logger, clock, custodyConfig, metrics: null},
+        undefined
+      );
+
+      initialSync.addPeer(peer, target);
+      initialSync.startSyncing(startEpoch);
+    });
+
+    expect(downloads).toBeGreaterThanOrEqual(2);
+  });
+
   function generateEmptyBlock(slot: Slot): phase0.BeaconBlock {
     return {
       slot,

@@ -42,6 +42,7 @@ export enum ReqRespMethod {
   Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
+  BeaconBlocksByHead = "beacon_blocks_by_head",
   BlobSidecarsByRange = "blob_sidecars_by_range",
   BlobSidecarsByRoot = "blob_sidecars_by_root",
   DataColumnSidecarsByRange = "data_column_sidecars_by_range",
@@ -62,6 +63,7 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.Metadata]: null;
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
+  [ReqRespMethod.BeaconBlocksByHead]: fulu.BeaconBlocksByHeadRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
@@ -82,6 +84,7 @@ type ResponseBodyByMethod = {
   // Do not matter
   [ReqRespMethod.BeaconBlocksByRange]: SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
+  [ReqRespMethod.BeaconBlocksByHead]: SignedBeaconBlock;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
   [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecar;
@@ -111,6 +114,7 @@ export const requestSszTypeByMethod: (
 
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
+  [ReqRespMethod.BeaconBlocksByHead]: ssz.fulu.BeaconBlocksByHeadRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
@@ -142,6 +146,7 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
     version === Version.V1 ? ssz.phase0.Metadata : version === Version.V2 ? ssz.altair.Metadata : ssz.fulu.Metadata,
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
+  [ReqRespMethod.BeaconBlocksByHead]: (fork) => ssz[fork].SignedBeaconBlock,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,

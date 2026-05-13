@@ -1155,6 +1155,9 @@ export enum DownloadByRangeErrorCode {
 
   /** Envelope beaconBlockRoot does not match the block's root */
   INVALID_ENVELOPE_BEACON_BLOCK_ROOT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_ENVELOPE_BEACON_BLOCK_ROOT",
+
+  /** Block segment + envelopes failed chain-segment linearity / FULL-chain checks */
+  INVALID_CHAIN_SEGMENT = "DOWNLOAD_BY_RANGE_ERROR_INVALID_CHAIN_SEGMENT",
 }
 
 export type DownloadByRangeErrorType =
@@ -1252,6 +1255,11 @@ export type DownloadByRangeErrorType =
       slot: Slot;
       expected: string;
       actual: string;
+    }
+  | {
+      code: DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT;
+      slot: Slot;
+      reason: string;
     };
 
 export class DownloadByRangeError extends LodestarError<DownloadByRangeErrorType> {}

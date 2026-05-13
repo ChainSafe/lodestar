@@ -286,6 +286,7 @@ export class ReqRespBeaconNode extends ReqResp {
         // instead of protocol version. This is not easily fixable with our current architecture.
         // See https://github.com/ChainSafe/lodestar/pull/8168 for more details.
         [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
+        [protocols.BeaconBlocksByHead(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByHead)],
         [
           protocols.DataColumnSidecarsByRoot(fork, this.config),
           this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot),

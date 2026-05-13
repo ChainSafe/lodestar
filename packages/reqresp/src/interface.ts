@@ -14,7 +14,7 @@ export enum RespStatus {
    */
   SERVER_ERROR = 2,
   /**
-   * The responder does not have requested resource.  The response payload adheres to the ErrorMessage schema (described below). Note: This response code is only valid as a response to BlocksByRange
+   * The responder does not have requested resource. The response payload adheres to the ErrorMessage schema.
    */
   RESOURCE_UNAVAILABLE = 3,
   /**
