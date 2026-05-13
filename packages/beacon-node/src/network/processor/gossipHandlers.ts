@@ -35,6 +35,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
@@ -1148,7 +1149,40 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
-        chain.logger.debug("Error processing execution payload from gossip", {slot, root: blockRootHex}, e as Error);
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
+
+        if (e instanceof PayloadError) {
+          switch (e.type.code) {
+            // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
+            // already verified the block is in fork choice
+            case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
+            case PayloadErrorCode.MISS_BLOCK_STATE:
+            case PayloadErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected EL client
+              logLevel = LogLevel.error;
+              break;
+            // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
+            case PayloadErrorCode.INVALID_SIGNATURE:
+            case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
+            case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+              // Misbehaving peer, but could highlight an issue in another client
+              logLevel = LogLevel.warn;
+              break;
+          }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
+        }
+        metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({
+          error: e instanceof PayloadError ? e.type.code : "NOT_PAYLOAD_ERROR",
+        });
+        chain.logger[logLevel](
+          "Error processing execution payload from gossip",
+          {slot, peer: peerIdStr, root: blockRootHex},
+          e as Error
+        );
       });
     },
     [GossipType.payload_attestation_message]: async ({

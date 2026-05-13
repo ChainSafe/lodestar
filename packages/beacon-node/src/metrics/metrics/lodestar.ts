@@ -3,6 +3,7 @@ import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/archiveStore.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
+import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
@@ -889,6 +890,11 @@ export function createLodestarMetrics(
         help: "Time elapsed between slot time and the time execution payload envelope received",
         labelNames: ["source"],
         buckets: [0.5, 1, 2, 4, 6, 12],
+      }),
+      processPayloadErrors: register.gauge<{error: PayloadErrorCode | "NOT_PAYLOAD_ERROR"}>({
+        name: "lodestar_gossip_execution_payload_envelope_process_payload_errors",
+        help: "Count of errors, by error type, while processing execution payload envelopes",
+        labelNames: ["error"],
       }),
     },
     // recovery in the case of specific blob rows required
