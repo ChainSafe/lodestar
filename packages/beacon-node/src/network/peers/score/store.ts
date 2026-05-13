@@ -58,7 +58,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void {
     const peerScore = this.scores.getOrDefault(peer.toString());
     const scoreChange = peerActionScore[action];
-    const newScore = peerScore.add(scoreChange);
+    const newScore = peerScore.add(scoreChange, actionName);
 
     this.logger?.debug("peer score adjusted", {scoreChange, newScore, peerId: prettyPrintPeerId(peer), actionName});
     this.metrics?.peersReportPeerCount.inc({reason: actionName});

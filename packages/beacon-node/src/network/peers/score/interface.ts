@@ -23,7 +23,7 @@ export interface IPeerScore {
   getScore(): number;
   getGossipScore(): number;
   isCoolingDown(): boolean;
-  add(scoreDelta: number): number;
+  add(scoreDelta: number, actionName?: string): number;
   update(): number;
   updateGossipsubScore(newScore: number, ignore: boolean): void;
   getStat(): PeerScoreStat;
@@ -51,6 +51,12 @@ export type PeerScoreStat = {
   ignoreNegativeGossipScore: boolean;
   score: number;
   lastUpdate: number;
+  /** Name of the most recent `reportPeer` action applied, or null if no action has been applied. */
+  lastActionName: string | null;
+  /** Effective change to `lodestarScore` produced by the last action (post score clamp). */
+  lastActionDeltaScore: number;
+  /** Unix timestamp (ms) at which the last action was applied. */
+  lastActionUnixMs: number;
 };
 
 export enum PeerAction {

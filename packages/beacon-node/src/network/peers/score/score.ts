@@ -23,6 +23,15 @@ export class RealScore implements IPeerScore {
   /** The final score, computed from the above */
   private score: number;
   private lastUpdate: number;
+  /**
+   * Tracks the most recent explicit `reportPeer` action applied to this peer.
+   * Updated only via `add()` (i.e. when an actionName is provided) and never by
+   * decay in `update()` or by gossipsub score sync, so it represents the last
+   * intentional scoring decision made by lodestar.
+   */
+  private lastActionName: string | null;
+  private lastActionDeltaScore: number;
+  private lastActionUnixMs: number;
 
   constructor() {
     this.lodestarScore = DEFAULT_SCORE;
@@ -30,6 +39,9 @@ export class RealScore implements IPeerScore {
     this.score = DEFAULT_SCORE;
     this.ignoreNegativeGossipScore = false;
     this.lastUpdate = Date.now();
+    this.lastActionName = null;
+    this.lastActionDeltaScore = 0;
+    this.lastActionUnixMs = 0;
   }
 
   isCoolingDown(): boolean {
@@ -44,12 +56,23 @@ export class RealScore implements IPeerScore {
     return this.gossipScore;
   }
 
-  add(scoreDelta: number): number {
+  add(scoreDelta: number, actionName?: string): number {
+    const preScore = this.lodestarScore;
     let newScore = this.lodestarScore + scoreDelta;
     if (newScore > MAX_SCORE) newScore = MAX_SCORE;
     if (newScore < MIN_SCORE) newScore = MIN_SCORE;
 
     this.setLodestarScore(newScore);
+
+    // Only record metadata when an actionName is provided so that decay-style
+    // updates (which also funnel through setLodestarScore) cannot clobber the
+    // last explicit reportPeer reason.
+    if (actionName !== undefined) {
+      this.lastActionName = actionName;
+      this.lastActionDeltaScore = newScore - preScore;
+      this.lastActionUnixMs = Date.now();
+    }
+
     return newScore;
   }
 
@@ -116,6 +139,9 @@ export class RealScore implements IPeerScore {
       ignoreNegativeGossipScore: this.ignoreNegativeGossipScore,
       score: this.score,
       lastUpdate: this.lastUpdate,
+      lastActionName: this.lastActionName,
+      lastActionDeltaScore: this.lastActionDeltaScore,
+      lastActionUnixMs: this.lastActionUnixMs,
     };
   }
 
@@ -174,7 +200,7 @@ export class MaxScore implements IPeerScore {
     return false;
   }
 
-  add(): number {
+  add(_scoreDelta: number, _actionName?: string): number {
     return DEFAULT_SCORE;
   }
 
@@ -195,6 +221,9 @@ export class MaxScore implements IPeerScore {
       ignoreNegativeGossipScore: false,
       score: MAX_SCORE,
       lastUpdate: Date.now(),
+      lastActionName: null,
+      lastActionDeltaScore: 0,
+      lastActionUnixMs: 0,
     };
   }
 }
