@@ -15,6 +15,7 @@ import {validPeerIdStr} from "../../../../utils/peer.js";
 
 describe("sync / range / batches", () => {
   const peer = validPeerIdStr;
+  const peerSyncMeta = {peerId: peer, client: "lodestar", custodyColumns: []};
 
   describe("validateBatchesStatus", () => {
     const testCases: {
@@ -234,7 +235,7 @@ describe("sync / range / batches", () => {
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 
-    batch.startDownloading(peer);
+    batch.startDownloading(peerSyncMeta);
     if (status === BatchStatus.Downloading) return batch;
 
     batch.downloadingSuccess(peer, [], null);
