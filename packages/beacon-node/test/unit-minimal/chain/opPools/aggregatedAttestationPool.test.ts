@@ -64,7 +64,7 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
   attestation.data.index = 0; // Must be zero post-electra
   attestation.data.target.epoch = currentEpoch;
   attestation.signature = validSignature;
-  const attDataRootHex = toHexString(ssz.phase0.AttestationData.serialize(attestation.data));
+  const attDataRootHex = toHexString(ssz.phase0.AttestationData.hashTreeRoot(attestation.data));
 
   const validatorOpts = {
     activationEpoch: 0,
@@ -541,7 +541,7 @@ describe("MatchingDataAttestationGroup aggregateInto", () => {
   const attestation1 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([false, true])}};
   const attestation2 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([true, false])}};
   const mergedBitArray = BitArray.fromBoolArray([true, true]); // = [false, true] + [true, false]
-  const attestationDataRoot = ssz.phase0.AttestationData.hashTreeRoot(attestationSeed.data);
+  const attestationDataRoot = ssz.phase0.AttestationData.serialize(attestationSeed.data);
   let sk1: SecretKey;
   let sk2: SecretKey;
 
