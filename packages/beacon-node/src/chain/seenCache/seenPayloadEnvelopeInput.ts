@@ -136,11 +136,10 @@ export class SeenPayloadEnvelopeInput {
   }
 
   pruneBelowParent(parentBlock: ProtoBlock): void {
-    let deletedCount = 0;
     for (const input of this.payloadInputs.values()) {
       if (
         input.slot < parentBlock.slot &&
-        // Check if the cached FULL variant is an ancestor of the current parent block
+        // Check if the cached PENDING/FULL variant is an ancestor of the current parent block
         this.forkChoice.isDescendant(
           input.blockRootHex,
           input.hasPayloadEnvelope() ? PayloadStatus.FULL : PayloadStatus.PENDING,
@@ -149,16 +148,11 @@ export class SeenPayloadEnvelopeInput {
         )
       ) {
         this.evictPayloadInput(input);
-        deletedCount++;
+        this.logger?.verbose("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
+          slot: input.slot,
+          root: input.blockRootHex,
+        });
       }
-    }
-
-    if (deletedCount > 0) {
-      this.logger?.debug("SeenPayloadEnvelopeInput.pruneBelowParent deleted entries", {
-        parentSlot: parentBlock.slot,
-        parentRoot: parentBlock.blockRoot,
-        deletedCount,
-      });
     }
   }
 
