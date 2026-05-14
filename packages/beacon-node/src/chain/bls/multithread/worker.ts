@@ -1,5 +1,5 @@
 import worker from "node:worker_threads";
-import {PublicKey, aggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {expose} from "@chainsafe/threads/worker";
 import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
@@ -20,7 +20,7 @@ if (!workerData) throw Error("workerData must be defined");
 const {workerId} = workerData || {};
 
 expose({
-  verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
+  async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
     return verifyManySignatureSets(workReqArr);
   },
 });
@@ -30,8 +30,6 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const results: WorkResult<boolean>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
-  let aggregateWithRandomnessTime = 0;
-  let aggregateWithRandomnessCount = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
   const batchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
@@ -40,35 +38,6 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
     const workReq = workReqArr[i];
-
-    if (workReq.type === "same_message") {
-      let aggregateResult: {pk: PublicKey; sig: {toBytes(): Uint8Array}} | null;
-      try {
-        const mappedSets = workReq.sets.map((set) => ({pk: PublicKey.fromBytes(set.publicKey), sig: set.signature}));
-        const [aggrStartSec, aggrStartNs] = process.hrtime();
-        aggregateResult = aggregateWithRandomness(mappedSets);
-        const [aggrEndSec, aggrEndNs] = process.hrtime();
-        aggregateWithRandomnessTime += aggrEndSec - aggrStartSec + (aggrEndNs - aggrStartNs) / 1e9;
-        aggregateWithRandomnessCount++;
-      } catch (_e) {
-        aggregateResult = null;
-      }
-
-      if (aggregateResult === null) {
-        // Malformed input, return false so the caller retries each individually
-        results[i] = {code: WorkResultCode.success, result: false};
-      } else {
-        const {pk, sig} = aggregateResult;
-        const sets: SignatureSetDeserialized[] = [{publicKey: pk, message: workReq.message, signature: sig.toBytes()}];
-        if (workReq.opts.batchable) {
-          batchableSets.push({idx: i, sets});
-        } else {
-          nonBatchableSets.push({idx: i, sets});
-        }
-      }
-      continue;
-    }
-
     const sets = workReq.sets.map(deserializeSet);
 
     if (workReq.opts.batchable) {
@@ -132,8 +101,6 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     batchSigsSuccess,
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
-    aggregateWithRandomnessTime,
-    aggregateWithRandomnessCount,
     results,
   };
 }

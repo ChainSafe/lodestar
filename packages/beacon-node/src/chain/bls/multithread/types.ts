@@ -10,20 +10,10 @@ export type SerializedSet = {
   signature: Uint8Array;
 };
 
-export type BlsWorkReqDefault = {
-  type: "default";
+export type BlsWorkReq = {
   opts: VerifySignatureOpts;
   sets: SerializedSet[];
 };
-
-export type BlsWorkReqSameMessage = {
-  type: "same_message";
-  opts: VerifySignatureOpts;
-  sets: {publicKey: Uint8Array; signature: Uint8Array}[];
-  message: Uint8Array;
-};
-
-export type BlsWorkReq = BlsWorkReqDefault | BlsWorkReqSameMessage;
 
 export enum WorkResultCode {
   success = "success",
@@ -44,9 +34,5 @@ export type BlsWorkResult = {
   workerStartTime: [number, number];
   /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */
   workerEndTime: [number, number];
-  /** Total time spent in aggregateWithRandomness in seconds */
-  aggregateWithRandomnessTime: number;
-  /** Number of aggregateWithRandomness calls */
-  aggregateWithRandomnessCount: number;
   results: WorkResult<boolean>[];
 };

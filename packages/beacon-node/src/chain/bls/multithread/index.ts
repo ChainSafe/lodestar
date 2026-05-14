@@ -398,7 +398,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         try {
           // Note: This can throw, must be handled per-job.
           // Pubkey and signature aggregation is defered here
-          workReq = jobItemWorkReq(job, this.pubkeyCache, this.metrics);
+          workReq = await jobItemWorkReq(job, this.pubkeyCache, this.metrics);
         } catch (e) {
           this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
 
@@ -442,16 +442,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const {
-        workerId,
-        batchRetries,
-        batchSigsSuccess,
-        workerStartTime,
-        workerEndTime,
-        aggregateWithRandomnessTime,
-        aggregateWithRandomnessCount,
-        results,
-      } = workResult;
+      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
 
       const [workerStartSec, workerStartNs] = workerStartTime;
       const [workerEndSec, workerEndNs] = workerEndTime;
@@ -508,11 +499,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
       this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
       this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
-      if (aggregateWithRandomnessCount > 0) {
-        this.metrics?.blsThreadPool.aggregateWithRandomnessWorkerDuration.observe(
-          aggregateWithRandomnessTime / aggregateWithRandomnessCount
-        );
-      }
     } catch (e) {
       // Worker communications should never reject
       if (!this.closed) {
