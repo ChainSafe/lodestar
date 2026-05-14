@@ -258,7 +258,7 @@ export function getBeaconPoolApi({
           try {
             const validateFn = () => validateApiPayloadAttestationMessage(chain, payloadAttestationMessage);
             const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
-            const {attDataRootHex, validatorCommitteeIndex} = await validateGossipFnRetryUnknownRoot(
+            const {attDataRootHex, validatorCommitteeIndices} = await validateGossipFnRetryUnknownRoot(
               validateFn,
               network,
               chain,
@@ -269,13 +269,13 @@ export function getBeaconPoolApi({
             const insertOutcome = chain.payloadAttestationPool.add(
               payloadAttestationMessage,
               attDataRootHex,
-              validatorCommitteeIndex
+              validatorCommitteeIndices
             );
             metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
             chain.forkChoice.notifyPtcMessages(
               toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-              [validatorCommitteeIndex],
+              validatorCommitteeIndices,
               payloadAttestationMessage.data.payloadPresent
             );
 
