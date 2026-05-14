@@ -67,18 +67,26 @@ const sidebars: SidebarsConfig = {
           type: "category",
           label: "Light Client",
           items: [
-            {type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/lightclient"},
-            "libraries/lightclient-prover/lightclient-cli",
+            {
+              type: "link",
+              label: "Documentation",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/light-client",
+            },
           ],
         },
         {
           type: "category",
           label: "Prover",
-          items: [{type: "doc", label: "Getting Started", id: "libraries/lightclient-prover/prover"}],
+          items: [
+            {
+              type: "link",
+              label: "Documentation",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/prover",
+            },
+          ],
         },
       ],
     },
-
     "supporting-libraries/index",
     {
       type: "category",

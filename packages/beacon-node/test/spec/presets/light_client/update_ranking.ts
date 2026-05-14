@@ -1,7 +1,11 @@
 import {expect} from "vitest";
-import {LightClientUpdateSummary, isBetterUpdate, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
+import {
+  LightClientUpdateSummary,
+  isBetterUpdate,
+  toLightClientUpdateSummary,
+} from "@lodestar/state-transition/light-client";
 import {LightClientUpdate, altair, ssz, sszTypesFor} from "@lodestar/types";
 import {TestRunnerFn} from "../../utils/types.js";
 
