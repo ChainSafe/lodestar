@@ -50,7 +50,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     return rootHex;
   }
 
-  function protoBlock(blockRoot: RootHex, slot: number): ProtoBlock {
+  function protoBlock(blockRoot: RootHex, slot: number, payloadStatus: PayloadStatus = PayloadStatus.FULL): ProtoBlock {
     return {
       slot,
       blockRoot,
@@ -69,7 +69,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-      payloadStatus: PayloadStatus.FULL,
+      payloadStatus,
       parentBlockHash: null,
     };
   }
@@ -107,6 +107,44 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     expect(cache.get(forkRootHex)).toBeDefined();
     expect(cache.get(headRootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent checks PENDING ancestry when payload envelope is not cached", () => {
+    const oldRootHex = addPayloadInput(1);
+    const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(forkChoice.isDescendant).toHaveBeenCalledWith(
+      oldRootHex,
+      PayloadStatus.PENDING,
+      newRootHex,
+      PayloadStatus.FULL
+    );
+    expect(cache.get(oldRootHex)).toBeUndefined();
+    expect(cache.get(newRootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent checks FULL ancestry when payload envelope is cached", () => {
+    const oldRootHex = addPayloadInput(1);
+    // biome-ignore lint/style/noNonNullAssertion: input was just added on the line above
+    vi.spyOn(cache.get(oldRootHex)!, "hasPayloadEnvelope").mockReturnValue(true);
+    const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(forkChoice.isDescendant).toHaveBeenCalledWith(
+      oldRootHex,
+      PayloadStatus.FULL,
+      newRootHex,
+      PayloadStatus.FULL
+    );
+    expect(cache.get(oldRootHex)).toBeUndefined();
+    expect(cache.get(newRootHex)).toBeDefined();
   });
 
   it("add returns the existing entry on duplicate root", () => {
