@@ -1,13 +1,6 @@
 packages:
   - packages/*
 
-catalog:
-  '@chainsafe/lodestar-z': 0.1.2-rc.1
-  '@vitest/browser': ^4.0.7
-  '@vitest/browser-playwright': ^4.0.7
-  '@vitest/coverage-v8': ^4.0.7
-  vitest: ^4.0.7
-
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
@@ -19,6 +12,13 @@ minimumReleaseAgeExclude:
   - "libp2p"
 
 nodeLinker: isolated
+
+catalog:
+  "@chainsafe/lodestar-z": "0.1.2-rc.1"
+  "@vitest/browser": "^4.0.7"
+  "@vitest/browser-playwright": "^4.0.7"
+  "@vitest/coverage-v8": "^4.0.7"
+  vitest: "^4.0.7"
 
 allowBuilds:
   "@parcel/watcher": true
@@ -34,19 +34,8 @@ allowBuilds:
   ssh2: true
 
 onlyBuiltDependencies:
-  - '@chainsafe/lodestar-z'
-  - '@parcel/watcher'
-  - '@swc/core'
-  - aws-sdk
-  - '@vekexasia/bigint-buffer2'
-  - classic-level
-  - core-js
-  - cpu-features
-  - electron
-  - esbuild
-  - nx
-  - ssh2
- 
+  - "@chainsafe/lodestar-z"
+
 overrides:
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
