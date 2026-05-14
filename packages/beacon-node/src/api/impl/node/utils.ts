@@ -1,5 +1,6 @@
 import type {Connection, ConnectionStatus} from "@libp2p/interface";
 import {routes} from "@lodestar/api";
+import {GoodByeReasonCode} from "../../../constants/network.js";
 
 /**
  * Format a list of connections from libp2p connections manager into the API's format NodePeer
@@ -87,6 +88,48 @@ export function mapPeerScoreReason(actionName: string | null): string {
       return PEER_SCORE_REASON.BehaviourPenalty;
     default:
       return PEER_SCORE_REASON.Unknown;
+  }
+}
+
+/**
+ * Controlled vocabulary for the most recent peer disconnect reason surfaced
+ * on the beacon API `/eth/v1/node/peers` extension. Mirrors the proposed
+ * `PeerDisconnectReason` enum.
+ */
+export const PEER_DISCONNECT_REASON = {
+  ClientShutdown: "client_shutdown",
+  IrrelevantNetwork: "irrelevant_network",
+  IoError: "io_error",
+  UnviableFork: "unviable_fork",
+  TooManyPeers: "too_many_peers",
+  BadScore: "bad_score",
+  InboundDisconnect: "inbound_disconnect",
+  Unknown: "unknown",
+} as const;
+
+/**
+ * Map lodestar's `GoodByeReasonCode` to the controlled
+ * `PeerDisconnectReason` vocabulary. Returns "unknown" for codes we don't
+ * have an explicit mapping for so the API stays forward-compatible.
+ */
+export function mapDisconnectReason(code: GoodByeReasonCode | number): string {
+  switch (code) {
+    case GoodByeReasonCode.CLIENT_SHUTDOWN:
+      return PEER_DISCONNECT_REASON.ClientShutdown;
+    case GoodByeReasonCode.IRRELEVANT_NETWORK:
+      return PEER_DISCONNECT_REASON.IrrelevantNetwork;
+    case GoodByeReasonCode.ERROR:
+      return PEER_DISCONNECT_REASON.IoError;
+    case GoodByeReasonCode.TOO_MANY_PEERS:
+      return PEER_DISCONNECT_REASON.TooManyPeers;
+    case GoodByeReasonCode.SCORE_TOO_LOW:
+    case GoodByeReasonCode.BANNED:
+      return PEER_DISCONNECT_REASON.BadScore;
+    case GoodByeReasonCode.INBOUND_DISCONNECT:
+      return PEER_DISCONNECT_REASON.InboundDisconnect;
+    default:
+      if (code === 128) return PEER_DISCONNECT_REASON.UnviableFork;
+      return PEER_DISCONNECT_REASON.Unknown;
   }
 }
 

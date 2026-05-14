@@ -9,7 +9,7 @@ import type {LoggerNode} from "@lodestar/logger/node";
 import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
-import {formatNodePeer, mapPeerScoreReason} from "../../api/impl/node/utils.js";
+import {formatNodePeer, mapDisconnectReason, mapPeerScoreReason} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -477,10 +477,13 @@ export class NetworkCore implements INetworkCore {
     const agentVersion = peerData?.agentVersion ?? "NA";
     const downscoreReasons =
       scoreStat && scoreStat.lastActionName !== null ? [mapPeerScoreReason(scoreStat.lastActionName)] : undefined;
+    const lastDisconnect = this.peerManager.getLastDisconnect(peerIdStr);
+    const disconnectReason = lastDisconnect ? mapDisconnectReason(lastDisconnect.code) : undefined;
     return {
       ...formatNodePeer(peerIdStr, connections),
       agentVersion,
       score: scoreStat ? scoreStat.score : undefined,
+      disconnectReason,
       downscoreReasons,
       status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,

@@ -75,6 +75,19 @@ const STARVATION_PRUNE_RATIO = 0.05;
  */
 const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 
+/**
+ * Maximum number of last-disconnect entries to keep in memory. FIFO eviction
+ * keeps the map bounded while still allowing observability of recent
+ * disconnects via the beacon API peer-scoring extension.
+ */
+const LAST_DISCONNECT_MAX_SIZE = 1024;
+
+export type LastDisconnectInfo = {
+  code: GoodByeReasonCode;
+  sentByUs: boolean;
+  at: number;
+};
+
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
 // The Node should compute a recommended value every interval and log a warning
@@ -169,6 +182,13 @@ export class PeerManager {
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
   private connectedPeers: Map<PeerIdStr, PeerData>;
+  /**
+   * Tracks the most recent goodbye/disconnect reason per peer. Bounded with a
+   * FIFO eviction policy via insertion order in the Map. Retained across
+   * disconnects so the beacon API peer-scoring extension can surface a
+   * `disconnect_reason` for peers that are no longer connected.
+   */
+  private lastDisconnectByPeerId: Map<PeerIdStr, LastDisconnectInfo> = new Map();
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
@@ -305,6 +325,29 @@ export class PeerManager {
   }
 
   /**
+   * Record the most recent goodbye reason for a peer. `sentByUs` is true when
+   * lodestar initiated the goodbye, false when the remote peer sent it to us.
+   * Bounded to `LAST_DISCONNECT_MAX_SIZE` entries with FIFO eviction.
+   */
+  recordDisconnect(peerIdStr: PeerIdStr, code: GoodByeReasonCode, sentByUs: boolean): void {
+    if (this.lastDisconnectByPeerId.has(peerIdStr)) {
+      this.lastDisconnectByPeerId.delete(peerIdStr);
+    } else if (this.lastDisconnectByPeerId.size >= LAST_DISCONNECT_MAX_SIZE) {
+      const oldestKey = this.lastDisconnectByPeerId.keys().next().value;
+      if (oldestKey !== undefined) this.lastDisconnectByPeerId.delete(oldestKey);
+    }
+    this.lastDisconnectByPeerId.set(peerIdStr, {code, sentByUs, at: Date.now()});
+  }
+
+  /**
+   * Return the most recent disconnect record for a peer, or null if none has
+   * been observed (or it was evicted from the bounded map).
+   */
+  getLastDisconnect(peerIdStr: PeerIdStr): LastDisconnectInfo | null {
+    return this.lastDisconnectByPeerId.get(peerIdStr) ?? null;
+  }
+
+  /**
    * Must be called when network ReqResp receives incoming requests
    */
   private onRequest = ({peer, request}: NetworkEventData[NetworkEvent.reqRespRequest]): void => {
@@ -399,6 +442,8 @@ export class PeerManager {
     if (conn && Date.now() - conn.timeline.open > LONG_PEER_CONNECTION_MS) {
       this.metrics?.peerLongConnectionDisconnect.inc({reason});
     }
+
+    this.recordDisconnect(peer.toString(), Number(goodbye) as GoodByeReasonCode, false);
 
     void this.disconnect(peer);
   }
@@ -851,6 +896,9 @@ export class PeerManager {
       const coolDownMin = this.peerRpcScores.applyReconnectionCoolDown(peerIdStr, GoodByeReasonCode.INBOUND_DISCONNECT);
       logMessage += ". Enforcing a reconnection cool-down period";
       logContext.coolDownMin = coolDownMin;
+      if (!this.lastDisconnectByPeerId.has(peerIdStr)) {
+        this.recordDisconnect(peerIdStr, GoodByeReasonCode.INBOUND_DISCONNECT, false);
+      }
     }
 
     // remove the ping and status timer for the peer
@@ -896,6 +944,7 @@ export class PeerManager {
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
     const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
     const peerIdStr = peer.toString();
+    this.recordDisconnect(peerIdStr, goodbye, true);
     try {
       this.metrics?.peerGoodbyeSent.inc({reason});
       this.logger.debug("initiating goodbyeAndDisconnect peer", {reason, peerId: prettyPrintPeerId(peer)});
