@@ -29,7 +29,7 @@ export enum BlobSidecarErrorCode {
   FUTURE_SLOT = "BLOB_SIDECAR_ERROR_FUTURE_SLOT",
   WOULD_REVERT_FINALIZED_SLOT = "BLOB_SIDECAR_ERROR_WOULD_REVERT_FINALIZED_SLOT",
   ALREADY_KNOWN = "BLOB_SIDECAR_ERROR_ALREADY_KNOWN",
-  /** Already accepted a sidecar for this (block_root, index) tuple via gossip */
+  /** Already accepted a sidecar for this (slot, proposer_index, blob_index) tuple via gossip */
   ALREADY_SEEN_TUPLE = "BLOB_SIDECAR_ERROR_ALREADY_SEEN_TUPLE",
   PARENT_UNKNOWN = "BLOB_SIDECAR_ERROR_PARENT_UNKNOWN",
   PARENT_EXECUTION_INVALID = "BLOB_SIDECAR_ERROR_PARENT_EXECUTION_INVALID",
