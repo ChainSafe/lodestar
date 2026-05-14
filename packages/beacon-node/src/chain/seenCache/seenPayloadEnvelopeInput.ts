@@ -143,7 +143,7 @@ export class SeenPayloadEnvelopeInput {
         // Check if the cached FULL variant is an ancestor of the current parent block
         this.forkChoice.isDescendant(
           input.blockRootHex,
-          PayloadStatus.FULL,
+          input.hasPayloadEnvelope() ? PayloadStatus.FULL : PayloadStatus.PENDING,
           parentBlock.blockRoot,
           parentBlock.payloadStatus
         )
