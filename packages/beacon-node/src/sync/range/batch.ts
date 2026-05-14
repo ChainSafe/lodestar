@@ -45,6 +45,15 @@ export type Attempt = {
   hash: RootHex;
 };
 
+type TrackedRequest = {
+  /** only happen for the 1st batch in checkpoint sync */
+  parentPayload: boolean;
+  /**
+   * we always issue by_range before parent_payload, so we don't model this as null
+   */
+  byRangeColumns: Set<number>;
+};
+
 export type AwaitingDownloadState = {
   status: BatchStatus.AwaitingDownload;
   blocks: IBlockInput[];
@@ -62,6 +71,7 @@ export type BatchState =
   | {
       status: BatchStatus.Downloading;
       peer: PeerIdStr;
+      request: TrackedRequest;
       blocks: IBlockInput[];
       payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
     }
@@ -110,6 +120,13 @@ function formatColumnsReq(req: {startSlot: Slot; count: number; columns: number[
   return `startSlot=${req.startSlot},count=${req.count},cols=${prettyPrintIndices(req.columns)}`;
 }
 
+function getTrackedRequest({parentPayloadRequest, columnsRequest}: DownloadByRangeRequests): TrackedRequest {
+  return {
+    parentPayload: parentPayloadRequest != null,
+    byRangeColumns: new Set(parentPayloadRequest == null ? (columnsRequest?.columns ?? []) : []),
+  };
+}
+
 /**
  * Batches are downloaded at the first block of the epoch.
  *
@@ -131,8 +148,8 @@ export class Batch {
   requests: DownloadByRangeRequests;
   /** State of the batch. */
   state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
-  /** Peers that provided good data */
-  goodPeers: PeerIdStr[] = [];
+  /** Peers that provided good data, with column coverage for by_range requests */
+  private readonly successfulDownloads = new Map<PeerIdStr, TrackedRequest>();
   /** The `Attempts` that have been made and failed to send us this batch. */
   readonly failedProcessingAttempts: Attempt[] = [];
   /** The `Attempts` that have been made and failed because of execution malfunction. */
@@ -406,6 +423,35 @@ export class Batch {
     return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
   }
 
+  /**
+   * True only if the peer has already returned a successful response for the current request.
+   * A by_range success may update `this.requests` to parent_payload, and the same peer is then
+   * still eligible for the newly discovered parent payload data.
+   * For by_range, a peer that previously succeeded with a superset of requested columns is skipped.
+   */
+  hasPeerSucceededCurrentRequest(peer: PeerSyncMeta): boolean {
+    const successfulDownload = this.successfulDownloads.get(peer.peerId);
+    if (successfulDownload == null) return false;
+
+    const request = getTrackedRequest(this.getRequestsForPeer(peer));
+    if (request.parentPayload) return successfulDownload.parentPayload;
+
+    const requestByRangeColumns = request.byRangeColumns;
+
+    if (requestByRangeColumns.size === 0) {
+      // this means a download blocks/envelops by_range only
+      // don't do that again if we already did it
+      // see https://github.com/ChainSafe/lodestar/issues/9357
+      return true;
+    }
+
+    return [...requestByRangeColumns].every((column) => successfulDownload.byRangeColumns.has(column));
+  }
+
+  private getSuccessfulPeers(): PeerIdStr[] {
+    return Array.from(this.successfulDownloads.keys());
+  }
+
   getMetadata(): BatchMetadata {
     const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
     const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
@@ -440,14 +486,17 @@ export class Batch {
   /**
    * AwaitingDownload -> Downloading
    */
-  startDownloading(peer: PeerIdStr): void {
+  startDownloading(peer: PeerSyncMeta): void {
     if (this.state.status !== BatchStatus.AwaitingDownload) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
+    const request = getTrackedRequest(this.getRequestsForPeer(peer));
+
     this.state = {
       status: BatchStatus.Downloading,
-      peer,
+      peer: peer.peerId,
+      request,
       blocks: this.state.blocks,
       payloadEnvelopes: this.state.payloadEnvelopes,
     };
@@ -468,7 +517,17 @@ export class Batch {
     // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
     blocks.sort((a, b) => a.slot - b.slot);
 
-    this.goodPeers.push(peer);
+    const successfulDownload = this.successfulDownloads.get(peer) ?? {
+      parentPayload: false,
+      byRangeColumns: new Set<number>(),
+    };
+    successfulDownload.parentPayload ||= this.state.request.parentPayload;
+    if (!this.state.request.parentPayload) {
+      for (const column of this.state.request.byRangeColumns) {
+        successfulDownload.byRangeColumns.add(column);
+      }
+    }
+    this.successfulDownloads.set(peer, successfulDownload);
 
     let allComplete = true;
     const slots = new Set<number>();
@@ -497,8 +556,9 @@ export class Batch {
     if (allComplete && isForkPostGloas(this.forkName)) {
       for (const block of blocks) {
         const payloadInput = newPayloadEnvelopes?.get(block.slot);
-        // by_range needs every block's envelope and all sampled columns.
-        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
+        // only need to make sure envelope has all columns, not all blocks have payload
+        // assertLinearChainSegment() was called before reaching this
+        if (payloadInput?.hasPayloadEnvelope() && !payloadInput.hasComputedAllData()) {
           allComplete = false;
           break;
         }
@@ -589,10 +649,10 @@ export class Batch {
     const blocks = this.state.blocks;
     const payloadEnvelopes = this.state.payloadEnvelopes;
     const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
-    // Reset goodPeers in case another download attempt needs to be made.  When Attempt is successful or not the peers
-    // that the data came from will be handled by the Attempt that goes for processing
-    const peers = this.goodPeers;
-    this.goodPeers = [];
+    // Reset successfulDownloads in case another download attempt needs to be made. When Attempt is successful or not
+    // the peers that the data came from will be handled by the Attempt that goes for processing.
+    const peers = this.getSuccessfulPeers();
+    this.successfulDownloads.clear();
     this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
     return {blocks, payloadEnvelopes, peers};
   }

@@ -21,8 +21,9 @@ catalogs:
 
 overrides:
   dns-over-http-resolver: ^2.1.1
-  loupe: ^2.3.6
   elliptic: '>=6.6.1'
+  loupe: ^2.3.6
+  nan: ^2.19.0
 
 importers:
 
@@ -177,8 +178,8 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
         specifier: ^1.4.0
         version: 1.4.0
@@ -235,8 +236,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -374,7 +375,7 @@ importers:
         version: 2.0.0
       systeminformation:
         specifier: ^5.22.9
-        version: 5.30.8
+        version: 5.31.6
       uint8arraylist:
         specifier: ^2.4.7
         version: 2.4.8
@@ -446,8 +447,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/pubkey-index-map':
         specifier: ^3.0.0
         version: 3.0.0
@@ -643,43 +644,6 @@ importers:
         specifier: ^2.4.7
         version: 2.4.8
 
-  packages/flare:
-    dependencies:
-      '@chainsafe/bls-keygen':
-        specifier: ^0.4.0
-        version: 0.4.0
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
-      '@lodestar/api':
-        specifier: workspace:^
-        version: link:../api
-      '@lodestar/config':
-        specifier: workspace:^
-        version: link:../config
-      '@lodestar/params':
-        specifier: workspace:^
-        version: link:../params
-      '@lodestar/state-transition':
-        specifier: workspace:^
-        version: link:../state-transition
-      '@lodestar/types':
-        specifier: workspace:^
-        version: link:../types
-      '@lodestar/utils':
-        specifier: workspace:^
-        version: link:../utils
-      source-map-support:
-        specifier: ^0.5.21
-        version: 0.5.21
-      yargs:
-        specifier: ^17.7.1
-        version: 17.7.2
-    devDependencies:
-      '@types/yargs':
-        specifier: ^17.0.24
-        version: 17.0.24
-
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
@@ -710,8 +674,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/ssz':
         specifier: ^1.4.0
         version: 1.4.0
@@ -802,8 +766,8 @@ importers:
   packages/prover:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@ethereumjs/block':
         specifier: ^4.2.2
         version: 4.2.2
@@ -978,8 +942,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.1
-        version: 1.2.1
+        specifier: ^1.2.5
+        version: 1.2.5
       '@chainsafe/persistent-ts':
         specifier: ^1.0.0
         version: 1.0.0
@@ -1313,6 +1277,9 @@ packages:
   '@chainsafe/as-sha256@1.2.0':
     resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
 
+  '@chainsafe/as-sha256@1.2.4':
+    resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
+
   '@chainsafe/benchmark@2.0.2':
     resolution: {integrity: sha512-qL8HpfP3922oPIDC7zarJpVNYddlf5Vv1DDGoOrKT/WRWKyQ0+INgrcs0Z67DbRp3tyZf70du1Oul0A93pAA5g==}
     hasBin: true
@@ -1504,9 +1471,6 @@ packages:
 
   '@chainsafe/persistent-merkle-tree@0.6.1':
     resolution: {integrity: sha512-gcENLemRR13+1MED2NeZBMA7FRS0xQPM7L2vhMqvKkjqtFT4YfjSVADq5U0iLuQLhFUJEMVuA8fbv5v+TN6O9A==}
-
-  '@chainsafe/persistent-merkle-tree@1.2.1':
-    resolution: {integrity: sha512-AOSEVLfaqwb9eTCKuY1ri0DrRxVQ3Rh+we1VBj1GahUGfEdE8OC3Vkbca7Up6RoI9Ip9FLnI31Y7AjKH9ZqAGA==}
 
   '@chainsafe/persistent-merkle-tree@1.2.5':
     resolution: {integrity: sha512-uyv3/nHkD8vNXjdez6q89rhXwGDUp3YX2mBbOwB7/xelgZ9E7hc3HQgOuq1EdfM9Vyh09jiwimXF/hskmymOfQ==}
@@ -6716,8 +6680,8 @@ packages:
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
 
-  systeminformation@5.30.8:
-    resolution: {integrity: sha512-imB8LwJCc2DkufKlSRHfzbjhheGzpg1P31A4c55IKTq/ll6Agn1rhBOY+WmS/hyg5inGFp7AyZIK0gvq5rFO2Q==}
+  systeminformation@5.31.6:
+    resolution: {integrity: sha512-Uv2b2uGGM6ns+26czgW2cYRabYdnswM0ddSOOlryHOaelzsmDSet1iM/NT7VOYxW8x/BW+HkY+b1Ve2pLTSGSA==}
     engines: {node: '>=8.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
@@ -7026,6 +6990,7 @@ packages:
 
   uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@13.0.0:
@@ -7034,15 +6999,17 @@ packages:
 
   uuid@3.3.2:
     resolution: {integrity: sha512-yXJmeNaw3DnnKAOKJE51sL/ZaYfWJRl1pK9dr19YFCu0ObS231AB1/LbqTKRAQ5kw8A90rA6fr4riOUpTZvQZA==}
-    deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@8.3.2:
     resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   v8-compile-cache-lib@3.0.1:
@@ -7741,6 +7708,8 @@ snapshots:
 
   '@chainsafe/as-sha256@1.2.0': {}
 
+  '@chainsafe/as-sha256@1.2.4': {}
+
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
     dependencies:
       '@actions/cache': 4.0.0(encoding@0.1.13)
@@ -7941,15 +7910,9 @@ snapshots:
       '@chainsafe/as-sha256': 0.4.1
       '@noble/hashes': 1.8.0
 
-  '@chainsafe/persistent-merkle-tree@1.2.1':
-    dependencies:
-      '@chainsafe/as-sha256': 1.2.0
-      '@chainsafe/hashtree': 1.0.2
-      '@noble/hashes': 1.8.0
-
   '@chainsafe/persistent-merkle-tree@1.2.5':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.0
+      '@chainsafe/as-sha256': 1.2.4
       '@chainsafe/hashtree': 1.0.2
       '@noble/hashes': 1.8.0
 
@@ -14150,7 +14113,7 @@ snapshots:
 
   symbol-tree@3.2.4: {}
 
-  systeminformation@5.30.8: {}
+  systeminformation@5.31.6: {}
 
   tar@6.2.1:
     dependencies:

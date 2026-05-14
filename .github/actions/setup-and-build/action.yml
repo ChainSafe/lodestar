@@ -4,16 +4,21 @@ inputs:
   node:
     description: Node version
     required: true
+  registry-url:
+    description: npm registry URL to write into .npmrc (required for OIDC publish jobs)
+    required: false
+    default: ""
 
 runs:
   using: "composite"
   steps:
-    - uses: pnpm/action-setup@c5ba7f7862a0f64c1b1a05fbac13e0b8e86ba08c # v4
+    - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
 
     - name: Setup Node
       uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
         node-version: ${{inputs.node}}
+        registry-url: ${{inputs.registry-url}}
         check-latest: true
         # Due to a known issue we have to disable package caching for now
         # https://github.com/pnpm/pnpm/issues/6234

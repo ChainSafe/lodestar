@@ -114,7 +114,7 @@
     "@chainsafe/enr": "^6.0.1",
     "@chainsafe/libp2p-noise": "^17.0.0",
     "@chainsafe/libp2p-quic": "^2.0.1",
-    "@chainsafe/persistent-merkle-tree": "^1.2.1",
+    "@chainsafe/persistent-merkle-tree": "^1.2.5",
     "@chainsafe/prometheus-gc-stats": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/snappy-wasm": "^0.5.0",
