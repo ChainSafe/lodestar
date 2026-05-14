@@ -9,7 +9,7 @@ import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodest
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, isForkPostDeneb} from "@lodestar/params";
+import {ForkName, isForkPostDeneb, isForkPostElectra} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -638,7 +638,10 @@ async function validateMessageForTopic(
     }
 
     case GossipType.beacon_attestation: {
-      const attestation = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).Attestation.deserialize(bytes));
+      const attestationType = isForkPostElectra(fork)
+        ? sszTypesFor(fork).SingleAttestation
+        : sszTypesFor(fork).Attestation;
+      const attestation = rejectOnInvalidSerializedBytes(() => attestationType.deserialize(bytes));
       const beaconBlockRootHex = toRootHex(attestation.data.beaconBlockRoot);
 
       if (failedBlockRoots.has(beaconBlockRootHex)) {
