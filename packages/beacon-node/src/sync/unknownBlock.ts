@@ -42,6 +42,7 @@ import {
 } from "./types.js";
 import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
+import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -67,20 +68,6 @@ class UnknownBlockRateLimitedError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "UnknownBlockRateLimitedError";
-  }
-}
-
-function getRateLimitedUntilMs(e: unknown): number | null {
-  if (!(e instanceof RequestError)) {
-    return null;
-  }
-
-  switch (e.type.code) {
-    case RequestErrorCode.RESP_RATE_LIMITED:
-    case RequestErrorCode.REQUEST_SELF_RATE_LIMITED:
-      return e.type.rateLimitedUntilMs ?? null;
-    default:
-      return null;
   }
 }
 

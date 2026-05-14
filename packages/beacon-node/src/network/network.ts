@@ -578,6 +578,18 @@ export class Network implements INetwork {
     );
   }
 
+  async sendBeaconBlocksByHead(
+    peerId: PeerIdStr,
+    request: fulu.BeaconBlocksByHeadRequest
+  ): Promise<SignedBeaconBlock[]> {
+    return collectMaxResponseTypedWithBytes(
+      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
+      Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
+      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
+      this.chain.serializedCache
+    );
+  }
+
   async sendLightClientBootstrap(peerId: PeerIdStr, request: Root): Promise<LightClientBootstrap> {
     return collectExactOneTyped(
       this.sendReqRespRequest(peerId, ReqRespMethod.LightClientBootstrap, [Version.V1], request),

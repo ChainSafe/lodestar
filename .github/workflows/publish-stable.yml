@@ -72,6 +72,10 @@ jobs:
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
+          # Required for OIDC publish under pnpm v11 — without registry-url
+          # setup-node skips writing the registry to .npmrc and the npm OIDC
+          # auth flow rejects the token. Matches publish-dev.yml's setup.
+          registry-url: "https://registry.npmjs.org"
 
       - name: Generate changelog
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
