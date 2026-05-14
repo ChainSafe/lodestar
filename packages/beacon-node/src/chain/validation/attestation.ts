@@ -638,26 +638,32 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   } else {
     const attestationEpoch = computeEpochAtSlot(attestationSlot);
 
-    // upper bound for current epoch is same as epoch of latestPermissibleSlot
-    const latestPermissibleCurrentEpoch = computeEpochAtSlot(latestPermissibleSlot);
-    if (attestationEpoch > latestPermissibleCurrentEpoch) {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.FUTURE_EPOCH,
-        currentEpoch: latestPermissibleCurrentEpoch,
-        attestationEpoch,
-      });
-    }
+    // EIP-7045: an attestation is valid for the current or previous epoch with
+    // MAXIMUM_GOSSIP_CLOCK_DISPARITY tolerance on each side of the epoch's slot range.
+    // We mirror is_within_slot_range from the spec by comparing milliseconds to the
+    // start/end of the epoch's slot range, so messages exactly at an epoch boundary plus
+    // disparity remain in-range.
+    const disparityMs = chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+    const isWithinEpochSlotRange = (epoch: Epoch): boolean => {
+      const epochStartSlot = computeStartSlotAtEpoch(epoch);
+      const epochEndSlot = epochStartSlot + SLOTS_PER_EPOCH;
+      return (
+        chain.clock.msFromSlot(epochStartSlot) >= -disparityMs && chain.clock.msFromSlot(epochEndSlot) <= disparityMs
+      );
+    };
 
-    // lower bound for previous epoch is same as epoch of earliestPermissibleSlot
-    const currentEpochWithPastTolerance = computeEpochAtSlot(
-      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000)
-    );
-
-    const earliestPermissiblePreviousEpoch = Math.max(currentEpochWithPastTolerance - 1, 0);
-    if (attestationEpoch < earliestPermissiblePreviousEpoch) {
+    if (!isWithinEpochSlotRange(attestationEpoch) && !isWithinEpochSlotRange(attestationEpoch + 1)) {
+      const latestPermissibleCurrentEpoch = computeEpochAtSlot(latestPermissibleSlot);
+      if (attestationEpoch > latestPermissibleCurrentEpoch) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.FUTURE_EPOCH,
+          currentEpoch: latestPermissibleCurrentEpoch,
+          attestationEpoch,
+        });
+      }
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.PAST_EPOCH,
-        previousEpoch: earliestPermissiblePreviousEpoch,
+        previousEpoch: Math.max(latestPermissibleCurrentEpoch - 1, 0),
         attestationEpoch,
       });
     }

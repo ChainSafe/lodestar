@@ -85,8 +85,7 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
   ],
-  // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: ["fast_confirmation", "networking"],
+  skippedRunners: ["fast_confirmation"],
 };
 
 /**

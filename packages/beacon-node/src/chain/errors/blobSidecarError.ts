@@ -29,11 +29,16 @@ export enum BlobSidecarErrorCode {
   FUTURE_SLOT = "BLOB_SIDECAR_ERROR_FUTURE_SLOT",
   WOULD_REVERT_FINALIZED_SLOT = "BLOB_SIDECAR_ERROR_WOULD_REVERT_FINALIZED_SLOT",
   ALREADY_KNOWN = "BLOB_SIDECAR_ERROR_ALREADY_KNOWN",
+  /** Already accepted a sidecar for this (block_root, index) tuple via gossip */
+  ALREADY_SEEN_TUPLE = "BLOB_SIDECAR_ERROR_ALREADY_SEEN_TUPLE",
   PARENT_UNKNOWN = "BLOB_SIDECAR_ERROR_PARENT_UNKNOWN",
+  PARENT_EXECUTION_INVALID = "BLOB_SIDECAR_ERROR_PARENT_EXECUTION_INVALID",
+  FINALIZED_NOT_ANCESTOR = "BLOB_SIDECAR_ERROR_FINALIZED_NOT_ANCESTOR",
   NOT_LATER_THAN_PARENT = "BLOB_SIDECAR_ERROR_NOT_LATER_THAN_PARENT",
   PROPOSAL_SIGNATURE_INVALID = "BLOB_SIDECAR_ERROR_PROPOSAL_SIGNATURE_INVALID",
   INCLUSION_PROOF_INVALID = "BLOB_SIDECAR_ERROR_INCLUSION_PROOF_INVALID",
   INCORRECT_PROPOSER = "BLOB_SIDECAR_ERROR_INCORRECT_PROPOSER",
+  PROPOSER_INDEX_OUT_OF_RANGE = "BLOB_SIDECAR_ERROR_PROPOSER_INDEX_OUT_OF_RANGE",
 }
 
 export type BlobSidecarErrorType =
@@ -50,12 +55,15 @@ export type BlobSidecarErrorType =
   | {code: BlobSidecarErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlobSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
   | {code: BlobSidecarErrorCode.ALREADY_KNOWN; root: RootHex}
+  | {code: BlobSidecarErrorCode.ALREADY_SEEN_TUPLE; root: RootHex; blobIdx: number}
   | {
       code: BlobSidecarErrorCode.PARENT_UNKNOWN;
       parentRoot: RootHex;
       slot: Slot;
       blockRoot: RootHex;
     }
+  | {code: BlobSidecarErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
+  | {code: BlobSidecarErrorCode.FINALIZED_NOT_ANCESTOR; parentRoot: RootHex; finalizedRoot: RootHex}
   | {code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {
       code: BlobSidecarErrorCode.PROPOSAL_SIGNATURE_INVALID;
@@ -64,7 +72,12 @@ export type BlobSidecarErrorType =
       index: number;
     }
   | {code: BlobSidecarErrorCode.INCLUSION_PROOF_INVALID; slot: Slot; blobIdx: number}
-  | {code: BlobSidecarErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex};
+  | {code: BlobSidecarErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
+  | {
+      code: BlobSidecarErrorCode.PROPOSER_INDEX_OUT_OF_RANGE;
+      proposerIndex: ValidatorIndex;
+      validatorCount: number;
+    };
 
 export class BlobSidecarGossipError extends GossipActionError<BlobSidecarErrorType> {}
 export class BlobSidecarValidationError extends LodestarError<BlobSidecarErrorType> {}

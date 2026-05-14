@@ -9,7 +9,7 @@ import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodest
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName} from "@lodestar/params";
+import {ForkName, isForkPostDeneb} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -25,7 +25,7 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
-import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
+import {BlockInputBlobs, BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
@@ -33,6 +33,7 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
+import {validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
@@ -160,6 +161,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_message: GossipType.sync_committee,
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
+  gossip_blob_sidecar: GossipType.blob_sidecar,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -433,7 +435,7 @@ export async function runGossipValidationTest(
     const rejectedFailedBlockRoots = new Set<RootHex>();
 
     if (meta.blocks) {
-      for (const [index, blockEntry] of meta.blocks.entries()) {
+      for (const blockEntry of meta.blocks) {
         const signedBlock = sszTypesFor(fork).SignedBeaconBlock.deserialize(
           loadSszSnappy(testCaseDir, blockEntry.block)
         );
@@ -441,17 +443,10 @@ export async function runGossipValidationTest(
         const blockRootHex = toHex(beaconConfig.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
         blockRootsByName.set(blockEntry.block, blockRootHex);
 
-        if (index === 0) {
-          // We assume the first block in meta.blocks is the anchor block whose post-state is
-          // the loaded anchor state. Assert this to avoid silently mis-seeding the state map.
-          if (blockEntry.failed) {
-            throw new Error(`First block ${blockEntry.block} must not be marked as failed`);
-          }
-          if (slot !== anchorState.latestBlockHeader.slot) {
-            throw new Error(
-              `First block slot ${slot} does not match anchor state slot ${anchorState.latestBlockHeader.slot}`
-            );
-          }
+        // Fixtures list the chain anchor as the first entry in `meta.blocks`.
+        // It's already in fork-choice via chain init from `state.ssz_snappy`,
+        // so seed its post-state for descendant blocks and skip re-importing.
+        if (chain.forkChoice.getBlockHexDefaultStatus(blockRootHex) !== null) {
           blockStatesByRoot.set(blockRootHex, anchorStateView);
           continue;
         }
@@ -466,18 +461,17 @@ export async function runGossipValidationTest(
           throw new Error(`Missing parent state for ${blockEntry.block} with parent ${parentRootHex}`);
         }
 
-        // Failed blocks only need a post-state if they'll be imported into fork-choice
-        // (payload_status=VALID). Skip the state transition otherwise — it would be wasted
-        // work, and would throw for fixtures that intentionally include consensus-invalid blocks.
-        if (blockEntry.failed && blockEntry.payload_status !== "VALID") {
+        // Record consensus-invalid parents so topic handlers can surface REJECT
+        // for messages that reference them. Lodestar drops such blocks before
+        // fork-choice, so there is no source-level cache to consult.
+        if (blockEntry.failed && blockEntry.payload_status !== "VALID" && blockEntry.payload_status !== "INVALIDATED") {
           rejectedFailedBlockRoots.add(blockRootHex);
           continue;
         }
 
         const postState = computePostState(parentState, signedBlock, fork);
 
-        if (blockEntry.failed) {
-          // payload_status === "VALID" (filtered above)
+        if (blockEntry.failed && blockEntry.payload_status === "VALID") {
           clock.setSlot(slot);
           chain.forkChoice.updateTime(slot);
           chain.forkChoice.onBlock(
@@ -505,20 +499,30 @@ export async function runGossipValidationTest(
           );
           blockStatesByRoot.set(blockRootHex, postState);
           invalidateImportedBlock(chain, blockRootHex, parentRootHex);
+          if (blockEntry.failed) rejectedFailedBlockRoots.add(blockRootHex);
           continue;
         }
 
         clock.setSlot(slot);
         chain.forkChoice.updateTime(slot);
 
-        const blockImport = BlockInputPreData.createFromBlock({
-          forkName: fork,
-          block: signedBlock,
-          blockRootHex,
-          source: BlockInputSource.gossip,
-          seenTimestampSec: 0,
-          daOutOfRange: false,
-        });
+        const blockImport = isForkPostDeneb(fork)
+          ? BlockInputBlobs.createFromBlock({
+              forkName: fork,
+              block: signedBlock as Parameters<typeof BlockInputBlobs.createFromBlock>[0]["block"],
+              blockRootHex,
+              source: BlockInputSource.gossip,
+              seenTimestampSec: 0,
+              daOutOfRange: false,
+            })
+          : BlockInputPreData.createFromBlock({
+              forkName: fork,
+              block: signedBlock,
+              blockRootHex,
+              source: BlockInputSource.gossip,
+              seenTimestampSec: 0,
+              daOutOfRange: false,
+            });
 
         await chain.processBlock(blockImport, {
           seenTimestampSec: 0,
@@ -713,12 +717,21 @@ async function validateMessageForTopic(
       const blsToExecutionChange = rejectOnInvalidSerializedBytes(() =>
         ssz.capella.SignedBLSToExecutionChange.deserialize(bytes)
       );
-      if (chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH) {
-        throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_PRE_CAPELLA"});
-      }
       await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
       // Mirror gossip handler: insert into opPool so duplicate detection works
       chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      break;
+    }
+
+    case GossipType.blob_sidecar: {
+      const blobSidecar = rejectOnInvalidSerializedBytes(() => ssz.deneb.BlobSidecar.deserialize(bytes));
+      const parentRootHex = toRootHex(blobSidecar.signedBlockHeader.message.parentRoot);
+
+      if (rejectedFailedBlockRoots.has(parentRootHex)) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_PARENT_BLOCK_FAILED"});
+      }
+
+      await validateGossipBlobSidecar(fork, chain, blobSidecar, Number(message.subnet_id ?? 0));
       break;
     }
 
