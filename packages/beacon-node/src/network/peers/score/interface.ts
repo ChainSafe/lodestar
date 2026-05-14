@@ -13,6 +13,13 @@ export interface IPeerRpcScoreStore {
   getScoreState(peer: PeerId): ScoreState;
   isCoolingDown(peer: PeerIdStr): boolean;
   dumpPeerScoreStats(): PeerScoreStats;
+  /**
+   * Returns the score stat for a single peer, or null if no entry exists yet.
+   * Unlike getScore() this does not lazily create a default entry, so callers
+   * (e.g. read-only beacon API handlers) can introspect known peers without
+   * polluting the store.
+   */
+  getStatByPeerId(peerIdStr: PeerIdStr): PeerScoreStat | null;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
   applyReconnectionCoolDown(peer: PeerIdStr, reason: GoodByeReasonCode): number;
   update(): void;

@@ -25,7 +25,14 @@ import {ClientKind, getKnownClientFromAgentVersion} from "./client.js";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover.js";
 import {PeerData, PeersData} from "./peersData.js";
 import {NO_COOL_DOWN_APPLIED} from "./score/constants.js";
-import {IPeerRpcScoreStore, PeerAction, PeerScoreStats, ScoreState, updateGossipsubScores} from "./score/index.js";
+import {
+  IPeerRpcScoreStore,
+  PeerAction,
+  PeerScoreStat,
+  PeerScoreStats,
+  ScoreState,
+  updateGossipsubScores,
+} from "./score/index.js";
 import {
   assertPeerRelevance,
   getConnectedPeerIds,
@@ -291,6 +298,10 @@ export class PeerManager {
 
   dumpPeerScoreStats(): PeerScoreStats {
     return this.peerRpcScores.dumpPeerScoreStats();
+  }
+
+  getPeerScoreStat(peerIdStr: PeerIdStr): PeerScoreStat | null {
+    return this.peerRpcScores.getStatByPeerId(peerIdStr);
   }
 
   /**

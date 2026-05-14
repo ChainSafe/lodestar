@@ -9,7 +9,7 @@ import type {LoggerNode} from "@lodestar/logger/node";
 import {isForkPostFulu} from "@lodestar/params";
 import {ResponseIncoming} from "@lodestar/reqresp";
 import {Epoch, Status, fulu, sszTypesFor} from "@lodestar/types";
-import {formatNodePeer} from "../../api/impl/node/utils.js";
+import {formatNodePeer, mapPeerScoreReason} from "../../api/impl/node/utils.js";
 import {RegistryMetricCreator} from "../../metrics/index.js";
 import {ClockEvent, IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
@@ -473,9 +473,15 @@ export class NetworkCore implements INetworkCore {
       (peerData.status as fulu.Status).earliestAvailableSlot =
         (peerData.status as fulu.Status).earliestAvailableSlot ?? 0;
     }
+    const scoreStat = this.peerManager.getPeerScoreStat(peerIdStr);
+    const agentVersion = peerData?.agentVersion ?? "NA";
+    const downscoreReasons =
+      scoreStat && scoreStat.lastActionName !== null ? [mapPeerScoreReason(scoreStat.lastActionName)] : undefined;
     return {
       ...formatNodePeer(peerIdStr, connections),
-      agentVersion: peerData?.agentVersion ?? "NA",
+      agentVersion,
+      score: scoreStat ? scoreStat.score : undefined,
+      downscoreReasons,
       status: peerData?.status ? sszTypesFor(fork).Status.toJson(peerData.status) : null,
       metadata: peerData?.metadata ? sszTypesFor(fork).Metadata.toJson(peerData.metadata) : null,
       agentClient: String(peerData?.agentClient ?? "Unknown"),
