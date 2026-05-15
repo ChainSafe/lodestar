@@ -477,10 +477,14 @@ export class NetworkCore implements INetworkCore {
     const agentVersion = peerData?.agentVersion ?? "NA";
     const downscoreReasons =
       scoreStat && scoreStat.lastActionName !== null ? [mapPeerScoreReason(scoreStat.lastActionName)] : undefined;
+    const nodePeer = formatNodePeer(peerIdStr, connections);
     const lastDisconnect = this.peerManager.getLastDisconnect(peerIdStr);
-    const disconnectReason = lastDisconnect ? mapDisconnectReason(lastDisconnect.code) : undefined;
+    const disconnectReason =
+      lastDisconnect && (nodePeer.state === "disconnected" || nodePeer.state === "disconnecting")
+        ? mapDisconnectReason(lastDisconnect.code)
+        : undefined;
     return {
-      ...formatNodePeer(peerIdStr, connections),
+      ...nodePeer,
       agentVersion,
       score: scoreStat ? scoreStat.score : undefined,
       disconnectReason,
