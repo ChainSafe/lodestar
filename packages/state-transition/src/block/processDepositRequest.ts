@@ -1,10 +1,10 @@
-import {BeaconConfig} from "@lodestar/config";
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {BLSPubkey, Bytes32, PubkeyHex, UintNum64, electra, ssz} from "@lodestar/types";
+import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {computeEpochAtSlot, isValidatorKnown} from "../util/index.js";
+import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {isValidDepositSignature} from "./processDeposit.js";
 
 /**
@@ -76,53 +76,60 @@ function addBuilderToRegistry(
   }
 }
 
-// TODO GLOAS: pendingValidatorPubkeys cache is currently naive and has room for improvement.
-// Currently the cache lives in process_block, but we should put it in epochCache or elsewhere that has longer
-// lifetime to avoid duplicated deposit signature computation
+// TODO GLOAS: the PendingDepositsLookup is currently scoped to a single envelope of
+// deposit-requests. We can track it as ephemeral within EpochCache and transfer to the next block
+// transition to reuse cached signature verifications.
 // See https://github.com/ChainSafe/lodestar/issues/9181
 export function processDepositRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
   depositRequest: electra.DepositRequest,
-  pendingValidatorPubkeysCache?: Set<PubkeyHex>
+  pendingDepositsLookup?: PendingDepositsLookup
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
-  // Check if this is a builder or validator deposit
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
-    const pendingValidatorPubkeys =
-      pendingValidatorPubkeysCache ?? getPendingValidatorPubkeys(state.config, stateGloas);
+    const lookup = pendingDepositsLookup ?? PendingDepositsLookup.build(stateGloas);
     const pubkeyHex = toPubkeyHex(pubkey);
     const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
     const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
 
-    // Regardless of the withdrawal credentials prefix, if a builder/validator
-    // already exists with this pubkey, apply the deposit to their balance
     const isBuilder = builderIndex !== null;
     const isValidator = isValidatorKnown(state, validatorIndex);
-    const isPendingValidator = pendingValidatorPubkeys.has(pubkeyHex);
 
-    if (isBuilder || (isBuilderWithdrawalCredential(withdrawalCredentials) && !isValidator && !isPendingValidator)) {
-      // Apply builder deposits immediately
+    if (isBuilder) {
+      // Top up an existing builder regardless of withdrawal credential prefix
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
     }
 
-    // Keep the shared cache in sync: if this deposit has a valid signature, subsequent
-    // deposit requests for the same pubkey in this envelope must see it as a pending validator
+    // Only check the (expensive) "pending validator" condition when needed
     if (
-      pendingValidatorPubkeysCache &&
+      isBuilderWithdrawalCredential(withdrawalCredentials) &&
       !isValidator &&
-      !isPendingValidator &&
-      isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
+      !lookup.hasPendingValidator(state.config, pubkeyHex)
     ) {
-      pendingValidatorPubkeys.add(pubkeyHex);
+      applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
+      return;
     }
+
+    const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
+      pubkey,
+      withdrawalCredentials,
+      amount,
+      signature,
+      slot: state.slot,
+    });
+    // Keep the lookup in sync with state.pendingDeposits so later deposit-requests
+    // in the same envelope see this deposit
+    lookup.add(pendingDeposit, pubkeyHex);
+    state.pendingDeposits.push(pendingDeposit);
+    return;
   }
 
-  // Only set deposit_requests_start_index in Electra fork, not Gloas
-  if (fork < ForkSeq.gloas && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+  // Pre-Gloas (Electra) path
+  if (state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     state.depositRequestsStartIndex = depositRequest.index;
   }
 
@@ -135,29 +142,4 @@ export function processDepositRequest(
     slot: state.slot,
   });
   state.pendingDeposits.push(pendingDeposit);
-}
-
-/**
- * Build a set of pubkeys (hex-encoded) from pending deposits that have valid signatures.
- * This is computed once and passed to each processDepositRequest call to avoid
- * repeatedly iterating state.pendingDeposits.
- *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/beacon-chain.md#new-is_pending_validator
- */
-export function getPendingValidatorPubkeys(config: BeaconConfig, state: CachedBeaconStateGloas): Set<PubkeyHex> {
-  const result = new Set<PubkeyHex>();
-  for (const pendingDeposit of state.pendingDeposits.getAllReadonly()) {
-    if (
-      isValidDepositSignature(
-        config,
-        pendingDeposit.pubkey,
-        pendingDeposit.withdrawalCredentials,
-        pendingDeposit.amount,
-        pendingDeposit.signature
-      )
-    ) {
-      result.add(toPubkeyHex(pendingDeposit.pubkey));
-    }
-  }
-  return result;
 }
