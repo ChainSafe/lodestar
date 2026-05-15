@@ -5264,7 +5264,7 @@
 
 - name: get_safety_threshold#altair
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function getSafetyThreshold(
   spec: |
     <spec fn="get_safety_threshold" fork="altair" hash="72f3d7ff">
@@ -5992,7 +5992,7 @@
 
 - name: initialize_light_client_store#altair
   sources:
-    - file: packages/light-client/src/spec/store.ts
+    - file: packages/state-transition/src/lightClient/spec/store.ts
       search: export class LightClientStore
   spec: |
     <spec fn="initialize_light_client_store" fork="altair" hash="f3de55b9">
@@ -6252,7 +6252,7 @@
 
 - name: is_better_update#altair
   sources:
-    - file: packages/light-client/src/spec/isBetterUpdate.ts
+    - file: packages/state-transition/src/lightClient/spec/isBetterUpdate.ts
       search: export function isBetterUpdate(
   spec: |
     <spec fn="is_better_update" fork="altair" hash="b99582ff">
@@ -6569,7 +6569,7 @@
 
 - name: is_finality_update#altair
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function isFinalityUpdate(
   spec: |
     <spec fn="is_finality_update" fork="altair" hash="4d0080ac">
@@ -7123,7 +7123,7 @@
 
 - name: is_sync_committee_update#altair
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function isSyncCommitteeUpdate(
   spec: |
     <spec fn="is_sync_committee_update" fork="altair" hash="af6f8cb0">
@@ -7233,7 +7233,7 @@
 
 - name: is_valid_light_client_header#altair
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function isValidLightClientHeader(
   spec: |
     <spec fn="is_valid_light_client_header" fork="altair" hash="a4c4f0f3">
@@ -7243,7 +7243,7 @@
 
 - name: is_valid_light_client_header#capella
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function isValidLightClientHeader(
   spec: |
     <spec fn="is_valid_light_client_header" fork="capella" hash="232ae1d9">
@@ -7267,7 +7267,7 @@
 
 - name: is_valid_light_client_header#deneb
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function isValidLightClientHeader(
   spec: |
     <spec fn="is_valid_light_client_header" fork="deneb" hash="f458ba78">
@@ -7336,7 +7336,7 @@
 
 - name: is_valid_merkle_branch#phase0
   sources:
-    - file: packages/light-client/src/utils/verifyMerkleBranch.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function isValidMerkleBranch(
   spec: |
     <spec fn="is_valid_merkle_branch" fork="phase0" hash="19db92a5">
@@ -7540,7 +7540,7 @@
 
 - name: normalize_merkle_branch#electra
   sources:
-    - file: packages/light-client/src/utils/normalizeMerkleBranch.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function normalizeMerkleBranch(
   spec: |
     <spec fn="normalize_merkle_branch" fork="electra" hash="149d7b0c">
@@ -9929,7 +9929,7 @@
 
 - name: process_light_client_update#altair
   sources:
-    - file: packages/light-client/src/spec/processLightClientUpdate.ts
+    - file: packages/state-transition/src/lightClient/spec/processLightClientUpdate.ts
       search: export function processLightClientUpdate(
   spec: |
     <spec fn="process_light_client_update" fork="altair" hash="b64a67ff">
@@ -11919,7 +11919,7 @@
 
 - name: upgrade_lc_bootstrap_to_capella#capella
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientHeader(
   spec: |
     <spec fn="upgrade_lc_bootstrap_to_capella" fork="capella" hash="d5f1203a">
@@ -11933,7 +11933,7 @@
 
 - name: upgrade_lc_bootstrap_to_deneb#deneb
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientHeader(
   spec: |
     <spec fn="upgrade_lc_bootstrap_to_deneb" fork="deneb" hash="f91baf71">
@@ -11947,7 +11947,7 @@
 
 - name: upgrade_lc_bootstrap_to_electra#electra
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientHeader(
   spec: |
     <spec fn="upgrade_lc_bootstrap_to_electra" fork="electra" hash="93818ed1">
@@ -11975,7 +11975,7 @@
 
 - name: upgrade_lc_finality_update_to_capella#capella
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientFinalityUpdate(
   spec: |
     <spec fn="upgrade_lc_finality_update_to_capella" fork="capella" hash="c314b172">
@@ -11993,7 +11993,7 @@
 
 - name: upgrade_lc_finality_update_to_deneb#deneb
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientFinalityUpdate(
   spec: |
     <spec fn="upgrade_lc_finality_update_to_deneb" fork="deneb" hash="bfa53da6">
@@ -12011,7 +12011,7 @@
 
 - name: upgrade_lc_finality_update_to_electra#electra
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientFinalityUpdate(
   spec: |
     <spec fn="upgrade_lc_finality_update_to_electra" fork="electra" hash="1bcc6b97">
@@ -12045,7 +12045,7 @@
 
 - name: upgrade_lc_header_to_capella#capella
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientHeader(
   spec: |
     <spec fn="upgrade_lc_header_to_capella" fork="capella" hash="9f7a832d">
@@ -12059,7 +12059,7 @@
 
 - name: upgrade_lc_header_to_deneb#deneb
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientHeader(
   spec: |
     <spec fn="upgrade_lc_header_to_deneb" fork="deneb" hash="7dc12b61">
@@ -12093,7 +12093,7 @@
 
 - name: upgrade_lc_header_to_electra#electra
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientHeader(
   spec: |
     <spec fn="upgrade_lc_header_to_electra" fork="electra" hash="90aa82aa">
@@ -12165,7 +12165,7 @@
 
 - name: upgrade_lc_optimistic_update_to_capella#capella
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientOptimisticUpdate(
   spec: |
     <spec fn="upgrade_lc_optimistic_update_to_capella" fork="capella" hash="c4c29295">
@@ -12181,7 +12181,7 @@
 
 - name: upgrade_lc_optimistic_update_to_deneb#deneb
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientOptimisticUpdate(
   spec: |
     <spec fn="upgrade_lc_optimistic_update_to_deneb" fork="deneb" hash="66aa73ab">
@@ -12197,7 +12197,7 @@
 
 - name: upgrade_lc_optimistic_update_to_electra#electra
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientOptimisticUpdate(
   spec: |
     <spec fn="upgrade_lc_optimistic_update_to_electra" fork="electra" hash="a6059e7d">
@@ -12227,7 +12227,7 @@
 
 - name: upgrade_lc_store_to_capella#capella
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientStore(
   spec: |
     <spec fn="upgrade_lc_store_to_capella" fork="capella" hash="d02773ec">
@@ -12249,7 +12249,7 @@
 
 - name: upgrade_lc_store_to_deneb#deneb
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientStore(
   spec: |
     <spec fn="upgrade_lc_store_to_deneb" fork="deneb" hash="29b26f52">
@@ -12271,7 +12271,7 @@
 
 - name: upgrade_lc_store_to_electra#electra
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientStore(
   spec: |
     <spec fn="upgrade_lc_store_to_electra" fork="electra" hash="e9096017">
@@ -12313,7 +12313,7 @@
 
 - name: upgrade_lc_update_to_capella#capella
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientUpdate(
   spec: |
     <spec fn="upgrade_lc_update_to_capella" fork="capella" hash="ba863d2f">
@@ -12331,7 +12331,7 @@
 
 - name: upgrade_lc_update_to_deneb#deneb
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientUpdate(
   spec: |
     <spec fn="upgrade_lc_update_to_deneb" fork="deneb" hash="64adb1e0">
@@ -12349,7 +12349,7 @@
 
 - name: upgrade_lc_update_to_electra#electra
   sources:
-    - file: packages/light-client/src/spec/utils.ts
+    - file: packages/state-transition/src/lightClient/spec/utils.ts
       search: export function upgradeLightClientUpdate(
   spec: |
     <spec fn="upgrade_lc_update_to_electra" fork="electra" hash="4d42b63e">
@@ -13203,7 +13203,7 @@
 
 - name: validate_light_client_update#altair
   sources:
-    - file: packages/light-client/src/spec/validateLightClientUpdate.ts
+    - file: packages/state-transition/src/lightClient/spec/validateLightClientUpdate.ts
       search: export function validateLightClientUpdate(
   spec: |
     <spec fn="validate_light_client_update" fork="altair" hash="eb5d169b">
