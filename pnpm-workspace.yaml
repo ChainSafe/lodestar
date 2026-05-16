@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": "0.1.2-rc.1"
+  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#bd458b40fb01db6e93cf911cc76839741ec14b72"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
@@ -25,6 +25,7 @@ allowBuilds:
   "@swc/core": true
   aws-sdk: true
   "@vekexasia/bigint-buffer2": true
+  "@chainsafe/lodestar-z": true
   classic-level: true
   core-js: true
   cpu-features: true
@@ -41,3 +42,4 @@ overrides:
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"
   nan: "^2.19.0"
+  "@chainsafe/lodestar-z": "link:../lodestar-z"

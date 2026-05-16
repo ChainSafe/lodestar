@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@chainsafe/lodestar-z':
-      specifier: 0.1.2-rc.1
-      version: 0.1.2-rc.1
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -27,6 +24,7 @@ overrides:
   elliptic: '>=6.6.1'
   loupe: ^2.3.6
   nan: ^2.19.0
+  '@chainsafe/lodestar-z': link:../lodestar-z
 
 importers:
 
@@ -206,8 +204,8 @@ importers:
         specifier: ^2.0.1
         version: 2.0.1
       '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 0.1.2-rc.1
+        specifier: link:../../../lodestar-z
+        version: link:../../../lodestar-z
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -417,8 +415,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 0.1.2-rc.1
+        specifier: link:../../../lodestar-z
+        version: link:../../../lodestar-z
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -593,8 +591,8 @@ importers:
   packages/era:
     dependencies:
       '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 0.1.2-rc.1
+        specifier: link:../../../lodestar-z
+        version: link:../../../lodestar-z
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -760,8 +758,8 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
       '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 0.1.2-rc.1
+        specifier: link:../../../lodestar-z
+        version: link:../../../lodestar-z
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -803,8 +801,8 @@ importers:
         specifier: ^3.1.0
         version: 3.1.0
       '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 0.1.2-rc.1
+        specifier: link:../../../lodestar-z
+        version: link:../../../lodestar-z
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -874,8 +872,8 @@ importers:
   packages/validator:
     dependencies:
       '@chainsafe/lodestar-z':
-        specifier: 'catalog:'
-        version: 0.1.2-rc.1
+        specifier: link:../../../lodestar-z
+        version: link:../../../lodestar-z
       '@chainsafe/ssz':
         specifier: ^1.4.0
         version: 1.4.0
@@ -1275,37 +1273,6 @@ packages:
     resolution: {integrity: sha512-vXpS0MOC97z019X9Vxjr1pAPaKk97Jc4AC9G1IKnx3fhL+1utZOHeKf6MHd75QXcJgVyUDmL56LSLrUrcrN25g==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2-rc.1':
-    resolution: {integrity: sha512-7qIyAUQqvIf6buKjn+udKfewvUk2rQOBVJnGoBBqESAgUwl0cqBswsJCHHynZAnX2ke6zyC0u5TIirWjWI5t8Q==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2-rc.1':
-    resolution: {integrity: sha512-xUNg1RZGh0JBtrxq4bEZv3VpWDwcE8i/rzVObCco9WKxkKr+dpi2vMhgKZadFceOFhlI2KW3Bf993SDp0V9OZQ==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2-rc.1':
-    resolution: {integrity: sha512-wkBOzzOv+1SZhMfmgl2q5RbHOL05VCdRM1YZJDengVvOUrr9ZBur2rtQ9NPrXNNIZn2CP41SzrAST7RRd34Hog==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2-rc.1':
-    resolution: {integrity: sha512-gMYO9k4A5VG7WfrsV+oLwMduiVI7/34DqDFttTnBhYK7lHeEzOc3A0UeMMZpryoLW5DDoeKF2Xir6nUwsL5kIA==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2-rc.1':
-    resolution: {integrity: sha512-SyL32gkE8qKqxmBNTY896Hl25J2sqZSl/+3uLPRPpvXwgNXFNBlm4KqjPc6hHWvTK5futxWuge9lP7WtaAuuOQ==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/lodestar-z@0.1.2-rc.1':
-    resolution: {integrity: sha512-EuO4hSk5gE/SnCp2vZ0G/hpIvnzM6J235bly2I1UaatwL7WBBowsXcmhmUyNutBifFl0p94prQ//OQvQiEQV1w==}
-
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
@@ -1441,10 +1408,6 @@ packages:
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
-
-  '@chainsafe/zapi@2.0.0':
-    resolution: {integrity: sha512-5HXO76Ep4tYU5NngsBSgE5t/xMQQZnap+Q9PKDXOa1Oe3VaP0hU2+visNlaxW7RrVK1plF0cGMIamLubpNdefw==}
-    hasBin: true
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -6959,31 +6922,6 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.1
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.1
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2-rc.1':
-    optional: true
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2-rc.1':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2-rc.1':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2-rc.1':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2-rc.1':
-    optional: true
-
-  '@chainsafe/lodestar-z@0.1.2-rc.1':
-    dependencies:
-      '@chainsafe/zapi': 2.0.0
-    optionalDependencies:
-      '@chainsafe/lodestar-z-aarch64-apple-darwin': 0.1.2-rc.1
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 0.1.2-rc.1
-      '@chainsafe/lodestar-z-x86_64-apple-darwin': 0.1.2-rc.1
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 0.1.2-rc.1
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 0.1.2-rc.1
-
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
@@ -7087,8 +7025,6 @@ snapshots:
       tiny-worker: 2.3.0
     transitivePeerDependencies:
       - supports-color
-
-  '@chainsafe/zapi@2.0.0': {}
 
   '@colors/colors@1.5.0': {}
 
