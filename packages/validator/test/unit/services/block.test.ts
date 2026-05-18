@@ -8,6 +8,7 @@ import {ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";
+import {BlockDutiesService} from "../../../src/services/blockDuties.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
@@ -54,7 +55,8 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
+    const dutiesService = new BlockDutiesService(config, loggerVc, api, clock, validatorStore, null);
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: false,
     });
@@ -127,7 +129,8 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
+    const dutiesService = new BlockDutiesService(config, loggerVc, api, clock, validatorStore, null);
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: true,
     });
