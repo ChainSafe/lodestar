@@ -6963,8 +6963,8 @@
 
 - name: is_pending_validator#gloas
   sources:
-    - file: packages/state-transition/src/block/processDepositRequest.ts
-      search: export function getPendingValidatorPubkeys
+    - file: packages/state-transition/src/util/pendingDepositsLookup.ts
+      search: "hasPendingValidator(config: BeaconConfig, pubkeyHex: PubkeyHex): boolean {"
   spec: |
     <spec fn="is_pending_validator" fork="gloas" hash="9b409bab">
     def is_pending_validator(state: BeaconState, pubkey: BLSPubkey) -> bool:
