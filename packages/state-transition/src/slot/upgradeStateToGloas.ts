@@ -108,48 +108,38 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
       continue;
     }
 
-    // Top up a builder created in a previous iteration; no `is_pending_validator` check
-    // since the new builder could only have been created after that check returned false.
-    if (builderPubkeys.has(pubkeyHex)) {
-      applyDepositForBuilder(
-        state,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        deposit.signature,
-        deposit.slot
-      );
-      continue;
-    }
-
-    // Builder-credential deposit for a pubkey not yet seen as a builder. Defer to the
-    // pending queue if a valid validator deposit for this pubkey is already pending;
-    // otherwise create/top up the builder.
-    if (isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
+    // `applyDepositForBuilder` can mutate the state and add a builder to the registry, so
+    // the set of builder pubkeys must be recomputed each iteration. `builderPubkeys` stands
+    // in for the spec's `[b.pubkey for b in state.builders]`: `state.builders` starts empty
+    // at the fork, so every builder is one added in a previous iteration of this loop.
+    if (!builderPubkeys.has(pubkeyHex)) {
+      // Deposits for non-builders stay in the pending queue. If there is a valid pending
+      // deposit for a new validator with this pubkey, keep this deposit in the pending
+      // queue to be applied to that validator later.
+      if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
+        pendingDeposits.push(deposit);
+        pendingDepositsLookup.add(deposit, pubkeyHex);
+        continue;
+      }
       if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
         pendingDeposits.push(deposit);
         pendingDepositsLookup.add(deposit, pubkeyHex);
         continue;
       }
-
-      const buildersLenBefore = state.builders.length;
-      applyDepositForBuilder(
-        state,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        deposit.signature,
-        deposit.slot
-      );
-      if (state.builders.length > buildersLenBefore) {
-        builderPubkeys.add(pubkeyHex);
-      }
-      continue;
     }
 
-    // Validator-credential deposit for a new pubkey: keep it in the pending queue.
-    pendingDeposits.push(deposit);
-    pendingDepositsLookup.add(deposit, pubkeyHex);
+    const buildersLenBefore = state.builders.length;
+    applyDepositForBuilder(
+      state,
+      deposit.pubkey,
+      deposit.withdrawalCredentials,
+      deposit.amount,
+      deposit.signature,
+      deposit.slot
+    );
+    if (state.builders.length > buildersLenBefore) {
+      builderPubkeys.add(pubkeyHex);
+    }
   }
 
   state.pendingDeposits = pendingDeposits;
