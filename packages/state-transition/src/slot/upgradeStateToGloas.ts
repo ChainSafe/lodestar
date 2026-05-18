@@ -129,6 +129,8 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     }
 
     const buildersLenBefore = state.builders.length;
+    // TODO GLOAS: handle 20k 1ETH deposits on time
+    // there is a note in the spec https://github.com/ethereum/consensus-specs/pull/5227
     applyDepositForBuilder(
       state,
       deposit.pubkey,
