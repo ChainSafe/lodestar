@@ -84,6 +84,9 @@ export const defaultSkipOpts: SkipOpts = {
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
+    // TODOGLOAS: re-enable after upgrading to v1.7.0-alpha.8
+    // (which includes #5254). https://github.com/ethereum/consensus-specs/pull/5254
+    /^gloas\/fork\/fork\/pyspec_tests\/fork_invalid_validator_deposit_followed_by_builder_credentials$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["fast_confirmation", "networking"],

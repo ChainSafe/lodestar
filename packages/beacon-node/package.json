@@ -139,7 +139,6 @@
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",
     "@lodestar/fork-choice": "workspace:^",
-    "@lodestar/light-client": "workspace:^",
     "@lodestar/logger": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/reqresp": "workspace:^",
