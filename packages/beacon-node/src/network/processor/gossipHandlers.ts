@@ -1237,6 +1237,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
+
+      chain.proposerPreferencesPool.add(signedProposerPreferences);
+      chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+        version: ForkName.gloas,
+        data: signedProposerPreferences,
+      });
     },
   };
 }
