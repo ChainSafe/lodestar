@@ -167,6 +167,7 @@ const supportedSszRestEndpoints = [
   "POST /engine/v2/forkchoice",
   "POST /engine/v3/forkchoice",
   "POST /engine/v4/forkchoice",
+  "POST /engine/v1/blobs",
   "POST /engine/v2/blobs",
   "POST /engine/v1/client/version",
 ];
@@ -802,9 +803,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
             return null;
           }
           if (version === 1) {
-            // Spec v1 returns only the blobs that were found (potentially shorter
-            // than the request). Pad with nulls so the result aligns with the
-            // request indices, matching the JSON-RPC v1 contract.
+            // Spec v1 returns a flat list of found blobs with no per-element
+            // nullability — potentially shorter than the request. Map missing
+            // slots to null to keep the result indexable by request position
+            // (matches the JSON-RPC v1 contract). This assumes ELs return
+            // results in request order with trailing missing entries.
             const found = decodeGetBlobsV1Response(resp);
             return versionedHashes.map((_, i) => found[i] ?? null);
           }

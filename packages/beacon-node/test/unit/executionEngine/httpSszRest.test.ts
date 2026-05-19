@@ -175,7 +175,7 @@ describe("ExecutionEngine / SSZ-REST", () => {
     expect(jsonRpcNewPayloadRequests).toBe(0);
   });
 
-  it("uses JSON-RPC for getBlobsV1 because SSZ v1 cannot preserve null positions", async () => {
+  it("pads SSZ getBlobsV1 response with null when the EL returns fewer blobs than requested", async () => {
     let sszGetBlobsRequests = 0;
     let jsonRpcGetBlobsRequests = 0;
 
@@ -192,7 +192,10 @@ describe("ExecutionEngine / SSZ-REST", () => {
         sszRoutes: {
           "/engine/v1/blobs": async (_req, reply) => {
             sszGetBlobsRequests++;
-            reply.code(500).send("SSZ getBlobsV1 endpoint should not be called");
+            // Spec v1 has no per-element nullability; we return an empty list
+            // to simulate "no blobs found" and rely on the http.ts path to pad
+            // back up to the request length.
+            sendSsz(reply, emptyGetBlobsV1Response());
           },
         },
       },
@@ -202,8 +205,8 @@ describe("ExecutionEngine / SSZ-REST", () => {
     const response = await executionEngine.getBlobs(ForkName.deneb, [new Uint8Array(32)]);
 
     expect(response).toEqual([null]);
-    expect(sszGetBlobsRequests).toBe(0);
-    expect(jsonRpcGetBlobsRequests).toBe(1);
+    expect(sszGetBlobsRequests).toBe(1);
+    expect(jsonRpcGetBlobsRequests).toBe(0);
   });
 
   it("serializes SSZ newPayload and forkchoiceUpdated through the Engine queue", async () => {
@@ -328,6 +331,18 @@ function validForkchoiceUpdatedResponse(): Uint8Array {
     },
     payloadId: [],
   });
+}
+
+const Bytes48 = new ByteVectorType(48);
+const BlobBytes = new ByteVectorType(131072);
+const BlobAndProofV1 = new ContainerType({blob: BlobBytes, proof: Bytes48}, {typeName: "BlobAndProofV1"});
+const GetBlobsV1Response = new ContainerType(
+  {blobsAndProofs: new ListCompositeType(BlobAndProofV1, 128)},
+  {typeName: "GetBlobsV1Response"}
+);
+
+function emptyGetBlobsV1Response(): Uint8Array {
+  return GetBlobsV1Response.serialize({blobsAndProofs: []});
 }
 
 function sendSsz(reply: FastifyReply, data: Uint8Array): void {
