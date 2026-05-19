@@ -60,7 +60,6 @@ describe("Forkchoice", () => {
         epoch: genesisEpoch,
         root: fromHexString(finalizedRoot),
         rootHex: finalizedRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances: new Uint16Array([32]),
       totalBalance: 32,
@@ -70,7 +69,6 @@ describe("Forkchoice", () => {
         epoch: genesisEpoch,
         root: fromHexString(finalizedRoot),
         rootHex: finalizedRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances: new Uint16Array([32]),
     },
@@ -78,13 +76,11 @@ describe("Forkchoice", () => {
       epoch: genesisEpoch,
       root: fromHexString(finalizedRoot),
       rootHex: finalizedRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     unrealizedFinalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(finalizedRoot),
       rootHex: finalizedRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
@@ -93,19 +89,16 @@ describe("Forkchoice", () => {
       epoch: genesisEpoch,
       root: fromHexString(finalizedRoot),
       rootHex: finalizedRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     currentEpochObservedJustifiedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(finalizedRoot),
       rootHex: finalizedRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     previousEpochGreatestUnrealizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(finalizedRoot),
       rootHex: finalizedRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     previousEpochObservedJustifiedBalances: new Uint16Array([32]),
     currentEpochObservedJustifiedBalances: new Uint16Array([32]),
@@ -188,8 +181,6 @@ describe("Forkchoice", () => {
       finalizedCheckpoint,
       new Uint16Array([32]),
       () => new Uint16Array([32]),
-      PayloadStatus.FULL,
-      PayloadStatus.FULL,
       () => null
     );
 

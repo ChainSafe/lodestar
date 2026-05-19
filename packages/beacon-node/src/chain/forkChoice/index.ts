@@ -9,7 +9,6 @@ import {
   ProtoArray,
   ProtoBlock,
   ForkChoiceOpts as RawForkChoiceOpts,
-  getCheckpointPayloadStatus,
 } from "@lodestar/fork-choice";
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {
@@ -109,9 +108,6 @@ export function initializeForkChoiceFromFinalizedState(
 
   const isForkPostGloas = computeEpochAtSlot(state.slot) >= config.GLOAS_FORK_EPOCH;
 
-  const justifiedPayloadStatus = getCheckpointPayloadStatus(config, state, justifiedCheckpoint.epoch);
-  const finalizedPayloadStatus = getCheckpointPayloadStatus(config, state, finalizedCheckpoint.epoch);
-
   return new forkchoiceConstructor(
     config,
 
@@ -121,8 +117,6 @@ export function initializeForkChoiceFromFinalizedState(
       finalizedCheckpoint,
       justifiedBalances,
       justifiedBalancesGetter,
-      justifiedPayloadStatus,
-      finalizedPayloadStatus,
       stateGetter,
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
@@ -208,17 +202,12 @@ export function initializeForkChoiceFromUnfinalizedState(
 
   const isForkPostGloas = computeEpochAtSlot(unfinalizedState.slot) >= config.GLOAS_FORK_EPOCH;
 
-  const justifiedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, justifiedCheckpoint.epoch);
-  const finalizedPayloadStatus = getCheckpointPayloadStatus(config, unfinalizedState, finalizedCheckpoint.epoch);
-
   const store = new ForkChoiceStore(
     currentSlot,
     justifiedCheckpoint,
     finalizedCheckpoint,
     justifiedBalances,
     justifiedBalancesGetter,
-    justifiedPayloadStatus,
-    finalizedPayloadStatus,
     stateGetter,
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),

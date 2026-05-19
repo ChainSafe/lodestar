@@ -9,7 +9,7 @@ import {
   ProtoNode,
 } from "../protoArray/interface.js";
 import {UpdateAndGetHeadOpt} from "./forkChoice.js";
-import {CheckpointWithHex, CheckpointWithPayloadStatus} from "./store.js";
+import {CheckpointWithHex} from "./store.js";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -21,12 +21,12 @@ export type CheckpointsWithHex = {
   finalizedCheckpoint: CheckpointWithHex;
 };
 
-export type CheckpointWithPayloadAndBalance = {
-  checkpoint: CheckpointWithPayloadStatus;
+export type CheckpointWithBalance = {
+  checkpoint: CheckpointWithHex;
   balances: EffectiveBalanceIncrements;
 };
 
-export type CheckpointWithPayloadAndTotalBalance = CheckpointWithPayloadAndBalance & {
+export type CheckpointWithTotalBalance = CheckpointWithBalance & {
   totalBalance: number;
 };
 
@@ -123,8 +123,8 @@ export interface IForkChoice {
    * Retrieve all nodes for the debug API.
    */
   getAllNodes(): ProtoNode[];
-  getFinalizedCheckpoint(): CheckpointWithPayloadStatus;
-  getJustifiedCheckpoint(): CheckpointWithPayloadStatus;
+  getFinalizedCheckpoint(): CheckpointWithHex;
+  getJustifiedCheckpoint(): CheckpointWithHex;
   /**
    * Add `block` to the fork choice DAG.
    *

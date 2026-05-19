@@ -9,8 +9,8 @@ import {
 } from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
-import {ExecutionStatus, PayloadStatus, ProtoBlock} from "../../protoArray/interface.ts";
-import {CheckpointWithPayloadStatus, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
+import {ExecutionStatus, ProtoBlock} from "../../protoArray/interface.ts";
+import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
 import {
   FastConfirmationBalanceSource,
   FastConfirmationCache,
@@ -20,10 +20,6 @@ import {
 } from "./types.ts";
 
 const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR = 5;
-
-function getPayloadStatusForRoot(ctx: FastConfirmationContext, rootHex: RootHex): PayloadStatus {
-  return ctx.getBlock(rootHex)?.payloadStatus ?? PayloadStatus.FULL;
-}
 
 export function getBlock(ctx: FastConfirmationContext, cache: FastConfirmationCache, root: RootHex): ProtoBlock | null {
   if (cache.blockByRoot.has(root)) {
@@ -38,14 +34,13 @@ export function getUnrealizedJustification(
   ctx: FastConfirmationContext,
   cache: FastConfirmationCache,
   blockRoot: RootHex
-): CheckpointWithPayloadStatus | null {
+): CheckpointWithHex | null {
   const block = getBlock(ctx, cache, blockRoot);
   if (!block) return null;
   return {
     epoch: block.unrealizedJustifiedEpoch,
     root: fromHex(block.unrealizedJustifiedRoot),
     rootHex: block.unrealizedJustifiedRoot,
-    payloadStatus: getPayloadStatusForRoot(ctx, block.unrealizedJustifiedRoot),
   };
 }
 
@@ -53,25 +48,25 @@ export function getVotingSource(
   ctx: FastConfirmationContext,
   cache: FastConfirmationCache,
   blockRoot: RootHex
-): CheckpointWithPayloadStatus | null {
+): CheckpointWithHex | null {
   const block = getBlock(ctx, cache, blockRoot);
   if (!block) return null;
   const currentEpoch = computeEpochAtSlot(ctx.getCurrentSlot());
   const isFromPrevEpoch = computeEpochAtSlot(block.slot) < currentEpoch;
   const epoch = isFromPrevEpoch ? block.unrealizedJustifiedEpoch : block.justifiedEpoch;
   const rootHex = isFromPrevEpoch ? block.unrealizedJustifiedRoot : block.justifiedRoot;
-  return {epoch, root: fromHex(rootHex), rootHex, payloadStatus: getPayloadStatusForRoot(ctx, rootHex)};
+  return {epoch, root: fromHex(rootHex), rootHex};
 }
 
 export function getCheckpointForBlock(
   ctx: FastConfirmationContext,
   blockRoot: RootHex,
   epoch: Epoch
-): CheckpointWithPayloadStatus | null {
+): CheckpointWithHex | null {
   try {
     const epochStartSlot = computeStartSlotAtEpoch(epoch);
     const rootHex = ctx.getAncestor(blockRoot, epochStartSlot);
-    return {epoch, root: fromHex(rootHex), rootHex, payloadStatus: getPayloadStatusForRoot(ctx, rootHex)};
+    return {epoch, root: fromHex(rootHex), rootHex};
   } catch {
     return null;
   }
@@ -161,9 +156,9 @@ export function getPulledUpHeadState(
 export function getCheckpointState(
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
-  checkpoint: CheckpointWithPayloadStatus
+  checkpoint: CheckpointWithHex
 ): IBeaconStateView | null {
-  const key = `${checkpoint.epoch}:${checkpoint.rootHex}:${checkpoint.payloadStatus}`;
+  const key = `${checkpoint.epoch}:${checkpoint.rootHex}`;
   if (cache.checkpointStateByKey.has(key)) {
     return cache.checkpointStateByKey.get(key) ?? null;
   }
@@ -645,7 +640,7 @@ export function isOneConfirmed(
   return isConfirmed;
 }
 
-export function getCurrentTarget(ctx: FastConfirmationContext): CheckpointWithPayloadStatus | null {
+export function getCurrentTarget(ctx: FastConfirmationContext): CheckpointWithHex | null {
   const head = ctx.getHead().blockRoot;
   const currentEpoch = computeEpochAtSlot(ctx.getCurrentSlot());
   return getCheckpointForBlock(ctx, head, currentEpoch);
