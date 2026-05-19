@@ -6,6 +6,7 @@ import {
   ForkPreElectra,
   MAX_PAYLOAD_ATTESTATIONS,
   PTC_SIZE,
+  SLOTS_PER_EPOCH,
   isForkPostElectra,
 } from "@lodestar/params";
 import {
@@ -46,7 +47,12 @@ const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecut
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
 const PayloadAttestationListType = ArrayOf(ssz.gloas.PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS);
 const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
-const SignedProposerPreferencesListType = ArrayOf(ssz.gloas.SignedProposerPreferences);
+// 2 * SLOTS_PER_EPOCH max normally; getAll() may return up to 3 * SLOTS_PER_EPOCH during non-finality
+const MAX_PROPOSER_PREFERENCES_PER_REQUEST = 3 * SLOTS_PER_EPOCH;
+const SignedProposerPreferencesListType = ArrayOf(
+  ssz.gloas.SignedProposerPreferences,
+  MAX_PROPOSER_PREFERENCES_PER_REQUEST
+);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
