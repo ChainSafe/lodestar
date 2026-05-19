@@ -160,7 +160,6 @@ const supportedSszRestEndpoints = [
   "POST /engine/v2/forkchoice",
   "POST /engine/v3/forkchoice",
   "POST /engine/v4/forkchoice",
-  "POST /engine/v1/blobs",
   "POST /engine/v2/blobs",
 ];
 

@@ -175,6 +175,37 @@ describe("ExecutionEngine / SSZ-REST", () => {
     expect(jsonRpcNewPayloadRequests).toBe(0);
   });
 
+  it("uses JSON-RPC for getBlobsV1 because SSZ v1 cannot preserve null positions", async () => {
+    let sszGetBlobsRequests = 0;
+    let jsonRpcGetBlobsRequests = 0;
+
+    const executionEngine = await startExecutionEngine(
+      {
+        capabilities: ["POST /engine/v1/blobs"],
+        async onJsonRpc(payload) {
+          if (payload.method === "engine_getBlobsV1") {
+            jsonRpcGetBlobsRequests++;
+            return [null];
+          }
+          return [];
+        },
+        sszRoutes: {
+          "/engine/v1/blobs": async (_req, reply) => {
+            sszGetBlobsRequests++;
+            reply.code(500).send("SSZ getBlobsV1 endpoint should not be called");
+          },
+        },
+      },
+      afterCallbacks
+    );
+
+    const response = await executionEngine.getBlobs(ForkName.deneb, [new Uint8Array(32)]);
+
+    expect(response).toEqual([null]);
+    expect(sszGetBlobsRequests).toBe(0);
+    expect(jsonRpcGetBlobsRequests).toBe(1);
+  });
+
   it("serializes SSZ newPayload and forkchoiceUpdated through the Engine queue", async () => {
     const events: string[] = [];
     let releaseNewPayload = (): void => {
