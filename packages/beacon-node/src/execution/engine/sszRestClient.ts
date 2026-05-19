@@ -1,4 +1,4 @@
-import {fetch, isFetchError} from "@lodestar/utils";
+import {fetch, fromHex, isFetchError} from "@lodestar/utils";
 import {JwtClaim, encodeJwtToken} from "./jwt.js";
 import {HTTP_CONNECTION_ERROR_CODES, HTTP_FATAL_ERROR_CODES} from "./utils.js";
 
@@ -68,7 +68,7 @@ export class SszRestClient {
   constructor(opts: SszRestClientOpts) {
     // Strip trailing slash for consistent path joining
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
-    this.jwtSecret = opts.jwtSecretHex ? hexToBytes(opts.jwtSecretHex) : undefined;
+    this.jwtSecret = opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined;
     this.jwtId = opts.jwtId;
     this.jwtVersion = opts.jwtVersion;
     this.timeout = opts.timeout ?? DEFAULT_TIMEOUT;
@@ -137,14 +137,4 @@ export class SszRestClient {
       clearTimeout(timeout);
     }
   }
-}
-
-/** Convert a hex string (with or without 0x prefix) to Uint8Array */
-function hexToBytes(hex: string): Uint8Array {
-  const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  const bytes = new Uint8Array(stripped.length / 2);
-  for (let i = 0; i < bytes.length; i++) {
-    bytes[i] = parseInt(stripped.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
 }
