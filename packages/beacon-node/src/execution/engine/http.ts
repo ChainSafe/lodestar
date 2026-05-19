@@ -95,6 +95,16 @@ export type ExecutionEngineHttpOpts = {
    * Lodestar commit to be used for `ClientVersion`
    */
   commit?: string;
+  /**
+   * EIP-8161 / ethereum/execution-apis#764: opt-in to the binary SSZ-REST
+   * Engine API transport.
+   *
+   * When enabled, the CL probes each Engine call against the SSZ-REST
+   * endpoints first and falls back to JSON-RPC on network errors. Off by
+   * default until the spec stabilises and ELs we test against advertise
+   * support consistently.
+   */
+  sszRest?: boolean;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -189,19 +199,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.logger = logger;
     this.metrics = metrics ?? null;
 
-    // EIP-8161: Initialize SSZ-REST client using the same Engine API URL.
+    // EIP-8161: Initialize SSZ-REST client only when the flag is set.
     // SSZ-REST routes are served on the same port under /engine/* paths.
-    {
-      const engineUrl = opts?.urls?.[0] ?? "http://localhost:8551";
+    if (opts?.sszRest) {
+      const engineUrl = opts.urls?.[0] ?? "http://localhost:8551";
       const baseUrl = engineUrl.replace(/\/+$/, "");
       this.sszRestClient = new SszRestClient({
         baseUrl,
-        jwtSecretHex: opts?.jwtSecretHex,
-        jwtId: opts?.jwtId,
-        jwtVersion: opts?.jwtVersion,
-        timeout: opts?.timeout,
+        jwtSecretHex: opts.jwtSecretHex,
+        jwtId: opts.jwtId,
+        jwtVersion: opts.jwtVersion,
+        timeout: opts.timeout,
       });
       this.logger.info("SSZ-REST Engine API transport enabled (EIP-8161)", {url: baseUrl});
+    } else {
+      this.sszRestClient = null;
     }
 
     this.rpc.emitter.on(JsonRpcHttpClientEvent.ERROR, ({error}) => {

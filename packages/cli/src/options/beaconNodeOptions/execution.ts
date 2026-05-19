@@ -9,6 +9,7 @@ export type ExecutionEngineArgs = {
   "execution.retries": number;
   "execution.retryDelay": number;
   "execution.engineMock"?: boolean;
+  "execution.sszRest"?: boolean;
   jwtSecret?: string;
   jwtId?: string;
 };
@@ -32,6 +33,7 @@ export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["execut
      */
     jwtSecretHex: args.jwtSecret ? extractJwtHexSecret(fs.readFileSync(args.jwtSecret, "utf-8").trim()) : undefined,
     jwtId: args.jwtId,
+    sszRest: args["execution.sszRest"],
   };
 }
 
@@ -73,6 +75,14 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
     description: "Set the execution engine to mock mode (development only)",
     type: "boolean",
     hidden: false,
+    group: "execution",
+  },
+
+  "execution.sszRest": {
+    description:
+      "Enable the experimental SSZ-REST Engine API transport (EIP-8161 / ethereum/execution-apis#764). When enabled, supported Engine API calls are first attempted as binary SSZ over REST on the same Engine port, falling back to JSON-RPC on network errors. Off by default until the spec stabilises.",
+    type: "boolean",
+    hidden: true,
     group: "execution",
   },
 
