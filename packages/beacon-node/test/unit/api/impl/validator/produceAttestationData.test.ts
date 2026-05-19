@@ -4,7 +4,10 @@ import {ProtoBlock} from "@lodestar/fork-choice";
 import {toRootHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
-import {PayloadEnvelopeInput} from "../../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
+import {
+  PayloadEnvelopeInput,
+  PayloadEnvelopeInputSource,
+} from "../../../../../src/chain/blocks/payloadEnvelopeInput/index.js";
 import {ZERO_HASH_HEX} from "../../../../../src/constants/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
@@ -66,8 +69,10 @@ describe("api - validator - produceAttestationData", () => {
         slot: 0,
         blockRoot: ZERO_HASH_HEX,
       } as ProtoBlock);
+      vi.mocked(modules.chain.clock.secFromSlot).mockReturnValue(0);
       vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue({
         hasPayloadEnvelope: () => true,
+        getPayloadEnvelopeSource: () => ({source: PayloadEnvelopeInputSource.gossip, seenTimestampSec: 0}),
         hasAllData: () => true,
       } as PayloadEnvelopeInput);
 
