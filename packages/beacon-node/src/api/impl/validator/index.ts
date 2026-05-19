@@ -1136,7 +1136,7 @@ export function getValidatorApi(
       // close to the boundary `currentEpoch + 2` is serveable from the upcoming-epoch
       // checkpoint state (its `nextProposers`). Pre-Fulu / mid-epoch: `currentEpoch + 1` max.
       const isPostFulu = isForkPostFulu(config.getForkName(startSlot));
-      const maxFutureEpoch = isPostFulu && nearNextEpoch ? nextEpoch + 1 : nextEpoch;
+      const maxFutureEpoch = isPostFulu && nearNextEpoch && opts?.v2 ? nextEpoch + 1 : nextEpoch;
       if (currentEpoch >= 0 && epoch > maxFutureEpoch) {
         throw new ApiError(400, `Requested epoch ${epoch} must not be more than one epoch in the future`);
       }
