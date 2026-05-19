@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.7
+version: v1.7.0-alpha.8
 style: full
 
 specrefs:
@@ -92,6 +92,12 @@ exceptions:
 
     # capella
     - Seen#capella
+
+    # deneb
+    - Seen#deneb
+
+    # electra
+    - Seen#electra
 
     # capella
     - ExpectedWithdrawals#capella
@@ -255,6 +261,11 @@ exceptions:
     - verify_kzg_proof#deneb
     - verify_kzg_proof_batch#deneb
     - verify_kzg_proof_impl#deneb
+    - validate_beacon_aggregate_and_proof_gossip#deneb
+    - validate_beacon_attestation_gossip#deneb
+    - validate_beacon_block_gossip#deneb
+    - validate_blob_sidecar_gossip#deneb
+    - validate_voluntary_exit_gossip#deneb
 
     # electra
     - compute_fork_version#electra
@@ -274,6 +285,10 @@ exceptions:
     - is_valid_switch_to_compounding_request#electra
     - next_sync_committee_gindex_at_slot#electra
     - update_pending_partial_withdrawals#electra
+    - validate_beacon_aggregate_and_proof_gossip#electra
+    - validate_beacon_attestation_gossip#electra
+    - validate_beacon_block_gossip#electra
+    - validate_blob_sidecar_gossip#electra
 
     # fulu
     - _fft_field#fulu
@@ -334,16 +349,18 @@ exceptions:
     - get_upcoming_proposal_slots#gloas
     - get_weight#gloas
     - has_compounding_withdrawal_credential#gloas
+    - is_gas_limit_target_compatible#gloas
     - is_head_late#gloas
     - is_head_weak#gloas
     - is_parent_node_full#gloas
     - is_parent_strong#gloas
-    - is_payload_timely#gloas
     - is_supporting_vote#gloas
     - is_valid_proposal_slot#gloas
     - notify_ptc_messages#gloas
     - on_block#gloas
     - on_payload_attestation_message#gloas
+    - payload_data_availability#gloas
+    - payload_timeliness#gloas
     - prepare_execution_payload#gloas
     - process_attestation#gloas
     - process_block#gloas
@@ -355,6 +372,7 @@ exceptions:
     - process_withdrawals#gloas
     - record_block_timeliness#gloas
     - should_apply_proposer_boost#gloas
+    - should_build_on_full#gloas
     - should_extend_payload#gloas
     - update_builder_pending_withdrawals#gloas
     - update_latest_messages#gloas
@@ -366,7 +384,6 @@ exceptions:
     - get_proposer_dependent_root#gloas
 
     # gloas (new in alpha.3, not yet implemented)
-    - is_payload_data_available#gloas
     - compute_weak_subjectivity_period#gloas
     - block_to_light_client_header#gloas
     - get_lc_execution_root#gloas
