@@ -1,7 +1,6 @@
 import {PublicKey} from "@chainsafe/blst";
 import {
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
   isActiveBuilder,
@@ -9,6 +8,7 @@ import {
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -50,24 +50,45 @@ async function validateExecutionPayloadBid(
   }
 
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
-  // Moved earlier than the spec ordering so we can call `forkChoice.getAncestor` to derive
-  // the dependent root for the proposer-preferences lookup below.
-  if (!chain.forkChoice.hasBlock(bid.parentBlockRoot)) {
+  // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
+  // proposer-preferences lookup below from a known fork-choice block.
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+  if (parentBlock === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
       parentBlockRoot: parentBlockRootHex,
     });
   }
 
-  // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been seen
-  // — i.e. `proposal_slot == bid.slot` AND `dependent_root` equals the proposer-shuffling decision
-  // root for the bid's branch and epoch. Derived via fork-choice ancestor lookup: the block at the
-  // last slot of `epoch - 1` reached from `bid.parent_block_root`.
+  // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been
+  // seen — i.e. `proposal_slot == bid.slot` AND `dependent_root ==
+  // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`.
   const bidEpoch = computeEpochAtSlot(bid.slot);
-  const dependentRootHex = chain.forkChoice.getAncestor(
-    parentBlockRootHex,
-    computeStartSlotAtEpoch(bidEpoch) - 1
-  ).blockRoot;
+  // gloas is always post-Fulu, so `get_proposer_dependent_root` is the post-Fulu (deterministic
+  // proposer lookahead) form `block_root_at(start_slot(epoch - MIN_SEED_LOOKAHEAD) - 1)` with
+  // `MIN_SEED_LOOKAHEAD == 1` — identical to the attester-shuffling dependent root for the same
+  // epoch (both 1-epoch lookahead), hence `getShufflingDependentRoot`. `null` on a
+  // unknown/finalized-pruned ancestor or genesis edge → degrade to IGNORE below instead of
+  // letting a raw `ForkChoiceError` escape the `GossipActionError` contract.
+  const dependentRootHex = (() => {
+    try {
+      return getShufflingDependentRoot(chain.forkChoice, bidEpoch, computeEpochAtSlot(parentBlock.slot), parentBlock);
+    } catch {
+      return null;
+    }
+  })();
+
+  if (dependentRootHex === null) {
+    // Could not derive the dependent root for this branch (unknown/finalized-pruned ancestor,
+    // genesis edge, etc.) → definitionally no matching `SignedProposerPreferences`.
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      dependentRoot: "unknown",
+    });
+  }
+
   const proposerPreferences = chain.proposerPreferencesPool.get(bid.slot, dependentRootHex);
   if (proposerPreferences === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
