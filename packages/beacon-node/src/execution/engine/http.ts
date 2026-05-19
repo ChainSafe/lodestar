@@ -203,7 +203,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // SSZ-REST routes are served on the same port under /engine/* paths.
     if (opts?.sszRest) {
       const engineUrl = opts.urls?.[0] ?? "http://localhost:8551";
-      const baseUrl = engineUrl.replace(/\/+$/, "");
+      const baseUrl = stripTrailingSlashes(engineUrl);
       this.sszRestClient = new SszRestClient({
         baseUrl,
         jwtSecretHex: opts.jwtSecretHex,
@@ -828,6 +828,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     this.state = newState;
   }
+}
+
+// Linear-time trailing-slash strip. Avoids /\/+$/ which CodeQL flags as a
+// polynomial-backtracking regex (js/polynomial-redos).
+function stripTrailingSlashes(s: string): string {
+  let end = s.length;
+  while (end > 0 && s.charCodeAt(end - 1) === 0x2f /* '/' */) end--;
+  return end === s.length ? s : s.slice(0, end);
 }
 
 type EngineRequestKey = keyof EngineApiRpcParamTypes;

@@ -66,8 +66,8 @@ export class SszRestClient {
   private readonly timeout: number;
 
   constructor(opts: SszRestClientOpts) {
-    // Strip trailing slash for consistent path joining
-    this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
+    // Trailing slash normalisation is the caller's responsibility.
+    this.baseUrl = opts.baseUrl;
     this.jwtSecret = opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined;
     this.jwtId = opts.jwtId;
     this.jwtVersion = opts.jwtVersion;
