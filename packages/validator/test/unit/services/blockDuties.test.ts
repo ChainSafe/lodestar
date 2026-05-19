@@ -24,6 +24,13 @@ describe("BlockDutiesService", () => {
     const secretKeys = Array.from({length: 3}, (_, i) => SecretKey.fromBytes(toBufferBE(BigInt(i + 1), 32)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore = await initValidatorStore(secretKeys, api);
+
+    // Default config is pre-Fulu at the tested slots, so the v1 `getProposerDuties` path is
+    // exercised. Defensive default for the post-Fulu v2 branch so an unexpected fork config
+    // doesn't reject on an unstubbed mock.
+    api.validator.getProposerDutiesV2.mockResolvedValue(
+      mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
   });
 
   let controller: AbortController; // To stop clock

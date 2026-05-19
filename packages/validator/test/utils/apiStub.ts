@@ -29,6 +29,7 @@ export function getApiClientStub(): ApiClientStub {
     },
     validator: {
       getProposerDuties: vi.fn(),
+      getProposerDutiesV2: vi.fn(),
       getAttesterDuties: vi.fn(),
       getPtcDuties: vi.fn(),
       prepareBeaconCommitteeSubnet: vi.fn(),

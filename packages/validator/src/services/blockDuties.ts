@@ -1,5 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
+import {isForkPostFulu} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
@@ -8,11 +9,14 @@ import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc, differenceHex} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 
-/** This polls block duties 1s before the next epoch */
+/**
+ * Epoch-boundary poll offset (~1s relative to the next slot) for next-epoch proposer duties.
+ * Pre-Fulu it is applied ~1s *before* the boundary; post-Gloas the same offset is mirrored
+ * to ~1s *after* the boundary. See `pollBeaconProposersNextEpochs`.
+ */
 // TODO: change to 8333 (5/6 of slot) to do it 2s before the next epoch
 // once we have some improvement on epoch transition time
 // see https://github.com/ChainSafe/lodestar/issues/5792#issuecomment-1647457442
-// TODO GLOAS: re-evaluate timing
 const BLOCK_DUTIES_LOOKAHEAD_BPS = 9167;
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -135,23 +139,22 @@ export class BlockDutiesService {
    * However, we also have the slashing protection as a second line of defense. These two factors
    * provide an acceptable level of safety.
    *
-   * It's important to note that since there is a 0-epoch look-ahead (i.e., no look-ahead) for block
-   * proposers then it's very likely that a proposal for the first slot of the epoch will need go
-   * through the slow path every time. I.e., the proposal will only happen after we've been able to
+   * Pre-Fulu only: since proposer shuffling has a 0-epoch look-ahead (i.e., no look-ahead),
+   * it's very likely that a proposal for the first slot of the epoch will need to go through
+   * the slow path every time. I.e., the proposal will only happen after we've been able to
    * download and process the duties from the BN. This means it is very important to ensure this
    * function is as fast as possible.
    *   - Starting from Jul 2023, we poll proposers 1s before the next epoch thanks to PrepareNextSlotScheduler
    * usually finishes in 3s.
+   * Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so next-epoch
+   * duties are polled early/throughout the epoch (see `pollBeaconProposersNextEpochs`) and the
+   * first-slot-of-epoch slow-path penalty no longer applies.
    */
   private async pollBeaconProposersAndNotify(currentSlot: Slot, signal: AbortSignal): Promise<void> {
     const nextEpoch = computeEpochAtSlot(currentSlot) + 1;
-    const isLastSlotEpoch = computeStartSlotAtEpoch(nextEpoch) === currentSlot + 1;
-    if (isLastSlotEpoch) {
-      // no need to await for other steps, just poll proposers for next epoch
-      this.pollBeaconProposersNextEpoch(currentSlot, nextEpoch, signal).catch((e) => {
-        this.logger.error("Error on pollBeaconProposersNextEpoch", {}, e);
-      });
-    }
+    this.pollBeaconProposersNextEpochs(currentSlot, nextEpoch, signal).catch((e) => {
+      this.logger.error("Error on pollBeaconProposersNextEpochs", {}, e);
+    });
 
     // Notify the block proposal service for any proposals that we have in our cache.
     const initialBlockProposers = this.getblockProposersAtSlot(currentSlot);
@@ -180,16 +183,43 @@ export class BlockDutiesService {
   }
 
   /**
-   * This is to avoid some delay on the first slot of the epoch when validators have proposal duties.
+   * Pre-fulu: this is to avoid some delay on the first slot of the epoch when validators have proposal duties.
    * See https://github.com/ChainSafe/lodestar/issues/5792
+   * Post-fulu:
+   *   - if it's mid epoch, poll beacon proposers for the next epoch
+   *   - if it's end of epoch, poll proposers for nextEpoch and (next Epoch + 1)
    */
-  private async pollBeaconProposersNextEpoch(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
+  private async pollBeaconProposersNextEpochs(currentSlot: Slot, nextEpoch: Epoch, signal: AbortSignal): Promise<void> {
     const nextSlot = currentSlot + 1;
+    // `currentSlot` is the last slot of its epoch ⇒ `nextSlot` starts `nextEpoch`.
+    const isEpochBoundary = computeStartSlotAtEpoch(nextEpoch) === nextSlot;
     const lookAheadMs =
       this.config.SLOT_DURATION_MS - this.config.getSlotComponentDurationMs(BLOCK_DUTIES_LOOKAHEAD_BPS);
+    const fork = this.config.getForkName(nextSlot);
+
+    if (isForkPostFulu(fork)) {
+      if (isEpochBoundary) {
+        // Sleep until ~lookAheadMs after the next slot starts so the BN clock is in
+        // `nextEpoch` and `nextEpoch + 1` is servable (= the new `currentEpoch + 1`).
+        await sleep(this.clock.msToSlot(nextSlot) + lookAheadMs, signal);
+        this.logger.debug("Polling proposers for the next 2 epochs", {nextEpoch, currentSlot});
+        await this.pollBeaconProposers(nextEpoch);
+        await this.pollBeaconProposers(nextEpoch + 1);
+        return;
+      }
+
+      this.logger.debug("Polling proposers for the next epoch", {nextEpoch, currentSlot});
+      await this.pollBeaconProposers(nextEpoch);
+      return;
+    }
+
+    // Pre-Fulu: 0-epoch lookahead — only the last slot of the epoch matters. Sleep until
+    // ~1s before the boundary, then poll the next epoch once.
+    if (!isEpochBoundary) {
+      return;
+    }
     await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
-    this.logger.debug("Polling proposers for next epoch", {nextEpoch, nextSlot});
-    // Poll proposers for the next epoch
+    this.logger.debug("Polling proposers for the next epoch", {nextEpoch, currentSlot});
     await this.pollBeaconProposers(nextEpoch);
   }
 
@@ -199,7 +229,10 @@ export class BlockDutiesService {
       return;
     }
 
-    const res = await this.api.validator.getProposerDuties({epoch});
+    // Post-Fulu the proposer dependent root changed (deterministic proposer lookahead)
+    const res = isForkPostFulu(this.config.getForkName(computeStartSlotAtEpoch(epoch)))
+      ? await this.api.validator.getProposerDutiesV2({epoch})
+      : await this.api.validator.getProposerDuties({epoch});
     const proposerDuties = res.value();
     const {dependentRoot} = res.meta();
     const relevantDuties = proposerDuties.filter((duty) => {
