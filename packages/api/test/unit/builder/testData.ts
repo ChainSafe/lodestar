@@ -1,5 +1,5 @@
 import {fromHexString} from "@chainsafe/ssz";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {Endpoints} from "../../../src/builder/routes.js";
 import {GenericServerTestCases} from "../../utils/genericServerTest.js";
@@ -7,6 +7,8 @@ import {GenericServerTestCases} from "../../utils/genericServerTest.js";
 // randomly pregenerated pubkey
 const pubkeyRand = "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576";
 const root = new Uint8Array(32).fill(1);
+const signedBlindedBeaconBlockFulu = ssz.fulu.SignedBlindedBeaconBlock.defaultValue();
+signedBlindedBeaconBlockFulu.message.slot = SLOTS_PER_EPOCH;
 
 export const testData: GenericServerTestCases<Endpoints> = {
   status: {
@@ -19,14 +21,14 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   getHeader: {
     args: {slot: 1, parentHash: root, proposerPubkey: fromHexString(pubkeyRand)},
-    res: {data: ssz.electra.SignedBuilderBid.defaultValue(), meta: {version: ForkName.electra}},
+    res: {data: ssz.bellatrix.SignedBuilderBid.defaultValue(), meta: {version: ForkName.bellatrix}},
   },
   submitBlindedBlock: {
-    args: {signedBlindedBlock: {data: ssz.electra.SignedBlindedBeaconBlock.defaultValue()}},
-    res: {data: ssz.deneb.ExecutionPayloadAndBlobsBundle.defaultValue(), meta: {version: ForkName.electra}},
+    args: {signedBlindedBlock: {data: ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue()}},
+    res: {data: ssz.bellatrix.ExecutionPayload.defaultValue(), meta: {version: ForkName.bellatrix}},
   },
   submitBlindedBlockV2: {
-    args: {signedBlindedBlock: {data: ssz.fulu.SignedBlindedBeaconBlock.defaultValue()}},
+    args: {signedBlindedBlock: {data: signedBlindedBeaconBlockFulu}},
     res: undefined,
   },
 };

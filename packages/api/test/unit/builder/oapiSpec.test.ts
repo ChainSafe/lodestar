@@ -20,7 +20,17 @@ const openApiFile: OpenApiFile = {
   version: RegExp(/.*/),
 };
 
-const definitions = getDefinitions(createChainForkConfig({...defaultChainConfig, ELECTRA_FORK_EPOCH: 0}));
+const definitions = getDefinitions(
+  createChainForkConfig({
+    ...defaultChainConfig,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: Infinity,
+    DENEB_FORK_EPOCH: Infinity,
+    ELECTRA_FORK_EPOCH: Infinity,
+    FULU_FORK_EPOCH: Infinity,
+    GLOAS_FORK_EPOCH: Infinity,
+  })
+);
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testData);
