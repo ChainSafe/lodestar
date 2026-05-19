@@ -925,7 +925,7 @@ export function getValidatorApi(
       metrics?.blockProductionRequests.inc({source});
 
       const graffitiBytes = toGraffitiBytes(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
+        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
       );
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
         slot,
