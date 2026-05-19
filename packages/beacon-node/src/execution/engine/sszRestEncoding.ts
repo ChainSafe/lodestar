@@ -7,6 +7,7 @@ import {
   ForkSeq,
   MAX_BLOB_COMMITMENTS_PER_BLOCK,
   MAX_BYTES_PER_TRANSACTION,
+  MAX_TRANSACTIONS_PER_PAYLOAD,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
@@ -250,6 +251,35 @@ const GetBlobsV2Response = new ContainerType(
 );
 
 // ---------------------------------------------------------------------------
+// Payload bodies (Shanghai)
+// ---------------------------------------------------------------------------
+
+const MAX_PAYLOAD_BODIES_REQUEST = 32;
+const TransactionsList = new ListCompositeType(TransactionBytes, MAX_TRANSACTIONS_PER_PAYLOAD);
+
+const ExecutionPayloadBodyV1Container = new ContainerType(
+  {transactions: TransactionsList, withdrawals: ssz.capella.Withdrawals},
+  {typeName: "ExecutionPayloadBodyV1"}
+);
+// Nullable wrapper: 0 elements = unknown block, 1 element = known block.
+const ExecutionPayloadBodyV1Optional = new ListCompositeType(ExecutionPayloadBodyV1Container, 1);
+
+const PayloadBodiesV1Response = new ContainerType(
+  {payloadBodies: new ListCompositeType(ExecutionPayloadBodyV1Optional, MAX_PAYLOAD_BODIES_REQUEST)},
+  {typeName: "PayloadBodiesV1Response"}
+);
+
+const GetPayloadBodiesByHashV1Request = new ContainerType(
+  {blockHashes: new ListCompositeType(Bytes32, MAX_PAYLOAD_BODIES_REQUEST)},
+  {typeName: "GetPayloadBodiesByHashV1Request"}
+);
+
+const GetPayloadBodiesByRangeV1Request = new ContainerType(
+  {start: ssz.UintNum64, count: ssz.UintNum64},
+  {typeName: "GetPayloadBodiesByRangeV1Request"}
+);
+
+// ---------------------------------------------------------------------------
 // Fork → version mapping
 // ---------------------------------------------------------------------------
 
@@ -474,6 +504,14 @@ export function encodeGetBlobsRequest(versionedHashes: VersionedHashes): Uint8Ar
   return GetBlobsRequest.serialize({blobVersionedHashes: versionedHashes});
 }
 
+export function encodeGetPayloadBodiesByHashRequest(blockHashes: Uint8Array[]): Uint8Array {
+  return GetPayloadBodiesByHashV1Request.serialize({blockHashes});
+}
+
+export function encodeGetPayloadBodiesByRangeRequest(start: number, count: number): Uint8Array {
+  return GetPayloadBodiesByRangeV1Request.serialize({start, count});
+}
+
 export function encodeExchangeCapabilities(capabilities: string[]): Uint8Array {
   const encoder = new TextEncoder();
   return ExchangeCapabilitiesContainer.serialize({
@@ -605,6 +643,24 @@ export function decodeGetBlobsV1Response(data: Uint8Array): BlobAndProof[] {
 export function decodeGetBlobsV2Response(data: Uint8Array): BlobAndProofV2[] {
   const parsed = GetBlobsV2Response.deserialize(data);
   return parsed.blobsAndProofs.map((item) => ({blob: item.blob, proofs: item.proofs}));
+}
+
+export interface DecodedExecutionPayloadBody {
+  transactions: Uint8Array[];
+  withdrawals: import("@lodestar/types").capella.Withdrawals;
+}
+
+/**
+ * Spec PayloadBodiesV1Response wraps each entry in List[Body, 1] for per-element
+ * nullability: 0 elements = unknown block, 1 element = known block.
+ */
+export function decodePayloadBodiesV1Response(data: Uint8Array): (DecodedExecutionPayloadBody | null)[] {
+  const parsed = PayloadBodiesV1Response.deserialize(data);
+  return parsed.payloadBodies.map((wrapper) => {
+    if (wrapper.length === 0) return null;
+    const body = wrapper[0];
+    return {transactions: body.transactions, withdrawals: body.withdrawals};
+  });
 }
 
 export function decodeExchangeCapabilities(data: Uint8Array): string[] {

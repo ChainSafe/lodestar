@@ -33,9 +33,12 @@ import {
   decodeGetBlobsV1Response,
   decodeGetBlobsV2Response,
   decodeGetPayloadResponse,
+  decodePayloadBodiesV1Response,
   decodePayloadStatus,
   encodeForkchoiceUpdatedRequest,
   encodeGetBlobsRequest,
+  encodeGetPayloadBodiesByHashRequest,
+  encodeGetPayloadBodiesByRangeRequest,
   encodeNewPayloadRequest,
   forkchoiceUpdatedVersion,
   getBlobsVersion,
@@ -156,6 +159,8 @@ const supportedSszRestEndpoints = [
   "GET /engine/v4/payloads/{payload_id}",
   "GET /engine/v5/payloads/{payload_id}",
   "GET /engine/v6/payloads/{payload_id}",
+  "POST /engine/v1/payloads/bodies/by-hash",
+  "POST /engine/v1/payloads/bodies/by-range",
   "POST /engine/v1/forkchoice",
   "POST /engine/v2/forkchoice",
   "POST /engine/v3/forkchoice",
@@ -691,8 +696,31 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   async getPayloadBodiesByHash(_fork: ForkName, blockHashes: RootHex[]): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByHashV1";
     assertReqSizeLimit(blockHashes.length, 32);
+
+    if (this.sszRestClient) {
+      const path = "/engine/v1/payloads/bodies/by-hash";
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getPayloadBodiesByHash endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeGetPayloadBodiesByHashRequest(blockHashes.map((h) => fromHex(h)));
+          const resp = await this.sszRestClient.doRequest(path, body);
+          return decodePayloadBodiesV1Response(resp);
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getPayloadBodiesByHash failed, falling back to JSON-RPC", {
+              error: (e as Error).message,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
+    const method = "engine_getPayloadBodiesByHashV1";
     const response = await this.rpc.fetchWithRetries<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -705,8 +733,31 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     startBlockNumber: number,
     blockCount: number
   ): Promise<(ExecutionPayloadBody | null)[]> {
-    const method = "engine_getPayloadBodiesByRangeV1";
     assertReqSizeLimit(blockCount, 32);
+
+    if (this.sszRestClient) {
+      const path = "/engine/v1/payloads/bodies/by-range";
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getPayloadBodiesByRange endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeGetPayloadBodiesByRangeRequest(startBlockNumber, blockCount);
+          const resp = await this.sszRestClient.doRequest(path, body);
+          return decodePayloadBodiesV1Response(resp);
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getPayloadBodiesByRange failed, falling back to JSON-RPC", {
+              error: (e as Error).message,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
+    const method = "engine_getPayloadBodiesByRangeV1";
     const start = numToQuantity(startBlockNumber);
     const count = numToQuantity(blockCount);
     const response = await this.rpc.fetchWithRetries<
