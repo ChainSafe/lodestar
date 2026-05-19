@@ -199,9 +199,9 @@ export class BlockDutiesService {
 
     if (isForkPostFulu(fork)) {
       if (isEpochBoundary) {
-        // Sleep until ~lookAheadMs after the next slot starts so the BN clock is in
-        // `nextEpoch` and `nextEpoch + 1` is servable (= the new `currentEpoch + 1`).
-        await sleep(this.clock.msToSlot(nextSlot) + lookAheadMs, signal);
+        // Poll ~lookAheadMs before the boundary (same timing as pre-Fulu). The BN serves
+        // `nextEpoch + 1` from the upcoming-epoch checkpoint state (deterministic lookahead).
+        await sleep(this.clock.msToSlot(nextSlot) - lookAheadMs, signal);
         this.logger.debug("Polling proposers for the next 2 epochs", {nextEpoch, currentSlot});
         await this.pollBeaconProposers(nextEpoch);
         await this.pollBeaconProposers(nextEpoch + 1);
