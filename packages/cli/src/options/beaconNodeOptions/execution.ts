@@ -80,7 +80,7 @@ export const options: CliCommandOptions<ExecutionEngineArgs> = {
 
   "execution.sszRest": {
     description:
-      "Enable the experimental SSZ-REST Engine API transport (EIP-8161 / ethereum/execution-apis#764). When enabled, supported Engine API calls are first attempted as binary SSZ over REST on the same Engine port, falling back to JSON-RPC on network errors. Off by default until the spec stabilises.",
+      "Enable the experimental SSZ-REST Engine API transport (EIP-8161 / ethereum/execution-apis#764). When enabled, mutually advertised Engine API endpoints use binary SSZ over REST on the same Engine port, falling back to JSON-RPC on network errors. Off by default until the spec stabilises.",
     type: "boolean",
     hidden: true,
     group: "execution",

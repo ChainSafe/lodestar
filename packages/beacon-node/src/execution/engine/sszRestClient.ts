@@ -30,14 +30,16 @@ export class SszRestError extends Error {
  */
 export function isSszRestNetworkError(e: unknown): boolean {
   if (e instanceof SszRestError) {
-    // HTTP errors from the SSZ-REST endpoint (e.g. 404) indicate the
-    // endpoint doesn't support this path — fall back to JSON-RPC.
-    return true;
+    // HTTP responses carry Engine API semantics in the SSZ-REST spec. Once an
+    // endpoint has been negotiated, do not hide malformed SSZ, auth failures,
+    // unknown payload IDs, invalid forkchoice state, or EL errors by retrying
+    // the same operation through JSON-RPC.
+    return false;
   }
   // Node.js fetch errors (ECONNREFUSED, ENOTFOUND, etc.)
   if (isFetchError(e)) {
     const allCodes = [...HTTP_FATAL_ERROR_CODES, ...HTTP_CONNECTION_ERROR_CODES];
-    return allCodes.includes((e as {code: string}).code);
+    return allCodes.includes((e as {code: string}).code) || (e as {code: string}).code === "ERR_ABORTED";
   }
   // TypeError is thrown by fetch on DNS resolution failure in some runtimes
   if (e instanceof TypeError) {
