@@ -1,6 +1,6 @@
 import {Logger} from "@lodestar/logger";
 import {ForkName, ForkPostFulu, ForkPreFulu, ForkSeq, SLOTS_PER_EPOCH, isForkPostFulu} from "@lodestar/params";
-import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, ssz as sszCodecs} from "@lodestar/types";
+import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
 import {fromHex, strip0xPrefix} from "@lodestar/utils";
@@ -30,13 +30,17 @@ import {PayloadIdCache} from "./payloadIdCache.js";
 import {SszRestClient, isSszRestNetworkError} from "./sszRestClient.js";
 import {
   decodeForkchoiceUpdatedResponse,
-  decodeGetBlobsResponse,
+  decodeGetBlobsV1Response,
+  decodeGetBlobsV2Response,
   decodeGetPayloadResponse,
   decodePayloadStatus,
   encodeForkchoiceUpdatedRequest,
   encodeGetBlobsRequest,
-  encodeGetPayloadRequest,
   encodeNewPayloadRequest,
+  forkchoiceUpdatedVersion,
+  getBlobsVersion,
+  getPayloadVersion,
+  newPayloadVersion,
 } from "./sszRestEncoding.js";
 import {
   BLOB_AND_PROOF_V2_RPC_BYTES,
@@ -248,25 +252,26 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // EIP-8161: Try SSZ-REST first, fall back to JSON-RPC on network errors
     if (this.sszRestClient) {
       try {
-        const version =
-          ForkSeq[fork] >= ForkSeq.fulu ? 5 : ForkSeq[fork] >= ForkSeq.electra ? 4 : ForkSeq[fork] >= ForkSeq.deneb ? 3 : ForkSeq[fork] >= ForkSeq.capella ? 2 : 1;
-        const path = `/engine/v${version}/payloads`;
-        const body = encodeNewPayloadRequest(fork, executionPayload, versionedHashes, parentBlockRoot, executionRequests);
+        const path = `/engine/v${newPayloadVersion(fork)}/payloads`;
+        const body = encodeNewPayloadRequest(
+          fork,
+          executionPayload,
+          versionedHashes,
+          parentBlockRoot,
+          executionRequests
+        );
         const resp = await this.sszRestClient.doRequest(path, body);
-        const decoded = decodePayloadStatus(resp);
-        const status = decoded.status as ExecutionPayloadStatus;
+        const {status, latestValidHash, validationError} = decodePayloadStatus(resp);
         this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
 
         switch (status) {
           case ExecutionPayloadStatus.VALID:
-            return {status, latestValidHash: decoded.latestValidHash ?? "0x0", validationError: null};
+            return {status, latestValidHash: latestValidHash ?? "0x0", validationError: null};
           case ExecutionPayloadStatus.INVALID:
-            return {status, latestValidHash: decoded.latestValidHash, validationError: decoded.validationError};
+            return {status, latestValidHash, validationError};
           case ExecutionPayloadStatus.SYNCING:
           case ExecutionPayloadStatus.ACCEPTED:
             return {status, latestValidHash: null, validationError: null};
-          case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
-            return {status, latestValidHash: null, validationError: decoded.validationError ?? "Malformed block"};
           default:
             return {
               status: ExecutionPayloadStatus.ELERROR,
@@ -418,15 +423,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // EIP-8161: Try SSZ-REST first, fall back to JSON-RPC on network errors
     if (this.sszRestClient) {
       try {
-        const version = ForkSeq[fork] >= ForkSeq.deneb ? 3 : ForkSeq[fork] >= ForkSeq.capella ? 2 : 1;
-        const path = `/engine/v${version}/forkchoice`;
-        const headBytes = fromHex(headBlockHash);
-        const safeBytes = fromHex(safeBlockHash);
-        const finalizedBytes = fromHex(finalizedBlockHash);
-        const body = encodeForkchoiceUpdatedRequest(headBytes, safeBytes, finalizedBytes, payloadAttributes);
+        const path = `/engine/v${forkchoiceUpdatedVersion(fork)}/forkchoice`;
+        const body = encodeForkchoiceUpdatedRequest(
+          fork,
+          fromHex(headBlockHash),
+          fromHex(safeBlockHash),
+          fromHex(finalizedBlockHash),
+          payloadAttributes
+        );
         const resp = await this.sszRestClient.doRequest(path, body);
         const decoded = decodeForkchoiceUpdatedResponse(resp);
-        const status = decoded.payloadStatus.status as ExecutionPayloadStatus;
+        const {status, validationError} = decoded.payloadStatus;
 
         this.updateEngineState(getExecutionEngineState({payloadStatus: status, oldState: this.state}));
         this.metrics?.engineNotifyForkchoiceUpdateResult.inc({result: status});
@@ -436,13 +443,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         switch (status) {
           case ExecutionPayloadStatus.VALID:
             if (payloadAttributesRpc) {
-              if (!decoded.payloadId || decoded.payloadId === "0x") {
-                throw Error(`Received invalid payloadId=${decoded.payloadId}`);
+              if (decoded.payloadId === null) {
+                throw Error("Received null payloadId when payload attributes were provided");
               }
               this.payloadIdCache.add({headBlockHash, finalizedBlockHash, ...payloadAttributesRpc}, decoded.payloadId);
               void this.prunePayloadIdCache();
             }
-            return decoded.payloadId !== "0x" ? decoded.payloadId : null;
+            return decoded.payloadId;
 
           case ExecutionPayloadStatus.SYNCING:
             if (payloadAttributes) {
@@ -453,7 +460,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           case ExecutionPayloadStatus.INVALID:
             throw Error(
               `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
-                decoded.payloadStatus.validationError ?? ""
+                validationError ?? ""
               }`
             );
 
@@ -462,7 +469,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
       } catch (e) {
         if (isSszRestNetworkError(e)) {
-          this.logger.debug("SSZ-REST forkchoiceUpdate failed, falling back to JSON-RPC", {error: (e as Error).message});
+          this.logger.debug("SSZ-REST forkchoiceUpdate failed, falling back to JSON-RPC", {
+            error: (e as Error).message,
+          });
         } else {
           throw e;
         }
@@ -551,28 +560,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // EIP-8161: Try SSZ-REST first, fall back to JSON-RPC on network errors
     if (this.sszRestClient) {
       try {
-        const version =
-          ForkSeq[fork] >= ForkSeq.fulu ? 5 : ForkSeq[fork] >= ForkSeq.electra ? 4 : ForkSeq[fork] >= ForkSeq.deneb ? 3 : ForkSeq[fork] >= ForkSeq.capella ? 2 : 1;
-        const path = `/engine/v${version}/payloads/${payloadId}`;
+        const path = `/engine/v${getPayloadVersion(fork)}/payloads/${payloadId}`;
         const resp = await this.sszRestClient.doGetRequest(path);
-        const decoded = decodeGetPayloadResponse(resp);
-
-        // The executionPayloadSsz needs to be parsed back through the JSON-RPC parseExecutionPayload path
-        // For now, we return the raw SSZ and let the caller handle it.
-        // Actually, we can deserialize the SSZ payload using @lodestar/types
-        const executionPayload = deserializeExecutionPayloadSsz(fork, decoded.executionPayloadSsz);
-        const executionPayloadValue = decoded.blockValue;
-        const blobsBundle =
-          decoded.blobsBundleSsz.length > 0 ? deserializeBlobsBundleSsz(decoded.blobsBundleSsz) : undefined;
-        const executionRequests =
-          decoded.executionRequestsSsz.length > 0
-            ? deserializeExecutionRequestsSsz(decoded.executionRequestsSsz)
-            : undefined;
+        const decoded = decodeGetPayloadResponse(fork, resp);
         return {
-          executionPayload,
-          executionPayloadValue,
-          blobsBundle,
-          executionRequests,
+          executionPayload: decoded.executionPayload,
+          executionPayloadValue: decoded.blockValue,
+          blobsBundle: decoded.blobsBundle,
+          executionRequests: decoded.executionRequests,
           shouldOverrideBuilder: decoded.shouldOverrideBuilder,
         };
       } catch (e) {
@@ -669,15 +664,22 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     // EIP-8161: Try SSZ-REST first for getBlobs, fall back to JSON-RPC on network errors
     if (this.sszRestClient) {
       try {
-        const version = isForkPostFulu(fork) ? 2 : 1;
+        const version = getBlobsVersion(fork);
         const path = `/engine/v${version}/blobs`;
         const body = encodeGetBlobsRequest(versionedHashes);
         const resp = await this.sszRestClient.doRequest(path, body);
-        const decoded = decodeGetBlobsResponse(resp);
-        return decoded.map((item) => ({
-          blob: item.blob,
-          proof: item.kzgProof,
-        }));
+        // HTTP 204 (syncing, or any missing blob in v2) maps to null per spec.
+        if (resp.length === 0) {
+          return null;
+        }
+        if (version === 1) {
+          // Spec v1 returns only the blobs that were found (potentially shorter
+          // than the request). Pad with nulls so the result aligns with the
+          // request indices, matching the JSON-RPC v1 contract.
+          const found = decodeGetBlobsV1Response(resp);
+          return versionedHashes.map((_, i) => found[i] ?? null);
+        }
+        return decodeGetBlobsV2Response(resp);
       } catch (e) {
         if (isSszRestNetworkError(e)) {
           this.logger.debug("SSZ-REST getBlobs failed, falling back to JSON-RPC", {error: (e as Error).message});
@@ -814,32 +816,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     this.state = newState;
   }
-}
-
-/**
- * Deserialize an ExecutionPayload from SSZ bytes using the appropriate
- * @lodestar/types codec for the given fork. Used by the SSZ-REST getPayload path.
- */
-function deserializeExecutionPayloadSsz(fork: ForkName, data: Uint8Array): ExecutionPayload {
-  const forkSeq = ForkSeq[fork];
-  if (forkSeq >= ForkSeq.electra) {
-    return sszCodecs.electra.ExecutionPayload.deserialize(data);
-  }
-  if (forkSeq >= ForkSeq.deneb) {
-    return sszCodecs.deneb.ExecutionPayload.deserialize(data);
-  }
-  if (forkSeq >= ForkSeq.capella) {
-    return sszCodecs.capella.ExecutionPayload.deserialize(data);
-  }
-  return sszCodecs.bellatrix.ExecutionPayload.deserialize(data);
-}
-
-function deserializeBlobsBundleSsz(data: Uint8Array): BlobsBundle {
-  return sszCodecs.deneb.BlobsBundle.deserialize(data);
-}
-
-function deserializeExecutionRequestsSsz(data: Uint8Array): ExecutionRequests {
-  return sszCodecs.electra.ExecutionRequests.deserialize(data);
 }
 
 type EngineRequestKey = keyof EngineApiRpcParamTypes;

@@ -1,608 +1,613 @@
-/**
- * SSZ-REST (EIP-8161) encoding and decoding functions for the Engine API.
- *
- * All multi-byte integers are little-endian (LE). DataView is used for reading
- * and writing to ensure correctness regardless of platform endianness.
- */
-
-import {ByteListType, ContainerType, ListCompositeType} from "@chainsafe/ssz";
-import {ForkName, ForkSeq} from "@lodestar/params";
+import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, UintNumberType} from "@chainsafe/ssz";
 import {
-  ExecutionPayload,
-  ExecutionRequests,
-  Root,
-  ssz,
-  bellatrix,
-  capella,
-  deneb,
-  electra,
-} from "@lodestar/types";
-import {PayloadAttributes, VersionedHashes} from "./interface.js";
+  CELLS_PER_EXT_BLOB,
+  CONSOLIDATION_REQUEST_TYPE,
+  DEPOSIT_REQUEST_TYPE,
+  ForkName,
+  ForkSeq,
+  MAX_BLOB_COMMITMENTS_PER_BLOCK,
+  MAX_BYTES_PER_TRANSACTION,
+  WITHDRAWAL_REQUEST_TYPE,
+} from "@lodestar/params";
+import {ExecutionPayload, ExecutionRequests, RootHex, ssz} from "@lodestar/types";
+import type {BlobAndProof} from "@lodestar/types/deneb";
+import type {BlobAndProofV2} from "@lodestar/types/fulu";
+import {fromHex, toHex} from "@lodestar/utils";
+import {ExecutionPayloadStatus, PayloadAttributes, VersionedHashes} from "./interface.js";
+import {PayloadId} from "./payloadIdCache.js";
 
-// SSZ type: Container { capabilities: List[List[uint8, 64], 128] }
-const Capability = new ByteListType(64);
-const ExchangeCapabilitiesRequest = new ContainerType({
-  capabilities: new ListCompositeType(Capability, 128),
-});
+// Spec constants from ethereum/execution-apis#764 not exported by @lodestar/params.
+const MAX_BLOB_HASHES_REQUEST = 128;
+const MAX_EXECUTION_REQUESTS = 256;
+const MAX_ERROR_MESSAGE_LENGTH = 1024;
+const MAX_CAPABILITY_NAME_LENGTH = 64;
+const MAX_CAPABILITIES = 64;
+const BLOB_SIZE = 131072;
 
 // ---------------------------------------------------------------------------
-// Helper functions
+// Primitives
 // ---------------------------------------------------------------------------
 
-function writeUint32LE(buf: Uint8Array, offset: number, value: number): void {
-  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  view.setUint32(offset, value, true);
+const Uint8 = new UintNumberType(1);
+const Bytes8 = new ByteVectorType(8);
+const Bytes20 = new ByteVectorType(20);
+const Bytes32 = new ByteVectorType(32);
+const Bytes48 = new ByteVectorType(48);
+
+// Nullable wrapper: spec encodes `T or null` as `List[T, 1]` — 0 = absent, 1 = present.
+const NullableHash = new ListCompositeType(Bytes32, 1);
+const NullablePayloadId = new ListCompositeType(Bytes8, 1);
+
+const ValidationErrorBytes = new ByteListType(MAX_ERROR_MESSAGE_LENGTH);
+const TransactionBytes = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+
+const VersionedHashesList = new ListCompositeType(Bytes32, MAX_BLOB_COMMITMENTS_PER_BLOCK);
+const BlobHashesRequest = new ListCompositeType(Bytes32, MAX_BLOB_HASHES_REQUEST);
+
+// `execution_requests` is a flat list of opaque byte-lists; each element is
+// `type_byte || ssz_bytes`. CL forwards them to the EL without parsing.
+const ExecutionRequestsList = new ListCompositeType(TransactionBytes, MAX_EXECUTION_REQUESTS);
+
+// ---------------------------------------------------------------------------
+// Fork-independent containers
+// ---------------------------------------------------------------------------
+
+const PayloadStatusV1 = new ContainerType(
+  {status: Uint8, latestValidHash: NullableHash, validationError: ValidationErrorBytes},
+  {typeName: "PayloadStatusV1"}
+);
+
+const ForkchoiceStateV1 = new ContainerType(
+  {headBlockHash: Bytes32, safeBlockHash: Bytes32, finalizedBlockHash: Bytes32},
+  {typeName: "ForkchoiceStateV1"}
+);
+
+const ForkchoiceUpdatedResponseV1 = new ContainerType(
+  {payloadStatus: PayloadStatusV1, payloadId: NullablePayloadId},
+  {typeName: "ForkchoiceUpdatedResponseV1"}
+);
+
+const ExchangeCapabilitiesContainer = new ContainerType(
+  {capabilities: new ListCompositeType(new ByteListType(MAX_CAPABILITY_NAME_LENGTH), MAX_CAPABILITIES)},
+  {typeName: "ExchangeCapabilities"}
+);
+
+// ---------------------------------------------------------------------------
+// PayloadAttributes (one container per fork)
+//
+// We cannot reuse `ssz.{fork}.PayloadAttributes` from @lodestar/types because
+// they declare `suggestedFeeRecipient: stringType` — a JSON-only marker that
+// throws on SSZ serialization.
+// ---------------------------------------------------------------------------
+
+const PayloadAttributesV1Container = new ContainerType(
+  {timestamp: ssz.UintNum64, prevRandao: Bytes32, suggestedFeeRecipient: Bytes20},
+  {typeName: "PayloadAttributesV1"}
+);
+
+const PayloadAttributesV2Container = new ContainerType(
+  {...PayloadAttributesV1Container.fields, withdrawals: ssz.capella.Withdrawals},
+  {typeName: "PayloadAttributesV2"}
+);
+
+const PayloadAttributesV3Container = new ContainerType(
+  {...PayloadAttributesV2Container.fields, parentBeaconBlockRoot: Bytes32},
+  {typeName: "PayloadAttributesV3"}
+);
+
+const PayloadAttributesV4Container = new ContainerType(
+  {...PayloadAttributesV3Container.fields, slotNumber: ssz.UintNum64, targetGasLimit: ssz.UintNum64},
+  {typeName: "PayloadAttributesV4"}
+);
+
+const PayloadAttributesV1Optional = new ListCompositeType(PayloadAttributesV1Container, 1);
+const PayloadAttributesV2Optional = new ListCompositeType(PayloadAttributesV2Container, 1);
+const PayloadAttributesV3Optional = new ListCompositeType(PayloadAttributesV3Container, 1);
+const PayloadAttributesV4Optional = new ListCompositeType(PayloadAttributesV4Container, 1);
+
+// ---------------------------------------------------------------------------
+// NewPayload request containers (per version)
+// ---------------------------------------------------------------------------
+
+const NewPayloadV1Request = new ContainerType(
+  {executionPayload: ssz.bellatrix.ExecutionPayload},
+  {typeName: "NewPayloadV1Request"}
+);
+
+const NewPayloadV2Request = new ContainerType(
+  {executionPayload: ssz.capella.ExecutionPayload},
+  {typeName: "NewPayloadV2Request"}
+);
+
+const NewPayloadV3Request = new ContainerType(
+  {
+    executionPayload: ssz.deneb.ExecutionPayload,
+    expectedBlobVersionedHashes: VersionedHashesList,
+    parentBeaconBlockRoot: Bytes32,
+  },
+  {typeName: "NewPayloadV3Request"}
+);
+
+const NewPayloadV4Request = new ContainerType(
+  {
+    executionPayload: ssz.deneb.ExecutionPayload,
+    expectedBlobVersionedHashes: VersionedHashesList,
+    parentBeaconBlockRoot: Bytes32,
+    executionRequests: ExecutionRequestsList,
+  },
+  {typeName: "NewPayloadV4Request"}
+);
+
+const NewPayloadV5Request = new ContainerType(
+  {
+    executionPayload: ssz.gloas.ExecutionPayload,
+    expectedBlobVersionedHashes: VersionedHashesList,
+    parentBeaconBlockRoot: Bytes32,
+    executionRequests: ExecutionRequestsList,
+  },
+  {typeName: "NewPayloadV5Request"}
+);
+
+// ---------------------------------------------------------------------------
+// ForkchoiceUpdated request containers
+// ---------------------------------------------------------------------------
+
+const ForkchoiceUpdatedV1Request = new ContainerType(
+  {forkchoiceState: ForkchoiceStateV1, payloadAttributes: PayloadAttributesV1Optional},
+  {typeName: "ForkchoiceUpdatedV1Request"}
+);
+
+const ForkchoiceUpdatedV2Request = new ContainerType(
+  {forkchoiceState: ForkchoiceStateV1, payloadAttributes: PayloadAttributesV2Optional},
+  {typeName: "ForkchoiceUpdatedV2Request"}
+);
+
+const ForkchoiceUpdatedV3Request = new ContainerType(
+  {forkchoiceState: ForkchoiceStateV1, payloadAttributes: PayloadAttributesV3Optional},
+  {typeName: "ForkchoiceUpdatedV3Request"}
+);
+
+const ForkchoiceUpdatedV4Request = new ContainerType(
+  {forkchoiceState: ForkchoiceStateV1, payloadAttributes: PayloadAttributesV4Optional},
+  {typeName: "ForkchoiceUpdatedV4Request"}
+);
+
+// ---------------------------------------------------------------------------
+// GetPayload response containers
+// ---------------------------------------------------------------------------
+
+const GetPayloadResponseV2 = new ContainerType(
+  {executionPayload: ssz.capella.ExecutionPayload, blockValue: ssz.UintBn256},
+  {typeName: "GetPayloadResponseV2"}
+);
+
+const GetPayloadResponseV3 = new ContainerType(
+  {
+    executionPayload: ssz.deneb.ExecutionPayload,
+    blockValue: ssz.UintBn256,
+    blobsBundle: ssz.deneb.BlobsBundle,
+    shouldOverrideBuilder: ssz.Boolean,
+  },
+  {typeName: "GetPayloadResponseV3"}
+);
+
+const GetPayloadResponseV4 = new ContainerType(
+  {
+    executionPayload: ssz.deneb.ExecutionPayload,
+    blockValue: ssz.UintBn256,
+    blobsBundle: ssz.deneb.BlobsBundle,
+    shouldOverrideBuilder: ssz.Boolean,
+    executionRequests: ExecutionRequestsList,
+  },
+  {typeName: "GetPayloadResponseV4"}
+);
+
+const GetPayloadResponseV5 = new ContainerType(
+  {
+    executionPayload: ssz.deneb.ExecutionPayload,
+    blockValue: ssz.UintBn256,
+    blobsBundle: ssz.fulu.BlobsBundle,
+    shouldOverrideBuilder: ssz.Boolean,
+    executionRequests: ExecutionRequestsList,
+  },
+  {typeName: "GetPayloadResponseV5"}
+);
+
+const GetPayloadResponseV6 = new ContainerType(
+  {
+    executionPayload: ssz.gloas.ExecutionPayload,
+    blockValue: ssz.UintBn256,
+    blobsBundle: ssz.fulu.BlobsBundle,
+    shouldOverrideBuilder: ssz.Boolean,
+    executionRequests: ExecutionRequestsList,
+  },
+  {typeName: "GetPayloadResponseV6"}
+);
+
+// ---------------------------------------------------------------------------
+// GetBlobs request / response containers
+// ---------------------------------------------------------------------------
+
+const GetBlobsRequest = new ContainerType({blobVersionedHashes: BlobHashesRequest}, {typeName: "GetBlobsRequest"});
+
+const BlobBytes = new ByteVectorType(BLOB_SIZE);
+
+const BlobAndProofV1Container = new ContainerType({blob: BlobBytes, proof: Bytes48}, {typeName: "BlobAndProofV1"});
+
+const BlobAndProofV2Container = new ContainerType(
+  {blob: BlobBytes, proofs: new ListCompositeType(Bytes48, CELLS_PER_EXT_BLOB)},
+  {typeName: "BlobAndProofV2"}
+);
+
+const GetBlobsV1Response = new ContainerType(
+  {blobsAndProofs: new ListCompositeType(BlobAndProofV1Container, MAX_BLOB_HASHES_REQUEST)},
+  {typeName: "GetBlobsV1Response"}
+);
+
+const GetBlobsV2Response = new ContainerType(
+  {blobsAndProofs: new ListCompositeType(BlobAndProofV2Container, MAX_BLOB_HASHES_REQUEST)},
+  {typeName: "GetBlobsV2Response"}
+);
+
+// ---------------------------------------------------------------------------
+// Fork → version mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * REST endpoint version for `engine_newPayload`.
+ * Spec: Paris=v1, Shanghai=v2, Cancun=v3, Prague=v4, Amsterdam=v5.
+ * Osaka (Fulu) does not bump the newPayload version.
+ */
+export function newPayloadVersion(fork: ForkName): 1 | 2 | 3 | 4 | 5 {
+  const seq = ForkSeq[fork];
+  if (seq >= ForkSeq.gloas) return 5;
+  if (seq >= ForkSeq.electra) return 4;
+  if (seq >= ForkSeq.deneb) return 3;
+  if (seq >= ForkSeq.capella) return 2;
+  return 1;
 }
 
-function readUint32LE(buf: Uint8Array, offset: number): number {
-  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  return view.getUint32(offset, true);
+/**
+ * REST endpoint version for `engine_getPayload`.
+ * Spec: Paris=v1, Shanghai=v2, Cancun=v3, Prague=v4, Osaka=v5, Amsterdam=v6.
+ */
+export function getPayloadVersion(fork: ForkName): 1 | 2 | 3 | 4 | 5 | 6 {
+  const seq = ForkSeq[fork];
+  if (seq >= ForkSeq.gloas) return 6;
+  if (seq >= ForkSeq.fulu) return 5;
+  if (seq >= ForkSeq.electra) return 4;
+  if (seq >= ForkSeq.deneb) return 3;
+  if (seq >= ForkSeq.capella) return 2;
+  return 1;
 }
 
-function writeUint64LE(buf: Uint8Array, offset: number, value: bigint): void {
-  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  view.setBigUint64(offset, value, true);
+/**
+ * REST endpoint version for `engine_forkchoiceUpdated`.
+ * Spec: Paris=v1, Shanghai=v2, Cancun=v3, Amsterdam=v4.
+ */
+export function forkchoiceUpdatedVersion(fork: ForkName): 1 | 2 | 3 | 4 {
+  const seq = ForkSeq[fork];
+  if (seq >= ForkSeq.gloas) return 4;
+  if (seq >= ForkSeq.deneb) return 3;
+  if (seq >= ForkSeq.capella) return 2;
+  return 1;
 }
 
-function readUint64LE(buf: Uint8Array, offset: number): bigint {
-  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
-  return view.getBigUint64(offset, true);
+/**
+ * REST endpoint version for `engine_getBlobs`.
+ * Cancun=v1, Osaka=v2 (all-or-nothing variant — matches Lodestar's existing
+ * JSON-RPC v2 contract). The spec also defines a v3 with per-element
+ * nullability, but Lodestar's IExecutionEngine signature is all-or-nothing.
+ */
+export function getBlobsVersion(fork: ForkName): 1 | 2 {
+  return ForkSeq[fork] >= ForkSeq.fulu ? 2 : 1;
 }
 
-function writeUint256LE(buf: Uint8Array, offset: number, value: bigint): void {
-  // Write 256-bit LE as 4x 64-bit LE words
-  for (let i = 0; i < 4; i++) {
-    writeUint64LE(buf, offset + i * 8, value & 0xffffffffffffffffn);
-    value >>= 64n;
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function buildExecutionRequestsList(executionRequests: ExecutionRequests): Uint8Array[] {
+  const items: Uint8Array[] = [];
+  const prefix = (typeByte: number, body: Uint8Array): Uint8Array => {
+    const out = new Uint8Array(1 + body.length);
+    out[0] = typeByte;
+    out.set(body, 1);
+    return out;
+  };
+  if (executionRequests.deposits.length > 0) {
+    items.push(prefix(DEPOSIT_REQUEST_TYPE, ssz.electra.DepositRequests.serialize(executionRequests.deposits)));
   }
+  if (executionRequests.withdrawals.length > 0) {
+    items.push(
+      prefix(WITHDRAWAL_REQUEST_TYPE, ssz.electra.WithdrawalRequests.serialize(executionRequests.withdrawals))
+    );
+  }
+  if (executionRequests.consolidations.length > 0) {
+    items.push(
+      prefix(CONSOLIDATION_REQUEST_TYPE, ssz.electra.ConsolidationRequests.serialize(executionRequests.consolidations))
+    );
+  }
+  return items;
 }
 
-function readUint256LE(buf: Uint8Array, offset: number): bigint {
-  let result = 0n;
-  for (let i = 3; i >= 0; i--) {
-    result = (result << 64n) | readUint64LE(buf, offset + i * 8);
+function parseExecutionRequestsList(items: Uint8Array[]): ExecutionRequests {
+  const result: ExecutionRequests = {deposits: [], withdrawals: [], consolidations: []};
+  for (const item of items) {
+    if (item.length === 0) throw Error("Execution request with empty data");
+    const type = item[0];
+    const body = item.subarray(1);
+    switch (type) {
+      case DEPOSIT_REQUEST_TYPE:
+        result.deposits = ssz.electra.DepositRequests.deserialize(body);
+        break;
+      case WITHDRAWAL_REQUEST_TYPE:
+        result.withdrawals = ssz.electra.WithdrawalRequests.deserialize(body);
+        break;
+      case CONSOLIDATION_REQUEST_TYPE:
+        result.consolidations = ssz.electra.ConsolidationRequests.deserialize(body);
+        break;
+      default:
+        throw Error(`Unknown execution request type=${type}`);
+    }
   }
   return result;
 }
 
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder();
-
-// ---------------------------------------------------------------------------
-// Encode functions
-// ---------------------------------------------------------------------------
-
-/**
- * Encode ForkchoiceState: headBlockHash(32) + safeBlockHash(32) + finalizedBlockHash(32) = 96 bytes
- */
-export function encodeForkchoiceState(
-  headBlockHash: Uint8Array,
-  safeBlockHash: Uint8Array,
-  finalizedBlockHash: Uint8Array
-): Uint8Array {
-  const buf = new Uint8Array(96);
-  buf.set(headBlockHash, 0);
-  buf.set(safeBlockHash, 32);
-  buf.set(finalizedBlockHash, 64);
-  return buf;
+function buildPayloadAttributesValue(fork: ForkName, attrs: PayloadAttributes): Record<string, unknown> {
+  const seq = ForkSeq[fork];
+  const base = {
+    timestamp: attrs.timestamp,
+    prevRandao: attrs.prevRandao,
+    suggestedFeeRecipient: fromHex(attrs.suggestedFeeRecipient),
+  };
+  if (seq < ForkSeq.capella) return base;
+  const v2 = {...base, withdrawals: attrs.withdrawals ?? []};
+  if (seq < ForkSeq.deneb) return v2;
+  if (attrs.parentBeaconBlockRoot === undefined) {
+    throw Error(`parentBeaconBlockRoot required in PayloadAttributes for fork=${fork}`);
+  }
+  const v3 = {...v2, parentBeaconBlockRoot: attrs.parentBeaconBlockRoot};
+  if (seq < ForkSeq.gloas) return v3;
+  if (attrs.slotNumber === undefined) {
+    throw Error(`slotNumber required in PayloadAttributes for fork=${fork}`);
+  }
+  // targetGasLimit is in the spec PR but not yet plumbed through Lodestar's PayloadAttributes.
+  // Encode 0 so the on-wire shape matches the spec; revisit when the field lands.
+  return {...v3, slotNumber: attrs.slotNumber, targetGasLimit: 0};
 }
 
-/**
- * Encode a ForkchoiceUpdated request.
- *
- * Layout: ForkchoiceState(96 fixed) + attributes_offset(4) + List[PayloadAttributes, 1]
- *
- * List[PayloadAttributes, 1]: empty = absent; offset(4) + element data = present
- * (PayloadAttributes is variable-size, so the list uses a 4-byte item offset)
- *
- * PayloadAttributes V3: timestamp(8) + prevRandao(32) + suggestedFeeRecipient(20)
- *   + withdrawals_offset(4) + parentBeaconBlockRoot(32) + withdrawals list
- *
- * Each withdrawal: index(8) + validatorIndex(8) + address(20) + amount(8) = 44 bytes
- */
+function statusByteToEnum(byte: number): ExecutionPayloadStatus {
+  switch (byte) {
+    case 0:
+      return ExecutionPayloadStatus.VALID;
+    case 1:
+      return ExecutionPayloadStatus.INVALID;
+    case 2:
+      return ExecutionPayloadStatus.SYNCING;
+    case 3:
+      return ExecutionPayloadStatus.ACCEPTED;
+    default:
+      throw Error(`Unknown payload status byte=${byte}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Public encoders
+// ---------------------------------------------------------------------------
+
+export function encodeNewPayloadRequest(
+  fork: ForkName,
+  executionPayload: ExecutionPayload,
+  versionedHashes?: VersionedHashes,
+  parentBeaconBlockRoot?: Uint8Array,
+  executionRequests?: ExecutionRequests
+): Uint8Array {
+  const version = newPayloadVersion(fork);
+
+  if (version === 1) {
+    return NewPayloadV1Request.serialize({executionPayload} as never);
+  }
+  if (version === 2) {
+    return NewPayloadV2Request.serialize({executionPayload} as never);
+  }
+
+  if (versionedHashes === undefined || parentBeaconBlockRoot === undefined) {
+    throw Error(`versionedHashes and parentBeaconBlockRoot required for newPayload v${version}`);
+  }
+
+  if (version === 3) {
+    return NewPayloadV3Request.serialize({
+      executionPayload,
+      expectedBlobVersionedHashes: versionedHashes,
+      parentBeaconBlockRoot,
+    } as never);
+  }
+
+  if (executionRequests === undefined) {
+    throw Error(`executionRequests required for newPayload v${version}`);
+  }
+  const requestsList = buildExecutionRequestsList(executionRequests);
+
+  if (version === 4) {
+    return NewPayloadV4Request.serialize({
+      executionPayload,
+      expectedBlobVersionedHashes: versionedHashes,
+      parentBeaconBlockRoot,
+      executionRequests: requestsList,
+    } as never);
+  }
+
+  return NewPayloadV5Request.serialize({
+    executionPayload,
+    expectedBlobVersionedHashes: versionedHashes,
+    parentBeaconBlockRoot,
+    executionRequests: requestsList,
+  } as never);
+}
+
 export function encodeForkchoiceUpdatedRequest(
+  fork: ForkName,
   headBlockHash: Uint8Array,
   safeBlockHash: Uint8Array,
   finalizedBlockHash: Uint8Array,
   attributes?: PayloadAttributes
 ): Uint8Array {
-  // Fixed part: 96 (forkchoice state) + 4 (attributes offset) = 100
-  const FIXED_SIZE = 100;
+  const version = forkchoiceUpdatedVersion(fork);
+  const forkchoiceState = {headBlockHash, safeBlockHash, finalizedBlockHash};
+  const payloadAttributes = attributes ? [buildPayloadAttributesValue(fork, attributes)] : [];
 
-  if (!attributes) {
-    // No attributes: offset points to end (empty list)
-    const buf = new Uint8Array(FIXED_SIZE);
-    buf.set(headBlockHash, 0);
-    buf.set(safeBlockHash, 32);
-    buf.set(finalizedBlockHash, 64);
-    writeUint32LE(buf, 96, FIXED_SIZE);
-    return buf;
+  switch (version) {
+    case 1:
+      return ForkchoiceUpdatedV1Request.serialize({forkchoiceState, payloadAttributes} as never);
+    case 2:
+      return ForkchoiceUpdatedV2Request.serialize({forkchoiceState, payloadAttributes} as never);
+    case 3:
+      return ForkchoiceUpdatedV3Request.serialize({forkchoiceState, payloadAttributes} as never);
+    case 4:
+      return ForkchoiceUpdatedV4Request.serialize({forkchoiceState, payloadAttributes} as never);
   }
-
-  // Encode PayloadAttributes
-  const feeRecipientBytes = hexToBytes20(attributes.suggestedFeeRecipient);
-  const withdrawals = attributes.withdrawals ?? [];
-  const parentBeaconBlockRoot = attributes.parentBeaconBlockRoot;
-
-  // PayloadAttributes fixed part: timestamp(8) + prevRandao(32) + suggestedFeeRecipient(20)
-  //   + withdrawals_offset(4) + parentBeaconBlockRoot(32) = 96
-  const ATTR_FIXED = 96;
-  const withdrawalsSize = withdrawals.length * 44;
-  const attrTotalSize = ATTR_FIXED + withdrawalsSize;
-
-  // Total: FIXED_SIZE + 4 (list item offset) + attrTotalSize
-  const totalSize = FIXED_SIZE + 4 + attrTotalSize;
-  const buf = new Uint8Array(totalSize);
-
-  // ForkchoiceState
-  buf.set(headBlockHash, 0);
-  buf.set(safeBlockHash, 32);
-  buf.set(finalizedBlockHash, 64);
-
-  // Offset to attributes list data
-  writeUint32LE(buf, 96, FIXED_SIZE);
-
-  // List[PayloadAttributes, 1] with 1 element: item offset(4) + element data
-  let pos = FIXED_SIZE;
-  writeUint32LE(buf, pos, 4); // offset to element data (past the single item offset)
-  pos += 4;
-
-  // PayloadAttributes element data
-  writeUint64LE(buf, pos, BigInt(attributes.timestamp));
-  pos += 8;
-  buf.set(attributes.prevRandao, pos);
-  pos += 32;
-  buf.set(feeRecipientBytes, pos);
-  pos += 20;
-  // withdrawals_offset: relative to element start
-  writeUint32LE(buf, pos, ATTR_FIXED);
-  pos += 4;
-  if (parentBeaconBlockRoot) {
-    buf.set(parentBeaconBlockRoot, pos);
-  }
-  pos += 32;
-
-  // Withdrawals
-  for (const w of withdrawals) {
-    writeUint64LE(buf, pos, BigInt(w.index));
-    pos += 8;
-    writeUint64LE(buf, pos, BigInt(w.validatorIndex));
-    pos += 8;
-    buf.set(w.address, pos);
-    pos += 20;
-    writeUint64LE(buf, pos, BigInt(w.amount));
-    pos += 8;
-  }
-
-  return buf;
 }
 
-/**
- * Encode a NewPayload request.
- *
- * V1/V2: just the ExecutionPayload SSZ bytes
- * V3: payload_offset(4) + hashes_offset(4) + parentBeaconBlockRoot(32 fixed) + payload SSZ + hashes (32 each)
- * V4: V3 layout + requests_offset(4) + execution_requests SSZ
- */
-export function encodeNewPayloadRequest(
-  fork: ForkName,
-  executionPayload: ExecutionPayload,
-  versionedHashes?: VersionedHashes,
-  parentBeaconBlockRoot?: Root,
-  executionRequests?: ExecutionRequests
-): Uint8Array {
-  // Serialize the execution payload using lodestar SSZ codecs
-  const payloadSsz = serializeExecutionPayloadSsz(fork, executionPayload);
-
-  const forkSeq = ForkSeq[fork];
-
-  if (forkSeq < ForkSeq.deneb) {
-    // V1/V2: just the raw payload bytes
-    return payloadSsz;
-  }
-
-  if (!versionedHashes) throw Error("versionedHashes required for deneb+");
-  if (!parentBeaconBlockRoot) throw Error("parentBeaconBlockRoot required for deneb+");
-
-  const hashesBytes = versionedHashes.length * 32;
-
-  if (forkSeq >= ForkSeq.electra && executionRequests) {
-    // V4: payload_offset(4) + hashes_offset(4) + parentBeaconBlockRoot(32) + requests_offset(4) = 44 fixed
-    const FIXED_SIZE = 44;
-
-    const requestsSsz = serializeExecutionRequestsSsz(executionRequests);
-
-    const payloadOffset = FIXED_SIZE;
-    const hashesOffset = payloadOffset + payloadSsz.length;
-    const requestsOffset = hashesOffset + hashesBytes;
-
-    const totalSize = requestsOffset + requestsSsz.length;
-    const buf = new Uint8Array(totalSize);
-
-    writeUint32LE(buf, 0, payloadOffset);
-    writeUint32LE(buf, 4, hashesOffset);
-    buf.set(parentBeaconBlockRoot, 8);
-    writeUint32LE(buf, 40, requestsOffset);
-
-    buf.set(payloadSsz, payloadOffset);
-
-    let pos = hashesOffset;
-    for (const hash of versionedHashes) {
-      buf.set(hash, pos);
-      pos += 32;
-    }
-
-    buf.set(requestsSsz, requestsOffset);
-    return buf;
-  }
-
-  // V3: payload_offset(4) + hashes_offset(4) + parentBeaconBlockRoot(32) = 40 fixed
-  const FIXED_SIZE = 40;
-  const payloadOffset = FIXED_SIZE;
-  const hashesOffset = payloadOffset + payloadSsz.length;
-
-  const totalSize = hashesOffset + hashesBytes;
-  const buf = new Uint8Array(totalSize);
-
-  writeUint32LE(buf, 0, payloadOffset);
-  writeUint32LE(buf, 4, hashesOffset);
-  buf.set(parentBeaconBlockRoot, 8);
-
-  buf.set(payloadSsz, payloadOffset);
-
-  let pos = hashesOffset;
-  for (const hash of versionedHashes) {
-    buf.set(hash, pos);
-    pos += 32;
-  }
-
-  return buf;
-}
-
-/**
- * Encode a GetPayload request: just the 8-byte payload ID.
- */
-export function encodeGetPayloadRequest(payloadId: Uint8Array): Uint8Array {
-  if (payloadId.length !== 8) {
-    throw Error(`Invalid payloadId length ${payloadId.length}, expected 8`);
-  }
-  return payloadId;
-}
-
-/**
- * Encode a GetBlobs request.
- * Container: hashes_offset(4) + concatenated 32-byte hashes
- */
 export function encodeGetBlobsRequest(versionedHashes: VersionedHashes): Uint8Array {
-  const FIXED_SIZE = 4;
-  const hashesSize = versionedHashes.length * 32;
-  const buf = new Uint8Array(FIXED_SIZE + hashesSize);
-  writeUint32LE(buf, 0, FIXED_SIZE);
-  let pos = FIXED_SIZE;
-  for (const hash of versionedHashes) {
-    buf.set(hash, pos);
-    pos += 32;
-  }
-  return buf;
+  return GetBlobsRequest.serialize({blobVersionedHashes: versionedHashes});
 }
 
-/**
- * Encode ExchangeCapabilities as SSZ Container { capabilities: List[List[uint8, 64], 128] }.
- */
 export function encodeExchangeCapabilities(capabilities: string[]): Uint8Array {
-  return ExchangeCapabilitiesRequest.serialize({
-    capabilities: capabilities.map((s) => textEncoder.encode(s)),
+  const encoder = new TextEncoder();
+  return ExchangeCapabilitiesContainer.serialize({
+    capabilities: capabilities.map((s) => encoder.encode(s)),
   });
 }
 
 // ---------------------------------------------------------------------------
-// Decode functions
+// Public decoders
 // ---------------------------------------------------------------------------
 
-/** Status byte mapping */
-const PAYLOAD_STATUS_MAP: Record<number, string> = {
-  0: "VALID",
-  1: "INVALID",
-  2: "SYNCING",
-  3: "ACCEPTED",
-  4: "INVALID_BLOCK_HASH",
-};
-
 export interface DecodedPayloadStatus {
-  status: string;
-  latestValidHash: string | null;
+  status: ExecutionPayloadStatus;
+  latestValidHash: RootHex | null;
   validationError: string | null;
 }
 
-/**
- * Decode PayloadStatus from SSZ-REST response.
- *
- * Layout:
- *   Byte 0: status (0=VALID, 1=INVALID, 2=SYNCING, 3=ACCEPTED, 4=INVALID_BLOCK_HASH)
- *   Bytes 1-4: latestValidHash offset (uint32 LE)
- *   Bytes 5-8: validationError offset (uint32 LE)
- *   Variable: latestValidHash as List[Hash32, 1] (0 bytes = absent, 32 bytes = present)
- *   Variable: validationError as UTF-8 bytes
- */
 export function decodePayloadStatus(data: Uint8Array): DecodedPayloadStatus {
-  if (data.length < 9) {
-    throw Error(`PayloadStatus too short: ${data.length} bytes, expected at least 9`);
-  }
-
-  const statusByte = data[0];
-  const status = PAYLOAD_STATUS_MAP[statusByte];
-  if (status === undefined) {
-    throw Error(`Unknown payload status byte: ${statusByte}`);
-  }
-
-  const latestValidHashOffset = readUint32LE(data, 1);
-  const validationErrorOffset = readUint32LE(data, 5);
-
-  // Decode latestValidHash: List[Hash32, 1] — 0 bytes = absent, 32 bytes = present
-  let latestValidHash: string | null = null;
-  const hashLen = validationErrorOffset - latestValidHashOffset;
-  if (hashLen === 32) {
-    const hashBytes = data.subarray(latestValidHashOffset, validationErrorOffset);
-    latestValidHash = "0x" + bytesToHex(hashBytes);
-  }
-
-  // Decode validationError
-  let validationError: string | null = null;
-  if (validationErrorOffset < data.length) {
-    const errorBytes = data.subarray(validationErrorOffset);
-    if (errorBytes.length > 0) {
-      validationError = textDecoder.decode(errorBytes);
-    }
-  }
-
-  return {status, latestValidHash, validationError};
+  const parsed = PayloadStatusV1.deserialize(data);
+  const validationError = parsed.validationError.length > 0 ? new TextDecoder().decode(parsed.validationError) : null;
+  return {
+    status: statusByteToEnum(parsed.status),
+    latestValidHash: parsed.latestValidHash.length === 1 ? toHex(parsed.latestValidHash[0]) : null,
+    validationError,
+  };
 }
 
 export interface DecodedForkchoiceUpdatedResponse {
   payloadStatus: DecodedPayloadStatus;
-  payloadId: string | null;
+  payloadId: PayloadId | null;
 }
 
-/**
- * Decode ForkchoiceUpdated response.
- *
- * Layout:
- *   Bytes 0-3: payloadStatus offset
- *   Bytes 4-7: payloadId offset
- *   Variable: payloadStatus (decoded with decodePayloadStatus)
- *   Variable: payloadId as List[Bytes8, 1] (0 bytes = absent, 8 bytes = present)
- */
 export function decodeForkchoiceUpdatedResponse(data: Uint8Array): DecodedForkchoiceUpdatedResponse {
-  if (data.length < 8) {
-    throw Error(`ForkchoiceUpdatedResponse too short: ${data.length} bytes, expected at least 8`);
-  }
-
-  const payloadStatusOffset = readUint32LE(data, 0);
-  const payloadIdOffset = readUint32LE(data, 4);
-
-  // Determine payloadStatus extent
-  const payloadStatusEnd = payloadIdOffset < data.length ? payloadIdOffset : data.length;
-  const payloadStatusBytes = data.subarray(payloadStatusOffset, payloadStatusEnd);
-  const payloadStatus = decodePayloadStatus(payloadStatusBytes);
-
-  // Decode payloadId: List[Bytes8, 1] — 0 bytes = absent, 8 bytes = present
-  let payloadId: string | null = null;
-  const pidData = data.subarray(payloadIdOffset);
-  if (pidData.length === 8) {
-    payloadId = "0x" + bytesToHex(pidData);
-  }
-
-  return {payloadStatus, payloadId};
-}
-
-export interface DecodedGetPayloadResponse {
-  /** Raw SSZ bytes of the ExecutionPayload */
-  executionPayloadSsz: Uint8Array;
-  /** Block value as bigint (uint256 LE) */
-  blockValue: bigint;
-  /** Raw SSZ bytes of the BlobsBundle, may be empty */
-  blobsBundleSsz: Uint8Array;
-  /** Whether the builder should be overridden */
-  shouldOverrideBuilder: boolean;
-  /** Raw SSZ bytes of execution requests, may be empty */
-  executionRequestsSsz: Uint8Array;
-}
-
-/**
- * Decode GetPayload response.
- *
- * Layout:
- *   Bytes 0-3:   executionPayload offset
- *   Bytes 4-35:  blockValue (uint256 LE, 32 bytes)
- *   Bytes 36-39: blobsBundle offset
- *   Byte 40:     shouldOverrideBuilder (boolean)
- *   Bytes 41-44: executionRequests offset
- *
- * Fixed header = 45 bytes (if executionRequests field present) or 41 bytes (without)
- */
-export function decodeGetPayloadResponse(data: Uint8Array): DecodedGetPayloadResponse {
-  // Determine layout based on data length and offsets
-  // Minimum: 41 bytes without executionRequests
-  if (data.length < 41) {
-    throw Error(`GetPayloadResponse too short: ${data.length} bytes, expected at least 41`);
-  }
-
-  const executionPayloadOffset = readUint32LE(data, 0);
-  const blockValue = readUint256LE(data, 4);
-  const blobsBundleOffset = readUint32LE(data, 36);
-  const shouldOverrideBuilder = data[40] !== 0;
-
-  let executionRequestsOffset: number;
-  let hasExecutionRequests = false;
-
-  // If executionPayloadOffset >= 45, we have the executionRequests offset field
-  if (executionPayloadOffset >= 45 && data.length >= 45) {
-    executionRequestsOffset = readUint32LE(data, 41);
-    hasExecutionRequests = true;
-  } else {
-    executionRequestsOffset = data.length;
-  }
-
-  // Extract regions
-  const executionPayloadSsz = data.subarray(executionPayloadOffset, blobsBundleOffset);
-  const blobsBundleEnd = hasExecutionRequests ? executionRequestsOffset : data.length;
-  const blobsBundleSsz = data.subarray(blobsBundleOffset, blobsBundleEnd);
-  const executionRequestsSsz = hasExecutionRequests ? data.subarray(executionRequestsOffset) : new Uint8Array(0);
-
+  const parsed = ForkchoiceUpdatedResponseV1.deserialize(data);
+  const validationError =
+    parsed.payloadStatus.validationError.length > 0
+      ? new TextDecoder().decode(parsed.payloadStatus.validationError)
+      : null;
   return {
-    executionPayloadSsz,
-    blockValue,
-    blobsBundleSsz,
-    shouldOverrideBuilder,
-    executionRequestsSsz,
+    payloadStatus: {
+      status: statusByteToEnum(parsed.payloadStatus.status),
+      latestValidHash:
+        parsed.payloadStatus.latestValidHash.length === 1 ? toHex(parsed.payloadStatus.latestValidHash[0]) : null,
+      validationError,
+    },
+    payloadId: parsed.payloadId.length === 1 ? toHex(parsed.payloadId[0]) : null,
   };
 }
 
-/**
- * Decode ExchangeCapabilities response (SSZ Container with List[List[uint8, 64], 128]).
- */
+export interface DecodedGetPayloadResponse {
+  executionPayload: ExecutionPayload;
+  blockValue: bigint;
+  blobsBundle?: import("@lodestar/types").BlobsBundle;
+  shouldOverrideBuilder: boolean;
+  executionRequests?: ExecutionRequests;
+}
+
+export function decodeGetPayloadResponse(fork: ForkName, data: Uint8Array): DecodedGetPayloadResponse {
+  const version = getPayloadVersion(fork);
+
+  // v1 is the raw ExecutionPayloadV1 with no wrapping container — no block
+  // value, no blobs bundle. Lodestar does not produce v1 traffic but we keep
+  // the branch for completeness.
+  if (version === 1) {
+    return {
+      executionPayload: ssz.bellatrix.ExecutionPayload.deserialize(data) as ExecutionPayload,
+      blockValue: 0n,
+      shouldOverrideBuilder: false,
+    };
+  }
+
+  if (version === 2) {
+    const parsed = GetPayloadResponseV2.deserialize(data);
+    return {
+      executionPayload: parsed.executionPayload as ExecutionPayload,
+      blockValue: parsed.blockValue,
+      shouldOverrideBuilder: false,
+    };
+  }
+
+  if (version === 3) {
+    const parsed = GetPayloadResponseV3.deserialize(data);
+    return {
+      executionPayload: parsed.executionPayload as ExecutionPayload,
+      blockValue: parsed.blockValue,
+      blobsBundle: parsed.blobsBundle,
+      shouldOverrideBuilder: parsed.shouldOverrideBuilder,
+    };
+  }
+
+  if (version === 4) {
+    const parsed = GetPayloadResponseV4.deserialize(data);
+    return {
+      executionPayload: parsed.executionPayload as ExecutionPayload,
+      blockValue: parsed.blockValue,
+      blobsBundle: parsed.blobsBundle,
+      shouldOverrideBuilder: parsed.shouldOverrideBuilder,
+      executionRequests: parseExecutionRequestsList(parsed.executionRequests),
+    };
+  }
+
+  if (version === 5) {
+    const parsed = GetPayloadResponseV5.deserialize(data);
+    return {
+      executionPayload: parsed.executionPayload as ExecutionPayload,
+      blockValue: parsed.blockValue,
+      blobsBundle: parsed.blobsBundle,
+      shouldOverrideBuilder: parsed.shouldOverrideBuilder,
+      executionRequests: parseExecutionRequestsList(parsed.executionRequests),
+    };
+  }
+
+  // v6
+  const parsed = GetPayloadResponseV6.deserialize(data);
+  return {
+    executionPayload: parsed.executionPayload as ExecutionPayload,
+    blockValue: parsed.blockValue,
+    blobsBundle: parsed.blobsBundle,
+    shouldOverrideBuilder: parsed.shouldOverrideBuilder,
+    executionRequests: parseExecutionRequestsList(parsed.executionRequests),
+  };
+}
+
+export function decodeGetBlobsV1Response(data: Uint8Array): BlobAndProof[] {
+  const parsed = GetBlobsV1Response.deserialize(data);
+  return parsed.blobsAndProofs.map((item) => ({blob: item.blob, proof: item.proof}));
+}
+
+export function decodeGetBlobsV2Response(data: Uint8Array): BlobAndProofV2[] {
+  const parsed = GetBlobsV2Response.deserialize(data);
+  return parsed.blobsAndProofs.map((item) => ({blob: item.blob, proofs: item.proofs}));
+}
+
 export function decodeExchangeCapabilities(data: Uint8Array): string[] {
-  if (data.length < 4) {
-    return [];
-  }
-  try {
-    const decoded = ExchangeCapabilitiesRequest.deserialize(data);
-    return decoded.capabilities.map((cap) => textDecoder.decode(cap));
-  } catch {
-    return [];
-  }
-}
-
-export interface DecodedBlobAndProof {
-  blob: Uint8Array;
-  kzgProof: Uint8Array;
-}
-
-/**
- * Decode GetBlobs response: returns array of {blob, kzgProof}.
- *
- * Layout: list_offset(4) + N item_offsets(4 each) + items
- * Each item: blob(131072 bytes) + proof(48 bytes)
- */
-export function decodeGetBlobsResponse(data: Uint8Array): DecodedBlobAndProof[] {
-  if (data.length < 4) {
-    return [];
-  }
-
-  const listOffset = readUint32LE(data, 0);
-  if (listOffset >= data.length) {
-    return [];
-  }
-
-  const listData = data.subarray(listOffset);
-  if (listData.length === 0) {
-    return [];
-  }
-
-  // Each blob+proof is fixed size: 131072 + 48 = 131120 bytes
-  const BLOB_SIZE = 131072;
-  const PROOF_SIZE = 48;
-  const ITEM_SIZE = BLOB_SIZE + PROOF_SIZE;
-
-  const numItems = Math.floor(listData.length / ITEM_SIZE);
-  const result: DecodedBlobAndProof[] = [];
-
-  for (let i = 0; i < numItems; i++) {
-    const itemStart = i * ITEM_SIZE;
-    result.push({
-      blob: listData.subarray(itemStart, itemStart + BLOB_SIZE),
-      kzgProof: listData.subarray(itemStart + BLOB_SIZE, itemStart + ITEM_SIZE),
-    });
-  }
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// SSZ serialization helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Serialize an ExecutionPayload to SSZ bytes using the @lodestar/types codec
- * appropriate for the given fork.
- */
-function serializeExecutionPayloadSsz(fork: ForkName, payload: ExecutionPayload): Uint8Array {
-  const forkSeq = ForkSeq[fork];
-  if (forkSeq >= ForkSeq.electra) {
-    return ssz.electra.ExecutionPayload.serialize(payload as unknown as electra.ExecutionPayload);
-  }
-  if (forkSeq >= ForkSeq.deneb) {
-    return ssz.deneb.ExecutionPayload.serialize(payload as unknown as deneb.ExecutionPayload);
-  }
-  if (forkSeq >= ForkSeq.capella) {
-    return ssz.capella.ExecutionPayload.serialize(payload as unknown as capella.ExecutionPayload);
-  }
-  return ssz.bellatrix.ExecutionPayload.serialize(payload as unknown as bellatrix.ExecutionPayload);
-}
-
-/**
- * Serialize ExecutionRequests to a single SSZ byte array.
- * Concatenates the type-prefixed request lists.
- */
-function serializeExecutionRequestsSsz(executionRequests: ExecutionRequests): Uint8Array {
-  const parts: Uint8Array[] = [];
-
-  if (executionRequests.deposits.length > 0) {
-    const bytes = ssz.electra.DepositRequests.serialize(executionRequests.deposits);
-    const prefixed = new Uint8Array(1 + bytes.length);
-    prefixed[0] = 0x00; // DEPOSIT_REQUEST_TYPE
-    prefixed.set(bytes, 1);
-    parts.push(prefixed);
-  }
-
-  if (executionRequests.withdrawals.length > 0) {
-    const bytes = ssz.electra.WithdrawalRequests.serialize(executionRequests.withdrawals);
-    const prefixed = new Uint8Array(1 + bytes.length);
-    prefixed[0] = 0x01; // WITHDRAWAL_REQUEST_TYPE
-    prefixed.set(bytes, 1);
-    parts.push(prefixed);
-  }
-
-  if (executionRequests.consolidations.length > 0) {
-    const bytes = ssz.electra.ConsolidationRequests.serialize(executionRequests.consolidations);
-    const prefixed = new Uint8Array(1 + bytes.length);
-    prefixed[0] = 0x02; // CONSOLIDATION_REQUEST_TYPE
-    prefixed.set(bytes, 1);
-    parts.push(prefixed);
-  }
-
-  // Concatenate
-  const totalLen = parts.reduce((sum, p) => sum + p.length, 0);
-  const result = new Uint8Array(totalLen);
-  let offset = 0;
-  for (const part of parts) {
-    result.set(part, offset);
-    offset += part.length;
-  }
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// Utility
-// ---------------------------------------------------------------------------
-
-function bytesToHex(bytes: Uint8Array): string {
-  let hex = "";
-  for (const b of bytes) {
-    hex += b.toString(16).padStart(2, "0");
-  }
-  return hex;
-}
-
-function hexToBytes20(hex: string): Uint8Array {
-  const stripped = hex.startsWith("0x") ? hex.slice(2) : hex;
-  if (stripped.length !== 40) {
-    throw Error(`Expected 20-byte hex address, got ${stripped.length / 2} bytes`);
-  }
-  const bytes = new Uint8Array(20);
-  for (let i = 0; i < 20; i++) {
-    bytes[i] = parseInt(stripped.substring(i * 2, i * 2 + 2), 16);
-  }
-  return bytes;
+  const parsed = ExchangeCapabilitiesContainer.deserialize(data);
+  const decoder = new TextDecoder();
+  return parsed.capabilities.map((bytes) => decoder.decode(bytes));
 }
