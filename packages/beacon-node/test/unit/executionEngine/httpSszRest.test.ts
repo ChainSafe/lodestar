@@ -3,13 +3,16 @@ import {afterEach, describe, expect, it} from "vitest";
 import {ByteListType, ByteVectorType, ContainerType, ListCompositeType, UintNumberType} from "@chainsafe/ssz";
 import {Logger} from "@lodestar/logger";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {defaultExecutionEngineHttpOpts} from "../../../src/execution/engine/http.js";
+import {encodeForkchoiceUpdatedRequest} from "../../../src/execution/engine/sszRestEncoding.js";
 import {parseExecutionPayload} from "../../../src/execution/engine/types.js";
 import {RpcPayload} from "../../../src/execution/engine/utils.js";
 import {IExecutionEngine, initializeExecutionEngine} from "../../../src/execution/index.js";
 
 const Uint8 = new UintNumberType(1);
 const Bytes8 = new ByteVectorType(8);
+const Bytes20 = new ByteVectorType(20);
 const Bytes32 = new ByteVectorType(32);
 const NullableHash = new ListCompositeType(Bytes32, 1);
 const NullablePayloadId = new ListCompositeType(Bytes8, 1);
@@ -26,6 +29,32 @@ const ForkchoiceUpdatedResponseV1 = new ContainerType(
     payloadId: NullablePayloadId,
   },
   {typeName: "ForkchoiceUpdatedResponseV1"}
+);
+
+const ForkchoiceStateV1 = new ContainerType(
+  {headBlockHash: Bytes32, safeBlockHash: Bytes32, finalizedBlockHash: Bytes32},
+  {typeName: "ForkchoiceStateV1"}
+);
+
+const PayloadAttributesV4 = new ContainerType(
+  {
+    timestamp: ssz.UintNum64,
+    prevRandao: Bytes32,
+    suggestedFeeRecipient: Bytes20,
+    withdrawals: ssz.capella.Withdrawals,
+    parentBeaconBlockRoot: Bytes32,
+    slotNumber: ssz.UintNum64,
+    targetGasLimit: ssz.UintNum64,
+  },
+  {typeName: "PayloadAttributesV4"}
+);
+
+const ForkchoiceUpdatedV4Request = new ContainerType(
+  {
+    forkchoiceState: ForkchoiceStateV1,
+    payloadAttributes: new ListCompositeType(PayloadAttributesV4, 1),
+  },
+  {typeName: "ForkchoiceUpdatedV4Request"}
 );
 
 const executionPayloadRpc = {
@@ -62,6 +91,23 @@ describe("ExecutionEngine / SSZ-REST", () => {
       const callback = afterCallbacks.pop();
       if (callback) await callback();
     }
+  });
+
+  it("encodes targetGasLimit in forkchoiceUpdated v4 payload attributes", () => {
+    const root = new Uint8Array(32);
+    const body = encodeForkchoiceUpdatedRequest(ForkName.gloas, root, root, root, {
+      timestamp: 1,
+      prevRandao: root,
+      suggestedFeeRecipient: `0x${"11".repeat(20)}`,
+      withdrawals: [],
+      parentBeaconBlockRoot: root,
+      slotNumber: 2,
+      targetGasLimit: 30_000_000,
+    });
+
+    const parsed = ForkchoiceUpdatedV4Request.deserialize(body);
+
+    expect(parsed.payloadAttributes[0].targetGasLimit).toBe(30_000_000);
   });
 
   it("does not call SSZ endpoint unless it is advertised by engine_exchangeCapabilities", async () => {

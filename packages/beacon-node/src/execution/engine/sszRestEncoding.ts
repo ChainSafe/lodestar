@@ -372,9 +372,10 @@ function buildPayloadAttributesValue(fork: ForkName, attrs: PayloadAttributes): 
   if (attrs.slotNumber === undefined) {
     throw Error(`slotNumber required in PayloadAttributes for fork=${fork}`);
   }
-  // targetGasLimit is in the spec PR but not yet plumbed through Lodestar's PayloadAttributes.
-  // Encode 0 so the on-wire shape matches the spec; revisit when the field lands.
-  return {...v3, slotNumber: attrs.slotNumber, targetGasLimit: 0};
+  if (attrs.targetGasLimit === undefined) {
+    throw Error(`targetGasLimit required in PayloadAttributes for fork=${fork}`);
+  }
+  return {...v3, slotNumber: attrs.slotNumber, targetGasLimit: attrs.targetGasLimit};
 }
 
 function statusByteToEnum(byte: number): ExecutionPayloadStatus {

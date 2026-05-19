@@ -692,6 +692,9 @@ export async function prepareExecutionPayload(
       parentBlockHash,
       feeRecipient: suggestedFeeRecipient,
     });
+    if (ForkSeq[fork] >= ForkSeq.gloas) {
+      attributes.targetGasLimit = getTargetGasLimit(chain, state, state.slot, parentBlockRoot, parentBlockHash);
+    }
 
     payloadId = await chain.executionEngine.notifyForkchoiceUpdate(
       fork,
@@ -793,6 +796,43 @@ export function getPayloadAttributesForSSE(
     payloadAttributes,
   };
   return ssePayloadAttributes;
+}
+
+function getTargetGasLimit(
+  chain: {
+    forkChoice: IForkChoice;
+    proposerPreferencesPool: {
+      get(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null;
+    };
+  },
+  prepareState: IBeaconStateViewBellatrix,
+  prepareSlot: Slot,
+  parentBlockRoot: Root,
+  parentBlockHash: Bytes32
+): number {
+  const fallback = isStatePostGloas(prepareState)
+    ? Number(prepareState.latestExecutionPayloadBid.gasLimit)
+    : prepareState.latestExecutionPayloadHeader.gasLimit;
+  const parentBlockRootHex = toRootHex(parentBlockRoot);
+  const parentBlock =
+    chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash)) ??
+    chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+
+  if (parentBlock === null) {
+    return fallback;
+  }
+
+  try {
+    const dependentRootHex = getShufflingDependentRoot(
+      chain.forkChoice,
+      computeEpochAtSlot(prepareSlot),
+      computeEpochAtSlot(parentBlock.slot),
+      parentBlock
+    );
+    return chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex)?.message.targetGasLimit ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function preparePayloadAttributes(
