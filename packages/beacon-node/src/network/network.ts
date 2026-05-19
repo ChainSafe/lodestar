@@ -526,6 +526,17 @@ export class Network implements INetwork {
     );
   }
 
+  async publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number> {
+    const epoch = computeEpochAtSlot(signedProposerPreferences.message.proposalSlot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.proposer_preferences>(
+      {type: GossipType.proposer_preferences, boundary},
+      signedProposerPreferences,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
   private async publishGossip<K extends GossipType>(
     topic: GossipTopicMap[K],
     object: GossipTypeMap[K],

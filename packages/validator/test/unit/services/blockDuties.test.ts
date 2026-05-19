@@ -44,15 +44,8 @@ describe("BlockDutiesService", () => {
     const notifyBlockProductionFn = vi.fn(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      null,
-      notifyBlockProductionFn
-    );
+    const dutiesService = new BlockDutiesService(config, loggerVc, api, clock, validatorStore, null);
+    dutiesService.setNotifyBlockProductionFn(notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);
@@ -75,15 +68,8 @@ describe("BlockDutiesService", () => {
 
     // Clock will call runAttesterDutiesTasks() immediately
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      null,
-      notifyBlockProductionFn
-    );
+    const dutiesService = new BlockDutiesService(config, loggerVc, api, clock, validatorStore, null);
+    dutiesService.setNotifyBlockProductionFn(notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     api.validator.getProposerDuties.mockResolvedValue(
@@ -128,15 +114,8 @@ describe("BlockDutiesService", () => {
     const notifyBlockProductionFn = vi.fn(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      null,
-      notifyBlockProductionFn
-    );
+    const dutiesService = new BlockDutiesService(config, loggerVc, api, clock, validatorStore, null);
+    dutiesService.setNotifyBlockProductionFn(notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);
