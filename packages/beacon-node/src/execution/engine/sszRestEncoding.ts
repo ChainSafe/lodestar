@@ -280,6 +280,36 @@ const GetPayloadBodiesByRangeV1Request = new ContainerType(
 );
 
 // ---------------------------------------------------------------------------
+// Client version (identification.md)
+// ---------------------------------------------------------------------------
+
+const MAX_CLIENT_CODE_LENGTH = 2;
+const MAX_CLIENT_NAME_LENGTH = 64;
+const MAX_CLIENT_VERSION_LENGTH = 64;
+const MAX_CLIENT_VERSIONS = 4;
+const Bytes4 = new ByteVectorType(4);
+
+const ClientVersionV1Container = new ContainerType(
+  {
+    code: new ByteListType(MAX_CLIENT_CODE_LENGTH),
+    name: new ByteListType(MAX_CLIENT_NAME_LENGTH),
+    version: new ByteListType(MAX_CLIENT_VERSION_LENGTH),
+    commit: Bytes4,
+  },
+  {typeName: "ClientVersionV1"}
+);
+
+const GetClientVersionV1Request = new ContainerType(
+  {clientVersion: ClientVersionV1Container},
+  {typeName: "GetClientVersionV1Request"}
+);
+
+const GetClientVersionV1Response = new ContainerType(
+  {versions: new ListCompositeType(ClientVersionV1Container, MAX_CLIENT_VERSIONS)},
+  {typeName: "GetClientVersionV1Response"}
+);
+
+// ---------------------------------------------------------------------------
 // Fork → version mapping
 // ---------------------------------------------------------------------------
 
@@ -510,6 +540,37 @@ export function encodeGetPayloadBodiesByHashRequest(blockHashes: Uint8Array[]): 
 
 export function encodeGetPayloadBodiesByRangeRequest(start: number, count: number): Uint8Array {
   return GetPayloadBodiesByRangeV1Request.serialize({start, count});
+}
+
+export interface SszClientVersion {
+  code: string;
+  name: string;
+  version: string;
+  /** Hex string (with or without 0x prefix) — 4 bytes. */
+  commit: string;
+}
+
+export function encodeGetClientVersionRequest(clientVersion: SszClientVersion): Uint8Array {
+  const encoder = new TextEncoder();
+  return GetClientVersionV1Request.serialize({
+    clientVersion: {
+      code: encoder.encode(clientVersion.code),
+      name: encoder.encode(clientVersion.name),
+      version: encoder.encode(clientVersion.version),
+      commit: fromHex(clientVersion.commit),
+    },
+  });
+}
+
+export function decodeGetClientVersionResponse(data: Uint8Array): SszClientVersion[] {
+  const parsed = GetClientVersionV1Response.deserialize(data);
+  const decoder = new TextDecoder();
+  return parsed.versions.map((cv) => ({
+    code: decoder.decode(cv.code),
+    name: decoder.decode(cv.name),
+    version: decoder.decode(cv.version),
+    commit: toHex(cv.commit).slice(2), // drop the `0x` prefix to match JSON-RPC path
+  }));
 }
 
 export function encodeExchangeCapabilities(capabilities: string[]): Uint8Array {

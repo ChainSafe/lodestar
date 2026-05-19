@@ -32,11 +32,13 @@ import {
   decodeForkchoiceUpdatedResponse,
   decodeGetBlobsV1Response,
   decodeGetBlobsV2Response,
+  decodeGetClientVersionResponse,
   decodeGetPayloadResponse,
   decodePayloadBodiesV1Response,
   decodePayloadStatus,
   encodeForkchoiceUpdatedRequest,
   encodeGetBlobsRequest,
+  encodeGetClientVersionRequest,
   encodeGetPayloadBodiesByHashRequest,
   encodeGetPayloadBodiesByRangeRequest,
   encodeNewPayloadRequest,
@@ -166,6 +168,7 @@ const supportedSszRestEndpoints = [
   "POST /engine/v3/forkchoice",
   "POST /engine/v4/forkchoice",
   "POST /engine/v2/blobs",
+  "POST /engine/v1/client/version",
 ];
 
 /**
@@ -892,17 +895,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   private async getClientVersion(clientVersion: ClientVersion): Promise<ClientVersion[]> {
-    const method = "engine_getClientVersionV1";
-
-    const response = await this.rpc.fetchWithRetries<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]}, getClientVersionOpts);
-
-    const clientVersions = response.map((cv) => {
-      const code = cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX;
-      return {code, name: cv.name, version: cv.version, commit: strip0xPrefix(cv.commit)};
-    });
+    const clientVersions = (await this.fetchClientVersions(clientVersion)).map((cv) => ({
+      code: cv.code in ClientCode ? ClientCode[cv.code as keyof typeof ClientCode] : ClientCode.XX,
+      name: cv.name,
+      version: cv.version,
+      commit: strip0xPrefix(cv.commit),
+    }));
 
     if (clientVersions.length === 0) {
       throw Error("Received empty client versions array");
@@ -912,6 +910,38 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     this.logger.debug("Execution client version updated", this.clientVersion);
 
     return clientVersions;
+  }
+
+  private async fetchClientVersions(
+    clientVersion: ClientVersion
+  ): Promise<{code: string; name: string; version: string; commit: string}[]> {
+    if (this.sszRestClient) {
+      const path = "/engine/v1/client/version";
+      const endpoint = `POST ${path}`;
+      if (!(await this.supportsSszRestEndpoint(endpoint))) {
+        this.logger.debug("SSZ-REST getClientVersion endpoint not advertised, using JSON-RPC", {endpoint});
+      } else {
+        try {
+          const body = encodeGetClientVersionRequest(clientVersion);
+          const resp = await this.sszRestClient.doRequest(path, body);
+          return decodeGetClientVersionResponse(resp);
+        } catch (e) {
+          if (isSszRestNetworkError(e)) {
+            this.logger.debug("SSZ-REST getClientVersion failed, falling back to JSON-RPC", {
+              error: (e as Error).message,
+            });
+          } else {
+            throw e;
+          }
+        }
+      }
+    }
+
+    const method = "engine_getClientVersionV1";
+    return this.rpc.fetchWithRetries<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>(
+      {method, params: [{...clientVersion, commit: `0x${clientVersion.commit}`}]},
+      getClientVersionOpts
+    );
   }
 
   private updateEngineState(newState: ExecutionEngineState): void {
