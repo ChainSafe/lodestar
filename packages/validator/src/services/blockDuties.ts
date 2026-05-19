@@ -20,12 +20,12 @@ const HISTORICAL_DUTIES_EPOCHS = 2;
 const GENESIS_EPOCH = 0;
 export const GENESIS_SLOT = 0;
 
-type BlockDutyAtEpoch = {dependentRoot: RootHex; data: routes.validator.ProposerDuty[]};
+export type BlockDutyAtEpoch = {dependentRoot: RootHex; data: routes.validator.ProposerDuty[]};
 type NotifyBlockProductionFn = (slot: Slot, proposers: BLSPubkey[]) => void;
 
 export class BlockDutiesService {
   /** Notify the block service if it should produce a block. */
-  private readonly notifyBlockProductionFn: NotifyBlockProductionFn;
+  private notifyBlockProductionFn: NotifyBlockProductionFn = () => {};
   /** Maps an epoch to all *local* proposers in this epoch. Notably, this does not contain
       proposals for any validators which are not registered locally. */
   private readonly proposers = new Map<Epoch, BlockDutyAtEpoch>();
@@ -36,11 +36,8 @@ export class BlockDutiesService {
     private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null,
-    notifyBlockProductionFn: NotifyBlockProductionFn
+    private readonly metrics: Metrics | null
   ) {
-    this.notifyBlockProductionFn = notifyBlockProductionFn;
-
     // TODO: Instead of polling every CLOCK_SLOT, poll every CLOCK_EPOCH and track re-org events
     //       only then re-fetch the block duties. Make sure most clients (including Lodestar)
     //       properly emit the re-org event
@@ -51,6 +48,14 @@ export class BlockDutiesService {
         metrics.proposerDutiesEpochCount.set(this.proposers.size);
       });
     }
+  }
+
+  /**
+   * Late-bind the production callback. Allows the duties service to be constructed
+   * before the consumer that handles proposal production.
+   */
+  setNotifyBlockProductionFn(notifyBlockProductionFn: NotifyBlockProductionFn): void {
+    this.notifyBlockProductionFn = notifyBlockProductionFn;
   }
 
   /**
@@ -73,6 +78,16 @@ export class BlockDutiesService {
     }
 
     return Array.from(publicKeys.values());
+  }
+
+  /**
+   * Returns the cached `{dependentRoot, data}` entry for `epoch`, or `undefined` if duties
+   * for that epoch are not yet known. Consumers can detect a proposer-shuffling change
+   * (e.g. after a reorg) by observing a different `dependentRoot` than the one they last
+   * read for the same epoch.
+   */
+  getProposersAtEpoch(epoch: Epoch): BlockDutyAtEpoch | undefined {
+    return this.proposers.get(epoch);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {

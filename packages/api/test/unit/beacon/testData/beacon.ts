@@ -131,6 +131,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {slot: 1},
     res: {data: [ssz.gloas.PayloadAttestation.defaultValue()], meta: {version: ForkName.gloas}},
   },
+  getPoolProposerPreferences: {
+    args: {slot: 1},
+    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
+  },
   getPoolAttesterSlashings: {
     args: undefined,
     res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
@@ -185,6 +189,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   submitPayloadAttestationMessages: {
     args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
+    res: undefined,
+  },
+  submitSignedProposerPreferences: {
+    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
     res: undefined,
   },
 
