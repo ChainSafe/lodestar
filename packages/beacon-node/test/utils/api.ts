@@ -23,7 +23,7 @@ export function getApiTestModules(opts?: Partial<MockedBeaconChainOptions>): Api
   const networkStub = getMockedNetwork();
 
   return {
-    config,
+    config: opts?.config ?? config,
     chain: chainStub,
     sync: syncStub,
     db: dbStub,

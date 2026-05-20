@@ -235,7 +235,15 @@ export class Validator {
     const chainHeaderTracker = new ChainHeaderTracker(config, logger, api, emitter);
     const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
-    const blockDutiesService = new BlockDutiesService(config, loggerVc, api, clock, validatorStore, metrics);
+    const blockDutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      metrics
+    );
 
     const blockProposingService = new BlockProposingService(
       config,
