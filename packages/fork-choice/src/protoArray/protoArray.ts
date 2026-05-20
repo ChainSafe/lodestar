@@ -558,6 +558,7 @@ export class ProtoArray {
     currentSlot: Slot,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
+    executionPayloadGasLimit: number,
     proposerBoostRoot: RootHex | null,
     executionStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
@@ -613,6 +614,7 @@ export class ProtoArray {
       executionStatus,
       executionPayloadBlockHash,
       executionPayloadNumber,
+      executionPayloadGasLimit,
       dataAvailabilityStatus,
     };
 

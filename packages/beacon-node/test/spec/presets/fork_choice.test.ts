@@ -399,6 +399,7 @@ const forkChoiceTest =
                 const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
                 const blockHash = toHex(envelope.message.payload.blockHash);
                 const blockNumber = envelope.message.payload.blockNumber;
+                const gasLimit = envelope.message.payload.gasLimit;
 
                 // Verify envelope against the state
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
@@ -433,6 +434,7 @@ const forkChoiceTest =
                   beaconBlockRoot,
                   blockHash,
                   blockNumber,
+                  gasLimit,
                   ExecutionStatus.Valid,
                   DataAvailabilityStatus.Available
                 );

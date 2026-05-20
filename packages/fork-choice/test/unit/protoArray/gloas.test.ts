@@ -49,6 +49,7 @@ describe("Gloas Fork Choice", () => {
       timeliness: true,
       executionPayloadBlockHash: blockRoot, // Use blockRoot as execution hash
       executionPayloadNumber: slot,
+      executionPayloadGasLimit: 30000000,
       executionStatus: ExecutionStatus.Valid,
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
       parentBlockHash: parentBlockHash === undefined ? null : parentBlockHash,
@@ -277,6 +278,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -297,6 +299,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -308,6 +311,40 @@ describe("Gloas Fork Choice", () => {
       expect(fullNode?.parent).toBe(pendingIndex);
     });
 
+    it("FULL node carries the executionPayloadGasLimit supplied to onExecutionPayload", () => {
+      // Distinct from the value in createTestBlock (30M) so we know it came from this call.
+      const deliveredGasLimit = 31_500_000;
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        deliveredGasLimit,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
+      if (fullNode === undefined || fullNode.executionPayloadBlockHash === null) {
+        throw new Error("expected post-merge FULL variant");
+      }
+      // FULL must carry the *delivered* gas limit, not the value the block was created with.
+      // This is the value bid validation reads as `parent_gas_limit` for child bids.
+      expect(fullNode.executionPayloadBlockHash).toBe("0x02");
+      expect(fullNode.executionPayloadGasLimit).toBe(deliveredGasLimit);
+
+      const pendingNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
+      if (pendingNode === undefined || pendingNode.executionPayloadBlockHash === null) {
+        throw new Error("expected post-merge PENDING variant");
+      }
+      // PENDING/EMPTY hold inherited parent-payload values, unchanged by onExecutionPayload.
+      expect(pendingNode.executionPayloadGasLimit).toBe(30_000_000);
+    });
+
     it("is idempotent (calling twice does not create duplicate)", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
@@ -317,6 +354,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -326,6 +364,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -350,6 +389,7 @@ describe("Gloas Fork Choice", () => {
           gloasForkSlot - 1,
           "0x02",
           gloasForkSlot - 1,
+          30000000,
           null,
           ExecutionStatus.Valid,
           DataAvailabilityStatus.Available
@@ -364,6 +404,7 @@ describe("Gloas Fork Choice", () => {
           gloasForkSlot,
           "0x99",
           gloasForkSlot,
+          30000000,
           null,
           ExecutionStatus.Valid,
           DataAvailabilityStatus.Available
@@ -437,6 +478,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -461,6 +503,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -485,6 +528,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -546,6 +590,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -568,6 +613,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02Hash",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -605,6 +651,7 @@ describe("Gloas Fork Choice", () => {
         blockSlot,
         "0x02",
         blockSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -690,6 +737,7 @@ describe("Gloas Fork Choice", () => {
         blockSlot,
         "0x02",
         blockSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -755,6 +803,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -808,6 +857,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -843,6 +893,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -934,6 +985,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Syncing,
         DataAvailabilityStatus.Available
@@ -954,6 +1006,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot + 1,
         "0x03",
         gloasForkSlot + 1,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -993,6 +1046,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02hash",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Syncing,
         DataAvailabilityStatus.Available
@@ -1010,6 +1064,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot + 1,
         "0x03",
         gloasForkSlot + 1,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -1037,6 +1092,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Syncing,
         DataAvailabilityStatus.Available
@@ -1075,6 +1131,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02hash",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Syncing,
         DataAvailabilityStatus.Available

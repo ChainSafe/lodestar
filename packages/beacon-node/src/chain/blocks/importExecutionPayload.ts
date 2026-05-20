@@ -237,6 +237,7 @@ export async function importExecutionPayload(
     blockRootHex,
     blockHashHex,
     envelope.payload.blockNumber,
+    envelope.payload.gasLimit,
     execStatus,
     dataAvailabilityStatus
   );
