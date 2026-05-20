@@ -21,6 +21,7 @@ import {
   type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  getExpectedGasLimit,
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
@@ -53,13 +54,7 @@ import {
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {
-  IExecutionBuilder,
-  IExecutionEngine,
-  PayloadAttributes,
-  PayloadId,
-  getExpectedGasLimit,
-} from "../../execution/index.js";
+import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
