@@ -56,7 +56,8 @@ export type ExecutionPayloadBidErrorType =
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH;
       builderIndex: BuilderIndex;
       bidGasLimit: number;
-      expectedGasLimit: number;
+      parentGasLimit: number;
+      targetGasLimit: number;
     };
 
 export class ExecutionPayloadBidError extends GossipActionError<ExecutionPayloadBidErrorType> {}

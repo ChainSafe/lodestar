@@ -74,6 +74,30 @@ export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): 
 }
 
 /**
+ * Check if `gasLimit` is compatible with `targetGasLimit` under the EIP-1559 transition rule
+ * from `parentGasLimit`. The bid must hit `targetGasLimit` when the target is within one
+ * adjustment step of the parent, otherwise it must hit the clamped boundary.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/builder.md#new-is_gas_limit_target_compatible
+ */
+export function isGasLimitTargetCompatible(
+  parentGasLimit: number,
+  gasLimit: number,
+  targetGasLimit: number
+): boolean {
+  const maxGasLimitDifference = Math.max(Math.floor(parentGasLimit / 1024), 1) - 1;
+  const minGasLimit = parentGasLimit - maxGasLimitDifference;
+  const maxGasLimit = parentGasLimit + maxGasLimitDifference;
+
+  if (targetGasLimit >= minGasLimit && targetGasLimit <= maxGasLimit) {
+    return gasLimit === targetGasLimit;
+  }
+  if (targetGasLimit > maxGasLimit) {
+    return gasLimit === maxGasLimit;
+  }
+  return gasLimit === minGasLimit;
+}
+
+/**
  * Get the total pending balance to withdraw for a builder (from withdrawals + payments).
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-get_pending_balance_to_withdraw_for_builder
  */
