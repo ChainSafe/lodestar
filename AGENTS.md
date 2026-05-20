@@ -32,7 +32,6 @@ and serves as:
   config/           # Network configuration (mainnet, sepolia, etc.)
   db/               # Database abstraction (LevelDB)
   era/              # Era file handling for historical data
-  flare/            # CLI debugging/testing tool
   fork-choice/      # Fork choice implementation (proto-array)
   light-client/     # Light client implementation
   logger/           # Logging utilities
@@ -91,6 +90,14 @@ pnpm vitest run --project unit -t "pattern"
 # Run spec tests (requires downloading first)
 pnpm download-spec-tests
 pnpm test:spec
+
+# Download nightly artifacts from ethereum/consensus-specs CI instead of a
+# stable release. Useful when testing against unreleased spec changes.
+# Requires GITHUB_TOKEN in the env or a repo-root .env file.
+pnpm download-spec-tests latest                                # latest scheduled master run
+pnpm download-spec-tests 2026-04-14                            # latest successful run on that date
+pnpm download-spec-tests latest <owner>/consensus-specs        # fork
+pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
 
 # Run e2e tests (requires docker environment)
 ./scripts/run_e2e_env.sh start

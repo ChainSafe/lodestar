@@ -34,6 +34,7 @@ export enum SignableMessageType {
   SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
   VALIDATOR_REGISTRATION = "VALIDATOR_REGISTRATION",
   EXECUTION_PAYLOAD_ENVELOPE = "EXECUTION_PAYLOAD_ENVELOPE",
+  PAYLOAD_ATTESTATION = "PAYLOAD_ATTESTATION",
 }
 
 const AggregationSlotType = new ContainerType({
@@ -83,7 +84,8 @@ export type SignableMessage =
   | {type: SignableMessageType.SYNC_COMMITTEE_SELECTION_PROOF; data: ValueOf<typeof SyncAggregatorSelectionDataType>}
   | {type: SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF; data: altair.ContributionAndProof}
   | {type: SignableMessageType.VALIDATOR_REGISTRATION; data: ValidatorRegistrationV1}
-  | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope};
+  | {type: SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE; data: gloas.ExecutionPayloadEnvelope}
+  | {type: SignableMessageType.PAYLOAD_ATTESTATION; data: gloas.PayloadAttestationData};
 
 const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.AGGREGATION_SLOT]: true,
@@ -99,6 +101,7 @@ const requiresForkInfo: Record<SignableMessageType, boolean> = {
   [SignableMessageType.SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF]: true,
   [SignableMessageType.VALIDATOR_REGISTRATION]: false,
   [SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE]: true,
+  [SignableMessageType.PAYLOAD_ATTESTATION]: true,
 };
 
 type Web3SignerSerializedRequest = {
@@ -273,6 +276,9 @@ function serializerSignableMessagePayload(config: BeaconConfig, payload: Signabl
 
     case SignableMessageType.EXECUTION_PAYLOAD_ENVELOPE:
       return {execution_payload_envelope: ssz.gloas.ExecutionPayloadEnvelope.toJson(payload.data)};
+
+    case SignableMessageType.PAYLOAD_ATTESTATION:
+      return {payload_attestation: ssz.gloas.PayloadAttestationData.toJson(payload.data)};
   }
 }
 

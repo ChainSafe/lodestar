@@ -7,12 +7,14 @@ import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidec
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
 import {INetwork} from "../../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
+import {PendingBlockInputStatus} from "../../../../src/sync/types.js";
 import {
   DownloadByRootError,
   fetchAndValidateBlobs,
   fetchAndValidateBlock,
   fetchAndValidateColumns,
   fetchBlobsByRoot,
+  fetchByRoot,
   fetchColumnsByRoot,
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
@@ -317,6 +319,41 @@ describe("downloadByRoot.ts", () => {
           missing: [0, 1, 2, 3, 4, 5],
         })
       ).rejects.toThrow(DataColumnSidecarValidationError);
+    });
+  });
+
+  describe("fetchByRoot", () => {
+    afterEach(() => {
+      vi.resetAllMocks();
+    });
+
+    it("does not fetch columns for bare-root gloas block sync", async () => {
+      const gloasBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.gloas});
+      const sendBeaconBlocksByRoot = vi.fn(() => Promise.resolve([gloasBlockWithColumns.block]));
+      const sendDataColumnSidecarsByRoot = vi.fn();
+      network = {
+        sendBeaconBlocksByRoot,
+        sendDataColumnSidecarsByRoot,
+      } as unknown as INetwork;
+
+      const response = await fetchByRoot({
+        config,
+        chain: null,
+        network,
+        peerMeta,
+        blockRoot: gloasBlockWithColumns.blockRoot,
+        cacheItem: {
+          status: PendingBlockInputStatus.pending,
+          rootHex: gloasBlockWithColumns.rootHex,
+          timeAddedSec: 0,
+          peerIdStrings: new Set(),
+        },
+      });
+
+      expect(sendBeaconBlocksByRoot).toHaveBeenCalledOnce();
+      expect(sendDataColumnSidecarsByRoot).not.toHaveBeenCalled();
+      expect(response.result.block).toEqual(gloasBlockWithColumns.block);
+      expect(response.result.columnSidecars).toBeUndefined();
     });
   });
 

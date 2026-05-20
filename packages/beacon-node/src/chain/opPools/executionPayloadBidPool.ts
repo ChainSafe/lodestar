@@ -59,13 +59,13 @@ export class ExecutionPayloadBidPool {
   }
 
   /**
-   * Return the highest-value bid matching slot, parent block root, and parent block hash.
+   * Return the highest-value bid matching slot, parent block hash, and parent block root.
    * Used for gossip validation and block production.
    */
   getBestBid(
-    parentBlockRoot: BlockRootHex,
+    slot: Slot,
     parentBlockHash: BlockHashHex,
-    slot: Slot
+    parentBlockRoot: BlockRootHex
   ): gloas.ExecutionPayloadBid | null {
     const bidByParentHash = this.bidByParentHashByParentRootBySlot.get(slot)?.get(parentBlockRoot);
     return bidByParentHash?.get(parentBlockHash) ?? null;

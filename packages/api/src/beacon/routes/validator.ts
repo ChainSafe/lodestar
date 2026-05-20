@@ -131,6 +131,18 @@ export const ProposerDutyType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+export const PtcDutyType = new ContainerType(
+  {
+    /** Public key of the validator in the registry  */
+    pubkey: ssz.BLSPubkey,
+    /** Index of validator in the registry. */
+    validatorIndex: ssz.ValidatorIndex,
+    /** The slot at which the validator must perform PTC duties. */
+    slot: ssz.Slot,
+  },
+  {jsonCase: "eth2"}
+);
+
 /**
  * From https://github.com/ethereum/beacon-APIs/pull/134
  */
@@ -219,6 +231,7 @@ export const LivenessResponseDataType = new ContainerType(
 export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
 export const AttesterDutyListType = ArrayOf(AttesterDutyType);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
+export const PtcDutyListType = ArrayOf(PtcDutyType);
 export const SyncDutyListType = ArrayOf(SyncDutyType);
 export const SignedAggregateAndProofListPhase0Type = ArrayOf(ssz.phase0.SignedAggregateAndProof);
 export const SignedAggregateAndProofListElectraType = ArrayOf(ssz.electra.SignedAggregateAndProof);
@@ -239,6 +252,8 @@ export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
 export type AttesterDutyList = ValueOf<typeof AttesterDutyListType>;
 export type ProposerDuty = ValueOf<typeof ProposerDutyType>;
 export type ProposerDutyList = ValueOf<typeof ProposerDutyListType>;
+export type PtcDuty = ValueOf<typeof PtcDutyType>;
+export type PtcDutyList = ValueOf<typeof PtcDutyListType>;
 export type SyncDuty = ValueOf<typeof SyncDutyType>;
 export type SyncDutyList = ValueOf<typeof SyncDutyListType>;
 export type SignedAggregateAndProofListPhase0 = ValueOf<typeof SignedAggregateAndProofListPhase0Type>;
@@ -334,6 +349,23 @@ export type Endpoints = {
     {params: {epoch: Epoch}; body: unknown},
     SyncDutyList,
     ExecutionOptimisticMeta
+  >;
+
+  /**
+   * Get PTC duties
+   * Requests the beacon node to provide a set of Payload Timeliness Committee duties for a particular epoch.
+   */
+  getPtcDuties: Endpoint<
+    "POST",
+    {
+      /** Must not be greater than the next epoch */
+      epoch: Epoch;
+      /** An array of the validator indices for which to obtain the duties */
+      indices: ValidatorIndices;
+    },
+    {params: {epoch: Epoch}; body: unknown},
+    PtcDutyList,
+    ExecutionOptimisticAndDependentRootMeta
   >;
 
   /**
@@ -438,6 +470,21 @@ export type Endpoints = {
     {query: {slot: number; committee_index?: number}},
     phase0.AttestationData,
     EmptyMeta
+  >;
+
+  /**
+   * Produce payload attestation data
+   * Requests that the beacon node produce a PayloadAttestationData.
+   */
+  producePayloadAttestationData: Endpoint<
+    "GET",
+    {
+      /** The slot for which payload attestation data should be created */
+      slot: Slot;
+    },
+    {params: {slot: Slot}},
+    gloas.PayloadAttestationData,
+    VersionMeta
   >;
 
   produceSyncCommitteeContribution: Endpoint<
@@ -698,6 +745,24 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: ExecutionOptimisticCodec,
       },
     },
+    getPtcDuties: {
+      url: "/eth/v1/validator/duties/ptc/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: PtcDutyListType,
+        meta: ExecutionOptimisticAndDependentRootCodec,
+      },
+    },
     produceBlockV3: {
       url: "/eth/v3/validator/blocks/{slot}",
       method: "GET",
@@ -780,7 +845,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                     (data as BlockContents).block as BeaconBlock<ForkPreDeneb> // <- tranformation
                   );
           },
-          deserialize(data, {executionPayloadBlinded, version}) {
+          deserialize(data, meta) {
+            const {executionPayloadBlinded, version} = meta as ProduceBlockV3Meta;
             return executionPayloadBlinded
               ? getPostBellatrixForkTypes(version).BlindedBeaconBlock.deserialize(data)
               : isForkPostDeneb(version)
@@ -932,6 +998,21 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: ssz.phase0.AttestationData,
         meta: EmptyMetaCodec,
+      },
+    },
+    producePayloadAttestationData: {
+      url: "/eth/v1/validator/payload_attestation_data/{slot}",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({params: {slot}}),
+        parseReq: ({params}) => ({slot: params.slot}),
+        schema: {
+          params: {slot: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: ssz.gloas.PayloadAttestationData,
+        meta: VersionCodec,
       },
     },
     produceSyncCommitteeContribution: {

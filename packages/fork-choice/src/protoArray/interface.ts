@@ -24,16 +24,15 @@ export type VoteIndex = number;
  * - Syncing: EL is syncing, payload validity unknown (optimistic sync)
  * - PreMerge: Block is from before The Merge, no execution payload exists
  * - Invalid: Execution payload was invalidated by the EL (post-import status)
- * - PayloadSeparated: Gloas beacon block without embedded execution payload.
- *         The execution payload arrives separately via SignedExecutionPayloadEnvelope.
- *         Gloas blocks WITH execution payload (FULL variant) use Valid/Invalid/Syncing.
+ *
+ * For gloas blocks the PENDING/EMPTY variants inherit `executionStatus` from the parent's chain
+ * (Valid/Syncing/PreMerge); the FULL variant carries the EL response for this block's own payload.
  */
 export enum ExecutionStatus {
   Valid = "Valid",
   Syncing = "Syncing",
   PreMerge = "PreMerge",
   Invalid = "Invalid",
-  PayloadSeparated = "PayloadSeparated",
 }
 
 /**
@@ -61,19 +60,21 @@ export type LVHInvalidResponse = {
   executionStatus: ExecutionStatus.Invalid;
   latestValidExecHash: RootHex | null;
   invalidateFromParentBlockRoot: RootHex;
+  // EL block hash from invalid block's bid (gloas) or payload's parentHash (pre-gloas).
+  // Disambiguates which variant of the parent (FULL vs EMPTY) to invalidate from.
+  invalidateFromParentBlockHash: RootHex;
 };
 export type LVHExecResponse = LVHValidResponse | LVHInvalidResponse;
 
 /**
  * Any execution status that is not definitively invalid.
- * Pre-Gloas: Valid | Syncing | PreMerge
- * Post-Gloas: execution status must be PayloadSeparated (beacon block imported before its payload arrives via SignedExecutionPayloadEnvelope)
+ * Valid | Syncing | PreMerge
  */
 export type BlockExecutionStatus = Exclude<ExecutionStatus, ExecutionStatus.Invalid>;
 
 /**
  * Execution status for a block whose execution payload is present and has been submitted to the EL.
- * Used post-Gloas when transitioning a PayloadSeparated block to FULL via onExecutionPayload().
+ * Used post-Gloas when transitioning a PENDING block to FULL via onExecutionPayload().
  */
 export type PayloadExecutionStatus = ExecutionStatus.Valid | ExecutionStatus.Syncing;
 

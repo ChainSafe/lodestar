@@ -16,12 +16,13 @@ import {
   altair,
   capella,
   electra,
+  gloas,
   phase0,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
-import {getPostAltairForkTypes, getPostBellatrixForkTypes} from "../../utils/fork.js";
+import {getPostAltairForkTypes, getPostBellatrixForkTypes, getPostGloasForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {VersionType} from "../../utils/metadata.js";
 
@@ -99,12 +100,14 @@ export enum EventType {
   blobSidecar = "blob_sidecar",
   /** The node has received a valid DataColumnSidecar (from P2P or API) */
   dataColumnSidecar = "data_column_sidecar",
-  /** The node has received an execution payload (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload` handler */
+  /** The node has received a `SignedExecutionPayloadEnvelope` (from P2P or API) that is successfully imported on the fork-choice `on_execution_payload` handler */
   executionPayload = "execution_payload",
-  /** The node has received an execution payload (from P2P or API) that passes validation rules of the `execution_payload` topic */
+  /** The node has received a `SignedExecutionPayloadEnvelope` (from P2P or API) that passes validation rules of the `execution_payload` topic */
   executionPayloadGossip = "execution_payload_gossip",
   /** The node has verified that the execution payload and blobs for a block are available and ready for payload attestation */
   executionPayloadAvailable = "execution_payload_available",
+  /** The node has received a `SignedExecutionPayloadBid` (from P2P or API) that passes gossip validation on the `execution_payload_bid` topic */
+  executionPayloadBid = "execution_payload_bid",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
@@ -128,6 +131,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.executionPayload]: EventType.executionPayload,
   [EventType.executionPayloadGossip]: EventType.executionPayloadGossip,
   [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
+  [EventType.executionPayloadBid]: EventType.executionPayloadBid,
 };
 
 export type EventData = {
@@ -182,7 +186,6 @@ export type EventData = {
     builderIndex: BuilderIndex;
     blockHash: RootHex;
     blockRoot: RootHex;
-    stateRoot: RootHex;
     executionOptimistic: boolean;
   };
   [EventType.executionPayloadGossip]: {
@@ -190,12 +193,12 @@ export type EventData = {
     builderIndex: BuilderIndex;
     blockHash: RootHex;
     blockRoot: RootHex;
-    stateRoot: RootHex;
   };
   [EventType.executionPayloadAvailable]: {
     slot: Slot;
     blockRoot: RootHex;
   };
+  [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -371,7 +374,6 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
         blockRoot: stringType,
-        stateRoot: stringType,
         executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
@@ -382,7 +384,6 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
         blockRoot: stringType,
-        stateRoot: stringType,
       },
       {jsonCase: "eth2"}
     ),
@@ -393,6 +394,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       {jsonCase: "eth2"}
     ),
+    [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
       (fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate

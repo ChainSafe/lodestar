@@ -8,7 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {IBeaconStateView, isExecutionBlockBodyType} from "@lodestar/state-transition";
+import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -46,8 +46,7 @@ type VerifyBlockExecutionResponse =
   | VerifyExecutionErrorResponse
   | {executionStatus: ExecutionStatus.Valid; lvhResponse: LVHValidResponse; execError: null}
   | {executionStatus: ExecutionStatus.Syncing; lvhResponse?: LVHValidResponse; execError: null}
-  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null}
-  | {executionStatus: ExecutionStatus.PayloadSeparated; lvhResponse: undefined; execError: null};
+  | {executionStatus: ExecutionStatus.PreMerge; lvhResponse: undefined; execError: null};
 
 /**
  * Verifies 1 or more execution payloads from a linear sequence of blocks.
@@ -145,13 +144,15 @@ export async function verifyBlockExecutionPayload(
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
-  // Gloas block doesn't have execution payload. Return right away
+  // Gloas block doesn't have execution payload. Return Syncing as a placeholder; the actual
+  // status for gloas PENDING/EMPTY is derived from parent's chain in importBlock.
   if (isBlockInputNoData(blockInput)) {
-    return {executionStatus: ExecutionStatus.PayloadSeparated, lvhResponse: undefined, execError: null};
+    return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
   }
 
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
+    isStatePostBellatrix(preState0) &&
     preState0.isExecutionStateType &&
     isExecutionBlockBodyType(block.message.body) &&
     preState0.isExecutionEnabled(block.message)
@@ -197,6 +198,7 @@ export async function verifyBlockExecutionPayload(
         executionStatus,
         latestValidExecHash: execResult.latestValidHash,
         invalidateFromParentBlockRoot: blockInput.parentRootHex,
+        invalidateFromParentBlockHash: toRootHex(executionPayloadEnabled.parentHash),
       };
       const execError = new BlockError(block, {
         code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -280,6 +282,7 @@ function getSegmentErrorResponse(
         executionStatus: ExecutionStatus.Invalid,
         latestValidExecHash: lvhResponse.latestValidExecHash,
         invalidateFromParentBlockRoot: parentBlock.blockRoot,
+        invalidateFromParentBlockHash: parentBlock.executionPayloadBlockHash,
       };
     }
   }

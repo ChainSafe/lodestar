@@ -1,6 +1,6 @@
 {
   "ethereumConsensusSpecsTests": {
-    "specVersion": "v1.7.0-alpha.2",
+    "specVersion": "v1.7.0-alpha.7",
     "specTestsRepoUrl": "https://github.com/ethereum/consensus-specs",
     "outputDirBase": "spec-tests",
     "testsToDownload": [

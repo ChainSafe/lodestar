@@ -1,17 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {
-  EPOCHS_PER_HISTORICAL_VECTOR,
-  SLOTS_PER_EPOCH,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostElectra,
-  isForkPostFulu,
-} from "@lodestar/params";
+import {EPOCHS_PER_HISTORICAL_VECTOR, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {
   IBeaconStateView,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getCurrentEpoch,
+  isStatePostAltair,
+  isStatePostElectra,
+  isStatePostFulu,
 } from "@lodestar/state-transition";
 import {ValidatorIndex, getValidatorStatus, ssz} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
@@ -303,6 +300,9 @@ export function getBeaconStateApi({
       if (stateEpoch < config.ALTAIR_FORK_EPOCH) {
         throw new ApiError(400, "Requested state before ALTAIR_FORK_EPOCH");
       }
+      if (!isStatePostAltair(state)) {
+        throw new Error("Expected Altair state for sync committee lookup");
+      }
 
       const syncCommitteeCache = state.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
       const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
@@ -324,9 +324,9 @@ export function getBeaconStateApi({
 
     async getPendingDeposits({stateId}, context) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const fork = config.getForkName(state.slot);
+      const fork = state.forkName;
 
-      if (!isForkPostElectra(fork)) {
+      if (!isStatePostElectra(state)) {
         throw new ApiError(400, `Cannot retrieve pending deposits for pre-electra state fork=${fork}`);
       }
 
@@ -340,9 +340,9 @@ export function getBeaconStateApi({
 
     async getPendingPartialWithdrawals({stateId}, context) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const fork = config.getForkName(state.slot);
+      const fork = state.forkName;
 
-      if (!isForkPostElectra(fork)) {
+      if (!isStatePostElectra(state)) {
         throw new ApiError(400, `Cannot retrieve pending partial withdrawals for pre-electra state fork=${fork}`);
       }
 
@@ -358,9 +358,9 @@ export function getBeaconStateApi({
 
     async getPendingConsolidations({stateId}, context) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const fork = config.getForkName(state.slot);
+      const fork = state.forkName;
 
-      if (!isForkPostElectra(fork)) {
+      if (!isStatePostElectra(state)) {
         throw new ApiError(400, `Cannot retrieve pending consolidations for pre-electra state fork=${fork}`);
       }
 
@@ -376,9 +376,9 @@ export function getBeaconStateApi({
 
     async getProposerLookahead({stateId}, context) {
       const {state, executionOptimistic, finalized} = await getState(stateId);
-      const fork = config.getForkName(state.slot);
+      const fork = state.forkName;
 
-      if (!isForkPostFulu(fork)) {
+      if (!isStatePostFulu(state)) {
         throw new ApiError(400, `Cannot retrieve proposer lookahead for pre-fulu state fork=${fork}`);
       }
 

@@ -505,12 +505,23 @@ export class Network implements INetwork {
   }
 
   async publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number> {
-    const epoch = computeEpochAtSlot(signedEnvelope.message.slot);
+    const epoch = computeEpochAtSlot(signedEnvelope.message.payload.slotNumber);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     return this.publishGossip<GossipType.execution_payload>(
       {type: GossipType.execution_payload, boundary},
       signedEnvelope,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
+  async publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number> {
+    const epoch = computeEpochAtSlot(payloadAttestationMessage.data.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.payload_attestation_message>(
+      {type: GossipType.payload_attestation_message, boundary},
+      payloadAttestationMessage,
       {ignoreDuplicatePublishError: true}
     );
   }
@@ -563,6 +574,18 @@ export class Network implements INetwork {
       ),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
+      this.chain.serializedCache
+    );
+  }
+
+  async sendBeaconBlocksByHead(
+    peerId: PeerIdStr,
+    request: fulu.BeaconBlocksByHeadRequest
+  ): Promise<SignedBeaconBlock[]> {
+    return collectMaxResponseTypedWithBytes(
+      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
+      Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
+      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
       this.chain.serializedCache
     );
   }

@@ -21,7 +21,7 @@ import {
   isForkPostElectra,
 } from "@lodestar/params";
 import {
-  IBeaconStateView,
+  type IBeaconStateViewAltair,
   computeStartSlotAtEpoch,
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
@@ -260,11 +260,23 @@ export class LightClientServer {
    * - Persist state witness
    * - Use block's syncAggregate
    */
-  onImportBlockHead(block: BeaconBlock<ForkPostAltair>, postState: IBeaconStateView, parentBlockSlot: Slot): void {
+  onImportBlockHead(
+    block: BeaconBlock<ForkPostAltair>,
+    postState: IBeaconStateViewAltair,
+    parentBlockSlot: Slot
+  ): void {
     // TEMP: To disable this functionality for fork_choice spec tests.
     // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
     // While this function is only called for head blocks, best to disable.
     if (this.opts.disableLightClientServerOnImportBlockHead) {
+      return;
+    }
+
+    // TODO GLOAS: Light client updates for gloas are not yet updated in the spec.
+    // The block body no longer contains execution payload, so `blockToLightClientHeader`
+    // cannot construct a header from a gloas block. Skip all light client processing
+    // for post-gloas blocks, revisit once there is a spec for it.
+    if (this.config.getForkSeq(block.slot) >= ForkSeq.gloas) {
       return;
     }
 
@@ -396,7 +408,7 @@ export class LightClientServer {
 
   private async persistPostBlockImportData(
     block: BeaconBlock<ForkPostAltair>,
-    postState: IBeaconStateView,
+    postState: IBeaconStateViewAltair,
     parentBlockSlot: Slot
   ): Promise<void> {
     const blockSlot = block.slot;

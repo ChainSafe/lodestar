@@ -4,7 +4,13 @@ import {toRootHex, withTimeout} from "@lodestar/utils";
 import {VersionedHashes} from "../../../execution/index.js";
 import {kzgCommitmentToVersionedHash} from "../../../util/blobs.js";
 import {MissingColumnMeta} from "../blockInput/types.js";
-import {AddPayloadEnvelopeProps, ColumnWithSource, CreateFromBlockProps, SourceMeta} from "./types.js";
+import {
+  AddPayloadEnvelopeProps,
+  ColumnWithSource,
+  CreateFromBidProps,
+  CreateFromBlockProps,
+  SourceMeta,
+} from "./types.js";
 
 export type PayloadEnvelopeInputState =
   | {
@@ -64,6 +70,7 @@ export class PayloadEnvelopeInput {
   readonly proposerIndex: ValidatorIndex;
   readonly bid: gloas.ExecutionPayloadBid;
   readonly versionedHashes: VersionedHashes;
+  readonly daOutOfRange: boolean;
 
   private columnsCache = new Map<ColumnIndex, ColumnWithSource>();
 
@@ -73,6 +80,7 @@ export class PayloadEnvelopeInput {
   private timeCreatedSec: number;
 
   private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
+  private readonly allDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
   private readonly columnsDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
 
   state: PayloadEnvelopeInputState;
@@ -86,6 +94,7 @@ export class PayloadEnvelopeInput {
     sampledColumns: ColumnIndex[];
     custodyColumns: ColumnIndex[];
     timeCreatedSec: number;
+    daOutOfRange: boolean;
   }) {
     this.blockRootHex = props.blockRootHex;
     this.slot = props.slot;
@@ -96,15 +105,18 @@ export class PayloadEnvelopeInput {
     this.sampledColumns = props.sampledColumns;
     this.custodyColumns = props.custodyColumns;
     this.timeCreatedSec = props.timeCreatedSec;
+    this.daOutOfRange = props.daOutOfRange;
     this.payloadEnvelopeDataPromise = createPromise();
+    this.allDataPromise = createPromise();
     this.columnsDataPromise = createPromise();
 
     const noBlobs = props.bid.blobKzgCommitments.length === 0;
     const noSampledColumns = props.sampledColumns.length === 0;
-    const hasAllData = noBlobs || noSampledColumns;
+    const hasAllData = props.daOutOfRange || noBlobs || noSampledColumns;
 
     if (hasAllData) {
       this.state = {hasPayload: false, hasAllData: true, hasComputedAllData: true};
+      this.allDataPromise.resolve(this.getSampledColumns());
       this.columnsDataPromise.resolve(this.getSampledColumns());
     } else {
       this.state = {hasPayload: false, hasAllData: false, hasComputedAllData: false};
@@ -122,6 +134,27 @@ export class PayloadEnvelopeInput {
       sampledColumns: props.sampledColumns,
       custodyColumns: props.custodyColumns,
       timeCreatedSec: props.timeCreatedSec,
+      daOutOfRange: props.daOutOfRange,
+    });
+  }
+
+  /**
+   * Create a `PayloadEnvelopeInput` from a state's `latestExecutionPayloadBid` (the bid
+   * recorded in beacon state for the latest imported block). Used when seeding the cache
+   * for a checkpoint anchor block — we have the bid via state but not the full
+   * SignedBeaconBlock body.
+   */
+  static createFromBid(props: CreateFromBidProps): PayloadEnvelopeInput {
+    return new PayloadEnvelopeInput({
+      blockRootHex: props.blockRootHex,
+      slot: props.slot,
+      forkName: props.forkName,
+      proposerIndex: props.proposerIndex,
+      bid: props.bid,
+      sampledColumns: props.sampledColumns,
+      custodyColumns: props.custodyColumns,
+      timeCreatedSec: props.timeCreatedSec,
+      daOutOfRange: props.daOutOfRange,
     });
   }
 
@@ -149,6 +182,7 @@ export class PayloadEnvelopeInput {
       throw new Error("Payload envelope beacon_block_root mismatch");
     }
 
+    // TODO GLOAS: track source by metrics, maybe inside the seen cache
     const source: SourceMeta = {
       source: props.source,
       seenTimestampSec: props.seenTimestampSec,
@@ -201,6 +235,12 @@ export class PayloadEnvelopeInput {
 
     if (!hasAllData) {
       return true;
+    }
+
+    // Resolve allDataPromise on the first transition to hasAllData (either sampled-complete or
+    // reconstruction-threshold branch). Guarded so it fires exactly once.
+    if (!this.state.hasAllData && hasAllData) {
+      this.allDataPromise.resolve(sampledColumns);
     }
 
     if (hasComputedAllData) {
@@ -297,8 +337,11 @@ export class PayloadEnvelopeInput {
     return this.state.hasAllData;
   }
 
+  /**
+   * Strictly checks missing sampled columns. Does NOT short-circuit on `state.hasAllData`.
+   */
   getMissingSampledColumnMeta(): MissingColumnMeta {
-    if (this.state.hasAllData) {
+    if (this.state.hasComputedAllData) {
       return {missing: [], versionedHashes: this.versionedHashes};
     }
 
@@ -313,6 +356,24 @@ export class PayloadEnvelopeInput {
 
   hasComputedAllData(): boolean {
     return this.state.hasComputedAllData;
+  }
+
+  waitForAllData(timeout: number, signal?: AbortSignal): Promise<gloas.DataColumnSidecar[]> {
+    if (this.state.hasAllData) {
+      return Promise.resolve(this.getSampledColumns());
+    }
+    return withTimeout(() => this.allDataPromise.promise, timeout, signal);
+  }
+
+  async waitForEnvelopeAndAllData(timeout: number, signal?: AbortSignal): Promise<this> {
+    if (!this.state.hasPayload || !this.state.hasAllData) {
+      await withTimeout(
+        () => Promise.all([this.payloadEnvelopeDataPromise.promise, this.allDataPromise.promise]),
+        timeout,
+        signal
+      );
+    }
+    return this;
   }
 
   waitForComputedAllData(timeout: number, signal?: AbortSignal): Promise<gloas.DataColumnSidecar[]> {

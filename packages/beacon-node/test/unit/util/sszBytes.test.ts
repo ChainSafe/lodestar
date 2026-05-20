@@ -571,7 +571,7 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
   for (const {slot, blockRoot} of testCases) {
     it(`slot=${slot}`, () => {
       const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-      envelope.message.slot = slot;
+      envelope.message.payload.slotNumber = slot;
       envelope.message.beaconBlockRoot = fromHex(blockRoot);
       const bytes = ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
 
@@ -581,8 +581,9 @@ describe("SignedExecutionPayloadEnvelope SSZ serialized picking", () => {
   }
 
   it("getSlotFromExecutionPayloadEnvelopeSerialized - invalid data", () => {
-    // Slot is at offset 148, need at least 156 bytes
-    const invalidSizes = [0, 50, 100, 155];
+    // slotNumber is at offset 712 within the serialized payload (alpha.6: parentBeaconBlockRoot
+    // shifted the envelope fixed portion to 80), need at least 720 bytes
+    const invalidSizes = [0, 50, 100, 719];
     for (const size of invalidSizes) {
       expect(getSlotFromExecutionPayloadEnvelopeSerialized(Buffer.alloc(size))).toBeNull();
     }

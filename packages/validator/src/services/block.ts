@@ -241,9 +241,8 @@ export class BlockProposingService {
       beaconBlockRoot,
     });
     const envelope = envelopeRes.value();
-    const stateRootHex = toRootHex(envelope.stateRoot);
 
-    this.logger.debug("Retrieved execution payload envelope", {...debugLogCtx, stateRoot: stateRootHex});
+    this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
 
     // Step 4: Sign and publish the envelope
     const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(pubkey, envelope, slot, this.logger);
