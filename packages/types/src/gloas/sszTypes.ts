@@ -126,7 +126,7 @@ export const ProposerPreferences = new ContainerType(
     proposalSlot: Slot,
     validatorIndex: ValidatorIndex,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintNum64,
+    targetGasLimit: UintNum64,
   },
   {typeName: "ProposerPreferences", jsonCase: "eth2"}
 );
@@ -324,6 +324,7 @@ export const PayloadAttributes = new ContainerType(
   {
     ...denebSsz.PayloadAttributes.fields,
     slotNumber: Slot,
+    targetGasLimit: UintNum64,
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );

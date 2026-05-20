@@ -3,8 +3,9 @@ import {BeaconBlock, electra, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
+import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
-import {getPendingValidatorPubkeys, processDepositRequest} from "./processDepositRequest.js";
+import {processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 /**
@@ -54,9 +55,9 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
   // Process execution requests from parent's payload. The execution
   // requests are processed at state.slot (child's slot), not the parent's slot.
   if (requests.deposits.length > 0) {
-    const pendingValidatorPubkeys = getPendingValidatorPubkeys(state.config, state);
+    const pendingDepositsLookup = PendingDepositsLookup.build(state);
     for (const deposit of requests.deposits) {
-      processDepositRequest(fork, state, deposit, pendingValidatorPubkeys);
+      processDepositRequest(fork, state, deposit, pendingDepositsLookup);
     }
   }
 

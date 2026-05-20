@@ -526,6 +526,17 @@ export class Network implements INetwork {
     );
   }
 
+  async publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number> {
+    const epoch = computeEpochAtSlot(signedProposerPreferences.message.proposalSlot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.proposer_preferences>(
+      {type: GossipType.proposer_preferences, boundary},
+      signedProposerPreferences,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
   private async publishGossip<K extends GossipType>(
     topic: GossipTopicMap[K],
     object: GossipTypeMap[K],
@@ -574,6 +585,18 @@ export class Network implements INetwork {
       ),
       request.length,
       responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByRoot],
+      this.chain.serializedCache
+    );
+  }
+
+  async sendBeaconBlocksByHead(
+    peerId: PeerIdStr,
+    request: fulu.BeaconBlocksByHeadRequest
+  ): Promise<SignedBeaconBlock[]> {
+    return collectMaxResponseTypedWithBytes(
+      this.sendReqRespRequest(peerId, ReqRespMethod.BeaconBlocksByHead, [Version.V1], request),
+      Math.min(request.count, this.config.MAX_REQUEST_BLOCKS_DENEB),
+      responseSszTypeByMethod[ReqRespMethod.BeaconBlocksByHead],
       this.chain.serializedCache
     );
   }

@@ -18,6 +18,8 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
+  type IBeaconStateViewGloas,
+  computeEpochAtSlot,
   computeTimeAtSlot,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -58,10 +60,12 @@ import {
   PayloadId,
   getExpectedGasLimit,
 } from "../../execution/index.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
+import {ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -236,6 +240,9 @@ export async function produceBlockBody<T extends BlockType>(
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
+    // ProposerPreferencesPool. Consider using this unified cache instead
+    // see https://github.com/ChainSafe/lodestar/issues/9379
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
@@ -669,6 +676,8 @@ export async function prepareExecutionPayload(
   chain: {
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
+    proposerPreferencesPool: ProposerPreferencesPool;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -769,6 +778,7 @@ export function getPayloadAttributesForSSE(
   chain: {
     config: ChainForkConfig;
     forkChoice: IForkChoice;
+    proposerPreferencesPool: ProposerPreferencesPool;
   },
   {
     prepareState,
@@ -825,6 +835,8 @@ function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
+    forkChoice: IForkChoice;
+    proposerPreferencesPool: ProposerPreferencesPool;
   },
   {
     prepareState,
@@ -887,10 +899,57 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.gloas) {
+    if (!isStatePostGloas(prepareState)) {
+      throw new Error("Expected Gloas state for Gloas payload attributes");
+    }
     (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
+    (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).targetGasLimit = getProposerTargetGasLimit(
+      chain,
+      prepareState,
+      prepareSlot,
+      parentBlockRoot
+    );
   }
 
   return payloadAttributes;
+}
+
+/**
+ * Resolve the proposer's preferred (target) gas limit for the Gloas `PayloadAttributesV4`
+ * `targetGasLimit` field (consensus-specs#5235, execution-apis#796).
+ *
+ * Sourced from the `SignedProposerPreferences` the proposer's VC submitted to the pool
+ * (same `(slot, dependent_root)` lookup as gossip bid validation). When no matching
+ * preferences are pooled, target the parent payload's gas limit so the gas limit stays
+ * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
+ */
+function getProposerTargetGasLimit(
+  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  state: IBeaconStateViewGloas,
+  prepareSlot: Slot,
+  parentBlockRoot: Root
+): number {
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(toRootHex(parentBlockRoot));
+  const dependentRootHex = (() => {
+    if (parentBlock === null) {
+      return null;
+    }
+    try {
+      return getShufflingDependentRoot(
+        chain.forkChoice,
+        computeEpochAtSlot(prepareSlot),
+        computeEpochAtSlot(parentBlock.slot),
+        parentBlock
+      );
+    } catch {
+      return null;
+    }
+  })();
+
+  const pref = dependentRootHex !== null ? chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex) : null;
+  // TODO GLOAS: state.latestExecutionPayloadBid is the latest *bid*, not the latest *executed*
+  // payload — for EMPTY parents this drifts. Consider having a default value like Prysm's DefaultBuilderGasLimit.
+  return Number(pref ? pref.message.targetGasLimit : state.latestExecutionPayloadBid.gasLimit);
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(

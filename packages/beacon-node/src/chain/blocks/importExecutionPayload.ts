@@ -21,6 +21,7 @@ export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
   EXECUTION_ENGINE_ERROR = "PAYLOAD_ERROR_EXECUTION_ENGINE_ERROR",
   BLOCK_NOT_IN_FORK_CHOICE = "PAYLOAD_ERROR_BLOCK_NOT_IN_FORK_CHOICE",
+  MISS_BLOCK_STATE = "PAYLOAD_ERROR_MISS_BLOCK_STATE",
   ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
 }
@@ -38,6 +39,10 @@ export type PayloadErrorType =
     }
   | {
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE;
+      blockRootHex: string;
+    }
+  | {
+      code: PayloadErrorCode.MISS_BLOCK_STATE;
       blockRootHex: string;
     }
   | {
@@ -123,12 +128,19 @@ export async function importExecutionPayload(
   }
 
   // 3. Regenerate state for envelope verification
-  const blockState = await this.regen.getBlockSlotState(
-    protoBlock,
-    protoBlock.slot,
-    {dontTransferCache: true},
-    RegenCaller.processBlock
-  );
+  const blockState = await this.regen
+    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.processBlock)
+    .catch(() =>
+      // only happen at the 1st batch of skipped slot checkpoint sync
+      this.regen.getClosestHeadState(protoBlock)
+    );
+
+  if (blockState == null) {
+    throw new PayloadError({
+      code: PayloadErrorCode.MISS_BLOCK_STATE,
+      blockRootHex: protoBlock.blockRoot,
+    });
+  }
   if (!isStatePostGloas(blockState)) {
     throw new PayloadError({
       code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,

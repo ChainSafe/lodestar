@@ -6,12 +6,12 @@ import {
   NotReorgedReason,
   ProtoArray,
   ProtoBlock,
-  ProtoNode,
 } from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 
 /**
- * Specific implementation of ForkChoice that reorg at a given slot and distance.
+ * Specific implementation of ForkChoice that reorgs at a given slot and distance.
+ *
  *                                    (n+1)
  *                     -----------------|
  *                    /
@@ -21,14 +21,20 @@ import {Slot} from "@lodestar/types";
  *                   ^
  *               commonAncestor
  *                   |<--reorgDistance-->|
- **/
+ *
+ */
 export class ReorgedForkChoice extends ForkChoice {
   /**
-   * These need to be in the constructor, however we want to keep the constructor signature the same.
-   * So they are set after construction in the test instead.
+   * These need to be in the constructor, however we want to keep the constructor signature
+   * the same. So they are set after construction in the test instead.
    */
   reorgedSlot: Slot | undefined;
   reorgDistance: number | undefined;
+
+  /**
+   * Stored separately because the base `ForkChoice` keeps `fcStore` private, but several
+   * overrides need to read `currentSlot` to gate reorg behavior.
+   */
   private readonly _fcStore: IForkChoiceStore;
 
   constructor(
@@ -44,67 +50,68 @@ export class ReorgedForkChoice extends ForkChoice {
   }
 
   /**
-   * Override to trigger reorged event at `reorgedSlot + 1`
+   * The base ForkChoice's `getProposerHead` returns the canonical head (= the orphan
+   * block at slot `reorgedSlot`). With our override, the proposer at slot `reorgedSlot+1`
+   * builds on slot `reorgedSlot+1-reorgDistance`, skipping the orphan and creating the
+   * reorg the test wants to exercise.
    */
   getProposerHead(
     headBlock: ProtoBlock,
     secFromSlot: number,
     slot: Slot
   ): {proposerHead: ProtoBlock; isHeadTimely: boolean; notReorgedReason?: NotReorgedReason} {
-    const currentSlot = this._fcStore.currentSlot;
-    if (this.reorgedSlot !== undefined && this.reorgDistance !== undefined && currentSlot === this.reorgedSlot + 1) {
-      const nodes = super.getAllNodes();
-      const headSlot = currentSlot - this.reorgDistance;
-      const headNode = nodes.find((node) => node.slot === headSlot);
-      if (headNode !== undefined) {
-        return {proposerHead: headNode, isHeadTimely: true};
+    if (this.reorgedSlot !== undefined && this._fcStore.currentSlot === this.reorgedSlot + 1) {
+      const commonAncestor = this.getCommonAncestorBlock();
+      if (commonAncestor !== undefined) {
+        return {proposerHead: commonAncestor, isHeadTimely: true};
       }
     }
-
     return super.getProposerHead(headBlock, secFromSlot, slot);
   }
 
   /**
-   * Override the getHead() method
-   * - produceAttestation: to build on the latest node after the reorged slot
-   * - importBlock: to return the old branch at the reorged slot to produce the reorg event
+   * Tell `PrepareNextSlotScheduler` to anticipate the upcoming reorg so the execution
+   * layer pre-builds the right payload for slot `reorgedSlot+1`.
    */
-  getHead = (): ProtoBlock => {
-    const currentSlot = this._fcStore.currentSlot;
-    if (this.reorgedSlot === undefined || this.reorgDistance === undefined) {
-      return super.getHead();
+  predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot: Slot): ProtoBlock {
+    if (currentSlot === this.reorgedSlot) {
+      const commonAncestor = this.getCommonAncestorBlock();
+      if (commonAncestor !== undefined) {
+        return commonAncestor;
+      }
     }
+    return super.predictProposerHead(headBlock, secFromSlot, currentSlot);
+  }
 
-    // this is mainly for producing attestations + produceBlock for latter slots
-    // at `reorgedSlot + 1` should return the old head to trigger reorg event
-    if (currentSlot > this.reorgedSlot + 1) {
-      // from now on build on latest node which reorged at the given slot
-      const nodes = super.getAllNodes();
-      return nodes.at(-1) as ProtoBlock;
+  /**
+   * Behaves identically to `super.updateHead()` except for one thing: post-reorg, we
+   * force-overwrite the base class's private `this.head` field to point at the new chain
+   * instead of the orphan.
+   */
+  updateHead = (): ProtoBlock => {
+    super.updateHead();
+    if (this.reorgedSlot !== undefined && this._fcStore.currentSlot > this.reorgedSlot) {
+      const newChainTip = super.getAllNodes().at(-1);
+      if (newChainTip !== undefined && newChainTip.slot > this.reorgedSlot) {
+        // `this.head` is private in the base class; force-patch it onto the new chain.
+        (this as unknown as {head: ProtoBlock}).head = newChainTip;
+      }
     }
-
-    // importBlock flow at "this.reorgedSlot + 1" returns the old branch for oldHead computation which trigger reorg event
     return super.getHead();
   };
 
   /**
-   * Override this function to:
-   * - produceBlock flow: mark flags to indicate that the current call of getHead() is to produce a block
-   * - importBlock: return the new branch after the reorged slot, this is for newHead computation
+   * Returns the ProtoBlock at slot `reorgedSlot+1-reorgDistance` — the `commonAncestor`
+   * labeled in the class diagram. Both the old chain (through the orphan at
+   * `reorgedSlot`) and the new chain (which skips it) descend from this block.
+   *
+   * The proposer of slot `reorgedSlot+1` builds directly on top of it (see
+   * `getProposerHead`), and `predictProposerHead` returns it so `PrepareNextSlotScheduler`
+   * can have the EL pre-build the matching payload (parent = commonAncestor's payload).
    */
-  updateHead = (): ProtoBlock => {
-    if (this.reorgedSlot === undefined || this.reorgDistance === undefined) {
-      return super.updateHead();
-    }
-    const currentSlot = this._fcStore.currentSlot;
-    if (currentSlot <= this.reorgedSlot) {
-      return super.updateHead();
-    }
-
-    // since reorgSlot, always return the latest node
-    const nodes = super.getAllNodes();
-    const head = nodes.at(-1) as ProtoNode;
-    super.updateHead();
-    return head;
-  };
+  private getCommonAncestorBlock(): ProtoBlock | undefined {
+    if (this.reorgedSlot === undefined || this.reorgDistance === undefined) return undefined;
+    const commonAncestorSlot = this.reorgedSlot + 1 - this.reorgDistance;
+    return super.getAllNodes().find((n) => n.slot === commonAncestorSlot);
+  }
 }
