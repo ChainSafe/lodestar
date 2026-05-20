@@ -1,5 +1,12 @@
-import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {BeaconBlock, electra, ssz} from "@lodestar/types";
+import {
+  ForkPostGloas,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+  SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
+} from "@lodestar/params";
+import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
@@ -26,7 +33,8 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   }
 
   // Parent was FULL -- verify the bid commitment and apply the payload
-  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(requests);
+  assertExecutionRequestsWithinLimits(requests);
+  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(requests);
   if (!byteArrayEquals(requestsRoot, parentBid.executionRequestsRoot)) {
     throw new Error(
       `Parent execution requests root mismatch actual=${toRootHex(requestsRoot)} expected=${toRootHex(parentBid.executionRequestsRoot)}`
@@ -45,7 +53,9 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
-export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: electra.ExecutionRequests): void {
+export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: gloas.ExecutionRequests): void {
+  assertExecutionRequestsWithinLimits(requests);
+
   const fork = state.config.getForkSeq(state.slot);
   const parentBid = state.latestExecutionPayloadBid;
   const parentSlot = parentBid.slot;
@@ -110,7 +120,19 @@ function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: numbe
   state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
 }
 
-function assertEmptyExecutionRequests(requests: electra.ExecutionRequests): void {
+function assertExecutionRequestsWithinLimits(requests: gloas.ExecutionRequests): void {
+  assertMaxLength("deposits", requests.deposits.length, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD);
+  assertMaxLength("withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
+  assertMaxLength("consolidations", requests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD);
+}
+
+function assertMaxLength(name: string, length: number, limit: number): void {
+  if (length > limit) {
+    throw new Error(`Too many parent execution request ${name} count=${length} limit=${limit}`);
+  }
+}
+
+function assertEmptyExecutionRequests(requests: gloas.ExecutionRequests): void {
   if (requests.deposits.length !== 0 || requests.withdrawals.length !== 0 || requests.consolidations.length !== 0) {
     throw new Error("Parent execution requests must be empty when parent block is EMPTY");
   }

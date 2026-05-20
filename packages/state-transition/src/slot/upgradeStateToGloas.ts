@@ -34,23 +34,27 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.eth1Data = stateGloasCloned.eth1Data;
   stateGloasView.eth1DataVotes = stateGloasCloned.eth1DataVotes;
   stateGloasView.eth1DepositIndex = stateGloasCloned.eth1DepositIndex;
-  stateGloasView.validators = stateGloasCloned.validators;
-  stateGloasView.balances = stateGloasCloned.balances;
+  stateGloasView.validators = ssz.gloas.Validators.toViewDU(stateGloasCloned.validators.getAllReadonlyValues());
+  stateGloasView.balances = ssz.gloas.Balances.toViewDU(stateGloasCloned.balances.getAll());
   stateGloasView.randaoMixes = stateGloasCloned.randaoMixes;
   stateGloasView.slashings = stateGloasCloned.slashings;
-  stateGloasView.previousEpochParticipation = stateGloasCloned.previousEpochParticipation;
-  stateGloasView.currentEpochParticipation = stateGloasCloned.currentEpochParticipation;
+  stateGloasView.previousEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
+    stateGloasCloned.previousEpochParticipation.getAll()
+  );
+  stateGloasView.currentEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
+    stateGloasCloned.currentEpochParticipation.getAll()
+  );
   stateGloasView.justificationBits = stateGloasCloned.justificationBits;
   stateGloasView.previousJustifiedCheckpoint = stateGloasCloned.previousJustifiedCheckpoint;
   stateGloasView.currentJustifiedCheckpoint = stateGloasCloned.currentJustifiedCheckpoint;
   stateGloasView.finalizedCheckpoint = stateGloasCloned.finalizedCheckpoint;
-  stateGloasView.inactivityScores = stateGloasCloned.inactivityScores;
+  stateGloasView.inactivityScores = ssz.gloas.InactivityScores.toViewDU(stateGloasCloned.inactivityScores.getAll());
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
   stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
-  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
-    ssz.electra.ExecutionRequests.defaultValue()
+  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
+    ssz.gloas.ExecutionRequests.defaultValue()
   );
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
@@ -61,9 +65,15 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.earliestExitEpoch = stateGloasCloned.earliestExitEpoch;
   stateGloasView.consolidationBalanceToConsume = stateGloasCloned.consolidationBalanceToConsume;
   stateGloasView.earliestConsolidationEpoch = stateGloasCloned.earliestConsolidationEpoch;
-  stateGloasView.pendingDeposits = stateGloasCloned.pendingDeposits;
-  stateGloasView.pendingPartialWithdrawals = stateGloasCloned.pendingPartialWithdrawals;
-  stateGloasView.pendingConsolidations = stateGloasCloned.pendingConsolidations;
+  stateGloasView.pendingDeposits = ssz.gloas.PendingDeposits.toViewDU(
+    stateGloasCloned.pendingDeposits.getAllReadonlyValues()
+  );
+  stateGloasView.pendingPartialWithdrawals = ssz.gloas.PendingPartialWithdrawals.toViewDU(
+    stateGloasCloned.pendingPartialWithdrawals.getAllReadonlyValues()
+  );
+  stateGloasView.pendingConsolidations = ssz.gloas.PendingConsolidations.toViewDU(
+    stateGloasCloned.pendingConsolidations.getAllReadonlyValues()
+  );
   stateGloasView.proposerLookahead = stateGloasCloned.proposerLookahead;
   stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
 
@@ -93,7 +103,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
   // Track pubkeys of new builders added when applying deposits
   const builderPubkeys = new Set<string>();
 
-  const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+  const pendingDeposits = ssz.gloas.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
 
   for (let i = 0; i < state.pendingDeposits.length; i++) {

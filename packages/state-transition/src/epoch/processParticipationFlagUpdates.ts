@@ -1,6 +1,7 @@
 import {zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {ssz} from "@lodestar/types";
-import {CachedBeaconStateAltair} from "../types.js";
+import type {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
+import {isGloasStateType} from "../util/execution.js";
 
 /**
  * Updates `state.previousEpochParticipation` with precalculated epoch participation. Creates a new empty tree for
@@ -10,6 +11,11 @@ import {CachedBeaconStateAltair} from "../types.js";
  * trees completely.
  */
 export function processParticipationFlagUpdates(state: CachedBeaconStateAltair): void {
+  if (isGloasStateType(state)) {
+    processParticipationFlagUpdatesGloas(state as CachedBeaconStateGloas);
+    return;
+  }
+
   // Set view and tree from currentEpochParticipation to previousEpochParticipation
   state.previousEpochParticipation = state.currentEpochParticipation;
 
@@ -24,4 +30,11 @@ export function processParticipationFlagUpdates(state: CachedBeaconStateAltair):
   );
 
   state.currentEpochParticipation = ssz.altair.EpochParticipation.getViewDU(currentEpochParticipationNode);
+}
+
+function processParticipationFlagUpdatesGloas(state: CachedBeaconStateGloas): void {
+  state.previousEpochParticipation = state.currentEpochParticipation;
+  state.currentEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
+    new Array<number>(state.currentEpochParticipation.length).fill(0)
+  );
 }

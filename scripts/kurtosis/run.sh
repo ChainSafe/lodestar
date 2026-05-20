@@ -12,7 +12,7 @@ NC='\033[0m' # No Color
 # Default values
 ENCLAVE_NAME="lodestar-testnet"
 CONFIG_FILE="lodestar.yaml"
-KURTOSIS_PACKAGE="github.com/ethpandaops/ethereum-package"
+KURTOSIS_PACKAGE="${KURTOSIS_PACKAGE:-github.com/ethpandaops/ethereum-package}"
 
 # Function to print colored output
 print_info() {

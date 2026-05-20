@@ -112,7 +112,7 @@ export type ProduceFullGloas = {
   type: BlockType.Full;
   fork: ForkPostGloas;
   executionPayload: ExecutionPayload<ForkPostGloas>;
-  executionRequests: electra.ExecutionRequests;
+  executionRequests: gloas.ExecutionRequests;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
   parentBlockRoot: Root;
@@ -223,7 +223,7 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
-    let parentExecutionRequests: electra.ExecutionRequests;
+    let parentExecutionRequests: gloas.ExecutionRequests;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
     const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
@@ -233,7 +233,7 @@ export async function produceBlockBody<T extends BlockType>(
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
     } else {
       parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      parentExecutionRequests = ssz.electra.ExecutionRequests.defaultValue();
+      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
     }
     const prepareRes = await prepareExecutionPayload(
       this,
@@ -288,7 +288,7 @@ export async function produceBlockBody<T extends BlockType>(
       value: 0,
       executionPayment: 0,
       blobKzgCommitments: blobsBundle.commitments,
-      executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
+      executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests),
     };
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
