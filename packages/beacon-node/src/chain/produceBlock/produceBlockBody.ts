@@ -208,6 +208,9 @@ export async function produceBlockBody<T extends BlockType>(
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
+    // ProposerPreferencesPool. Consider using this unified cache instead
+    // see https://github.com/ChainSafe/lodestar/issues/9379
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
@@ -908,6 +911,8 @@ function getProposerTargetGasLimit(
   })();
 
   const pref = dependentRootHex !== null ? chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex) : null;
+  // TODO GLOAS: state.latestExecutionPayloadBid is the latest *bid*, not the latest *executed*
+  // payload — for EMPTY parents this drifts. Consider having a default value like Prysm's DefaultBuilderGasLimit.
   return Number(pref ? pref.message.targetGasLimit : state.latestExecutionPayloadBid.gasLimit);
 }
 
