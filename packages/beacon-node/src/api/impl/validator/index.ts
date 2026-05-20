@@ -1067,7 +1067,15 @@ export function getValidatorApi(
 
       const blockIsForSlot = block.slot === slot;
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
-      const payloadPresent = blockIsForSlot && (payloadInput?.hasPayloadEnvelope() ?? false);
+      // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
+      // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
+      // the input's creation time.
+      const payloadDueSec = config.getPayloadDueMs() / 1000;
+      const payloadPresent =
+        blockIsForSlot &&
+        payloadInput !== undefined &&
+        payloadInput.hasPayloadEnvelope() &&
+        chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
       const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
 
       return {
