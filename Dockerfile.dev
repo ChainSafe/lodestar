@@ -6,7 +6,7 @@
 FROM --platform=${BUILDPLATFORM:-amd64} node:24 AS build_dev
 
 # Install zig toolchain
-# Required by @chainsafe/lodestar-z's `prepare` script
+# Required by @chainsafe/lodestar-z's `prepare` script in dev builds
 ARG TARGETARCH
 ARG ZIG_VERSION=0.16.0
 RUN case "${TARGETARCH}" in \

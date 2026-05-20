@@ -4,7 +4,7 @@ WORKDIR /usr/app
 RUN apt-get update && apt-get install -y git g++ make python3 python3-setuptools curl xz-utils && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install zig toolchain
-# Required by @chainsafe/lodestar-z's `prepare` script
+# Required by @chainsafe/lodestar-z's `prepare` script in dev builds
 ARG TARGETARCH
 ARG ZIG_VERSION=0.16.0
 RUN case "${TARGETARCH}" in \
