@@ -11,6 +11,9 @@ export enum ExecutionPayloadBidErrorCode {
   UNKNOWN_BLOCK_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_BLOCK_ROOT",
   INVALID_SLOT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SLOT",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SIGNATURE",
+  NO_MATCHING_PROPOSER_PREFERENCES = "EXECUTION_PAYLOAD_BID_ERROR_NO_MATCHING_PROPOSER_PREFERENCES",
+  PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH",
+  PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH",
 }
 
 export type ExecutionPayloadBidErrorType =
@@ -36,6 +39,24 @@ export type ExecutionPayloadBidErrorType =
     }
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: BuilderIndex; slot: Slot}
-  | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE; builderIndex: BuilderIndex; slot: Slot};
+  | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE; builderIndex: BuilderIndex; slot: Slot}
+  | {
+      code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES;
+      slot: Slot;
+      parentBlockRoot: RootHex;
+      dependentRoot: RootHex;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH;
+      builderIndex: BuilderIndex;
+      bidFeeRecipient: string;
+      expectedFeeRecipient: string;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH;
+      builderIndex: BuilderIndex;
+      bidGasLimit: number;
+      expectedGasLimit: number;
+    };
 
 export class ExecutionPayloadBidError extends GossipActionError<ExecutionPayloadBidErrorType> {}

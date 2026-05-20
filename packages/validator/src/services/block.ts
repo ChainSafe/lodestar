@@ -52,18 +52,12 @@ export class BlockProposingService {
     private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    dutiesService: BlockDutiesService,
     private readonly metrics: Metrics | null,
     private readonly opts: BlockProposalOpts
   ) {
-    this.dutiesService = new BlockDutiesService(
-      config,
-      logger,
-      api,
-      clock,
-      validatorStore,
-      metrics,
-      this.notifyBlockProductionFn
-    );
+    this.dutiesService = dutiesService;
+    this.dutiesService.setNotifyBlockProductionFn(this.notifyBlockProductionFn);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {

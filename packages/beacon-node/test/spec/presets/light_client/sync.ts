@@ -1,10 +1,10 @@
 import {expect} from "vitest";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
-import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/light-client/spec";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
+import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/state-transition/light-client";
 import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, toHex} from "@lodestar/utils";
 import {TestRunnerFn} from "../../utils/types.js";

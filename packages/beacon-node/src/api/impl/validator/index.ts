@@ -14,6 +14,7 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -925,7 +926,7 @@ export function getValidatorApi(
       metrics?.blockProductionRequests.inc({source});
 
       const graffitiBytes = toGraffitiBytes(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
+        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
       );
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
         slot,
@@ -1066,7 +1067,15 @@ export function getValidatorApi(
 
       const blockIsForSlot = block.slot === slot;
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
-      const payloadPresent = blockIsForSlot && (payloadInput?.hasPayloadEnvelope() ?? false);
+      // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
+      // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
+      // the input's creation time.
+      const payloadDueSec = config.getPayloadDueMs() / 1000;
+      const payloadPresent =
+        blockIsForSlot &&
+        payloadInput !== undefined &&
+        payloadInput.hasPayloadEnvelope() &&
+        chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
       const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
 
       return {
@@ -1124,26 +1133,33 @@ export function getValidatorApi(
     async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
       notWhileSyncing();
 
-      // Early check that epoch is no more than current_epoch + 1, or allow for pre-genesis
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
-      if (currentEpoch >= 0 && epoch > nextEpoch) {
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      const prepareNextSlotLookAheadMs =
+        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+      const toNextEpochMs = msToNextEpoch();
+      const nearNextEpoch = toNextEpochMs < prepareNextSlotLookAheadMs;
+      // Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so
+      // close to the boundary `currentEpoch + 2` is serveable from the upcoming-epoch
+      // checkpoint state (its `nextProposers`). Pre-Fulu / mid-epoch: `currentEpoch + 1` max.
+      const isPostFulu = isForkPostFulu(config.getForkName(startSlot));
+      const maxFutureEpoch = isPostFulu && nearNextEpoch && opts?.v2 ? nextEpoch + 1 : nextEpoch;
+      if (currentEpoch >= 0 && epoch > maxFutureEpoch) {
         throw new ApiError(400, `Requested epoch ${epoch} must not be more than one epoch in the future`);
       }
 
       const head = chain.forkChoice.getHead();
       let state: IBeaconStateView | undefined = undefined;
-      const startSlot = computeStartSlotAtEpoch(epoch);
-      const prepareNextSlotLookAheadMs =
-        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
-      const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
-      // this is to avoid missed block proposal due to 0 epoch look ahead
-      if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
+      // this is to avoid missed block proposal due to 0 epoch look ahead.
+      // Post-Fulu, `nextEpoch + 1` is served from the same upcoming-epoch (`nextEpoch`)
+      // checkpoint state via its `nextProposers` (deterministic proposer lookahead).
+      if (nearNextEpoch && (epoch === nextEpoch || (isPostFulu && epoch === nextEpoch + 1))) {
         // wait for maximum 1 slot for cp state which is the timeout of validator api
         const cpState = await waitForCheckpointState({
           rootHex: head.blockRoot,
-          epoch,
+          epoch: nextEpoch,
         });
         if (cpState) {
           state = cpState;
@@ -1218,7 +1234,7 @@ export function getValidatorApi(
       // It should be set to the latest block applied to `self` or the genesis block root.
       const dependentRoot =
         // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
-        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state) ||
+        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state, epoch) ||
         (await getGenesisBlockRoot(state));
 
       return {

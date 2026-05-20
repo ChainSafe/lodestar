@@ -7,7 +7,8 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -48,12 +49,55 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
+  // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
+  // proposer-preferences lookup below from a known fork-choice block.
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+  if (parentBlock === null) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
+      parentBlockRoot: parentBlockRootHex,
+    });
+  }
+
   // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been
   // seen — i.e. `proposal_slot == bid.slot` AND `dependent_root ==
-  // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`,
-  // where `parent_state` is the post-state of `bid.parent_block_root`.
-  // This is the message referenced as `proposer_preferences` in the following REJECT rules.
-  // TODO GLOAS: Implement once a ProposerPreferencesPool exists.
+  // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`.
+  const bidEpoch = computeEpochAtSlot(bid.slot);
+  // gloas is always post-Fulu, so `get_proposer_dependent_root` is the post-Fulu (deterministic
+  // proposer lookahead) form `block_root_at(start_slot(epoch - MIN_SEED_LOOKAHEAD) - 1)` with
+  // `MIN_SEED_LOOKAHEAD == 1` — identical to the attester-shuffling dependent root for the same
+  // epoch (both 1-epoch lookahead), hence `getShufflingDependentRoot`. `null` on a
+  // unknown/finalized-pruned ancestor or genesis edge → degrade to IGNORE below instead of
+  // letting a raw `ForkChoiceError` escape the `GossipActionError` contract.
+  const dependentRootHex = (() => {
+    try {
+      return getShufflingDependentRoot(chain.forkChoice, bidEpoch, computeEpochAtSlot(parentBlock.slot), parentBlock);
+    } catch {
+      return null;
+    }
+  })();
+
+  if (dependentRootHex === null) {
+    // Could not derive the dependent root for this branch (unknown/finalized-pruned ancestor,
+    // genesis edge, etc.) → definitionally no matching `SignedProposerPreferences`.
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      dependentRoot: "unknown",
+    });
+  }
+
+  const proposerPreferences = chain.proposerPreferencesPool.get(bid.slot, dependentRootHex);
+  if (proposerPreferences === null) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      dependentRoot: dependentRootHex,
+    });
+  }
 
   // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
@@ -75,10 +119,25 @@ async function validateExecutionPayloadBid(
   }
 
   // [REJECT] `bid.fee_recipient == proposer_preferences.fee_recipient`.
-  // [REJECT] `bid.gas_limit == proposer_preferences.gas_limit`.
-  // Both compared against the matching `proposer_preferences` defined above (same branch
-  // via dependent_root, same proposal_slot).
-  // TODO GLOAS: Implement once a ProposerPreferencesPool exists.
+  if (!byteArrayEquals(bid.feeRecipient, proposerPreferences.message.feeRecipient)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH,
+      builderIndex: bid.builderIndex,
+      bidFeeRecipient: toHex(bid.feeRecipient),
+      expectedFeeRecipient: toHex(proposerPreferences.message.feeRecipient),
+    });
+  }
+
+  // [REJECT] `bid.gas_limit == proposer_preferences.target_gas_limit`.
+  const bidGasLimit = Number(bid.gasLimit);
+  if (bidGasLimit !== proposerPreferences.message.targetGasLimit) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH,
+      builderIndex: bid.builderIndex,
+      bidGasLimit,
+      expectedGasLimit: proposerPreferences.message.targetGasLimit,
+    });
+  }
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in the
   // consensus layer -- i.e. validate that
@@ -127,15 +186,6 @@ async function validateExecutionPayloadBid(
   // [IGNORE] `bid.parent_block_hash` is the block hash of a known execution
   // payload in fork choice.
   // TODO GLOAS: implement this
-
-  // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon
-  // block in fork choice.
-  if (!chain.forkChoice.hasBlock(bid.parentBlockRoot)) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
-      parentBlockRoot: parentBlockRootHex,
-    });
-  }
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
