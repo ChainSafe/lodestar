@@ -129,11 +129,22 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [IGNORE] `bid.parent_block_hash` is the block hash of a known execution payload in fork
+  // choice. Partial implementation: we can only resolve the head's last committed bid because
+  // fork choice doesn't yet index per-payload metadata by EL block hash. Bids whose parent
+  // payload sits behind that (EMPTY-parent chains, sibling forks) get IGNORED and will
+  // re-enter the validator as the head catches up.
+  // TODO GLOAS: drop this guard once fork choice tracks executed-payload gas_limit by hash.
+  if (!byteArrayEquals(bid.parentBlockHash, state.latestExecutionPayloadBid.blockHash)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
+      parentBlockHash: parentBlockHashHex,
+    });
+  }
+
   // [REJECT] `is_gas_limit_target_compatible(parent_gas_limit, bid.gas_limit, target_gas_limit)`,
   // where `parent_gas_limit` is the `gas_limit` of the parent execution payload and
   // `target_gas_limit` is `proposer_preferences.target_gas_limit`.
-  // TODO GLOAS: state.latestExecutionPayloadBid is the latest *bid*, not the latest *executed*
-  // payload — for EMPTY parents this drifts (see produceBlockBody.getProposerTargetGasLimit).
   const bidGasLimit = Number(bid.gasLimit);
   const parentGasLimit = Number(state.latestExecutionPayloadBid.gasLimit);
   const targetGasLimit = proposerPreferences.message.targetGasLimit;
@@ -190,10 +201,6 @@ async function validateExecutionPayloadBid(
       builderBalance: builder.balance,
     });
   }
-
-  // [IGNORE] `bid.parent_block_hash` is the block hash of a known execution
-  // payload in fork choice.
-  // TODO GLOAS: implement this
 
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
