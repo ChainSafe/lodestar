@@ -355,9 +355,31 @@ export function forkchoiceUpdatedVersion(fork: ForkName): 1 | 2 | 3 | 4 {
 
 /**
  * REST endpoint version for `engine_getBlobs`.
- * Cancun=v1, Osaka=v2 (all-or-nothing variant — matches Lodestar's existing
- * JSON-RPC v2 contract). The spec also defines a v3 with per-element
- * nullability, but Lodestar's IExecutionEngine signature is all-or-nothing.
+ *
+ *   Cancun (deneb) → v1
+ *   Osaka  (fulu)  → v2
+ *
+ * Osaka also defines v3 (`List[List[BlobAndProofV2, 1], MAX]`, per-element
+ * nullable) alongside v2 (all-or-nothing — HTTP 204 when any blob is
+ * missing). Lodestar picks v2 deliberately:
+ *
+ *   1. `IExecutionEngine.getBlobs` post-Fulu returns
+ *      `BlobAndProofV2[] | null` — all-or-nothing by design. v2 maps onto
+ *      it directly; v3 would require either changing the interface to
+ *      `(BlobAndProofV2 | null)[]` or a collapse step that throws v3's
+ *      per-element information away.
+ *   2. The JSON-RPC path uses `engine_getBlobsV2`. Keeping the same version
+ *      on SSZ-REST avoids transport-asymmetric semantics for the same
+ *      logical operation.
+ *   3. Spec guidance (osaka.md `engine_getBlobsV3`): "For an all-or-nothing
+ *      query style, refer to `engine_getBlobsV2`."
+ *   4. `deserializeBlobAndProofsV2IntoBytes` reuses caller-supplied buffers
+ *      on the block-production hot path; that optimisation assumes
+ *      all-or-nothing semantics.
+ *
+ * Revisit if Lodestar grows a consumer that benefits from per-element
+ * granularity (e.g. parallel EL+gossip blob fetching). Nethermind and
+ * Erigon ELs both serve v2 alongside v3, so picking v2 has no interop cost.
  */
 export function getBlobsVersion(fork: ForkName): 1 | 2 {
   return ForkSeq[fork] >= ForkSeq.fulu ? 2 : 1;
