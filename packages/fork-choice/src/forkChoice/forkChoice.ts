@@ -318,6 +318,11 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
+  /** Spec: should_build_on_full(store, head) */
+  shouldBuildOnFull(head: ProtoBlock): boolean {
+    return this.protoArray.shouldBuildOnFull(head);
+  }
+
   /**
    * To predict the proposer head of the next slot. That is, to predict if proposer-boost-reorg could happen.
    * Reason why we can't be certain is because information of the head block is not fully available yet
@@ -934,8 +939,13 @@ export class ForkChoice implements IForkChoice {
    * Updates the PTC votes for multiple validators attesting to a block
    * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
    */
-  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
-    this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent);
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void {
+    this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, blobDataAvailable);
   }
 
   /**

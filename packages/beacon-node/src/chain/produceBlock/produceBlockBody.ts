@@ -226,8 +226,11 @@ export async function produceBlockBody<T extends BlockType>(
     let parentExecutionRequests: electra.ExecutionRequests;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
-    const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
-    if (isExtendingPayload) {
+    // Spec: should_build_on_full(store, head). `parentBlock` is the proposer's head
+    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority
+    // signalled the blob data is not available, forcing a build on EMPTY (reorg).
+    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock);
+    if (isBuildingOnFull) {
       parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
       parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
@@ -306,7 +309,7 @@ export async function produceBlockBody<T extends BlockType>(
     // Drop voluntary exits that parent_execution_requests have invalidated (e.g. a withdrawal
     // request initiating an exit on the same validator). Op pool selected against the unapplied
     // state, so re-validate against the post-apply state to avoid producing an invalid block.
-    if (isExtendingPayload && commonBlockBody.voluntaryExits.length > 0) {
+    if (isBuildingOnFull && commonBlockBody.voluntaryExits.length > 0) {
       gloasBody.voluntaryExits = commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
         stateAfterParentPayload.isValidVoluntaryExit(signedVoluntaryExit, false)
       );

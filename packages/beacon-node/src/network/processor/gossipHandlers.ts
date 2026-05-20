@@ -1206,7 +1206,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.forkChoice.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
         validationResult.validatorCommitteeIndices,
-        payloadAttestationMessage.data.payloadPresent
+        payloadAttestationMessage.data.payloadPresent,
+        payloadAttestationMessage.data.blobDataAvailable
       );
     },
     [GossipType.execution_payload_bid]: async ({

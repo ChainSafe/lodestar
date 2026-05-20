@@ -258,7 +258,8 @@ export async function importBlock(
           this.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
             ptcIndices,
-            payloadAttestation.data.payloadPresent
+            payloadAttestation.data.payloadPresent,
+            payloadAttestation.data.blobDataAvailable
           );
         }
       } catch (e) {
