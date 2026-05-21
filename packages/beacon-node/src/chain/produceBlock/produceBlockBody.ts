@@ -18,9 +18,9 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
-  type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  getExpectedGasLimit,
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
@@ -50,16 +50,10 @@ import {
   gloas,
   ssz,
 } from "@lodestar/types";
-import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {
-  IExecutionBuilder,
-  IExecutionEngine,
-  PayloadAttributes,
-  PayloadId,
-  getExpectedGasLimit,
-} from "../../execution/index.js";
+import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
@@ -97,6 +91,8 @@ export type BlockAttributes = {
   slot: Slot;
   parentBlock: ProtoBlock;
   feeRecipient?: string;
+  /** When provided, build block with this builder bid instead of a self-build bid */
+  builderBid?: gloas.SignedExecutionPayloadBid;
 };
 
 export enum BlockType {
@@ -156,6 +152,28 @@ export type ProduceResult =
   | ProduceFullPhase0
   | ProduceBlinded;
 
+/**
+ * Drop voluntary exits that `parent_execution_requests` have invalidated (e.g. a withdrawal
+ * request initiating an exit on the same validator). Op pool selected against the unapplied
+ * state, so re-validate against the post-apply state to avoid producing an invalid block.
+ *
+ * `getStateAfterParentPayload` is a thunk so the post-apply state is only materialized when
+ * actually needed (i.e. when extending the parent payload and there are exits to filter).
+ */
+function maybeFilterInvalidatedVoluntaryExits(
+  commonBlockBody: CommonBlockBody,
+  isExtendingPayload: boolean,
+  getStateAfterParentPayload: () => IBeaconStateViewBellatrix
+): CommonBlockBody["voluntaryExits"] {
+  if (!isExtendingPayload || commonBlockBody.voluntaryExits.length === 0) {
+    return commonBlockBody.voluntaryExits;
+  }
+  const state = getStateAfterParentPayload();
+  return commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
+    state.isValidVoluntaryExit(signedVoluntaryExit, false)
+  );
+}
+
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
@@ -178,6 +196,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
+    builderBid,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
@@ -198,7 +217,43 @@ export async function produceBlockBody<T extends BlockType>(
   };
   this.logger.verbose("Producing beacon block body", logMeta);
 
-  if (isForkPostGloas(fork)) {
+  if (builderBid !== undefined) {
+    if (!isStatePostGloas(currentState)) {
+      throw new Error("Expected Gloas state for builder bid block production");
+    }
+
+    const isExtendingPayload = byteArrayEquals(
+      builderBid.message.parentBlockHash,
+      currentState.latestExecutionPayloadBid.blockHash
+    );
+    const parentExecutionRequests = isExtendingPayload
+      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
+      : ssz.electra.ExecutionRequests.defaultValue();
+    executionPayloadValue = BigInt(builderBid.message.value) * GWEI_TO_WEI;
+
+    const commonBlockBody = await commonBlockBodyPromise;
+    const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
+    gloasBody.signedExecutionPayloadBid = builderBid;
+    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+      parentBlock.blockRoot,
+      blockSlot - 1
+    );
+    gloasBody.parentExecutionRequests = parentExecutionRequests;
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
+      currentState.withParentPayloadApplied(parentExecutionRequests)
+    );
+    blockBody = gloasBody as AssembledBodyType<T>;
+
+    this.logger.verbose("Produced block with builder bid", {
+      slot: blockSlot,
+      builderIndex: builderBid.message.builderIndex,
+      bidValue: builderBid.message.value,
+      parentBlockHash: toRootHex(builderBid.message.parentBlockHash),
+      parentBlockRoot: toRootHex(builderBid.message.parentBlockRoot),
+      blockHash: toRootHex(builderBid.message.blockHash),
+      isExtendingPayload,
+    });
+  } else if (isForkPostGloas(fork)) {
     if (!isStatePostGloas(currentState)) {
       throw new Error("Expected Gloas state for Gloas block production");
     }
@@ -215,19 +270,16 @@ export async function produceBlockBody<T extends BlockType>(
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
-    this.logger.verbose("Preparing execution payload from engine", {
-      slot: blockSlot,
-      parentBlockRoot: toRootHex(parentBlockRoot),
-      feeRecipient,
-    });
-
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
     let parentExecutionRequests: gloas.ExecutionRequests;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
-    const isExtendingPayload = this.forkChoice.shouldExtendPayload(toRootHex(parentBlockRoot));
-    if (isExtendingPayload) {
+    // Spec: should_build_on_full(store, head). `parentBlock` is the proposer's head
+    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority
+    // signalled the blob data is not available, forcing a build on EMPTY (reorg).
+    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock);
+    if (isBuildingOnFull) {
       parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
       parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
@@ -249,6 +301,16 @@ export async function produceBlockBody<T extends BlockType>(
 
     const {prepType, payloadId} = prepareRes;
     Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
+    this.logger.verbose("Prepared execution payload from engine", {
+      slot: blockSlot,
+      parentBlockRoot: toRootHex(parentBlockRoot),
+      parentBlockHash: toRootHex(parentBlockHash),
+      feeRecipient,
+      prepType,
+      payloadId,
+      isBuildingOnFull,
+    });
 
     if (prepType !== PayloadPreparationType.Cached) {
       await sleep(PAYLOAD_GENERATION_TIME_MS);
@@ -303,14 +365,11 @@ export async function produceBlockBody<T extends BlockType>(
       blockSlot - 1
     );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    // Drop voluntary exits that parent_execution_requests have invalidated (e.g. a withdrawal
-    // request initiating an exit on the same validator). Op pool selected against the unapplied
-    // state, so re-validate against the post-apply state to avoid producing an invalid block.
-    if (isExtendingPayload && commonBlockBody.voluntaryExits.length > 0) {
-      gloasBody.voluntaryExits = commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
-        stateAfterParentPayload.isValidVoluntaryExit(signedVoluntaryExit, false)
-      );
-    }
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
+      commonBlockBody,
+      isBuildingOnFull,
+      () => stateAfterParentPayload
+    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -331,6 +390,7 @@ export async function produceBlockBody<T extends BlockType>(
       fetchedTime,
       executionBlockHash: toRootHex(executionPayload.blockHash),
       blobs: blobsBundle.commitments.length,
+      gasLimit: executionPayload.gasLimit,
     });
 
     Object.assign(logMeta, {
@@ -869,9 +929,9 @@ function preparePayloadAttributes(
     (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
     (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).targetGasLimit = getProposerTargetGasLimit(
       chain,
-      prepareState,
       prepareSlot,
-      parentBlockRoot
+      parentBlockRoot,
+      parentBlockHash
     );
   }
 
@@ -886,14 +946,20 @@ function preparePayloadAttributes(
  * (same `(slot, dependent_root)` lookup as gossip bid validation). When no matching
  * preferences are pooled, target the parent payload's gas limit so the gas limit stays
  * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
+ *
+ * The parent payload's gas_limit is read from fork choice — the variant matching
+ * `(parentBlockRoot, parentBlockHash)` carries the correct value for both FULL parents
+ * (FULL.executionPayloadGasLimit = delivered payload's gas_limit) and EMPTY parents
+ * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
  */
 function getProposerTargetGasLimit(
   chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
-  state: IBeaconStateViewGloas,
   prepareSlot: Slot,
-  parentBlockRoot: Root
+  parentBlockRoot: Root,
+  parentBlockHash: Bytes32
 ): number {
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(toRootHex(parentBlockRoot));
+  const parentBlockRootHex = toRootHex(parentBlockRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
   const dependentRootHex = (() => {
     if (parentBlock === null) {
       return null;
@@ -911,9 +977,17 @@ function getProposerTargetGasLimit(
   })();
 
   const pref = dependentRootHex !== null ? chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex) : null;
-  // TODO GLOAS: state.latestExecutionPayloadBid is the latest *bid*, not the latest *executed*
-  // payload — for EMPTY parents this drifts. Consider having a default value like Prysm's DefaultBuilderGasLimit.
-  return Number(pref ? pref.message.targetGasLimit : state.latestExecutionPayloadBid.gasLimit);
+  if (pref !== null) {
+    return pref.message.targetGasLimit;
+  }
+
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
+  if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
+    throw new Error(
+      `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
+    );
+  }
+  return parentPayloadVariant.executionPayloadGasLimit;
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(

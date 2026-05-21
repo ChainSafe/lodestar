@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {getExpectedGasLimit} from "../../../../src/execution/builder/utils.js";
+import {getExpectedGasLimit} from "../../../src/util/gloas.js";
 
-describe("execution / builder / utils", () => {
+describe("util / gloas", () => {
   describe("getExpectedGasLimit", () => {
     const testCases: {
       name: string;

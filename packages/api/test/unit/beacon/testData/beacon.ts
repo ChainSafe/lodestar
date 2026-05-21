@@ -95,6 +95,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
     res: undefined,
   },
+  publishExecutionPayloadBid: {
+    args: {signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue()},
+    res: undefined,
+  },
   getSignedExecutionPayloadEnvelope: {
     args: {blockId: "head"},
     res: {
