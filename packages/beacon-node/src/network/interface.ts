@@ -115,6 +115,7 @@ export interface INetwork extends INetworkCorePublic {
   publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
   publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
   publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
+  publishExecutionPayloadBid(signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;

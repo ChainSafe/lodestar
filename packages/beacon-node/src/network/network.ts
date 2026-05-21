@@ -537,6 +537,17 @@ export class Network implements INetwork {
     );
   }
 
+  async publishExecutionPayloadBid(signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid): Promise<number> {
+    const epoch = computeEpochAtSlot(signedExecutionPayloadBid.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_payload_bid>(
+      {type: GossipType.execution_payload_bid, boundary},
+      signedExecutionPayloadBid,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
   private async publishGossip<K extends GossipType>(
     topic: GossipTopicMap[K],
     object: GossipTypeMap[K],

@@ -32,6 +32,7 @@ import {
   fulu,
   gloas,
   isDenebBlockContents,
+  ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -41,7 +42,14 @@ import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {ChainEvent} from "../../../../chain/emitter.js";
-import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
+import {
+  BlockError,
+  BlockErrorCode,
+  BlockGossipError,
+  ExecutionPayloadBidError,
+  ExecutionPayloadBidErrorCode,
+  GossipAction,
+} from "../../../../chain/errors/index.js";
 import {
   BlockType,
   ProduceFullBellatrix,
@@ -50,6 +58,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
@@ -823,6 +832,47 @@ export function getBeaconBlockApi({
         delaySec,
         sentPeers: (sentPeersArr[0] as number) ?? 0,
       });
+    },
+
+    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const fork = config.getForkName(signedExecutionPayloadBid.message.slot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
+      }
+
+      const logCtx = {
+        slot: signedExecutionPayloadBid.message.slot,
+        builderIndex: signedExecutionPayloadBid.message.builderIndex,
+      };
+
+      try {
+        const {proposerIndex} = await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid.message);
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+
+        chain.validatorMonitor?.registerExecutionPayloadBid(
+          OpSource.api,
+          proposerIndex,
+          signedExecutionPayloadBid.message
+        );
+        await network.publishExecutionPayloadBid(signedExecutionPayloadBid);
+
+        chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+          version: fork,
+          data: signedExecutionPayloadBid,
+        });
+      } catch (e) {
+        if (e instanceof ExecutionPayloadBidError && e.type.code === ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN) {
+          chain.logger.debug("Ignoring known execution payload bid", logCtx);
+          return;
+        }
+        chain.logger.verbose("Error on publishExecutionPayloadBid", logCtx, e as Error);
+        if (e instanceof ExecutionPayloadBidError && e.action === GossipAction.REJECT) {
+          chain.persistInvalidSszValue(ssz.gloas.SignedExecutionPayloadBid, signedExecutionPayloadBid, "api_reject");
+        }
+        throw e;
+      }
     },
 
     async getSignedExecutionPayloadEnvelope({blockId}, context) {
