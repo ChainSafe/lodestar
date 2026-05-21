@@ -764,33 +764,32 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
       ...(isGloasBeaconBlock(block)
-        ? {
-            executionPayloadBlockHash: toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash), // post-gloas, we don't know payload hash until we import execution payload. Set to parent payload hash for now
-            executionPayloadNumber: (() => {
-              // Determine parent's execution payload number based on which variant the block extends
-              const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+        ? (() => {
+            // post-gloas, we don't know payload hash until we import execution payload. Set to
+            // parent payload hash for now, along with the gas limit/number of that parent payload
+            // (which is what bids built on top of this block will reference until a payload arrives).
+            // we also use parent hash to pass to EL via fcu
+            // see https://github.com/ethereum/consensus-specs/pull/5197
+            const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
 
-              // If parent is pre-merge, return 0
-              if (parentBlock.executionPayloadBlockHash === null) {
-                return 0;
-              }
+            // Inherit parent payload's (number, gasLimit) for the PENDING/EMPTY variants.
+            // `parentBlock` is already the variant matching `parentBlockHashFromBid` —
+            // `getParent` (called above) resolves Gloas parents via
+            // `getBlockHexAndBlockHash(parentRoot, parentBlockHash)`, and pre-Gloas parents
+            // have a single variant. Pre-merge parents have null payload hash and zero values.
+            const parentMeta: {number: number; gasLimit: number} =
+              parentBlock.executionPayloadBlockHash === null
+                ? {number: 0, gasLimit: 0}
+                : {number: parentBlock.executionPayloadNumber, gasLimit: parentBlock.executionPayloadGasLimit};
 
-              // If parent is pre-Gloas, it only has FULL variant
-              if (parentBlock.parentBlockHash === null) {
-                return parentBlock.executionPayloadNumber;
-              }
-
-              // Parent is Gloas: get the variant that matches the parentBlockHash from bid
-              const parentVariant = this.getBlockHexAndBlockHash(parentRootHex, parentBlockHashFromBid);
-              if (parentVariant && parentVariant.executionPayloadBlockHash !== null) {
-                return parentVariant.executionPayloadNumber;
-              }
-              // Fallback to parent block's number (we know it's post-merge from check above)
-              return parentBlock.executionPayloadNumber;
-            })(),
-            executionStatus: this.getPostMergeExecStatus(executionStatus),
-            dataAvailabilityStatus,
-          }
+            return {
+              executionPayloadBlockHash: parentBlockHashFromBid,
+              executionPayloadNumber: parentMeta.number,
+              executionPayloadGasLimit: parentMeta.gasLimit,
+              executionStatus: this.getPostMergeExecStatus(executionStatus),
+              dataAvailabilityStatus,
+            };
+          })()
         : isExecutionBlockBodyType(block.body) &&
             isStatePostBellatrix(state) &&
             state.isExecutionStateType &&
@@ -798,6 +797,7 @@ export class ForkChoice implements IForkChoice {
           ? {
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
               executionPayloadNumber: block.body.executionPayload.blockNumber,
+              executionPayloadGasLimit: block.body.executionPayload.gasLimit,
               executionStatus: this.getPostMergeExecStatus(executionStatus),
               dataAvailabilityStatus,
             }
@@ -947,6 +947,7 @@ export class ForkChoice implements IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
+    executionPayloadGasLimit: number,
     executionStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
@@ -955,6 +956,7 @@ export class ForkChoice implements IForkChoice {
       this.fcStore.currentSlot,
       executionPayloadBlockHash,
       executionPayloadNumber,
+      executionPayloadGasLimit,
       this.proposerBoostRoot,
       executionStatus,
       dataAvailabilityStatus

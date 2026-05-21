@@ -18,9 +18,9 @@ import {
   G2_POINT_AT_INFINITY,
   IBeaconStateView,
   type IBeaconStateViewBellatrix,
-  type IBeaconStateViewGloas,
   computeEpochAtSlot,
   computeTimeAtSlot,
+  getExpectedGasLimit,
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
@@ -53,13 +53,7 @@ import {
 import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
-import {
-  IExecutionBuilder,
-  IExecutionEngine,
-  PayloadAttributes,
-  PayloadId,
-  getExpectedGasLimit,
-} from "../../execution/index.js";
+import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
@@ -331,6 +325,7 @@ export async function produceBlockBody<T extends BlockType>(
       fetchedTime,
       executionBlockHash: toRootHex(executionPayload.blockHash),
       blobs: blobsBundle.commitments.length,
+      gasLimit: executionPayload.gasLimit,
     });
 
     Object.assign(logMeta, {
@@ -869,9 +864,9 @@ function preparePayloadAttributes(
     (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).slotNumber = prepareSlot;
     (payloadAttributes as gloas.SSEPayloadAttributes["payloadAttributes"]).targetGasLimit = getProposerTargetGasLimit(
       chain,
-      prepareState,
       prepareSlot,
-      parentBlockRoot
+      parentBlockRoot,
+      parentBlockHash
     );
   }
 
@@ -886,14 +881,20 @@ function preparePayloadAttributes(
  * (same `(slot, dependent_root)` lookup as gossip bid validation). When no matching
  * preferences are pooled, target the parent payload's gas limit so the gas limit stays
  * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
+ *
+ * The parent payload's gas_limit is read from fork choice — the variant matching
+ * `(parentBlockRoot, parentBlockHash)` carries the correct value for both FULL parents
+ * (FULL.executionPayloadGasLimit = delivered payload's gas_limit) and EMPTY parents
+ * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
  */
 function getProposerTargetGasLimit(
   chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
-  state: IBeaconStateViewGloas,
   prepareSlot: Slot,
-  parentBlockRoot: Root
+  parentBlockRoot: Root,
+  parentBlockHash: Bytes32
 ): number {
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(toRootHex(parentBlockRoot));
+  const parentBlockRootHex = toRootHex(parentBlockRoot);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
   const dependentRootHex = (() => {
     if (parentBlock === null) {
       return null;
@@ -911,9 +912,17 @@ function getProposerTargetGasLimit(
   })();
 
   const pref = dependentRootHex !== null ? chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex) : null;
-  // TODO GLOAS: state.latestExecutionPayloadBid is the latest *bid*, not the latest *executed*
-  // payload — for EMPTY parents this drifts. Consider having a default value like Prysm's DefaultBuilderGasLimit.
-  return Number(pref ? pref.message.targetGasLimit : state.latestExecutionPayloadBid.gasLimit);
+  if (pref !== null) {
+    return pref.message.targetGasLimit;
+  }
+
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
+  if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
+    throw new Error(
+      `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
+    );
+  }
+  return parentPayloadVariant.executionPayloadGasLimit;
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(

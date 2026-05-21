@@ -198,11 +198,13 @@ export interface IForkChoice {
    * @param blockRoot - The beacon block root for which the payload arrived
    * @param executionPayloadBlockHash - The block hash of the execution payload
    * @param executionPayloadNumber - The block number of the execution payload
+   * @param executionPayloadGasLimit - The gas limit of the execution payload
    */
   onExecutionPayload(
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
+    executionPayloadGasLimit: number,
     executionStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): void;
