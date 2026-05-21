@@ -678,6 +678,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -783,6 +784,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -841,6 +843,7 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
+        30000000,
         null,
         ExecutionStatus.Valid,
         DataAvailabilityStatus.Available
@@ -962,6 +965,7 @@ describe("Gloas Fork Choice", () => {
           gloasForkSlot,
           "0x02",
           gloasForkSlot,
+          30000000,
           null,
           ExecutionStatus.Valid,
           DataAvailabilityStatus.Available
