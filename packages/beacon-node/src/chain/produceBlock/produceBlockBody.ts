@@ -229,6 +229,10 @@ export async function produceBlockBody<T extends BlockType>(
       slot: blockSlot,
       builderIndex: builderBid.message.builderIndex,
       bidValue: builderBid.message.value,
+      parentBlockHash: toRootHex(builderBid.message.parentBlockHash),
+      parentBlockRoot: toRootHex(builderBid.message.parentBlockRoot),
+      blockHash: toRootHex(builderBid.message.blockHash),
+      isExtendingPayload,
     });
   } else if (isForkPostGloas(fork)) {
     if (!isStatePostGloas(currentState)) {
