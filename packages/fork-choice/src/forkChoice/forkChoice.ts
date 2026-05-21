@@ -768,6 +768,8 @@ export class ForkChoice implements IForkChoice {
             // post-gloas, we don't know payload hash until we import execution payload. Set to
             // parent payload hash for now, along with the gas limit/number of that parent payload
             // (which is what bids built on top of this block will reference until a payload arrives).
+            // we also use parent hash to pass to EL via fcu
+            // see https://github.com/ethereum/consensus-specs/pull/5197
             const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
 
             // Inherit parent payload's (number, gasLimit) for the PENDING/EMPTY variants.
