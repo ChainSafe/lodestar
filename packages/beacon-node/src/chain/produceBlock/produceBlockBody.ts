@@ -1,5 +1,10 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {
+  IForkChoice,
+  ProtoBlock,
+  getFinalizedExecutionBlockHash,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -262,7 +267,7 @@ export async function produceBlockBody<T extends BlockType>(
     // full and blinded no longer makes sense in gloas, it might be a good idea to move
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
     // ProposerPreferencesPool. Consider using this unified cache instead
     // see https://github.com/ChainSafe/lodestar/issues/9379
@@ -404,7 +409,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
 
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
     const feeRecipientType = requestedFeeRecipient
       ? "requested"

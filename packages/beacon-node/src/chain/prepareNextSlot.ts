@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {getFinalizedExecutionBlockHash, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   IBeaconStateView,
@@ -13,7 +13,7 @@ import {
 } from "@lodestar/state-transition";
 import {Bytes32, Slot} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
-import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
+import {GENESIS_SLOT} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
@@ -193,8 +193,7 @@ export class PrepareNextSlotScheduler {
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
-          const finalizedBlockHash =
-            this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the

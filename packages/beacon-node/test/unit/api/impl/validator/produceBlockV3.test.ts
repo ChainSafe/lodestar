@@ -246,8 +246,8 @@ describe("api/validator - produceBlockV3", () => {
       syncCommitteeBits: ssz.altair.SyncCommitteeBits.defaultValue(),
       syncCommitteeSignature: G2_POINT_AT_INFINITY,
     });
-    modules.forkChoice.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
-    modules.forkChoice.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    modules.forkChoice.getJustifiedBlock.mockReturnValue(generateProtoBlock());
+    modules.forkChoice.getFinalizedBlock.mockReturnValue(generateProtoBlock());
 
     modules.chain["executionEngine"].payloadIdCache = new PayloadIdCache();
     modules.chain["executionEngine"].notifyForkchoiceUpdate.mockResolvedValue("0x");
