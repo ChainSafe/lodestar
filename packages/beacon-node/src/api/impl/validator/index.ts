@@ -998,12 +998,9 @@ export function getValidatorApi(
 
       if (bestResult === null || bestResult.status !== "fulfilled") {
         const engineReason = engineResult.status === "rejected" ? engineResult.reason : undefined;
-        const bidReason =
-          builderBid !== null && bidResult.status === "rejected" ? bidResult.reason : undefined;
+        const bidReason = builderBid !== null && bidResult.status === "rejected" ? bidResult.reason : undefined;
         logger.error("Block production failed", {...logCtx, engineReason, bidReason});
-        throw Error(
-          `Block production failed: engine=${engineReason ?? "n/a"} builder=${bidReason ?? "n/a"}`
-        );
+        throw Error(`Block production failed: engine=${engineReason ?? "n/a"} builder=${bidReason ?? "n/a"}`);
       }
 
       const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
