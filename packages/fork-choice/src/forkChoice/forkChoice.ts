@@ -770,27 +770,15 @@ export class ForkChoice implements IForkChoice {
             // (which is what bids built on top of this block will reference until a payload arrives).
             const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
 
-            // Inherit parent payload's (number, gasLimit) for the PENDING/EMPTY variants:
-            //   - pre-merge parent: zero/no payload
-            //   - pre-Gloas parent: single variant carries the values
-            //   - Gloas parent: look up the variant matching parentBlockHashFromBid
-            const parentMeta = ((): {number: number; gasLimit: number} => {
-              if (parentBlock.executionPayloadBlockHash === null) {
-                return {number: 0, gasLimit: 0};
-              }
-              if (parentBlock.parentBlockHash === null) {
-                return {number: parentBlock.executionPayloadNumber, gasLimit: parentBlock.executionPayloadGasLimit};
-              }
-              const parentVariant = this.getBlockHexAndBlockHash(parentRootHex, parentBlockHashFromBid);
-              if (parentVariant && parentVariant.executionPayloadBlockHash !== null) {
-                return {
-                  number: parentVariant.executionPayloadNumber,
-                  gasLimit: parentVariant.executionPayloadGasLimit,
-                };
-              }
-              // Fallback to parent block's values (we know it's post-merge from check above)
-              return {number: parentBlock.executionPayloadNumber, gasLimit: parentBlock.executionPayloadGasLimit};
-            })();
+            // Inherit parent payload's (number, gasLimit) for the PENDING/EMPTY variants.
+            // `parentBlock` is already the variant matching `parentBlockHashFromBid` —
+            // `getParent` (called above) resolves Gloas parents via
+            // `getBlockHexAndBlockHash(parentRoot, parentBlockHash)`, and pre-Gloas parents
+            // have a single variant. Pre-merge parents have null payload hash and zero values.
+            const parentMeta: {number: number; gasLimit: number} =
+              parentBlock.executionPayloadBlockHash === null
+                ? {number: 0, gasLimit: 0}
+                : {number: parentBlock.executionPayloadNumber, gasLimit: parentBlock.executionPayloadGasLimit};
 
             return {
               executionPayloadBlockHash: parentBlockHashFromBid,
