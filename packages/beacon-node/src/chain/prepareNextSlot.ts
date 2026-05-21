@@ -169,7 +169,8 @@ export class PrepareNextSlotScheduler {
         // Apply parent payload once here as it's reused by EL prep and SSE emit below
         let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
         if (isStatePostGloas(updatedPrepareState)) {
-          if (this.chain.forkChoice.shouldExtendPayload(updatedHead.blockRoot)) {
+          // Spec: should_build_on_full(store, head) — see produceBlockBody.ts for context.
+          if (this.chain.forkChoice.shouldBuildOnFull(updatedHead)) {
             parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
             // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
             if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {

@@ -66,6 +66,7 @@ export type ValidatorMonitor = {
     delaySec: Seconds,
     envelope: gloas.SignedExecutionPayloadEnvelope
   ): void;
+  registerExecutionPayloadBid(src: OpSource, proposerIndex: ValidatorIndex, bid: gloas.ExecutionPayloadBid): void;
   registerImportedBlock(block: BeaconBlock, data: {proposerBalanceDelta: number}): void;
   onPoolSubmitUnaggregatedAttestation(
     seenTimestampSec: number,
@@ -457,6 +458,23 @@ export function createValidatorMonitor(
 
     registerExecutionPayloadEnvelope(_src, _delaySec, _envelope) {
       // TODO GLOAS: implement execution payload envelope monitoring
+    },
+
+    registerExecutionPayloadBid(src, proposerIndex, bid) {
+      if (!validators.has(proposerIndex)) {
+        return;
+      }
+      log("Received an execution payload bid for monitored proposer", {
+        slot: bid.slot,
+        proposerIndex,
+        src,
+        builderIndex: bid.builderIndex,
+        gasLimit: bid.gasLimit,
+        value: bid.value.toString(),
+        parentBlockRoot: toRootHex(bid.parentBlockRoot),
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        blockHash: toRootHex(bid.blockHash),
+      });
     },
 
     registerImportedBlock(block, {proposerBalanceDelta}) {

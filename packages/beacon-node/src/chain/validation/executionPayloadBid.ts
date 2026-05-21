@@ -4,9 +4,10 @@ import {
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
   isActiveBuilder,
+  isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
@@ -16,21 +17,21 @@ import {RegenCaller} from "../regen/index.js";
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<void> {
+): Promise<{proposerIndex: ValidatorIndex}> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 export async function validateGossipExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<void> {
+): Promise<{proposerIndex: ValidatorIndex}> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<void> {
+): Promise<{proposerIndex: ValidatorIndex}> {
   const bid = signedExecutionPayloadBid.message;
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
@@ -128,14 +129,33 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [REJECT] `bid.gas_limit == proposer_preferences.target_gas_limit`.
+  // [IGNORE] `bid.parent_block_hash` is the block hash of a known execution payload in fork
+  // choice. Looks up the variant of `bid.parent_block_root` whose payload hash matches
+  // `bid.parent_block_hash` — works for both FULL parents (FULL variant carries the delivered
+  // payload's hash) and EMPTY parents (EMPTY/PENDING variants carry the inherited parent
+  // payload's hash, since the new block doesn't have its own payload). Variant carries the
+  // executed payload's gas_limit, which we use as `parent_gas_limit` below.
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, parentBlockHashHex);
+  if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
+      parentBlockHash: parentBlockHashHex,
+    });
+  }
+
+  // [IGNORE] `is_gas_limit_target_compatible(parent_gas_limit, bid.gas_limit, target_gas_limit)`,
+  // where `parent_gas_limit` is the `gas_limit` of the parent execution payload and
+  // `target_gas_limit` is `proposer_preferences.target_gas_limit`.
   const bidGasLimit = Number(bid.gasLimit);
-  if (bidGasLimit !== proposerPreferences.message.targetGasLimit) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+  const parentGasLimit = parentPayloadVariant.executionPayloadGasLimit;
+  const targetGasLimit = proposerPreferences.message.targetGasLimit;
+  if (!isGasLimitTargetCompatible(parentGasLimit, bidGasLimit, targetGasLimit)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH,
       builderIndex: bid.builderIndex,
       bidGasLimit,
-      expectedGasLimit: proposerPreferences.message.targetGasLimit,
+      parentGasLimit,
+      targetGasLimit,
     });
   }
 
@@ -183,10 +203,6 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] `bid.parent_block_hash` is the block hash of a known execution
-  // payload in fork choice.
-  // TODO GLOAS: implement this
-
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
     PublicKey.fromBytes(builder.pubkey),
@@ -204,4 +220,6 @@ async function validateExecutionPayloadBid(
 
   // Valid
   chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex);
+
+  return {proposerIndex: proposerPreferences.message.validatorIndex};
 }
