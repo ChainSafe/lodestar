@@ -309,7 +309,7 @@ export async function produceBlockBody<T extends BlockType>(
       feeRecipient,
       prepType,
       payloadId,
-      isExtendingPayload,
+      isBuildingOnFull,
     });
 
     if (prepType !== PayloadPreparationType.Cached) {
