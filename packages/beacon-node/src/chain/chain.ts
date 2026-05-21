@@ -1049,6 +1049,7 @@ export class BeaconChain implements IBeaconChain {
       feeRecipient,
       commonBlockBodyPromise,
       parentBlock,
+      builderBid,
     }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
@@ -1078,6 +1079,7 @@ export class BeaconChain implements IBeaconChain {
         proposerIndex,
         proposerPubKey,
         commonBlockBodyPromise,
+        builderBid,
       }
     );
 

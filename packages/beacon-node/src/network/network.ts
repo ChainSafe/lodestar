@@ -515,6 +515,17 @@ export class Network implements INetwork {
     );
   }
 
+  async publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number> {
+    const epoch = computeEpochAtSlot(signedBid.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+
+    return this.publishGossip<GossipType.execution_payload_bid>(
+      {type: GossipType.execution_payload_bid, boundary},
+      signedBid,
+      {ignoreDuplicatePublishError: true}
+    );
+  }
+
   async publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number> {
     const epoch = computeEpochAtSlot(payloadAttestationMessage.data.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);

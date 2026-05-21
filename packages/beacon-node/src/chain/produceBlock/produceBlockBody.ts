@@ -50,7 +50,7 @@ import {
   gloas,
   ssz,
 } from "@lodestar/types";
-import {Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
@@ -91,6 +91,8 @@ export type BlockAttributes = {
   slot: Slot;
   parentBlock: ProtoBlock;
   feeRecipient?: string;
+  /** When provided, build block with this builder bid instead of a self-build bid */
+  builderBid?: gloas.SignedExecutionPayloadBid;
 };
 
 export enum BlockType {
@@ -150,6 +152,28 @@ export type ProduceResult =
   | ProduceFullPhase0
   | ProduceBlinded;
 
+/**
+ * Drop voluntary exits that `parent_execution_requests` have invalidated (e.g. a withdrawal
+ * request initiating an exit on the same validator). Op pool selected against the unapplied
+ * state, so re-validate against the post-apply state to avoid producing an invalid block.
+ *
+ * `getStateAfterParentPayload` is a thunk so the post-apply state is only materialized when
+ * actually needed (i.e. when extending the parent payload and there are exits to filter).
+ */
+function maybeFilterInvalidatedVoluntaryExits(
+  commonBlockBody: CommonBlockBody,
+  isExtendingPayload: boolean,
+  getStateAfterParentPayload: () => IBeaconStateViewBellatrix
+): CommonBlockBody["voluntaryExits"] {
+  if (!isExtendingPayload || commonBlockBody.voluntaryExits.length === 0) {
+    return commonBlockBody.voluntaryExits;
+  }
+  const state = getStateAfterParentPayload();
+  return commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
+    state.isValidVoluntaryExit(signedVoluntaryExit, false)
+  );
+}
+
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
@@ -172,6 +196,7 @@ export async function produceBlockBody<T extends BlockType>(
     proposerIndex,
     proposerPubKey,
     commonBlockBodyPromise,
+    builderBid,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
@@ -192,7 +217,43 @@ export async function produceBlockBody<T extends BlockType>(
   };
   this.logger.verbose("Producing beacon block body", logMeta);
 
-  if (isForkPostGloas(fork)) {
+  if (builderBid !== undefined) {
+    if (!isStatePostGloas(currentState)) {
+      throw new Error("Expected Gloas state for builder bid block production");
+    }
+
+    const isExtendingPayload = byteArrayEquals(
+      builderBid.message.parentBlockHash,
+      currentState.latestExecutionPayloadBid.blockHash
+    );
+    const parentExecutionRequests = isExtendingPayload
+      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
+      : ssz.electra.ExecutionRequests.defaultValue();
+    executionPayloadValue = BigInt(builderBid.message.value) * GWEI_TO_WEI;
+
+    const commonBlockBody = await commonBlockBodyPromise;
+    const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
+    gloasBody.signedExecutionPayloadBid = builderBid;
+    gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
+      parentBlock.blockRoot,
+      blockSlot - 1
+    );
+    gloasBody.parentExecutionRequests = parentExecutionRequests;
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
+      currentState.withParentPayloadApplied(parentExecutionRequests)
+    );
+    blockBody = gloasBody as AssembledBodyType<T>;
+
+    this.logger.verbose("Produced block with builder bid", {
+      slot: blockSlot,
+      builderIndex: builderBid.message.builderIndex,
+      bidValue: builderBid.message.value,
+      parentBlockHash: toRootHex(builderBid.message.parentBlockHash),
+      parentBlockRoot: toRootHex(builderBid.message.parentBlockRoot),
+      blockHash: toRootHex(builderBid.message.blockHash),
+      isExtendingPayload,
+    });
+  } else if (isForkPostGloas(fork)) {
     if (!isStatePostGloas(currentState)) {
       throw new Error("Expected Gloas state for Gloas block production");
     }
@@ -208,12 +269,6 @@ export async function produceBlockBody<T extends BlockType>(
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
-
-    this.logger.verbose("Preparing execution payload from engine", {
-      slot: blockSlot,
-      parentBlockRoot: toRootHex(parentBlockRoot),
-      feeRecipient,
-    });
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
@@ -246,6 +301,16 @@ export async function produceBlockBody<T extends BlockType>(
 
     const {prepType, payloadId} = prepareRes;
     Object.assign(logMeta, {executionPayloadPrepType: prepType});
+
+    this.logger.verbose("Prepared execution payload from engine", {
+      slot: blockSlot,
+      parentBlockRoot: toRootHex(parentBlockRoot),
+      parentBlockHash: toRootHex(parentBlockHash),
+      feeRecipient,
+      prepType,
+      payloadId,
+      isBuildingOnFull,
+    });
 
     if (prepType !== PayloadPreparationType.Cached) {
       await sleep(PAYLOAD_GENERATION_TIME_MS);
@@ -300,14 +365,11 @@ export async function produceBlockBody<T extends BlockType>(
       blockSlot - 1
     );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    // Drop voluntary exits that parent_execution_requests have invalidated (e.g. a withdrawal
-    // request initiating an exit on the same validator). Op pool selected against the unapplied
-    // state, so re-validate against the post-apply state to avoid producing an invalid block.
-    if (isBuildingOnFull && commonBlockBody.voluntaryExits.length > 0) {
-      gloasBody.voluntaryExits = commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
-        stateAfterParentPayload.isValidVoluntaryExit(signedVoluntaryExit, false)
-      );
-    }
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
+      commonBlockBody,
+      isBuildingOnFull,
+      () => stateAfterParentPayload
+    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
