@@ -325,6 +325,7 @@ export async function produceBlockBody<T extends BlockType>(
       fetchedTime,
       executionBlockHash: toRootHex(executionPayload.blockHash),
       blobs: blobsBundle.commitments.length,
+      gasLimit: executionPayload.gasLimit,
     });
 
     Object.assign(logMeta, {
