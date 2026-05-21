@@ -7,7 +7,7 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {gloas} from "@lodestar/types";
+import {ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
@@ -17,21 +17,21 @@ import {RegenCaller} from "../regen/index.js";
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<void> {
+): Promise<{proposerIndex: ValidatorIndex}> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 export async function validateGossipExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<void> {
+): Promise<{proposerIndex: ValidatorIndex}> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-): Promise<void> {
+): Promise<{proposerIndex: ValidatorIndex}> {
   const bid = signedExecutionPayloadBid.message;
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
@@ -220,4 +220,6 @@ async function validateExecutionPayloadBid(
 
   // Valid
   chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex);
+
+  return {proposerIndex: proposerPreferences.message.validatorIndex};
 }
