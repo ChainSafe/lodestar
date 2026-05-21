@@ -143,14 +143,14 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [REJECT] `is_gas_limit_target_compatible(parent_gas_limit, bid.gas_limit, target_gas_limit)`,
+  // [IGNORE] `is_gas_limit_target_compatible(parent_gas_limit, bid.gas_limit, target_gas_limit)`,
   // where `parent_gas_limit` is the `gas_limit` of the parent execution payload and
   // `target_gas_limit` is `proposer_preferences.target_gas_limit`.
   const bidGasLimit = Number(bid.gasLimit);
   const parentGasLimit = parentPayloadVariant.executionPayloadGasLimit;
   const targetGasLimit = proposerPreferences.message.targetGasLimit;
   if (!isGasLimitTargetCompatible(parentGasLimit, bidGasLimit, targetGasLimit)) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH,
       builderIndex: bid.builderIndex,
       bidGasLimit,
