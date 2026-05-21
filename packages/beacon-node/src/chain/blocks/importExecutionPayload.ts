@@ -255,7 +255,11 @@ export async function importExecutionPayload(
   }
 
   // 8. Record metrics for payload envelope and column sources
-  this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
+  const delaySec = this.clock.secFromSlot(slot);
+  this.metrics?.importPayload.elapsedTimeTillImported.observe(
+    {source: payloadInput.getPayloadEnvelopeSource().source},
+    delaySec
+  );
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
@@ -276,6 +280,7 @@ export async function importExecutionPayload(
     builderIndex: envelope.builderIndex,
     blockRoot: blockRootHex,
     blockHash: blockHashHex,
+    delaySec,
   });
 }
 

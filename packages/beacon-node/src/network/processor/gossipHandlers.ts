@@ -1117,7 +1117,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       const slot = envelope.payload.slotNumber;
-      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+
+      logger.debug("Received gossip payload envelope", {
+        currentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        slot,
+        blockRoot: toRootHex(envelope.beaconBlockRoot),
+        delaySec,
+      });
+
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
