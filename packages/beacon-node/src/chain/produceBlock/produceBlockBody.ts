@@ -158,6 +158,28 @@ export type ProduceResult =
   | ProduceFullPhase0
   | ProduceBlinded;
 
+/**
+ * Drop voluntary exits that `parent_execution_requests` have invalidated (e.g. a withdrawal
+ * request initiating an exit on the same validator). Op pool selected against the unapplied
+ * state, so re-validate against the post-apply state to avoid producing an invalid block.
+ *
+ * `getStateAfterParentPayload` is a thunk so the post-apply state is only materialized when
+ * actually needed (i.e. when extending the parent payload and there are exits to filter).
+ */
+function maybeFilterInvalidatedVoluntaryExits(
+  commonBlockBody: CommonBlockBody,
+  isExtendingPayload: boolean,
+  getStateAfterParentPayload: () => IBeaconStateViewBellatrix
+): CommonBlockBody["voluntaryExits"] {
+  if (!isExtendingPayload || commonBlockBody.voluntaryExits.length === 0) {
+    return commonBlockBody.voluntaryExits;
+  }
+  const state = getStateAfterParentPayload();
+  return commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
+    state.isValidVoluntaryExit(signedVoluntaryExit, false)
+  );
+}
+
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
@@ -223,6 +245,9 @@ export async function produceBlockBody<T extends BlockType>(
       blockSlot - 1
     );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
+      currentState.withParentPayloadApplied(parentExecutionRequests)
+    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     this.logger.verbose("Produced block with builder bid", {
@@ -343,14 +368,11 @@ export async function produceBlockBody<T extends BlockType>(
       blockSlot - 1
     );
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    // Drop voluntary exits that parent_execution_requests have invalidated (e.g. a withdrawal
-    // request initiating an exit on the same validator). Op pool selected against the unapplied
-    // state, so re-validate against the post-apply state to avoid producing an invalid block.
-    if (isExtendingPayload && commonBlockBody.voluntaryExits.length > 0) {
-      gloasBody.voluntaryExits = commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
-        stateAfterParentPayload.isValidVoluntaryExit(signedVoluntaryExit, false)
-      );
-    }
+    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
+      commonBlockBody,
+      isExtendingPayload,
+      () => stateAfterParentPayload
+    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
