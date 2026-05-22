@@ -117,13 +117,9 @@ export async function importBlock(
     executionStatus = parentBlock.executionStatus;
   }
 
-  let expectedProposerIndex: number | null = null;
-  try {
-    expectedProposerIndex = this.getHeadState().getBeaconProposer(blockSlot);
-  } catch {
-    // headState is more than one epoch away from blockSlot; cannot determine the
-    // canonical proposer, so skip the proposer-boost canonical check.
-  }
+  // getBeaconProposerOrNull will return null if head state is more than one epoch away
+  // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
+  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
 
   const blockSummary = this.forkChoice.onBlock(
     block.message,

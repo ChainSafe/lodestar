@@ -475,14 +475,7 @@ export async function runGossipValidationTest(
         }
 
         const postState = computePostState(parentState, signedBlock, fork);
-
-        let expectedProposerIndex: number | null = null;
-        try {
-          expectedProposerIndex = chain.getHeadState().getBeaconProposer(slot);
-        } catch {
-          // headState is more than one epoch away from slot; cannot determine the
-          // canonical proposer, so skip the proposer-boost canonical check.
-        }
+        const expectedProposerIndex: number | null = chain.getHeadState().getBeaconProposerOrNull(slot);
 
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
