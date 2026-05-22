@@ -1,19 +1,23 @@
 import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {
+  BUILDER_WITHDRAWAL_PREFIX,
+  DOMAIN_DEPOSIT,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
   ForkSeq,
+  GENESIS_SLOT,
   MAX_ATTESTATIONS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
-import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
+import {BeaconState, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {getEffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {ZERO_HASH} from "../constants/index.js";
 import {
   computeCommitteeCount,
   computeEpochAtSlot,
@@ -26,12 +30,15 @@ import {
 import {
   BeaconStateAltair,
   BeaconStateElectra,
+  BeaconStateFulu,
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   CachedBeaconStateElectra,
+  CachedBeaconStateFulu,
   CachedBeaconStatePhase0,
 } from "../types.js";
+import {computeDomain, computeSigningRoot} from "../util/index.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {getActiveValidatorIndices} from "../util/validator.js";
 import {interopPubkeysCached} from "./interop.js";
@@ -540,4 +547,119 @@ export function generateTestCachedBeaconStateOnlyValidators({
     },
     {skipSyncPubkeys: true}
   );
+}
+
+/**
+ * Fulu performance state. Mirrors `generatePerformanceStateElectra` with the single extra
+ * Fulu field `proposerLookahead`, which is left as the default zero vector since
+ * `upgradeStateToGloas` copies it verbatim and never reads it.
+ */
+export function generatePerformanceStateFulu(pubkeysArg?: Uint8Array[]): BeaconStateFulu {
+  const pubkeys = pubkeysArg || getPubkeys().pubkeys;
+  const fuluConfig = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+    FULU_FORK_EPOCH: 0,
+  });
+  const state = ssz.fulu.BeaconState.defaultValue();
+
+  Object.assign(state, buildPerformanceStatePhase0(pubkeys));
+
+  state.fork.previousVersion = fuluConfig.ELECTRA_FORK_VERSION;
+  state.fork.currentVersion = fuluConfig.FULU_FORK_VERSION;
+  state.fork.epoch = fuluConfig.FULU_FORK_EPOCH;
+  state.previousEpochParticipation = newFilledArray(pubkeys.length, 0b111);
+  state.currentEpochParticipation = state.previousEpochParticipation;
+  state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2);
+  state.currentSyncCommittee = ssz.altair.SyncCommittee.defaultValue();
+  state.nextSyncCommittee = state.currentSyncCommittee;
+  state.latestExecutionPayloadHeader = ssz.electra.ExecutionPayloadHeader.defaultValue();
+  state.depositRequestsStartIndex = 2023n;
+
+  let cached = ssz.fulu.BeaconState.toViewDU(state);
+
+  const epoch = computeEpochAtSlot(state.slot);
+  const activeValidatorIndices = getActiveValidatorIndices(cached, epoch);
+  const effectiveBalanceIncrements = getEffectiveBalanceIncrements(cached);
+  const {syncCommittee} = getNextSyncCommittee(
+    ForkSeq.fulu,
+    cached,
+    activeValidatorIndices,
+    effectiveBalanceIncrements
+  );
+  state.currentSyncCommittee = syncCommittee;
+  state.nextSyncCommittee = syncCommittee;
+
+  cached = ssz.fulu.BeaconState.toViewDU(state);
+  cached.hashTreeRoot();
+  return cached.clone();
+}
+
+/**
+ * Cached Fulu performance state used as the pre-state for `upgradeStateToGloas` benchmarks.
+ * `vc` is kept modest (default 16384) since these benchmarks exercise builder onboarding,
+ * not validator-heavy processing.
+ */
+export function generatePerfTestCachedStateFulu(opts?: {vc?: number}): CachedBeaconStateFulu {
+  const vc = opts?.vc ?? 16384;
+  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
+  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj}, vc);
+
+  const fuluConfig = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+    FULU_FORK_EPOCH: 0,
+  });
+
+  const state = generatePerformanceStateFulu(pubkeys).clone();
+
+  return createCachedBeaconState(state, {
+    config: createBeaconConfig(fuluConfig, state.genesisValidatorsRoot),
+    pubkeyCache,
+  });
+}
+
+/**
+ * Build `count` builder `PendingDeposit` entries with valid deposit signatures, distinct
+ * pubkeys from interop indices `[startIndex, startIndex + count)`, builder withdrawal
+ * credentials (prefix `BUILDER_WITHDRAWAL_PREFIX`), and a 1 ETH amount. Used to fill
+ * `state.pendingDeposits` before benchmarking `upgradeStateToGloas` builder onboarding.
+ */
+export function generateBuilderPendingDeposits(
+  config: BeaconConfig,
+  count: number,
+  startIndex: number
+): electra.PendingDeposit[] {
+  // Deposits use a fork-agnostic domain, see `isValidDepositSignature`
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const amount = 1_000_000_000; // 1 ETH in Gwei
+  const deposits: electra.PendingDeposit[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const sk = interopSecretKey(startIndex + i);
+    const pubkey = sk.toPublicKey().toBytes();
+
+    const withdrawalCredentials = Buffer.alloc(32, 0);
+    withdrawalCredentials[0] = BUILDER_WITHDRAWAL_PREFIX;
+    // bytes [12, 32) hold the 20-byte builder execution address
+    withdrawalCredentials.fill((startIndex + i) & 0xff, 12, 32);
+
+    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+
+    deposits.push({
+      pubkey,
+      withdrawalCredentials,
+      amount,
+      signature: sk.sign(signingRoot).toBytes(),
+      slot: GENESIS_SLOT,
+    });
+  }
+
+  return deposits;
 }
