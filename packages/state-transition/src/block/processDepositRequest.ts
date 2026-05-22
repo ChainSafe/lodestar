@@ -121,20 +121,22 @@ export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.
   // Deposit signatures use a fork-agnostic domain, see `isValidDepositSignature`
   const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
 
-  const signatureSets: {publicKey: PublicKey; message: Uint8Array; signature: Uint8Array}[] = [];
+  const signatureSets: {pk: PublicKey; msg: Uint8Array; sig: Signature}[] = [];
   const signatureSetDepositIndices: number[] = [];
   for (let i = 0; i < deposits.length; i++) {
     const {pubkey, withdrawalCredentials, amount, signature} = deposits[i];
-    let publicKey: PublicKey;
+    let pk: PublicKey;
+    let sig: Signature;
     try {
-      // Deposit pubkeys are untrusted: must be group + infinity checked
-      publicKey = PublicKey.fromBytes(pubkey, true);
+      // Deposit pubkeys and signatures are untrusted: must be group + infinity checked
+      pk = PublicKey.fromBytes(pubkey, true);
+      sig = Signature.fromBytes(signature, true);
     } catch (_) {
-      // Malformed pubkey - invalid deposit, results[i] stays false
+      // Malformed pubkey or signature - invalid deposit, results[i] stays false
       continue;
     }
-    const message = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
-    signatureSets.push({publicKey, message, signature});
+    const msg = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+    signatureSets.push({pk, msg, sig});
     signatureSetDepositIndices.push(i);
   }
 
@@ -146,29 +148,21 @@ export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.
   try {
     batchValid =
       signatureSets.length >= 2
-        ? verifyMultipleAggregateSignatures(
-            signatureSets.map((s) => ({pk: s.publicKey, msg: s.message, sig: Signature.fromBytes(s.signature, true)}))
-          )
-        : verify(
-            signatureSets[0].message,
-            signatureSets[0].publicKey,
-            Signature.fromBytes(signatureSets[0].signature, true)
-          );
+        ? verifyMultipleAggregateSignatures(signatureSets)
+        : verify(signatureSets[0].msg, signatureSets[0].pk, signatureSets[0].sig);
   } catch (_) {
     batchValid = false;
   }
 
   if (batchValid) {
-    // Batch passed - every deposit with a well-formed pubkey is valid
+    // Batch passed - every deposit with a well-formed pubkey and signature is valid
     for (const depositIndex of signatureSetDepositIndices) {
       results[depositIndex] = true;
     }
   } else {
     // Batch failed: at least one signature is invalid - verify each individually
     for (let s = 0; s < signatureSets.length; s++) {
-      const depositIndex = signatureSetDepositIndices[s];
-      const {pubkey, withdrawalCredentials, amount, signature} = deposits[depositIndex];
-      results[depositIndex] = isValidDepositSignature(config, pubkey, withdrawalCredentials, amount, signature);
+      results[signatureSetDepositIndices[s]] = verify(signatureSets[s].msg, signatureSets[s].pk, signatureSets[s].sig);
     }
   }
 
