@@ -178,9 +178,9 @@ function aggregateMessageInto(
   validatorCommitteeIndices: number[],
   aggregate: AggregateFast
 ): InsertOutcome {
-  // Gossip dedup via `seenPayloadAttesters` is keyed by (epoch, validatorIndex), so the same
-  // validator's message is never processed twice — all of its bits are set together or none.
-  // Checking the first index is sufficient.
+  // Gossip dedup via `seenPayloadAttesters` is keyed by (slot, validatorIndex), so the same
+  // validator's message is never processed twice in the same slot — all of its bits are set
+  // together or none. Checking the first index is sufficient.
   if (aggregate.aggregationBits.get(validatorCommitteeIndices[0]) === true) {
     return InsertOutcome.AlreadyKnown;
   }

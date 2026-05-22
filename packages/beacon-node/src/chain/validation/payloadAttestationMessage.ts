@@ -1,5 +1,4 @@
 import {
-  computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
   isStatePostGloas,
@@ -35,7 +34,6 @@ async function validatePayloadAttestationMessage(
   prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
-  const epoch = computeEpochAtSlot(data.slot);
 
   // [IGNORE] The message's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
@@ -48,8 +46,10 @@ async function validatePayloadAttestationMessage(
 
   // [IGNORE] The `payload_attestation_message` is the first valid message received
   // from the validator with index `payload_attestation_message.validator_index`.
-  // A single validator can participate PTC at most once per epoch
-  if (chain.seenPayloadAttesters.isKnown(epoch, validatorIndex)) {
+  // It is possible that a validator can participate in PTC more than one time per
+  // slot and per epoch. However only first message of a validator in the same slot will be accepted.
+  // A message from the same validator at a different slot in the same epoch is independent and accepted.
+  if (chain.seenPayloadAttesters.isKnown(data.slot, validatorIndex)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN,
       validatorIndex,
@@ -113,7 +113,7 @@ async function validatePayloadAttestationMessage(
   }
 
   // Valid
-  chain.seenPayloadAttesters.add(epoch, validatorIndex);
+  chain.seenPayloadAttesters.add(data.slot, validatorIndex);
 
   return {
     attDataRootHex: toRootHex(ssz.gloas.PayloadAttestationData.hashTreeRoot(data)),

@@ -554,7 +554,7 @@ export class BeaconChain implements IBeaconChain {
       //   seenAggregators = single aggregator index, not participants of the aggregate
       this.seenAggregators.isKnown(epoch, index) ||
       //   seenPayloadAttesters = single signer of payload attestation message
-      this.seenPayloadAttesters.isKnown(epoch, index) ||
+      this.seenPayloadAttesters.isKnownAtEpoch(epoch, index) ||
       //   seenBlockProposers = single block proposer
       this.seenBlockProposers.seenAtEpoch(epoch, index)
     );
@@ -1462,6 +1462,7 @@ export class BeaconChain implements IBeaconChain {
     this.aggregatedAttestationPool.prune(slot);
     this.syncCommitteeMessagePool.prune(slot);
     this.seenSyncCommitteeMessages.prune(slot);
+    this.seenPayloadAttesters.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
@@ -1490,7 +1491,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.seenAttesters.prune(epoch);
     this.seenAggregators.prune(epoch);
-    this.seenPayloadAttesters.prune(epoch);
+    this.seenPayloadAttesters.pruneEpoch(epoch);
     this.seenAggregatedAttestations.prune(epoch);
     this.seenBlockAttesters.prune(epoch);
     this.beaconProposerCache.prune(epoch);

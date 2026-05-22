@@ -1,4 +1,5 @@
-import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
 // How many *non future* epochs we intend to keep for SeenAttesters.
@@ -58,6 +59,60 @@ export class SeenAttesters {
 export class SeenAggregators extends SeenAttesters {}
 
 /**
- * Keeps a cache to filter payload attestations from the same attesters in the same epoch
+ * Maximum number of slots retained in the per-slot dedup map for PayloadAttestationMessage.
+ *
+ * Gossip validation enforces `data.slot == current_slot` (with MAXIMUM_GOSSIP_CLOCK_DISPARITY),
+ * so we only need a small window around the current slot. Mirrors `SeenSyncCommitteeMessages`.
  */
-export class SeenPayloadAttesters extends SeenAttesters {}
+const PAYLOAD_ATTESTER_MAX_SLOTS_IN_CACHE = 3;
+
+/**
+ * Caches for PayloadAttestationMessage gossip. Two parallel structures, written atomically
+ * by `add(slot, validatorIndex)`:
+ *
+ *  - `validatorIndexesBySlot` — per-slot dedup. The gloas spec requires "first valid message
+ *    received from the validator with index `validator_index`", and the validator emits ONE
+ *    message per slot regardless of how many PTC seats it holds (multi-seat fan-out happens
+ *    at pool aggregation, see `payloadAttestationPool`). A second message from the same
+ *    validator at the same slot conflicts on `payload_present`/`blob_data_available` and
+ *    must be IGNORED. Same validator at a *different* slot in the same epoch is independent
+ *    and must be accepted.
+ *
+ *  - `validatorIndexesByEpoch` — per-epoch liveness signal consumed by `validatorSeenAtEpoch`
+ *    for the validator liveness API, which queries epochs in `currentEpoch-1 .. currentEpoch+1`.
+ */
+export class SeenPayloadAttesters {
+  private readonly validatorIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
+  private readonly validatorIndexesByEpoch = new MapDef<Epoch, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
+  private lowestPermissibleEpoch: Epoch = 0;
+
+  isKnown(slot: Slot, validatorIndex: ValidatorIndex): boolean {
+    return this.validatorIndexesBySlot.get(slot)?.has(validatorIndex) === true;
+  }
+
+  isKnownAtEpoch(epoch: Epoch, validatorIndex: ValidatorIndex): boolean {
+    return this.validatorIndexesByEpoch.get(epoch)?.has(validatorIndex) === true;
+  }
+
+  add(slot: Slot, validatorIndex: ValidatorIndex): void {
+    this.validatorIndexesBySlot.getOrDefault(slot).add(validatorIndex);
+    this.validatorIndexesByEpoch.getOrDefault(Math.floor(slot / SLOTS_PER_EPOCH)).add(validatorIndex);
+  }
+
+  prune(clockSlot: Slot): void {
+    for (const slot of this.validatorIndexesBySlot.keys()) {
+      if (slot < clockSlot - PAYLOAD_ATTESTER_MAX_SLOTS_IN_CACHE) {
+        this.validatorIndexesBySlot.delete(slot);
+      }
+    }
+  }
+
+  pruneEpoch(currentEpoch: Epoch): void {
+    this.lowestPermissibleEpoch = Math.max(currentEpoch - EPOCH_LOOKBACK_LIMIT, 0);
+    for (const epoch of this.validatorIndexesByEpoch.keys()) {
+      if (epoch < this.lowestPermissibleEpoch) {
+        this.validatorIndexesByEpoch.delete(epoch);
+      }
+    }
+  }
+}
