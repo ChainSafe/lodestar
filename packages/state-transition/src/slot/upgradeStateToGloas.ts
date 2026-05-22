@@ -1,7 +1,7 @@
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {PubkeyHex, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
-import {applyDepositForBuilder} from "../block/processDepositRequest.js";
+import {applyDepositForBuilderIndex} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
@@ -89,9 +89,9 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
  * Applies any pending deposits for builders to onboard builders during the fork transition
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
-function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  // Track pubkeys of new builders added when applying deposits
-  const builderPubkeys = new Set<string>();
+export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
+  // Map of builder pubkey -> index in `state.builders` for builders added in this loop.
+  const builderIndexByPubkey = new Map<PubkeyHex, number>();
 
   const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
@@ -109,11 +109,12 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
       continue;
     }
 
-    // `applyDepositForBuilder` can mutate the state and add a builder to the registry, so
-    // the set of builder pubkeys must be recomputed each iteration. `builderPubkeys` stands
-    // in for the spec's `[b.pubkey for b in state.builders]`: `state.builders` starts empty
-    // at the fork, so every builder is one added in a previous iteration of this loop.
-    if (!builderPubkeys.has(pubkeyHex)) {
+    // `?? null` is required to keep builder index 0. A known index means a top-up to an
+    // already-onboarded builder, applied regardless of withdrawal credential; otherwise
+    // this is a candidate new builder and the credential checks below apply.
+    const builderIndex = builderIndexByPubkey.get(pubkeyHex) ?? null;
+
+    if (builderIndex === null) {
       // Deposits for non-builders stay in the pending queue. If there is a valid pending
       // deposit for a new validator with this pubkey, keep this deposit in the pending
       // queue to be applied to that validator later.
@@ -130,10 +131,9 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     }
 
     const buildersLenBefore = state.builders.length;
-    // TODO GLOAS: handle 20k 1ETH deposits on time
-    // there is a note in the spec https://github.com/ethereum/consensus-specs/pull/5227
-    applyDepositForBuilder(
+    applyDepositForBuilderIndex(
       state,
+      builderIndex,
       deposit.pubkey,
       deposit.withdrawalCredentials,
       deposit.amount,
@@ -141,7 +141,8 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
       deposit.slot
     );
     if (state.builders.length > buildersLenBefore) {
-      builderPubkeys.add(pubkeyHex);
+      // A new builder was appended; with direct push it lands at index `buildersLenBefore`
+      builderIndexByPubkey.set(pubkeyHex, buildersLenBefore);
     }
   }
 

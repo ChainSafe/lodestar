@@ -23,7 +23,6 @@ import {
   computeEpochAtSlot,
   createCachedBeaconState,
   createPubkeyCache,
-  interopSecretKey,
   newFilledArray,
   processSlots,
 } from "../index.js";
@@ -39,6 +38,9 @@ import {
   CachedBeaconStatePhase0,
 } from "../types.js";
 import {computeDomain, computeSigningRoot} from "../util/index.js";
+// Import directly from the source module (not the `../index.js` barrel) to avoid a
+// circular-import cycle that leaves `interopSecretKey` undefined under the vitest loader.
+import {interopSecretKey} from "../util/interop.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {getActiveValidatorIndices} from "../util/validator.js";
 import {interopPubkeysCached} from "./interop.js";
