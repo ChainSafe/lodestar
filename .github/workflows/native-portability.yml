@@ -22,11 +22,10 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install Zig
-        uses: mlugg/setup-zig@v2
+      # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
         with:
           version: 0.16.0
-          cache-key: 0.16.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
