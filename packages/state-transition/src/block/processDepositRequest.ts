@@ -1,5 +1,5 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
-import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
+import {BLSPubkey, BuilderIndex, Bytes32, Epoch, UintNum64, electra, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
@@ -34,6 +34,20 @@ export function applyDepositForBuilder(
 }
 
 /**
+ * Create a new builder registry entry (a `Builder` view) from a deposit.
+ */
+function buildNewBuilder(pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64, depositEpoch: Epoch) {
+  return ssz.gloas.Builder.toViewDU({
+    pubkey,
+    version: withdrawalCredentials[0],
+    executionAddress: withdrawalCredentials.subarray(12),
+    balance: amount,
+    depositEpoch,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+  });
+}
+
+/**
  * Add a new builder to the builders registry.
  * Reuses slots from exited and fully withdrawn builders if available.
  */
@@ -57,15 +71,7 @@ function addBuilderToRegistry(
     }
   }
 
-  // Create new builder
-  const newBuilder = ssz.gloas.Builder.toViewDU({
-    pubkey,
-    version: withdrawalCredentials[0],
-    executionAddress: withdrawalCredentials.subarray(12),
-    balance: amount,
-    depositEpoch: depositEpoch,
-    withdrawableEpoch: FAR_FUTURE_EPOCH,
-  });
+  const newBuilder = buildNewBuilder(pubkey, withdrawalCredentials, amount, depositEpoch);
 
   if (builderIndex < state.builders.length) {
     // Reuse existing slot
@@ -73,6 +79,33 @@ function addBuilderToRegistry(
   } else {
     // Append to end
     state.builders.push(newBuilder);
+  }
+}
+
+/**
+ * Apply a deposit for a builder whose registry index is already known by the caller.
+ *
+ * This is called at gloas fork transition only.
+ */
+export function applyDepositForBuilderIndex(
+  state: CachedBeaconStateGloas,
+  builderIndex: BuilderIndex | null,
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64,
+  signature: Bytes32,
+  slot: UintNum64
+): void {
+  if (builderIndex !== null) {
+    // Existing builder - increase balance
+    const builder = state.builders.get(builderIndex);
+    builder.balance += amount;
+    return;
+  }
+
+  // New builder - verify signature and append directly to the registry
+  if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
+    state.builders.push(buildNewBuilder(pubkey, withdrawalCredentials, amount, computeEpochAtSlot(slot)));
   }
 }
 
