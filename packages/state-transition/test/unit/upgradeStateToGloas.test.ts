@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
@@ -13,10 +14,9 @@ import {isValidatorKnown} from "../../src/util/index.js";
 import {PendingDepositsLookup} from "../../src/util/pendingDepositsLookup.js";
 
 /**
- * Verbatim copy of the original (pre-optimization) `onboardBuildersFromPendingDeposits`.
- * Kept as the reference oracle for the differential test below: the optimized version
- * must produce a byte-identical state. Reused unchanged to validate future improvements
- * (e.g. batch BLS signature verification).
+ * Verbatim copy of the eager `onboardBuildersFromPendingDeposits` (pre batch-verification).
+ * The reference oracle for the differential tests below: the optimized (lazy + batched)
+ * version must produce a byte-identical state. Reused unchanged to validate future changes.
  */
 function naiveOnboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
   // Track pubkeys of new builders added when applying deposits
@@ -72,67 +72,145 @@ describe("onboardBuildersFromPendingDeposits", () => {
   /** 1 ETH in Gwei - the amount used by `generateBuilderPendingDeposits` */
   const builderAmount = 1_000_000_000;
 
-  /**
-   * A Gloas state (empty builders registry) whose pendingDeposits interleave every branch:
-   * new builders, top-ups (incl. builder index 0), a non-builder deposit, an invalid signature.
-   */
-  function buildGloasStateWithPendingDeposits(): CachedBeaconStateGloas {
-    const state = createCachedBeaconStateTest(ssz.gloas.BeaconState.defaultViewDU(), getConfig(ForkName.gloas), {
+  const chainConfig = getConfig(ForkName.gloas);
+  // BeaconConfig used to sign the builder deposit pool. Deposit signatures use a
+  // fork-agnostic domain, so only GENESIS_FORK_VERSION matters and it matches the config
+  // of every state built by `buildGloasState`.
+  const beaconConfig = createBeaconConfig(chainConfig, Buffer.alloc(32));
+  // Pool of 100 distinct, validly-signed builder deposits (interop indices 1000..1099)
+  const pool = generateBuilderPendingDeposits(beaconConfig, 100, 1000);
+
+  /** A deposit with the same pubkey but an all-zero (invalid) signature. */
+  function withInvalidSignature(deposit: electra.PendingDeposit): electra.PendingDeposit {
+    return {...deposit, signature: Buffer.alloc(96)};
+  }
+
+  /** A deposit with a deliberately malformed (non-curve-point) pubkey. */
+  function withMalformedPubkey(deposit: electra.PendingDeposit): electra.PendingDeposit {
+    return {...deposit, pubkey: Buffer.alloc(48, 0xff)};
+  }
+
+  /** A deposit with the same pubkey but a non-builder (0x01) withdrawal credential. */
+  function withNonBuilderCredentials(deposit: electra.PendingDeposit): electra.PendingDeposit {
+    const withdrawalCredentials = Buffer.alloc(32);
+    withdrawalCredentials[0] = 0x01;
+    return {...deposit, withdrawalCredentials};
+  }
+
+  /** A non-builder deposit with a distinct pubkey; always passed through to pendingDeposits. */
+  function nonBuilderDeposit(seed: number): electra.PendingDeposit {
+    const withdrawalCredentials = Buffer.alloc(32);
+    withdrawalCredentials[0] = 0x01;
+    const pubkey = Buffer.alloc(48, 0xee);
+    pubkey.writeUInt32BE(seed >>> 0, 0);
+    return {pubkey, withdrawalCredentials, amount: 32_000_000_000, signature: Buffer.alloc(96), slot: 0};
+  }
+
+  function buildGloasState(deposits: electra.PendingDeposit[]): CachedBeaconStateGloas {
+    const state = createCachedBeaconStateTest(ssz.gloas.BeaconState.defaultViewDU(), chainConfig, {
       skipSyncCommitteeCache: true,
       skipSyncPubkeys: true,
     });
-
-    // 5 distinct, validly-signed builder deposits (interop indices 1000..1004)
-    const builderDeposits = generateBuilderPendingDeposits(state.config, 5, 1000);
-
-    // A deposit with a non-builder withdrawal credential - must stay in the pending queue
-    const nonBuilderWc = Buffer.alloc(32);
-    nonBuilderWc[0] = 0x01; // eth1 withdrawal prefix, not a builder
-    const nonBuilderDeposit: electra.PendingDeposit = {
-      pubkey: Buffer.alloc(48, 0xaa),
-      withdrawalCredentials: nonBuilderWc,
-      amount: 32_000_000_000,
-      signature: Buffer.alloc(96),
-      slot: 0,
-    };
-
-    // A builder deposit with an invalid signature - must be dropped (not onboarded, not queued)
-    const invalidSigDeposit: electra.PendingDeposit = {...builderDeposits[4], signature: Buffer.alloc(96)};
-
-    const deposits: electra.PendingDeposit[] = [
-      builderDeposits[0], // new builder -> index 0
-      builderDeposits[1], // new builder -> index 1
-      nonBuilderDeposit, // stays in the pending queue
-      builderDeposits[0], // top-up of builder index 0
-      builderDeposits[2], // new builder -> index 2
-      invalidSigDeposit, // dropped
-      builderDeposits[2], // top-up of builder index 2
-      builderDeposits[3], // new builder -> index 3
-    ];
-
     const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
     for (const deposit of deposits) {
       pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
     }
     state.pendingDeposits = pendingDeposits;
     state.commit();
-
     return state;
   }
 
-  it("optimized version produces the same state root as the naive reference", () => {
-    const state = buildGloasStateWithPendingDeposits();
-    const stateNaive = state.clone();
-    const stateOptimized = state.clone();
+  /** Run the naive and the optimized onboarding on identical states; assert they match. */
+  function runDifferential(deposits: electra.PendingDeposit[]): void {
+    const state = buildGloasState(deposits);
+    const naive = state.clone();
+    const optimized = state.clone();
 
-    naiveOnboardBuildersFromPendingDeposits(stateNaive);
-    onboardBuildersFromPendingDeposits(stateOptimized);
+    naiveOnboardBuildersFromPendingDeposits(naive);
+    onboardBuildersFromPendingDeposits(optimized);
 
-    expect(toRootHex(stateOptimized.hashTreeRoot())).toBe(toRootHex(stateNaive.hashTreeRoot()));
-  });
+    // builders registry must match the naive version
+    expect(optimized.builders.toValue()).toEqual(naive.builders.toValue());
+    // pendingDeposits must match the naive version
+    expect(optimized.pendingDeposits.toValue()).toEqual(naive.pendingDeposits.toValue());
+    // full state root catches anything else
+    expect(toRootHex(optimized.hashTreeRoot())).toBe(toRootHex(naive.hashTreeRoot()));
+  }
+
+  // The 8-deposit mix reused by the differential table and the concrete-value test below
+  const mixedDeposits: electra.PendingDeposit[] = [
+    pool[0], // new builder -> index 0
+    pool[1], // new builder -> index 1
+    nonBuilderDeposit(1), // stays in pendingDeposits
+    pool[0], // top-up of builder 0
+    pool[2], // new builder -> index 2
+    withInvalidSignature(pool[3]), // dropped
+    pool[2], // top-up of builder 2
+    pool[4], // new builder -> index 3
+  ];
+
+  const scenarios: {name: string; deposits: electra.PendingDeposit[]}[] = [
+    {name: "empty pendingDeposits", deposits: []},
+    {name: "only non-builder deposits", deposits: [nonBuilderDeposit(1), nonBuilderDeposit(2), nonBuilderDeposit(3)]},
+    {name: "single valid builder", deposits: [pool[0]]},
+    {name: "single invalid-signature builder", deposits: [withInvalidSignature(pool[0])]},
+    {name: "five valid builders flushed at end of loop", deposits: pool.slice(0, 5)},
+    {
+      name: "batch with one invalid signature",
+      deposits: [pool[0], pool[1], withInvalidSignature(pool[2]), pool[3], pool[4]],
+    },
+    {name: "batch with all invalid signatures", deposits: pool.slice(0, 5).map(withInvalidSignature)},
+    {
+      name: "batch with a malformed pubkey",
+      deposits: [pool[0], pool[1], withMalformedPubkey(pool[2]), pool[3], pool[4]],
+    },
+    {name: "exactly 32 builders (one full batch)", deposits: pool.slice(0, 32)},
+    {name: "33 builders (full batch + remainder)", deposits: pool.slice(0, 33)},
+    {name: "70 builders (multiple batches)", deposits: pool.slice(0, 70)},
+    {
+      // The first 32-batch passes; the second batch (8) falls back to one-by-one
+      name: "invalid signature in the second batch",
+      deposits: [...pool.slice(0, 35), withInvalidSignature(pool[35]), ...pool.slice(36, 40)],
+    },
+    {
+      // Two full 32-batches verified independently: the first all-valid, the second all-invalid
+      name: "a fully valid batch followed by a fully invalid batch",
+      deposits: [...pool.slice(0, 32), ...pool.slice(32, 64).map(withInvalidSignature)],
+    },
+    {
+      name: "builders interleaved with non-builder deposits",
+      deposits: [pool[0], nonBuilderDeposit(1), pool[1], nonBuilderDeposit(2), pool[2], nonBuilderDeposit(3)],
+    },
+    {name: "top-up of builder index 0 after a flush", deposits: [...pool.slice(0, 32), pool[0]]},
+    {name: "force-flush: queued pubkey reappears (valid)", deposits: [pool[0], pool[1], pool[0]]},
+    {
+      name: "force-flush: queued pubkey reappears after invalid signature",
+      deposits: [withInvalidSignature(pool[0]), pool[1], pool[0]],
+    },
+    {
+      name: "force-flush: queued pubkey reappears with non-builder credentials",
+      deposits: [pool[0], withNonBuilderCredentials(pool[0])],
+    },
+    {
+      name: "force-flush: invalid queued pubkey reappears with non-builder credentials",
+      deposits: [withInvalidSignature(pool[0]), withNonBuilderCredentials(pool[0])],
+    },
+    {name: "same pubkey three times", deposits: [pool[0], pool[0], pool[0]]},
+    {
+      name: "top-up applied while builders are queued",
+      deposits: [...pool.slice(0, 32), pool[32], pool[33], pool[0], pool[34]],
+    },
+    {name: "mixed: builders, top-ups, non-builder, invalid", deposits: mixedDeposits},
+  ];
+
+  for (const {name, deposits} of scenarios) {
+    it(`optimized matches naive: ${name}`, () => {
+      runDifferential(deposits);
+    });
+  }
 
   it("onboards new builders, applies top-ups, and keeps non-builder deposits queued", () => {
-    const state = buildGloasStateWithPendingDeposits();
+    const state = buildGloasState(mixedDeposits);
     onboardBuildersFromPendingDeposits(state);
     state.commit();
 
