@@ -95,8 +95,12 @@ export class SeenPayloadAttesters {
   }
 
   add(slot: Slot, validatorIndex: ValidatorIndex): void {
+    const epoch = Math.floor(slot / SLOTS_PER_EPOCH);
+    if (epoch < this.lowestPermissibleEpoch) {
+      throw Error(`EpochTooLow ${epoch} < ${this.lowestPermissibleEpoch}`);
+    }
     this.validatorIndexesBySlot.getOrDefault(slot).add(validatorIndex);
-    this.validatorIndexesByEpoch.getOrDefault(Math.floor(slot / SLOTS_PER_EPOCH)).add(validatorIndex);
+    this.validatorIndexesByEpoch.getOrDefault(epoch).add(validatorIndex);
   }
 
   prune(clockSlot: Slot): void {
