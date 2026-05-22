@@ -89,6 +89,7 @@ export interface IBeaconStateView {
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
+  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
