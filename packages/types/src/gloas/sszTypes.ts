@@ -1,6 +1,5 @@
 import {
   BitVectorType,
-  ByteListType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
@@ -18,7 +17,6 @@ import {
   EXECUTION_BLOCK_HASH_DEPTH_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   HISTORICAL_ROOTS_LIMIT,
-  MAX_BYTES_PER_TRANSACTION,
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
@@ -314,7 +312,7 @@ export const SignedExecutionPayloadBid = new ContainerType(
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
 );
 
-export const BlockAccessList = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+export const BlockAccessList = new ProgressiveByteListType({typeName: "BlockAccessList"});
 
 export const ExecutionPayload = new ProgressiveContainerType(
   {

@@ -23,12 +23,17 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.DataColumn).toBeInstanceOf(ProgressiveListCompositeType);
   });
 
-  it("keeps Transaction as a byte-list value while using progressive merkleization", () => {
+  it("keeps byte-list values while using progressive merkleization", () => {
     expect(ssz.gloas.Transaction).toBeInstanceOf(ProgressiveByteListType);
+    expect(ssz.gloas.BlockAccessList).toBeInstanceOf(ProgressiveByteListType);
 
     const transaction = Uint8Array.from([1, 2, 3, 4]);
     const serialized = ssz.gloas.Transaction.serialize(transaction);
     expect(ssz.gloas.Transaction.deserialize(serialized)).toEqual(transaction);
+
+    const blockAccessList = Uint8Array.from([5, 6, 7, 8]);
+    const blockAccessListSerialized = ssz.gloas.BlockAccessList.serialize(blockAccessList);
+    expect(ssz.gloas.BlockAccessList.deserialize(blockAccessListSerialized)).toEqual(blockAccessList);
   });
 
   it("keeps Lodestar DU list helpers on upstream progressive lists", () => {
