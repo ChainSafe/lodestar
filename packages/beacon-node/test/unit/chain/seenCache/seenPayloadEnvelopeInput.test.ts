@@ -1,6 +1,9 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import {beforeEach, describe, expect, it, vi} from "vitest";
+import {ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
+import {RootHex} from "@lodestar/types";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -11,16 +14,21 @@ describe("SeenPayloadEnvelopeInput", () => {
   let cache: SeenPayloadEnvelopeInput;
   let abortController: AbortController;
   let chainEvents: ChainEventEmitter;
+  let forkChoice: IForkChoice;
   let serializedCache: SerializedCache;
 
   beforeEach(() => {
     chainEvents = new ChainEventEmitter();
     abortController = new AbortController();
+    forkChoice = {
+      getAllAncestorBlocks: vi.fn(),
+    } as unknown as IForkChoice;
     serializedCache = new SerializedCache();
 
     cache = new SeenPayloadEnvelopeInput({
       config,
       clock: getMockedClock(),
+      forkChoice,
       chainEvents,
       signal: abortController.signal,
       serializedCache,
@@ -42,20 +50,48 @@ describe("SeenPayloadEnvelopeInput", () => {
     return rootHex;
   }
 
-  it("pruneBelow removes payload inputs below the cutoff slot", () => {
+  function protoBlock(blockRoot: RootHex, slot: number): ProtoBlock {
+    return {
+      slot,
+      blockRoot,
+      parentRoot: blockRoot,
+      stateRoot: blockRoot,
+      targetRoot: blockRoot,
+      justifiedEpoch: 0,
+      justifiedRoot: blockRoot,
+      finalizedEpoch: 0,
+      finalizedRoot: blockRoot,
+      unrealizedJustifiedEpoch: 0,
+      unrealizedJustifiedRoot: blockRoot,
+      unrealizedFinalizedEpoch: 0,
+      unrealizedFinalizedRoot: blockRoot,
+      timeliness: false,
+      executionPayloadBlockHash: null,
+      executionStatus: ExecutionStatus.PreMerge,
+      dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+      payloadStatus: PayloadStatus.FULL,
+      parentBlockHash: null,
+    };
+  }
+
+  it("pruneBelowParent removes ancestor payload inputs below the parent slot", () => {
     const oldRootHex = addPayloadInput(1);
     const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
 
-    cache.pruneBelow(2);
+    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(oldRootHex)).toBeUndefined();
     expect(cache.get(newRootHex)).toBeDefined();
   });
 
-  it("pruneBelow keeps payload inputs at or above the cutoff slot", () => {
+  it("pruneBelowParent keeps payload inputs at the parent slot", () => {
     const rootHex = addPayloadInput(1);
+    const parentBlock = protoBlock(rootHex, 1);
 
-    cache.pruneBelow(1);
+    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock]);
+    cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(rootHex)).toBeDefined();
   });

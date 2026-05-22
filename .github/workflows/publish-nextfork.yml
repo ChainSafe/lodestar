@@ -26,18 +26,22 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install pnpm before setup node
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 24
           registry-url: "https://registry.npmjs.org"
           check-latest: true
           cache: pnpm
+      # Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+      - uses: mlugg/setup-zig@d1434d08867e3ee9daa34448df10607b98908d29 # v2.2.1
+        with:
+          version: 0.16.0
       - name: Node.js version
         id: node
         run: echo "v8CppApiVersion=$(node --print "process.versions.modules")" >> $GITHUB_OUTPUT
       - name: Restore dependencies
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # master
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # master
         id: cache-deps
         with:
           path: |

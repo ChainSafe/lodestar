@@ -13,6 +13,7 @@ import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelope
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
+import {getBatchSlotRange} from "../../../../src/sync/range/utils/index.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {clock, config} from "../../../utils/blocksAndData.js";
 import {expectThrowsLodestarError} from "../../../utils/errors.js";
@@ -130,6 +131,7 @@ describe("sync / range / batch", async () => {
   const nodeId = computeNodeIdFromPrivateKey(privateKey);
   const custodyConfig = new CustodyConfig({config, nodeId});
   const peer = validPeerIdStr;
+  const peerSyncMeta = {peerId: peer, client: "lodestar", custodyColumns: custodyConfig.sampledColumns};
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -141,7 +143,7 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH + 1;
 
       it("should make default pre-deneb requests if no existing blocks are passed", () => {
-        batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toBeUndefined();
         expect(batch.requests.columnsRequest).toBeUndefined();
@@ -155,7 +157,7 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.DENEB_FORK_EPOCH + 1;
 
       it("should make default ForkDABlobs requests if no existing blocks are passed", () => {
-        batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
@@ -166,7 +168,7 @@ describe("sync / range / batch", async () => {
         vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
           startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
         );
-        batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toEqual({startSlot: batch.startSlot, count: batch.count});
@@ -177,7 +179,7 @@ describe("sync / range / batch", async () => {
         vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
           startEpoch + config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS + 1
         );
-        batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toBeUndefined();
@@ -190,7 +192,7 @@ describe("sync / range / batch", async () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
 
       beforeEach(() => {
-        batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       });
 
       it("should make ForkDAColumns requests if no existing blocks are passed", () => {
@@ -207,7 +209,7 @@ describe("sync / range / batch", async () => {
         vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
           startEpoch + config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
         );
-        batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toBeUndefined();
@@ -222,7 +224,7 @@ describe("sync / range / batch", async () => {
         vi.spyOn(clock, "currentEpoch", "get").mockReturnValue(
           startEpoch + config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS + 1
         );
-        batch = new Batch(startEpoch, config, clock, custodyConfig);
+        batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
         expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
         expect(batch.requests.blobsRequest).toBeUndefined();
@@ -232,7 +234,7 @@ describe("sync / range / batch", async () => {
 
     it("should not request data pre-deneb", () => {
       const startEpoch = config.CAPELLA_FORK_EPOCH - 1;
-      const batch = new Batch(startEpoch, config, clock, custodyConfig);
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
       expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toBeUndefined();
@@ -248,7 +250,7 @@ describe("sync / range / batch", async () => {
 
     it("should request columns post-fulu", () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
-      const batch = new Batch(startEpoch, config, clock, custodyConfig);
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest).toEqual({startSlot: batch.startSlot, count: batch.count, step: 1});
       expect(batch.requests.blobsRequest).toBeUndefined();
       expect(batch.requests.columnsRequest).toEqual({
@@ -260,7 +262,7 @@ describe("sync / range / batch", async () => {
 
     it("should have same start slot and count for blocks and data requests", () => {
       const startEpoch = config.FULU_FORK_EPOCH + 1;
-      const batch = new Batch(startEpoch, config, clock, custodyConfig);
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
       expect(batch.requests.blocksRequest?.startSlot).toEqual(batch.requests.columnsRequest?.startSlot);
       expect(batch.requests.blocksRequest?.count).toEqual(batch.requests.columnsRequest?.count);
     });
@@ -340,8 +342,8 @@ describe("sync / range / batch", async () => {
       }
 
       it("transitions to AwaitingProcessing when every block has a complete payload envelope", () => {
-        const batch = new Batch(startEpoch, config, clock, custodyConfig);
-        batch.startDownloading(peer);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+        batch.startDownloading(peerSyncMeta);
 
         const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot});
         const {blockInput: bi2, payloadInput: pi2} = buildGloasBlockWithEnvelope({slot: batch.startSlot + 1});
@@ -355,24 +357,41 @@ describe("sync / range / batch", async () => {
         expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
       });
 
-      it("stays AwaitingDownload when a block has no payload envelope", () => {
-        const batch = new Batch(startEpoch, config, clock, custodyConfig);
-        batch.startDownloading(peer);
+      it("transitions to AwaitingProcessing when a block has no payload envelope (EMPTY variant)", () => {
+        // Regression test for https://github.com/ChainSafe/lodestar/issues/9357
+        // For post-Gloas, a block without an envelope is a valid EMPTY-variant slot. The download
+        // path cannot distinguish "EMPTY" from "peer doesn't have the envelope", so we accept it
+        // as complete here and let `assertLinearChainSegment` (run during processing with the real
+        // parent execution hash) decide whether the variant is correct.
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+        batch.startDownloading(peerSyncMeta);
 
         const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot});
-        // Block downloaded but envelope is missing for this slot
         const {blockInput: bi2} = buildGloasBlockWithEnvelope({slot: batch.startSlot + 1, addEnvelope: false});
         const payloadEnvelopes = new Map([[bi1.slot, pi1]]);
 
         batch.downloadingSuccess(peer, [bi1, bi2], payloadEnvelopes);
 
-        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
-        expect(batch.requests.envelopesRequest).toBeDefined();
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+      });
+
+      it("transitions to AwaitingProcessing for count=1 with only the block (no envelope)", () => {
+        // The exact scenario from #9357: count=1 batch, peer returns block but no envelope.
+        const {startSlot} = getBatchSlotRange(startEpoch);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, startSlot);
+        expect(batch.count).toBe(1);
+        batch.startDownloading(peerSyncMeta);
+
+        const {blockInput: bi1} = buildGloasBlockWithEnvelope({slot: batch.startSlot, addEnvelope: false});
+
+        batch.downloadingSuccess(peer, [bi1], null);
+
+        expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
       });
 
       it("stays AwaitingDownload when a payload envelope is missing sampled columns", () => {
-        const batch = new Batch(startEpoch, config, clock, custodyConfig);
-        batch.startDownloading(peer);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+        batch.startDownloading(peerSyncMeta);
 
         const sampledColumns = [0, 1];
         const {blockInput: bi1, payloadInput: pi1} = buildGloasBlockWithEnvelope({
@@ -409,8 +428,8 @@ describe("sync / range / batch", async () => {
       const seenTimestampSec = Date.now() / 1000;
 
       it("stays AwaitingDownload when reconstruction threshold reached but sampled columns missing", () => {
-        const batch = new Batch(startEpoch, config, clock, custodyConfig);
-        batch.startDownloading(peer);
+        const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+        batch.startDownloading(peerSyncMeta);
 
         // Pick sampled indices outside the range we'll fill so they stay physically missing
         const sampledColumns = [100, 101, 102, 103];
@@ -462,13 +481,13 @@ describe("sync / range / batch", async () => {
 
   it("Complete state flow", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, clock, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
     // Instantion: AwaitingDownload
     expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // startDownloading: AwaitingDownload -> Downloading
-    batch.startDownloading(peer);
+    batch.startDownloading(peerSyncMeta);
     expect(batch.state.status).toBe(BatchStatus.Downloading);
 
     // downloadingError: Downloading -> AwaitingDownload
@@ -481,7 +500,7 @@ describe("sync / range / batch", async () => {
 
     // retry download: AwaitingDownload -> Downloading
     // downloadingSuccess: Downloading -> AwaitingProcessing
-    batch.startDownloading(peer);
+    batch.startDownloading(peerSyncMeta);
     batch.downloadingSuccess(
       peer,
       [
@@ -510,7 +529,7 @@ describe("sync / range / batch", async () => {
 
     // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
     // processingSuccess: Processing -> AwaitingValidation
-    // batch.startDownloading(peer);
+    // batch.startDownloading(peerSyncMeta);
     // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     // batch.startProcessing();
     // batch.processingSuccess();
@@ -522,7 +541,7 @@ describe("sync / range / batch", async () => {
     // expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
 
     // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation
-    // batch.startDownloading(peer);
+    // batch.startDownloading(peerSyncMeta);
     // batch.downloadingSuccess({blocks: blocksDownloaded, pendingDataColumns: null});
     batch.startProcessing();
     batch.processingSuccess();
@@ -532,7 +551,7 @@ describe("sync / range / batch", async () => {
 
   it("Should throw on inconsistent state - downloadingSuccess", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, clock, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
     expectThrowsLodestarError(
       () => batch.downloadingSuccess(peer, [], null),
@@ -547,7 +566,7 @@ describe("sync / range / batch", async () => {
 
   it("Should throw on inconsistent state - startProcessing", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, clock, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
     expectThrowsLodestarError(
       () => batch.startProcessing(),
@@ -562,7 +581,7 @@ describe("sync / range / batch", async () => {
 
   it("Should throw on inconsistent state - processingSuccess", () => {
     const startEpoch = 0;
-    const batch = new Batch(startEpoch, config, clock, custodyConfig);
+    const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
 
     expectThrowsLodestarError(
       () => batch.processingSuccess(),

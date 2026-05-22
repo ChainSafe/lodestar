@@ -191,12 +191,13 @@ export interface IForkChoice {
    * ## Specification
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/gloas/fork-choice.md#new-notify_ptc_messages
-   *
-   * @param blockRoot - The beacon block root being attested
-   * @param ptcIndices - Array of PTC committee indices that voted
-   * @param payloadPresent - Whether validators attest the payload is present
    */
-  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void;
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void;
   /**
    * Notify fork choice that an execution payload has arrived (Gloas fork)
    * Creates the FULL variant of a Gloas block when the payload becomes available
@@ -208,11 +209,13 @@ export interface IForkChoice {
    * @param blockRoot - The beacon block root for which the payload arrived
    * @param executionPayloadBlockHash - The block hash of the execution payload
    * @param executionPayloadNumber - The block number of the execution payload
+   * @param executionPayloadGasLimit - The gas limit of the execution payload
    */
   onExecutionPayload(
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
+    executionPayloadGasLimit: number,
     executionStatus: PayloadExecutionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus
   ): void;
@@ -252,6 +255,8 @@ export interface IForkChoice {
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
+  /** Spec: should_build_on_full(store, head) */
+  shouldBuildOnFull(head: ProtoBlock): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;

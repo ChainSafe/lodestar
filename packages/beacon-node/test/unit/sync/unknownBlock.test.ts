@@ -6,6 +6,7 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
+import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
@@ -254,11 +255,18 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
     seenBlock?: boolean;
     wrongBlockRoot?: boolean;
     maxPendingBlocks?: number;
+    rateLimitOnce?: boolean;
   }[] = [
     {
       id: "fetch and process multiple unknown blocks",
       event: ChainEvent.unknownBlockRoot,
       finalizedSlot: 0,
+    },
+    {
+      id: "fetch and process multiple unknown blocks after peer rate limit",
+      event: ChainEvent.unknownBlockRoot,
+      finalizedSlot: 0,
+      rateLimitOnce: true,
     },
     {
       id: "fetch and process multiple unknown block parents",
@@ -307,6 +315,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
     seenBlock = false,
     wrongBlockRoot = false,
     maxPendingBlocks,
+    rateLimitOnce = false,
   } of testCases) {
     it(id, async () => {
       const peer = await getRandPeerIdStr();
@@ -351,6 +360,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       const sendBeaconBlocksByRootPromise = new Promise<Parameters<INetwork["sendBeaconBlocksByRoot"]>>((r) => {
         sendBeaconBlocksByRootResolveFn = r;
       });
+      let sendBeaconBlocksByRootCallCount = 0;
 
       const networkEvents = new NetworkEventBus();
       const network: Partial<INetwork> = {
@@ -364,7 +374,15 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         }),
         custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
         sendBeaconBlocksByRoot: async (_peerId, roots) => {
+          sendBeaconBlocksByRootCallCount++;
           sendBeaconBlocksByRootResolveFn([_peerId, roots]);
+          if (rateLimitOnce && sendBeaconBlocksByRootCallCount === 1) {
+            throw new RequestError({
+              code: RequestErrorCode.RESP_RATE_LIMITED,
+              rateLimitedUntilMs: Date.now() + 100,
+            });
+          }
+
           const correctBlocks = Array.from(roots)
             .map((root) => blocksByRoot.get(toRootHex(root)))
             .filter(notNullish);
@@ -502,6 +520,12 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
         await sleep(200);
         // should not send the invalid root block to chain
         expect(processBlockSpy).toHaveBeenCalledOnce();
+      } else if (rateLimitOnce) {
+        await sendBeaconBlocksByRootPromise;
+        expect(processBlockSpy).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(100);
+        await blockCProcessed;
+        expect(sendBeaconBlocksByRootCallCount).toBeGreaterThan(1);
       } else if (reportPeer) {
         // Wait for the network request to happen, then allow async processing to complete
         await sendBeaconBlocksByRootPromise;
@@ -1541,6 +1565,10 @@ describe("UnknownBlockPeerBalancer", async () => {
     }
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   for (const [testCaseIndex, {custodyGroups, excludedPeers, activeRequests, bestPeer}] of testCases.entries()) {
     for (const [i, groups] of custodyGroups.entries()) {
       peers[i].custodyColumns = groups;
@@ -1560,4 +1588,41 @@ describe("UnknownBlockPeerBalancer", async () => {
       }
     });
   } // end for testCases
+
+  it("skips rate-limited peers until their backoff expires", () => {
+    vi.useFakeTimers();
+    const now = 10_000;
+    vi.setSystemTime(now);
+
+    peers[0].custodyColumns = [0];
+    peers[1].custodyColumns = [1];
+    peers[2].custodyColumns = [1];
+    peers[3].custodyColumns = [1];
+
+    peerBalancer.onRateLimited(peer0.peerId, now + 1_000);
+
+    expect(peerBalancer.getNextRateLimitRetryAt(new Set([0]), new Set())).toBe(now + 1_000);
+    expect(peerBalancer.bestPeerForPendingColumns(new Set([0]), new Set())).toBeNull();
+
+    vi.setSystemTime(now + 1_000);
+    const peer = peerBalancer.bestPeerForPendingColumns(new Set([0]), new Set());
+    expect(peer?.peerId).toBe(peer0.peerId);
+    expect(peerBalancer.getNextRateLimitRetryAt(new Set([0]), new Set())).toBeNull();
+  });
+
+  it("reschedules around the earliest tracked rate limit", () => {
+    vi.useFakeTimers();
+    const now = 20_000;
+    vi.setSystemTime(now);
+
+    peerBalancer.onRateLimited(peer0.peerId, now + 1_000);
+    peerBalancer.onRateLimited(peer1.peerId, now + 500);
+    expect(peerBalancer.getNextRateLimitRetryAt()).toBe(now + 500);
+
+    peerBalancer.onPeerDisconnected(peer1.peerId);
+    expect(peerBalancer.getNextRateLimitRetryAt()).toBe(now + 1_000);
+
+    peerBalancer.onRateLimited(peer2.peerId, now + 250);
+    expect(peerBalancer.getNextRateLimitRetryAt()).toBe(now + 250);
+  });
 });
