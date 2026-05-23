@@ -450,7 +450,7 @@ export type Endpoints = {
       /** Root of the beacon block that this envelope is for */
       beaconBlockRoot: Root;
     },
-    {params: {slot: Slot; beacon_block_root: string}},
+    {params: {slot: Slot}; query: {beacon_block_root: string}},
     gloas.ExecutionPayloadEnvelope,
     VersionMeta
   >;
@@ -960,24 +960,20 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     getExecutionPayloadEnvelope: {
-      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}",
+      url: "/eth/v1/validator/execution_payload_envelope/{slot}",
       method: "GET",
       req: {
         writeReq: ({slot, beaconBlockRoot}) => ({
-          params: {
-            slot,
-            beacon_block_root: toRootHex(beaconBlockRoot),
-          },
+          params: {slot},
+          query: {beacon_block_root: toRootHex(beaconBlockRoot)},
         }),
-        parseReq: ({params}) => ({
+        parseReq: ({params, query}) => ({
           slot: params.slot,
-          beaconBlockRoot: fromHex(params.beacon_block_root),
+          beaconBlockRoot: fromHex(query.beacon_block_root),
         }),
         schema: {
-          params: {
-            slot: Schema.UintRequired,
-            beacon_block_root: Schema.StringRequired,
-          },
+          params: {slot: Schema.UintRequired},
+          query: {beacon_block_root: Schema.StringRequired},
         },
       },
       resp: {
