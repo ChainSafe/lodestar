@@ -66,6 +66,8 @@ function addBuilderToRegistry(
   slot: UintNum64,
   // new param compared to the spec to speed up onboard builder flow at fork transition
   shouldReuse: boolean
+  // TODO: use this to simplify
+  // reusedBuilderIndex: BuilderIndex | null
 ): void {
   const currentEpoch = computeEpochAtSlot(state.slot);
   const depositEpoch = computeEpochAtSlot(slot);
