@@ -601,7 +601,11 @@ export class ForkChoice implements IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    // The expected proposer index on the canonical chain we are following.
+    // Calculated by our head state. We use it as part of the proposer
+    // boost decision making. No boost will be set if this is null.
+    expectedProposerIndex: ValidatorIndex | null
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
@@ -674,7 +678,9 @@ export class ForkChoice implements IForkChoice {
       this.opts?.proposerBoost &&
       isTimely &&
       // only boost the first block we see
-      this.proposerBoostRoot === null
+      this.proposerBoostRoot === null &&
+      expectedProposerIndex !== null &&
+      block.proposerIndex === expectedProposerIndex
     ) {
       this.proposerBoostRoot = blockRootHex;
     }

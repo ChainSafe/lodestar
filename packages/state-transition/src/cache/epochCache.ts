@@ -782,14 +782,17 @@ export class EpochCache {
    */
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
-    if (epoch !== this.currentShuffling.epoch) {
-      throw new EpochCacheError({
-        code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
-        currentEpoch: this.currentShuffling.epoch,
-        requestedEpoch: epoch,
-      });
+    if (epoch === this.currentShuffling.epoch) {
+      return this.proposers[slot % SLOTS_PER_EPOCH];
     }
-    return this.proposers[slot % SLOTS_PER_EPOCH];
+    if (epoch === this.nextEpoch) {
+      return this.getBeaconProposersNextEpoch()[slot % SLOTS_PER_EPOCH];
+    }
+    throw new EpochCacheError({
+      code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
+      currentEpoch: this.currentShuffling.epoch,
+      requestedEpoch: epoch,
+    });
   }
 
   getBeaconProposers(): ValidatorIndex[] {
