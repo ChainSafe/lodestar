@@ -1,6 +1,12 @@
-import {BuilderIndex, PubkeyHex, UintNum64, electra} from "@lodestar/types";
-import {applyDepositForBuilder, verifyDepositSignatures} from "../block/processDepositRequest.js";
+import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
+import {BeaconConfig} from "@lodestar/config";
+import {DOMAIN_DEPOSIT} from "@lodestar/params";
+import {BuilderIndex, PubkeyHex, UintNum64, electra, ssz} from "@lodestar/types";
+import {applyDepositForBuilder} from "../block/processDepositRequest.js";
+import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateGloas} from "../types.js";
+import {computeDomain} from "./domain.js";
+import {computeSigningRoot} from "./signingRoot.js";
 
 /** Verify queued builder deposit signatures in batches of this size. */
 const BUILDER_DEPOSIT_BATCH_SIZE = 32;
@@ -89,4 +95,62 @@ export class OnboardBuilder {
     }
     this.queuedBuilderDeposits.clear();
   }
+}
+
+/**
+ * Verify a batch of deposit signatures. Tries batch verification first; on failure falls
+ * back to verifying each deposit individually so the valid deposits in a batch that
+ * contains an invalid one are still identified. Returns a boolean per input deposit.
+ */
+function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDeposit[]): boolean[] {
+  const results = new Array<boolean>(deposits.length).fill(false);
+  // Deposit signatures use a fork-agnostic domain, see `isValidDepositSignature`
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+
+  const signatureSets: {pk: PublicKey; msg: Uint8Array; sig: Signature}[] = [];
+  const signatureSetDepositIndices: number[] = [];
+  for (let i = 0; i < deposits.length; i++) {
+    const {pubkey, withdrawalCredentials, amount, signature} = deposits[i];
+    let pk: PublicKey;
+    let sig: Signature;
+    try {
+      // Deposit pubkeys and signatures are untrusted: must be group + infinity checked
+      pk = PublicKey.fromBytes(pubkey, true);
+      sig = Signature.fromBytes(signature, true);
+    } catch (_) {
+      // Malformed pubkey or signature - invalid deposit, results[i] stays false
+      continue;
+    }
+    const msg = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+    signatureSets.push({pk, msg, sig});
+    signatureSetDepositIndices.push(i);
+  }
+
+  if (signatureSets.length === 0) {
+    return results;
+  }
+
+  let batchValid: boolean;
+  try {
+    batchValid =
+      signatureSets.length >= 2
+        ? verifyMultipleAggregateSignatures(signatureSets)
+        : verify(signatureSets[0].msg, signatureSets[0].pk, signatureSets[0].sig);
+  } catch (_) {
+    batchValid = false;
+  }
+
+  if (batchValid) {
+    // Batch passed - every deposit with a well-formed pubkey and signature is valid
+    for (const depositIndex of signatureSetDepositIndices) {
+      results[depositIndex] = true;
+    }
+  } else {
+    // Batch failed: at least one signature is invalid - verify each individually
+    for (let s = 0; s < signatureSets.length; s++) {
+      results[signatureSetDepositIndices[s]] = verify(signatureSets[s].msg, signatureSets[s].pk, signatureSets[s].sig);
+    }
+  }
+
+  return results;
 }

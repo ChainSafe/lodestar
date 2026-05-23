@@ -1,12 +1,9 @@
-import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
-import {BeaconConfig} from "@lodestar/config";
-import {DOMAIN_DEPOSIT, FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {BLSPubkey, BuilderIndex, Bytes32, Epoch, UintNum64, electra, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
-import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
-import {computeDomain, computeEpochAtSlot, computeSigningRoot, isValidatorKnown} from "../util/index.js";
+import {computeEpochAtSlot, isValidatorKnown} from "../util/index.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {isValidDepositSignature} from "./processDeposit.js";
 
@@ -96,64 +93,6 @@ function addBuilderToRegistry(
     // Append to end
     state.builders.push(newBuilder);
   }
-}
-
-/**
- * Verify a batch of deposit signatures. Tries batch verification first; on failure falls
- * back to verifying each deposit individually so the valid deposits in a batch that
- * contains an invalid one are still identified. Returns a boolean per input deposit.
- */
-export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDeposit[]): boolean[] {
-  const results = new Array<boolean>(deposits.length).fill(false);
-  // Deposit signatures use a fork-agnostic domain, see `isValidDepositSignature`
-  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
-
-  const signatureSets: {pk: PublicKey; msg: Uint8Array; sig: Signature}[] = [];
-  const signatureSetDepositIndices: number[] = [];
-  for (let i = 0; i < deposits.length; i++) {
-    const {pubkey, withdrawalCredentials, amount, signature} = deposits[i];
-    let pk: PublicKey;
-    let sig: Signature;
-    try {
-      // Deposit pubkeys and signatures are untrusted: must be group + infinity checked
-      pk = PublicKey.fromBytes(pubkey, true);
-      sig = Signature.fromBytes(signature, true);
-    } catch (_) {
-      // Malformed pubkey or signature - invalid deposit, results[i] stays false
-      continue;
-    }
-    const msg = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
-    signatureSets.push({pk, msg, sig});
-    signatureSetDepositIndices.push(i);
-  }
-
-  if (signatureSets.length === 0) {
-    return results;
-  }
-
-  let batchValid: boolean;
-  try {
-    batchValid =
-      signatureSets.length >= 2
-        ? verifyMultipleAggregateSignatures(signatureSets)
-        : verify(signatureSets[0].msg, signatureSets[0].pk, signatureSets[0].sig);
-  } catch (_) {
-    batchValid = false;
-  }
-
-  if (batchValid) {
-    // Batch passed - every deposit with a well-formed pubkey and signature is valid
-    for (const depositIndex of signatureSetDepositIndices) {
-      results[depositIndex] = true;
-    }
-  } else {
-    // Batch failed: at least one signature is invalid - verify each individually
-    for (let s = 0; s < signatureSets.length; s++) {
-      results[signatureSetDepositIndices[s]] = verify(signatureSets[s].msg, signatureSets[s].pk, signatureSets[s].sig);
-    }
-  }
-
-  return results;
 }
 
 // TODO GLOAS: the PendingDepositsLookup is currently scoped to a single envelope of
