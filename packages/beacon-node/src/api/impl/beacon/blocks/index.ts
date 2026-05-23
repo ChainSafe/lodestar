@@ -673,7 +673,9 @@ export function getBeaconBlockApi({
       await publishBlock(args, context, opts);
     },
 
-    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope, blobs, kzgProofs}) {
+    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope, blobs, kzgProofs, broadcastValidation}) {
+      // TODO GLOAS: honor broadcastValidation (gossip|consensus|consensus_and_equivocation) per beacon-APIs PR #580
+      void broadcastValidation;
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
       const slot = envelope.payload.slotNumber;
