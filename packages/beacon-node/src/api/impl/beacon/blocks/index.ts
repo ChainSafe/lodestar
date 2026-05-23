@@ -665,7 +665,7 @@ export function getBeaconBlockApi({
       await publishBlock(args, context, opts);
     },
 
-    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
+    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope, blobs, kzgProofs}) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
       const slot = envelope.payload.slotNumber;
@@ -688,11 +688,32 @@ export function getBeaconBlockApi({
 
       await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
+      // Stateless mode (beacon-APIs PR #580): the validator client supplied blobs + KZG proofs
+      // alongside the envelope. Always trust those over any cached block-production data; this is
+      // the path external builders and multi-BN/DVT setups use, where the cache may be empty.
+      const hasSuppliedBlobs = blobs !== undefined && kzgProofs !== undefined;
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
 
-      if (isSelfBuild) {
-        // For self-builds, construct and publish data column sidecars from cached block production data
+      if (hasSuppliedBlobs) {
+        if (kzgProofs.length !== blobs.length * NUMBER_OF_COLUMNS) {
+          throw new ApiError(
+            400,
+            `Expected ${blobs.length * NUMBER_OF_COLUMNS} kzg_proofs for ${blobs.length} blobs, got ${kzgProofs.length}`
+          );
+        }
+        if (blobs.length > 0) {
+          const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+          const cells = blobs.map((blob) => kzg.computeCells(blob));
+          const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+            cells: rowCells,
+            proofs: kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+          }));
+          dataColumnSidecars = getGloasDataColumnSidecars(slot, envelope.beaconBlockRoot, cellsAndProofs);
+          timer?.();
+        }
+      } else if (isSelfBuild) {
+        // Stateful self-build path: reconstruct data column sidecars from cached cells + proofs.
         const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
         if (cachedResult === undefined) {
           throw new ApiError(404, `No cached block production result found for block root ${blockRootHex}`);
@@ -717,9 +738,8 @@ export function getBeaconBlockApi({
           dataColumnSidecars = getGloasDataColumnSidecars(slot, envelope.beaconBlockRoot, cellsAndProofs);
           timer?.();
         }
-      } else {
-        // TODO GLOAS: will this api be used by builders or only for self-building?
       }
+      // External builder + no supplied blobs: nothing to publish (builder gossips columns separately).
 
       // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();

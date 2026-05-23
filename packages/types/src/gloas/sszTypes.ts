@@ -195,6 +195,18 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+// Stateless publish wrapper for `POST /eth/v1/beacon/execution_payload_envelope`
+// (beacon-APIs PR #580). Lets the validator client supply blobs + KZG proofs to
+// a beacon node that does not have them cached (multi-BN, DVT, failover).
+export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
+  {
+    signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "SignedExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
+);
+
 export const BeaconBlockBody = new ContainerType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,

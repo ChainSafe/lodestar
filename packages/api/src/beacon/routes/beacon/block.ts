@@ -19,6 +19,7 @@ import {
   SignedBlockContents,
   Slot,
   deneb,
+  fulu,
   gloas,
   ssz,
   sszTypesFor,
@@ -217,11 +218,21 @@ export type Endpoints = {
    * Instructs the beacon node to broadcast a signed execution payload envelope to the network,
    * to be gossiped for payload validation. A success response (20x) indicates that the envelope
    * passed gossip validation and was successfully broadcast onto the network.
+   *
+   * Body is either a bare `SignedExecutionPayloadEnvelope` (stateful: the receiving beacon node
+   * already has blobs cached from block production) or a `SignedExecutionPayloadEnvelopeContents`
+   * wrapper (stateless: envelope bundled with blobs and KZG proofs for multi-BN, DVT, or failover).
+   * See beacon-APIs PR #580.
    */
   publishExecutionPayloadEnvelope: Endpoint<
     "POST",
-    {signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    {
+      signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+      blobs?: deneb.Blobs;
+      kzgProofs?: fulu.KZGProofs;
+      broadcastValidation?: BroadcastValidation;
+    },
+    {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -619,39 +630,89 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/execution_payload_envelope",
       method: "POST",
       req: {
-        writeReqJson: ({signedExecutionPayloadEnvelope}) => {
+        writeReqJson: ({signedExecutionPayloadEnvelope, blobs, kzgProofs, broadcastValidation}) => {
           const fork = config.getForkName(signedExecutionPayloadEnvelope.message.payload.slotNumber);
+          const types = getPostGloasForkTypes(fork);
+          const hasBlobs = blobs !== undefined && kzgProofs !== undefined;
+          const body = hasBlobs
+            ? types.SignedExecutionPayloadEnvelopeContents.toJson({
+                signedExecutionPayloadEnvelope,
+                kzgProofs,
+                blobs,
+              })
+            : types.SignedExecutionPayloadEnvelope.toJson(signedExecutionPayloadEnvelope);
           return {
-            body: getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.toJson(signedExecutionPayloadEnvelope),
+            body,
             headers: {
               [MetaHeader.Version]: fork,
             },
+            query: {broadcast_validation: broadcastValidation},
           };
         },
-        parseReqJson: ({body, headers}) => {
+        parseReqJson: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const types = getPostGloasForkTypes(fork);
+          // Discriminate by the wrapper's top-level key. SignedExecutionPayloadEnvelopeContents
+          // serializes to {signed_execution_payload_envelope, kzg_proofs, blobs}; the bare envelope
+          // serializes to {message, signature}.
+          const isContents = body !== null && typeof body === "object" && "signed_execution_payload_envelope" in body;
+          if (isContents) {
+            const contents = types.SignedExecutionPayloadEnvelopeContents.fromJson(body);
+            return {
+              signedExecutionPayloadEnvelope: contents.signedExecutionPayloadEnvelope,
+              blobs: contents.blobs,
+              kzgProofs: contents.kzgProofs,
+              broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            };
+          }
           return {
-            signedExecutionPayloadEnvelope: getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.fromJson(body),
+            signedExecutionPayloadEnvelope: types.SignedExecutionPayloadEnvelope.fromJson(body),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
           };
         },
-        writeReqSsz: ({signedExecutionPayloadEnvelope}) => {
+        writeReqSsz: ({signedExecutionPayloadEnvelope, blobs, kzgProofs, broadcastValidation}) => {
           const fork = config.getForkName(signedExecutionPayloadEnvelope.message.payload.slotNumber);
+          const types = getPostGloasForkTypes(fork);
+          const hasBlobs = blobs !== undefined && kzgProofs !== undefined;
+          const body = hasBlobs
+            ? types.SignedExecutionPayloadEnvelopeContents.serialize({
+                signedExecutionPayloadEnvelope,
+                kzgProofs,
+                blobs,
+              })
+            : types.SignedExecutionPayloadEnvelope.serialize(signedExecutionPayloadEnvelope);
           return {
-            body: getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.serialize(signedExecutionPayloadEnvelope),
+            body,
             headers: {
               [MetaHeader.Version]: fork,
             },
+            query: {broadcast_validation: broadcastValidation},
           };
         },
-        parseReqSsz: ({body, headers}) => {
+        parseReqSsz: ({body, headers, query}) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {
-            signedExecutionPayloadEnvelope:
-              getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelope.deserialize(body),
-          };
+          const types = getPostGloasForkTypes(fork);
+          // SSZ has no in-band Contents-vs-envelope discriminator; spec uses a single
+          // `application/octet-stream` Content-Type for both shapes. Try the wrapper first
+          // (catches the stateless variant) then fall back to the bare envelope.
+          try {
+            const contents = types.SignedExecutionPayloadEnvelopeContents.deserialize(body);
+            return {
+              signedExecutionPayloadEnvelope: contents.signedExecutionPayloadEnvelope,
+              blobs: contents.blobs,
+              kzgProofs: contents.kzgProofs,
+              broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            };
+          } catch {
+            return {
+              signedExecutionPayloadEnvelope: types.SignedExecutionPayloadEnvelope.deserialize(body),
+              broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            };
+          }
         },
         schema: {
           body: Schema.Object,
+          query: {broadcast_validation: Schema.String},
           headers: {[MetaHeader.Version]: Schema.String},
         },
       },
