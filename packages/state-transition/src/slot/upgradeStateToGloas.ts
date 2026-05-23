@@ -1,11 +1,11 @@
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {PubkeyHex, electra, ssz} from "@lodestar/types";
+import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
-import {applyDepositForBuilder, verifyDepositSignatures} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
+import {OnboardBuilder} from "../util/onboardBuilder.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 
 /**
@@ -85,9 +85,6 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   return stateGloas;
 }
 
-/** Verify queued builder deposit signatures in batches of this size. */
-const BUILDER_DEPOSIT_BATCH_SIZE = 32;
-
 /**
  * Applies any pending deposits for builders to onboard builders during the fork transition
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
@@ -96,49 +93,10 @@ const BUILDER_DEPOSIT_BATCH_SIZE = 32;
  * `BUILDER_DEPOSIT_BATCH_SIZE` at a time.
  */
 export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  // Map of builder pubkey -> index in `state.builders` for builders already applied in this loop.
-  const builderIndexByPubkey = new Map<PubkeyHex, number>();
-  // FIFO queue of new-builder deposits awaiting batch signature verification. Holds
-  // distinct pubkeys, a reappearing queued pubkey force-flushes the queue first.
-  const queuedBuilderDeposits = new Map<PubkeyHex, electra.PendingDeposit>();
+  const onboarder = new OnboardBuilder(state);
 
   const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
-
-  // Batch-verify the queued deposits and apply the ones with valid signatures.
-  const flushQueue = (): void => {
-    if (queuedBuilderDeposits.size === 0) {
-      return;
-    }
-    const entries = Array.from(queuedBuilderDeposits);
-    const validResults = verifyDepositSignatures(
-      state.config,
-      entries.map(([, deposit]) => deposit)
-    );
-    for (let j = 0; j < entries.length; j++) {
-      if (!validResults[j]) {
-        continue;
-      }
-      const [pubkeyHex, deposit] = entries[j];
-      // With direct push (no slot reuse at the fork) the builder lands at the current length
-      const builderIndex = state.builders.length;
-      applyDepositForBuilder(
-        state,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        // signature = null means valid
-        null,
-        deposit.slot,
-        // this is new builder, top up flow was detected below
-        null,
-        // no previous builders at fork transition so no need to check for reuse
-        false
-      );
-      builderIndexByPubkey.set(pubkeyHex, builderIndex);
-    }
-    queuedBuilderDeposits.clear();
-  };
 
   for (let i = 0; i < state.pendingDeposits.length; i++) {
     const deposit = state.pendingDeposits.getReadonly(i);
@@ -156,14 +114,14 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
     // after the flush it is either an applied builder (-> top-up below) or absent (its
     // queued deposit had an invalid signature -> re-evaluated as a fresh candidate).
     // this ensures the functions work the same way to the spec
-    if (queuedBuilderDeposits.has(pubkeyHex)) {
-      flushQueue();
+    if (onboarder.hasQueuedDeposit(pubkeyHex)) {
+      onboarder.flushQueue();
     }
 
-    // `?? null` is required to keep builder index 0. A known index means a top-up to an
-    // already-onboarded builder, applied regardless of withdrawal credential; otherwise
-    // this is a candidate new builder and the credential checks below apply.
-    const builderIndex = builderIndexByPubkey.get(pubkeyHex) ?? null;
+    // A known index means a top-up to an already-onboarded builder, applied regardless of
+    // withdrawal credential; otherwise this is a candidate new builder and the credential
+    // checks below apply.
+    const builderIndex = onboarder.getBuilderIndex(pubkeyHex);
 
     if (builderIndex === null) {
       // Deposits for non-builders stay in the pending queue. If there is a valid pending
@@ -181,35 +139,16 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
       }
 
       // New builder candidate: queue it for lazy batch signature verification
-      queuedBuilderDeposits.set(pubkeyHex, {
-        pubkey: deposit.pubkey,
-        withdrawalCredentials: deposit.withdrawalCredentials,
-        amount: deposit.amount,
-        signature: deposit.signature,
-        slot: deposit.slot,
-      });
-      if (queuedBuilderDeposits.size >= BUILDER_DEPOSIT_BATCH_SIZE) {
-        flushQueue();
-      }
+      // (auto-flushes when batch size is reached)
+      onboarder.addBuilderDeposit(pubkeyHex, deposit);
     } else {
       // Top-up of an already-onboarded builder; no signature verification needed
-      applyDepositForBuilder(
-        state,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        // top up flow, no need signature verification
-        null,
-        deposit.slot,
-        builderIndex,
-        // no previous builders at fork transition so no need to check for reuse
-        false
-      );
+      onboarder.topupBuilder(builderIndex, deposit.amount);
     }
   }
 
   // Verify and apply any remaining queued builder deposits
-  flushQueue();
+  onboarder.flushQueue();
 
   state.pendingDeposits = pendingDeposits;
 }
