@@ -9,7 +9,7 @@ import {onboardBuildersFromPendingDeposits} from "../../src/slot/upgradeStateToG
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
 import {generateBuilderPendingDeposits} from "../../src/testUtils/util.js";
 import {CachedBeaconStateGloas} from "../../src/types.js";
-import {isBuilderWithdrawalCredential} from "../../src/util/gloas.js";
+import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../../src/util/gloas.js";
 import {isValidatorKnown} from "../../src/util/index.js";
 import {PendingDepositsLookup} from "../../src/util/pendingDepositsLookup.js";
 
@@ -52,13 +52,17 @@ function naiveOnboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas):
     }
 
     const buildersLenBefore = state.builders.length;
+    const builderIndex = findBuilderIndexByPubkey(state, deposit.pubkey);
     applyDepositForBuilder(
       state,
       deposit.pubkey,
       deposit.withdrawalCredentials,
       deposit.amount,
       deposit.signature,
-      deposit.slot
+      deposit.slot,
+      builderIndex,
+      // per spec, should always reuse builder index if possible
+      true
     );
     if (state.builders.length > buildersLenBefore) {
       builderPubkeys.add(pubkeyHex);
