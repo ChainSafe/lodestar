@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@chainsafe/lodestar-z':
-      specifier: v0.1.2-rc.5
-      version: 0.1.2-rc.5
+      specifier: v0.1.2-rc.6
+      version: 0.1.2-rc.6
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -37,7 +37,7 @@ importers:
         version: link:packages/cli
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2-rc.5
+        version: 0.1.2-rc.6
       debug:
         specifier: ^4.4.3
         version: 4.4.3
@@ -210,7 +210,7 @@ importers:
         version: 2.0.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2-rc.5
+        version: 0.1.2-rc.6
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -421,7 +421,7 @@ importers:
         version: 6.0.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2-rc.5
+        version: 0.1.2-rc.6
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -597,7 +597,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2-rc.5
+        version: 0.1.2-rc.6
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -764,7 +764,7 @@ importers:
         version: 1.2.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2-rc.5
+        version: 0.1.2-rc.6
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -807,7 +807,7 @@ importers:
         version: 3.1.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2-rc.5
+        version: 0.1.2-rc.6
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -878,7 +878,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2-rc.5
+        version: 0.1.2-rc.6
       '@chainsafe/ssz':
         specifier: ^1.4.0
         version: 1.4.0
@@ -1278,36 +1278,36 @@ packages:
     resolution: {integrity: sha512-vXpS0MOC97z019X9Vxjr1pAPaKk97Jc4AC9G1IKnx3fhL+1utZOHeKf6MHd75QXcJgVyUDmL56LSLrUrcrN25g==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2-rc.5':
-    resolution: {integrity: sha512-nO/FQOpSnunMuQrkbBSn7850Cnnyt5OSxjd7kscY/5L/Yhz3cTBN1butMqjOQr2fp38/7Hb2knqrWQBRb4oDkw==}
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2-rc.6':
+    resolution: {integrity: sha512-xLGnr875FPFE5f56g4p5Cgn7r9efBjj/n0I1i3AdHxev5L4G7PzgqbSyUWU6YN+bqHiNajSewVMJwk5uhA4Vgw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2-rc.5':
-    resolution: {integrity: sha512-2uHeClpzZzuHIqV9gcNY3jFrgkVgWGcC00E13ggZzwLLcyPj06/iR0fxDHrx889+rkwjAsMSGKX3BaUoOnrFEw==}
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2-rc.6':
+    resolution: {integrity: sha512-JgIGuTi/2/dAI6+TsQlMmbKVLGcoyh6NRSfHGzhFbeVPo4wU7ssdKuGSkN/xzdg6NGgNcre1vP9n26GO8whXmA==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2-rc.5':
-    resolution: {integrity: sha512-UuY04wj51ArJ+cKa6+1+BUVFRsXuAxJloOz+FqymDFNEo92hdKpaHwYXNpwJizxeWzjRT9S+C7WYuF9wKkp+Lw==}
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2-rc.6':
+    resolution: {integrity: sha512-2pdIK6F5XZ7gHPMxqIdhrMeQDwPI29RQtwr5gXjsPpUu9LibNkc52aK4IAoEoUlr8BLq5q0yuMAgAqIt4wP7mw==}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2-rc.5':
-    resolution: {integrity: sha512-q4oDE81RjmJ4i5IdoH9Hjy/nxFQaZNQ0xo2oS7a+A2kIrBkBoeAZLQgNTO07+1VPWeq9OuiUrp4ViCcwDjRADg==}
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2-rc.6':
+    resolution: {integrity: sha512-ud/ToBud23yCWH+sX6QW5TRrIZqchf4wnCwH1D5M4I/mQTgls5sAwqWWMWniiQpJ2qeCd0X70gPKwHU7BMtVCQ==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2-rc.5':
-    resolution: {integrity: sha512-gzrP8cco9sepsVT222F7yFD9FbR3Od8jRtbSm0NtkX6XHVFzzCN6Wy8mJy5Aq4drQei0dxhv59yz66VCOAE1wg==}
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2-rc.6':
+    resolution: {integrity: sha512-g5DsV/kgz+E//cUSXXNydUSWBWinoeT/yxGCJ+Dy1RpI0zslLjbr9CLz/OlwCcyED1EQJCHwdWXSKOGA8rmBwQ==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/lodestar-z@0.1.2-rc.5':
-    resolution: {integrity: sha512-7PtjbpOiMXRqZlVeCgA8xdVGxKWnzklf2vQabSvtnjWuWybP64OfXNg/h6dZHOyWZTcPkQAiNlknkWpo7u1kFA==}
+  '@chainsafe/lodestar-z@0.1.2-rc.6':
+    resolution: {integrity: sha512-I5jBhdyE5PrJv+3Nz0jsjRHr79Khp/Sp4epBbImw0VSFUOZlXEuZpuYZZMMBqOW8sTvpinU5QGaInJr7aUHFRQ==}
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
@@ -6962,30 +6962,30 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.1
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.1
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2-rc.5':
+  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2-rc.6':
     optional: true
 
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2-rc.5':
+  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2-rc.6':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2-rc.5':
+  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2-rc.6':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2-rc.5':
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2-rc.6':
     optional: true
 
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2-rc.5':
+  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2-rc.6':
     optional: true
 
-  '@chainsafe/lodestar-z@0.1.2-rc.5':
+  '@chainsafe/lodestar-z@0.1.2-rc.6':
     dependencies:
       '@chainsafe/zapi': 2.0.0
     optionalDependencies:
-      '@chainsafe/lodestar-z-aarch64-apple-darwin': 0.1.2-rc.5
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 0.1.2-rc.5
-      '@chainsafe/lodestar-z-x86_64-apple-darwin': 0.1.2-rc.5
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 0.1.2-rc.5
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 0.1.2-rc.5
+      '@chainsafe/lodestar-z-aarch64-apple-darwin': 0.1.2-rc.6
+      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 0.1.2-rc.6
+      '@chainsafe/lodestar-z-x86_64-apple-darwin': 0.1.2-rc.6
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 0.1.2-rc.6
+      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 0.1.2-rc.6
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
