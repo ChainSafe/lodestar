@@ -1,7 +1,7 @@
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {PubkeyHex, electra, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
-import {applyDepositForBuilderIndex, verifyDepositSignatures} from "../block/processDepositRequest.js";
+import {applyDepositForBuilder, verifyDepositSignatures} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
@@ -122,13 +122,18 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
       const [pubkeyHex, deposit] = entries[j];
       // With direct push (no slot reuse at the fork) the builder lands at the current length
       const builderIndex = state.builders.length;
-      applyDepositForBuilderIndex(
+      applyDepositForBuilder(
         state,
-        null,
         deposit.pubkey,
         deposit.withdrawalCredentials,
         deposit.amount,
-        deposit.slot
+        // signature = null means valid
+        null,
+        deposit.slot,
+        // this is new builder, top up flow was detected below
+        null,
+        // no previous builders at fork transition so no need to check for reuse
+        false
       );
       builderIndexByPubkey.set(pubkeyHex, builderIndex);
     }
@@ -188,13 +193,17 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
       }
     } else {
       // Top-up of an already-onboarded builder; no signature verification needed
-      applyDepositForBuilderIndex(
+      applyDepositForBuilder(
         state,
-        builderIndex,
         deposit.pubkey,
         deposit.withdrawalCredentials,
         deposit.amount,
-        deposit.slot
+        // top up flow, no need signature verification
+        null,
+        deposit.slot,
+        builderIndex,
+        // no previous builders at fork transition so no need to check for reuse
+        false
       );
     }
   }

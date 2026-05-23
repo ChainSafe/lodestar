@@ -19,19 +19,23 @@ export function applyDepositForBuilder(
   pubkey: BLSPubkey,
   withdrawalCredentials: Bytes32,
   amount: UintNum64,
-  signature: Bytes32,
-  slot: UintNum64
+  signature: Bytes32 | null,
+  slot: UintNum64,
+  builderIndex: BuilderIndex | null,
+  shouldReuse: boolean
 ): void {
-  const builderIndex = findBuilderIndexByPubkey(state, pubkey);
-
   if (builderIndex !== null) {
     // Existing builder - increase balance
     const builder = state.builders.get(builderIndex);
     builder.balance += amount;
   } else {
     // New builder - verify signature and add to registry
-    if (isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
-      addBuilderToRegistry(state, pubkey, withdrawalCredentials, amount, slot);
+    const validSignature =
+      signature !== null
+        ? isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)
+        : true;
+    if (validSignature) {
+      addBuilderToRegistry(state, pubkey, withdrawalCredentials, amount, slot, shouldReuse);
     }
   }
 }
@@ -59,10 +63,19 @@ function addBuilderToRegistry(
   pubkey: BLSPubkey,
   withdrawalCredentials: Bytes32,
   amount: UintNum64,
-  slot: UintNum64
+  slot: UintNum64,
+  // new param compared to the spec to speed up onboard builder flow at fork transition
+  shouldReuse: boolean
 ): void {
   const currentEpoch = computeEpochAtSlot(state.slot);
   const depositEpoch = computeEpochAtSlot(slot);
+
+  const newBuilder = buildNewBuilder(pubkey, withdrawalCredentials, amount, depositEpoch);
+
+  if (!shouldReuse) {
+    state.builders.push(newBuilder);
+    return;
+  }
 
   // Try to find a reusable slot from an exited builder with zero balance
   let builderIndex = state.builders.length;
@@ -74,8 +87,6 @@ function addBuilderToRegistry(
     }
   }
 
-  const newBuilder = buildNewBuilder(pubkey, withdrawalCredentials, amount, depositEpoch);
-
   if (builderIndex < state.builders.length) {
     // Reuse existing slot
     state.builders.set(builderIndex, newBuilder);
@@ -83,32 +94,6 @@ function addBuilderToRegistry(
     // Append to end
     state.builders.push(newBuilder);
   }
-}
-
-/**
- * Apply a deposit for a builder whose registry index is already known by the caller.
- *
- * This is called at gloas fork transition only. The signature is NOT verified here — the
- * caller (`onboardBuildersFromPendingDeposits`) batch-verifies new-builder signatures
- * before calling this. A new builder is appended directly, since the slot-reuse scan in
- * `addBuilderToRegistry` is unnecessary at the fork (`state.builders` starts empty).
- */
-export function applyDepositForBuilderIndex(
-  state: CachedBeaconStateGloas,
-  builderIndex: BuilderIndex | null,
-  pubkey: BLSPubkey,
-  withdrawalCredentials: Bytes32,
-  amount: UintNum64,
-  slot: UintNum64
-): void {
-  if (builderIndex !== null) {
-    // Existing builder - increase balance
-    state.builders.get(builderIndex).balance += amount;
-    return;
-  }
-
-  // New builder - signature already verified by the caller; append directly
-  state.builders.push(buildNewBuilder(pubkey, withdrawalCredentials, amount, computeEpochAtSlot(slot)));
 }
 
 /**
@@ -193,7 +178,17 @@ export function processDepositRequest(
 
     if (isBuilder) {
       // Top up an existing builder regardless of withdrawal credential prefix
-      applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
+      applyDepositForBuilder(
+        stateGloas,
+        pubkey,
+        withdrawalCredentials,
+        amount,
+        signature,
+        state.slot,
+        builderIndex,
+        // shouldReuse is irrelevent for top up flow
+        true
+      );
       return;
     }
 
@@ -203,7 +198,17 @@ export function processDepositRequest(
       !isValidator &&
       !lookup.hasPendingValidator(state.config, pubkeyHex)
     ) {
-      applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
+      applyDepositForBuilder(
+        stateGloas,
+        pubkey,
+        withdrawalCredentials,
+        amount,
+        signature,
+        state.slot,
+        builderIndex,
+        // should reuse builder index
+        true
+      );
       return;
     }
 
