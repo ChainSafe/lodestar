@@ -18,7 +18,7 @@ const BUILDER_DEPOSIT_BATCH_SIZE = 32;
  * New-builder deposits are verified lazily: signatures are queued and batch-verified
  * `BUILDER_DEPOSIT_BATCH_SIZE` at a time.
  */
-export class OnboardBuilder {
+export class BatchOnboardBuilder {
   // Map of builder pubkey -> index in `state.builders` for builders already applied via this instance.
   private readonly builderIndexByPubkey = new Map<PubkeyHex, number>();
   // FIFO queue of new-builder deposits awaiting batch signature verification. Holds
@@ -28,21 +28,14 @@ export class OnboardBuilder {
   constructor(private readonly state: CachedBeaconStateGloas) {}
 
   /** Builder index for a pubkey already applied by this instance, or null. */
-  getBuilderIndex(pubkeyHex: PubkeyHex): number | null {
+  getAppliedBuilderIndex(pubkeyHex: PubkeyHex): number | null {
     return this.builderIndexByPubkey.get(pubkeyHex) ?? null;
-  }
-
-  /** Whether a deposit for this pubkey is currently queued for batch verification. */
-  hasQueuedDeposit(pubkeyHex: PubkeyHex): boolean {
-    return this.queuedBuilderDeposits.has(pubkeyHex);
   }
 
   /**
    * Queue a new-builder deposit for lazy batch signature verification.
-   * Auto-flushes when the queue reaches BUILDER_DEPOSIT_BATCH_SIZE.
-   * Stores a POJO copy of the deposit fields (caller may pass a readonly view).
    */
-  addBuilderDeposit(pubkeyHex: PubkeyHex, deposit: electra.PendingDeposit): void {
+  queueBuilderDeposit(pubkeyHex: PubkeyHex, deposit: electra.PendingDeposit): void {
     this.queuedBuilderDeposits.set(pubkeyHex, {
       pubkey: deposit.pubkey,
       withdrawalCredentials: deposit.withdrawalCredentials,
@@ -51,7 +44,7 @@ export class OnboardBuilder {
       slot: deposit.slot,
     });
     if (this.queuedBuilderDeposits.size >= BUILDER_DEPOSIT_BATCH_SIZE) {
-      this.flushQueue();
+      this.onboardBuilders();
     }
   }
 
@@ -61,8 +54,15 @@ export class OnboardBuilder {
     builder.balance += amount;
   }
 
+  /** Onboard queued builders if this pubkey is in the queue */
+  onboardBuildersIfQueued(pubkeyHex: PubkeyHex): void {
+    if (this.queuedBuilderDeposits.has(pubkeyHex)) {
+      this.onboardBuilders();
+    }
+  }
+
   /** Batch-verify the queued deposits and apply the ones with valid signatures. */
-  flushQueue(): void {
+  onboardBuilders(): void {
     if (this.queuedBuilderDeposits.size === 0) {
       return;
     }
@@ -86,7 +86,7 @@ export class OnboardBuilder {
         // signature = null means valid
         null,
         deposit.slot,
-        // this is new builder, top up flow was detected below
+        // this is new builder
         null,
         // no previous builders at fork transition so no need to check for reuse
         false

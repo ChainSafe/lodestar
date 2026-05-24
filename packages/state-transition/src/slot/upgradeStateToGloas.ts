@@ -5,7 +5,7 @@ import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
-import {OnboardBuilder} from "../util/onboardBuilder.js";
+import {BatchOnboardBuilder} from "../util/onboardBuilder.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 
 /**
@@ -93,7 +93,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
  * `BUILDER_DEPOSIT_BATCH_SIZE` at a time.
  */
 export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  const onboarder = new OnboardBuilder(state);
+  const batcher = new BatchOnboardBuilder(state);
 
   const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
@@ -111,17 +111,15 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
       continue;
     }
 
-    // after the flush it is either an applied builder (-> top-up below) or absent (its
+    // after this, it is either an applied builder (-> top-up below) or absent (its
     // queued deposit had an invalid signature -> re-evaluated as a fresh candidate).
     // this ensures the functions work the same way to the spec
-    if (onboarder.hasQueuedDeposit(pubkeyHex)) {
-      onboarder.flushQueue();
-    }
+    batcher.onboardBuildersIfQueued(pubkeyHex);
 
     // A known index means a top-up to an already-onboarded builder, applied regardless of
     // withdrawal credential; otherwise this is a candidate new builder and the credential
     // checks below apply.
-    const builderIndex = onboarder.getBuilderIndex(pubkeyHex);
+    const builderIndex = batcher.getAppliedBuilderIndex(pubkeyHex);
 
     if (builderIndex === null) {
       // Deposits for non-builders stay in the pending queue. If there is a valid pending
@@ -139,16 +137,15 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
       }
 
       // New builder candidate: queue it for lazy batch signature verification
-      // (auto-flushes when batch size is reached)
-      onboarder.addBuilderDeposit(pubkeyHex, deposit);
+      batcher.queueBuilderDeposit(pubkeyHex, deposit);
     } else {
       // Top-up of an already-onboarded builder; no signature verification needed
-      onboarder.topupBuilder(builderIndex, deposit.amount);
+      batcher.topupBuilder(builderIndex, deposit.amount);
     }
   }
 
   // Verify and apply any remaining queued builder deposits
-  onboarder.flushQueue();
+  batcher.onboardBuilders();
 
   state.pendingDeposits = pendingDeposits;
 }
