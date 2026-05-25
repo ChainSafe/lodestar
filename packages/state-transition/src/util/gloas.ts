@@ -167,21 +167,6 @@ export function initiateBuilderExit(state: CachedBeaconStateGloas, builderIndex:
   builder.withdrawableEpoch = currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY;
 }
 
-/**
- * Find the index of a builder by their public key.
- * Returns null if not found.
- *
- * May consider builder pubkey cache if performance becomes an issue.
- */
-export function findBuilderIndexByPubkey(state: CachedBeaconStateGloas, pubkey: Uint8Array): BuilderIndex | null {
-  for (let i = 0; i < state.builders.length; i++) {
-    if (byteArrayEquals(state.builders.getReadonly(i).pubkey, pubkey)) {
-      return i;
-    }
-  }
-  return null;
-}
-
 export function isAttestationSameSlot(state: CachedBeaconStateGloas, data: AttestationData): boolean {
   if (data.slot === 0) return true;
 

@@ -32,9 +32,18 @@ export class BatchOnboardBuilder {
   constructor(private readonly state: CachedBeaconStateGloas) {
     this.preExistingBuilders = this.state.builders.getAllReadonlyValues();
     this.builderIndexByPubkey = new Map();
+    const currentEpoch = computeEpochAtSlot(this.state.slot);
+    // Sentinel = preExistingBuilders.length means "no eligible slot found yet".
+    // Since i increases monotonically, (i < firstReuseIdx) is true only until we
+    // assign, so this records the FIRST eligible slot's index.
+    let firstReuseIdx = this.preExistingBuilders.length;
     for (const [i, builder] of this.preExistingBuilders.entries()) {
       this.builderIndexByPubkey.set(toPubkeyHex(builder.pubkey), i);
+      if (i < firstReuseIdx && isBuilderExited(builder, currentEpoch)) {
+        firstReuseIdx = i;
+      }
     }
+    this.nextReuseIndexCheck = firstReuseIdx;
   }
 
   /** Builder index for a pubkey already applied by this instance, or null. */
@@ -44,6 +53,13 @@ export class BatchOnboardBuilder {
 
   /**
    * Queue a new-builder deposit for lazy batch signature verification.
+   *
+   * Flush conditions:
+   *   - reuse is still possible: applying NOW preserves eager (spec) ordering
+   *     against any subsequent topup that this onboard might displace.
+   *   - queue is at batch size: standard batch-verification trigger.
+   * Once cursor reaches preExistingBuilders.length, reuse is permanently
+   * exhausted and batching becomes safe.
    */
   queueBuilderDeposit(pubkeyHex: PubkeyHex, deposit: electra.PendingDeposit): void {
     this.queuedBuilderDeposits.set(pubkeyHex, {
@@ -53,7 +69,10 @@ export class BatchOnboardBuilder {
       signature: deposit.signature,
       slot: deposit.slot,
     });
-    if (this.queuedBuilderDeposits.size >= BUILDER_DEPOSIT_BATCH_SIZE) {
+    if (
+      this.nextReuseIndexCheck < this.preExistingBuilders.length ||
+      this.queuedBuilderDeposits.size >= BUILDER_DEPOSIT_BATCH_SIZE
+    ) {
       this.onboardBuilders();
     }
   }
@@ -103,7 +122,7 @@ export class BatchOnboardBuilder {
     // Try to find a reusable slot from an exited builder with zero balance
     for (let i = this.nextReuseIndexCheck; i < this.preExistingBuilders.length; i++) {
       const builder = this.preExistingBuilders[i];
-      if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
+      if (isBuilderExited(builder, currentEpoch)) {
         this.state.builders.set(i, newBuilder);
         this.preExistingBuilders[i] = newBuilder.toValue();
         this.builderIndexByPubkey.delete(toPubkeyHex(builder.pubkey));
@@ -119,6 +138,11 @@ export class BatchOnboardBuilder {
     this.state.builders.push(newBuilder);
     this.builderIndexByPubkey.set(toPubkeyHex(newBuilder.pubkey), newBuilderIndex);
   }
+}
+
+/** A builder slot is reusable when it is exited and fully withdrawn. */
+function isBuilderExited(builder: gloas.Builder, currentEpoch: Epoch): boolean {
+  return builder.withdrawableEpoch <= currentEpoch && builder.balance === 0;
 }
 
 function buildNewBuilder(pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64, depositEpoch: Epoch) {

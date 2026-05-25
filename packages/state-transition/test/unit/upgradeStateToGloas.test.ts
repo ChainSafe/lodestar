@@ -1,17 +1,92 @@
 import {describe, expect, it} from "vitest";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ForkName} from "@lodestar/params";
-import {electra, ssz} from "@lodestar/types";
+import {FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
+import {BLSPubkey, BuilderIndex, Bytes32, Epoch, UintNum64, electra, ssz} from "@lodestar/types";
 import {toPubkeyHex, toRootHex} from "@lodestar/utils";
-import {applyDepositForBuilder} from "../../src/block/processDepositRequest.js";
+import {isValidDepositSignature} from "../../src/block/processDeposit.js";
 import {onboardBuildersFromPendingDeposits} from "../../src/slot/upgradeStateToGloas.js";
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
 import {generateBuilderPendingDeposits} from "../../src/testUtils/util.js";
 import {CachedBeaconStateGloas} from "../../src/types.js";
-import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../../src/util/gloas.js";
-import {isValidatorKnown} from "../../src/util/index.js";
+import {isBuilderWithdrawalCredential} from "../../src/util/gloas.js";
+import {computeEpochAtSlot, isValidatorKnown} from "../../src/util/index.js";
 import {PendingDepositsLookup} from "../../src/util/pendingDepositsLookup.js";
+
+// ---------------------------------------------------------------------------
+// Naive oracle helpers — verbatim copies of the eager pre-Gloas-batching logic
+// previously living in src/block/processDepositRequest.ts. Kept inline here so
+// the production module no longer carries dead code; this file owns the oracle
+// it differentially compares against.
+// ---------------------------------------------------------------------------
+
+function naiveFindBuilderIndexByPubkey(state: CachedBeaconStateGloas, pubkey: Uint8Array): BuilderIndex | null {
+  for (let i = 0; i < state.builders.length; i++) {
+    if (byteArrayEquals(state.builders.getReadonly(i).pubkey, pubkey)) {
+      return i;
+    }
+  }
+  return null;
+}
+
+function naiveBuildNewBuilder(
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64,
+  depositEpoch: Epoch
+) {
+  return ssz.gloas.Builder.toViewDU({
+    pubkey,
+    version: withdrawalCredentials[0],
+    executionAddress: withdrawalCredentials.subarray(12),
+    balance: amount,
+    depositEpoch,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+  });
+}
+
+function naiveAddBuilderToRegistry(
+  state: CachedBeaconStateGloas,
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64,
+  slot: UintNum64
+): void {
+  const currentEpoch = computeEpochAtSlot(state.slot);
+  const depositEpoch = computeEpochAtSlot(slot);
+  const newBuilder = naiveBuildNewBuilder(pubkey, withdrawalCredentials, amount, depositEpoch);
+
+  // Try to find a reusable slot from an exited builder with zero balance
+  for (let i = 0; i < state.builders.length; i++) {
+    const builder = state.builders.getReadonly(i);
+    if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
+      state.builders.set(i, newBuilder);
+      return;
+    }
+  }
+  state.builders.push(newBuilder);
+}
+
+function naiveApplyDepositForBuilder(
+  state: CachedBeaconStateGloas,
+  pubkey: BLSPubkey,
+  withdrawalCredentials: Bytes32,
+  amount: UintNum64,
+  signature: Bytes32 | null,
+  slot: UintNum64,
+  builderIndex: BuilderIndex | null
+): void {
+  if (builderIndex !== null) {
+    state.builders.get(builderIndex).balance += amount;
+    return;
+  }
+  const validSignature =
+    signature !== null ? isValidDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature) : true;
+  if (validSignature) {
+    naiveAddBuilderToRegistry(state, pubkey, withdrawalCredentials, amount, slot);
+  }
+}
 
 /**
  * Verbatim copy of the eager `onboardBuildersFromPendingDeposits` (pre batch-verification).
@@ -52,17 +127,15 @@ function naiveOnboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas):
     }
 
     const buildersLenBefore = state.builders.length;
-    const builderIndex = findBuilderIndexByPubkey(state, deposit.pubkey);
-    applyDepositForBuilder(
+    const builderIndex = naiveFindBuilderIndexByPubkey(state, deposit.pubkey);
+    naiveApplyDepositForBuilder(
       state,
       deposit.pubkey,
       deposit.withdrawalCredentials,
       deposit.amount,
       deposit.signature,
       deposit.slot,
-      builderIndex,
-      // per spec, should always reuse builder index if possible
-      true
+      builderIndex
     );
     if (state.builders.length > buildersLenBefore) {
       builderPubkeys.add(pubkeyHex);

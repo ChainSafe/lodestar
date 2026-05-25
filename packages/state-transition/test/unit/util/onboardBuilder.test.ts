@@ -407,6 +407,125 @@ describe("BatchOnboardBuilder", () => {
     });
   });
 
+  describe("queueBuilderDeposit — flush-when-reuse-possible (spec ordering)", () => {
+    // queueBuilderDeposit must flush immediately when a pre-existing slot may still
+    // be reused, otherwise a later topup of a pre-existing builder would silently
+    // win the race for that slot (chain-split vs. eager). Once the cursor exhausts
+    // preExistingBuilders, deferring is safe.
+
+    it("flushes immediately when a pre-existing eligible slot exists", () => {
+      const state = buildGloasState({
+        preExistingBuilders: [exitedBuilder(pool[50].pubkey)],
+        slot: 0,
+      });
+      const batcher = new BatchOnboardBuilder(state);
+
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
+
+      // Onboarded immediately into the reused slot — NOT still queued
+      expect(state.builders.length).toBe(1);
+      expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[0].pubkey));
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(0);
+      // The displaced pre-existing pubkey is no longer in the map
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[50].pubkey))).toBe(null);
+    });
+
+    it("defers when no pre-existing slot is eligible (reuse exhausted)", () => {
+      const state = buildGloasState({
+        preExistingBuilders: [activeBuilder(pool[50].pubkey)],
+        slot: 0,
+      });
+      const batcher = new BatchOnboardBuilder(state);
+
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
+
+      // Still queued — pre-existing is full and ineligible, so deferral is safe
+      expect(state.builders.length).toBe(1); // just the pre-existing builder
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(null);
+
+      batcher.onboardBuilders();
+      expect(state.builders.length).toBe(2);
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(1);
+    });
+
+    it("[newD, topupA] preserves spec order: D reuses A's slot, A re-routes as new onboard", () => {
+      // Pre-existing A eligible at slot 0. Envelope mirrors the spec-ordering bug:
+      // batched-naive would defer D and let topupA hit slot 0 first — eager (spec)
+      // gives D slot 0 and routes A's deposit as a new onboard.
+      const state = buildGloasState({
+        preExistingBuilders: [exitedBuilder(pool[50].pubkey)],
+        slot: 0,
+      });
+      const batcher = new BatchOnboardBuilder(state);
+
+      // Simulate the processDepositRequest routing:
+      // Step 1 — newD: queueBuilderDeposit flushes immediately, reuses slot 0.
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
+
+      // Step 2 — topupA: getAppliedBuilderIndex(A) is now null (displaced),
+      // so the caller routes A's deposit as a new-builder candidate.
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[50].pubkey))).toBe(null);
+
+      // pool[50]'s pubkey doesn't have a real signed deposit in the pool; reuse pool[1]
+      // as the new-onboard deposit to keep BLS happy. The point is the ordering, not the pubkey.
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[1].pubkey), pool[1]);
+      batcher.onboardBuilders();
+
+      // Final state: D at slot 0 (reused), the re-routed deposit at slot 1 (pushed)
+      expect(state.builders.length).toBe(2);
+      expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[0].pubkey));
+      expect(toPubkeyHex(state.builders.get(1).pubkey)).toBe(toPubkeyHex(pool[1].pubkey));
+    });
+
+    it("[topupA, newD] preserves spec order: A topped up, D pushed at end", () => {
+      const state = buildGloasState({
+        preExistingBuilders: [exitedBuilder(pool[50].pubkey)],
+        slot: 0,
+      });
+      const batcher = new BatchOnboardBuilder(state);
+
+      // topupA — caller sees getAppliedBuilderIndex(A)=0 and calls topupBuilder
+      batcher.topupBuilder(0, 500_000_000);
+
+      // newD — cursor is still 0 (topup doesn't advance it), so queueBuilderDeposit
+      // flushes; the scan finds slot 0 ineligible (balance>0 after topup) and pushes
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
+
+      expect(state.builders.length).toBe(2);
+      // slot 0 = the topped-up pre-existing builder
+      expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[50].pubkey));
+      expect(state.builders.get(0).balance).toBe(500_000_000);
+      // slot 1 = D, pushed
+      expect(toPubkeyHex(state.builders.get(1).pubkey)).toBe(toPubkeyHex(pool[0].pubkey));
+    });
+
+    it("transitions from flush-eagerly to batch once cursor exhausts preExistingBuilders", () => {
+      const state = buildGloasState({
+        preExistingBuilders: [exitedBuilder(pool[50].pubkey)],
+        slot: 0,
+      });
+      const batcher = new BatchOnboardBuilder(state);
+
+      // First queue: cursor=0 < 1 → immediate flush, reuses slot 0, cursor=1
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
+      expect(state.builders.length).toBe(1);
+      expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[0].pubkey));
+
+      // Subsequent queues: cursor=1 >= 1 → deferred
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[1].pubkey), pool[1]);
+      batcher.queueBuilderDeposit(toPubkeyHex(pool[2].pubkey), pool[2]);
+      expect(state.builders.length).toBe(1); // still just the reused slot
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[1].pubkey))).toBe(null);
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[2].pubkey))).toBe(null);
+
+      // End-of-envelope flush applies the deferred batch
+      batcher.onboardBuilders();
+      expect(state.builders.length).toBe(3);
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[1].pubkey))).toBe(1);
+      expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[2].pubkey))).toBe(2);
+    });
+  });
+
   describe("stale-entry regression (the reason this class is unit-tested)", () => {
     // The original bug: reusing a slot left the displaced pubkey in the map, causing
     // a later deposit for the displaced pubkey to be wrongly routed as a top-up.
