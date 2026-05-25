@@ -3,6 +3,7 @@ import {BeaconBlock, electra, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
+import {BatchOnboardBuilder} from "../util/onboardBuilder.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
@@ -56,9 +57,12 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
   // requests are processed at state.slot (child's slot), not the parent's slot.
   if (requests.deposits.length > 0) {
     const pendingDepositsLookup = PendingDepositsLookup.build(state);
+    const batcher = new BatchOnboardBuilder(state);
     for (const deposit of requests.deposits) {
-      processDepositRequest(fork, state, deposit, pendingDepositsLookup);
+      processDepositRequest(fork, state, deposit, pendingDepositsLookup, batcher);
     }
+    // Flush any queued deposits remaining
+    batcher.onboardBuilders();
   }
 
   for (const withdrawal of requests.withdrawals) {
