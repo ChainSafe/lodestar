@@ -98,9 +98,7 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
   const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
 
-  for (let i = 0; i < state.pendingDeposits.length; i++) {
-    const deposit = state.pendingDeposits.getReadonly(i);
-
+  for (const deposit of state.pendingDeposits.getAllReadonly()) {
     const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
     const pubkeyHex = toPubkeyHex(deposit.pubkey);
 
