@@ -723,7 +723,7 @@ export class ValidatorStore {
       proposalSlot: duty.slot,
       validatorIndex: duty.validatorIndex,
       feeRecipient: fromHex(feeRecipient),
-      gasLimit,
+      targetGasLimit: gasLimit,
     };
 
     const signingSlot = duty.slot;
