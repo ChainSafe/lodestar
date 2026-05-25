@@ -1,12 +1,12 @@
 import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
-import {DOMAIN_DEPOSIT} from "@lodestar/params";
-import {BuilderIndex, PubkeyHex, UintNum64, electra, ssz} from "@lodestar/types";
-import {applyDepositForBuilder} from "../block/processDepositRequest.js";
+import {DOMAIN_DEPOSIT, FAR_FUTURE_EPOCH} from "@lodestar/params";
+import {BLSPubkey, BuilderIndex, Bytes32, Epoch, PubkeyHex, UintNum64, electra, gloas, ssz} from "@lodestar/types";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeDomain} from "./domain.js";
 import {computeSigningRoot} from "./signingRoot.js";
+import { computeEpochAtSlot } from "./epoch.ts";
 
 /** Verify queued builder deposit signatures in batches of this size. */
 const BUILDER_DEPOSIT_BATCH_SIZE = 32;
@@ -24,8 +24,13 @@ export class BatchOnboardBuilder {
   // FIFO queue of new-builder deposits awaiting batch signature verification. Holds
   // distinct pubkeys; a reappearing queued pubkey force-flushes the queue first.
   private readonly queuedBuilderDeposits = new Map<PubkeyHex, electra.PendingDeposit>();
+  // this is use to scan for reused builder index
+  private preExistingBuilders: gloas.Builder[];
+  private nextReuseIndexCheck = 0;
 
-  constructor(private readonly state: CachedBeaconStateGloas) {}
+  constructor(private readonly state: CachedBeaconStateGloas) {
+    this.preExistingBuilders = this.state.builders.getAllReadonlyValues();
+  }
 
   /** Builder index for a pubkey already applied by this instance, or null. */
   getAppliedBuilderIndex(pubkeyHex: PubkeyHex): number | null {
@@ -52,6 +57,9 @@ export class BatchOnboardBuilder {
   topupBuilder(builderIndex: BuilderIndex, amount: UintNum64): void {
     const builder = this.state.builders.get(builderIndex);
     builder.balance += amount;
+    if (builderIndex < this.preExistingBuilders.length) {
+      this.preExistingBuilders[builderIndex].balance += amount;
+    }
   }
 
   /** Onboard queued builders if this pubkey is in the queue */
@@ -76,25 +84,51 @@ export class BatchOnboardBuilder {
         continue;
       }
       const [pubkeyHex, deposit] = entries[j];
-      // With direct push (no slot reuse at the fork) the builder lands at the current length
-      const builderIndex = this.state.builders.length;
-      applyDepositForBuilder(
-        this.state,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        // signature = null means valid
-        null,
-        deposit.slot,
-        // this is new builder
-        null,
-        // no previous builders at fork transition so no need to check for reuse
-        false
-      );
+      const builderIndex = this.addBuilderToRegistry(deposit.pubkey, deposit.withdrawalCredentials, deposit.amount, deposit.slot);
       this.builderIndexByPubkey.set(pubkeyHex, builderIndex);
     }
     this.queuedBuilderDeposits.clear();
   }
+
+  addBuilderToRegistry(
+    pubkey: BLSPubkey,
+    withdrawalCredentials: Bytes32,
+    amount: UintNum64,
+    slot: UintNum64,
+  ): BuilderIndex {
+    const currentEpoch = computeEpochAtSlot(this.state.slot);
+    const depositEpoch = computeEpochAtSlot(slot);
+
+    const newBuilder = buildNewBuilder(pubkey, withdrawalCredentials, amount, depositEpoch);
+
+    // Try to find a reusable slot from an exited builder with zero balance
+    for (let i = this.nextReuseIndexCheck; i < this.preExistingBuilders.length; i++) {
+      const builder = this.preExistingBuilders[i];
+      if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
+        this.state.builders.set(i, newBuilder);
+        this.preExistingBuilders[i] = newBuilder.toValue();
+        this.nextReuseIndexCheck = i + 1;
+        return i;
+      }
+    }
+
+    // don't have to scan again the next time
+    this.nextReuseIndexCheck = this.preExistingBuilders.length;
+    const builderIndex = this.state.builders.length;
+    this.state.builders.push(newBuilder);
+    return builderIndex;
+  }
+}
+
+function buildNewBuilder(pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64, depositEpoch: Epoch) {
+  return ssz.gloas.Builder.toViewDU({
+    pubkey,
+    version: withdrawalCredentials[0],
+    executionAddress: withdrawalCredentials.subarray(12),
+    balance: amount,
+    depositEpoch,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+  });
 }
 
 /**
