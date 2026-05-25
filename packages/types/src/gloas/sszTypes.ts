@@ -1,6 +1,7 @@
 import {
   BitVectorType,
   ByteListType,
+  ContainerNodeStructType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
@@ -48,7 +49,7 @@ const {
   EpochInf,
 } = primitiveSsz;
 
-export const Builder = new ContainerType(
+export const Builder = new ContainerNodeStructType(
   {
     pubkey: BLSPubkey,
     version: Uint8,
