@@ -2,11 +2,12 @@ import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_DEPOSIT, FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {BLSPubkey, BuilderIndex, Bytes32, Epoch, PubkeyHex, UintNum64, electra, gloas, ssz} from "@lodestar/types";
+import {toPubkeyHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeDomain} from "./domain.js";
+import {computeEpochAtSlot} from "./epoch.ts";
 import {computeSigningRoot} from "./signingRoot.js";
-import { computeEpochAtSlot } from "./epoch.ts";
 
 /** Verify queued builder deposit signatures in batches of this size. */
 const BUILDER_DEPOSIT_BATCH_SIZE = 32;
@@ -20,7 +21,7 @@ const BUILDER_DEPOSIT_BATCH_SIZE = 32;
  */
 export class BatchOnboardBuilder {
   // Map of builder pubkey -> index in `state.builders` for builders already applied via this instance.
-  private readonly builderIndexByPubkey = new Map<PubkeyHex, number>();
+  private readonly builderIndexByPubkey: Map<PubkeyHex, BuilderIndex>;
   // FIFO queue of new-builder deposits awaiting batch signature verification. Holds
   // distinct pubkeys; a reappearing queued pubkey force-flushes the queue first.
   private readonly queuedBuilderDeposits = new Map<PubkeyHex, electra.PendingDeposit>();
@@ -30,6 +31,10 @@ export class BatchOnboardBuilder {
 
   constructor(private readonly state: CachedBeaconStateGloas) {
     this.preExistingBuilders = this.state.builders.getAllReadonlyValues();
+    this.builderIndexByPubkey = new Map();
+    for (const [i, builder] of this.preExistingBuilders.entries()) {
+      this.builderIndexByPubkey.set(toPubkeyHex(builder.pubkey), i);
+    }
   }
 
   /** Builder index for a pubkey already applied by this instance, or null. */
@@ -83,19 +88,13 @@ export class BatchOnboardBuilder {
       if (!validResults[j]) {
         continue;
       }
-      const [pubkeyHex, deposit] = entries[j];
-      const builderIndex = this.addBuilderToRegistry(deposit.pubkey, deposit.withdrawalCredentials, deposit.amount, deposit.slot);
-      this.builderIndexByPubkey.set(pubkeyHex, builderIndex);
+      const [_, deposit] = entries[j];
+      this.addBuilderToRegistry(deposit.pubkey, deposit.withdrawalCredentials, deposit.amount, deposit.slot);
     }
     this.queuedBuilderDeposits.clear();
   }
 
-  addBuilderToRegistry(
-    pubkey: BLSPubkey,
-    withdrawalCredentials: Bytes32,
-    amount: UintNum64,
-    slot: UintNum64,
-  ): BuilderIndex {
+  addBuilderToRegistry(pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64, slot: UintNum64): void {
     const currentEpoch = computeEpochAtSlot(this.state.slot);
     const depositEpoch = computeEpochAtSlot(slot);
 
@@ -107,16 +106,18 @@ export class BatchOnboardBuilder {
       if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
         this.state.builders.set(i, newBuilder);
         this.preExistingBuilders[i] = newBuilder.toValue();
+        this.builderIndexByPubkey.delete(toPubkeyHex(builder.pubkey));
+        this.builderIndexByPubkey.set(toPubkeyHex(newBuilder.pubkey), i);
         this.nextReuseIndexCheck = i + 1;
-        return i;
+        return;
       }
     }
 
     // don't have to scan again the next time
     this.nextReuseIndexCheck = this.preExistingBuilders.length;
-    const builderIndex = this.state.builders.length;
+    const newBuilderIndex = this.state.builders.length;
     this.state.builders.push(newBuilder);
-    return builderIndex;
+    this.builderIndexByPubkey.set(toPubkeyHex(newBuilder.pubkey), newBuilderIndex);
   }
 }
 
