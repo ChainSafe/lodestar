@@ -173,11 +173,12 @@ function verifyDepositSignatures(config: BeaconConfig, deposits: electra.Pending
     let pk: PublicKey;
     let sig: Signature;
     try {
-      // Deposit pubkeys and signatures are untrusted: must be group + infinity checked
-      pk = PublicKey.fromBytes(pubkey, true);
-      sig = Signature.fromBytes(signature, true);
+      // Parse without group/infinity checks; deferred to the verify call below so
+      // it can be batched across all sets.
+      pk = PublicKey.fromBytes(pubkey);
+      sig = Signature.fromBytes(signature);
     } catch (_) {
-      // Malformed pubkey or signature - invalid deposit, results[i] stays false
+      // Malformed pubkey or signature bytes - invalid deposit, results[i] stays false
       continue;
     }
     const msg = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
@@ -189,12 +190,15 @@ function verifyDepositSignatures(config: BeaconConfig, deposits: electra.Pending
     return results;
   }
 
+  // Deposit pubkeys and signatures are untrusted, so group + infinity checks are
+  // required. The trailing (true, true) args delegate those checks to blst, which
+  // amortizes them across the whole batch.
   let batchValid: boolean;
   try {
     batchValid =
       signatureSets.length >= 2
-        ? verifyMultipleAggregateSignatures(signatureSets)
-        : verify(signatureSets[0].msg, signatureSets[0].pk, signatureSets[0].sig);
+        ? verifyMultipleAggregateSignatures(signatureSets, true, true)
+        : verify(signatureSets[0].msg, signatureSets[0].pk, signatureSets[0].sig, true, true);
   } catch (_) {
     batchValid = false;
   }
@@ -207,7 +211,13 @@ function verifyDepositSignatures(config: BeaconConfig, deposits: electra.Pending
   } else {
     // Batch failed: at least one signature is invalid - verify each individually
     for (let s = 0; s < signatureSets.length; s++) {
-      results[signatureSetDepositIndices[s]] = verify(signatureSets[s].msg, signatureSets[s].pk, signatureSets[s].sig);
+      results[signatureSetDepositIndices[s]] = verify(
+        signatureSets[s].msg,
+        signatureSets[s].pk,
+        signatureSets[s].sig,
+        true,
+        true
+      );
     }
   }
 
