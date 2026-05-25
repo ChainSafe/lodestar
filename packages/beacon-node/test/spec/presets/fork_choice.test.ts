@@ -205,23 +205,34 @@ const forkChoiceTest =
 
             // payload attestation message step
             else if (isPayloadAttestationMessage(step)) {
+              const isValid = Boolean(step.valid ?? true);
               logger.debug(`Step ${i}/${stepsLen} payload attestation message`, {
                 root: step.payload_attestation_message,
-                valid: Boolean(step.valid),
+                valid: isValid,
               });
               const payloadAttestationMessage = testcase.payloadAttestationMessages.get(
                 step.payload_attestation_message
               );
               if (!payloadAttestationMessage)
                 throw Error(`No payload attestation message ${step.payload_attestation_message}`);
-              const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
-              // TODO: notifyPtcMessages expects PTC-relative indices (0-15), but the spec test
-              // provides global validator indices. Need to resolve via PTC committee lookup.
-              chain.forkChoice.notifyPtcMessages(
-                blockRoot,
-                [payloadAttestationMessage.validatorIndex],
-                payloadAttestationMessage.data.payloadPresent
-              );
+              try {
+                const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
+                const ptc = cachedState.epochCtx.getPayloadTimelinessCommittee(chain.getHeadState().slot);
+                const ptcIndex = ptc.indexOf(payloadAttestationMessage.validatorIndex);
+                if (ptcIndex === -1) {
+                  throw Error(
+                    `Validator ${payloadAttestationMessage.validatorIndex} not in PTC for slot ${payloadAttestationMessage.data.slot}`
+                  );
+                }
+                chain.forkChoice.notifyPtcMessages(
+                  blockRoot,
+                  [ptcIndex],
+                  payloadAttestationMessage.data.payloadPresent
+                );
+                if (!isValid) throw Error("Expected invalid payload attestation message to throw");
+              } catch (e) {
+                if (isValid) throw e;
+              }
             }
 
             // block step
