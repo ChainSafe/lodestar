@@ -708,6 +708,9 @@ export function getBeaconBlockApi({
       // Stateless mode (beacon-APIs PR #580): the validator client supplied blobs + KZG proofs
       // alongside the envelope. Always trust those over any cached block-production data; this is
       // the path external builders and multi-BN/DVT setups use, where the cache may be empty.
+      if ((blobs === undefined) !== (kzgProofs === undefined)) {
+        throw new ApiError(400, "blobs and kzgProofs must both be supplied or both omitted");
+      }
       const hasSuppliedBlobs = blobs !== undefined && kzgProofs !== undefined;
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
