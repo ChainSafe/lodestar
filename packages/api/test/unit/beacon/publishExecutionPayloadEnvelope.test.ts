@@ -91,4 +91,33 @@ describe("publishExecutionPayloadEnvelope route", () => {
   it("uses SSZ as the default request wire format", () => {
     expect(route.init?.requestWireFormat).toBe(WireFormat.ssz);
   });
+
+  describe("partial blobs/kzgProofs rejection", () => {
+    const blobs = [ssz.deneb.Blob.defaultValue()];
+    const kzgProofs = Array.from({length: 128}, () => ssz.deneb.KZGProof.defaultValue());
+
+    it("writeReqJson throws when only blobs are supplied", () => {
+      expect(() => route.req.writeReqJson({signedExecutionPayloadEnvelope, blobs})).toThrow(
+        /blobs and kzgProofs must both be supplied/
+      );
+    });
+
+    it("writeReqJson throws when only kzgProofs are supplied", () => {
+      expect(() => route.req.writeReqJson({signedExecutionPayloadEnvelope, kzgProofs})).toThrow(
+        /blobs and kzgProofs must both be supplied/
+      );
+    });
+
+    it("writeReqSsz throws when only blobs are supplied", () => {
+      expect(() => route.req.writeReqSsz({signedExecutionPayloadEnvelope, blobs})).toThrow(
+        /blobs and kzgProofs must both be supplied/
+      );
+    });
+
+    it("writeReqSsz throws when only kzgProofs are supplied", () => {
+      expect(() => route.req.writeReqSsz({signedExecutionPayloadEnvelope, kzgProofs})).toThrow(
+        /blobs and kzgProofs must both be supplied/
+      );
+    });
+  });
 });

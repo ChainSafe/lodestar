@@ -633,6 +633,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedExecutionPayloadEnvelope, blobs, kzgProofs, broadcastValidation}) => {
           const fork = config.getForkName(signedExecutionPayloadEnvelope.message.payload.slotNumber);
           const types = getPostGloasForkTypes(fork);
+          if ((blobs === undefined) !== (kzgProofs === undefined)) {
+            throw Error("blobs and kzgProofs must both be supplied or both omitted");
+          }
           const hasBlobs = blobs !== undefined && kzgProofs !== undefined;
           const body = hasBlobs
             ? types.SignedExecutionPayloadEnvelopeContents.toJson({
@@ -673,6 +676,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqSsz: ({signedExecutionPayloadEnvelope, blobs, kzgProofs, broadcastValidation}) => {
           const fork = config.getForkName(signedExecutionPayloadEnvelope.message.payload.slotNumber);
           const types = getPostGloasForkTypes(fork);
+          if ((blobs === undefined) !== (kzgProofs === undefined)) {
+            throw Error("blobs and kzgProofs must both be supplied or both omitted");
+          }
           const hasBlobs = blobs !== undefined && kzgProofs !== undefined;
           const body = hasBlobs
             ? types.SignedExecutionPayloadEnvelopeContents.serialize({
