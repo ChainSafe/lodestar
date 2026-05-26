@@ -33,6 +33,7 @@ import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processV
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
+import {GloaOnboardBuilderCache} from "../cache/onboardBuildersCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -66,6 +67,7 @@ import {
 } from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
+import {PreVerifyBuilderDepositsResult, preVerifyBuilderDeposits} from "../util/onboardBuilder.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
 import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
@@ -556,6 +558,19 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   get effectiveBalanceIncrements(): EffectiveBalanceIncrements {
     return this.cachedState.epochCtx.effectiveBalanceIncrements;
+  }
+
+  get gloaOnboardBuilderCache(): GloaOnboardBuilderCache {
+    return this.cachedState.epochCtx.gloaOnboardBuilderCache;
+  }
+
+  preVerifyBuilderDeposits(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult {
+    // Cast: this method is exposed on IBeaconStateViewElectra so callers narrow first;
+    // the underlying cached state has pendingDeposits available.
+    return preVerifyBuilderDeposits(
+      this.cachedState as CachedBeaconStateElectra | CachedBeaconStateFulu,
+      maxBuilderDeposits
+    );
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
