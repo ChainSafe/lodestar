@@ -699,9 +699,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           const types = getPostGloasForkTypes(fork);
           // SSZ has no in-band Contents-vs-envelope discriminator; spec uses a single
-          // `application/octet-stream` Content-Type for both shapes. Try the wrapper first
-          // (catches the stateless variant) then fall back to the bare envelope.
-          try {
+          // `application/octet-stream` Content-Type for both shapes. Discriminate by the
+          // first SSZ offset: SignedExecutionPayloadEnvelopeContents has 3 variable fields
+          // so its first offset is 12; SignedExecutionPayloadEnvelope's variable `message`
+          // sits after a 96-byte signature plus the 4-byte offset header, so its first
+          // offset is 100.
+          const firstOffset = body.length >= 4 ? body[0] | (body[1] << 8) | (body[2] << 16) | (body[3] << 24) : 0;
+          if (firstOffset === 12) {
             const contents = types.SignedExecutionPayloadEnvelopeContents.deserialize(body);
             return {
               signedExecutionPayloadEnvelope: contents.signedExecutionPayloadEnvelope,
@@ -709,12 +713,11 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
               kzgProofs: contents.kzgProofs,
               broadcastValidation: query.broadcast_validation as BroadcastValidation,
             };
-          } catch {
-            return {
-              signedExecutionPayloadEnvelope: types.SignedExecutionPayloadEnvelope.deserialize(body),
-              broadcastValidation: query.broadcast_validation as BroadcastValidation,
-            };
           }
+          return {
+            signedExecutionPayloadEnvelope: types.SignedExecutionPayloadEnvelope.deserialize(body),
+            broadcastValidation: query.broadcast_validation as BroadcastValidation,
+          };
         },
         schema: {
           body: Schema.Object,
