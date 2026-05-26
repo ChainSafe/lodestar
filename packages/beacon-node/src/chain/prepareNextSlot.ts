@@ -3,12 +3,15 @@ import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
+  GLOAS_PREVERIFY_WINDOW_EPOCHS,
   IBeaconStateView,
   IBeaconStateViewBellatrix,
+  MAX_BUILDER_DEPOSITS_PER_SLOT,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
   isStatePostBellatrix,
+  isStatePostElectra,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, Slot} from "@lodestar/types";
@@ -268,6 +271,37 @@ export class PrepareNextSlotScheduler {
         });
 
         precomputeEpochTransitionTimer?.();
+      }
+
+      if (isStatePostElectra(prepareState)) {
+        const cache = prepareState.gloaOnboardBuilderCache;
+        const gloasEpoch = this.config.GLOAS_FORK_EPOCH;
+        const finalizedEpoch = this.chain.forkChoice.getFinalizedCheckpoint().epoch;
+
+        if (finalizedEpoch >= gloasEpoch) {
+          // The Gloas transition can no longer be reorged. Cheap no-op when
+          // already empty.
+          if (cache.lastVerifiedSlot !== 0) cache.clear();
+        } else if (
+          !isEpochTransition && // epoch boundaries already tight; skip
+          ForkSeq[fork] < ForkSeq.gloas &&
+          computeEpochAtSlot(clockSlot) >= gloasEpoch - GLOAS_PREVERIFY_WINDOW_EPOCHS &&
+          computeEpochAtSlot(clockSlot) < gloasEpoch
+        ) {
+          const result = prepareState.preVerifyBuilderDeposits(MAX_BUILDER_DEPOSITS_PER_SLOT);
+          if (result.verifiedCount > 0 || result.invalidCount > 0) {
+            this.logger.verbose("PrepareNextSlotScheduler pre-verified builder deposit signatures", {
+              clockSlot,
+              fromSlot: result.fromSlot,
+              toSlot: result.toSlot,
+              verifiedCount: result.verifiedCount,
+              invalidCount: result.invalidCount,
+            });
+          } else {
+            // No new builder deposits to verify this slot
+            this.logger.verbose("PrepareNextSlotScheduler pre-verify builder deposit scan: nothing new", {clockSlot});
+          }
+        }
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {

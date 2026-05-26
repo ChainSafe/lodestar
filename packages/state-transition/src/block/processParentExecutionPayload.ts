@@ -62,7 +62,7 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
       processDepositRequest(fork, state, deposit, pendingDepositsLookup, batcher);
     }
     // Flush any queued deposits remaining
-    batcher.onboardBuilders();
+    batcher.onboardQueuedBuilders();
   }
 
   for (const withdrawal of requests.withdrawals) {

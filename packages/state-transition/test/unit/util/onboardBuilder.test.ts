@@ -6,8 +6,12 @@ import {electra, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../../src/testUtils/state.js";
 import {generateBuilderPendingDeposits} from "../../../src/testUtils/util.js";
-import {CachedBeaconStateGloas} from "../../../src/types.js";
-import {BatchOnboardBuilder} from "../../../src/util/onboardBuilder.js";
+import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../../../src/types.js";
+import {
+  BatchOnboardBuilder,
+  MAX_BUILDER_DEPOSITS_PER_SLOT,
+  preVerifyBuilderDeposits,
+} from "../../../src/util/onboardBuilder.js";
 
 describe("BatchOnboardBuilder", () => {
   const chainConfig = getConfig(ForkName.gloas);
@@ -97,7 +101,7 @@ describe("BatchOnboardBuilder", () => {
     it("returns the index after addBuilderToRegistry pushes", () => {
       const state = buildGloasState();
       const batcher = new BatchOnboardBuilder(state);
-      batcher.addBuilderToRegistry(pool[0].pubkey, pool[0].withdrawalCredentials, pool[0].amount, pool[0].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[0]);
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(0);
     });
   });
@@ -107,7 +111,7 @@ describe("BatchOnboardBuilder", () => {
       const state = buildGloasState();
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[0].pubkey, pool[0].withdrawalCredentials, pool[0].amount, pool[0].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[0]);
 
       expect(state.builders.length).toBe(1);
       expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[0].pubkey));
@@ -121,7 +125,7 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
 
       expect(state.builders.length).toBe(3);
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[5].pubkey))).toBe(2);
@@ -139,7 +143,7 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
 
       // length unchanged — slot was reused
       expect(state.builders.length).toBe(1);
@@ -154,7 +158,7 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
 
       // displaced pubkey is gone; new pubkey points at the reused slot
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(null);
@@ -172,7 +176,7 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
 
       expect(state.builders.length).toBe(3);
       expect(toPubkeyHex(state.builders.get(1).pubkey)).toBe(toPubkeyHex(pool[5].pubkey));
@@ -187,8 +191,8 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
-      batcher.addBuilderToRegistry(pool[6].pubkey, pool[6].withdrawalCredentials, pool[6].amount, pool[6].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
+      batcher.onboardBuilderVerifiedSignature(pool[6]);
 
       expect(state.builders.length).toBe(2);
       expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[5].pubkey));
@@ -206,7 +210,7 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
 
       // pushed at end, not reused
       expect(state.builders.length).toBe(2);
@@ -220,9 +224,9 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
       // second call: cursor was set to preExisting.length; should push directly
-      batcher.addBuilderToRegistry(pool[6].pubkey, pool[6].withdrawalCredentials, pool[6].amount, pool[6].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[6]);
 
       expect(state.builders.length).toBe(4);
       expect(toPubkeyHex(state.builders.get(2).pubkey)).toBe(toPubkeyHex(pool[5].pubkey));
@@ -253,7 +257,7 @@ describe("BatchOnboardBuilder", () => {
       batcher.topupBuilder(0, 1_000_000_000);
 
       // now try to onboard a new builder — should push, not reuse slot 0
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
 
       expect(state.builders.length).toBe(2);
       expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[0].pubkey));
@@ -265,7 +269,7 @@ describe("BatchOnboardBuilder", () => {
       const state = buildGloasState();
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[0].pubkey, pool[0].withdrawalCredentials, pool[0].amount, pool[0].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[0]);
       // Index 0 is past the empty preExistingBuilders array. Should not throw.
       batcher.topupBuilder(0, 500_000_000);
 
@@ -279,7 +283,7 @@ describe("BatchOnboardBuilder", () => {
       });
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
       // slot 0 now holds pool[5]; index 0 is still < preExistingBuilders.length
       batcher.topupBuilder(0, 500_000_000);
 
@@ -317,7 +321,7 @@ describe("BatchOnboardBuilder", () => {
       const state = buildGloasState();
       const batcher = new BatchOnboardBuilder(state);
 
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
 
       expect(state.builders.length).toBe(0);
     });
@@ -328,14 +332,14 @@ describe("BatchOnboardBuilder", () => {
 
       batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
       batcher.queueBuilderDeposit(toPubkeyHex(pool[1].pubkey), pool[1]);
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
 
       expect(state.builders.length).toBe(2);
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(0);
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[1].pubkey))).toBe(1);
 
       // queue cleared — calling again is a no-op
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
       expect(state.builders.length).toBe(2);
     });
 
@@ -347,7 +351,7 @@ describe("BatchOnboardBuilder", () => {
       batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
       batcher.queueBuilderDeposit(toPubkeyHex(bad.pubkey), bad);
       batcher.queueBuilderDeposit(toPubkeyHex(pool[2].pubkey), pool[2]);
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
 
       // valid deposits onboarded, invalid one dropped
       expect(state.builders.length).toBe(2);
@@ -365,7 +369,7 @@ describe("BatchOnboardBuilder", () => {
 
       batcher.queueBuilderDeposit(toPubkeyHex(pool[0].pubkey), pool[0]);
       batcher.queueBuilderDeposit(toPubkeyHex(pool[1].pubkey), pool[1]);
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
 
       // pool[0] reuses slot 0 (eligible); pool[1] pushes to slot 2 (since cursor moved past 1 which is ineligible)
       expect(state.builders.length).toBe(3);
@@ -443,7 +447,7 @@ describe("BatchOnboardBuilder", () => {
       expect(state.builders.length).toBe(1); // just the pre-existing builder
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(null);
 
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
       expect(state.builders.length).toBe(2);
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[0].pubkey))).toBe(1);
     });
@@ -469,7 +473,7 @@ describe("BatchOnboardBuilder", () => {
       // pool[50]'s pubkey doesn't have a real signed deposit in the pool; reuse pool[1]
       // as the new-onboard deposit to keep BLS happy. The point is the ordering, not the pubkey.
       batcher.queueBuilderDeposit(toPubkeyHex(pool[1].pubkey), pool[1]);
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
 
       // Final state: D at slot 0 (reused), the re-routed deposit at slot 1 (pushed)
       expect(state.builders.length).toBe(2);
@@ -519,7 +523,7 @@ describe("BatchOnboardBuilder", () => {
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[2].pubkey))).toBe(null);
 
       // End-of-envelope flush applies the deferred batch
-      batcher.onboardBuilders();
+      batcher.onboardQueuedBuilders();
       expect(state.builders.length).toBe(3);
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[1].pubkey))).toBe(1);
       expect(batcher.getAppliedBuilderIndex(toPubkeyHex(pool[2].pubkey))).toBe(2);
@@ -537,7 +541,7 @@ describe("BatchOnboardBuilder", () => {
       const batcher = new BatchOnboardBuilder(state);
 
       // Reuse slot 0 for pool[5]
-      batcher.addBuilderToRegistry(pool[5].pubkey, pool[5].withdrawalCredentials, pool[5].amount, pool[5].slot);
+      batcher.onboardBuilderVerifiedSignature(pool[5]);
 
       // The displaced pubkey must not resolve to slot 0 anymore — otherwise a
       // top-up for pool[50] would silently credit pool[5]'s balance.
@@ -545,6 +549,167 @@ describe("BatchOnboardBuilder", () => {
 
       // Sanity: slot 0 actually holds pool[5] now
       expect(toPubkeyHex(state.builders.get(0).pubkey)).toBe(toPubkeyHex(pool[5].pubkey));
+    });
+  });
+
+  describe("preVerifyBuilderDeposits", () => {
+    /** Pool of validly-signed builder deposits — distinct interop pubkeys [3000, 3099). */
+    const scannerPool = generateBuilderPendingDeposits(beaconConfig, 100, 3000);
+
+    function depositAtSlot(deposit: electra.PendingDeposit, slot: number): electra.PendingDeposit {
+      return {...deposit, slot};
+    }
+
+    /**
+     * Build a pre-Gloas cached state with pre-populated pendingDeposits. A Gloas state
+     * cast as CachedBeaconStateElectra works — preVerifyBuilderDeposits only touches
+     * pendingDeposits + epochCtx.gloaOnboardBuilderCache, which are present on all
+     * post-Electra forks.
+     */
+    function buildStateWithDeposits(deposits: electra.PendingDeposit[]): CachedBeaconStateElectra {
+      const stateView = ssz.gloas.BeaconState.defaultViewDU();
+      for (const d of deposits) {
+        stateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(d));
+      }
+      const cachedState = createCachedBeaconStateTest(stateView, chainConfig, {
+        skipSyncCommitteeCache: true,
+        skipSyncPubkeys: true,
+      });
+      cachedState.commit();
+      return cachedState as unknown as CachedBeaconStateElectra;
+    }
+
+    it("returns zero counts and null slot range when there are no pending deposits", () => {
+      const state = buildStateWithDeposits([]);
+      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      expect(result).toEqual({verifiedCount: 0, invalidCount: 0, fromSlot: null, toSlot: null});
+      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(0);
+    });
+
+    it("verifies builder-prefix deposits and stashes them on the cache", () => {
+      const deposits = [
+        depositAtSlot(scannerPool[0], 1),
+        depositAtSlot(scannerPool[1], 1),
+        depositAtSlot(scannerPool[2], 2),
+      ];
+      const state = buildStateWithDeposits(deposits);
+
+      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+
+      expect(result.verifiedCount).toBe(3);
+      expect(result.invalidCount).toBe(0);
+      expect(result.fromSlot).toBe(1);
+      expect(result.toSlot).toBe(2);
+      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(2);
+      for (const d of deposits) {
+        expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(d)).toBe(true);
+      }
+    });
+
+    it("skips deposits whose withdrawal credential prefix is not BUILDER_WITHDRAWAL_PREFIX", () => {
+      const validatorDeposit: electra.PendingDeposit = {
+        ...scannerPool[0],
+        // 0x01 = eth1 withdrawal credential (validator, not builder)
+        withdrawalCredentials: Buffer.concat([Buffer.from([0x01]), Buffer.alloc(31, 0)]),
+        slot: 1,
+      };
+      const builderDeposit = depositAtSlot(scannerPool[1], 2);
+      const state = buildStateWithDeposits([validatorDeposit, builderDeposit]);
+
+      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+
+      // Only the builder deposit was processed
+      expect(result.verifiedCount).toBe(1);
+      expect(result.fromSlot).toBe(2);
+      expect(result.toSlot).toBe(2);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(validatorDeposit)).toBe(false);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(builderDeposit)).toBe(true);
+    });
+
+    it("skips deposits with slot <= lastVerifiedSlot (cursor honored)", () => {
+      const deposits = [
+        depositAtSlot(scannerPool[0], 1),
+        depositAtSlot(scannerPool[1], 2),
+        depositAtSlot(scannerPool[2], 3),
+      ];
+      const state = buildStateWithDeposits(deposits);
+
+      // Pretend slots 1 and 2 were already verified in a prior tick
+      state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot = 2;
+
+      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+
+      expect(result.verifiedCount).toBe(1);
+      expect(result.fromSlot).toBe(3);
+      expect(result.toSlot).toBe(3);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[0])).toBe(false);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[2])).toBe(true);
+    });
+
+    it("counts invalid signatures separately and excludes them from the cache", () => {
+      const good1 = depositAtSlot(scannerPool[0], 1);
+      const bad: electra.PendingDeposit = {...depositAtSlot(scannerPool[1], 1), signature: Buffer.alloc(96)};
+      const good2 = depositAtSlot(scannerPool[2], 1);
+      const state = buildStateWithDeposits([good1, bad, good2]);
+
+      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+
+      expect(result.verifiedCount).toBe(2);
+      expect(result.invalidCount).toBe(1);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(good1)).toBe(true);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(bad)).toBe(false);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(good2)).toBe(true);
+    });
+
+    it("stops on a slot boundary when maxBuilderDeposits is exceeded", () => {
+      // Two deposits at slot 1, two at slot 2, two at slot 3
+      const deposits = [
+        depositAtSlot(scannerPool[0], 1),
+        depositAtSlot(scannerPool[1], 1),
+        depositAtSlot(scannerPool[2], 2),
+        depositAtSlot(scannerPool[3], 2),
+        depositAtSlot(scannerPool[4], 3),
+        depositAtSlot(scannerPool[5], 3),
+      ];
+      const state = buildStateWithDeposits(deposits);
+
+      // Cap at 3 — the third deposit (slot 2) pushes us past the cap, but we keep going
+      // until slot transitions to a strictly greater one. So we should pick up both slot-2
+      // deposits (4 total) and stop before slot 3.
+      const result = preVerifyBuilderDeposits(state, 3);
+
+      expect(result.verifiedCount).toBe(4);
+      expect(result.invalidCount).toBe(0);
+      expect(result.fromSlot).toBe(1);
+      expect(result.toSlot).toBe(2);
+      // lastVerifiedSlot advances only over fully-completed slots
+      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(2);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[4])).toBe(false);
+      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[5])).toBe(false);
+    });
+
+    it("subsequent call resumes at lastVerifiedSlot + 1", () => {
+      const deposits = [
+        depositAtSlot(scannerPool[0], 1),
+        depositAtSlot(scannerPool[1], 2),
+        depositAtSlot(scannerPool[2], 2),
+        depositAtSlot(scannerPool[3], 3),
+      ];
+      const state = buildStateWithDeposits(deposits);
+
+      // First call: cap at 1, so we pick up slot 1 only (1 deposit, finishes that slot)
+      const r1 = preVerifyBuilderDeposits(state, 1);
+      expect(r1.verifiedCount).toBe(1);
+      expect(r1.fromSlot).toBe(1);
+      expect(r1.toSlot).toBe(1);
+      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(1);
+
+      // Second call: resumes at slot 2 onward
+      const r2 = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      expect(r2.verifiedCount).toBe(3);
+      expect(r2.fromSlot).toBe(2);
+      expect(r2.toSlot).toBe(3);
+      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(3);
     });
   });
 });

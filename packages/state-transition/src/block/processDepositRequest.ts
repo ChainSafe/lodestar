@@ -56,7 +56,7 @@ export function processDepositRequest(
         slot: state.slot,
       });
       // this is for the spec test where we want to eagerly onboard builder immediately
-      if (ownsBatcher) onboarder.onboardBuilders();
+      if (ownsBatcher) onboarder.onboardQueuedBuilders();
       return;
     }
 

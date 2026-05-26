@@ -18,6 +18,7 @@ export * from "./genesis.js";
 export * from "./gloas.js";
 export * from "./interop.js";
 export * from "./loadState/index.js";
+export * from "./onboardBuilder.js";
 export * from "./pendingDepositsLookup.js";
 export * from "./rootCache.js";
 export * from "./seed.js";

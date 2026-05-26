@@ -1,16 +1,48 @@
 import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_DEPOSIT, FAR_FUTURE_EPOCH} from "@lodestar/params";
-import {BLSPubkey, BuilderIndex, Bytes32, Epoch, PubkeyHex, UintNum64, electra, gloas, ssz} from "@lodestar/types";
+import {
+  BLSPubkey,
+  BuilderIndex,
+  Bytes32,
+  Epoch,
+  PubkeyHex,
+  Slot,
+  UintNum64,
+  electra,
+  gloas,
+  ssz,
+} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
-import {CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateElectra, CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {computeDomain} from "./domain.js";
 import {computeEpochAtSlot} from "./epoch.ts";
+import {isBuilderWithdrawalCredential} from "./gloas.js";
 import {computeSigningRoot} from "./signingRoot.js";
 
 /** Verify queued builder deposit signatures in batches of this size. */
 const BUILDER_DEPOSIT_BATCH_SIZE = 32;
+
+/**
+ * Per-slot cap on builder deposits the prepareForNextSlot scanner will verify.
+ * ~2.7s for 10_000 BLS verifications on a typical server — fits within the slot budget
+ * while letting the pre-window (see GLOAS_PREVERIFY_WINDOW_EPOCHS) cover up to ~620k
+ * deposits (10_000 * 31 non-epoch-transition slots * 2 epochs).
+ */
+export const MAX_BUILDER_DEPOSITS_PER_SLOT = 10_000;
+
+/**
+ * Number of epochs before GLOAS_FORK_EPOCH during which the prepareForNextSlot scanner
+ * pre-verifies builder-deposit signatures. Two is chosen because deposits arriving inside
+ * this window cannot collude with validator deposits — the validator-vs-builder routing
+ * is decided at the fork boundary based on what is already in pendingDeposits, so anything
+ * submitted this late is unambiguous.
+ *
+ * TODO GLOAS: revisit if observed builder-deposit volumes push us past ~620k preverifiable
+ * deposits (= MAX_BUILDER_DEPOSITS_PER_SLOT * 31 * this value).
+ */
+export const GLOAS_PREVERIFY_WINDOW_EPOCHS = 2;
 
 /**
  * Encapsulates the queue + applier state used while onboarding builders from pending deposits.
@@ -73,8 +105,14 @@ export class BatchOnboardBuilder {
       this.nextReuseIndexCheck < this.preExistingBuilders.length ||
       this.queuedBuilderDeposits.size >= BUILDER_DEPOSIT_BATCH_SIZE
     ) {
-      this.onboardBuilders();
+      this.onboardQueuedBuilders();
     }
+  }
+
+  /** Consumer should verify builder deposit's signature before calling this function */
+  onboardBuilderVerifiedSignature(deposit: electra.PendingDeposit): void {
+    this.onboardQueuedBuilders();
+    this.addBuilderToRegistry(deposit.pubkey, deposit.withdrawalCredentials, deposit.amount, deposit.slot);
   }
 
   /** Top up an already-onboarded builder's balance. No signature verification needed. */
@@ -89,12 +127,12 @@ export class BatchOnboardBuilder {
   /** Onboard queued builders if this pubkey is in the queue */
   onboardBuildersIfQueued(pubkeyHex: PubkeyHex): void {
     if (this.queuedBuilderDeposits.has(pubkeyHex)) {
-      this.onboardBuilders();
+      this.onboardQueuedBuilders();
     }
   }
 
   /** Batch-verify the queued deposits and apply the ones with valid signatures. */
-  onboardBuilders(): void {
+  onboardQueuedBuilders(): void {
     if (this.queuedBuilderDeposits.size === 0) {
       return;
     }
@@ -113,7 +151,15 @@ export class BatchOnboardBuilder {
     this.queuedBuilderDeposits.clear();
   }
 
-  addBuilderToRegistry(pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amount: UintNum64, slot: UintNum64): void {
+  /**
+   * Consumer should not call this function directly because we need to onboard any pending builder deposits before this.
+   */
+  private addBuilderToRegistry(
+    pubkey: BLSPubkey,
+    withdrawalCredentials: Bytes32,
+    amount: UintNum64,
+    slot: UintNum64
+  ): void {
     const currentEpoch = computeEpochAtSlot(this.state.slot);
     const depositEpoch = computeEpochAtSlot(slot);
 
@@ -161,7 +207,7 @@ function buildNewBuilder(pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amou
  * back to verifying each deposit individually so the valid deposits in a batch that
  * contains an invalid one are still identified. Returns a boolean per input deposit.
  */
-function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDeposit[]): boolean[] {
+export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDeposit[]): boolean[] {
   const results = new Array<boolean>(deposits.length).fill(false);
   // Deposit signatures use a fork-agnostic domain, see `isValidDepositSignature`
   const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
@@ -222,4 +268,94 @@ function verifyDepositSignatures(config: BeaconConfig, deposits: electra.Pending
   }
 
   return results;
+}
+
+/** Summary of a single `preVerifyBuilderDeposits` call. */
+export type PreVerifyBuilderDepositsResult = {
+  /** Number of builder-prefix deposits whose signatures passed verification (added to the cache). */
+  verifiedCount: number;
+  /**
+   * Number of builder-prefix deposits whose signatures failed verification (dropped silently here;
+   * the fork-transition path will re-verify and similarly drop them). Non-zero is worth surfacing —
+   * legitimate deposits should not have invalid signatures, so a spike likely indicates abuse.
+   */
+  invalidCount: number;
+  /** Inclusive lower bound of `deposit.slot` values processed in this call. `null` when nothing was processed. */
+  fromSlot: Slot | null;
+  /** Inclusive upper bound of `deposit.slot` values processed in this call. `null` when nothing was processed. */
+  toSlot: Slot | null;
+};
+
+/**
+ * Scanner driven by `prepareForNextSlot` over the n epochs leading up to GLOAS_FORK_EPOCH.
+ *
+ * Walks `state.pendingDeposits` (ascending by deposit.slot), picks builder-prefix
+ * deposits not yet covered by the cache, and signature-verifies them in chunks of
+ * BUILDER_DEPOSIT_BATCH_SIZE. Verified roots are stashed on
+ * `state.gloaOnboardBuilderCache` so that `onboardBuildersFromPendingDeposits`
+ * at the fork transition can skip the bulk verification cost.
+ *
+ * Cuts off at `maxBuilderDeposits` on a slot boundary so `lastVerifiedSlot` only
+ * advances over fully-completed slots (slight overage within a single slot is
+ * acceptable; it keeps the resume cursor unambiguous).
+ *
+ * Caller must guarantee the fork-epoch + non-epoch-transition gates.
+ *
+ * Returns counts and the inclusive deposit-slot range processed so callers can
+ * log progress and surface invalid-signature counts as an anomaly signal.
+ */
+export function preVerifyBuilderDeposits(
+  state: CachedBeaconStateElectra | CachedBeaconStateFulu,
+  maxBuilderDeposits: number
+): PreVerifyBuilderDepositsResult {
+  const cache = state.epochCtx.gloaOnboardBuilderCache;
+  const cursor = cache.lastVerifiedSlot;
+
+  // Phase 1: collect builder-prefix deposits whose slot > cursor, cutting at a slot boundary.
+  // Iterate via getAllReadonly() — light-weight tree views, no full materialization.
+  const queue: electra.PendingDeposit[] = [];
+  let minSlotInQueue: Slot | null = null;
+  let maxSlotInQueue = cursor;
+  for (const deposit of state.pendingDeposits.getAllReadonly()) {
+    if (deposit.slot <= cursor) continue;
+    if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) continue;
+
+    // Stop only on a slot boundary: once we've hit the cap and the next deposit's
+    // slot is strictly greater than what's already queued, the current slot is
+    // fully accounted for — safe to break.
+    if (queue.length >= maxBuilderDeposits && deposit.slot > maxSlotInQueue) break;
+
+    queue.push(deposit);
+    if (minSlotInQueue === null) minSlotInQueue = deposit.slot;
+    if (deposit.slot > maxSlotInQueue) maxSlotInQueue = deposit.slot;
+  }
+
+  if (queue.length === 0) {
+    return {verifiedCount: 0, invalidCount: 0, fromSlot: null, toSlot: null};
+  }
+
+  // Phase 2: verify in BUILDER_DEPOSIT_BATCH_SIZE chunks and record verified deposits inline
+  // (no intermediate filtered array — the cache exposes a singular setter on purpose).
+  // Chunking caps the fallback blast radius: a single bad signature only forces 32
+  // individual re-verifications, not the full maxBuilderDeposits.
+  let verifiedCount = 0;
+  for (let start = 0; start < queue.length; start += BUILDER_DEPOSIT_BATCH_SIZE) {
+    const end = Math.min(start + BUILDER_DEPOSIT_BATCH_SIZE, queue.length);
+    const chunk = queue.slice(start, end);
+    const results = verifyDepositSignatures(state.epochCtx.config, chunk);
+    for (let j = 0; j < chunk.length; j++) {
+      if (results[j]) {
+        cache.setVerifiedDeposit(chunk[j]);
+        verifiedCount++;
+      }
+    }
+  }
+  cache.lastVerifiedSlot = maxSlotInQueue;
+
+  return {
+    verifiedCount,
+    invalidCount: queue.length - verifiedCount,
+    fromSlot: minSlotInQueue,
+    toSlot: maxSlotInQueue,
+  };
 }

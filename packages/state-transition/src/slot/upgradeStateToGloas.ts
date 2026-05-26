@@ -134,8 +134,14 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
         continue;
       }
 
-      // New builder candidate: queue it for lazy batch signature verification
-      batcher.queueBuilderDeposit(pubkeyHex, deposit);
+      // New builder candidate. If the prepareForNextSlot scanner already
+      // signature-verified this exact deposit in the n epochs leading up to
+      // the fork, fast-path it; otherwise queue for lazy batch verification.
+      if (state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposit)) {
+        batcher.onboardBuilderVerifiedSignature(deposit);
+      } else {
+        batcher.queueBuilderDeposit(pubkeyHex, deposit);
+      }
     } else {
       // Top-up of an already-onboarded builder; no signature verification needed
       batcher.topupBuilder(builderIndex, deposit.amount);
@@ -143,7 +149,9 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
   }
 
   // Verify and apply any remaining queued builder deposits
-  batcher.onboardBuilders();
+  batcher.onboardQueuedBuilders();
 
   state.pendingDeposits = pendingDeposits;
+
+  // NOTE: we intentionally do NOT clear gloaOnboardBuilderCache here, let beacon-node handle it
 }
