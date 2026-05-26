@@ -218,11 +218,6 @@ export type Endpoints = {
    * Instructs the beacon node to broadcast a signed execution payload envelope to the network,
    * to be gossiped for payload validation. A success response (20x) indicates that the envelope
    * passed gossip validation and was successfully broadcast onto the network.
-   *
-   * Body is either a bare `SignedExecutionPayloadEnvelope` (stateful: the receiving beacon node
-   * already has blobs cached from block production) or a `SignedExecutionPayloadEnvelopeContents`
-   * wrapper (stateless: envelope bundled with blobs and KZG proofs for multi-BN, DVT, or failover).
-   * See beacon-APIs PR #580.
    */
   publishExecutionPayloadEnvelope: Endpoint<
     "POST",
