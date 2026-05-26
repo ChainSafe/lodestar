@@ -698,9 +698,6 @@ export function getBeaconBlockApi({
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
-      // Stateless mode (beacon-APIs PR #580): the validator client supplied blobs + KZG proofs
-      // alongside the envelope. Always trust those over any cached block-production data; this is
-      // the path external builders and multi-BN/DVT setups use, where the cache may be empty.
       if ((blobs === undefined) !== (kzgProofs === undefined)) {
         throw new ApiError(400, "blobs and kzgProofs must both be supplied or both omitted");
       }
@@ -764,7 +761,6 @@ export function getBeaconBlockApi({
           timer?.();
         }
       }
-      // External builder + no supplied blobs: nothing to publish (builder gossips columns separately).
 
       // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
