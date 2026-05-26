@@ -322,6 +322,7 @@ exceptions:
 
     # gloas
     - add_builder_to_registry#gloas
+    - apply_deposit_for_builder#gloas
     - apply_withdrawals#gloas
     - compute_balance_weighted_selection#gloas
     - compute_fork_version#gloas
