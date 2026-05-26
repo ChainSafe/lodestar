@@ -4,8 +4,8 @@ import {ssz} from "@lodestar/types";
 import {BroadcastValidation, getDefinitions} from "../../../src/beacon/routes/beacon/block.js";
 import {WireFormat} from "../../../src/utils/wireFormat.js";
 
-function lowercaseKeys<T extends Record<string, string>>(headers: T): Record<string, string> {
-  return Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v]));
+function lowercaseKeys<T extends Record<string, string>>(headers: T): T {
+  return Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), v])) as T;
 }
 
 describe("publishExecutionPayloadEnvelope route", () => {
