@@ -1112,11 +1112,9 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      // Per spec (gloas/validator.md): if no beacon block has been seen for the assigned
-      // slot, the validator must not submit a payload attestation. Return 404 so the
-      // validator client skips submission rather than attesting on a stale block root.
       const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
+        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
         throw new ApiError(404, `No canonical block found at slot=${slot}`);
       }
 
@@ -1125,11 +1123,14 @@ export function getValidatorApi(
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
       const payloadDueSec = config.getPayloadDueMs() / 1000;
-      const payloadPresent =
-        payloadInput !== undefined &&
-        payloadInput.hasPayloadEnvelope() &&
-        chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
-      const blobDataAvailable = payloadInput?.hasAllData() ?? false;
+      let payloadPresent = false;
+      let blobDataAvailable = false;
+      if (payloadInput !== undefined) {
+        payloadPresent =
+          payloadInput.hasPayloadEnvelope() &&
+          chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
+        blobDataAvailable = payloadInput.hasAllData();
+      }
 
       return {
         data: {

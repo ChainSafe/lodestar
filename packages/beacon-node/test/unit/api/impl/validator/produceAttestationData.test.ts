@@ -104,9 +104,7 @@ describe("api - validator - produceAttestationData", () => {
 
       modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue(null);
 
-      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow(
-        "No canonical block found at slot=1"
-      );
+      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow("No canonical block found at slot=1");
     });
   });
 });

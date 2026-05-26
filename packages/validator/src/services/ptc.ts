@@ -70,8 +70,7 @@ export class PtcService {
 
     try {
       const payloadAttestationData = await this.producePayloadAttestationData(slot);
-      // Per spec (gloas/validator.md): if no beacon block was seen for the assigned slot,
-      // do not submit a payload attestation. The beacon node signals this with HTTP 404.
+      // If no beacon block was seen for the assigned slot, do not submit a payload attestation
       if (payloadAttestationData === null) {
         this.logger.debug("Skipping payload attestation, no beacon block seen for slot", {slot});
         return;
