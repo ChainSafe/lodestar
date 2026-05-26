@@ -49,6 +49,7 @@ import {
   ProduceFullFulu,
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
+import {validateCellsAndKzgCommitments} from "../../../../chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
@@ -721,6 +722,14 @@ export function getBeaconBlockApi({
         if (blobs.length > 0) {
           const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
           const cells = blobs.map((blob) => kzg.computeCells(blob));
+          try {
+            await validateCellsAndKzgCommitments(payloadInput.getBlobKzgCommitments(), kzgProofs, cells);
+          } catch (e) {
+            throw new ApiError(
+              400,
+              `Invalid supplied blobs/kzg_proofs against bid kzg_commitments: ${(e as Error).message}`
+            );
+          }
           const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
             cells: rowCells,
             proofs: kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
