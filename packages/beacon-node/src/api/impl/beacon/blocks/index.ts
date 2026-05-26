@@ -690,6 +690,13 @@ export function getBeaconBlockApi({
 
       await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
+      // TODO GLOAS: if block and payload are submitted in parallel, payloadInput may not yet exist.
+      // A queuing mechanism is needed to handle this case. See https://github.com/ChainSafe/lodestar/issues/8915
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
+      }
+
       // Stateless mode (beacon-APIs PR #580): the validator client supplied blobs + KZG proofs
       // alongside the envelope. Always trust those over any cached block-production data; this is
       // the path external builders and multi-BN/DVT setups use, where the cache may be empty.
@@ -698,6 +705,10 @@ export function getBeaconBlockApi({
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
 
       if (hasSuppliedBlobs) {
+        const expectedBlobs = payloadInput.getBlobKzgCommitments().length;
+        if (blobs.length !== expectedBlobs) {
+          throw new ApiError(400, `Expected ${expectedBlobs} blobs to match bid kzg_commitments, got ${blobs.length}`);
+        }
         if (kzgProofs.length !== blobs.length * NUMBER_OF_COLUMNS) {
           throw new ApiError(
             400,
@@ -747,13 +758,6 @@ export function getBeaconBlockApi({
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         await sleep(msToBlockSlot);
-      }
-
-      // TODO GLOAS: if block and payload are submitted in parallel, payloadInput may not yet exist.
-      // A queuing mechanism is needed to handle this case. See https://github.com/ChainSafe/lodestar/issues/8915
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-      if (!payloadInput) {
-        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
       payloadInput.addPayloadEnvelope({
