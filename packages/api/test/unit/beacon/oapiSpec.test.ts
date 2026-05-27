@@ -55,8 +55,6 @@ const ignoredOperations = [
   /* missing route */
   "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
   "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
-  // TODO GLOAS: required by v5.0.0-alpha.1
-  "publishExecutionPayloadBid",
   "getExecutionPayloadBid",
   "getSignedExecutionPayloadEnvelope",
 ];

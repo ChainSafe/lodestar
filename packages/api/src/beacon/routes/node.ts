@@ -108,6 +108,7 @@ export enum ClientCode {
   BU = "BU", // besu
   EJ = "EJ", // ethereumJS
   EG = "EG", // erigon
+  EX = "EX", // ethrex
   GE = "GE", // go-ethereum
   GR = "GR", // grandine
   LH = "LH", // lighthouse

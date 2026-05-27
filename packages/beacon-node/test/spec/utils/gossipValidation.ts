@@ -470,6 +470,7 @@ export async function runGossipValidationTest(
         }
 
         const postState = computePostState(parentState, signedBlock, fork);
+        const expectedProposerIndex: number | null = chain.getHeadState().getBeaconProposerOrNull(slot);
 
         if (blockEntry.failed && blockEntry.payload_status === "VALID") {
           clock.setSlot(slot);
@@ -480,7 +481,8 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Valid,
-            getDataAvailabilityStatusForFork(fork)
+            getDataAvailabilityStatusForFork(fork),
+            expectedProposerIndex
           );
           blockStatesByRoot.set(blockRootHex, postState);
           continue;
@@ -495,7 +497,8 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Syncing,
-            getDataAvailabilityStatusForFork(fork)
+            getDataAvailabilityStatusForFork(fork),
+            expectedProposerIndex
           );
           blockStatesByRoot.set(blockRootHex, postState);
           invalidateImportedBlock(chain, blockRootHex, parentRootHex);

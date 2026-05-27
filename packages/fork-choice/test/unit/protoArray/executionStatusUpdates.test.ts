@@ -96,6 +96,7 @@ function setupForkChoice(): ProtoArray {
         : {
             executionPayloadBlockHash: block.root,
             executionPayloadNumber: block.slot,
+            executionPayloadGasLimit: 30000000,
             executionStatus: block.executionStatus,
             dataAvailabilityStatus: DataAvailabilityStatus.PreData,
           }

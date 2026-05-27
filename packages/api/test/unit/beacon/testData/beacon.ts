@@ -95,6 +95,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedExecutionPayloadEnvelope: ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue()},
     res: undefined,
   },
+  publishExecutionPayloadBid: {
+    args: {signedExecutionPayloadBid: ssz.gloas.SignedExecutionPayloadBid.defaultValue()},
+    res: undefined,
+  },
   getSignedExecutionPayloadEnvelope: {
     args: {blockId: "head"},
     res: {
@@ -130,6 +134,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getPoolPayloadAttestations: {
     args: {slot: 1},
     res: {data: [ssz.gloas.PayloadAttestation.defaultValue()], meta: {version: ForkName.gloas}},
+  },
+  getPoolProposerPreferences: {
+    args: {slot: 1},
+    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
   },
   getPoolAttesterSlashings: {
     args: undefined,
@@ -185,6 +193,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   submitPayloadAttestationMessages: {
     args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
+    res: undefined,
+  },
+  submitSignedProposerPreferences: {
+    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
     res: undefined,
   },
 

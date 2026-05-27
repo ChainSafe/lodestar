@@ -89,6 +89,7 @@ export interface IBeaconStateView {
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
+  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
@@ -253,7 +254,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getEpochPTCs(epoch: Epoch): Uint32Array[];
-  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
+  getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
   /**
    * Clone the state and apply parent execution payload effects.
    * Used during block production and prepareNextSlot so that withdrawals and

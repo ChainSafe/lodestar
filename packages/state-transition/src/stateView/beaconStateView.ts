@@ -423,16 +423,27 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     throw new Error(`PTC committees are not available for epoch=${epoch}`);
   }
   /**
-   * Return the index of the validator in the PTC committee for the given slot.
-   * return -1 if validator is not in the PTC committee for the given slot.
+   * Return all positions of the validator in the PTC committee for the given slot.
+   *
+   * `compute_ptc` samples by effective balance and may place the same validator at multiple
+   * positions, so a validator can have more than one index. Returns an empty array if the
+   * validator is not in the PTC for the given slot.
+   *
+   * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
    */
-  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number {
+  getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[] {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("PTC committees are not supported before Gloas");
     }
 
     const ptcCommittee = (this.cachedState as CachedBeaconStateGloas).epochCtx.getPayloadTimelinessCommittee(slot);
-    return ptcCommittee.indexOf(validatorIndex);
+    const indices: number[] = [];
+    for (let i = 0; i < ptcCommittee.length; i++) {
+      if (ptcCommittee[i] === validatorIndex) {
+        indices.push(i);
+      }
+    }
+    return indices;
   }
 
   // Shuffling and committees
@@ -485,6 +496,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getBeaconProposer(slot: number): ValidatorIndex {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
+  }
+
+  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
+    try {
+      return this.cachedState.epochCtx.getBeaconProposer(slot);
+    } catch {
+      return null;
+    }
   }
 
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
