@@ -217,17 +217,25 @@ const forkChoiceTest =
                 throw Error(`No payload attestation message ${step.payload_attestation_message}`);
               try {
                 const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
-                const ptc = cachedState.epochCtx.getPayloadTimelinessCommittee(chain.getHeadState().slot);
-                const ptcIndex = ptc.indexOf(payloadAttestationMessage.validatorIndex);
-                if (ptcIndex === -1) {
-                  throw Error(
-                    `Validator ${payloadAttestationMessage.validatorIndex} not in PTC for slot ${payloadAttestationMessage.data.slot}`
-                  );
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRoot);
+                if (!protoBlock) {
+                  throw Error(`Block not found for root ${blockRoot}`);
                 }
+                const blockState = await chain.regen.getBlockSlotState(
+                  protoBlock,
+                  payloadAttestationMessage.data.slot,
+                  {dontTransferCache: true},
+                  RegenCaller.processBlock
+                );
+                const ptcIndices = (blockState as IBeaconStateViewGloas).getIndicesInPayloadTimelinessCommittee(
+                  payloadAttestationMessage.validatorIndex,
+                  payloadAttestationMessage.data.slot
+                );
                 chain.forkChoice.notifyPtcMessages(
                   blockRoot,
-                  [ptcIndex],
-                  payloadAttestationMessage.data.payloadPresent
+                  ptcIndices,
+                  payloadAttestationMessage.data.payloadPresent,
+                  payloadAttestationMessage.data.blobDataAvailable,
                 );
                 if (!isValid) throw Error("Expected invalid payload attestation message to throw");
               } catch (e) {
