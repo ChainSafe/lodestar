@@ -151,6 +151,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     abortController.signal.addEventListener(
       "abort",
       async () => {
+        buddy?.stop();
         try {
           await node.close();
           logger.debug("Beacon node closed");

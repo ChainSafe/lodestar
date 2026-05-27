@@ -173,15 +173,12 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
 
   fun: {
     hidden: true,
-    description: "Enable beacon buddy ASCII pet easter egg (off|tty|file|both)",
+    // A value is required: yargs would otherwise swallow the next CLI token
+    // (e.g. `--fun --reset` would set fun="--reset"). Use `--fun both` or `--fun=both`.
+    description: "Enable beacon buddy ASCII pet easter egg. Requires a value: off|tty|file|both",
     type: "string",
     choices: ["off", "tty", "file", "both"],
     default: "off",
-    coerce: (v: string | boolean | undefined): "off" | "tty" | "file" | "both" => {
-      // Bare `--fun` (no value) resolves to "both"
-      if (v === true || v === "" || v === undefined) return "both";
-      return v as "off" | "tty" | "file" | "both";
-    },
   },
 };
 
