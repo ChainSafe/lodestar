@@ -235,11 +235,11 @@ const forkChoiceTest =
                   blockRoot,
                   ptcIndices,
                   payloadAttestationMessage.data.payloadPresent,
-                  payloadAttestationMessage.data.blobDataAvailable,
+                  payloadAttestationMessage.data.blobDataAvailable
                 );
-                if (!isValid) throw Error("Expected invalid payload attestation message to throw");
+                if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
-                if (isValid) throw e;
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
               }
             }
 
