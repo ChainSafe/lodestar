@@ -40,40 +40,54 @@ export function startBeaconBuddy({node, dataDir, mode, logger}: StartBuddyOpts):
     }
   }
 
-  const onReorg = ({slot}: routes.events.EventData[routes.events.EventType.chainReorg]): void => {
-    lastReorgSlot = slot;
+  // Easter-egg listeners must never escape an error into the beacon node's
+  // event emitters: wrap every body so the consensus path is unaffected.
+  const onReorg = (data: routes.events.EventData[routes.events.EventType.chainReorg]): void => {
+    try {
+      lastReorgSlot = data.slot;
+    } catch (e) {
+      logger.debug("beacon buddy: onReorg failed", {}, e as Error);
+    }
   };
 
   const onSlot = (slot: number): void => {
-    const peers = safeCall(() => node.network.getConnectedPeerCount(), 0);
-    const sync = safeCall(() => node.sync.getSyncStatus(), null);
-    const fork = node.chain.config.getForkName(slot);
-    if (prevFork === "") prevFork = fork;
+    try {
+      const peers = safeCall(() => node.network.getConnectedPeerCount(), 0);
+      const sync = safeCall(() => node.sync.getSyncStatus(), null);
+      const fork = safeCall<string>(() => node.chain.config.getForkName(slot), "unknown");
+      if (prevFork === "") prevFork = fork;
 
-    const telemetry: Telemetry = {
-      slot,
-      peers,
-      isSyncing: sync ? sync.isSyncing : false,
-      syncDistance: sync ? Number(sync.syncDistance) : 0,
-      fork,
-      prevFork,
-      lastReorgSlot,
-    };
+      const telemetry: Telemetry = {
+        slot,
+        peers,
+        isSyncing: sync ? sync.isSyncing : false,
+        syncDistance: sync ? Number(sync.syncDistance) : 0,
+        fork,
+        prevFork,
+        lastReorgSlot,
+      };
 
-    const state = buildState(telemetry);
-    const sprite = renderSprite(spriteKindFor(state));
-    const frame = formatFrame(state, sprite);
+      const state = buildState(telemetry);
+      const sprite = renderSprite(spriteKindFor(state));
+      const frame = formatFrame(state, sprite);
 
-    if (fileWanted) {
-      try {
-        writeSidecar(sidecarPath, frame);
-      } catch (e) {
-        logger.debug("beacon buddy: sidecar write failed", {}, e as Error);
+      if (fileWanted) {
+        try {
+          writeSidecar(sidecarPath, frame);
+        } catch (e) {
+          logger.debug("beacon buddy: sidecar write failed", {}, e as Error);
+        }
       }
-    }
-    renderer?.draw(frame);
+      try {
+        renderer?.draw(frame);
+      } catch (e) {
+        logger.debug("beacon buddy: tty draw failed", {}, e as Error);
+      }
 
-    prevFork = fork;
+      prevFork = fork;
+    } catch (e) {
+      logger.debug("beacon buddy: onSlot failed", {}, e as Error);
+    }
   };
 
   node.chain.clock.on(ClockEvent.slot, onSlot);
