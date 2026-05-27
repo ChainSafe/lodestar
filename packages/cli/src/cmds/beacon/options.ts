@@ -26,6 +26,7 @@ type BeaconExtraArgs = {
   validatorMonitorLogs?: boolean;
   attachToGlobalThis?: boolean;
   disableLightClientServer?: boolean;
+  fun?: "off" | "tty" | "file" | "both";
 };
 
 export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
@@ -168,6 +169,19 @@ export const beaconExtraOptions: CliCommandOptions<BeaconExtraArgs> = {
   disableLightClientServer: {
     description: "Disable light client server.",
     type: "boolean",
+  },
+
+  fun: {
+    hidden: true,
+    description: "Enable beacon buddy ASCII pet easter egg (off|tty|file|both)",
+    type: "string",
+    choices: ["off", "tty", "file", "both"],
+    default: "off",
+    coerce: (v: string | boolean | undefined): "off" | "tty" | "file" | "both" => {
+      // Bare `--fun` (no value) resolves to "both"
+      if (v === true || v === "" || v === undefined) return "both";
+      return v as "off" | "tty" | "file" | "both";
+    },
   },
 };
 
