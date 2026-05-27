@@ -16,7 +16,8 @@ export abstract class AbstractBeaconStateView {
   get executionPayloadAvailability(): BitArray {
     if (this._executionPayloadAvailabilityBitArray === null) {
       const raw = this._executionPayloadAvailability;
-      this._executionPayloadAvailabilityBitArray = new BitArray(raw.uint8Array, raw.bitLen);
+      this._executionPayloadAvailabilityBitArray =
+        raw instanceof BitArray ? raw : new BitArray(raw.uint8Array, raw.bitLen);
     }
     return this._executionPayloadAvailabilityBitArray;
   }

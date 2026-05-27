@@ -354,8 +354,7 @@ export class BeaconStateView extends AbstractBeaconStateView implements IBeaconS
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("executionPayloadAvailability is not available before Gloas");
     }
-    const ba = (this.cachedState as CachedBeaconStateGloas).executionPayloadAvailability.toValue();
-    return {uint8Array: ba.uint8Array, bitLen: ba.bitLen};
+    return (this.cachedState as CachedBeaconStateGloas).executionPayloadAvailability.toValue();
   }
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
