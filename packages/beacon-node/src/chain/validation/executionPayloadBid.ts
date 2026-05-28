@@ -57,6 +57,17 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [REJECT] The bid is for a higher slot than its parent block -- i.e.
+  // validate that `bid.slot` is greater than the slot of the block with root
+  // `bid.parent_block_root`.
+  if (bid.slot <= parentBlock.slot) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT,
+      parentSlot: parentBlock.slot,
+      slot: bid.slot,
+    });
+  }
+
   // [IGNORE] A `SignedProposerPreferences` matching `bid.slot` and the bid's branch has been
   // seen — i.e. `proposal_slot == bid.slot` AND `dependent_root ==
   // get_proposer_dependent_root(parent_state, compute_epoch_at_slot(bid.slot))`.
