@@ -1,16 +1,21 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
-import {ValidatedBlock, getBlocksForDataValidation} from "../../../../src/sync/utils/downloadByRange.js";
-import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js";
+import {
+  DownloadByRangeErrorCode,
+  ValidatedBlock,
+  getBlocksForDataValidation,
+  validateBlockByRangeResponse,
+  validateResponses,
+} from "../../../../src/sync/utils/downloadByRange.js";
+import {config, generateChainOfBlockMaybeSidecars, slots} from "../../../utils/blocksAndData.js";
 
 /**
  * Logic errors and gaps identified during test case creation:
  *
  * INSERT_LOGIC_ERROR_BULLET_POINTS_HERE
  *
- * - validateBlockByRangeResponse: Commented out zero blocks check breaks during chain liveness issues (line 445-453)
  * - validateBlobsByRangeResponse: Missing validation that blob sidecars are in consecutive (slot, index) order as per spec
  * - validateColumnsByRangeResponse: Missing validation that column sidecars are in consecutive (slot, index) order
  * - cacheByRangeResponses: Error handling for wrong chain only breaks loop but doesn't throw/propagate error properly
@@ -163,6 +168,42 @@ import {generateChainOfBlockMaybeSidecars} from "../../../utils/blocksAndData.js
 //   it("should validate column sidecars in parallel");
 //   it("should propagate validation errors from validateBlockDataColumnSidecars");
 // });
+
+describe("validateBlockByRangeResponse", () => {
+  // Regression: a peer returning zero blocks for an all-skipped epoch is a valid response during
+  // poor chain liveness. It must be accepted (with a warning), not thrown — otherwise the SyncChain
+  // dies after MAX_BATCH_DOWNLOAD_ATTEMPTS and the node cannot sync past an empty epoch.
+  it("should accept empty response during chain liveness issues", () => {
+    const blocksRequest = {startSlot: slots.deneb, count: SLOTS_PER_EPOCH, step: 1};
+
+    const {result, warnings} = validateBlockByRangeResponse(config, blocksRequest, []);
+
+    expect(result).toEqual([]);
+    expect(warnings?.map((w) => w.type.code)).toContain(DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE);
+  });
+});
+
+describe("validateResponses", () => {
+  // Regression: an empty epoch that also carries a data (blobs/columns) request must not throw.
+  // Both the block validator and the "no blocks in data range" guard previously threw
+  // MISSING_BLOCKS_RESPONSE for a legitimately empty epoch, killing the SyncChain.
+  it("should accept an empty epoch when a data request is present", async () => {
+    const startSlot = slots.deneb;
+    const blocksRequest = {startSlot, count: SLOTS_PER_EPOCH, step: 1};
+    const blobsRequest = {startSlot, count: SLOTS_PER_EPOCH};
+
+    const {result} = await validateResponses({
+      config,
+      blocksRequest,
+      blobsRequest,
+      blocks: [],
+      blobSidecars: [],
+    });
+
+    expect(result.responses.validatedBlocks).toEqual([]);
+    expect(result.responses.validatedBlobSidecars ?? []).toEqual([]);
+  });
+});
 
 describe("getBlocksForDataValidation", () => {
   const forkName = ForkName.capella;

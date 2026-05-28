@@ -541,53 +541,50 @@ export async function validateResponses({
     validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
   );
 
-  if (!blocksForDataValidation.length) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest}),
-      },
-      "No blocks in data request slot range to validate data response against"
-    );
-  }
+  // An empty epoch (no blocks in the data request's slot range) is a valid response during poor
+  // chain liveness — the peer returns no data either, so there is nothing to validate here. Skip
+  // data-sidecar validation rather than throwing, and let the chain-level AwaitingValidation
+  // mechanism confirm the empty epoch once a later batch imports a block. Parent-by-root columns and
+  // envelopes below are keyed off roots (not the in-range blocks), so they are still handled.
+  if (blocksForDataValidation.length > 0) {
+    if (blobsRequest) {
+      if (!blobSidecars) {
+        throw new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
+            ...requestsLogMeta({blobsRequest, columnsRequest}),
+          },
+          "No blobSidecars to validate against blobsRequest"
+        );
+      }
 
-  if (blobsRequest) {
-    if (!blobSidecars) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
-          ...requestsLogMeta({blobsRequest, columnsRequest}),
-        },
-        "No blobSidecars to validate against blobsRequest"
+      validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
+        blocksForDataValidation,
+        blobSidecars
       );
     }
 
-    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
-      blocksForDataValidation,
-      blobSidecars
-    );
-  }
+    if (columnsRequest) {
+      if (!columnSidecars) {
+        throw new DownloadByRangeError(
+          {
+            code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
+            ...requestsLogMeta({blobsRequest, columnsRequest}),
+          },
+          "No columnSidecars to check columnRequest against"
+        );
+      }
 
-  if (columnsRequest) {
-    if (!columnSidecars) {
-      throw new DownloadByRangeError(
-        {
-          code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
-          ...requestsLogMeta({blobsRequest, columnsRequest}),
-        },
-        "No columnSidecars to check columnRequest against"
+      const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
+        config,
+        columnsRequest,
+        blocksForDataValidation,
+        columnSidecars,
+        peerDasMetrics
       );
+      validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
+      warnings = validatedColumnSidecarsResult.warnings;
     }
-
-    const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
-      config,
-      columnsRequest,
-      blocksForDataValidation,
-      columnSidecars,
-      peerDasMetrics
-    );
-    validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
-    warnings = validatedColumnSidecarsResult.warnings;
   }
 
   // Parent columns (by-root): KZG-validate against parent's bid commitments and append.
@@ -664,26 +661,23 @@ export function validateBlockByRangeResponse(
 ): WarnResult<ValidatedBlock[], DownloadByRangeError> {
   const {startSlot, count} = blocksRequest;
 
-  // An error was thrown here by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
-  // liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
-  // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
-  // if what the correct behavior should be
+  // A peer returning zero blocks for an epoch is the correct response when every slot in the epoch
+  // was skipped (an "empty epoch"), which happens during periods of poor chain liveness. Return the
+  // empty result with a warning — rather than throwing — so the SyncChain can process through the
+  // empty epoch. Throwing here previously killed the chain after MAX_BATCH_DOWNLOAD_ATTEMPTS
+  // (https://github.com/ChainSafe/lodestar/issues/8147). The empty batch is held in
+  // AwaitingValidation and only confirmed once a later batch imports a block, so a peer cannot stall
+  // sync by falsely claiming an epoch is empty.
   if (!blocks.length) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-      ...requestsLogMeta({blocksRequest}),
-    });
-    // TODO: this was causing deadlock again. need to come back and fix this so that its possible to process through
-    //       an empty epoch for periods with poor liveness
-    // return {
-    //   result: [],
-    //   warnings: [
-    //     new DownloadByRangeError({
-    //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-    //       ...requestsLogMeta({blocksRequest}),
-    //     }),
-    //   ],
-    // };
+    return {
+      result: [],
+      warnings: [
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blocksRequest}),
+        }),
+      ],
+    };
   }
 
   if (blocks.length > count) {
