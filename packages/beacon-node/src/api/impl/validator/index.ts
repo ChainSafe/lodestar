@@ -1130,6 +1130,17 @@ export function getValidatorApi(
         chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
       const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
 
+      logger.debug("Produced payload attestation data", {
+        slot,
+        blockRoot: block.blockRoot,
+        blockSlot: block.slot,
+        payloadPresent,
+        blobDataAvailable,
+        hasPayloadInput: payloadInput !== undefined,
+        hasPayloadEnvelope: payloadInput?.hasPayloadEnvelope() ?? false,
+        hasAllData: payloadInput?.hasAllData() ?? false,
+      });
+
       return {
         data: {
           beaconBlockRoot: fromHex(block.blockRoot),

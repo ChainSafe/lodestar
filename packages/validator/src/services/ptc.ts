@@ -119,6 +119,8 @@ export class PtcService {
         this.logger.info("Published payload attestation messages", {
           slot,
           beaconBlockRoot: prettyBytes(beaconBlockRootHex),
+          payloadPresent: payloadAttestationData.payloadPresent,
+          blobDataAvailable: payloadAttestationData.blobDataAvailable,
           count: payloadAttestationMessages.length,
         });
         this.metrics?.publishedPayloadAttestations.inc(payloadAttestationMessages.length);
