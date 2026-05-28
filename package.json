@@ -61,7 +61,7 @@
     "inquirer": "^9.1.5",
     "libp2p": "3.1.6",
     "node-gyp": "^9.4.0",
-    "playwright": "^1.56.1",
+    "playwright": "^1.60.0",
     "prettier": "^3.2.5",
     "pretty-format": "^29.7.0",
     "semver": "^7.7.3",
@@ -83,5 +83,10 @@
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "elliptic": ">=6.6.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "playwright": "^1.60.0"
+    }
   }
 }
