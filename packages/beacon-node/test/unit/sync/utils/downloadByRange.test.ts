@@ -203,6 +203,23 @@ describe("validateResponses", () => {
     expect(result.responses.validatedBlocks).toEqual([]);
     expect(result.responses.validatedBlobSidecars ?? []).toEqual([]);
   });
+
+  // Characterization test for the no-data-request path (envelopes-only). With no blocks/blobs/columns
+  // request, data-sidecar validation must be skipped while envelope validation still runs and returns
+  // a (possibly empty) map — never null. This pins the behavior that the data-validation refactor
+  // must preserve.
+  it("validates envelopes and skips data validation when only an envelopes request is present", async () => {
+    const {result} = await validateResponses({
+      config,
+      envelopesRequest: {startSlot: slots.gloas, count: SLOTS_PER_EPOCH},
+      payloadEnvelopes: [],
+    });
+
+    expect(result.responses.validatedBlocks).toBeUndefined();
+    expect(result.responses.validatedColumnSidecars ?? []).toEqual([]);
+    expect(result.payloadEnvelopes).toBeInstanceOf(Map);
+    expect(result.payloadEnvelopes?.size).toBe(0);
+  });
 });
 
 describe("getBlocksForDataValidation", () => {

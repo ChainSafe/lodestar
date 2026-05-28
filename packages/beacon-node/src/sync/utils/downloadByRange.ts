@@ -514,77 +514,57 @@ export async function validateResponses({
     return {result: {responses: validatedResponses, payloadEnvelopes: null}, warnings};
   }
 
-  if (!dataRequest) {
-    // Only envelope and/or parent-by-root validation needed
-    if (parentPayloadCommitments !== undefined) {
-      const parentValidated = await validateParentPayloadColumns(
-        parentPayloadCommitments,
-        columnSidecars ?? [],
-        peerDasMetrics
+  // Validate data sidecars (blobs/columns) against the in-range blocks. Two cases have nothing to
+  // validate here and simply fall through to the shared parent-by-root + envelope tail below:
+  //   - envelopes-only / parent-payload-only requests (no blobs/columns request at all), and
+  //   - an empty epoch, where the data request's slot range contains no blocks. This is a valid
+  //     response during poor chain liveness; the empty batch is confirmed at the chain level once a
+  //     later batch imports a block, so a peer cannot stall sync by falsely claiming an epoch is empty.
+  const blocksForDataValidation = dataRequest
+    ? getBlocksForDataValidation(
+        dataRequest,
+        batchBlocks,
+        validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
+      )
+    : [];
+
+  if (blobsRequest && blocksForDataValidation.length > 0) {
+    if (!blobSidecars) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
+          ...requestsLogMeta({blobsRequest, columnsRequest}),
+        },
+        "No blobSidecars to validate against blobsRequest"
       );
-      if (parentValidated) {
-        validatedResponses.validatedColumnSidecars = [parentValidated];
-      }
     }
-    const validatedPayloadEnvelopes = validateEnvelopesByRangeResponse(
-      validatedResponses.validatedBlocks ?? [],
-      batchBlocks,
-      payloadEnvelopes ?? [],
-      parentPayloadCommitments
+
+    validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
+      blocksForDataValidation,
+      blobSidecars
     );
-    return {result: {responses: validatedResponses, payloadEnvelopes: validatedPayloadEnvelopes}, warnings};
   }
 
-  const blocksForDataValidation = getBlocksForDataValidation(
-    dataRequest,
-    batchBlocks,
-    validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
-  );
-
-  // An empty epoch (no blocks in the data request's slot range) is a valid response during poor
-  // chain liveness — the peer returns no data either, so there is nothing to validate here. Skip
-  // data-sidecar validation rather than throwing, and let the chain-level AwaitingValidation
-  // mechanism confirm the empty epoch once a later batch imports a block. Parent-by-root columns and
-  // envelopes below are keyed off roots (not the in-range blocks), so they are still handled.
-  if (blocksForDataValidation.length > 0) {
-    if (blobsRequest) {
-      if (!blobSidecars) {
-        throw new DownloadByRangeError(
-          {
-            code: DownloadByRangeErrorCode.MISSING_BLOBS_RESPONSE,
-            ...requestsLogMeta({blobsRequest, columnsRequest}),
-          },
-          "No blobSidecars to validate against blobsRequest"
-        );
-      }
-
-      validatedResponses.validatedBlobSidecars = await validateBlobsByRangeResponse(
-        blocksForDataValidation,
-        blobSidecars
+  if (columnsRequest && blocksForDataValidation.length > 0) {
+    if (!columnSidecars) {
+      throw new DownloadByRangeError(
+        {
+          code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
+          ...requestsLogMeta({blobsRequest, columnsRequest}),
+        },
+        "No columnSidecars to check columnRequest against"
       );
     }
 
-    if (columnsRequest) {
-      if (!columnSidecars) {
-        throw new DownloadByRangeError(
-          {
-            code: DownloadByRangeErrorCode.MISSING_COLUMNS_RESPONSE,
-            ...requestsLogMeta({blobsRequest, columnsRequest}),
-          },
-          "No columnSidecars to check columnRequest against"
-        );
-      }
-
-      const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
-        config,
-        columnsRequest,
-        blocksForDataValidation,
-        columnSidecars,
-        peerDasMetrics
-      );
-      validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
-      warnings = validatedColumnSidecarsResult.warnings;
-    }
+    const validatedColumnSidecarsResult = await validateColumnsByRangeResponse(
+      config,
+      columnsRequest,
+      blocksForDataValidation,
+      columnSidecars,
+      peerDasMetrics
+    );
+    validatedResponses.validatedColumnSidecars = validatedColumnSidecarsResult.result;
+    warnings = validatedColumnSidecarsResult.warnings;
   }
 
   // Parent columns (by-root): KZG-validate against parent's bid commitments and append.
