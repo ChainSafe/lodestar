@@ -783,7 +783,7 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md#new-should_extend_payload
    *
    * Returns true if payload is verified (FULL variant exists) AND:
-   * 1. Payload is timely, OR
+   * 1. Payload is timely AND data is available, OR
    * 2. No proposer boost root (empty/zero hash), OR
    * 3. Proposer boost root's parent is not this block, OR
    * 4. Proposer boost root extends FULL parent
@@ -796,8 +796,9 @@ export class ProtoArray {
       return false;
     }
 
-    // Condition 1: Payload is timely
-    if (this.isPayloadTimely(blockRoot)) {
+    // Condition 1: Payload is timely AND data is available
+    // Spec: (payload_is_timely and payload_data_is_available)
+    if (this.isPayloadTimely(blockRoot) && this.isPayloadDataAvailable(blockRoot)) {
       return true;
     }
 
