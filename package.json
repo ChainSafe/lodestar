@@ -83,10 +83,5 @@
     "dns-over-http-resolver": "^2.1.1",
     "loupe": "^2.3.6",
     "elliptic": ">=6.6.1"
-  },
-  "pnpm": {
-    "overrides": {
-      "playwright": "^1.60.0"
-    }
   }
 }
