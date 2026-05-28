@@ -391,7 +391,7 @@ importers:
         version: 0.7.0
       tmp:
         specifier: ^0.2.1
-        version: 0.2.4
+        version: 0.2.6
 
   packages/cli:
     dependencies:
@@ -533,7 +533,7 @@ importers:
         version: 5.8.5
       tmp:
         specifier: ^0.2.4
-        version: 0.2.4
+        version: 0.2.6
       web3:
         specifier: ^4.0.3
         version: 4.0.3(encoding@0.1.13)
@@ -807,7 +807,7 @@ importers:
         version: 1.13.3(debug@4.4.3)
       tmp:
         specifier: ^0.2.1
-        version: 0.2.4
+        version: 0.2.6
       vitest:
         specifier: 'catalog:'
         version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(yaml@2.8.2)
@@ -5848,8 +5848,8 @@ packages:
     resolution: {integrity: sha512-jRCJlojKnZ3addtTOjdIqoRuPEKBvNXcGYqzO6zWZX8KfKEpnGY5jfggJQ3EjKuu8D4bJRr0y+cYJFmYbImXGw==}
     engines: {node: '>=0.6.0'}
 
-  tmp@0.2.4:
-    resolution: {integrity: sha512-UdiSoX6ypifLmrfQ/XfiawN6hkjSBpCjhKxxZcWlUUmoXLaCKQU0bx4HF/tdDK2uzRuchf1txGvrWBzYREssoQ==}
+  tmp@0.2.6:
+    resolution: {integrity: sha512-5sJPdPjfI5Kx+qbrDesxkglRBxW//g7hCsqspEjwkewGvBMGIKMOTKzLt1hFVJzyadba3lDUN20O9qhvbQUSTA==}
     engines: {node: '>=14.14'}
 
   to-arraybuffer@1.0.1:
@@ -12141,7 +12141,7 @@ snapshots:
     dependencies:
       os-tmpdir: 1.0.2
 
-  tmp@0.2.4: {}
+  tmp@0.2.6: {}
 
   to-arraybuffer@1.0.1: {}
 
