@@ -129,7 +129,7 @@ export async function importExecutionPayload(
 
   // 3. Regenerate state for envelope verification
   const blockState = await this.regen
-    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.processBlock)
+    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.importExecutionPayload)
     .catch(() =>
       // only happen at the 1st batch of skipped slot checkpoint sync
       this.regen.getClosestHeadState(protoBlock)
