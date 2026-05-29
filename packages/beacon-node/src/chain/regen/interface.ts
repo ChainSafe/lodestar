@@ -17,6 +17,7 @@ export enum RegenCaller {
   predictProposerHead = "predictProposerHead",
   produceAttestationData = "produceAttestationData",
   processBlocksInEpoch = "processBlocksInEpoch",
+  importExecutionPayload = "importExecutionPayload",
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
