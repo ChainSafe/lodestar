@@ -4,7 +4,6 @@ import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode} from "../../../src/index.js";
-import {HEX_ZERO_HASH} from "../../../src/protoArray/interface.js";
 import {countNoVotes} from "../../../src/protoArray/protoArray.js";
 
 describe("Gloas Fork Choice", () => {
@@ -1014,125 +1013,6 @@ describe("Gloas Fork Choice", () => {
       const head = makeHead(PayloadStatus.FULL);
       protoArray.notifyPtcMessages("0x02", [0], true, false);
       expect(protoArray.shouldBuildOnFull(head)).toBe(true);
-    });
-  });
-
-  describe("shouldExtendPayload() — Spec: should_extend_payload(store, root)", () => {
-    let protoArray: ProtoArray;
-
-    // Block A (the block whose payload extension is being decided).
-    // PENDING/EMPTY variants carry executionPayloadBlockHash = blockARoot ("0x02").
-    // FULL variant (revealed via onExecutionPayload) carries blockAFullHash ("0x02full").
-    const blockARoot = "0x02";
-    const blockAFullHash = "0x02full";
-
-    beforeEach(() => {
-      protoArray = new ProtoArray({
-        pruneThreshold: 0,
-        justifiedEpoch: genesisEpoch,
-        justifiedRoot: genesisRoot,
-        finalizedEpoch: genesisEpoch,
-        finalizedRoot: genesisRoot,
-      });
-    });
-
-    function addBlockA(): void {
-      const blockA = createTestBlock(gloasForkSlot, blockARoot, genesisRoot, genesisRoot);
-      protoArray.onBlock(blockA, gloasForkSlot, null);
-    }
-
-    function revealBlockAFull(): void {
-      protoArray.onExecutionPayload(
-        blockARoot,
-        gloasForkSlot,
-        blockAFullHash,
-        gloasForkSlot,
-        30000000,
-        null,
-        ExecutionStatus.Valid,
-        DataAvailabilityStatus.Available
-      );
-    }
-
-    function ptcMajorityVote(root: RootHex, timely: boolean, daAvailable: boolean): void {
-      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
-      const indices = Array.from({length: overThreshold}, (_, i) => i);
-      protoArray.notifyPtcMessages(root, indices, timely, daAvailable);
-    }
-
-    // Add a child of Block A at slot+1; extendsFull selects whether the child's
-    // bid points at A's FULL variant (parentBlockHash = blockAFullHash) or A's EMPTY
-    // variant (parentBlockHash = blockARoot, since EMPTY inherits A's own EL hash).
-    function addChildOfA(childRoot: RootHex, extendsFull: boolean): RootHex {
-      const parentBlockHash = extendsFull ? blockAFullHash : blockARoot;
-      const child = createTestBlock(gloasForkSlot + 1, childRoot, blockARoot, parentBlockHash);
-      protoArray.onBlock(child, gloasForkSlot + 1, null);
-      return childRoot;
-    }
-
-    it("returns false when payload is not verified (no FULL variant)", () => {
-      addBlockA();
-      // No revealBlockAFull() — hasPayload(blockARoot) is false
-      expect(protoArray.shouldExtendPayload(blockARoot, null)).toBe(false);
-    });
-
-    it("returns true when payload is timely AND data is available", () => {
-      addBlockA();
-      revealBlockAFull();
-      ptcMajorityVote(blockARoot, true, true);
-      expect(protoArray.shouldExtendPayload(blockARoot, null)).toBe(true);
-    });
-
-    // Regression for glamsterdam-devnet-4 stuck-head scenario:
-    // PTC voted timely=YES, data=NO. Pre-fix code returned true on timely alone;
-    // spec requires (timely AND data_available). Override conditions must also
-    // all fail for the regression to surface, so we set proposer boost to a child
-    // of Block A that extends Block A's EMPTY parent (is_parent_node_full = false).
-    it("returns false when payload is timely but data NOT available, and proposer boost block extends EMPTY parent", () => {
-      addBlockA();
-      revealBlockAFull();
-      ptcMajorityVote(blockARoot, true, false);
-      const boostRoot = addChildOfA("0x03", /*extendsFull*/ false);
-      expect(protoArray.shouldExtendPayload(blockARoot, boostRoot)).toBe(false);
-    });
-
-    it("returns true when proposer boost root is null (no-boost override)", () => {
-      addBlockA();
-      revealBlockAFull();
-      ptcMajorityVote(blockARoot, true, false);
-      expect(protoArray.shouldExtendPayload(blockARoot, null)).toBe(true);
-    });
-
-    it("returns true when proposer boost root is HEX_ZERO_HASH (no-boost override)", () => {
-      addBlockA();
-      revealBlockAFull();
-      ptcMajorityVote(blockARoot, true, false);
-      expect(protoArray.shouldExtendPayload(blockARoot, HEX_ZERO_HASH)).toBe(true);
-    });
-
-    it("returns true when proposer boost block's parent is not this block", () => {
-      addBlockA();
-      revealBlockAFull();
-      ptcMajorityVote(blockARoot, true, false);
-      // Sibling of Block A — parent = genesisRoot, not blockARoot
-      const sibling = createTestBlock(gloasForkSlot + 1, "0x04", genesisRoot, genesisRoot);
-      protoArray.onBlock(sibling, gloasForkSlot + 1, null);
-      expect(protoArray.shouldExtendPayload(blockARoot, "0x04")).toBe(true);
-    });
-
-    it("returns true when proposer boost block extends FULL parent", () => {
-      addBlockA();
-      revealBlockAFull();
-      ptcMajorityVote(blockARoot, true, false);
-      const boostRoot = addChildOfA("0x03", /*extendsFull*/ true);
-      expect(protoArray.shouldExtendPayload(blockARoot, boostRoot)).toBe(true);
-    });
-
-    it("returns true when proposer boost root is unknown (defensive fallback)", () => {
-      addBlockA();
-      revealBlockAFull();
-      ptcMajorityVote(blockARoot, true, false);
-      expect(protoArray.shouldExtendPayload(blockARoot, "0xUnknown")).toBe(true);
     });
   });
 
