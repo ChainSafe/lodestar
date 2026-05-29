@@ -797,7 +797,6 @@ export class ProtoArray {
     }
 
     // Condition 1: Payload is timely AND data is available
-    // Spec: (payload_is_timely and payload_data_is_available)
     if (this.isPayloadTimely(blockRoot) && this.isPayloadDataAvailable(blockRoot)) {
       return true;
     }
