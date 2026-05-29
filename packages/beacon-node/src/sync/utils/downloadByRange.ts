@@ -514,20 +514,20 @@ export async function validateResponses({
     return {result: {responses: validatedResponses, payloadEnvelopes: null}, warnings};
   }
 
-  // Validate data sidecars (blobs/columns) against the in-range blocks. Two cases have nothing to
-  // validate here and simply fall through to the shared parent-by-root + envelope tail below:
-  //   - envelopes-only / parent-payload-only requests (no blobs/columns request at all), and
-  //   - an empty epoch, where the data request's slot range contains no blocks. This is a valid
-  //     response during poor chain liveness; the empty batch is confirmed at the chain level once a
-  //     later batch imports a block, so a peer cannot stall sync by falsely claiming an epoch is empty.
+  // Resolve the in-range blocks the data sidecars are validated against. Empty when there is no data
+  // request (envelopes-only / parent-payload-only) or when the data request's slot range contains no
+  // blocks (an empty epoch — valid during poor chain liveness; the empty batch is confirmed at the
+  // chain level once a later batch imports a block, so a peer cannot stall sync by falsely claiming an
+  // epoch is empty). getBlocksForDataValidation treats `undefined` and `[]` the same, so pass directly.
   const blocksForDataValidation = dataRequest
-    ? getBlocksForDataValidation(
-        dataRequest,
-        batchBlocks,
-        validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
-      )
+    ? getBlocksForDataValidation(dataRequest, batchBlocks, validatedResponses.validatedBlocks)
     : [];
 
+  // When the range has no blocks we neither validate nor reject the sidecars a peer returned. We can't
+  // confirm the range is genuinely empty at this layer (the empty blocks response is itself unverified
+  // until a later batch extends the chain), so there is no peer we could safely penalize — orphan
+  // sidecars are dropped. The per-request validators below only run when there are blocks to validate
+  // against.
   if (blobsRequest && blocksForDataValidation.length > 0) {
     if (!blobSidecars) {
       throw new DownloadByRangeError(
