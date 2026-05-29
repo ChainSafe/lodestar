@@ -285,7 +285,7 @@ export type IBeaconStateViewLatestFork = Omit<
  * Differs from `IBeaconStateViewLatestFork` in two ways:
  * - `executionPayloadAvailability` is a raw `{uint8Array, bitLen}` POJO — a
  *   native (`.node`) binding cannot construct a `BitArray` across FFI.
- *   `AbstractBeaconStateView` lifts it back to `BitArray` for beacon-node.
+ *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
  * - Methods that produce another view (`stateTransition`, `processSlots`,
  *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
  *   so callers can re-wrap without an `as unknown` cast. Param lists are reused

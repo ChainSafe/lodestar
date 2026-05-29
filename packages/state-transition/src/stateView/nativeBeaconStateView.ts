@@ -1,5 +1,5 @@
 import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
-import {ByteViews} from "@chainsafe/ssz";
+import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {ForkName} from "@lodestar/params";
 import {
   BeaconBlock,
@@ -34,7 +34,6 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
-import {AbstractBeaconStateView} from "./abstractBeaconStateView.js";
 import {
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -49,9 +48,9 @@ import {
  *
  * The binding is typed `IBeaconStateViewNative` — identical to
  * `IBeaconStateViewLatestFork` except `executionPayloadAvailability` is a raw
- * `{uint8Array, bitLen}` POJO. `AbstractBeaconStateView` lifts that POJO back
- * to a `BitArray` so beacon-node consumers see no difference from the TS-side
- * `BeaconStateView`.
+ * `{uint8Array, bitLen}` POJO. The `executionPayloadAvailability` getter lifts
+ * that POJO back to a `BitArray` so beacon-node consumers see no difference from
+ * the TS-side `BeaconStateView`.
  *
  * Every getter that returns a value stable for the view's lifetime is cached so
  * the binding is hit at most once per field per view. Only mutable counters
@@ -59,7 +58,7 @@ import {
  * pass-through. Methods with arguments are pass-through too — caching them
  * would need a per-arg map and isn't worth it without a hot-path signal.
  */
-export class NativeBeaconStateView extends AbstractBeaconStateView implements IBeaconStateViewLatestFork {
+export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // phase0
   private _forkName: ForkName | null = null;
   private _slot: Slot | null = null;
@@ -109,7 +108,8 @@ export class NativeBeaconStateView extends AbstractBeaconStateView implements IB
   private _pendingConsolidationsCount: number | null = null;
   // fulu
   private _proposerLookahead: fulu.ProposerLookahead | null = null;
-  // gloas (executionPayloadAvailability cache lives on AbstractBeaconStateView)
+  // gloas
+  private _executionPayloadAvailability: BitArray | null = null;
   private _latestBlockHash: Bytes32 | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
@@ -166,15 +166,17 @@ export class NativeBeaconStateView extends AbstractBeaconStateView implements IB
     processedValidatorSweepCount: number;
   } | null = null;
 
-  constructor(readonly binding: IBeaconStateViewNative) {
-    super();
-  }
+  constructor(readonly binding: IBeaconStateViewNative) {}
 
-  // Abstract member from AbstractBeaconStateView. The public BitArray getter
-  // on the base class caches the lifted BitArray, so this just forwards the
-  // raw POJO shape coming from the binding.
-  protected get _executionPayloadAvailability(): {uint8Array: Uint8Array; bitLen: number} {
-    return this.binding.executionPayloadAvailability;
+  // Binding returns pojo object {uint8Array: Uint8Array; bitLen: number}
+  // this class wrap it with BitArray to conform to the api
+  get executionPayloadAvailability(): BitArray {
+    if (this._executionPayloadAvailability === null) {
+      const pojo = this.binding.executionPayloadAvailability;
+      this._executionPayloadAvailability = new BitArray(pojo.uint8Array, pojo.bitLen);
+    }
+
+    return this._executionPayloadAvailability;
   }
 
   // ─── phase0 ──────────────────────────────────────────────────────────────
@@ -839,7 +841,7 @@ export class NativeBeaconStateView extends AbstractBeaconStateView implements IB
     return this._latestBlockHash;
   }
 
-  // executionPayloadAvailability is inherited from AbstractBeaconStateView.
+  // executionPayloadAvailability getter is defined near the top of the class.
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
     if (this._latestExecutionPayloadBid === null) {

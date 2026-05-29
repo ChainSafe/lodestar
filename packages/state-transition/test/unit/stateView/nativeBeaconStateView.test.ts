@@ -34,18 +34,6 @@ describe("NativeBeaconStateView", () => {
     expect(fetchCount).toBe(1);
   });
 
-  it("reuses an already-constructed BitArray returned by the binding", () => {
-    // BitArray itself is structurally a {uint8Array, bitLen} POJO. The JS-side
-    // backing returns one directly; the abstract class should not wrap it again.
-    const existing = BitArray.fromBoolArray([true, false, true, true]);
-    const binding = {
-      executionPayloadAvailability: existing,
-    } as unknown as IBeaconStateViewNative;
-
-    const view = new NativeBeaconStateView(binding);
-    expect(view.executionPayloadAvailability).toBe(existing);
-  });
-
   it("caches forwarded properties so the binding is hit once", () => {
     let forkAccessCount = 0;
     let latestBlockHeaderAccessCount = 0;

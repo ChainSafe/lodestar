@@ -1,5 +1,5 @@
 import {CompactMultiProof, ProofType, Tree, createProof} from "@chainsafe/persistent-merkle-tree";
-import {ByteViews} from "@chainsafe/ssz";
+import {BitArray, ByteViews} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, ForkSeq, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
@@ -68,10 +68,9 @@ import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
-import {AbstractBeaconStateView} from "./abstractBeaconStateView.js";
 import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
 
-export class BeaconStateView extends AbstractBeaconStateView implements IBeaconStateViewLatestFork {
+export class BeaconStateView implements IBeaconStateViewLatestFork {
   private readonly config: BeaconConfig;
   // Cached values extracted from the tree
   // phase0
@@ -93,11 +92,11 @@ export class BeaconStateView extends AbstractBeaconStateView implements IBeaconS
   // fulu
   private _proposerLookahead: fulu.ProposerLookahead | null = null;
   // gloas
+  private _executionPayloadAvailability: BitArray | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
 
   constructor(readonly cachedState: CachedBeaconStateAllForks) {
-    super();
     this.config = cachedState.config;
   }
 
@@ -350,11 +349,18 @@ export class BeaconStateView extends AbstractBeaconStateView implements IBeaconS
     return (this.cachedState as CachedBeaconStateGloas).latestBlockHash;
   }
 
-  protected get _executionPayloadAvailability(): {uint8Array: Uint8Array; bitLen: number} {
+  get executionPayloadAvailability(): BitArray {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("executionPayloadAvailability is not available before Gloas");
     }
-    return (this.cachedState as CachedBeaconStateGloas).executionPayloadAvailability.toValue();
+
+    if (this._executionPayloadAvailability === null) {
+      this._executionPayloadAvailability = (
+        this.cachedState as CachedBeaconStateGloas
+      ).executionPayloadAvailability.toValue();
+    }
+
+    return this._executionPayloadAvailability;
   }
 
   get latestExecutionPayloadBid(): ExecutionPayloadBid {
