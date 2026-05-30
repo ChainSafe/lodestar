@@ -263,6 +263,7 @@ export async function importBlock(
         if (ptcIndices.length > 0) {
           this.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
+            payloadAttestation.data.slot,
             ptcIndices,
             payloadAttestation.data.payloadPresent,
             payloadAttestation.data.blobDataAvailable
