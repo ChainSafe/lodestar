@@ -600,7 +600,7 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
       // notifyPtcMessages should be no-op
-      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], true, true)).not.toThrow();
+      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot - 1, [0], true, true)).not.toThrow();
     });
   });
 
@@ -1029,7 +1029,7 @@ describe("Gloas Fork Choice", () => {
       const head = makeHead(PayloadStatus.FULL);
       const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: overThreshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, true, false);
       expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
     });
 
@@ -1037,14 +1037,14 @@ describe("Gloas Fork Choice", () => {
       const head = makeHead(PayloadStatus.FULL);
       const atThreshold = Math.floor(PTC_SIZE / 2);
       const indices = Array.from({length: atThreshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, true, false);
       expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
     });
 
     it("returns true when many PTC members did not vote and few NO votes are below threshold", () => {
       // Guards against None being miscounted as NO — would force a spurious reorg.
       const head = makeHead(PayloadStatus.FULL);
-      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], true, false);
+      protoArray.notifyPtcMessages("0x02", head.slot, [0], true, false);
       expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
     });
 
@@ -1052,7 +1052,7 @@ describe("Gloas Fork Choice", () => {
       const head = makeHead(PayloadStatus.FULL);
       const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: overThreshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, false, false);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, false);
       expect(protoArray.shouldBuildOnFull(head, head.slot + 2)).toBe(true);
     });
   });
