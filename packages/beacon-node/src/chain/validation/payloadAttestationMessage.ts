@@ -61,11 +61,12 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue attestation for processing
   // once the block is retrieved. Note a client might want to request payload after).
-  const block = chain.forkChoice.getBlockHexDefaultStatus(toRootHex(data.beaconBlockRoot));
-  if (block === null) {
+  const blockRootHex = toRootHex(data.beaconBlockRoot);
+  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  if (!block) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
-      blockRoot: toRootHex(data.beaconBlockRoot),
+      blockRoot: blockRootHex,
     });
   }
 
@@ -74,7 +75,7 @@ async function validatePayloadAttestationMessage(
   if (block.slot !== data.slot) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.INVALID_BLOCK_SLOT,
-      blockRoot: toRootHex(data.beaconBlockRoot),
+      blockRoot: blockRootHex,
       blockSlot: block.slot,
       slot: data.slot,
     });
