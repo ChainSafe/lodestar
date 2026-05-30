@@ -965,6 +965,54 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "batch_retries"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ops"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "same_message_job_retries"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ops"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "same_message_set_retries"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ops"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
           }
         ]
       },
@@ -1011,6 +1059,30 @@
           "interval": "",
           "legendFormat": "batch_retries",
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_bls_thread_pool_same_message_jobs_retries_total[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "same_message_job_retries",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_bls_thread_pool_same_message_sets_retries_total[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "same_message_set_retries",
+          "refId": "D"
         }
       ],
       "title": "BLS thread pool - Error rates",

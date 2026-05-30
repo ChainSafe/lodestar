@@ -31,6 +31,7 @@ type NativeOpts = {
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.useNative) {
     throw new Error("Native (Zig) BeaconStateView not yet implemented");
+    // TODO: return a new instance of NativeBeaconStateView
   }
   const {anchorState, config, pubkeyCache} = opts;
   const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
@@ -69,6 +70,7 @@ type RegenNativeOpts = {
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.useNative) {
     throw new Error("Native (Zig) BeaconStateView not yet implemented");
+    // TODO: return a new instance of NativeBeaconStateView
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
