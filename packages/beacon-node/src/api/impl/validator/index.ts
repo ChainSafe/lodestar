@@ -1124,10 +1124,9 @@ export function getValidatorApi(
       // the input's creation time.
       const payloadDueSec = config.getPayloadDueMs() / 1000;
       const payloadPresent =
-        (payloadInput?.hasPayloadEnvelope() &&
-          chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec) ??
-        false;
-      const blobDataAvailable = payloadInput?.hasAllData() ?? false;
+        payloadInput?.hasPayloadEnvelope() === true &&
+        chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
+      const blobDataAvailable = payloadInput?.hasAllData() === true;
 
       return {
         data: {
