@@ -1112,23 +1112,21 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const block = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
+      const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
-        throw new ApiError(404, `No canonical block found at or before slot=${slot}`);
+        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
+        throw new ApiError(404, `No canonical block found at slot=${slot}`);
       }
 
-      const blockIsForSlot = block.slot === slot;
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
       // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
       const payloadDueSec = config.getPayloadDueMs() / 1000;
       const payloadPresent =
-        blockIsForSlot &&
-        payloadInput !== undefined &&
-        payloadInput.hasPayloadEnvelope() &&
+        payloadInput?.hasPayloadEnvelope() === true &&
         chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
-      const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
+      const blobDataAvailable = payloadInput?.hasAllData() === true;
 
       return {
         data: {
