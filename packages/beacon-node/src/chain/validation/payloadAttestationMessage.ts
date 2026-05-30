@@ -89,7 +89,8 @@ async function validatePayloadAttestationMessage(
   }
 
   // [REJECT] The message's validator index is within the payload committee in
-  // `get_ptc(state, data.slot)`.
+  // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
+  // processing the block up to the current slot as determined by the fork choice.
   // The validator may occupy multiple PTC positions because `compute_ptc` samples
   // by effective balance — collect all of them so duplicate votes are counted.
   const validatorCommitteeIndices = state.getIndicesInPayloadTimelinessCommittee(validatorIndex, data.slot);
