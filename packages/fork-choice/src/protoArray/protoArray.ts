@@ -678,6 +678,7 @@ export class ProtoArray {
    */
   notifyPtcMessages(
     blockRoot: RootHex,
+    slot: Slot,
     ptcIndices: number[],
     payloadPresent: boolean,
     blobDataAvailable: boolean
@@ -687,6 +688,13 @@ export class ProtoArray {
     const daVotes = this.daVotes.get(blockRoot);
     if (votes === undefined || attended === undefined || daVotes === undefined) {
       // Block not found or not a Gloas block, ignore
+      return;
+    }
+
+    // PTC votes can only change the vote for their assigned beacon block, return early otherwise
+    const nodeIndex = this.getDefaultNodeIndex(blockRoot);
+    const node = nodeIndex !== undefined ? this.getNodeByIndex(nodeIndex) : undefined;
+    if (node === undefined || node.slot !== slot) {
       return;
     }
 
