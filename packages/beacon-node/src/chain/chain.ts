@@ -89,6 +89,7 @@ import {
   ExecutionPayloadBidPool,
   OpPool,
   PayloadAttestationPool,
+  ProposerPreferencesPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
@@ -181,6 +182,7 @@ export class BeaconChain implements IBeaconChain {
   readonly syncContributionAndProofPool;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
+  readonly proposerPreferencesPool = new ProposerPreferencesPool();
   readonly opPool: OpPool;
   readonly deferredVoluntaryExitPool: DeferredVoluntaryExitPool;
 
@@ -1050,6 +1052,7 @@ export class BeaconChain implements IBeaconChain {
       feeRecipient,
       commonBlockBodyPromise,
       parentBlock,
+      builderBid,
     }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
@@ -1079,6 +1082,7 @@ export class BeaconChain implements IBeaconChain {
         proposerIndex,
         proposerPubKey,
         commonBlockBodyPromise,
+        builderBid,
       }
     );
 
@@ -1466,6 +1470,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.seenProposerPreferences.prune(slot);
+    this.proposerPreferencesPool.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

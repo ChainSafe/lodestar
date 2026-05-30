@@ -1117,7 +1117,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       const slot = envelope.payload.slotNumber;
-      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+
+      logger.debug("Received gossip payload envelope", {
+        currentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        slot,
+        blockRoot: toRootHex(envelope.beaconBlockRoot),
+        delaySec,
+      });
+
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
@@ -1205,8 +1214,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       chain.forkChoice.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+        payloadAttestationMessage.data.slot,
         validationResult.validatorCommitteeIndices,
-        payloadAttestationMessage.data.payloadPresent
+        payloadAttestationMessage.data.payloadPresent,
+        payloadAttestationMessage.data.blobDataAvailable
       );
     },
     [GossipType.execution_payload_bid]: async ({
@@ -1215,15 +1226,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
-      await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+      const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
       // Handle valid payload bid by storing in a bid pool
       try {
-        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid.message);
+        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid);
         metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }
+
+      chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.gossip, proposerIndex, executionPayloadBid.message);
 
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
         version: config.getForkName(executionPayloadBid.message.slot),
@@ -1237,6 +1250,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
+
+      chain.proposerPreferencesPool.add(signedProposerPreferences);
+      chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+        version: ForkName.gloas,
+        data: signedProposerPreferences,
+      });
     },
   };
 }

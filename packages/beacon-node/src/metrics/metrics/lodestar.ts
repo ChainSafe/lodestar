@@ -987,10 +987,11 @@ export function createLodestarMetrics(
       }),
     },
     importPayload: {
-      bySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
-        name: "lodestar_import_payload_by_source_total",
-        help: "Total number of imported execution payload envelopes by source",
+      elapsedTimeTillImported: register.histogram<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_elapsed_time_till_imported_seconds",
+        help: "Time elapsed between slot time and the time execution payload envelope is imported (added to fork choice)",
         labelNames: ["source"],
+        buckets: [1, 2, 3, 6, 9, 12],
       }),
       columnsBySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
         name: "lodestar_import_payload_columns_by_source_total",
