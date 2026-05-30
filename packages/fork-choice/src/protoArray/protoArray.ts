@@ -98,7 +98,7 @@ export class ProtoArray {
    *
    * Bit i = PTC member i voted blobDataAvailable=true (DA YES vote)
    */
-  private daVotes = new Map<RootHex, BitArray>();
+  private payloadDataAvailabilityVotes = new Map<RootHex, BitArray>();
   /**
    * Tracks which PTC members have attested at all (any payload_status).
    * Without this, we cannot tell "didn't vote" (None) from "voted false" —
@@ -554,7 +554,7 @@ export class ProtoArray {
       // Spec: gloas/fork-choice.md#modified-on_block
       this.payloadTimelinessVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
       this.ptcAttested.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
-      this.daVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
+      this.payloadDataAvailabilityVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
@@ -684,7 +684,7 @@ export class ProtoArray {
   ): void {
     const votes = this.payloadTimelinessVotes.get(blockRoot);
     const attended = this.ptcAttested.get(blockRoot);
-    const daVotes = this.daVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
     if (votes === undefined || attended === undefined || daVotes === undefined) {
       // Block not found or not a Gloas block, ignore
       return;
@@ -736,7 +736,7 @@ export class ProtoArray {
    * Spec: payload_data_availability(store, root, available=True)
    */
   isPayloadDataAvailable(blockRoot: RootHex): boolean {
-    const daVotes = this.daVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
     if (daVotes === undefined) return false;
     if (!this.hasPayload(blockRoot)) return false;
     return bitCount(daVotes.uint8Array) > DATA_AVAILABILITY_TIMELY_THRESHOLD;
@@ -746,7 +746,7 @@ export class ProtoArray {
    * Spec: payload_data_availability(store, root, available=False)
    */
   isPayloadDataNotAvailable(blockRoot: RootHex): boolean {
-    const daVotes = this.daVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
     const attended = this.ptcAttested.get(blockRoot);
     if (daVotes === undefined || attended === undefined) return false;
     // Spec: not verified locally → returns `not False = True`
@@ -1207,7 +1207,7 @@ export class ProtoArray {
       // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
       this.payloadTimelinessVotes.delete(root);
       this.ptcAttested.delete(root);
-      this.daVotes.delete(root);
+      this.payloadDataAvailabilityVotes.delete(root);
     }
 
     // Store nodes prior to finalization
