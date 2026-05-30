@@ -105,7 +105,7 @@ export class ProtoArray {
    * a distinction required by payload_timeliness/payload_data_availability
    * when called with the negative parameter value.
    */
-  private ptcAttested = new Map<RootHex, BitArray>();
+  private ptcParticipation = new Map<RootHex, BitArray>();
 
   constructor({
     pruneThreshold,
@@ -553,7 +553,7 @@ export class ProtoArray {
       // Initialize PTC vote bitvectors for this block.
       // Spec: gloas/fork-choice.md#modified-on_block
       this.payloadTimelinessVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
-      this.ptcAttested.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
+      this.ptcParticipation.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
       this.payloadDataAvailabilityVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
@@ -683,7 +683,7 @@ export class ProtoArray {
     blobDataAvailable: boolean
   ): void {
     const votes = this.payloadTimelinessVotes.get(blockRoot);
-    const attended = this.ptcAttested.get(blockRoot);
+    const attended = this.ptcParticipation.get(blockRoot);
     const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
     if (votes === undefined || attended === undefined || daVotes === undefined) {
       // Block not found or not a Gloas block, ignore
@@ -725,7 +725,7 @@ export class ProtoArray {
    */
   isPayloadNotTimely(blockRoot: RootHex): boolean {
     const votes = this.payloadTimelinessVotes.get(blockRoot);
-    const attended = this.ptcAttested.get(blockRoot);
+    const attended = this.ptcParticipation.get(blockRoot);
     if (votes === undefined || attended === undefined) return false;
     // Spec: not verified locally → returns `not False = True`
     if (!this.hasPayload(blockRoot)) return true;
@@ -747,7 +747,7 @@ export class ProtoArray {
    */
   isPayloadDataNotAvailable(blockRoot: RootHex): boolean {
     const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
-    const attended = this.ptcAttested.get(blockRoot);
+    const attended = this.ptcParticipation.get(blockRoot);
     if (daVotes === undefined || attended === undefined) return false;
     // Spec: not verified locally → returns `not False = True`
     if (!this.hasPayload(blockRoot)) return true;
@@ -1206,7 +1206,7 @@ export class ProtoArray {
       // Prune PTC votes for this block to prevent memory leak
       // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
       this.payloadTimelinessVotes.delete(root);
-      this.ptcAttested.delete(root);
+      this.ptcParticipation.delete(root);
       this.payloadDataAvailabilityVotes.delete(root);
     }
 
