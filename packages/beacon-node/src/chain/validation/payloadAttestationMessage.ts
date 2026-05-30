@@ -83,6 +83,7 @@ async function validatePayloadAttestationMessage(
         blockRoot: toRootHex(data.beaconBlockRoot),
       });
     });
+
   if (!isStatePostGloas(state)) {
     throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
   }
