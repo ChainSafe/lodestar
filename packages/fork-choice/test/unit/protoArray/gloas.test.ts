@@ -720,7 +720,7 @@ describe("Gloas Fork Choice", () => {
     it("DA NO votes do not pollute timeliness NO count (cross-dimension isolation)", () => {
       // Every PTC member votes (payloadPresent=true, blobDataAvailable=false).
       // Timeliness YES → no timeliness NO votes. DA NO → DA NO threshold tripped.
-      // isPayloadNotTimely must read only ptcVotes, not daVotes.
+      // isPayloadNotTimely must read only payloadTimelinessVotes, not daVotes.
       makeFullBlock();
       const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
       protoArray.notifyPtcMessages("0x02", indices, true, false);
@@ -893,7 +893,7 @@ describe("Gloas Fork Choice", () => {
     it("timeliness NO votes do not pollute DA NO count (cross-dimension isolation)", () => {
       // Every PTC member votes (payloadPresent=false, blobDataAvailable=true).
       // Timeliness NO → timeliness NO threshold tripped. DA YES → no DA NO votes.
-      // isPayloadDataNotAvailable must read only daVotes, not ptcVotes.
+      // isPayloadDataNotAvailable must read only daVotes, not payloadTimelinessVotes.
       makeFullBlock();
       const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
       protoArray.notifyPtcMessages("0x02", indices, false, true);

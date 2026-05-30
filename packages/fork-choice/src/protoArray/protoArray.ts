@@ -91,7 +91,7 @@ export class ProtoArray {
    *
    * Bit i = PTC member i voted payloadPresent=true (timeliness YES vote)
    */
-  private ptcVotes = new Map<RootHex, BitArray>();
+  private payloadTimelinessVotes = new Map<RootHex, BitArray>();
   /**
    * Blob data availability votes per block.
    * Spec: gloas/fork-choice.md#modified-store (payload_data_availability_vote)
@@ -552,7 +552,7 @@ export class ProtoArray {
 
       // Initialize PTC vote bitvectors for this block.
       // Spec: gloas/fork-choice.md#modified-on_block
-      this.ptcVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
+      this.payloadTimelinessVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
       this.ptcAttested.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
       this.daVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
     } else {
@@ -682,7 +682,7 @@ export class ProtoArray {
     payloadPresent: boolean,
     blobDataAvailable: boolean
   ): void {
-    const votes = this.ptcVotes.get(blockRoot);
+    const votes = this.payloadTimelinessVotes.get(blockRoot);
     const attended = this.ptcAttested.get(blockRoot);
     const daVotes = this.daVotes.get(blockRoot);
     if (votes === undefined || attended === undefined || daVotes === undefined) {
@@ -701,7 +701,7 @@ export class ProtoArray {
   }
 
   getPTCVotes(blockRootHex: RootHex): BitArray | null {
-    const votes = this.ptcVotes.get(blockRootHex);
+    const votes = this.payloadTimelinessVotes.get(blockRootHex);
     if (votes === undefined) {
       // Block not found or not a Gloas block
       return null;
@@ -714,7 +714,7 @@ export class ProtoArray {
    * Spec: payload_timeliness(store, root, timely=True)
    */
   isPayloadTimely(blockRoot: RootHex): boolean {
-    const votes = this.ptcVotes.get(blockRoot);
+    const votes = this.payloadTimelinessVotes.get(blockRoot);
     if (votes === undefined) return false;
     if (!this.hasPayload(blockRoot)) return false;
     return bitCount(votes.uint8Array) > PAYLOAD_TIMELY_THRESHOLD;
@@ -724,7 +724,7 @@ export class ProtoArray {
    * Spec: payload_timeliness(store, root, timely=False)
    */
   isPayloadNotTimely(blockRoot: RootHex): boolean {
-    const votes = this.ptcVotes.get(blockRoot);
+    const votes = this.payloadTimelinessVotes.get(blockRoot);
     const attended = this.ptcAttested.get(blockRoot);
     if (votes === undefined || attended === undefined) return false;
     // Spec: not verified locally → returns `not False = True`
@@ -1205,7 +1205,7 @@ export class ProtoArray {
       this.indices.delete(root);
       // Prune PTC votes for this block to prevent memory leak
       // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
-      this.ptcVotes.delete(root);
+      this.payloadTimelinessVotes.delete(root);
       this.ptcAttested.delete(root);
       this.daVotes.delete(root);
     }
