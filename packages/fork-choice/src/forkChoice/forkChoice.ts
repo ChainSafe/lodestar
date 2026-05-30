@@ -319,8 +319,8 @@ export class ForkChoice implements IForkChoice {
   }
 
   /** Spec: should_build_on_full(store, head) */
-  shouldBuildOnFull(head: ProtoBlock): boolean {
-    return this.protoArray.shouldBuildOnFull(head);
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
+    return this.protoArray.shouldBuildOnFull(head, slot);
   }
 
   /**

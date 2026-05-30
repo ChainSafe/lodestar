@@ -978,18 +978,18 @@ describe("Gloas Fork Choice", () => {
 
     it("throws when head is PENDING", () => {
       const head = makeHead(PayloadStatus.PENDING);
-      expect(() => protoArray.shouldBuildOnFull(head)).toThrow(/PENDING/);
+      expect(() => protoArray.shouldBuildOnFull(head, head.slot + 1)).toThrow(/PENDING/);
     });
 
     it("returns false when head is EMPTY", () => {
       const head = makeHead(PayloadStatus.EMPTY);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
     });
 
     it("returns true when head is FULL and no DA NO votes", () => {
       const head = makeHead(PayloadStatus.FULL);
       // No votes at all — isPayloadDataNotAvailable returns false → build on full
-      expect(protoArray.shouldBuildOnFull(head)).toBe(true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
     });
 
     it("returns false when head is FULL and DA NO votes exceed threshold (reorg trigger)", () => {
@@ -997,7 +997,7 @@ describe("Gloas Fork Choice", () => {
       const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: overThreshold}, (_, i) => i);
       protoArray.notifyPtcMessages("0x02", indices, true, false);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
     });
 
     it("returns true when head is FULL and DA NO votes exactly at threshold (>, not >=)", () => {
@@ -1005,14 +1005,22 @@ describe("Gloas Fork Choice", () => {
       const atThreshold = Math.floor(PTC_SIZE / 2);
       const indices = Array.from({length: atThreshold}, (_, i) => i);
       protoArray.notifyPtcMessages("0x02", indices, true, false);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
     });
 
     it("returns true when many PTC members did not vote and few NO votes are below threshold", () => {
       // Guards against None being miscounted as NO — would force a spurious reorg.
       const head = makeHead(PayloadStatus.FULL);
       protoArray.notifyPtcMessages("0x02", [0], true, false);
-      expect(protoArray.shouldBuildOnFull(head)).toBe(true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
+    it("returns true for a FULL head that is not from the previous slot, even with PTC voting against it", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", indices, true, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 2)).toBe(true);
     });
   });
 

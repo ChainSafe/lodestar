@@ -278,7 +278,7 @@ export async function produceBlockBody<T extends BlockType>(
     // Spec: should_build_on_full(store, head). `parentBlock` is the proposer's head
     // (set by chain.getProposerHead(slot)). Returns false when the PTC majority
     // signalled the blob data is not available, forcing a build on EMPTY (reorg).
-    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock);
+    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
     if (isBuildingOnFull) {
       parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
       parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
