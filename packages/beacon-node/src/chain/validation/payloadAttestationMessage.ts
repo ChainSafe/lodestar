@@ -8,6 +8,7 @@ import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {RegenCaller} from "../regen/index.js";
 
 export type PayloadAttestationValidationResult = {
   attDataRootHex: RootHex;
@@ -61,21 +62,31 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue attestation for processing
   // once the block is retrieved. Note a client might want to request payload after).
-  if (!chain.forkChoice.hasBlock(data.beaconBlockRoot)) {
+  const block = chain.forkChoice.getBlockDefaultStatus(data.beaconBlockRoot);
+  if (!block) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
       blockRoot: toRootHex(data.beaconBlockRoot),
     });
   }
 
-  const state = chain.getHeadState();
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
-  }
-
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
+
+  // Use the referenced block's branch state for the PTC committee check
+  const state = await chain.regen
+    .getBlockSlotState(block, data.slot, {dontTransferCache: true}, RegenCaller.validateGossipPayloadAttestationMessage)
+    .catch(() => {
+      throw new PayloadAttestationError(GossipAction.IGNORE, {
+        code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
+        blockRoot: toRootHex(data.beaconBlockRoot),
+      });
+    });
+
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
+  }
 
   // [REJECT] The message's validator index is within the payload committee in
   // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
