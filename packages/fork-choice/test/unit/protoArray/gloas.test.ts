@@ -1019,7 +1019,7 @@ describe("Gloas Fork Choice", () => {
       const head = makeHead(PayloadStatus.FULL);
       const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: overThreshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true, false);
+      protoArray.notifyPtcMessages("0x02", indices, false, false);
       expect(protoArray.shouldBuildOnFull(head, head.slot + 2)).toBe(true);
     });
   });
