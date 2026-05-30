@@ -765,9 +765,11 @@ export class ProtoArray {
       throw new Error("shouldBuildOnFull called with PENDING head");
     }
     if (head.payloadStatus === PayloadStatus.EMPTY) return false;
+
     // The PTC data availability view is only consulted for a head from the previous slot.
     // For an earlier head the empty/full variant has already been resolved by weight in getHead.
     if (head.slot + 1 !== slot) return true;
+
     return !this.isPayloadDataNotAvailable(head.blockRoot);
   }
 
