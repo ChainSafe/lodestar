@@ -18,7 +18,10 @@ export async function validateApiVoluntaryExit(
 ): Promise<ApiVoluntaryExitResult> {
   const prioritizeBls = true;
 
-  if (chain.opPool.hasSeenVoluntaryExit(voluntaryExit.message.validatorIndex)) {
+  if (
+    chain.opPool.hasSeenVoluntaryExit(voluntaryExit.message.validatorIndex) ||
+    chain.deferredVoluntaryExitPool.has(voluntaryExit.message.validatorIndex)
+  ) {
     throw new VoluntaryExitError(GossipAction.IGNORE, {
       code: VoluntaryExitErrorCode.ALREADY_EXISTS,
     });

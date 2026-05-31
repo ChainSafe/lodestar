@@ -53,6 +53,10 @@ export class DeferredVoluntaryExitPool {
     return validExits;
   }
 
+  has(validatorIndex: ValidatorIndex): boolean {
+    return this.pool.has(validatorIndex);
+  }
+
   size(): number {
     return this.pool.size;
   }
