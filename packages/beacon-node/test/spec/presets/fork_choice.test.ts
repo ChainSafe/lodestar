@@ -24,6 +24,8 @@ import {
   IBeaconStateViewGloas,
   createCachedBeaconState,
   createPubkeyCache,
+  createSingleSignatureSetFromComponents,
+  getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
@@ -221,6 +223,16 @@ const forkChoiceTest =
                 if (!protoBlock) {
                   throw Error(`Block not found for root ${blockRoot}`);
                 }
+
+                if (protoBlock.slot !== payloadAttestationMessage.data.slot) {
+                  continue;
+                }
+
+                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+                if (currentSlot !== payloadAttestationMessage.data.slot) {
+                  throw Error(`Message slot ${payloadAttestationMessage.data.slot} is not current slot ${currentSlot}`);
+                }
+
                 const blockState = await chain.regen.getBlockSlotState(
                   protoBlock,
                   payloadAttestationMessage.data.slot,
@@ -231,6 +243,23 @@ const forkChoiceTest =
                   payloadAttestationMessage.validatorIndex,
                   payloadAttestationMessage.data.slot
                 );
+                if (ptcIndices.length === 0) {
+                  throw Error(`Validator ${payloadAttestationMessage.validatorIndex} is not a member of the PTC`);
+                }
+
+                const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
+                if (!validatorPubkey) {
+                  throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
+                }
+                const signatureSet = createSingleSignatureSetFromComponents(
+                  validatorPubkey,
+                  getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
+                  payloadAttestationMessage.signature
+                );
+                if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+                  throw Error("Invalid payload attestation message signature");
+                }
+
                 chain.forkChoice.notifyPtcMessages(
                   blockRoot,
                   payloadAttestationMessage.data.slot,
