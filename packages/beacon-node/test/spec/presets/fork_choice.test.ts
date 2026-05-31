@@ -228,11 +228,6 @@ const forkChoiceTest =
                   continue;
                 }
 
-                const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
-                if (currentSlot !== payloadAttestationMessage.data.slot) {
-                  throw Error(`Message slot ${payloadAttestationMessage.data.slot} is not current slot ${currentSlot}`);
-                }
-
                 const blockState = await chain.regen.getBlockSlotState(
                   protoBlock,
                   payloadAttestationMessage.data.slot,
@@ -247,6 +242,11 @@ const forkChoiceTest =
                   throw Error(`Validator ${payloadAttestationMessage.validatorIndex} is not a member of the PTC`);
                 }
 
+                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
+                if (currentSlot !== payloadAttestationMessage.data.slot) {
+                  throw Error(`Message slot ${payloadAttestationMessage.data.slot} is not current slot ${currentSlot}`);
+                }
+
                 const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
                 if (!validatorPubkey) {
                   throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
@@ -256,7 +256,7 @@ const forkChoiceTest =
                   getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
                   payloadAttestationMessage.signature
                 );
-                if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+                if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: true}))) {
                   throw Error("Invalid payload attestation message signature");
                 }
 
