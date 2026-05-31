@@ -947,11 +947,12 @@ export class ForkChoice implements IForkChoice {
    */
   notifyPtcMessages(
     blockRoot: RootHex,
+    slot: Slot,
     ptcIndices: number[],
     payloadPresent: boolean,
     blobDataAvailable: boolean
   ): void {
-    this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, blobDataAvailable);
+    this.protoArray.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
   }
 
   /**

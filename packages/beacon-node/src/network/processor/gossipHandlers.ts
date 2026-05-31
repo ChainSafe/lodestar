@@ -1214,6 +1214,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       chain.forkChoice.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+        payloadAttestationMessage.data.slot,
         validationResult.validatorCommitteeIndices,
         payloadAttestationMessage.data.payloadPresent,
         payloadAttestationMessage.data.blobDataAvailable
