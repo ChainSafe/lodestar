@@ -70,6 +70,17 @@ async function validatePayloadAttestationMessage(
     });
   }
 
+  // [IGNORE] The block referenced by `data.beacon_block_root` is at slot `data.slot`,
+  // i.e. the block has `block.slot == data.slot`.
+  if (block.slot !== data.slot) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.INVALID_BLOCK_SLOT,
+      blockRoot: toRootHex(data.beaconBlockRoot),
+      blockSlot: block.slot,
+      slot: data.slot,
+    });
+  }
+
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
