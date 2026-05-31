@@ -1137,8 +1137,6 @@ export function getValidatorApi(
         payloadPresent,
         blobDataAvailable,
         hasPayloadInput: payloadInput !== undefined,
-        hasPayloadEnvelope: payloadInput?.hasPayloadEnvelope() ?? false,
-        hasAllData: payloadInput?.hasAllData() ?? false,
         payloadSeenSec,
         payloadDueSec,
       });
