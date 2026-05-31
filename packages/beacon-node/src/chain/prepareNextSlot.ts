@@ -170,7 +170,7 @@ export class PrepareNextSlotScheduler {
         let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
         if (isStatePostGloas(updatedPrepareState)) {
           // Spec: should_build_on_full(store, head) — see produceBlockBody.ts for context.
-          if (this.chain.forkChoice.shouldBuildOnFull(updatedHead)) {
+          if (this.chain.forkChoice.shouldBuildOnFull(updatedHead, prepareSlot)) {
             parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
             // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
             if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
