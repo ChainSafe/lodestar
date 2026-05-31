@@ -132,6 +132,7 @@ export interface IForkChoice {
   getAllNodes(): ProtoNode[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
+  getEquivocatingIndices(): ReadonlySet<ValidatorIndex>;
   /**
    * Add `block` to the fork choice DAG.
    *
