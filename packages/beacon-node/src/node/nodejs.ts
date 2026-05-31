@@ -339,7 +339,7 @@ export class BeaconNode {
     chain.clock.addListener(ClockEvent.epoch, async () => {
       try {
         const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.publishDeferredVoluntaryExits);
-        const exits = chain.deferredVoluntaryExitPool.retrieveProcessableExits(state);
+        const exits = chain.deferredVoluntaryExitPool.drainProcessableExits(state);
         for (const exit of exits) {
           try {
             chain.opPool.insertVoluntaryExit(exit);

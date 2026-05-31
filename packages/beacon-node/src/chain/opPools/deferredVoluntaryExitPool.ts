@@ -28,7 +28,7 @@ export class DeferredVoluntaryExitPool {
     return true;
   }
 
-  retrieveProcessableExits(state: IBeaconStateView): SignedVoluntaryExit[] {
+  drainProcessableExits(state: IBeaconStateView): SignedVoluntaryExit[] {
     const epoch = state.epoch;
     const validExits: SignedVoluntaryExit[] = [];
     for (const [validatorIndex, entry] of this.pool) {

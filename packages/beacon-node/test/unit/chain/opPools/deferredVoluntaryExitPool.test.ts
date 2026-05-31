@@ -78,10 +78,10 @@ describe("DeferredVoluntaryExitPool", () => {
     });
   });
 
-  describe("retrieveProcessableExits", () => {
+  describe("drainProcessableExits", () => {
     it("correct empty state", () => {
       const mockState = makeStateStub(epoch, () => VoluntaryExitValidity.valid);
-      expect(pool.retrieveProcessableExits(mockState)).toEqual([]);
+      expect(pool.drainProcessableExits(mockState)).toEqual([]);
     });
 
     it("valid entry is retrieved and removed", () => {
@@ -90,7 +90,7 @@ describe("DeferredVoluntaryExitPool", () => {
       expect(result).toBe(true);
       expect(pool.size()).toBe(1);
       const mockState = makeStateStub(epoch, () => VoluntaryExitValidity.valid);
-      expect(pool.retrieveProcessableExits(mockState)).toEqual([exit]);
+      expect(pool.drainProcessableExits(mockState)).toEqual([exit]);
       expect(pool.size()).toBe(0);
     });
 
@@ -100,7 +100,7 @@ describe("DeferredVoluntaryExitPool", () => {
       expect(result).toBe(true);
       expect(pool.size()).toBe(1);
       const mockState = makeStateStub(epoch, () => VoluntaryExitValidity.shortTimeActive);
-      expect(pool.retrieveProcessableExits(mockState)).toEqual([]);
+      expect(pool.drainProcessableExits(mockState)).toEqual([]);
       expect(pool.size()).toBe(1);
     });
 
@@ -110,7 +110,7 @@ describe("DeferredVoluntaryExitPool", () => {
       expect(result).toBe(true);
       expect(pool.size()).toBe(1);
       const mockState = makeStateStub(epoch, () => VoluntaryExitValidity.invalidSignature);
-      expect(pool.retrieveProcessableExits(mockState)).toEqual([]);
+      expect(pool.drainProcessableExits(mockState)).toEqual([]);
       expect(pool.size()).toBe(0);
     });
 
@@ -120,7 +120,7 @@ describe("DeferredVoluntaryExitPool", () => {
       expect(result).toBe(true);
       expect(pool.size()).toBe(1);
       const mockState = makeStateStub(maxDeferEpochs + epoch + 1, () => VoluntaryExitValidity.valid);
-      expect(pool.retrieveProcessableExits(mockState)).toEqual([]);
+      expect(pool.drainProcessableExits(mockState)).toEqual([]);
       expect(pool.size()).toBe(0);
     });
 
@@ -140,7 +140,7 @@ describe("DeferredVoluntaryExitPool", () => {
       };
 
       const mockState = makeStateStub(epoch, validityFn);
-      expect(pool.retrieveProcessableExits(mockState)).toEqual([exit2]);
+      expect(pool.drainProcessableExits(mockState)).toEqual([exit2]);
       // Exit1 stays in pool because the throw was caught before delete
       expect(pool.size()).toBe(1);
     });
@@ -178,7 +178,7 @@ describe("DeferredVoluntaryExitPool", () => {
       // Exit 1 is returned and removed
       // Exit 2 is kept
       // Exit 3 is removed
-      expect(pool.retrieveProcessableExits(mockState)).toEqual([exit3]);
+      expect(pool.drainProcessableExits(mockState)).toEqual([exit3]);
       expect(pool.size()).toBe(1);
     });
   });
