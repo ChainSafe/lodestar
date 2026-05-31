@@ -1048,6 +1048,23 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
     });
 
+    it("returns false when head is FULL, data available but timeliness NO votes exceed threshold (late payload reorg)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      // payloadPresent=false (untimely), blobDataAvailable=true (data available)
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
+    });
+
+    it("returns true when head is FULL and timeliness NO votes exactly at threshold (>, not >=)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const atThreshold = Math.floor(PTC_SIZE / 2);
+      const indices = Array.from({length: atThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
     it("returns true for a FULL head that is not from the previous slot, even with PTC voting against it", () => {
       const head = makeHead(PayloadStatus.FULL);
       const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
