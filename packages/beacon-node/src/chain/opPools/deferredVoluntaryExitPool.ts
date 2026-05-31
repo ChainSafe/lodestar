@@ -37,7 +37,7 @@ export class DeferredVoluntaryExitPool {
           this.pool.delete(validatorIndex);
           continue;
         }
-        const validity = state.getVoluntaryExitValidity(entry.exit, false);
+        const validity = state.getVoluntaryExitValidity(entry.exit, true);
         if (validity === VoluntaryExitValidity.valid) {
           validExits.push(entry.exit);
           this.pool.delete(validatorIndex);
