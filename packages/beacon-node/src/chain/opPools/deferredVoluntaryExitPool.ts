@@ -35,6 +35,7 @@ export class DeferredVoluntaryExitPool {
       try {
         if (epoch - entry.insertedAtEpoch > this.maxDeferEpochs) {
           this.pool.delete(validatorIndex);
+          this.logger.warn("Deferred voluntary exit expired", {validatorIndex, lastValidity: entry.validity});
           continue;
         }
         const validity = state.getVoluntaryExitValidity(entry.exit, true);
