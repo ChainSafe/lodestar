@@ -233,6 +233,7 @@ const forkChoiceTest =
                 );
                 chain.forkChoice.notifyPtcMessages(
                   blockRoot,
+                  payloadAttestationMessage.data.slot,
                   ptcIndices,
                   payloadAttestationMessage.data.payloadPresent,
                   payloadAttestationMessage.data.blobDataAvailable
