@@ -64,7 +64,8 @@ describe("BuilderDepositSignatureCache", () => {
     it("returns false when the same content is queried at a different slot", () => {
       const cache = new BuilderDepositSignatureCache();
       cache.setVerifiedPreGloas(atSlot(pool[0], 5));
-      // Slot is part of the hash-tree-root, so a different slot looks up to a different bucket
+      // Slot is the outer Map key (not part of the inner hash); querying a different slot
+      // looks up a different bucket → miss.
       expect(cache.isVerifiedPreGloas(atSlot(pool[0], 6))).toBe(false);
     });
 
