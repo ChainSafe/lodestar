@@ -928,13 +928,8 @@ export function getValidatorApi(
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
-      const bidParentBlockHash = isBuildingOnFull
-        ? parentBlock.executionPayloadBlockHash
-        : (chain.forkChoice.getBlockHex(parentBlockRootHex, PayloadStatus.EMPTY)?.executionPayloadBlockHash ?? null);
-      const builderBid =
-        bidParentBlockHash !== null
-          ? chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex)
-          : null;
+      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       const logCtx = {
         slot,
