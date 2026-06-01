@@ -661,7 +661,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     publishExecutionPayloadBid: {
-      url: "/eth/v1/beacon/execution_payload_bid",
+      url: "/eth/v1/beacon/execution_payload_bids",
       method: "POST",
       req: {
         writeReqJson: ({signedExecutionPayloadBid}) => {
@@ -705,7 +705,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     getSignedExecutionPayloadEnvelope: {
-      url: "/eth/v1/beacon/execution_payload_envelope/{block_id}",
+      url: "/eth/v1/beacon/execution_payload_envelopes/{block_id}",
       method: "GET",
       req: blockIdOnlyReq,
       resp: {
