@@ -52,15 +52,12 @@ const testDatas = {
 };
 
 const ignoredOperations = [
-  /* missing route */
-  "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
-  "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
+  // TODO GLOAS: not yet implemented
   "getExecutionPayloadBid",
-  "getSignedExecutionPayloadEnvelope",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
-  /* 
+  /*
    https://github.com/ChainSafe/lodestar/issues/6168
    /query/syncing_status - must be integer
    */

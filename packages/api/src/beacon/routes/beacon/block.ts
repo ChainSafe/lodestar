@@ -616,7 +616,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     publishExecutionPayloadEnvelope: {
-      url: "/eth/v1/beacon/execution_payload_envelope",
+      url: "/eth/v1/beacon/execution_payload_envelopes",
       method: "POST",
       req: {
         writeReqJson: ({signedExecutionPayloadEnvelope}) => {
