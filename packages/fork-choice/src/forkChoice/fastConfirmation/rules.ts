@@ -5,6 +5,7 @@ import {
   FastConfirmationCache,
   FastConfirmationContext,
   FastConfirmationDecision,
+  FastConfirmationDecisionReason,
   FastConfirmationRule,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
@@ -14,7 +15,11 @@ import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSaf
 export const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
   if (!confirmedBlock) {
-    return {confirmedRoot: snapshot.finalizedRoot, didReset: true, reason: "confirmed_not_found"};
+    return {
+      confirmedRoot: snapshot.finalizedRoot,
+      didReset: true,
+      reason: FastConfirmationDecisionReason.ConfirmedNotFound,
+    };
   }
   return decision;
 };
@@ -39,7 +44,12 @@ export const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (
 
   if (confirmedEpochBehindHead || notAncestorOfHead || allChildrenNotConfirmed) {
     const didReset = decision.didReset || decision.confirmedRoot !== snapshot.finalizedRoot;
-    return {confirmedRoot: snapshot.finalizedRoot, didReset, reason: "confirmed_reset"};
+    const reason = confirmedEpochBehindHead
+      ? FastConfirmationDecisionReason.ResetBehind
+      : notAncestorOfHead
+        ? FastConfirmationDecisionReason.ResetNotAncestor
+        : FastConfirmationDecisionReason.ResetChainUnsafe;
+    return {confirmedRoot: snapshot.finalizedRoot, didReset, reason};
   }
   return decision;
 };
@@ -58,7 +68,7 @@ export const advanceIfObservedJustified: FastConfirmationRule = (snapshot, ctx, 
     return {
       ...decision,
       confirmedRoot: store.currentEpochObservedJustifiedCheckpoint.rootHex,
-      reason: "observed_justified",
+      reason: FastConfirmationDecisionReason.ObservedJustified,
     };
   }
   return decision;
@@ -79,7 +89,7 @@ export const advanceToLatestConfirmedDescendant: FastConfirmationRule = (
     return {
       ...decision,
       confirmedRoot: newConfirmed,
-      reason: "confirmed_descendant",
+      reason: FastConfirmationDecisionReason.ConfirmedDescendant,
     };
   }
   return decision;
@@ -101,11 +111,14 @@ export function runFastConfirmationRules(
   cache: FastConfirmationCache,
   logger?: Logger
 ): FastConfirmationDecision {
-  let decision: FastConfirmationDecision = {confirmedRoot: snapshot.confirmedRoot, didReset: false};
+  let decision: FastConfirmationDecision = {
+    confirmedRoot: snapshot.confirmedRoot,
+    didReset: false,
+    reason: FastConfirmationDecisionReason.Unchanged,
+  };
 
   for (const rule of FAST_CONFIRMATION_RULES) {
     decision = rule(snapshot, ctx, store, cache, decision, logger);
-    if (decision.stop) break;
   }
   return decision;
 }

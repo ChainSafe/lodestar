@@ -146,9 +146,6 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     if (confirmedBlock) {
       this.metrics.fastConfirmation.confirmedSlot.set(confirmedBlock.slot);
       this.metrics.fastConfirmation.confirmedEpoch.set(computeEpochAtSlot(confirmedBlock.slot));
-    } else {
-      this.metrics.fastConfirmation.confirmedSlot.set(0);
-      this.metrics.fastConfirmation.confirmedEpoch.set(0);
     }
     if (result.didReset) {
       this.metrics.fastConfirmation.resets.inc();

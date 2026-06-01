@@ -74,9 +74,9 @@ export interface MetricsRegisterCustom extends MetricsRegisterExtra {
   static<Labels extends LabelsGeneric = NoLabels>(config: StaticConfig<Labels>): void;
 }
 
-export type EndTimer = (() => number) | undefined;
+export type EndTimer = () => number;
 
-export function withObservedDuration<T>(endTimer: EndTimer, fn: () => T): T {
+export function withObservedDuration<T>(endTimer: EndTimer | undefined, fn: () => T): T {
   try {
     return fn();
   } finally {
@@ -84,7 +84,7 @@ export function withObservedDuration<T>(endTimer: EndTimer, fn: () => T): T {
   }
 }
 
-export async function withObservedDurationAsync<T>(endTimer: EndTimer, fn: () => Promise<T>): Promise<T> {
+export async function withObservedDurationAsync<T>(endTimer: EndTimer | undefined, fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } finally {

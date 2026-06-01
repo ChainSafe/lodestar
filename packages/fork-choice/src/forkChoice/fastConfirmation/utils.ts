@@ -12,6 +12,7 @@ import {Logger, fromHex} from "@lodestar/utils";
 import {ExecutionStatus, ProtoBlock} from "../../protoArray/interface.ts";
 import {CheckpointWithHex, computeTotalBalance, equalCheckpointWithHex} from "../store.ts";
 import {
+  type BalanceSourceKey,
   FastConfirmationBalanceSource,
   FastConfirmationCache,
   FastConfirmationContext,
@@ -19,7 +20,17 @@ import {
   IFastConfirmationStore,
 } from "./types.ts";
 
+// Spec: adjust_committee_weight_estimate_to_ensure_safety
+// https://github.com/ethereum/consensus-specs/blob/master/specs/phase0/fast-confirmation.md#adjust_committee_weight_estimate_to_ensure_safety
 const COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR = 5;
+
+const SAFETY_THRESHOLD_UNREACHABLE = Object.freeze({
+  threshold: Number.POSITIVE_INFINITY,
+  proposerScore: 0,
+  maximumSupport: 0,
+  supportDiscount: 0,
+  adversarialWeight: 0,
+});
 
 export function getBlock(ctx: FastConfirmationContext, cache: FastConfirmationCache, root: RootHex): ProtoBlock | null {
   if (cache.blockByRoot.has(root)) {
@@ -311,6 +322,7 @@ export function adjustCommitteeWeightEstimateToEnsureSafety(estimate: number): n
   // `ceil(... / 1000)` becomes a no-op at our unit scale. The equivalent
   // conservative adjustment in increments is therefore:
   //   ceil(estimate_increments * (1000 + factor) / 1000)
+  // The `+ 999` is integer ceiling division by 1000.
   return Math.floor((estimate * (1000 + COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR) + 999) / 1000);
 }
 
@@ -338,7 +350,7 @@ function ensureVoteMaps(
   ctx: FastConfirmationContext,
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
-  sourceKey: "current" | "previous"
+  sourceKey: BalanceSourceKey
 ): void {
   if (cache.voteWeightBySource.has(sourceKey)) return;
 
@@ -347,26 +359,17 @@ function ensureVoteMaps(
   const state = balanceSource.state;
   const activeIndices = state?.getCurrentShuffling().activeIndices ?? null;
   const equivocating = ctx.getEquivocatingIndices();
+  const indices: Iterable<number> = activeIndices ?? balances.keys();
+  const isSlashed = state ? (i: ValidatorIndex) => state.getValidator(i).slashed : () => false;
 
-  if (activeIndices !== null && state) {
-    for (const i of activeIndices) {
-      if (state.getValidator(i).slashed) continue;
-      if (equivocating.has(i)) continue;
-      const msg = ctx.getLatestMessage(i);
-      if (!msg) continue;
-      const weight = balances[i] ?? 0;
-      if (weight === 0) continue;
-      voteMap.set(msg.root, (voteMap.get(msg.root) ?? 0) + weight);
-    }
-  } else {
-    for (let i = 0; i < balances.length; i++) {
-      const weight = balances[i] ?? 0;
-      if (weight === 0) continue;
-      if (equivocating.has(i)) continue;
-      const msg = ctx.getLatestMessage(i);
-      if (!msg) continue;
-      voteMap.set(msg.root, (voteMap.get(msg.root) ?? 0) + weight);
-    }
+  for (const i of indices) {
+    if (isSlashed(i)) continue;
+    if (equivocating.has(i)) continue;
+    const weight = balances[i] ?? 0;
+    if (weight === 0) continue;
+    const msg = ctx.getLatestMessage(i);
+    if (!msg) continue;
+    voteMap.set(msg.root, (voteMap.get(msg.root) ?? 0) + weight);
   }
 
   cache.voteWeightBySource.set(sourceKey, voteMap);
@@ -377,7 +380,7 @@ export function getAttestationScore(
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
   blockRoot: RootHex,
-  sourceKey: "current" | "previous"
+  sourceKey: BalanceSourceKey
 ): number {
   ensureVoteMaps(ctx, cache, balanceSource, sourceKey);
   const voteMap = cache.voteWeightBySource.get(sourceKey) ?? new Map();
@@ -528,16 +531,6 @@ export function computeEmptySlotSupportDiscount(
   return parentSupportInEmptySlots > adversarialWeight ? parentSupportInEmptySlots - adversarialWeight : 0;
 }
 
-export function getSupportDiscount(
-  ctx: FastConfirmationContext,
-  store: IFastConfirmationStore,
-  cache: FastConfirmationCache,
-  balanceSource: FastConfirmationBalanceSource,
-  blockRoot: RootHex
-): number {
-  return computeEmptySlotSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
-}
-
 export function computeSafetyThreshold(
   ctx: FastConfirmationContext,
   store: IFastConfirmationStore,
@@ -554,23 +547,11 @@ export function computeSafetyThreshold(
   const currentSlot = ctx.getCurrentSlot();
   const block = getBlock(ctx, cache, blockRoot);
   if (!block) {
-    return {
-      threshold: Number.POSITIVE_INFINITY,
-      proposerScore: 0,
-      maximumSupport: 0,
-      supportDiscount: 0,
-      adversarialWeight: 0,
-    };
+    return SAFETY_THRESHOLD_UNREACHABLE;
   }
   const parentBlock = getBlock(ctx, cache, block.parentRoot);
   if (!parentBlock) {
-    return {
-      threshold: Number.POSITIVE_INFINITY,
-      proposerScore: 0,
-      maximumSupport: 0,
-      supportDiscount: 0,
-      adversarialWeight: 0,
-    };
+    return SAFETY_THRESHOLD_UNREACHABLE;
   }
 
   // Spec: compute_safety_threshold(store, block_root, balance_source)
@@ -582,7 +563,7 @@ export function computeSafetyThreshold(
     (parentBlock.slot + 1) as Slot,
     (currentSlot - 1) as Slot
   );
-  const supportDiscount = getSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
+  const supportDiscount = computeEmptySlotSupportDiscount(ctx, store, cache, balanceSource, blockRoot);
   const adversarialWeight = getAdversarialWeight(ctx, store, cache, balanceSource, blockRoot);
 
   // Spec underflow guard:
@@ -601,7 +582,7 @@ export function isOneConfirmed(
   cache: FastConfirmationCache,
   balanceSource: FastConfirmationBalanceSource,
   blockRoot: RootHex,
-  sourceKey: "current" | "previous",
+  sourceKey: BalanceSourceKey,
   logger?: Logger
 ): boolean {
   const currentSlot = ctx.getCurrentSlot();
@@ -668,7 +649,7 @@ export function getCurrentTargetScore(
 
   // Group validators by (voteRoot, voteEpoch) to avoid per-validator getCheckpointForBlock calls.
   // On mainnet ~1M validators vote for only ~50 unique (root, epoch) pairs.
-  const voteGroups = new Map<string, number>();
+  const voteGroups = new Map<RootHex, Map<Epoch, number>>();
   for (const i of activeIndices) {
     if (targetState.getValidator(i).slashed) continue;
     if (equivocating.has(i)) continue;
@@ -676,20 +657,22 @@ export function getCurrentTargetScore(
     if (!msg) continue;
     const weight = balances[i] ?? 0;
     if (weight === 0) continue;
-    const groupKey = `${msg.root}:${msg.epoch}`;
-    voteGroups.set(groupKey, (voteGroups.get(groupKey) ?? 0) + weight);
+    let byEpoch = voteGroups.get(msg.root);
+    if (!byEpoch) {
+      byEpoch = new Map();
+      voteGroups.set(msg.root, byEpoch);
+    }
+    byEpoch.set(msg.epoch, (byEpoch.get(msg.epoch) ?? 0) + weight);
   }
 
   // Check each unique vote group's checkpoint against the target
-  const targetKey = `${target.epoch}:${target.rootHex}`;
   let score = 0;
-  for (const [groupKey, weight] of voteGroups) {
-    const sepIdx = groupKey.lastIndexOf(":");
-    const root = groupKey.slice(0, sepIdx);
-    const epoch = Number(groupKey.slice(sepIdx + 1)) as Epoch;
-    const cp = getCheckpointForBlock(ctx, root, epoch);
-    if (cp && `${cp.epoch}:${cp.rootHex}` === targetKey) {
-      score += weight;
+  for (const [root, byEpoch] of voteGroups) {
+    for (const [epoch, weight] of byEpoch) {
+      const cp = getCheckpointForBlock(ctx, root, epoch);
+      if (cp && cp.epoch === target.epoch && cp.rootHex === target.rootHex) {
+        score += weight;
+      }
     }
   }
   return score;
@@ -851,7 +834,7 @@ export function findLatestConfirmedDescendant(
 
   const confirmedBlock = getBlock(ctx, cache, confirmedRoot);
   const confirmedEpoch = confirmedBlock ? computeEpochAtSlot(confirmedBlock.slot) : null;
-  const loop1Condition =
+  const shouldAdvanceThroughPreviousEpoch =
     confirmedEpoch !== null &&
     confirmedEpoch + 1 === currentEpoch &&
     previousSlotVotingSource !== null &&
@@ -865,10 +848,10 @@ export function findLatestConfirmedDescendant(
     latestConfirmedRoot,
     currentEpoch,
     headRoot: snapshot.headRoot,
-    loop1Condition,
+    shouldAdvanceThroughPreviousEpoch,
   });
 
-  if (loop1Condition) {
+  if (shouldAdvanceThroughPreviousEpoch) {
     const canonicalRoots = getAncestorRoots(ctx, cache, snapshot.headRoot, confirmedRoot);
     for (const blockRoot of canonicalRoots) {
       const block = getBlock(ctx, cache, blockRoot);
@@ -909,11 +892,11 @@ export function findLatestConfirmedDescendant(
     }
   }
 
-  const loop2Condition =
+  const shouldAdvanceThroughCurrentEpoch =
     isStartSlotOfEpoch(snapshot.currentSlot) ||
     (headJustification !== null && headJustification.epoch + 1 >= currentEpoch);
 
-  if (loop2Condition) {
+  if (shouldAdvanceThroughCurrentEpoch) {
     const canonicalRoots = getAncestorRoots(ctx, cache, snapshot.headRoot, confirmedRoot);
     let tentativeConfirmedRoot = confirmedRoot;
 
@@ -967,7 +950,7 @@ export function findLatestConfirmedDescendant(
   logger?.debug("Fast confirmation descendant search result", {
     latestConfirmedRoot,
     confirmedRoot,
-    loop2Condition,
+    shouldAdvanceThroughCurrentEpoch,
   });
 
   return confirmedRoot;

@@ -8,7 +8,10 @@ import {
   resetIfBehindOrNotAncestorOrUnsafe,
   resetIfConfirmedUnavailable,
 } from "../../../src/forkChoice/fastConfirmation/rules.js";
-import {FastConfirmationDecision} from "../../../src/forkChoice/fastConfirmation/types.js";
+import {
+  FastConfirmationDecision,
+  FastConfirmationDecisionReason,
+} from "../../../src/forkChoice/fastConfirmation/types.js";
 import {
   ZERO_ROOT,
   latestMessagesFor,
@@ -20,7 +23,11 @@ import {
   rootFromNumber,
 } from "./fastConfirmationTestUtils.js";
 
-const BASE_DECISION: FastConfirmationDecision = {confirmedRoot: ZERO_ROOT, didReset: false};
+const BASE_DECISION: FastConfirmationDecision = {
+  confirmedRoot: ZERO_ROOT,
+  didReset: false,
+  reason: FastConfirmationDecisionReason.Unchanged,
+};
 
 describe("fast confirmation rules", () => {
   it("resetIfConfirmedUnavailable resets to finalized when confirmed block is unknown", () => {
@@ -53,7 +60,11 @@ describe("fast confirmation rules", () => {
       confirmedRoot: rootFromNumber(99),
     });
 
-    expect(result).toEqual({confirmedRoot: ZERO_ROOT, didReset: true, reason: "confirmed_not_found"});
+    expect(result).toEqual({
+      confirmedRoot: ZERO_ROOT,
+      didReset: true,
+      reason: FastConfirmationDecisionReason.ConfirmedNotFound,
+    });
   });
 
   it("resetIfBehindOrNotAncestorOrUnsafe resets when confirmed block is older than previous epoch", () => {
@@ -100,7 +111,7 @@ describe("fast confirmation rules", () => {
 
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
-    expect(result.reason).toBe("confirmed_reset");
+    expect(result.reason).toBe(FastConfirmationDecisionReason.ResetBehind);
   });
 
   it("resetIfBehindOrNotAncestorOrUnsafe only enforces chain safety at epoch start", () => {
@@ -239,7 +250,7 @@ describe("fast confirmation rules", () => {
     });
 
     expect(advanced.confirmedRoot).toBe(observed.blockRoot);
-    expect(advanced.reason).toBe("observed_justified");
+    expect(advanced.reason).toBe(FastConfirmationDecisionReason.ObservedJustified);
     expect(unchanged.confirmedRoot).toBe(confirmed.blockRoot);
   });
 
@@ -292,7 +303,7 @@ describe("fast confirmation rules", () => {
     });
 
     expect(result.confirmedRoot).toBe(finalized.blockRoot);
-    expect(result.reason).toBeUndefined();
+    expect(result.reason).toBe(FastConfirmationDecisionReason.Unchanged);
   });
 
   it("advanceToLatestConfirmedDescendant ignores confirmed blocks older than previous epoch", () => {
@@ -398,6 +409,6 @@ describe("fast confirmation rules", () => {
     });
 
     expect(result.confirmedRoot).toBe(candidate.blockRoot);
-    expect(result.reason).toBe("confirmed_descendant");
+    expect(result.reason).toBe(FastConfirmationDecisionReason.ConfirmedDescendant);
   });
 });

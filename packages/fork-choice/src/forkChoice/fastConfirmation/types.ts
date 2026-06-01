@@ -48,11 +48,20 @@ export type FastConfirmationSnapshot = {
   finalizedRoot: RootHex;
 };
 
+export enum FastConfirmationDecisionReason {
+  Unchanged = "unchanged",
+  ConfirmedNotFound = "confirmed_not_found",
+  ResetBehind = "reset_behind",
+  ResetNotAncestor = "reset_not_ancestor",
+  ResetChainUnsafe = "reset_chain_unsafe",
+  ObservedJustified = "observed_justified",
+  ConfirmedDescendant = "confirmed_descendant",
+}
+
 export type FastConfirmationDecision = {
   confirmedRoot: RootHex;
   didReset: boolean;
-  stop?: boolean;
-  reason?: string;
+  reason: FastConfirmationDecisionReason;
 };
 
 export type FastConfirmationRule = (
@@ -64,14 +73,16 @@ export type FastConfirmationRule = (
   logger?: Logger
 ) => FastConfirmationDecision;
 
+export type BalanceSourceKey = "current" | "previous";
+
 // This cache is created once per slot
 export type FastConfirmationCache = {
   blockByRoot: Map<RootHex, ProtoBlock | null>;
   ancestorRoots: Map<string, RootHex[] | null>;
   committeeBySlot: Map<Slot, Set<ValidatorIndex>>;
   isDescendantByRootPair: Map<string, boolean>;
-  /** voteRoot -> totalWeight, keyed by sourceKey ("current" | "previous") */
-  voteWeightBySource: Map<string, Map<RootHex, number>>;
+  /** voteRoot -> totalWeight, keyed by sourceKey */
+  voteWeightBySource: Map<BalanceSourceKey, Map<RootHex, number>>;
   headState?: IBeaconStateView;
   pulledUpHeadState?: IBeaconStateView;
   checkpointStateByKey: Map<string, IBeaconStateView | null>;

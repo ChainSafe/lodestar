@@ -11,7 +11,7 @@ import {IForkChoice} from "./interface.js";
  * @deprecated The merged fast-confirmation spec only defines `get_safe_execution_block_hash`.
  */
 export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
-  const confirmedRoot = fc.getConfirmedRoot?.();
+  const confirmedRoot = fc.getConfirmedRoot();
   if (confirmedRoot && fc.hasBlockHex(confirmedRoot)) {
     return fromHex(confirmedRoot);
   }
@@ -24,7 +24,7 @@ export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
  * https://github.com/ethereum/consensus-specs/blob/master/fork_choice/safe-block.md#get_safe_execution_block_hash
  */
 export function getSafeExecutionBlockHash(forkChoice: IForkChoice): RootHex {
-  const confirmedRoot = forkChoice.getConfirmedRoot?.();
+  const confirmedRoot = forkChoice.getConfirmedRoot();
   if (confirmedRoot) {
     const confirmedBlock = forkChoice.getBlockHexDefaultStatus(confirmedRoot);
     if (confirmedBlock?.executionPayloadBlockHash) {
