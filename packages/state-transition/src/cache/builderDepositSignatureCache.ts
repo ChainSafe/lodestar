@@ -25,12 +25,6 @@ const MAX_VERIFIED_PAYLOAD_BLOCK_HASHES = 32;
  *   `state.latestExecutionPayloadBid.blockHash`. Self-rolling: FIFO-bounded to
  *   `MAX_VERIFIED_PAYLOAD_BLOCK_HASHES` and intentionally not touched by `clear()`.
  *
- * Membership key:
- * - Slot-keyed sub-cache: `hashTreeRoot(PendingDeposit)` with the deposit's real slot.
- * - Payload-keyed sub-cache: `hashTreeRoot(PendingDepositNoSlot)` — slot is excluded
- *   from the type because at envelope-import time the deposit's eventual application
- *   slot is unknown (it becomes `state.slot` of the child block), and signature
- *   verification doesn't depend on slot.
  *
  * Single instance across application (created in `EpochCache.createFromState`,
  * shared by-reference through `clone()`).
@@ -54,7 +48,8 @@ export class BuilderDepositSignatureCache {
 
   setVerifiedPreGloas(builderDeposit: electra.PendingDeposit): void {
     const verifiedRoots = this.verifiedRootsByPreGloasSlot.getOrDefault(builderDeposit.slot);
-    verifiedRoots.add(toRootHex(ssz.electra.PendingDeposit.hashTreeRoot(builderDeposit)));
+    // Hash via PendingDepositNoSlot to save hashing cost as slot is not part of signature check
+    verifiedRoots.add(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)));
   }
 
   setVerifiedByPayload(payloadBlockHash: RootHex, builderDeposit: electra.PendingDepositNoSlot): void {
@@ -73,7 +68,8 @@ export class BuilderDepositSignatureCache {
     if (!verifiedRoots) {
       return false;
     }
-    return verifiedRoots.has(toRootHex(ssz.electra.PendingDeposit.hashTreeRoot(builderDeposit)));
+    // setVerifiedPreGloas uses PendingDepositNoSlot to hash
+    return verifiedRoots.has(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)));
   }
 
   isVerifiedByPayload(payloadBlockHash: RootHex, builderDeposit: electra.PendingDepositNoSlot): boolean {
