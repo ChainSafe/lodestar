@@ -68,6 +68,7 @@ export function makeBlock(
     ...block,
     executionPayloadBlockHash: blockRoot,
     executionPayloadNumber: 0,
+    executionPayloadGasLimit: 0,
     executionStatus,
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,
   };
