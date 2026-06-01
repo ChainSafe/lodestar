@@ -266,6 +266,8 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
+  /** Number of builders currently registered in `state.builders` (Gloas+). */
+  buildersCount: number;
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getEpochPTCs(epoch: Epoch): Uint32Array[];

@@ -114,6 +114,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private _latestBlockHash: Bytes32 | null = null;
   private _latestExecutionPayloadBid: ExecutionPayloadBid | null = null;
   private _payloadExpectedWithdrawals: capella.Withdrawal[] | null = null;
+  private _buildersCount: number | null = null;
 
   // Per-argument caches for argument-taking methods. The binding is treated as
   // immutable for the view's lifetime, so a given argument always yields the
@@ -871,6 +872,13 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._payloadExpectedWithdrawals = this.binding.payloadExpectedWithdrawals;
     }
     return this._payloadExpectedWithdrawals;
+  }
+
+  get buildersCount(): number {
+    if (this._buildersCount === null) {
+      this._buildersCount = this.binding.buildersCount;
+    }
+    return this._buildersCount;
   }
 
   getBuilder(index: BuilderIndex): gloas.Builder {

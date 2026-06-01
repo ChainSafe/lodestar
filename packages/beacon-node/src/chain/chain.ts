@@ -1445,6 +1445,9 @@ export class BeaconChain implements IBeaconChain {
       metrics.pendingPartialWithdrawals.set(headState.pendingPartialWithdrawalsCount);
       metrics.pendingConsolidations.set(headState.pendingConsolidationsCount);
     }
+    if (isStatePostGloas(headState)) {
+      metrics.builders.set(headState.buildersCount);
+    }
   }
 
   private onClockSlot(slot: Slot): void {

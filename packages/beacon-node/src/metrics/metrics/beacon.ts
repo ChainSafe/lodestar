@@ -59,6 +59,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Current number of pending deposits",
     }),
 
+    builders: register.gauge({
+      name: "beacon_builders",
+      help: "Current number of registered builders (Gloas+)",
+    }),
+
     pendingConsolidations: register.gauge({
       name: "beacon_pending_consolidations",
       help: "Current number of pending consolidations",

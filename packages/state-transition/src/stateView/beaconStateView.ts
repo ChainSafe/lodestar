@@ -394,6 +394,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this._payloadExpectedWithdrawals;
   }
 
+  get buildersCount(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).builders.length;
+  }
+
   getBuilder(index: BuilderIndex): gloas.Builder {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("Builders are not supported before Gloas");
