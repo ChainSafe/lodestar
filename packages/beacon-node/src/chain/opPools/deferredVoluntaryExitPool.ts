@@ -1,7 +1,8 @@
 import {Logger} from "@lodestar/logger";
-import {IBeaconStateView, VoluntaryExitValidity, isTransientExitValidity} from "@lodestar/state-transition";
+import {IBeaconStateView, VoluntaryExitValidity} from "@lodestar/state-transition";
 import {Epoch, ValidatorIndex} from "@lodestar/types";
 import {SignedVoluntaryExit} from "@lodestar/types/phase0";
+import {isTransientExitValidity} from "../validation/voluntaryExit.js";
 
 type DeferredEntry = {
   exit: SignedVoluntaryExit;

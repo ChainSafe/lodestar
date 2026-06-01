@@ -1,4 +1,4 @@
-import {VoluntaryExitValidity, getVoluntaryExitSignatureSet, isTransientExitValidity} from "@lodestar/state-transition";
+import {VoluntaryExitValidity, getVoluntaryExitSignatureSet} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {
   GossipAction,
@@ -10,6 +10,24 @@ import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export type ApiVoluntaryExitResult = {status: "published"} | {status: "deferred"; validity: VoluntaryExitValidity};
+
+// Variants that can become valid in a future epoch without user action.
+// - earlyEpoch: exit.message.epoch is in the future; valid once current epoch catches up
+// - shortTimeActive: validator active < SHARD_COMMITTEE_PERIOD; valid once enough time passes
+// - pendingWithdrawals: Electra; valid once pending partial withdrawals drain
+const TRANSIENT_EXIT_VALIDITY = new Set([
+  VoluntaryExitValidity.earlyEpoch,
+  VoluntaryExitValidity.shortTimeActive,
+  VoluntaryExitValidity.pendingWithdrawals,
+]);
+// Note: VoluntaryExitValidity.inactive is intentionally excluded. It conflates
+// "validator does not exist" (permanent) with "validator not yet activated"
+// (transient), and cleanly classifying it requires splitting the enum variant
+// upstream. Left for a future follow-up.
+
+export function isTransientExitValidity(v: VoluntaryExitValidity): boolean {
+  return TRANSIENT_EXIT_VALIDITY.has(v);
+}
 
 // Comments for each call are present inside `validateVoluntaryExit`.
 export async function validateApiVoluntaryExit(

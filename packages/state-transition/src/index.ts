@@ -13,7 +13,6 @@ export {assertValidProposerSlashing} from "./block/processProposerSlashing.js";
 export {
   VoluntaryExitValidity,
   getVoluntaryExitValidity,
-  isTransientExitValidity,
   isValidVoluntaryExit,
 } from "./block/processVoluntaryExit.js";
 // Withdrawals for new blocks
