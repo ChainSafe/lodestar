@@ -44,9 +44,9 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     } else {
       chain.logger.debug("Cannot serve ExecutionPayloadEnvelopesByRoot: envelope not found", {
         slot,
+        root: rootHex,
         peer: prettyPrintPeerId(peerId),
         client: peerClient,
-        root: rootHex,
       });
     }
   }
