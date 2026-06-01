@@ -1,6 +1,6 @@
 import {ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
-import {toPubkeyHex} from "@lodestar/utils";
+import {toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
@@ -48,13 +48,13 @@ export function processDepositRequest(
       !isValidator &&
       !lookup.hasPendingValidator(state.config, pubkeyHex)
     ) {
-      onboarder.queueBuilderDeposit(pubkeyHex, {
-        pubkey,
-        withdrawalCredentials,
-        amount,
-        signature,
-        slot: state.slot,
-      });
+      const pendingDeposit = {pubkey, withdrawalCredentials, amount, signature, slot: state.slot};
+      const payloadBlockHash = toRootHex(stateGloas.latestExecutionPayloadBid.blockHash);
+      if (stateGloas.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, pendingDeposit)) {
+        onboarder.onboardBuilderVerifiedSignature(pendingDeposit);
+        return;
+      }
+      onboarder.queueBuilderDeposit(pubkeyHex, pendingDeposit);
       // this is for the spec test where we want to eagerly onboard builder immediately
       if (ownsBatcher) onboarder.onboardQueuedBuilders();
       return;

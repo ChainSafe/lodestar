@@ -1,9 +1,11 @@
 import {routes} from "@lodestar/api";
 import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, isBuilderWithdrawalCredential, isStatePostGloas} from "@lodestar/state-transition";
+import {electra} from "@lodestar/types";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
@@ -282,6 +284,33 @@ export async function importExecutionPayload(
     blockHash: blockHashHex,
     delaySec,
   });
+
+  // 10. Optional, fire-and-forget: pre-verify builder-prefix deposit signatures from this
+  // envelope so the next block's processDepositRequest can skip the queued batch verify.
+  const builderDeposits: electra.PendingDepositNoSlot[] = envelope.executionRequests.deposits
+    .filter((d) => isBuilderWithdrawalCredential(d.withdrawalCredentials))
+    .map((d) => ({
+      pubkey: d.pubkey,
+      withdrawalCredentials: d.withdrawalCredentials,
+      amount: d.amount,
+      signature: d.signature,
+    }));
+  if (builderDeposits.length > 0) {
+    callInNextEventLoop(() => {
+      try {
+        const result = blockState.preVerifyPayloadBuilderDeposits(blockHashHex, builderDeposits);
+        this.logger.verbose("Envelope builder deposit pre-verification", {
+          slot,
+          blockHash: blockHashHex,
+          builderDeposits: builderDeposits.length,
+          verifiedCount: result.verifiedCount,
+          invalidCount: result.invalidCount,
+        });
+      } catch (e) {
+        this.logger.debug("preVerifyPayloadBuilderDeposits failed", {slot, blockHash: blockHashHex}, e as Error);
+      }
+    });
+  }
 }
 
 /**

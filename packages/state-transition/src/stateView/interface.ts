@@ -42,9 +42,9 @@ import {
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
+import {BuilderDepositSignatureCache} from "../cache/builderDepositSignatureCache.ts";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
-import {GloaOnboardBuilderCache} from "../cache/onboardBuildersCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
@@ -233,14 +233,14 @@ export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
   pendingPartialWithdrawalsCount: number;
   pendingConsolidations: electra.PendingConsolidations;
   pendingConsolidationsCount: number;
-  gloaOnboardBuilderCache: GloaOnboardBuilderCache;
+  builderDepositSignatureCache: BuilderDepositSignatureCache;
   /**
    * Pre-verify a slice of builder-prefix pending deposits and stash the verified
-   * roots on `gloaOnboardBuilderCache`. Driven by the prepareForNextSlot scheduler
+   * roots on `builderDepositSignatureCache`. Driven by the prepareForNextSlot scheduler
    * in the GLOAS_PREVERIFY_WINDOW_EPOCHS epochs before GLOAS_FORK_EPOCH.
-   * See `preVerifyBuilderDeposits` in util/onboardBuilder.ts for full semantics.
+   * See `preVerifyBuilderDepositsPreGloas` in util/onboardBuilder.ts for full semantics.
    */
-  preVerifyBuilderDeposits(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult;
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult;
 }
 
 /** Fulu+ state fields — use isStatePostFulu() guard */
@@ -252,6 +252,11 @@ export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
 /** Gloas+ state fields — use isStatePostGloas() guard */
 export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   forkName: ForkPostGloas;
+  /** Pre-verify builder-prefix deposit signatures from an imported execution payload envelope.*/
+  preVerifyPayloadBuilderDeposits(
+    payloadBlockHash: RootHex,
+    builderDeposits: electra.PendingDepositNoSlot[]
+  ): {verifiedCount: number; invalidCount: number};
   /** Removed from BeaconState in gloas. Use `latestBlockHash` instead. */
   latestExecutionPayloadHeader: never;
   /** Removed from BeaconState in gloas. */

@@ -7,6 +7,7 @@ import {
   Bytes32,
   Epoch,
   PubkeyHex,
+  RootHex,
   Slot,
   UintNum64,
   electra,
@@ -206,8 +207,9 @@ function buildNewBuilder(pubkey: BLSPubkey, withdrawalCredentials: Bytes32, amou
  * Verify a batch of deposit signatures. Tries batch verification first; on failure falls
  * back to verifying each deposit individually so the valid deposits in a batch that
  * contains an invalid one are still identified. Returns a boolean per input deposit.
+ * Note that slot is not part of signature check.
  */
-export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDeposit[]): boolean[] {
+export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDepositNoSlot[]): boolean[] {
   const results = new Array<boolean>(deposits.length).fill(false);
   // Deposit signatures use a fork-agnostic domain, see `isValidDepositSignature`
   const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
@@ -270,7 +272,32 @@ export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.
   return results;
 }
 
-/** Summary of a single `preVerifyBuilderDeposits` call. */
+/**
+ * Pre-verify builder-prefix deposit signatures from an imported execution payload envelope
+ * and cache verified roots on `builderDepositSignatureCache`.
+ */
+export function preVerifyPayloadBuilderDeposits(
+  state: CachedBeaconStateGloas,
+  payloadBlockHash: RootHex,
+  builderDeposits: electra.PendingDepositNoSlot[]
+): {verifiedCount: number; invalidCount: number} {
+  if (builderDeposits.length === 0) {
+    return {verifiedCount: 0, invalidCount: 0};
+  }
+
+  const results = verifyDepositSignatures(state.epochCtx.config, builderDeposits);
+  const cache = state.epochCtx.builderDepositSignatureCache;
+  let verifiedCount = 0;
+  for (let i = 0; i < builderDeposits.length; i++) {
+    if (results[i]) {
+      cache.setVerifiedByPayload(payloadBlockHash, builderDeposits[i]);
+      verifiedCount++;
+    }
+  }
+  return {verifiedCount, invalidCount: builderDeposits.length - verifiedCount};
+}
+
+/** Summary of a single `preVerifyBuilderDepositsPreGloas` call. */
 export type PreVerifyBuilderDepositsResult = {
   /** Number of builder-prefix deposits whose signatures passed verification (added to the cache). */
   verifiedCount: number;
@@ -287,12 +314,13 @@ export type PreVerifyBuilderDepositsResult = {
 };
 
 /**
- * Scanner driven by `prepareForNextSlot` over the n epochs leading up to GLOAS_FORK_EPOCH.
+ * Scanner driven by `prepareForNextSlot` over the `GLOAS_PREVERIFY_WINDOW_EPOCHS` epochs
+ * leading up to GLOAS_FORK_EPOCH.
  *
  * Walks `state.pendingDeposits` (ascending by deposit.slot), picks builder-prefix
  * deposits not yet covered by the cache, and signature-verifies them in chunks of
  * BUILDER_DEPOSIT_BATCH_SIZE. Verified roots are stashed on
- * `state.gloaOnboardBuilderCache` so that `onboardBuildersFromPendingDeposits`
+ * `state.builderDepositSignatureCache` so that `onboardBuildersFromPendingDeposits`
  * at the fork transition can skip the bulk verification cost.
  *
  * Cuts off at `maxBuilderDeposits` on a slot boundary so `lastVerifiedSlot` only
@@ -304,11 +332,11 @@ export type PreVerifyBuilderDepositsResult = {
  * Returns counts and the inclusive deposit-slot range processed so callers can
  * log progress and surface invalid-signature counts as an anomaly signal.
  */
-export function preVerifyBuilderDeposits(
+export function preVerifyBuilderDepositsPreGloas(
   state: CachedBeaconStateElectra | CachedBeaconStateFulu,
   maxBuilderDeposits: number
 ): PreVerifyBuilderDepositsResult {
-  const cache = state.epochCtx.gloaOnboardBuilderCache;
+  const cache = state.epochCtx.builderDepositSignatureCache;
   const cursor = cache.lastVerifiedSlot;
 
   // Phase 1: collect builder-prefix deposits whose slot > cursor, cutting at a slot boundary.
@@ -345,7 +373,7 @@ export function preVerifyBuilderDeposits(
     const results = verifyDepositSignatures(state.epochCtx.config, chunk);
     for (let j = 0; j < chunk.length; j++) {
       if (results[j]) {
-        cache.setVerifiedDeposit(chunk[j]);
+        cache.setVerifiedPreGloas(chunk[j]);
         verifiedCount++;
       }
     }

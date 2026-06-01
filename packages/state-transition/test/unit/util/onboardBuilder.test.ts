@@ -10,7 +10,8 @@ import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../../../src/typ
 import {
   BatchOnboardBuilder,
   MAX_BUILDER_DEPOSITS_PER_SLOT,
-  preVerifyBuilderDeposits,
+  preVerifyBuilderDepositsPreGloas,
+  preVerifyPayloadBuilderDeposits,
 } from "../../../src/util/onboardBuilder.js";
 
 describe("BatchOnboardBuilder", () => {
@@ -552,7 +553,7 @@ describe("BatchOnboardBuilder", () => {
     });
   });
 
-  describe("preVerifyBuilderDeposits", () => {
+  describe("preVerifyBuilderDepositsPreGloas", () => {
     /** Pool of validly-signed builder deposits — distinct interop pubkeys [3000, 3099). */
     const scannerPool = generateBuilderPendingDeposits(beaconConfig, 100, 3000);
 
@@ -562,8 +563,8 @@ describe("BatchOnboardBuilder", () => {
 
     /**
      * Build a pre-Gloas cached state with pre-populated pendingDeposits. A Gloas state
-     * cast as CachedBeaconStateElectra works — preVerifyBuilderDeposits only touches
-     * pendingDeposits + epochCtx.gloaOnboardBuilderCache, which are present on all
+     * cast as CachedBeaconStateElectra works — preVerifyBuilderDepositsPreGloas only touches
+     * pendingDeposits + epochCtx.builderDepositSignatureCache, which are present on all
      * post-Electra forks.
      */
     function buildStateWithDeposits(deposits: electra.PendingDeposit[]): CachedBeaconStateElectra {
@@ -581,9 +582,9 @@ describe("BatchOnboardBuilder", () => {
 
     it("returns zero counts and null slot range when there are no pending deposits", () => {
       const state = buildStateWithDeposits([]);
-      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
       expect(result).toEqual({verifiedCount: 0, invalidCount: 0, fromSlot: null, toSlot: null});
-      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(0);
+      expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(0);
     });
 
     it("verifies builder-prefix deposits and stashes them on the cache", () => {
@@ -594,15 +595,15 @@ describe("BatchOnboardBuilder", () => {
       ];
       const state = buildStateWithDeposits(deposits);
 
-      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
 
       expect(result.verifiedCount).toBe(3);
       expect(result.invalidCount).toBe(0);
       expect(result.fromSlot).toBe(1);
       expect(result.toSlot).toBe(2);
-      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(2);
+      expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(2);
       for (const d of deposits) {
-        expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(d)).toBe(true);
+        expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(d)).toBe(true);
       }
     });
 
@@ -616,14 +617,14 @@ describe("BatchOnboardBuilder", () => {
       const builderDeposit = depositAtSlot(scannerPool[1], 2);
       const state = buildStateWithDeposits([validatorDeposit, builderDeposit]);
 
-      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
 
       // Only the builder deposit was processed
       expect(result.verifiedCount).toBe(1);
       expect(result.fromSlot).toBe(2);
       expect(result.toSlot).toBe(2);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(validatorDeposit)).toBe(false);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(builderDeposit)).toBe(true);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(validatorDeposit)).toBe(false);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(builderDeposit)).toBe(true);
     });
 
     it("skips deposits with slot <= lastVerifiedSlot (cursor honored)", () => {
@@ -635,15 +636,15 @@ describe("BatchOnboardBuilder", () => {
       const state = buildStateWithDeposits(deposits);
 
       // Pretend slots 1 and 2 were already verified in a prior tick
-      state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot = 2;
+      state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot = 2;
 
-      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
 
       expect(result.verifiedCount).toBe(1);
       expect(result.fromSlot).toBe(3);
       expect(result.toSlot).toBe(3);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[0])).toBe(false);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[2])).toBe(true);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[0])).toBe(false);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[2])).toBe(true);
     });
 
     it("counts invalid signatures separately and excludes them from the cache", () => {
@@ -652,13 +653,13 @@ describe("BatchOnboardBuilder", () => {
       const good2 = depositAtSlot(scannerPool[2], 1);
       const state = buildStateWithDeposits([good1, bad, good2]);
 
-      const result = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
 
       expect(result.verifiedCount).toBe(2);
       expect(result.invalidCount).toBe(1);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(good1)).toBe(true);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(bad)).toBe(false);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(good2)).toBe(true);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(good1)).toBe(true);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(bad)).toBe(false);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(good2)).toBe(true);
     });
 
     it("stops on a slot boundary when maxBuilderDeposits is exceeded", () => {
@@ -676,16 +677,16 @@ describe("BatchOnboardBuilder", () => {
       // Cap at 3 — the third deposit (slot 2) pushes us past the cap, but we keep going
       // until slot transitions to a strictly greater one. So we should pick up both slot-2
       // deposits (4 total) and stop before slot 3.
-      const result = preVerifyBuilderDeposits(state, 3);
+      const result = preVerifyBuilderDepositsPreGloas(state, 3);
 
       expect(result.verifiedCount).toBe(4);
       expect(result.invalidCount).toBe(0);
       expect(result.fromSlot).toBe(1);
       expect(result.toSlot).toBe(2);
       // lastVerifiedSlot advances only over fully-completed slots
-      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(2);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[4])).toBe(false);
-      expect(state.epochCtx.gloaOnboardBuilderCache.isBuilderDepositVerified(deposits[5])).toBe(false);
+      expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(2);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[4])).toBe(false);
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[5])).toBe(false);
     });
 
     it("subsequent call resumes at lastVerifiedSlot + 1", () => {
@@ -698,18 +699,81 @@ describe("BatchOnboardBuilder", () => {
       const state = buildStateWithDeposits(deposits);
 
       // First call: cap at 1, so we pick up slot 1 only (1 deposit, finishes that slot)
-      const r1 = preVerifyBuilderDeposits(state, 1);
+      const r1 = preVerifyBuilderDepositsPreGloas(state, 1);
       expect(r1.verifiedCount).toBe(1);
       expect(r1.fromSlot).toBe(1);
       expect(r1.toSlot).toBe(1);
-      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(1);
+      expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(1);
 
       // Second call: resumes at slot 2 onward
-      const r2 = preVerifyBuilderDeposits(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+      const r2 = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
       expect(r2.verifiedCount).toBe(3);
       expect(r2.fromSlot).toBe(2);
       expect(r2.toSlot).toBe(3);
-      expect(state.epochCtx.gloaOnboardBuilderCache.lastVerifiedSlot).toBe(3);
+      expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(3);
+    });
+  });
+
+  describe("preVerifyEnvelopeBuilderDeposits", () => {
+    /** Pool of validly-signed builder deposits — distinct interop pubkeys [4000, 4099). */
+    const envelopePool = generateBuilderPendingDeposits(beaconConfig, 100, 4000);
+    const payloadBlockHash = "0xabc".padEnd(66, "c");
+
+    function freshState(): CachedBeaconStateGloas {
+      return buildGloasState();
+    }
+
+    it("returns zero counts and writes nothing when given an empty list", () => {
+      const state = freshState();
+      const result = preVerifyPayloadBuilderDeposits(state, payloadBlockHash, []);
+      expect(result).toEqual({verifiedCount: 0, invalidCount: 0});
+      // Nothing recorded
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, envelopePool[0])).toBe(
+        false
+      );
+    });
+
+    it("verifies and caches each builder-prefix deposit under the given payloadBlockHash", () => {
+      const state = freshState();
+      const deposits = envelopePool.slice(0, 3).map((d) => ({...d, slot: 0}));
+
+      const result = preVerifyPayloadBuilderDeposits(state, payloadBlockHash, deposits);
+
+      expect(result.verifiedCount).toBe(3);
+      expect(result.invalidCount).toBe(0);
+      for (const d of deposits) {
+        expect(state.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, d)).toBe(true);
+      }
+    });
+
+    it("counts invalid signatures separately and excludes them from the cache", () => {
+      const state = freshState();
+      const good1 = {...envelopePool[0], slot: 0};
+      const bad = withInvalidSignature({...envelopePool[1], slot: 0});
+      const good2 = {...envelopePool[2], slot: 0};
+
+      const result = preVerifyPayloadBuilderDeposits(state, payloadBlockHash, [good1, bad, good2]);
+
+      expect(result.verifiedCount).toBe(2);
+      expect(result.invalidCount).toBe(1);
+      const cache = state.epochCtx.builderDepositSignatureCache;
+      expect(cache.isVerifiedByPayload(payloadBlockHash, good1)).toBe(true);
+      expect(cache.isVerifiedByPayload(payloadBlockHash, bad)).toBe(false);
+      expect(cache.isVerifiedByPayload(payloadBlockHash, good2)).toBe(true);
+    });
+
+    it("cached entries are queryable with the consumer's apply-slot (slot is stripped)", () => {
+      // Producer writes with slot:0 (envelope-import doesn't know apply slot). Consumer
+      // (processDepositRequest) queries with state.slot of the child block.
+      const state = freshState();
+      const producerView = {...envelopePool[0], slot: 0};
+      const consumerView = {...envelopePool[0], slot: 42};
+
+      preVerifyPayloadBuilderDeposits(state, payloadBlockHash, [producerView]);
+
+      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, consumerView)).toBe(
+        true
+      );
     });
   });
 });

@@ -284,6 +284,22 @@ export const PendingDeposit = new ContainerNodeStructType(
   {typeName: "PendingDeposit", jsonCase: "eth2"}
 );
 
+/**
+ * PendingDeposit minus the `slot` field. Used by the payload-keyed
+ * BuilderDepositSignatureCache: at execution-payload-envelope import time the
+ * deposit's eventual application slot is unknown (it becomes `state.slot` of the
+ * child block), and signature verification does not depend on slot.
+ */
+export const PendingDepositNoSlot = new ContainerNodeStructType(
+  {
+    pubkey: BLSPubkey,
+    withdrawalCredentials: Bytes32,
+    amount: UintNum64,
+    signature: BLSSignature,
+  },
+  {typeName: "PendingDepositNoSlot", jsonCase: "eth2"}
+);
+
 export const PendingDeposits = new ListCompositeType(PendingDeposit, PENDING_DEPOSITS_LIMIT);
 
 export const PendingPartialWithdrawal = new ContainerNodeStructType(

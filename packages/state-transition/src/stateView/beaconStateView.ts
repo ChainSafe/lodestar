@@ -31,9 +31,9 @@ import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {applyParentExecutionPayload} from "../block/processParentExecutionPayload.js";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
+import {BuilderDepositSignatureCache} from "../cache/builderDepositSignatureCache.ts";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
-import {GloaOnboardBuilderCache} from "../cache/onboardBuildersCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -67,7 +67,11 @@ import {
 } from "../util/execution.js";
 import {canBuilderCoverBid} from "../util/gloas.js";
 import {loadState} from "../util/loadState/loadState.js";
-import {PreVerifyBuilderDepositsResult, preVerifyBuilderDeposits} from "../util/onboardBuilder.js";
+import {
+  PreVerifyBuilderDepositsResult,
+  preVerifyBuilderDepositsPreGloas,
+  preVerifyPayloadBuilderDeposits,
+} from "../util/onboardBuilder.js";
 import {getRandaoMix} from "../util/seed.js";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "../util/weakSubjectivity.js";
 import {IBeaconStateView, IBeaconStateViewGloas, IBeaconStateViewLatestFork, isStatePostGloas} from "./interface.js";
@@ -552,16 +556,27 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.epochCtx.effectiveBalanceIncrements;
   }
 
-  get gloaOnboardBuilderCache(): GloaOnboardBuilderCache {
-    return this.cachedState.epochCtx.gloaOnboardBuilderCache;
+  get builderDepositSignatureCache(): BuilderDepositSignatureCache {
+    return this.cachedState.epochCtx.builderDepositSignatureCache;
   }
 
-  preVerifyBuilderDeposits(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult {
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult {
     // Cast: this method is exposed on IBeaconStateViewElectra so callers narrow first;
     // the underlying cached state has pendingDeposits available.
-    return preVerifyBuilderDeposits(
+    return preVerifyBuilderDepositsPreGloas(
       this.cachedState as CachedBeaconStateElectra | CachedBeaconStateFulu,
       maxBuilderDeposits
+    );
+  }
+
+  preVerifyPayloadBuilderDeposits(
+    payloadBlockHash: RootHex,
+    builderDeposits: electra.PendingDepositNoSlot[]
+  ): {verifiedCount: number; invalidCount: number} {
+    return preVerifyPayloadBuilderDeposits(
+      this.cachedState as CachedBeaconStateGloas,
+      payloadBlockHash,
+      builderDeposits
     );
   }
 
