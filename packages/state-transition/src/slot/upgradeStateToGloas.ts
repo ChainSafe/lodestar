@@ -136,13 +136,17 @@ export function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas
 
       // New builder candidate. If the prepareForNextSlot scanner already
       // signature-verified this exact deposit in the `GLOAS_PREVERIFY_WINDOW_EPOCHS`
-      // epochs leading up to the fork, fast-path it; otherwise queue for lazy batch
-      // verification.
-      if (state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposit)) {
+      // epochs leading up to the fork, take the appropriate cached path:
+      //   true   → fast-path onboard
+      //   false  → drop silently (the slow path would also reject it)
+      //   null   → not yet verified, defer to batch verification
+      const cachedResult = state.epochCtx.builderDepositSignatureCache.getPreGloasResult(deposit);
+      if (cachedResult === true) {
         batcher.onboardBuilderVerifiedSignature(deposit);
-      } else {
+      } else if (cachedResult === null) {
         batcher.queueBuilderDeposit(pubkeyHex, deposit);
       }
+      // cachedResult === false → intentionally drop the deposit.
     } else {
       // Top-up of an already-onboarded builder; no signature verification needed
       batcher.topupBuilder(builderIndex, deposit.amount);

@@ -41,65 +41,90 @@ describe("BuilderDepositSignatureCache", () => {
     });
   });
 
-  describe("setVerifiedPreGloas + isVerifiedPreGloas", () => {
-    it("returns false for an unseen deposit", () => {
+  describe("setPreGloasResult + getPreGloasResult", () => {
+    it("returns null for an unseen deposit (distinct from a recorded false)", () => {
       const cache = new BuilderDepositSignatureCache();
-      expect(cache.isVerifiedPreGloas(atSlot(pool[0], 5))).toBe(false);
+      expect(cache.getPreGloasResult(atSlot(pool[0], 5))).toBe(null);
     });
 
-    it("returns true after setVerifiedPreGloas on the same (slot, content)", () => {
+    it("returns true after setPreGloasResult(deposit, true)", () => {
       const cache = new BuilderDepositSignatureCache();
       const d = atSlot(pool[0], 5);
-      cache.setVerifiedPreGloas(d);
-      expect(cache.isVerifiedPreGloas(d)).toBe(true);
+      cache.setPreGloasResult(d, true);
+      expect(cache.getPreGloasResult(d)).toBe(true);
     });
 
-    it("returns false when a different deposit at the same slot is queried", () => {
+    it("returns false after setPreGloasResult(deposit, false)", () => {
       const cache = new BuilderDepositSignatureCache();
-      cache.setVerifiedPreGloas(atSlot(pool[0], 5));
+      const d = atSlot(pool[0], 5);
+      cache.setPreGloasResult(d, false);
+      expect(cache.getPreGloasResult(d)).toBe(false);
+    });
+
+    it("returns null when a different deposit at the same slot is queried", () => {
+      const cache = new BuilderDepositSignatureCache();
+      cache.setPreGloasResult(atSlot(pool[0], 5), true);
       // Same slot, different pubkey → root differs → not in cache
-      expect(cache.isVerifiedPreGloas(atSlot(pool[1], 5))).toBe(false);
+      expect(cache.getPreGloasResult(atSlot(pool[1], 5))).toBe(null);
     });
 
-    it("returns false when the same content is queried at a different slot", () => {
+    it("returns null when the same content is queried at a different slot", () => {
       const cache = new BuilderDepositSignatureCache();
-      cache.setVerifiedPreGloas(atSlot(pool[0], 5));
+      cache.setPreGloasResult(atSlot(pool[0], 5), true);
       // Slot is the outer Map key (not part of the inner hash); querying a different slot
       // looks up a different bucket → miss.
-      expect(cache.isVerifiedPreGloas(atSlot(pool[0], 6))).toBe(false);
+      expect(cache.getPreGloasResult(atSlot(pool[0], 6))).toBe(null);
     });
 
     it("distinguishes two deposits with same pubkey/slot but different signatures", () => {
       const cache = new BuilderDepositSignatureCache();
       const d1 = atSlot(pool[0], 5);
       const d2: electra.PendingDeposit = {...d1, signature: Buffer.alloc(96, 0xff)};
-      cache.setVerifiedPreGloas(d1);
-      expect(cache.isVerifiedPreGloas(d1)).toBe(true);
-      expect(cache.isVerifiedPreGloas(d2)).toBe(false);
+      cache.setPreGloasResult(d1, true);
+      expect(cache.getPreGloasResult(d1)).toBe(true);
+      expect(cache.getPreGloasResult(d2)).toBe(null);
     });
 
     it("holds entries across multiple slots independently", () => {
       const cache = new BuilderDepositSignatureCache();
       const d5 = atSlot(pool[0], 5);
       const d6 = atSlot(pool[1], 6);
-      cache.setVerifiedPreGloas(d5);
-      cache.setVerifiedPreGloas(d6);
-      expect(cache.isVerifiedPreGloas(d5)).toBe(true);
-      expect(cache.isVerifiedPreGloas(d6)).toBe(true);
+      cache.setPreGloasResult(d5, true);
+      cache.setPreGloasResult(d6, false);
+      expect(cache.getPreGloasResult(d5)).toBe(true);
+      expect(cache.getPreGloasResult(d6)).toBe(false);
+    });
+
+    it("a later set overwrites an earlier result for the same deposit", () => {
+      const cache = new BuilderDepositSignatureCache();
+      const d = atSlot(pool[0], 5);
+      cache.setPreGloasResult(d, false);
+      cache.setPreGloasResult(d, true);
+      expect(cache.getPreGloasResult(d)).toBe(true);
     });
   });
 
   describe("clearPreGloasCache", () => {
-    it("empties the verified-roots map and resets lastVerifiedSlot to 0", () => {
+    it("empties the pre-Gloas results and resets lastVerifiedSlot to 0", () => {
       const cache = new BuilderDepositSignatureCache();
       const d = atSlot(pool[0], 5);
-      cache.setVerifiedPreGloas(d);
+      cache.setPreGloasResult(d, true);
       cache.lastVerifiedSlot = 42;
 
       cache.clearPreGloasCache();
 
       expect(cache.lastVerifiedSlot).toBe(0);
-      expect(cache.isVerifiedPreGloas(d)).toBe(false);
+      expect(cache.getPreGloasResult(d)).toBe(null);
+    });
+
+    it("also clears recorded false entries", () => {
+      const cache = new BuilderDepositSignatureCache();
+      const d = atSlot(pool[0], 5);
+      cache.setPreGloasResult(d, false);
+
+      cache.clearPreGloasCache();
+
+      expect(cache.getPreGloasResult(d)).toBe(null);
     });
 
     it("monotonic setter still works after clear (counter truly reset)", () => {
@@ -114,28 +139,34 @@ describe("BuilderDepositSignatureCache", () => {
     it("does not touch the payload-blockHash sub-cache (different lifecycle)", () => {
       const cache = new BuilderDepositSignatureCache();
       const hashA = "0xaa".padEnd(66, "a");
-      cache.setVerifiedByPayload(hashA, pool[0]);
+      cache.setPayloadResult(hashA, pool[0], true);
 
       cache.clearPreGloasCache();
 
       // Survives clear — payload sub-cache is self-rolling, not tied to fork transition
-      expect(cache.isVerifiedByPayload(hashA, pool[0])).toBe(true);
+      expect(cache.getPayloadResult(hashA, pool[0])).toBe(true);
     });
   });
 
-  describe("setVerifiedByPayload + isVerifiedByPayload", () => {
+  describe("setPayloadResult + getPayloadResult", () => {
     const hashA = "0xaa".padEnd(66, "a");
     const hashB = "0xbb".padEnd(66, "b");
 
-    it("returns false for an unseen (payloadBlockHash, deposit) pair", () => {
+    it("returns null for an unseen (payloadBlockHash, deposit) pair", () => {
       const cache = new BuilderDepositSignatureCache();
-      expect(cache.isVerifiedByPayload(hashA, pool[0])).toBe(false);
+      expect(cache.getPayloadResult(hashA, pool[0])).toBe(null);
     });
 
-    it("returns true after setVerifiedByPayload on the same key + content", () => {
+    it("returns true after setPayloadResult(..., true)", () => {
       const cache = new BuilderDepositSignatureCache();
-      cache.setVerifiedByPayload(hashA, pool[0]);
-      expect(cache.isVerifiedByPayload(hashA, pool[0])).toBe(true);
+      cache.setPayloadResult(hashA, pool[0], true);
+      expect(cache.getPayloadResult(hashA, pool[0])).toBe(true);
+    });
+
+    it("returns false after setPayloadResult(..., false) — proves negative results are recorded", () => {
+      const cache = new BuilderDepositSignatureCache();
+      cache.setPayloadResult(hashA, pool[0], false);
+      expect(cache.getPayloadResult(hashA, pool[0])).toBe(false);
     });
 
     it("ignores the deposit.slot field (PendingDepositNoSlot type excludes slot from identity)", () => {
@@ -143,22 +174,22 @@ describe("BuilderDepositSignatureCache", () => {
       // The payload-keyed surface takes PendingDepositNoSlot. PendingDeposit (with slot)
       // is structurally assignable, and the SSZ type hashes only the 4 slot-less fields,
       // so a producer and consumer disagreeing on `slot` still hit.
-      cache.setVerifiedByPayload(hashA, atSlot(pool[0], 0));
-      expect(cache.isVerifiedByPayload(hashA, atSlot(pool[0], 42))).toBe(true);
+      cache.setPayloadResult(hashA, atSlot(pool[0], 0), true);
+      expect(cache.getPayloadResult(hashA, atSlot(pool[0], 42))).toBe(true);
     });
 
     it("isolates entries between different payloadBlockHash keys", () => {
       const cache = new BuilderDepositSignatureCache();
-      cache.setVerifiedByPayload(hashA, pool[0]);
-      expect(cache.isVerifiedByPayload(hashB, pool[0])).toBe(false);
+      cache.setPayloadResult(hashA, pool[0], true);
+      expect(cache.getPayloadResult(hashB, pool[0])).toBe(null);
     });
 
     it("multiple deposits under the same key do not grow the underlying Map", () => {
       const cache = new BuilderDepositSignatureCache();
       // 5 distinct deposits under one payload — should still occupy a single Map entry
-      for (let i = 0; i < 5; i++) cache.setVerifiedByPayload(hashA, pool[i]);
+      for (let i = 0; i < 5; i++) cache.setPayloadResult(hashA, pool[i], true);
       for (let i = 0; i < 5; i++) {
-        expect(cache.isVerifiedByPayload(hashA, pool[i])).toBe(true);
+        expect(cache.getPayloadResult(hashA, pool[i])).toBe(true);
       }
     });
 
@@ -169,13 +200,21 @@ describe("BuilderDepositSignatureCache", () => {
       for (let i = 0; i < 33; i++) {
         const k = `0x${i.toString(16).padStart(64, "0")}`;
         keys.push(k);
-        cache.setVerifiedByPayload(k, pool[0]);
+        cache.setPayloadResult(k, pool[0], true);
       }
-      // The first inserted key was evicted; the remaining 32 are still queryable.
-      expect(cache.isVerifiedByPayload(keys[0], pool[0])).toBe(false);
+      // The first inserted key was evicted; the lookup must return null (not false),
+      // so the caller re-verifies instead of silently dropping the deposit.
+      expect(cache.getPayloadResult(keys[0], pool[0])).toBe(null);
       for (let i = 1; i < 33; i++) {
-        expect(cache.isVerifiedByPayload(keys[i], pool[0])).toBe(true);
+        expect(cache.getPayloadResult(keys[i], pool[0])).toBe(true);
       }
+    });
+
+    it("a later set overwrites an earlier result for the same (payload, deposit)", () => {
+      const cache = new BuilderDepositSignatureCache();
+      cache.setPayloadResult(hashA, pool[0], false);
+      cache.setPayloadResult(hashA, pool[0], true);
+      expect(cache.getPayloadResult(hashA, pool[0])).toBe(true);
     });
   });
 });

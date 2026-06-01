@@ -9,30 +9,40 @@ import {MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
 const MAX_VERIFIED_PAYLOAD_BLOCK_HASHES = 32;
 
 /**
- * Caches pre-verified builder-deposit signatures so the Fulu → Gloas fork
- * transition can skip the bulk verification cost.
+ * Caches builder-deposit signature-verification results — both passes (`true`) and
+ * failures (`false`) — so the Fulu → Gloas fork transition and post-Gloas block
+ * processing can skip the bulk verification cost AND skip re-verifying deposits already
+ * proven invalid.
  *
  * Two sub-caches with distinct lifecycles:
  *
- * - `verifiedRootsByPreGloasSlot` — produced by `preVerifyBuilderDepositsPreGloas()` driven by
+ * - `preGloasResultsBySlot` — produced by `preVerifyBuilderDepositsPreGloas()` driven by
  *   `prepareForNextSlot` over the `GLOAS_PREVERIFY_WINDOW_EPOCHS` epochs leading up to
  *   GLOAS_FORK_EPOCH; consumed by `onboardBuildersFromPendingDeposits()` at the fork boundary.
  *   Cleared by `clearPreGloasCache()` once the finalized epoch reaches GLOAS_FORK_EPOCH.
  *
- * - `verifiedRootsByPayloadBlockHash` — produced by `preVerifyPayloadBuilderDeposits()`
- *   when an execution payload envelope is imported (block N); consumed by
- *   `processDepositRequest()` on the next block (block N+1) via
- *   `state.latestExecutionPayloadBid.blockHash`. Self-rolling: FIFO-bounded to
- *   `MAX_VERIFIED_PAYLOAD_BLOCK_HASHES` and intentionally not touched by `clear()`.
+ * - `payloadResultsByBlockHash` — produced by `preVerifyPayloadBuilderDeposits()` when an
+ *   execution payload envelope is imported (block N); consumed by `processDepositRequest()`
+ *   on the next block (block N+1) via `state.latestExecutionPayloadBid.blockHash`.
+ *   Self-rolling: FIFO-bounded to `MAX_VERIFIED_PAYLOAD_BLOCK_HASHES` and intentionally not
+ *   touched by `clearPreGloasCache()`.
  *
+ * Both sub-caches hash deposit entries via `hashTreeRoot(PendingDepositNoSlot)` —
+ * the deposit's slot is either already encoded in the outer Map key (pre-Gloas) or
+ * unknown at producer time (payload), and signature verification doesn't depend on slot.
+ *
+ * Producers must call `setPreGloasResult` / `setPayloadResult` for **every** deposit they
+ * verify (pass or fail), so a `null` result from `getPreGloasResult` / `getPayloadResult`
+ * unambiguously means "this deposit hasn't been verified yet" rather than "this deposit
+ * was verified and rejected".
  *
  * Single instance across application (created in `EpochCache.createFromState`,
  * shared by-reference through `clone()`).
  */
 export class BuilderDepositSignatureCache {
-  private verifiedRootsByPreGloasSlot: MapDef<Slot, Set<RootHex>> = new MapDef(() => new Set());
+  private preGloasResultsBySlot: MapDef<Slot, Map<RootHex, boolean>> = new MapDef(() => new Map());
   // Plain Map (not MapDef) so insertion order is usable for FIFO eviction via pruneSetToMax.
-  private verifiedRootsByPayloadBlockHash = new Map<RootHex, Set<RootHex>>();
+  private payloadResultsByBlockHash = new Map<RootHex, Map<RootHex, boolean>>();
 
   private _lastVerifiedSlot: Slot = 0;
 
@@ -46,47 +56,48 @@ export class BuilderDepositSignatureCache {
     }
   }
 
-  setVerifiedPreGloas(builderDeposit: electra.PendingDeposit): void {
-    const verifiedRoots = this.verifiedRootsByPreGloasSlot.getOrDefault(builderDeposit.slot);
-    // Hash via PendingDepositNoSlot to save hashing cost as slot is not part of signature check
-    verifiedRoots.add(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)));
+  setPreGloasResult(builderDeposit: electra.PendingDeposit, isValid: boolean): void {
+    const results = this.preGloasResultsBySlot.getOrDefault(builderDeposit.slot);
+    // Hash via PendingDepositNoSlot: slot is already the bucket key, so re-hashing it would
+    // be redundant work. PendingDeposit is structurally assignable to PendingDepositNoSlot.
+    results.set(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)), isValid);
   }
 
-  setVerifiedByPayload(payloadBlockHash: RootHex, builderDeposit: electra.PendingDepositNoSlot): void {
-    let verifiedRoots = this.verifiedRootsByPayloadBlockHash.get(payloadBlockHash);
-    if (!verifiedRoots) {
-      verifiedRoots = new Set();
-      this.verifiedRootsByPayloadBlockHash.set(payloadBlockHash, verifiedRoots);
+  setPayloadResult(payloadBlockHash: RootHex, builderDeposit: electra.PendingDepositNoSlot, isValid: boolean): void {
+    let results = this.payloadResultsByBlockHash.get(payloadBlockHash);
+    if (!results) {
+      results = new Map();
+      this.payloadResultsByBlockHash.set(payloadBlockHash, results);
     }
-    verifiedRoots.add(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)));
+    results.set(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)), isValid);
     // Always-prune as the final step. No-op when size ≤ cap (O(1) branch in pruneSetToMax).
-    pruneSetToMax(this.verifiedRootsByPayloadBlockHash, MAX_VERIFIED_PAYLOAD_BLOCK_HASHES);
+    pruneSetToMax(this.payloadResultsByBlockHash, MAX_VERIFIED_PAYLOAD_BLOCK_HASHES);
   }
 
-  isVerifiedPreGloas(builderDeposit: electra.PendingDeposit): boolean {
-    const verifiedRoots = this.verifiedRootsByPreGloasSlot.get(builderDeposit.slot);
-    if (!verifiedRoots) {
-      return false;
+  getPreGloasResult(builderDeposit: electra.PendingDeposit): boolean | null {
+    const results = this.preGloasResultsBySlot.get(builderDeposit.slot);
+    if (!results) {
+      return null;
     }
-    // setVerifiedPreGloas uses PendingDepositNoSlot to hash
-    return verifiedRoots.has(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)));
+    // setPreGloasResult uses PendingDepositNoSlot to hash; mirror here.
+    // Map.get returns undefined for missing keys — coalesce to null to honor the contract.
+    return results.get(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit))) ?? null;
   }
 
-  isVerifiedByPayload(payloadBlockHash: RootHex, builderDeposit: electra.PendingDepositNoSlot): boolean {
-    const verifiedRoots = this.verifiedRootsByPayloadBlockHash.get(payloadBlockHash);
-    if (!verifiedRoots) {
-      return false;
+  getPayloadResult(payloadBlockHash: RootHex, builderDeposit: electra.PendingDepositNoSlot): boolean | null {
+    const results = this.payloadResultsByBlockHash.get(payloadBlockHash);
+    if (!results) {
+      return null;
     }
-    return verifiedRoots.has(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit)));
+    return results.get(toRootHex(ssz.electra.PendingDepositNoSlot.hashTreeRoot(builderDeposit))) ?? null;
   }
 
   /**
    * Clears only the pre-Gloas fork-transition slot cache. The payload-blockHash cache is
-   * self-rolling via the FIFO cap in setVerifiedByPayload and is intentionally left
-   * in place.
+   * self-rolling via the FIFO cap in setPayloadResult and is intentionally left in place.
    */
   clearPreGloasCache(): void {
-    this.verifiedRootsByPreGloasSlot.clear();
+    this.preGloasResultsBySlot.clear();
     this._lastVerifiedSlot = 0;
   }
 }

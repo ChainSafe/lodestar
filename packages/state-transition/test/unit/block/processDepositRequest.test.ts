@@ -47,11 +47,29 @@ describe("processDepositRequest — Gloas cache fast path", () => {
     // payload-keyed cache uses PendingDepositNoSlot, so no slot is supplied here;
     // the consumer looks up with state.slot present and the hash matches because
     // the type excludes slot from identity.
-    state.epochCtx.builderDepositSignatureCache.setVerifiedByPayload(payloadBlockHashHex, depositInput);
+    state.epochCtx.builderDepositSignatureCache.setPayloadResult(payloadBlockHashHex, depositInput, true);
 
     const buildersBefore = state.builders.length;
     processDepositRequest(ForkSeq.gloas, state, {...depositInput, index: 0n});
     expect(state.builders.length).toBe(buildersBefore + 1);
+  });
+
+  it("drops the deposit when cache says the signature is invalid (false result)", () => {
+    const payloadBlockHash = Buffer.alloc(32, 0xbe);
+    const state = buildState(payloadBlockHash);
+    const payloadBlockHashHex = `0x${payloadBlockHash.toString("hex")}`;
+
+    // Seed the cache with a `false` result — proves negative-cache fast path: the
+    // deposit is dropped without re-running BLS verification AND without being added
+    // to pendingDeposits. We use a *valid* signature so any code path that DID verify
+    // would have onboarded the builder; the only way builders.length stays 0 is the
+    // cache-says-invalid fast path returning early.
+    const depositInput = pool[0];
+    state.epochCtx.builderDepositSignatureCache.setPayloadResult(payloadBlockHashHex, depositInput, false);
+
+    processDepositRequest(ForkSeq.gloas, state, {...depositInput, index: 0n});
+    expect(state.builders.length).toBe(0);
+    expect(state.pendingDeposits.length).toBe(0);
   });
 
   it("does NOT onboard when signature is invalid and cache miss (control)", () => {
@@ -78,7 +96,7 @@ describe("processDepositRequest — Gloas cache fast path", () => {
     // Invalid signature seeded under the wrong payload key → cache lookup at the
     // correct key (latestExecutionPayloadBid.blockHash) misses → builder not onboarded.
     const depositInput = {...pool[0], signature: Buffer.alloc(96)};
-    state.epochCtx.builderDepositSignatureCache.setVerifiedByPayload(wrongKey, depositInput);
+    state.epochCtx.builderDepositSignatureCache.setPayloadResult(wrongKey, depositInput, true);
 
     processDepositRequest(ForkSeq.gloas, state, {...depositInput, index: 0n});
     expect(state.builders.length).toBe(0);

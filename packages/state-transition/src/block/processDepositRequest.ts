@@ -50,10 +50,20 @@ export function processDepositRequest(
     ) {
       const pendingDeposit = {pubkey, withdrawalCredentials, amount, signature, slot: state.slot};
       const payloadBlockHash = toRootHex(stateGloas.latestExecutionPayloadBid.blockHash);
-      if (stateGloas.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, pendingDeposit)) {
+      const cachedResult = stateGloas.epochCtx.builderDepositSignatureCache.getPayloadResult(
+        payloadBlockHash,
+        pendingDeposit
+      );
+      //   true   → fast-path onboard
+      if (cachedResult === true) {
         onboarder.onboardBuilderVerifiedSignature(pendingDeposit);
         return;
       }
+      if (cachedResult === false) {
+        //   false  → drop silently (cached as invalid)
+        return;
+      }
+      //   null   → not yet verified, queue for batch verification
       onboarder.queueBuilderDeposit(pubkeyHex, pendingDeposit);
       // this is for the spec test where we want to eagerly onboard builder immediately
       if (ownsBatcher) onboarder.onboardQueuedBuilders();
