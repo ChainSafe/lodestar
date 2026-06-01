@@ -31,7 +31,6 @@ import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {applyParentExecutionPayload} from "../block/processParentExecutionPayload.js";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
-import {BuilderDepositSignatureCache} from "../cache/builderDepositSignatureCache.ts";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
@@ -564,10 +563,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.epochCtx.effectiveBalanceIncrements;
   }
 
-  get builderDepositSignatureCache(): BuilderDepositSignatureCache {
-    return this.cachedState.epochCtx.builderDepositSignatureCache;
-  }
-
   preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult {
     // Cast: this method is exposed on IBeaconStateViewElectra so callers narrow first;
     // the underlying cached state has pendingDeposits available.
@@ -586,6 +581,11 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
       payloadBlockHash,
       builderDeposits
     );
+  }
+
+  clearPreGloasBuilderDepositCache(): void {
+    const cache = this.cachedState.epochCtx.builderDepositSignatureCache;
+    if (cache.lastVerifiedSlot !== 0) cache.clearPreGloasCache();
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {

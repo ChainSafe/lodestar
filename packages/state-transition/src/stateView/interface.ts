@@ -42,7 +42,6 @@ import {
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
-import {BuilderDepositSignatureCache} from "../cache/builderDepositSignatureCache.ts";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
@@ -234,14 +233,15 @@ export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
   pendingPartialWithdrawalsCount: number;
   pendingConsolidations: electra.PendingConsolidations;
   pendingConsolidationsCount: number;
-  builderDepositSignatureCache: BuilderDepositSignatureCache;
   /**
-   * Pre-verify a slice of builder-prefix pending deposits and stash the verified
-   * roots on `builderDepositSignatureCache`. Driven by the prepareForNextSlot scheduler
-   * in the GLOAS_PREVERIFY_WINDOW_EPOCHS epochs before GLOAS_FORK_EPOCH.
-   * See `preVerifyBuilderDepositsPreGloas` in util/onboardBuilder.ts for full semantics.
+   * Pre-verify a slice of builder-prefix pending deposits and cache the verified
+   * roots on the underlying `BuilderDepositSignatureCache`.
    */
   preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult;
+  /**
+   * Clear the pre-gloas builder deposit cache
+   */
+  clearPreGloasBuilderDepositCache(): void;
 }
 
 /** Fulu+ state fields — use isStatePostFulu() guard */

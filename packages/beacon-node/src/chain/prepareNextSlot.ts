@@ -274,14 +274,12 @@ export class PrepareNextSlotScheduler {
       }
 
       if (isStatePostElectra(prepareState)) {
-        const cache = prepareState.builderDepositSignatureCache;
         const gloasEpoch = this.config.GLOAS_FORK_EPOCH;
         const finalizedEpoch = this.chain.forkChoice.getFinalizedCheckpoint().epoch;
 
         if (finalizedEpoch >= gloasEpoch) {
-          // The Gloas transition can no longer be reorged. Cheap no-op when
-          // already empty.
-          if (cache.lastVerifiedSlot !== 0) cache.clearPreGloasCache();
+          // Gloas transition is now finalized — release the pre-window cache memory.
+          prepareState.clearPreGloasBuilderDepositCache();
         } else if (
           !isEpochTransition && // epoch boundaries already tight; skip
           ForkSeq[fork] < ForkSeq.gloas &&

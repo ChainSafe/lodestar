@@ -34,6 +34,7 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/onboardBuilder.js";
 import {
   IBeaconStateView,
   IBeaconStateViewGloas,
@@ -403,6 +404,21 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._effectiveBalanceIncrements = this.binding.effectiveBalanceIncrements;
     }
     return this._effectiveBalanceIncrements;
+  }
+
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult {
+    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits);
+  }
+
+  preVerifyPayloadBuilderDeposits(
+    payloadBlockHash: RootHex,
+    builderDeposits: electra.PendingDepositNoSlot[]
+  ): {verifiedCount: number; invalidCount: number} {
+    return this.binding.preVerifyPayloadBuilderDeposits(payloadBlockHash, builderDeposits);
+  }
+
+  clearPreGloasBuilderDepositCache(): void {
+    this.binding.clearPreGloasBuilderDepositCache();
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
