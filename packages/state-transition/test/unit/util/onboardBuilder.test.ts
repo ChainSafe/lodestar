@@ -603,7 +603,7 @@ describe("BatchOnboardBuilder", () => {
       expect(result.toSlot).toBe(2);
       expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(2);
       for (const d of deposits) {
-        expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(d)).toBe(true);
+        expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(d)).toBe(true);
       }
     });
 
@@ -623,8 +623,9 @@ describe("BatchOnboardBuilder", () => {
       expect(result.verifiedCount).toBe(1);
       expect(result.fromSlot).toBe(2);
       expect(result.toSlot).toBe(2);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(validatorDeposit)).toBe(false);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(builderDeposit)).toBe(true);
+      // validator-prefix deposit is filtered out before reaching the verifier → not in cache.
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(validatorDeposit)).toBe(null);
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(builderDeposit)).toBe(true);
     });
 
     it("skips deposits with slot <= lastVerifiedSlot (cursor honored)", () => {
@@ -643,11 +644,12 @@ describe("BatchOnboardBuilder", () => {
       expect(result.verifiedCount).toBe(1);
       expect(result.fromSlot).toBe(3);
       expect(result.toSlot).toBe(3);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[0])).toBe(false);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[2])).toBe(true);
+      // deposits[0] was below the cursor → never reached the verifier → not in cache.
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(deposits[0])).toBe(null);
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(deposits[2])).toBe(true);
     });
 
-    it("counts invalid signatures separately and excludes them from the cache", () => {
+    it("counts invalid signatures separately and records them as false in the cache", () => {
       const good1 = depositAtSlot(scannerPool[0], 1);
       const bad: electra.PendingDeposit = {...depositAtSlot(scannerPool[1], 1), signature: Buffer.alloc(96)};
       const good2 = depositAtSlot(scannerPool[2], 1);
@@ -657,9 +659,11 @@ describe("BatchOnboardBuilder", () => {
 
       expect(result.verifiedCount).toBe(2);
       expect(result.invalidCount).toBe(1);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(good1)).toBe(true);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(bad)).toBe(false);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(good2)).toBe(true);
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(good1)).toBe(true);
+      // Bad signatures are now recorded as `false` (not missing) so the fork-transition
+      // consumer can skip them without re-verifying.
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(bad)).toBe(false);
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(good2)).toBe(true);
     });
 
     it("stops on a slot boundary when maxBuilderDeposits is exceeded", () => {
@@ -685,8 +689,10 @@ describe("BatchOnboardBuilder", () => {
       expect(result.toSlot).toBe(2);
       // lastVerifiedSlot advances only over fully-completed slots
       expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(2);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[4])).toBe(false);
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedPreGloas(deposits[5])).toBe(false);
+      // deposits[4] and deposits[5] sit beyond the slot-boundary cutoff → never reach the
+      // verifier → no cache entry (null), not a recorded `false`.
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(deposits[4])).toBe(null);
+      expect(state.epochCtx.builderDepositSignatureCache.getPreGloasResult(deposits[5])).toBe(null);
     });
 
     it("subsequent call resumes at lastVerifiedSlot + 1", () => {
@@ -727,9 +733,9 @@ describe("BatchOnboardBuilder", () => {
       const state = freshState();
       const result = preVerifyPayloadBuilderDeposits(state, payloadBlockHash, []);
       expect(result).toEqual({verifiedCount: 0, invalidCount: 0});
-      // Nothing recorded
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, envelopePool[0])).toBe(
-        false
+      // Nothing recorded — empty input never reached the verifier.
+      expect(state.epochCtx.builderDepositSignatureCache.getPayloadResult(payloadBlockHash, envelopePool[0])).toBe(
+        null
       );
     });
 
@@ -742,11 +748,11 @@ describe("BatchOnboardBuilder", () => {
       expect(result.verifiedCount).toBe(3);
       expect(result.invalidCount).toBe(0);
       for (const d of deposits) {
-        expect(state.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, d)).toBe(true);
+        expect(state.epochCtx.builderDepositSignatureCache.getPayloadResult(payloadBlockHash, d)).toBe(true);
       }
     });
 
-    it("counts invalid signatures separately and excludes them from the cache", () => {
+    it("counts invalid signatures separately and records them as false in the cache", () => {
       const state = freshState();
       const good1 = {...envelopePool[0], slot: 0};
       const bad = withInvalidSignature({...envelopePool[1], slot: 0});
@@ -757,9 +763,11 @@ describe("BatchOnboardBuilder", () => {
       expect(result.verifiedCount).toBe(2);
       expect(result.invalidCount).toBe(1);
       const cache = state.epochCtx.builderDepositSignatureCache;
-      expect(cache.isVerifiedByPayload(payloadBlockHash, good1)).toBe(true);
-      expect(cache.isVerifiedByPayload(payloadBlockHash, bad)).toBe(false);
-      expect(cache.isVerifiedByPayload(payloadBlockHash, good2)).toBe(true);
+      expect(cache.getPayloadResult(payloadBlockHash, good1)).toBe(true);
+      // Bad signatures are now recorded as `false` (not missing) so the next-block
+      // consumer can skip them without re-verifying.
+      expect(cache.getPayloadResult(payloadBlockHash, bad)).toBe(false);
+      expect(cache.getPayloadResult(payloadBlockHash, good2)).toBe(true);
     });
 
     it("cached entries are queryable with the consumer's apply-slot (slot is stripped)", () => {
@@ -771,9 +779,7 @@ describe("BatchOnboardBuilder", () => {
 
       preVerifyPayloadBuilderDeposits(state, payloadBlockHash, [producerView]);
 
-      expect(state.epochCtx.builderDepositSignatureCache.isVerifiedByPayload(payloadBlockHash, consumerView)).toBe(
-        true
-      );
+      expect(state.epochCtx.builderDepositSignatureCache.getPayloadResult(payloadBlockHash, consumerView)).toBe(true);
     });
   });
 });

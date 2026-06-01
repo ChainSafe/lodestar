@@ -289,10 +289,8 @@ export function preVerifyPayloadBuilderDeposits(
   const cache = state.epochCtx.builderDepositSignatureCache;
   let verifiedCount = 0;
   for (let i = 0; i < builderDeposits.length; i++) {
-    if (results[i]) {
-      cache.setVerifiedByPayload(payloadBlockHash, builderDeposits[i]);
-      verifiedCount++;
-    }
+    cache.setPayloadResult(payloadBlockHash, builderDeposits[i], results[i]);
+    if (results[i]) verifiedCount++;
   }
   return {verifiedCount, invalidCount: builderDeposits.length - verifiedCount};
 }
@@ -372,10 +370,8 @@ export function preVerifyBuilderDepositsPreGloas(
     const chunk = queue.slice(start, end);
     const results = verifyDepositSignatures(state.epochCtx.config, chunk);
     for (let j = 0; j < chunk.length; j++) {
-      if (results[j]) {
-        cache.setVerifiedPreGloas(chunk[j]);
-        verifiedCount++;
-      }
+      cache.setPreGloasResult(chunk[j], results[j]);
+      if (results[j]) verifiedCount++;
     }
   }
   cache.lastVerifiedSlot = maxSlotInQueue;
