@@ -927,11 +927,14 @@ export function getValidatorApi(
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
-      const builderBid = chain.executionPayloadBidPool.getBestBid(
-        slot,
-        parentBlock.executionPayloadBlockHash,
-        parentBlockRootHex
-      );
+      const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
+      const bidParentBlockHash = isBuildingOnFull
+        ? parentBlock.executionPayloadBlockHash
+        : (chain.forkChoice.getBlockHex(parentBlockRootHex, PayloadStatus.EMPTY)?.executionPayloadBlockHash ?? null);
+      const builderBid =
+        bidParentBlockHash !== null
+          ? chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex)
+          : null;
 
       const logCtx = {
         slot,
