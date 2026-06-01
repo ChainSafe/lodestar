@@ -14,26 +14,26 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  vitest: "^4.0.7"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
+  vitest: "^4.0.7"
+
+allowBuilds:
+  "@parcel/watcher": true
+  "@swc/core": true
+  aws-sdk: true
+  "@vekexasia/bigint-buffer2": true
+  classic-level: true
+  core-js: true
+  cpu-features: true
+  electron: true
+  esbuild: true
+  nx: true
+  ssh2: true
 
 overrides:
-  dns-over-http-resolver": "^2.1.1"
-  loupe": "^2.3.6"
-  nan": "^2.19.0"
+  dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
-
-onlyBuiltDependencies:
-  - "@parcel/watcher"
-  - "@swc/core"
-  - aws-sdk
-  - "@vekexasia/bigint-buffer2"
-  - classic-level
-  - core-js
-  - cpu-features
-  - electron
-  - esbuild
-  - nx
-  - ssh2
+  loupe: "^2.3.6"
+  nan: "^2.19.0"

@@ -116,36 +116,24 @@ export async function importBlock(
     }
     executionStatus = parentBlock.executionStatus;
   }
+
+  // getBeaconProposerOrNull will return null if head state is more than one epoch away
+  // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
+  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
+
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus
+    dataAvailabilityStatus,
+    expectedProposerIndex
   );
 
   // This adds the state necessary to process the next block
   // Some block event handlers require state being in state cache so need to do this before emitting EventType.block
   this.regen.processState(blockRootHex, postState);
-
-  // For range sync we skip triggerGetBlobs because column fetching is handled in the range path.
-  if (fork >= ForkSeq.gloas && !opts.fromRangeSync) {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
-    // PayloadEnvelopeInput is supposed to have right after we have block
-    // there are 4 sources of them: gossip, by root, by range and api
-    if (!payloadInput) {
-      throw Error(`PayloadEnvelopeInput not seeded for block ${blockRootHex} before importBlock`);
-    }
-
-    // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
-    // which is all the information we need so there is no reason to delay until execution payload arrives
-    // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
-    // (for example later in the slot). Do not couple retries to incoming gossip columns.
-    // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
-    // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
-    this.getBlobsTracker.triggerGetBlobs(payloadInput);
-  }
 
   this.metrics?.importBlock.bySource.inc({source: source.source});
   this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
@@ -275,8 +263,10 @@ export async function importBlock(
         if (ptcIndices.length > 0) {
           this.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
+            payloadAttestation.data.slot,
             ptcIndices,
-            payloadAttestation.data.payloadPresent
+            payloadAttestation.data.payloadPresent,
+            payloadAttestation.data.blobDataAvailable
           );
         }
       } catch (e) {

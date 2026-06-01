@@ -1,12 +1,12 @@
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
-import {isValidDepositSignature} from "../block/processDeposit.js";
+import {toPubkeyHex} from "@lodestar/utils";
 import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
+import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 
 /**
  * Upgrade a state from Fulu to Gloas.
@@ -48,6 +48,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
   stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
     ssz.electra.ExecutionRequests.defaultValue()
   );
@@ -86,66 +87,63 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
 /**
  * Applies any pending deposits for builders to onboard builders during the fork transition
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  // Track pubkeys of new validators to keep their deposits pending
-  const validatorPubkeys = new Set<string>();
-
   // Track pubkeys of new builders added when applying deposits
   const builderPubkeys = new Set<string>();
 
-  const remainingPendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+  const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+  const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
+
   for (let i = 0; i < state.pendingDeposits.length; i++) {
     const deposit = state.pendingDeposits.getReadonly(i);
 
     const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
-    const pubkeyHex = toHex(deposit.pubkey);
+    const pubkeyHex = toPubkeyHex(deposit.pubkey);
 
-    // Deposits for existing validators stay in pending queue
-    if (isValidatorKnown(state, validatorIndex) || validatorPubkeys.has(pubkeyHex)) {
-      remainingPendingDeposits.push(deposit);
+    // Deposits for existing validators stay in the pending queue
+    if (isValidatorKnown(state, validatorIndex)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
       continue;
     }
 
-    // If the pubkey is associated with a builder that was created in a previous iteration
-    // or it is a builder deposit, try to apply the deposit to the new/existing builder
-    const isExistingBuilder = builderPubkeys.has(pubkeyHex);
-    const hasBuilderCredentials = isBuilderWithdrawalCredential(deposit.withdrawalCredentials);
-    if (isExistingBuilder || hasBuilderCredentials) {
-      const buildersLenBefore = state.builders.length;
-      applyDepositForBuilder(
-        state,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        deposit.signature,
-        deposit.slot
-      );
-      // Track newly added builders for subsequent iterations
-      if (!isExistingBuilder && state.builders.length > buildersLenBefore) {
-        builderPubkeys.add(pubkeyHex);
+    // `applyDepositForBuilder` can mutate the state and add a builder to the registry, so
+    // the set of builder pubkeys must be recomputed each iteration. `builderPubkeys` stands
+    // in for the spec's `[b.pubkey for b in state.builders]`: `state.builders` starts empty
+    // at the fork, so every builder is one added in a previous iteration of this loop.
+    if (!builderPubkeys.has(pubkeyHex)) {
+      // Deposits for non-builders stay in the pending queue. If there is a valid pending
+      // deposit for a new validator with this pubkey, keep this deposit in the pending
+      // queue to be applied to that validator later.
+      if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
+        pendingDeposits.push(deposit);
+        pendingDepositsLookup.add(deposit, pubkeyHex);
+        continue;
       }
-      continue;
+      if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
+        pendingDeposits.push(deposit);
+        pendingDepositsLookup.add(deposit, pubkeyHex);
+        continue;
+      }
     }
 
-    // If there is a pending deposit for a new validator that has a valid signature, track the
-    // pubkey so that subsequent builder deposits for the same pubkey stay in pending (applied to
-    // the validator later) rather than creating a builder. Deposits with invalid signatures are
-    // dropped here since they would fail in apply_pending_deposit anyway.
-    if (
-      isValidDepositSignature(
-        state.config,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        deposit.signature
-      )
-    ) {
-      validatorPubkeys.add(pubkeyHex);
-      remainingPendingDeposits.push(deposit);
+    const buildersLenBefore = state.builders.length;
+    // TODO GLOAS: handle 20k 1ETH deposits on time
+    // there is a note in the spec https://github.com/ethereum/consensus-specs/pull/5227
+    applyDepositForBuilder(
+      state,
+      deposit.pubkey,
+      deposit.withdrawalCredentials,
+      deposit.amount,
+      deposit.signature,
+      deposit.slot
+    );
+    if (state.builders.length > buildersLenBefore) {
+      builderPubkeys.add(pubkeyHex);
     }
   }
 
-  state.pendingDeposits = remainingPendingDeposits;
+  state.pendingDeposits = pendingDeposits;
 }
