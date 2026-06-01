@@ -274,21 +274,21 @@ export class PrepareNextSlotScheduler {
       }
 
       if (isStatePostElectra(prepareState)) {
-        const cache = prepareState.gloaOnboardBuilderCache;
+        const cache = prepareState.builderDepositSignatureCache;
         const gloasEpoch = this.config.GLOAS_FORK_EPOCH;
         const finalizedEpoch = this.chain.forkChoice.getFinalizedCheckpoint().epoch;
 
         if (finalizedEpoch >= gloasEpoch) {
           // The Gloas transition can no longer be reorged. Cheap no-op when
           // already empty.
-          if (cache.lastVerifiedSlot !== 0) cache.clear();
+          if (cache.lastVerifiedSlot !== 0) cache.clearPreGloasCache();
         } else if (
           !isEpochTransition && // epoch boundaries already tight; skip
           ForkSeq[fork] < ForkSeq.gloas &&
           computeEpochAtSlot(clockSlot) >= gloasEpoch - GLOAS_PREVERIFY_WINDOW_EPOCHS &&
           computeEpochAtSlot(clockSlot) < gloasEpoch
         ) {
-          const result = prepareState.preVerifyBuilderDeposits(MAX_BUILDER_DEPOSITS_PER_SLOT);
+          const result = prepareState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT);
           if (result.verifiedCount > 0 || result.invalidCount > 0) {
             this.logger.verbose("PrepareNextSlotScheduler pre-verified builder deposit signatures", {
               clockSlot,

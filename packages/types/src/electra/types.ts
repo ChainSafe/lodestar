@@ -44,6 +44,7 @@ export type LightClientOptimisticUpdate = ValueOf<typeof ssz.LightClientOptimist
 export type LightClientStore = ValueOf<typeof ssz.LightClientStore>;
 
 export type PendingDeposit = ValueOf<typeof ssz.PendingDeposit>;
+export type PendingDepositNoSlot = ValueOf<typeof ssz.PendingDepositNoSlot>;
 export type PendingDeposits = ValueOf<typeof ssz.PendingDeposits>;
 export type PendingPartialWithdrawal = ValueOf<typeof ssz.PendingPartialWithdrawal>;
 export type PendingPartialWithdrawals = ValueOf<typeof ssz.PendingPartialWithdrawals>;
