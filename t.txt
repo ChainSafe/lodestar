@@ -1,0 +1,30 @@
+env \
+  BLS_BENCH_WORKERS=11 \
+  BLS_BENCH_MODES=verify-only \
+  BLS_BENCH_BATCHES=32 \
+  BLS_BENCH_MODULES=@chainsafe/lodestar-z/blst \
+  node benchmark-bls-deser-vs-verify.mjs
+
+  env \
+  BLS_BENCH_WORKERS=11 \
+  BLS_BENCH_MODES=verify-only \
+  BLS_BENCH_BATCHES=32 \
+  BLS_BENCH_MODULES=@chainsafe/lodestar-z/blst \
+  perf record -F 999 -g --call-graph dwarf -e cycles:u \
+  -o perf-zig-cycles.data -- \
+  node benchmark-bls-deser-vs-verify.mjs
+
+perf report --stdio --children -i perf-zig-cycles.data | head -180 > perf-zig-cycles.txt
+cat perf-zig-cycles.txt
+
+env \
+  BLS_BENCH_WORKERS=11 \
+  BLS_BENCH_MODES=verify-only \
+  BLS_BENCH_BATCHES=32 \
+  BLS_BENCH_MODULES=@chainsafe/blst \
+  perf record -F 999 -g --call-graph dwarf -e cycles:u \
+  -o perf-rust-cycles.data -- \
+  node benchmark-bls-deser-vs-verify.mjs
+
+perf report --stdio --children -i perf-rust-cycles.data | head -180 > perf-rust-cycles.txt
+cat perf-rust-cycles.txt
