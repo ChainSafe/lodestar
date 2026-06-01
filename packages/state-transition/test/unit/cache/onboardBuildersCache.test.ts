@@ -17,9 +17,9 @@ describe("BuilderDepositSignatureCache", () => {
   }
 
   describe("lastVerifiedSlot", () => {
-    it("defaults to 0", () => {
+    it("defaults to -1 (the 'no slot verified' sentinel; 0 is a real slot)", () => {
       const cache = new BuilderDepositSignatureCache();
-      expect(cache.lastVerifiedSlot).toBe(0);
+      expect(cache.lastVerifiedSlot).toBe(-1);
     });
 
     it("setter is monotonic — accepts strictly greater values, ignores smaller", () => {
@@ -105,7 +105,7 @@ describe("BuilderDepositSignatureCache", () => {
   });
 
   describe("clearPreGloasCache", () => {
-    it("empties the pre-Gloas results and resets lastVerifiedSlot to 0", () => {
+    it("empties the pre-Gloas results and resets lastVerifiedSlot to -1", () => {
       const cache = new BuilderDepositSignatureCache();
       const d = atSlot(pool[0], 5);
       cache.setPreGloasResult(d, true);
@@ -113,7 +113,7 @@ describe("BuilderDepositSignatureCache", () => {
 
       cache.clearPreGloasCache();
 
-      expect(cache.lastVerifiedSlot).toBe(0);
+      expect(cache.lastVerifiedSlot).toBe(-1);
       expect(cache.getPreGloasResult(d)).toBe(null);
     });
 

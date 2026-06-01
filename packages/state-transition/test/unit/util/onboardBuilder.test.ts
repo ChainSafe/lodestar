@@ -584,7 +584,8 @@ describe("BatchOnboardBuilder", () => {
       const state = buildStateWithDeposits([]);
       const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
       expect(result).toEqual({verifiedCount: 0, invalidCount: 0, fromSlot: null, toSlot: null});
-      expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(0);
+      // -1 is the "no slot verified" sentinel
+      expect(state.epochCtx.builderDepositSignatureCache.lastVerifiedSlot).toBe(-1);
     });
 
     it("verifies builder-prefix deposits and stashes them on the cache", () => {

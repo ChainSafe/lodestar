@@ -9,6 +9,12 @@ import {MapDef, pruneSetToMax, toRootHex} from "@lodestar/utils";
 const MAX_VERIFIED_PAYLOAD_BLOCK_HASHES = 32;
 
 /**
+ * Sentinel for `lastVerifiedSlot` meaning "no slot has been verified yet". GENESIS_SLOT
+ * is `0`, which is a real, valid slot for early devnet deposits, so we use `-1` instead.
+ */
+export const NO_VERIFIED_SLOT: Slot = -1;
+
+/**
  * Caches builder-deposit signature-verification results — both passes (`true`) and
  * failures (`false`) — so the Fulu → Gloas fork transition and post-Gloas block
  * processing can skip the bulk verification cost AND skip re-verifying deposits already
@@ -44,7 +50,7 @@ export class BuilderDepositSignatureCache {
   // Plain Map (not MapDef) so insertion order is usable for FIFO eviction via pruneSetToMax.
   private payloadResultsByBlockHash = new Map<RootHex, Map<RootHex, boolean>>();
 
-  private _lastVerifiedSlot: Slot = 0;
+  private _lastVerifiedSlot: Slot = NO_VERIFIED_SLOT;
 
   get lastVerifiedSlot(): Slot {
     return this._lastVerifiedSlot;
@@ -98,6 +104,6 @@ export class BuilderDepositSignatureCache {
    */
   clearPreGloasCache(): void {
     this.preGloasResultsBySlot.clear();
-    this._lastVerifiedSlot = 0;
+    this._lastVerifiedSlot = NO_VERIFIED_SLOT;
   }
 }

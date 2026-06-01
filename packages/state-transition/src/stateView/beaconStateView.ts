@@ -31,6 +31,7 @@ import {Checkpoint, Fork} from "@lodestar/types/phase0";
 import {applyParentExecutionPayload} from "../block/processParentExecutionPayload.js";
 import {VoluntaryExitValidity, getVoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {getExpectedWithdrawals} from "../block/processWithdrawals.js";
+import {NO_VERIFIED_SLOT} from "../cache/builderDepositSignatureCache.ts";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
@@ -593,7 +594,9 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   clearPreGloasBuilderDepositCache(): void {
     const cache = this.cachedState.epochCtx.builderDepositSignatureCache;
-    if (cache.lastVerifiedSlot !== 0) cache.clearPreGloasCache();
+    // Cheap no-op when already empty. NO_VERIFIED_SLOT (== -1) is the sentinel because
+    // GENESIS_SLOT == 0 is a real slot and can't double as "never verified".
+    if (cache.lastVerifiedSlot !== NO_VERIFIED_SLOT) cache.clearPreGloasCache();
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
