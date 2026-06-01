@@ -70,9 +70,9 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       return onDataColumnSidecarsByRoot(body, chain, db, peerId, peerClient);
     },
 
-    [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (req) => {
+    [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (req, peerId, peerClient) => {
       const body = ExecutionPayloadEnvelopesByRootRequestType(chain.config).deserialize(req.data);
-      return onExecutionPayloadEnvelopesByRoot(body, chain, db);
+      return onExecutionPayloadEnvelopesByRoot(body, chain, db, peerId, peerClient);
     },
     [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: (req) => {
       const body = ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest.deserialize(req.data);
