@@ -257,6 +257,7 @@ export interface IForkChoice {
     payloadPresentCount: number;
     dataAvailableCount: number;
   } | null;
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */

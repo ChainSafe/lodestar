@@ -1067,9 +1067,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null {
-    const votes = this.protoArray.getPTCVotes(blockRootHex);
-    if (votes === null) return null;
-    return votes.toBoolArray().map((v) => v ?? null);
+    return this.protoArray.getPayloadTimelinessVotes(blockRootHex);
+  }
+
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.protoArray.getPayloadDataAvailabilityVotes(blockRootHex);
   }
 
   getPTCVoteCounts(blockRootHex: RootHex): {
