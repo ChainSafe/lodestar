@@ -927,11 +927,9 @@ export function getValidatorApi(
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
-      const builderBid = chain.executionPayloadBidPool.getBestBid(
-        slot,
-        parentBlock.executionPayloadBlockHash,
-        parentBlockRootHex
-      );
+      const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
+      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       const logCtx = {
         slot,
@@ -1123,10 +1121,23 @@ export function getValidatorApi(
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
       const payloadDueSec = config.getPayloadDueMs() / 1000;
-      const payloadPresent =
-        payloadInput?.hasPayloadEnvelope() === true &&
-        chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
+      const payloadSeenSec =
+        payloadInput?.hasPayloadEnvelope() === true
+          ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
+          : null;
+      const payloadPresent = payloadSeenSec !== null && payloadSeenSec < payloadDueSec;
       const blobDataAvailable = payloadInput?.hasAllData() === true;
+
+      logger.debug("Produced payload attestation data", {
+        slot,
+        blockRoot: block.blockRoot,
+        blockSlot: block.slot,
+        payloadPresent,
+        blobDataAvailable,
+        hasPayloadInput: payloadInput !== undefined,
+        payloadSeenSec,
+        payloadDueSec,
+      });
 
       return {
         data: {

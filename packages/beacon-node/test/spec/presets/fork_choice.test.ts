@@ -709,9 +709,17 @@ const forkChoiceTest =
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||
               name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
-          // TODO GLOAS: Spec test fixture bug in v1.7.0-alpha.5: wrong_withdrawals envelope SSZ data is
-          // byte-for-byte identical to the valid envelope, making it impossible to reject
-          name.endsWith("on_execution_payload_envelope__wrong_withdrawals"),
+          // TODO: re-enable after "apply proposer boost if dependent roots match" (consensus-specs #5306)
+          // is implemented. New behavior in v1.7.0-alpha.9; Lodestar still applies the boost
+          // unconditionally. Only the altair vectors exercise the changed condition (other forks pass).
+          name.endsWith("altair/fork_choice/on_block/pyspec_tests/justified_update_always_if_better") ||
+          name.endsWith("altair/fork_choice/on_block/pyspec_tests/justified_update_not_realized_finality") ||
+          name.endsWith("altair/fork_choice/get_head/pyspec_tests/voting_source_beyond_two_epoch") ||
+          // TODO GLOAS: re-enable after the validate_on_attestation payload-status updates
+          // (consensus-specs #5275) are implemented. New gloas on_attestation vectors in v1.7.0-alpha.9.
+          name.endsWith("validate_on_attestation_beacon_root_payload_check") ||
+          name.endsWith("validate_on_attestation_payload_invalid_index") ||
+          name.endsWith("validate_on_attestation_same_slot_full_vote_rejected"),
       },
     };
   };

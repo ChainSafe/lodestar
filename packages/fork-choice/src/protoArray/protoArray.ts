@@ -719,6 +719,33 @@ export class ProtoArray {
   }
 
   /**
+   * Raw PTC vote tallies for a block root, for the debug fork choice endpoint.
+   * Returns `null` for pre-Gloas (or pruned) roots, which have no vote maps.
+   */
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null {
+    const attended = this.ptcAttested.get(blockRootHex);
+    const timelinessVotes = this.payloadTimelinessVotes.get(blockRootHex);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRootHex);
+    // The three maps share a lifecycle (set together in onBlock, deleted together on prune)
+    if (attended === undefined || timelinessVotes === undefined || daVotes === undefined) {
+      return null;
+    }
+    return {
+      attesterCount: bitCount(attended.uint8Array),
+      payloadPresentCount: bitCount(timelinessVotes.uint8Array),
+      dataAvailableCount: bitCount(daVotes.uint8Array),
+    };
+  }
+
+  getPreviousProposerBoostRoot(): RootHex {
+    return this.previousProposerBoost?.root ?? HEX_ZERO_HASH;
+  }
+
+  /**
    * Spec: payload_timeliness(store, root, timely=True)
    */
   isPayloadTimely(blockRoot: RootHex): boolean {
@@ -766,7 +793,8 @@ export class ProtoArray {
    * Spec: should_build_on_full(store, head)
    *
    * The proposer is forced to build on the EMPTY variant (effectively reorging)
-   * when the PTC majority voted that the blob data is not available.
+   * when the PTC majority voted that the blob data is not available or that the
+   * payload was not timely.
    */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
     if (head.payloadStatus === PayloadStatus.PENDING) {
@@ -774,11 +802,14 @@ export class ProtoArray {
     }
     if (head.payloadStatus === PayloadStatus.EMPTY) return false;
 
-    // The PTC data availability view is only consulted for a head from the previous slot.
-    // For an earlier head the empty/full variant has already been resolved by weight in getHead.
+    // The PTC data availability and timeliness views are only consulted for a head from the
+    // previous slot. For an earlier head the empty/full variant has already been resolved by
+    // weight in getHead.
     if (head.slot + 1 !== slot) return true;
 
-    return !this.isPayloadDataNotAvailable(head.blockRoot);
+    if (this.isPayloadDataNotAvailable(head.blockRoot)) return false;
+
+    return !this.isPayloadNotTimely(head.blockRoot);
   }
 
   /**
