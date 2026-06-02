@@ -1112,7 +1112,7 @@ export function getValidatorApi(
 
       // Vote for the first block seen for the slot (fork-choice nodes are in import order),
       // which need not be canonical, a payload attestation only votes on payload presence, not head.
-      const block = chain.forkChoice.getBlockSummariesAtSlot(slot)[0];
+      const block = chain.forkChoice.getBlockSummariesAtSlot(slot).at(0);
       if (block === undefined) {
         // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
         throw new ApiError(404, `No block seen at slot=${slot}`);
