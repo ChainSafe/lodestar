@@ -37,7 +37,7 @@ importers:
         version: link:packages/cli
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/698dc8f413c676dd904c84a5cba7a64caa9b6e58
+        version: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/aa212df7828c006b59c5ab6aec1dc6f52031d973
       debug:
         specifier: ^4.4.3
         version: 4.4.3
@@ -1282,8 +1282,8 @@ packages:
     resolution: {tarball: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/5a846957d214cbae38ba88d74802d7e2938a5116}
     version: 0.1.2-rc.6
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/698dc8f413c676dd904c84a5cba7a64caa9b6e58':
-    resolution: {tarball: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/698dc8f413c676dd904c84a5cba7a64caa9b6e58}
+  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/aa212df7828c006b59c5ab6aec1dc6f52031d973':
+    resolution: {tarball: https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/aa212df7828c006b59c5ab6aec1dc6f52031d973}
     version: 0.1.2-rc.6
 
   '@chainsafe/netmask@2.0.0':
@@ -6943,7 +6943,7 @@ snapshots:
     dependencies:
       '@chainsafe/zapi': 2.0.0
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/698dc8f413c676dd904c84a5cba7a64caa9b6e58':
+  '@chainsafe/lodestar-z@https://codeload.github.com/ChainSafe/lodestar-z/tar.gz/aa212df7828c006b59c5ab6aec1dc6f52031d973':
     dependencies:
       '@chainsafe/zapi': 2.0.0
 
