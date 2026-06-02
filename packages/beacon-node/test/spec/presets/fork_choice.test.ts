@@ -28,6 +28,7 @@ import {
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
+  isStatePostGloas,
   signedBlockToSignedHeader,
   syncPubkeys,
 } from "@lodestar/state-transition";
@@ -224,49 +225,62 @@ const forkChoiceTest =
                   throw Error(`Block not found for root ${blockRoot}`);
                 }
 
-                if (protoBlock.slot !== payloadAttestationMessage.data.slot) {
-                  continue;
-                }
+                if (protoBlock.slot === payloadAttestationMessage.data.slot) {
+                  const blockState = await chain.regen.getBlockSlotState(
+                    protoBlock,
+                    payloadAttestationMessage.data.slot,
+                    {dontTransferCache: true},
+                    RegenCaller.processBlock
+                  );
 
-                const blockState = await chain.regen.getBlockSlotState(
-                  protoBlock,
-                  payloadAttestationMessage.data.slot,
-                  {dontTransferCache: true},
-                  RegenCaller.processBlock
-                );
-                const ptcIndices = (blockState as IBeaconStateViewGloas).getIndicesInPayloadTimelinessCommittee(
-                  payloadAttestationMessage.validatorIndex,
-                  payloadAttestationMessage.data.slot
-                );
-                if (ptcIndices.length === 0) {
-                  throw Error(`Validator ${payloadAttestationMessage.validatorIndex} is not a member of the PTC`);
-                }
+                  if (!isStatePostGloas(blockState)) throw Error(`Expected gloas+ state, got ${blockState.forkName}`);
 
-                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                if (currentSlot !== payloadAttestationMessage.data.slot) {
-                  throw Error(`Message slot ${payloadAttestationMessage.data.slot} is not current slot ${currentSlot}`);
-                }
+                  const ptcIndices = (blockState as IBeaconStateViewGloas).getIndicesInPayloadTimelinessCommittee(
+                    payloadAttestationMessage.validatorIndex,
+                    payloadAttestationMessage.data.slot
+                  );
 
-                const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
-                if (!validatorPubkey) {
-                  throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
-                }
-                const signatureSet = createSingleSignatureSetFromComponents(
-                  validatorPubkey,
-                  getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
-                  payloadAttestationMessage.signature
-                );
-                if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: true}))) {
-                  throw Error("Invalid payload attestation message signature");
-                }
+                  if (ptcIndices.length === 0) {
+                    throw Error(`Validator ${payloadAttestationMessage.validatorIndex} is not a member of the PTC`);
+                  }
 
-                chain.forkChoice.notifyPtcMessages(
-                  blockRoot,
-                  payloadAttestationMessage.data.slot,
-                  ptcIndices,
-                  payloadAttestationMessage.data.payloadPresent,
-                  payloadAttestationMessage.data.blobDataAvailable
-                );
+                  if (clock.currentSlot !== payloadAttestationMessage.data.slot) {
+                    throw Error(
+                      `Message slot ${payloadAttestationMessage.data.slot} is not current slot ${clock.currentSlot}`
+                    );
+                  }
+
+                  const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
+                  if (!validatorPubkey) {
+                    throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
+                  }
+
+                  const signatureSet = createSingleSignatureSetFromComponents(
+                    validatorPubkey,
+                    getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
+                    payloadAttestationMessage.signature
+                  );
+
+                  let signatureValidity: boolean;
+                  try {
+                    signatureValidity = await chain.bls.verifySignatureSets([signatureSet], {
+                      verifyOnMainThread: true,
+                      batchable: true,
+                      priority: true,
+                    });
+                  } catch {
+                    signatureValidity = false;
+                  }
+                  if (!signatureValidity) throw Error("Invalid payload attestation signature");
+
+                  chain.forkChoice.notifyPtcMessages(
+                    blockRoot,
+                    payloadAttestationMessage.data.slot,
+                    ptcIndices,
+                    payloadAttestationMessage.data.payloadPresent,
+                    payloadAttestationMessage.data.blobDataAvailable
+                  );
+                }
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
@@ -608,6 +622,24 @@ const forkChoiceTest =
                   `Invalid should override fcu result at step ${i}`
                 );
               }
+              if (step.checks.payload_timeliness_vote) {
+                expect(
+                  chain.forkChoice.getPayloadTimelinessVotes(step.checks.payload_timeliness_vote.block_root)
+                ).toEqualWithMessage(
+                  step.checks.payload_timeliness_vote.votes,
+                  `Invalid payload timeliness votes at step ${i}`
+                );
+              }
+              if (step.checks.payload_data_availability_vote) {
+                expect(
+                  chain.forkChoice.getPayloadDataAvailabilityVotes(
+                    step.checks.payload_data_availability_vote.block_root
+                  )
+                ).toEqualWithMessage(
+                  step.checks.payload_data_availability_vote.votes,
+                  `Invalid payload data availability votes at step ${i}`
+                );
+              }
             }
 
             // None of the above
@@ -825,6 +857,16 @@ type Checks = {
     should_override_forkchoice_update?: {
       validator_is_connected: boolean;
       result: boolean;
+    };
+    /** Gloas: PTC timeliness votes per PTC position (`null` = member has not attested). */
+    payload_timeliness_vote?: {
+      block_root: RootHex;
+      votes: (boolean | null)[];
+    };
+    /** Gloas: PTC data-availability votes per PTC position (`null` = member has not attested). */
+    payload_data_availability_vote?: {
+      block_root: RootHex;
+      votes: (boolean | null)[];
     };
   };
 };
