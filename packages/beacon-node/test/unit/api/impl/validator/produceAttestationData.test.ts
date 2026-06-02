@@ -50,7 +50,7 @@ describe("api - validator - produceAttestationData", () => {
       );
     });
 
-    it("Should produce payload attestation data for the canonical block", async () => {
+    it("Should produce payload attestation data for the first block seen for the slot", async () => {
       const gloasConfig = createChainForkConfig({
         ...defaultChainConfig,
         ALTAIR_FORK_EPOCH: 0,
@@ -65,10 +65,12 @@ describe("api - validator - produceAttestationData", () => {
       modules.config = gloasConfig;
       api = getValidatorApi(defaultApiOptions, modules);
 
-      modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue({
-        slot: 0,
-        blockRoot: ZERO_HASH_HEX,
-      } as ProtoBlock);
+      modules.forkChoice.getBlockSummariesAtSlot.mockReturnValue([
+        {
+          slot: 0,
+          blockRoot: ZERO_HASH_HEX,
+        } as ProtoBlock,
+      ]);
       vi.mocked(modules.chain.clock.secFromSlot).mockReturnValue(0);
       vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue({
         hasPayloadEnvelope: () => true,
@@ -87,7 +89,7 @@ describe("api - validator - produceAttestationData", () => {
       expect(res.data.blobDataAvailable).toBe(true);
     });
 
-    it("Should throw 404 when no canonical block has been seen for the assigned slot", async () => {
+    it("Should attest to the first block seen even if it is not canonical", async () => {
       const gloasConfig = createChainForkConfig({
         ...defaultChainConfig,
         ALTAIR_FORK_EPOCH: 0,
@@ -102,9 +104,41 @@ describe("api - validator - produceAttestationData", () => {
       modules.config = gloasConfig;
       api = getValidatorApi(defaultApiOptions, modules);
 
-      modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue(null);
+      const firstSeenRoot = `0x${"11".repeat(32)}`;
+      // Two competing blocks at the slot; [0] is the first one seen (import order),
+      // and is chosen even though it need not be canonical.
+      modules.forkChoice.getBlockSummariesAtSlot.mockReturnValue([
+        {slot: 0, blockRoot: firstSeenRoot} as ProtoBlock,
+        {slot: 0, blockRoot: ZERO_HASH_HEX} as ProtoBlock,
+      ]);
+      vi.mocked(modules.chain.clock.secFromSlot).mockReturnValue(0);
 
-      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow("No canonical block found at slot=1");
+      const res = await api.producePayloadAttestationData({slot: 0});
+      if (res.data instanceof Uint8Array) {
+        throw Error("Expected payload attestation data object");
+      }
+
+      expect(toRootHex(res.data.beaconBlockRoot)).toBe(firstSeenRoot);
+    });
+
+    it("Should throw 404 when no block has been seen for the assigned slot", async () => {
+      const gloasConfig = createChainForkConfig({
+        ...defaultChainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+      });
+      modules = getApiTestModules({config: gloasConfig});
+      modules.config = gloasConfig;
+      api = getValidatorApi(defaultApiOptions, modules);
+
+      modules.forkChoice.getBlockSummariesAtSlot.mockReturnValue([]);
+
+      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow("No block seen at slot=1");
     });
   });
 });

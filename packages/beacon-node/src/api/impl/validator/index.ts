@@ -1110,10 +1110,12 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
-      if (!block) {
+      // Vote for the first block seen for the slot (fork-choice nodes are in import order),
+      // which need not be canonical, a payload attestation only votes on payload presence, not head.
+      const block = chain.forkChoice.getBlockSummariesAtSlot(slot)[0];
+      if (block === undefined) {
         // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
-        throw new ApiError(404, `No canonical block found at slot=${slot}`);
+        throw new ApiError(404, `No block seen at slot=${slot}`);
       }
 
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
