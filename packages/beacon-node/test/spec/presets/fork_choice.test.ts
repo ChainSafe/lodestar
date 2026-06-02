@@ -615,7 +615,9 @@ const forkChoiceTest =
                 );
               }
               if (step.checks.payload_timeliness_vote) {
-                expect(chain.forkChoice.getPTCVotes(step.checks.payload_timeliness_vote.block_root)).toEqualWithMessage(
+                expect(
+                  chain.forkChoice.getPayloadTimelinessVotes(step.checks.payload_timeliness_vote.block_root)
+                ).toEqualWithMessage(
                   step.checks.payload_timeliness_vote.votes,
                   `Invalid payload timeliness votes at step ${i}`
                 );

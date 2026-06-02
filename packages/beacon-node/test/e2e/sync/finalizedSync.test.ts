@@ -159,7 +159,7 @@ describe("sync / finalized sync for gloas", () => {
           `Node B missing FULL payload variant for gloas block slot=${block.slot} root=${block.blockRoot}`
         );
         if (block.slot > gloasFirstSlot) {
-          const ptcVotes = bn2.chain.forkChoice.getPTCVotes(block.blockRoot) ?? [];
+          const ptcVotes = bn2.chain.forkChoice.getPayloadTimelinessVotes(block.blockRoot) ?? [];
 
           expect(ptcVotes.some(Boolean)).toBeWithMessage(
             true,

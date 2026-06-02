@@ -1066,7 +1066,7 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.hasPayload(blockRoot);
   }
 
-  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {
     return this.protoArray.getPayloadTimelinessVotes(blockRootHex);
   }
 
