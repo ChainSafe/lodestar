@@ -70,7 +70,7 @@ importers:
         specifier: 'workspace:'
         version: link:packages/params
       '@lodestar/state-transition':
-        specifier: 'workspace:'
+        specifier: workspace:*
         version: link:packages/state-transition
       '@types/node':
         specifier: ^24.10.1

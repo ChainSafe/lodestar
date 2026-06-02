@@ -42,6 +42,7 @@
     "@actions/core": "^1.11.1",
     "@biomejs/biome": "^2.2.0",
     "@chainsafe/benchmark": "^2.0.2",
+    "@lodestar/state-transition": "workspace:*",
     "@chainsafe/biomejs-config": "^1.0.0",
     "@chainsafe/caxa": "3.0.6",
     "@lerna-lite/cli": "^4.9.4",
