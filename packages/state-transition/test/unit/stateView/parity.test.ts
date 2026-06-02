@@ -62,7 +62,7 @@ describe("NativeBeaconStateView parity", () => {
     expect(zigPre.hashTreeRoot()).toEqual(cached.hashTreeRoot());
     expect(zigPre.serialize()).toEqual(stateBytes);
     const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(block);
-    const zigPost = stateTransition(zigPre, blockBytes, opts);
+    const zigPost = zigPre.stateTransition(blockBytes, opts);
 
     const tsPost: IBeaconStateView = new BeaconStateView(cached).stateTransition(block, opts, {});
 
