@@ -62,3 +62,7 @@ export function mockApiResponse<T, M, E extends Endpoint<any, any, any, T, M>>({
   apiResponse.meta = () => meta as M;
   return apiResponse;
 }
+
+export function mockApiErrorResponse<E extends Endpoint>(status: HttpStatusCode): ApiResponse<E> {
+  return new ApiResponse<E>({} as any, null, new Response(null, {status}));
+}

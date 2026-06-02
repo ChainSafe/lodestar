@@ -328,6 +328,7 @@ export function getBeaconPoolApi({
 
             chain.forkChoice.notifyPtcMessages(
               toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+              payloadAttestationMessage.data.slot,
               validatorCommitteeIndices,
               payloadAttestationMessage.data.payloadPresent,
               payloadAttestationMessage.data.blobDataAvailable

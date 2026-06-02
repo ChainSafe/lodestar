@@ -91,14 +91,14 @@ export class ProtoArray {
    *
    * Bit i = PTC member i voted payloadPresent=true (timeliness YES vote)
    */
-  private ptcVotes = new Map<RootHex, BitArray>();
+  private payloadTimelinessVotes = new Map<RootHex, BitArray>();
   /**
    * Blob data availability votes per block.
    * Spec: gloas/fork-choice.md#modified-store (payload_data_availability_vote)
    *
    * Bit i = PTC member i voted blobDataAvailable=true (DA YES vote)
    */
-  private daVotes = new Map<RootHex, BitArray>();
+  private payloadDataAvailabilityVotes = new Map<RootHex, BitArray>();
   /**
    * Tracks which PTC members have attested at all (any payload_status).
    * Without this, we cannot tell "didn't vote" (None) from "voted false" —
@@ -552,9 +552,9 @@ export class ProtoArray {
 
       // Initialize PTC vote bitvectors for this block.
       // Spec: gloas/fork-choice.md#modified-on_block
-      this.ptcVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
+      this.payloadTimelinessVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
       this.ptcAttested.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
-      this.daVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
+      this.payloadDataAvailabilityVotes.set(block.blockRoot, BitArray.fromBitLen(PTC_SIZE));
     } else {
       // Pre-Gloas: Only create FULL node (payload embedded in block)
       const node: ProtoNode = {
@@ -678,15 +678,23 @@ export class ProtoArray {
    */
   notifyPtcMessages(
     blockRoot: RootHex,
+    slot: Slot,
     ptcIndices: number[],
     payloadPresent: boolean,
     blobDataAvailable: boolean
   ): void {
-    const votes = this.ptcVotes.get(blockRoot);
+    const votes = this.payloadTimelinessVotes.get(blockRoot);
     const attended = this.ptcAttested.get(blockRoot);
-    const daVotes = this.daVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
     if (votes === undefined || attended === undefined || daVotes === undefined) {
       // Block not found or not a Gloas block, ignore
+      return;
+    }
+
+    // PTC votes can only change the vote for their assigned beacon block, return early otherwise
+    const nodeIndex = this.getDefaultNodeIndex(blockRoot);
+    const node = nodeIndex !== undefined ? this.getNodeByIndex(nodeIndex) : undefined;
+    if (node === undefined || node.slot !== slot) {
       return;
     }
 
@@ -701,7 +709,7 @@ export class ProtoArray {
   }
 
   getPTCVotes(blockRootHex: RootHex): BitArray | null {
-    const votes = this.ptcVotes.get(blockRootHex);
+    const votes = this.payloadTimelinessVotes.get(blockRootHex);
     if (votes === undefined) {
       // Block not found or not a Gloas block
       return null;
@@ -714,7 +722,7 @@ export class ProtoArray {
    * Spec: payload_timeliness(store, root, timely=True)
    */
   isPayloadTimely(blockRoot: RootHex): boolean {
-    const votes = this.ptcVotes.get(blockRoot);
+    const votes = this.payloadTimelinessVotes.get(blockRoot);
     if (votes === undefined) return false;
     if (!this.hasPayload(blockRoot)) return false;
     return bitCount(votes.uint8Array) > PAYLOAD_TIMELY_THRESHOLD;
@@ -724,7 +732,7 @@ export class ProtoArray {
    * Spec: payload_timeliness(store, root, timely=False)
    */
   isPayloadNotTimely(blockRoot: RootHex): boolean {
-    const votes = this.ptcVotes.get(blockRoot);
+    const votes = this.payloadTimelinessVotes.get(blockRoot);
     const attended = this.ptcAttested.get(blockRoot);
     if (votes === undefined || attended === undefined) return false;
     // Spec: not verified locally → returns `not False = True`
@@ -736,7 +744,7 @@ export class ProtoArray {
    * Spec: payload_data_availability(store, root, available=True)
    */
   isPayloadDataAvailable(blockRoot: RootHex): boolean {
-    const daVotes = this.daVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
     if (daVotes === undefined) return false;
     if (!this.hasPayload(blockRoot)) return false;
     return bitCount(daVotes.uint8Array) > DATA_AVAILABILITY_TIMELY_THRESHOLD;
@@ -746,7 +754,7 @@ export class ProtoArray {
    * Spec: payload_data_availability(store, root, available=False)
    */
   isPayloadDataNotAvailable(blockRoot: RootHex): boolean {
-    const daVotes = this.daVotes.get(blockRoot);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRoot);
     const attended = this.ptcAttested.get(blockRoot);
     if (daVotes === undefined || attended === undefined) return false;
     // Spec: not verified locally → returns `not False = True`
@@ -758,14 +766,23 @@ export class ProtoArray {
    * Spec: should_build_on_full(store, head)
    *
    * The proposer is forced to build on the EMPTY variant (effectively reorging)
-   * when the PTC majority voted that the blob data is not available.
+   * when the PTC majority voted that the blob data is not available or that the
+   * payload was not timely.
    */
-  shouldBuildOnFull(head: ProtoBlock): boolean {
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
     if (head.payloadStatus === PayloadStatus.PENDING) {
       throw new Error("shouldBuildOnFull called with PENDING head");
     }
     if (head.payloadStatus === PayloadStatus.EMPTY) return false;
-    return !this.isPayloadDataNotAvailable(head.blockRoot);
+
+    // The PTC data availability and timeliness views are only consulted for a head from the
+    // previous slot. For an earlier head the empty/full variant has already been resolved by
+    // weight in getHead.
+    if (head.slot + 1 !== slot) return true;
+
+    if (this.isPayloadDataNotAvailable(head.blockRoot)) return false;
+
+    return !this.isPayloadNotTimely(head.blockRoot);
   }
 
   /**
@@ -783,7 +800,7 @@ export class ProtoArray {
    * Spec: gloas/fork-choice.md#new-should_extend_payload
    *
    * Returns true if payload is verified (FULL variant exists) AND:
-   * 1. Payload is timely, OR
+   * 1. Payload is timely AND data is available, OR
    * 2. No proposer boost root (empty/zero hash), OR
    * 3. Proposer boost root's parent is not this block, OR
    * 4. Proposer boost root extends FULL parent
@@ -796,8 +813,8 @@ export class ProtoArray {
       return false;
     }
 
-    // Condition 1: Payload is timely
-    if (this.isPayloadTimely(blockRoot)) {
+    // Condition 1: Payload is timely AND data is available
+    if (this.isPayloadTimely(blockRoot) && this.isPayloadDataAvailable(blockRoot)) {
       return true;
     }
 
@@ -1205,9 +1222,9 @@ export class ProtoArray {
       this.indices.delete(root);
       // Prune PTC votes for this block to prevent memory leak
       // Spec: gloas/fork-choice.md (implicit - finalized blocks don't need PTC votes)
-      this.ptcVotes.delete(root);
+      this.payloadTimelinessVotes.delete(root);
       this.ptcAttested.delete(root);
-      this.daVotes.delete(root);
+      this.payloadDataAvailabilityVotes.delete(root);
     }
 
     // Store nodes prior to finalization

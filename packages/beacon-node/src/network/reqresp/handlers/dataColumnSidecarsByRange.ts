@@ -1,5 +1,6 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
+import {PayloadStatus} from "@lodestar/fork-choice";
 import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
@@ -104,6 +105,11 @@ export async function* onDataColumnSidecarsByRange(
 
       // Must include only columns in the range requested
       if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
+        // Post-gloas, columns exist only for FULL blocks (pre-gloas blocks are always FULL)
+        if (block.payloadStatus !== PayloadStatus.FULL) {
+          continue;
+        }
+
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of columns must be consistent, but on
         // re-org there's no need to abort the request
