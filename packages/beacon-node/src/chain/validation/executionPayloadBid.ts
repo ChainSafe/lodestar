@@ -35,10 +35,6 @@ async function validateExecutionPayloadBid(
   const bid = signedExecutionPayloadBid.message;
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
-  const state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.validateGossipExecutionPayloadBid);
-  if (!isStatePostGloas(state)) {
-    throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
-  }
 
   // [IGNORE] `bid.slot` is the current slot or the next slot.
   const currentSlot = chain.clock.currentSlot;
@@ -58,6 +54,17 @@ async function validateExecutionPayloadBid(
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
       parentBlockRoot: parentBlockRootHex,
+    });
+  }
+
+  // [REJECT] The bid is for a higher slot than its parent block -- i.e.
+  // validate that `bid.slot` is greater than the slot of the block with root
+  // `bid.parent_block_root`.
+  if (bid.slot <= parentBlock.slot) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT,
+      parentSlot: parentBlock.slot,
+      slot: bid.slot,
     });
   }
 
@@ -100,9 +107,31 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // Use the bid's parent branch state for builder checks
+  const state = await chain.regen
+    .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateGossipExecutionPayloadBid)
+    .catch(() => {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
+        parentBlockRoot: parentBlockRootHex,
+      });
+    });
+
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
+  }
+
   // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
   // `is_active_builder(state, bid.builder_index)` returns `True`.
-  const builder = state.getBuilder(bid.builderIndex);
+  let builder: gloas.Builder;
+  try {
+    builder = state.getBuilder(bid.builderIndex);
+  } catch {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
+      builderIndex: bid.builderIndex,
+    });
+  }
   if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,

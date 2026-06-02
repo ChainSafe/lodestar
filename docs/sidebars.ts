@@ -70,7 +70,7 @@ const sidebars: SidebarsConfig = {
             {
               type: "link",
               label: "Documentation",
-              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/light-client",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/light-client",
             },
           ],
         },
@@ -81,7 +81,7 @@ const sidebars: SidebarsConfig = {
             {
               type: "link",
               label: "Documentation",
-              href: "https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/prover",
+              href: "https://github.com/ChainSafe/lodestar-prover/tree/main/packages/prover",
             },
           ],
         },

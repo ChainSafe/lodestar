@@ -927,11 +927,9 @@ export function getValidatorApi(
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
-      const builderBid = chain.executionPayloadBidPool.getBestBid(
-        slot,
-        parentBlock.executionPayloadBlockHash,
-        parentBlockRootHex
-      );
+      const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
+      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       const logCtx = {
         slot,
@@ -1112,23 +1110,34 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const block = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
+      const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
-        throw new ApiError(404, `No canonical block found at or before slot=${slot}`);
+        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
+        throw new ApiError(404, `No canonical block found at slot=${slot}`);
       }
 
-      const blockIsForSlot = block.slot === slot;
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
       // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
       const payloadDueSec = config.getPayloadDueMs() / 1000;
-      const payloadPresent =
-        blockIsForSlot &&
-        payloadInput !== undefined &&
-        payloadInput.hasPayloadEnvelope() &&
-        chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
-      const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
+      const payloadSeenSec =
+        payloadInput?.hasPayloadEnvelope() === true
+          ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
+          : null;
+      const payloadPresent = payloadSeenSec !== null && payloadSeenSec < payloadDueSec;
+      const blobDataAvailable = payloadInput?.hasAllData() === true;
+
+      logger.debug("Produced payload attestation data", {
+        slot,
+        blockRoot: block.blockRoot,
+        blockSlot: block.slot,
+        payloadPresent,
+        blobDataAvailable,
+        hasPayloadInput: payloadInput !== undefined,
+        payloadSeenSec,
+        payloadDueSec,
+      });
 
       return {
         data: {
