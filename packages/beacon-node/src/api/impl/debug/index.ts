@@ -100,7 +100,10 @@ export function getDebugApi({
                 payloadAttesterCount: ptc?.attesterCount ?? null,
                 payloadAvailabilityYesCount: ptc?.payloadPresentCount ?? null,
                 payloadDataAvailabilityYesCount: ptc?.dataAvailableCount ?? null,
-                gasLimit: ptc !== null && "executionPayloadGasLimit" in node ? node.executionPayloadGasLimit : null,
+                gasLimit:
+                  node.payloadStatus === PayloadStatus.FULL && "executionPayloadGasLimit" in node
+                    ? node.executionPayloadGasLimit
+                    : null,
               },
             };
           }),
