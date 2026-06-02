@@ -35,6 +35,24 @@ export async function validateGossipFuluDataColumnSidecar(
   metrics: Metrics | null
 ): Promise<void> {
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
+
+  // [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
+  //          sidecar.index). Spec orders this check first, before any expensive verification.
+  if (
+    chain.seenBlockInputCache.isSeenDataColumnSidecar(
+      blockHeader.slot,
+      blockHeader.proposerIndex,
+      dataColumnSidecar.index
+    )
+  ) {
+    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+      code: DataColumnSidecarErrorCode.ALREADY_SEEN_TUPLE,
+      slot: blockHeader.slot,
+      proposerIndex: blockHeader.proposerIndex,
+      columnIndex: dataColumnSidecar.index,
+    });
+  }
+
   const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
@@ -208,17 +226,6 @@ export async function validateGossipFuluDataColumnSidecar(
     });
   } finally {
     kzgProofTimer?.();
-  }
-
-  // 12) [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
-  //              sidecar.index) with valid header signature, sidecar inclusion proof, and kzg proof
-  if (chain.seenBlockInputCache.isSeenDataColumnSidecar(blockHeader.slot, proposerIndex, dataColumnSidecar.index)) {
-    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
-      code: DataColumnSidecarErrorCode.ALREADY_SEEN_TUPLE,
-      slot: blockHeader.slot,
-      proposerIndex,
-      columnIndex: dataColumnSidecar.index,
-    });
   }
 
   chain.seenBlockInputCache.markSeenDataColumnSidecar(blockHeader.slot, proposerIndex, dataColumnSidecar.index);
