@@ -36,6 +36,7 @@ import {validateGossipAttesterSlashing} from "../../../src/chain/validation/atte
 import {validateGossipBlobSidecar} from "../../../src/chain/validation/blobSidecar.js";
 import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
+import {validateGossipFuluDataColumnSidecar} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
 import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
@@ -162,6 +163,7 @@ const gossipTopicByHandler = {
   gossip_sync_committee_contribution_and_proof: GossipType.sync_committee_contribution_and_proof,
   gossip_bls_to_execution_change: GossipType.bls_to_execution_change,
   gossip_blob_sidecar: GossipType.blob_sidecar,
+  gossip_data_column_sidecar: GossipType.data_column_sidecar,
 } as const satisfies Record<string, GossipType>;
 
 export function isGossipValidationHandler(topicHandler: string): topicHandler is keyof typeof gossipTopicByHandler {
@@ -738,6 +740,18 @@ async function validateMessageForTopic(
       }
 
       await validateGossipBlobSidecar(fork, chain, blobSidecar, Number(message.subnet_id ?? 0));
+      break;
+    }
+
+    case GossipType.data_column_sidecar: {
+      const dataColumnSidecar = rejectOnInvalidSerializedBytes(() => ssz.fulu.DataColumnSidecar.deserialize(bytes));
+      const parentRootHex = toRootHex(dataColumnSidecar.signedBlockHeader.message.parentRoot);
+
+      if (rejectedFailedBlockRoots.has(parentRootHex)) {
+        throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_PARENT_BLOCK_FAILED"});
+      }
+
+      await validateGossipFuluDataColumnSidecar(chain, dataColumnSidecar, Number(message.subnet_id ?? 0), null);
       break;
     }
 

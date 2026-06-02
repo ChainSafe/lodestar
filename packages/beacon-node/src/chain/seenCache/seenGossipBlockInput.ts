@@ -115,6 +115,10 @@ export class SeenBlockInput {
   // gossip validation. Spec requires `[IGNORE]` for a subsequent sidecar matching the
   // same tuple.
   private blobSidecarTuples = new Map<Slot, Set<string>>();
+  // Tracks data column sidecar tuples `(slot, proposer_index, column_index)` already
+  // seen via gossip validation. Spec requires `[IGNORE]` for a subsequent sidecar
+  // matching the same tuple.
+  private dataColumnSidecarTuples = new Map<Slot, Set<string>>();
 
   constructor({
     config,
@@ -432,6 +436,23 @@ export class SeenBlockInput {
     seenSet.add(`${proposerIndex}:${blobIndex}`);
   }
 
+  /**
+   * Same proposer signing two different blocks at the same slot (equivocation)
+   * yields the same tuple, and only the first valid sidecar should propagate.
+   */
+  isSeenDataColumnSidecar(slot: Slot, proposerIndex: ValidatorIndex, columnIndex: number): boolean {
+    return this.dataColumnSidecarTuples.get(slot)?.has(`${proposerIndex}:${columnIndex}`) ?? false;
+  }
+
+  markSeenDataColumnSidecar(slot: Slot, proposerIndex: ValidatorIndex, columnIndex: number): void {
+    let seenSet = this.dataColumnSidecarTuples.get(slot);
+    if (!seenSet) {
+      seenSet = new Set<string>();
+      this.dataColumnSidecarTuples.set(slot, seenSet);
+    }
+    seenSet.add(`${proposerIndex}:${columnIndex}`);
+  }
+
   private buildCommonProps(slot: Slot): {
     daOutOfRange: boolean;
     forkName: ForkName;
@@ -460,6 +481,7 @@ export class SeenBlockInput {
     }
     pruneSetToMax(this.verifiedProposerSignatures, MAX_BLOCK_INPUT_CACHE_SIZE);
     pruneSetToMax(this.blobSidecarTuples, MAX_BLOCK_INPUT_CACHE_SIZE);
+    pruneSetToMax(this.dataColumnSidecarTuples, MAX_BLOCK_INPUT_CACHE_SIZE);
   }
 
   private evictBlockInput(blockInput: IBlockInput): void {

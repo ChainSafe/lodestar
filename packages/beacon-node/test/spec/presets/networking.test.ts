@@ -7,7 +7,7 @@ import {bigIntToBytes, loadYaml} from "@lodestar/utils";
 import {computeColumnsForCustodyGroup, getCustodyGroups} from "../../../src/util/dataColumns.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {isGossipValidationHandler, runGossipValidationTest} from "../utils/gossipValidation.js";
-import {readdirSyncSpec, specTestIterator} from "../utils/specTestIterator.js";
+import {defaultSkipOpts, readdirSyncSpec, specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerCustom} from "../utils/types.js";
 
 type ComputeColumnForCustodyGroupInput = {
@@ -74,6 +74,12 @@ const networking: TestRunnerCustom = (fork, testHandler, testSuite, testSuiteDir
   }
 };
 
-specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
-  networking: {type: RunnerType.custom, fn: networking},
-});
+specTestIterator(
+  path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET),
+  {networking: {type: RunnerType.custom, fn: networking}},
+  {
+    ...defaultSkipOpts,
+    // gossip_partial_data_column_sidecar requires cell-level DAS support not yet in Lodestar
+    skippedHandlers: ["gossip_partial_data_column_sidecar"],
+  }
+);

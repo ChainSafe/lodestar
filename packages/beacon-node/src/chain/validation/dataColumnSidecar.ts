@@ -10,7 +10,7 @@ import {
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
-import {DataColumnSidecar, Root, Slot, SubnetID, fulu, gloas, ssz} from "@lodestar/types";
+import {DataColumnSidecar, Root, RootHex, Slot, SubnetID, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
 import {Metrics} from "../../metrics/metrics.js";
@@ -35,6 +35,24 @@ export async function validateGossipFuluDataColumnSidecar(
   metrics: Metrics | null
 ): Promise<void> {
   const blockHeader = dataColumnSidecar.signedBlockHeader.message;
+
+  // [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
+  //          sidecar.index). Spec orders this check first, before any expensive verification.
+  if (
+    chain.seenBlockInputCache.isSeenDataColumnSidecar(
+      blockHeader.slot,
+      blockHeader.proposerIndex,
+      dataColumnSidecar.index
+    )
+  ) {
+    throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
+      code: DataColumnSidecarErrorCode.ALREADY_SEEN_TUPLE,
+      slot: blockHeader.slot,
+      proposerIndex: blockHeader.proposerIndex,
+      columnIndex: dataColumnSidecar.index,
+    });
+  }
+
   const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
@@ -104,9 +122,24 @@ export async function validateGossipFuluDataColumnSidecar(
     });
   }
 
-  // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
-  // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
-  // this is something we should change this in the future to make the code airtight to the spec.
+  // 9) [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
+  //             -- i.e. get_checkpoint_block(store, block_header.parent_root, store.finalized_checkpoint.epoch)
+  //                     == store.finalized_checkpoint.root
+  const finalizedAncestorSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+  let ancestorRoot: RootHex | undefined;
+  try {
+    ancestorRoot = chain.forkChoice.getAncestor(parentRoot, finalizedAncestorSlot).blockRoot;
+  } catch {
+    // parent not in fork-choice or finalized slot before parent's chain start
+  }
+  if (ancestorRoot !== finalizedCheckpoint.rootHex) {
+    throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
+      code: DataColumnSidecarErrorCode.FINALIZED_NOT_ANCESTOR,
+      parentRoot,
+      finalizedRoot: finalizedCheckpoint.rootHex,
+    });
+  }
+
   // 7) [REJECT] The sidecar's block's parent passes validation.
   const blockState = await chain.regen
     .getBlockSlotState(parentBlock, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipDataColumn)
@@ -160,11 +193,6 @@ export async function validateGossipFuluDataColumnSidecar(
     chain.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
   }
 
-  // 9) [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
-  //             -- i.e. get_checkpoint_block(store, block_header.parent_root, store.finalized_checkpoint.epoch)
-  //                     == store.finalized_checkpoint.root
-  // Handled by 7)
-
   // 10) [REJECT] The sidecar's kzg_commitments field inclusion proof is valid as verified by
   //              verify_data_column_sidecar_inclusion_proof
   //              TODO: Can cache result on (commitments, proof, header) in the future
@@ -200,9 +228,7 @@ export async function validateGossipFuluDataColumnSidecar(
     kzgProofTimer?.();
   }
 
-  // 12) [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index,
-  //              sidecar.index) with valid header signature, sidecar inclusion proof, and kzg proof
-  //              -- Handled in seenGossipBlockInput
+  chain.seenBlockInputCache.markSeenDataColumnSidecar(blockHeader.slot, proposerIndex, dataColumnSidecar.index);
 }
 
 // SPEC FUNCTION
