@@ -490,6 +490,37 @@ describe("Gloas Fork Choice", () => {
       expect(() => protoArray.notifyPtcMessages("0x99", gloasForkSlot, [0], true, true)).not.toThrow();
     });
 
+    it("getPTCVoteCounts() returns raw popcounts of attested / present / available votes", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      // No votes yet
+      expect(protoArray.getPTCVoteCounts("0x02")).toEqual({
+        attesterCount: 0,
+        payloadPresentCount: 0,
+        dataAvailableCount: 0,
+      });
+
+      // 3 validators vote present + available, 2 attest but vote against both
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0, 1, 2], true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [3, 4], false, false);
+
+      expect(protoArray.getPTCVoteCounts("0x02")).toEqual({
+        attesterCount: 5,
+        payloadPresentCount: 3,
+        dataAvailableCount: 3,
+      });
+    });
+
+    it("getPTCVoteCounts() returns null for pre-Gloas and unknown roots", () => {
+      // Pre-Gloas block (parentBlockHash === null) has no PTC vote maps
+      const preGloasBlock = createTestBlock(gloasForkSlot - 1, "0x03", genesisRoot);
+      protoArray.onBlock(preGloasBlock, gloasForkSlot - 1, null);
+      expect(protoArray.getPTCVoteCounts("0x03")).toBeNull();
+      // Unknown root
+      expect(protoArray.getPTCVoteCounts("0x99")).toBeNull();
+    });
+
     it("isPayloadTimely() returns false when payload not locally available", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);

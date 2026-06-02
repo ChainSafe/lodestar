@@ -310,6 +310,10 @@ export class ForkChoice implements IForkChoice {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
 
+  getPreviousProposerBoostRoot(): RootHex {
+    return this.protoArray.getPreviousProposerBoostRoot();
+  }
+
   /**
    * Decides whether to extend an available payload from the previous slot,
    * corresponding to the beacon block `blockRoot`.
@@ -1066,6 +1070,22 @@ export class ForkChoice implements IForkChoice {
     const votes = this.protoArray.getPTCVotes(blockRootHex);
     if (votes === null) return null;
     return votes.toBoolArray().map((v) => v ?? null);
+  }
+
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null {
+    return this.protoArray.getPTCVoteCounts(blockRootHex);
+  }
+
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedJustified.checkpoint;
+  }
+
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedFinalizedCheckpoint;
   }
 
   /**
