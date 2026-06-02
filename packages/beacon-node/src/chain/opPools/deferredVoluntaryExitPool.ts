@@ -44,6 +44,7 @@ export class DeferredVoluntaryExitPool {
           validExits.push(entry.exit);
           this.pool.delete(validatorIndex);
         } else if (!isTransientExitValidity(validity)) {
+          this.logger.warn("Deferred voluntary exit became permanently invalid", {validatorIndex, validity});
           this.pool.delete(validatorIndex);
         }
         // Else if still transient - keep
