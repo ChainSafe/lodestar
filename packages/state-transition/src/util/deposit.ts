@@ -4,12 +4,7 @@ import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 
 export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {
   const eth1DataToUse = eth1Data ?? state.eth1Data;
-  const fork = state.config.getForkSeq(state.slot);
-  // From Fulu the former eth1 deposit mechanism was removed, blocks must not contain any deposits.
-  if (fork >= ForkSeq.fulu) {
-    return 0;
-  }
-  if (fork >= ForkSeq.electra) {
+  if (state.config.getForkSeq(state.slot) >= ForkSeq.electra) {
     const electraState = state as CachedBeaconStateElectra;
     // eth1DataIndexLimit = min(UintNum64, UintBn64) can be safely casted as UintNum64
     // since the result lies within upper and lower bound of UintNum64
