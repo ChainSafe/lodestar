@@ -1175,15 +1175,6 @@
         epoch: Epoch
     </spec>
 
-- name: ForkChoiceNode#gloas
-  sources: []
-  spec: |
-    <spec container="ForkChoiceNode" fork="gloas" hash="755a4b34">
-    class ForkChoiceNode(Container):
-        root: Root
-        payload_status: PayloadStatus  # One of PAYLOAD_STATUS_* values
-    </spec>
-
 - name: ForkData#phase0
   sources:
     - file: packages/types/src/phase0/sszTypes.ts

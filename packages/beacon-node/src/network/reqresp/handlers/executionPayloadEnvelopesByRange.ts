@@ -20,9 +20,9 @@ export async function* onExecutionPayloadEnvelopesByRange(
   }
 
   const finalized = db.executionPayloadEnvelopeArchive;
-  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
-  // The current finalized block's envelope is still in the hot db; archive migration happens
-  // in the next finalization run (see migrateExecutionPayloadEnvelopesFromHotToColdDb).
+  // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
+  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // The finalized block's envelope stays in the hot db until the next finalization run
   const archiveMaxSlot = finalizedSlot - 1;
 
   // Finalized range of envelopes

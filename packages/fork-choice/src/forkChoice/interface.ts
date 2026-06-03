@@ -134,6 +134,10 @@ export interface IForkChoice {
   getAllNodes(): ProtoNode[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
+  getProposerBoostRoot(): RootHex;
+  getPreviousProposerBoostRoot(): RootHex;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -249,6 +253,12 @@ export interface IForkChoice {
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null;
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
