@@ -220,9 +220,6 @@ const forkChoiceTest =
               try {
                 const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRoot);
-                if (!protoBlock) {
-                  throw Error(`Block not found for root ${blockRoot}`);
-                }
 
                 if (protoBlock.slot === payloadAttestationMessage.data.slot) {
                   const blockState = await chain.regen.getBlockSlotState(
@@ -236,10 +233,6 @@ const forkChoiceTest =
                     payloadAttestationMessage.validatorIndex,
                     payloadAttestationMessage.data.slot
                   );
-
-                  if (ptcIndices.length === 0) {
-                    throw Error(`Validator ${payloadAttestationMessage.validatorIndex} is not a member of the PTC`);
-                  }
 
                   if (clock.currentSlot !== payloadAttestationMessage.data.slot) {
                     throw Error(
