@@ -39,6 +39,23 @@ pnpm build
 ./lodestar --help
 ```
 
+###### Run the blst `aggregateWithRandomness` benchmark:
+
+Benchmarks `asyncAggregateWithRandomness` (the call behind the `aggregateWithRandomnessAsyncDuration` metric) with 32/64/128 same-message signature sets.
+
+Bare metal:
+
+```bash
+pnpm benchmark:local 'packages/beacon-node/test/perf/bls/aggregateWithRandomness.test.ts'
+```
+
+Docker (requires BuildKit so `Dockerfile.bench.dockerignore` is honored):
+
+```bash
+DOCKER_BUILDKIT=1 docker build -f Dockerfile.bench -t lodestar-bench:node24 .
+docker run --rm lodestar-bench:node24 | tee bench-docker.txt
+```
+
 ## Architecture Overview
 
 - :package: This mono-repository contains a suite of Ethereum Consensus packages.
