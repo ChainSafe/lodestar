@@ -94,4 +94,26 @@ describe("getEth1DepositCount", () => {
     postElectraState.eth1DepositIndex = 1003;
     expect(getEth1DepositCount(postElectraState)).toBe(0);
   });
+  it("Post Fulu (eth1 deposit mechanism removed)", () => {
+    const stateView = ssz.fulu.BeaconState.defaultViewDU();
+    const postFuluState = createCachedBeaconStateTest(
+      stateView,
+      createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+      }),
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    );
+
+    // From Fulu the eth1 deposit mechanism is removed, so blocks never contain eth1 deposits
+    // regardless of eth1DepositIndex / depositRequestsStartIndex.
+    postFuluState.depositRequestsStartIndex = 1000n;
+    postFuluState.eth1Data.depositCount = 2000;
+    postFuluState.eth1DepositIndex = 5;
+    expect(getEth1DepositCount(postFuluState)).toBe(0);
+  });
 });
