@@ -56,6 +56,7 @@ import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {numToQuantity} from "../../execution/engine/utils.js";
 import {IExecutionBuilder, IExecutionEngine, PayloadAttributes, PayloadId} from "../../execution/index.js";
+import {Metrics} from "../../metrics/metrics.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
@@ -720,6 +721,7 @@ export async function prepareExecutionPayload(
     executionEngine: IExecutionEngine;
     inclusionListStore: InclusionListStore;
     config: ChainForkConfig;
+    metrics: Metrics | null;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
   },
@@ -823,6 +825,7 @@ export function getPayloadAttributesForSSE(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     inclusionListStore: InclusionListStore;
+    metrics: Metrics | null;
     proposerPreferencesPool: ProposerPreferencesPool;
   },
   {
@@ -881,6 +884,7 @@ function preparePayloadAttributes(
   chain: {
     config: ChainForkConfig;
     inclusionListStore: InclusionListStore;
+    metrics: Metrics | null;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
   },

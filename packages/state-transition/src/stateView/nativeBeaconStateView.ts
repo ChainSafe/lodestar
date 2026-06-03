@@ -883,6 +883,10 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }
 
+  getInclusionListCommittee(slot: Slot): Uint32Array {
+    return this.binding.getInclusionListCommittee(slot);
+  }
+
   withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
     const view = new NativeBeaconStateView(this.binding.withParentPayloadApplied(executionRequests));
     if (!isStatePostGloas(view)) {

@@ -287,10 +287,11 @@ export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
  */
 export type IBeaconStateViewLatestFork = Omit<
   IBeaconStateViewHeze,
-  "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
+  "forkName" | "latestExecutionPayloadHeader" | "latestExecutionPayloadBid" | "payloadBlockNumber"
 > & {
   forkName: ForkName;
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
+  latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadBlockNumber: number;
 };
 
