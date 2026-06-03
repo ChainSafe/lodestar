@@ -83,7 +83,10 @@ export function validateRequestedDataColumns(chain: IBeaconChain, requestedColum
   const availableColumns: ColumnIndex[] = [];
   const missingColumns: ColumnIndex[] = [];
   for (const c of requestedColumns) {
-    if (custodyColumnsIndex[c] !== 0) {
+    // `c` is peer-controlled and SSZ-deserialized as `uint64`, so it may exceed
+    // `NUMBER_OF_COLUMNS - 1`; `Uint8Array` returns `undefined` for OOB reads,
+    // and `undefined !== 0` would silently classify OOB indices as custodied.
+    if ((custodyColumnsIndex[c] ?? 0) !== 0) {
       availableColumns.push(c);
     } else {
       missingColumns.push(c);
