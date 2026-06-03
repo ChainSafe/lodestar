@@ -39,12 +39,15 @@ export function processOperations(
   opts: ProcessBlockOpts = {verifySignatures: true},
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
-  // verify that outstanding deposits are processed up to the maximum number of deposits
-  const maxDeposits = getEth1DepositCount(state);
-  if (body.deposits.length !== maxDeposits) {
-    throw new Error(
-      `Block contains incorrect number of deposits: depositCount=${body.deposits.length} expected=${maxDeposits}`
-    );
+  // [Modified in Fulu:EIP6110] Legacy eth1 bridge deposits are removed from Fulu onwards.
+  if (fork < ForkSeq.fulu) {
+    // verify that outstanding deposits are processed up to the maximum number of deposits
+    const maxDeposits = getEth1DepositCount(state);
+    if (body.deposits.length !== maxDeposits) {
+      throw new Error(
+        `Block contains incorrect number of deposits: depositCount=${body.deposits.length} expected=${maxDeposits}`
+      );
+    }
   }
 
   for (const proposerSlashing of body.proposerSlashings) {
@@ -56,8 +59,10 @@ export function processOperations(
 
   processAttestations(fork, state, body.attestations, opts.verifySignatures, metrics);
 
-  for (const deposit of body.deposits) {
-    processDeposit(fork, state, deposit);
+  if (fork < ForkSeq.fulu) {
+    for (const deposit of body.deposits) {
+      processDeposit(fork, state, deposit);
+    }
   }
 
   for (const voluntaryExit of body.voluntaryExits) {

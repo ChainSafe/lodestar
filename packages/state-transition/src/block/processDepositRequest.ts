@@ -129,7 +129,9 @@ export function processDepositRequest(
   }
 
   // Pre-Gloas (Electra) path
-  if (state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+  // [Modified in Fulu:EIP6110] The Fulu version of `process_deposit_request` no longer
+  // initializes `deposit_requests_start_index` since the legacy eth1 bridge is gone.
+  if (fork < ForkSeq.fulu && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     state.depositRequestsStartIndex = depositRequest.index;
   }
 

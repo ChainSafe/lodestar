@@ -1,4 +1,4 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
@@ -273,7 +273,15 @@ function processSlotsWithTransientCache(
         postState = upgradeStateToElectra(postState as CachedBeaconStateDeneb) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.FULU_FORK_EPOCH) {
-        postState = upgradeStateToFulu(postState as CachedBeaconStateElectra) as CachedBeaconStateAllForks;
+        // [Modified in Fulu:EIP6110] Legacy eth1 bridge deposits are removed in Fulu. If no Electra
+        // deposit_request set `deposit_requests_start_index`, mark the bridge cutover as complete
+        // at the boundary so post-Fulu `process_pending_deposits` (which no longer gates on the
+        // bridge index) sees a consistent state. Mirrors consensus-specs #4704 do_fork helper.
+        const stateElectra = postState as CachedBeaconStateElectra;
+        if (stateElectra.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+          stateElectra.depositRequestsStartIndex = BigInt(stateElectra.eth1Data.depositCount);
+        }
+        postState = upgradeStateToFulu(stateElectra) as CachedBeaconStateAllForks;
       }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
         postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
