@@ -1,3 +1,4 @@
+import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
@@ -6,17 +7,32 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {gloas} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
+import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRange(
   request: gloas.ExecutionPayloadEnvelopesByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconDb,
+  peerId: PeerId,
+  peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateExecutionPayloadEnvelopesByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
 
-  if (startSlot < chain.earliestAvailableSlot) {
-    return;
+  // endSlot is exclusive, so highest served slot is endSlot - 1.
+  // Throw only when the entire requested range is below earliestAvailableSlot.
+  if (endSlot - 1 < chain.earliestAvailableSlot) {
+    chain.logger.verbose("Peer requested range before earliestAvailableSlot for ExecutionPayloadEnvelopesByRange", {
+      peer: prettyPrintPeerId(peerId),
+      client: peerClient,
+      startSlot,
+      count,
+      earliestAvailableSlot: chain.earliestAvailableSlot,
+    });
+    throw new ResponseError(
+      RespStatus.RESOURCE_UNAVAILABLE,
+      `Requested range is before earliestAvailableSlot startSlot=${startSlot} count=${count} earliestAvailableSlot=${chain.earliestAvailableSlot}`
+    );
   }
 
   const finalized = db.executionPayloadEnvelopeArchive;
