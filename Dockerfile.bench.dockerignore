@@ -1,0 +1,54 @@
+# Used by BuildKit for Dockerfile.bench instead of the global .dockerignore.
+# Same exclusions as .dockerignore EXCEPT it does NOT ignore test files, so the
+# perf test (packages/beacon-node/test/perf/bls/aggregateWithRandomness.test.ts)
+# is copied into the image. .git stays excluded - `benchmark --local` needs no git.
+
+node_modules
+**/node_modules
+**/lib
+**/dist
+packages/**/lib
+packages/*/spec-tests
+benchmark_data
+**/benchmark_data
+.git
+
+# Docs
+supporting-docs
+docs
+typedocs
+mkdocs.yml
+LICENSE
+README.md
+packages/**/docs
+packages/**/typedocs
+
+# Github & configs
+.github
+.codeclimate.yml
+.codecov.yml
+
+# Docker
+Dockerfile
+Dockerfile.dev
+Dockerfile.bench
+docker-compose.yml
+
+# Artifacts
+.__testdb
+packages/beacon-node/test-logs/
+packages/cli/test-logs/
+packages/state-transition/test-cache
+invalidSszObjects/
+packages/beacon-node/mainnet_pubkeys.csv
+.lodestar
+**/.nyc_output
+**/coverage
+**/.tmp
+.tmp
+**/*.tsbuildinfo
+*.log
+**/*.log
+.idea
+
+# NOTE: intentionally NOT ignoring packages/**/test or **/test - the perf test must be copied in

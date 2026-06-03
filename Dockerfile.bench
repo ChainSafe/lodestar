@@ -1,0 +1,62 @@
+# Benchmark image - runs the blst aggregateWithRandomness perf test inside a container.
+# Not for production. Mirrors Dockerfile.dev (node:24 full + zig), skips pnpm build
+# (ts-node/esm transpiles the perf test on the fly).
+# Requires BuildKit so Dockerfile.bench.dockerignore is honored (it re-includes the test file).
+#   DOCKER_BUILDKIT=1 docker build -f Dockerfile.bench -t lodestar-bench:node24 .
+#   docker run --rm lodestar-bench:node24
+FROM node:24 AS bench
+
+# Install zig toolchain
+# Required by @chainsafe/lodestar-z's `prepare` script in dev builds
+ARG TARGETARCH
+ARG ZIG_VERSION=0.16.0
+RUN case "${TARGETARCH}" in \
+  amd64) ZIG_ARCH=x86_64; ZIG_SHA256=70e49664a74374b48b51e6f3fdfbf437f6395d42509050588bd49abe52ba3d00 ;; \
+  arm64) ZIG_ARCH=aarch64; ZIG_SHA256=ea4b09bfb22ec6f6c6ceac57ab63efb6b46e17ab08d21f69f3a48b38e1534f17 ;; \
+  *) echo "unsupported TARGETARCH=${TARGETARCH}" && exit 1 ;; \
+  esac && \
+  curl -fsSL "https://ziglang.org/download/${ZIG_VERSION}/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}.tar.xz" -o /tmp/zig.tar.xz && \
+  echo "${ZIG_SHA256}  /tmp/zig.tar.xz" | sha256sum -c - && \
+  tar -xJf /tmp/zig.tar.xz -C /opt && \
+  ln -s /opt/zig-${ZIG_ARCH}-linux-${ZIG_VERSION}/zig /usr/local/bin/zig && \
+  rm /tmp/zig.tar.xz && \
+  zig version
+
+WORKDIR /usr/app
+
+# Enable corepack for pnpm support
+RUN corepack enable
+
+# Copy dependency manifests first for optimal layer caching.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/api/package.json packages/api/
+COPY packages/beacon-node/package.json packages/beacon-node/
+COPY packages/cli/package.json packages/cli/
+COPY packages/config/package.json packages/config/
+COPY packages/db/package.json packages/db/
+COPY packages/era/package.json packages/era/
+COPY packages/fork-choice/package.json packages/fork-choice/
+COPY packages/logger/package.json packages/logger/
+COPY packages/params/package.json packages/params/
+COPY packages/reqresp/package.json packages/reqresp/
+COPY packages/spec-test-util/package.json packages/spec-test-util/
+COPY packages/state-transition/package.json packages/state-transition/
+COPY packages/test-utils/package.json packages/test-utils/
+COPY packages/types/package.json packages/types/
+COPY packages/utils/package.json packages/utils/
+COPY packages/validator/package.json packages/validator/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy source code (incl. the perf test via Dockerfile.bench.dockerignore).
+# No pnpm build: the benchmark runs through ts-node/esm.
+COPY . .
+
+# The benchmark CLI shells out to git (show -s, branch --show-current, symbolic-ref HEAD) even in
+# --local mode. .git is not copied in, so create a minimal repo with one empty commit to satisfy it.
+RUN git init -q -b master \
+  && git -c user.email=bench@lodestar -c user.name=bench commit -qm bench --allow-empty
+
+ENV NODE_OPTIONS=--max-old-space-size=8192
+
+ENTRYPOINT ["pnpm", "benchmark:local", "packages/beacon-node/test/perf/bls/aggregateWithRandomness.test.ts"]
