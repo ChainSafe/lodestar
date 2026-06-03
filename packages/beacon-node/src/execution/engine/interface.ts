@@ -101,6 +101,7 @@ export type PayloadAttributes = {
   parentBeaconBlockRoot?: Uint8Array;
   inclusionListTransactions?: bellatrix.Transactions;
   slotNumber?: number; // EIP-7843
+  targetGasLimit?: number; // GLOAS (PayloadAttributesV4, execution-apis#796)
 };
 
 export type VersionedHashes = Uint8Array[];

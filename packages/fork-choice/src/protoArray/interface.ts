@@ -87,6 +87,14 @@ export type BlockExtraMeta =
       //   - payload block hash for FULL variant
       executionPayloadBlockHash: RootHex;
       executionPayloadNumber: UintNum64;
+      // Gas limit of the executed payload identified by executionPayloadBlockHash. Set on
+      // pre-Gloas blocks (from block.body.executionPayload.gasLimit) and on Gloas variants:
+      //   - PENDING/EMPTY: inherited from the parent payload that the bid commits to extend
+      //     (matches executionPayloadBlockHash, which also points to that parent payload)
+      //   - FULL: the actual delivered payload's gasLimit (set in onExecutionPayload)
+      // Consumers (e.g. Gloas bid gas-limit validation) can read this without re-deriving from
+      // state.
+      executionPayloadGasLimit: UintNum64;
       executionStatus: Exclude<ExecutionStatus, ExecutionStatus.PreMerge>;
       dataAvailabilityStatus: DataAvailabilityStatus;
     }

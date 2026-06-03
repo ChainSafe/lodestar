@@ -72,8 +72,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    /^gloas\/ssz_static\/ForkChoiceNode.*$/,
-    /^heze\/ssz_static\/ForkChoiceNode.*$/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
@@ -82,6 +80,15 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after Gloas light client is implemented
     /^gloas\/light_client\/.*/,
     /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
+    // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
+    // handling is not yet implemented in Lodestar.
+    /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO-FULU: re-enable after the Fulu deposit-mechanism removal (consensus-specs #4704) is
+    // implemented. v1.7.0-alpha.9 regenerated these transition vectors so eth1-bridge deposits are
+    // no longer processed across the Electra to Fulu boundary; Lodestar still applies the Electra
+    // deposit flow, diverging the post-fork state root.
+    /^fulu\/transition\/.*/,
     /^heze\/light_client\/.*/,
     /^heze\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
   ],

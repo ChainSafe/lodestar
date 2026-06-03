@@ -1,18 +1,19 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostDeneb, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
-import {Epoch, RootHex, Slot, phase0} from "@lodestar/types";
-import {LodestarError, prettyPrintIndices} from "@lodestar/utils";
+import {Epoch, RootHex, SignedBeaconBlock, Slot, gloas, phase0} from "@lodestar/types";
+import {LodestarError, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
+import {ZERO_HASH} from "../../constants/constants.js";
 import {PeerSyncMeta} from "../../network/peers/peersData.js";
 import {IClock} from "../../util/clock.js";
 import {CustodyConfig} from "../../util/dataColumns.js";
 import {PeerIdStr} from "../../util/peerId.js";
 import {MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants.js";
-import {DownloadByRangeRequests} from "../utils/downloadByRange.js";
+import {DownloadByRangeRequests, ParentPayloadCommitments} from "../utils/downloadByRange.js";
 import {getBatchSlotRange, hashBlocks} from "./utils/index.js";
 
 /**
@@ -44,6 +45,15 @@ export type Attempt = {
   hash: RootHex;
 };
 
+type TrackedRequest = {
+  /** only happen for the 1st batch in checkpoint sync */
+  parentPayload: boolean;
+  /**
+   * we always issue by_range before parent_payload, so we don't model this as null
+   */
+  byRangeColumns: Set<number>;
+};
+
 export type AwaitingDownloadState = {
   status: BatchStatus.AwaitingDownload;
   blocks: IBlockInput[];
@@ -61,6 +71,7 @@ export type BatchState =
   | {
       status: BatchStatus.Downloading;
       peer: PeerIdStr;
+      request: TrackedRequest;
       blocks: IBlockInput[];
       payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
     }
@@ -109,6 +120,13 @@ function formatColumnsReq(req: {startSlot: Slot; count: number; columns: number[
   return `startSlot=${req.startSlot},count=${req.count},cols=${prettyPrintIndices(req.columns)}`;
 }
 
+function getTrackedRequest({parentPayloadRequest, columnsRequest}: DownloadByRangeRequests): TrackedRequest {
+  return {
+    parentPayload: parentPayloadRequest != null,
+    byRangeColumns: new Set(parentPayloadRequest == null ? (columnsRequest?.columns ?? []) : []),
+  };
+}
+
 /**
  * Batches are downloaded at the first block of the epoch.
  *
@@ -130,8 +148,8 @@ export class Batch {
   requests: DownloadByRangeRequests;
   /** State of the batch. */
   state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
-  /** Peers that provided good data */
-  goodPeers: PeerIdStr[] = [];
+  /** Peers that provided good data, with column coverage for by_range requests */
+  private readonly successfulDownloads = new Map<PeerIdStr, TrackedRequest>();
   /** The `Attempts` that have been made and failed to send us this batch. */
   readonly failedProcessingAttempts: Attempt[] = [];
   /** The `Attempts` that have been made and failed because of execution malfunction. */
@@ -141,8 +159,18 @@ export class Batch {
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly custodyConfig: CustodyConfig;
+  private readonly isFirstBatchInChain: boolean;
+  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
 
-  constructor(startEpoch: Epoch, config: ChainForkConfig, clock: IClock, custodyConfig: CustodyConfig) {
+  constructor(
+    startEpoch: Epoch,
+    config: ChainForkConfig,
+    clock: IClock,
+    custodyConfig: CustodyConfig,
+    isFirstBatchInChain: boolean,
+    latestBid: gloas.ExecutionPayloadBid | undefined,
+    targetSlot: Slot
+  ) {
     this.config = config;
     this.clock = clock;
     this.custodyConfig = custodyConfig;
@@ -151,8 +179,38 @@ export class Batch {
     this.forkName = this.config.getForkName(startSlot);
     this.startEpoch = startEpoch;
     this.startSlot = startSlot;
-    this.count = count;
+    this.count = Math.min(count, targetSlot - startSlot + 1);
+    this.isFirstBatchInChain = isFirstBatchInChain;
+    this.latestBid = latestBid;
     this.requests = this.getRequests([]);
+  }
+
+  private shouldDownloadParentEnvelope(firstBlock?: SignedBeaconBlock): boolean {
+    if (!this.isFirstBatchInChain) return false;
+
+    if (this.startSlot === 0 || !isForkPostGloas(this.config.getForkName(this.startSlot - 1))) {
+      return false;
+    }
+
+    // we only know if we should download parent envelope if firstBlock is downloaded
+    if (firstBlock === undefined) return false;
+    if (this.latestBid === undefined) return false;
+    const firstBlockBidParentHash = (firstBlock.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message
+      .parentBlockHash;
+    return byteArrayEquals(firstBlockBidParentHash, this.latestBid.blockHash);
+  }
+
+  getParentPayloadCommitments(parentBlockRoot: Uint8Array): ParentPayloadCommitments {
+    if (this.latestBid === undefined) {
+      throw new Error(
+        `Coding error: getParentPayloadCommitments called without latestBid for parentBlockRoot=${toRootHex(parentBlockRoot)}`
+      );
+    }
+    return {
+      blockRoot: parentBlockRoot,
+      blockRootHex: toRootHex(parentBlockRoot),
+      kzgCommitments: this.latestBid.blobKzgCommitments,
+    };
   }
 
   /**
@@ -292,6 +350,36 @@ export class Batch {
       };
     }
 
+    // Only the first batch of a SyncChain may need the dangling-parent payload by-root.
+    if (blocks.length > 0 && this.shouldDownloadParentEnvelope(blocks[0].getBlock())) {
+      // shouldDownloadParentEnvelope() = true means there are at least 1 block
+      const parentRoot = blocks[0].getBlock().message.parentRoot;
+      if (!byteArrayEquals(parentRoot, ZERO_HASH)) {
+        const parentRootHex = toRootHex(parentRoot);
+        let parentPayloadInput: PayloadEnvelopeInput | undefined;
+        if (this.state.payloadEnvelopes) {
+          for (const pi of this.state.payloadEnvelopes.values()) {
+            if (pi.blockRootHex === parentRootHex) {
+              parentPayloadInput = pi;
+              break;
+            }
+          }
+        }
+
+        const needsEnvelope = !parentPayloadInput?.hasPayloadEnvelope();
+        const missingColumns = parentPayloadInput
+          ? parentPayloadInput.getMissingSampledColumnMeta().missing
+          : this.custodyConfig.sampledColumns;
+
+        if (needsEnvelope || missingColumns.length > 0) {
+          requests.parentPayloadRequest = {
+            ...(needsEnvelope ? {envelopeBlockRoot: parentRoot} : {}),
+            ...(missingColumns.length > 0 ? {blockRoot: parentRoot, columns: missingColumns} : {}),
+          };
+        }
+      }
+    }
+
     return requests;
   }
 
@@ -303,24 +391,28 @@ export class Batch {
       return this.requests;
     }
 
-    // post-fulu we need to ensure that we only request columns that the peer has advertised
-    const {columnsRequest} = this.requests;
-    if (columnsRequest == null) {
-      return this.requests;
-    }
+    // post-fulu we need to ensure that we only request columns that the peer has advertised.
+    const {columnsRequest, parentPayloadRequest} = this.requests;
 
     const peerColumns = new Set(peer.custodyColumns ?? []);
-    const requestedColumns = columnsRequest.columns.filter((c) => peerColumns.has(c));
-    if (requestedColumns.length === columnsRequest.columns.length) {
-      return this.requests;
-    }
+    const filteredColumnsRequest =
+      columnsRequest != null ? columnsRequest.columns.filter((c) => peerColumns.has(c)) : null;
+    const parentColumns = parentPayloadRequest?.columns;
+    const filteredParentColumns = parentColumns != null ? parentColumns.filter((c) => peerColumns.has(c)) : null;
+
+    const updatedColumnRequest =
+      columnsRequest != null && filteredColumnsRequest != null
+        ? {columnsRequest: {...columnsRequest, columns: filteredColumnsRequest}}
+        : {};
+    const updatedParentPayloadRequest =
+      parentPayloadRequest != null && filteredParentColumns != null
+        ? {parentPayloadRequest: {...parentPayloadRequest, columns: filteredParentColumns}}
+        : {};
 
     return {
       ...this.requests,
-      columnsRequest: {
-        ...columnsRequest,
-        columns: requestedColumns,
-      },
+      ...updatedColumnRequest,
+      ...updatedParentPayloadRequest,
     };
   }
 
@@ -329,6 +421,35 @@ export class Batch {
    */
   getFailedPeers(): PeerIdStr[] {
     return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
+  }
+
+  /**
+   * True only if the peer has already returned a successful response for the current request.
+   * A by_range success may update `this.requests` to parent_payload, and the same peer is then
+   * still eligible for the newly discovered parent payload data.
+   * For by_range, a peer that previously succeeded with a superset of requested columns is skipped.
+   */
+  hasPeerSucceededCurrentRequest(peer: PeerSyncMeta): boolean {
+    const successfulDownload = this.successfulDownloads.get(peer.peerId);
+    if (successfulDownload == null) return false;
+
+    const request = getTrackedRequest(this.getRequestsForPeer(peer));
+    if (request.parentPayload) return successfulDownload.parentPayload;
+
+    const requestByRangeColumns = request.byRangeColumns;
+
+    if (requestByRangeColumns.size === 0) {
+      // this means a download blocks/envelops by_range only
+      // don't do that again if we already did it
+      // see https://github.com/ChainSafe/lodestar/issues/9357
+      return true;
+    }
+
+    return [...requestByRangeColumns].every((column) => successfulDownload.byRangeColumns.has(column));
+  }
+
+  private getSuccessfulPeers(): PeerIdStr[] {
+    return Array.from(this.successfulDownloads.keys());
   }
 
   getMetadata(): BatchMetadata {
@@ -365,14 +486,17 @@ export class Batch {
   /**
    * AwaitingDownload -> Downloading
    */
-  startDownloading(peer: PeerIdStr): void {
+  startDownloading(peer: PeerSyncMeta): void {
     if (this.state.status !== BatchStatus.AwaitingDownload) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingDownload));
     }
 
+    const request = getTrackedRequest(this.getRequestsForPeer(peer));
+
     this.state = {
       status: BatchStatus.Downloading,
-      peer,
+      peer: peer.peerId,
+      request,
       blocks: this.state.blocks,
       payloadEnvelopes: this.state.payloadEnvelopes,
     };
@@ -393,7 +517,17 @@ export class Batch {
     // ensure that blocks are always sorted before getting stored on the batch.state or being used to getRequests
     blocks.sort((a, b) => a.slot - b.slot);
 
-    this.goodPeers.push(peer);
+    const successfulDownload = this.successfulDownloads.get(peer) ?? {
+      parentPayload: false,
+      byRangeColumns: new Set<number>(),
+    };
+    successfulDownload.parentPayload ||= this.state.request.parentPayload;
+    if (!this.state.request.parentPayload) {
+      for (const column of this.state.request.byRangeColumns) {
+        successfulDownload.byRangeColumns.add(column);
+      }
+    }
+    this.successfulDownloads.set(peer, successfulDownload);
 
     let allComplete = true;
     const slots = new Set<number>();
@@ -422,10 +556,34 @@ export class Batch {
     if (allComplete && isForkPostGloas(this.forkName)) {
       for (const block of blocks) {
         const payloadInput = newPayloadEnvelopes?.get(block.slot);
-        // by_range needs to download all columns
-        if (!payloadInput?.hasPayloadEnvelope() || !payloadInput.hasComputedAllData()) {
+        // only need to make sure envelope has all columns, not all blocks have payload
+        // assertLinearChainSegment() was called before reaching this
+        if (payloadInput?.hasPayloadEnvelope() && !payloadInput.hasComputedAllData()) {
           allComplete = false;
           break;
+        }
+      }
+    }
+
+    // First batch of a sync chain must additionally have the dangling-parent payload fully
+    // present, otherwise `processBlocks` will throw PARENT_PAYLOAD_UNKNOWN. The parent's
+    // `PayloadEnvelopeInput` is identified by `blockRootHex` matching `blocks[0].parentRoot`.
+    if (allComplete && blocks.length > 0 && this.shouldDownloadParentEnvelope(blocks[0].getBlock())) {
+      const parentRoot = blocks[0].getBlock().message.parentRoot;
+      // Genesis has no parent payload — nothing to wait for.
+      if (!byteArrayEquals(parentRoot, ZERO_HASH)) {
+        const parentRootHex = toRootHex(parentRoot);
+        let parentPayloadComplete = false;
+        if (newPayloadEnvelopes) {
+          for (const payloadInput of newPayloadEnvelopes.values()) {
+            if (payloadInput.blockRootHex === parentRootHex) {
+              parentPayloadComplete = payloadInput.hasPayloadEnvelope() && payloadInput.hasComputedAllData();
+              break;
+            }
+          }
+        }
+        if (!parentPayloadComplete) {
+          allComplete = false;
         }
       }
     }
@@ -491,10 +649,10 @@ export class Batch {
     const blocks = this.state.blocks;
     const payloadEnvelopes = this.state.payloadEnvelopes;
     const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
-    // Reset goodPeers in case another download attempt needs to be made.  When Attempt is successful or not the peers
-    // that the data came from will be handled by the Attempt that goes for processing
-    const peers = this.goodPeers;
-    this.goodPeers = [];
+    // Reset successfulDownloads in case another download attempt needs to be made. When Attempt is successful or not
+    // the peers that the data came from will be handled by the Attempt that goes for processing.
+    const peers = this.getSuccessfulPeers();
+    this.successfulDownloads.clear();
     this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
     return {blocks, payloadEnvelopes, peers};
   }

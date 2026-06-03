@@ -332,6 +332,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     SYNC_MESSAGE_DUE_BPS_GLOAS: gloasForkRelevant,
     CONTRIBUTION_DUE_BPS_GLOAS: gloasForkRelevant,
     PAYLOAD_ATTESTATION_DUE_BPS: gloasForkRelevant,
+    PAYLOAD_DUE_BPS: gloasForkRelevant,
     PTC_SIZE: gloasForkRelevant,
     MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
     BUILDER_REGISTRY_LIMIT: gloasForkRelevant,

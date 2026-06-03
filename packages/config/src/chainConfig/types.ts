@@ -76,6 +76,7 @@ export type ChainConfig = {
   SYNC_MESSAGE_DUE_BPS_GLOAS: number;
   CONTRIBUTION_DUE_BPS_GLOAS: number;
   PAYLOAD_ATTESTATION_DUE_BPS: number;
+  PAYLOAD_DUE_BPS: number;
 
   INCLUSION_LIST_SUBMISSION_DUE_BPS: number;
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: number;
@@ -207,6 +208,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   SYNC_MESSAGE_DUE_BPS_GLOAS: "number",
   CONTRIBUTION_DUE_BPS_GLOAS: "number",
   PAYLOAD_ATTESTATION_DUE_BPS: "number",
+  PAYLOAD_DUE_BPS: "number",
 
   INCLUSION_LIST_SUBMISSION_DUE_BPS: "number",
   PROPOSER_INCLUSION_LIST_CUTOFF_BPS: "number",

@@ -4,5 +4,6 @@ export {ExecutionPayloadBidPool} from "./executionPayloadBidPool.js";
 export {InclusionListInsertOutcome, InclusionListStore} from "./inclusionListStore.js";
 export {OpPool} from "./opPool.js";
 export {PayloadAttestationPool} from "./payloadAttestationPool.js";
+export {ProposerPreferencesPool} from "./proposerPreferencesPool.js";
 export {SyncCommitteeMessagePool} from "./syncCommitteeMessagePool.js";
 export {SyncContributionAndProofPool} from "./syncContributionAndProofPool.js";

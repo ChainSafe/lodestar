@@ -9,6 +9,7 @@ import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {AttestationService} from "./services/attestation.js";
 import {BlockProposingService} from "./services/block.js";
+import {BlockDutiesService} from "./services/blockDuties.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
@@ -16,6 +17,7 @@ import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/exter
 import {InclusionListService} from "./services/inclusionList.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
+import {ProposerPreferencesService} from "./services/proposerPreferences.js";
 import {PtcService} from "./services/ptc.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
@@ -238,10 +240,29 @@ export class Validator {
     const chainHeaderTracker = new ChainHeaderTracker(config, logger, api, emitter);
     const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
-    const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
-      broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
-      blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
-    });
+    const blockDutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      metrics
+    );
+
+    const blockProposingService = new BlockProposingService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      blockDutiesService,
+      metrics,
+      {
+        broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
+        blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
+      }
+    );
 
     const attestationService = new AttestationService(
       loggerVc,
@@ -286,6 +307,8 @@ export class Validator {
         distributedAggregationSelection: opts.distributed,
       }
     );
+
+    new ProposerPreferencesService(config, loggerVc, api, clock, validatorStore, blockDutiesService, metrics);
 
     const inclusionListService = new InclusionListService(
       config,

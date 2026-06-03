@@ -1041,7 +1041,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     getExecutionPayloadEnvelope: {
-      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}",
+      url: "/eth/v1/validator/execution_payload_envelopes/{slot}/{beacon_block_root}",
       method: "GET",
       req: {
         writeReq: ({slot, beaconBlockRoot}) => ({

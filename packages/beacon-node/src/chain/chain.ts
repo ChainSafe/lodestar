@@ -23,6 +23,7 @@ import {
   getEffectiveBalancesFromStateBytes,
   isStatePostAltair,
   isStatePostElectra,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -88,6 +89,7 @@ import {
   InclusionListStore,
   OpPool,
   PayloadAttestationPool,
+  ProposerPreferencesPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
@@ -181,6 +183,7 @@ export class BeaconChain implements IBeaconChain {
   readonly inclusionListStore: InclusionListStore;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
+  readonly proposerPreferencesPool = new ProposerPreferencesPool();
   readonly opPool: OpPool;
 
   // Gossip seen cache
@@ -393,6 +396,7 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger
     );
+
     const regen = new QueuedStateRegenerator({
       config,
       forkChoice,
@@ -428,6 +432,21 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
+
+    const anchorBlockSlot = anchorState.latestBlockHeader.slot;
+    if (isStatePostGloas(anchorState) && anchorBlockSlot > 0) {
+      const anchorBid = anchorState.latestExecutionPayloadBid;
+      this.seenPayloadEnvelopeInputCache.addFromBid({
+        blockRootHex: toRootHex(checkpoint.root),
+        slot: anchorBlockSlot,
+        forkName: anchorState.forkName,
+        proposerIndex: anchorState.latestBlockHeader.proposerIndex,
+        bid: anchorBid,
+        sampledColumns: this.custodyConfig.sampledColumns,
+        custodyColumns: this.custodyConfig.custodyColumns,
+        timeCreatedSec: Math.floor(Date.now() / 1000),
+      });
+    }
 
     this.clock = clock;
     this.regen = regen;
@@ -1044,6 +1063,7 @@ export class BeaconChain implements IBeaconChain {
       feeRecipient,
       commonBlockBodyPromise,
       parentBlock,
+      builderBid,
     }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
@@ -1073,6 +1093,7 @@ export class BeaconChain implements IBeaconChain {
         proposerIndex,
         proposerPubKey,
         commonBlockBodyPromise,
+        builderBid,
       }
     );
 
@@ -1461,6 +1482,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.seenProposerPreferences.prune(slot);
+    this.proposerPreferencesPool.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

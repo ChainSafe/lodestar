@@ -29,6 +29,7 @@ export function getApiClientStub(): ApiClientStub {
     },
     validator: {
       getProposerDuties: vi.fn(),
+      getProposerDutiesV2: vi.fn(),
       getAttesterDuties: vi.fn(),
       getPtcDuties: vi.fn(),
       prepareBeaconCommitteeSubnet: vi.fn(),
@@ -63,4 +64,8 @@ export function mockApiResponse<T, M, E extends Endpoint<any, any, any, T, M>>({
   apiResponse.value = () => data as T;
   apiResponse.meta = () => meta as M;
   return apiResponse;
+}
+
+export function mockApiErrorResponse<E extends Endpoint>(status: HttpStatusCode): ApiResponse<E> {
+  return new ApiResponse<E>({} as any, null, new Response(null, {status}));
 }

@@ -236,6 +236,9 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getProposerReorgCutoffMs(_fork: ForkName): number {
       return this.getSlotComponentDurationMs(config.PROPOSER_REORG_CUTOFF_BPS);
     },
+    getPayloadDueMs(): number {
+      return this.getSlotComponentDurationMs(config.PAYLOAD_DUE_BPS);
+    },
     getInclusionListSubmissionDueMs(_fork: ForkName): number {
       return this.getSlotComponentDurationMs(config.INCLUSION_LIST_SUBMISSION_DUE_BPS);
     },

@@ -9,6 +9,7 @@ import {
   DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_INCLUSION_LIST_COMMITTEE,
   DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
@@ -702,6 +703,42 @@ export class ValidatorStore {
     return {
       validatorIndex: duty.validatorIndex,
       data,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signProposerPreferences(
+    duty: routes.validator.ProposerDuty,
+    dependentRoot: Uint8Array,
+    feeRecipient: ExecutionAddress,
+    gasLimit: number,
+    currentSlot: Slot
+  ): Promise<gloas.SignedProposerPreferences> {
+    if (duty.slot <= currentSlot) {
+      throw Error(`Not signing proposer preferences for past slot ${duty.slot} (current ${currentSlot})`);
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+
+    const message: gloas.ProposerPreferences = {
+      dependentRoot,
+      proposalSlot: duty.slot,
+      validatorIndex: duty.validatorIndex,
+      feeRecipient: fromHex(feeRecipient),
+      targetGasLimit: gasLimit,
+    };
+
+    const signingSlot = duty.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_PROPOSER_PREFERENCES);
+    const signingRoot = computeSigningRoot(ssz.gloas.ProposerPreferences, message, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.PROPOSER_PREFERENCES,
+      data: message,
+    };
+
+    return {
+      message,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
   }

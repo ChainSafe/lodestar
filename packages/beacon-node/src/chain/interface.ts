@@ -48,6 +48,7 @@ import {
   InclusionListStore,
   OpPool,
   PayloadAttestationPool,
+  ProposerPreferencesPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
@@ -126,6 +127,7 @@ export interface IBeaconChain {
   readonly inclusionListStore: InclusionListStore;
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
   readonly payloadAttestationPool: PayloadAttestationPool;
+  readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly opPool: OpPool;
 
   // Gossip seen cache

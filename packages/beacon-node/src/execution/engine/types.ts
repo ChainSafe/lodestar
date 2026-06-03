@@ -264,6 +264,8 @@ export type PayloadAttributesRpc = {
   inclusionListTransactions?: InclusionListRpc;
   /** QUANTITY, 64 Bits - value for the slot number field of the new payload (EIP-7843) */
   slotNumber?: QUANTITY;
+  /** QUANTITY, 64 Bits - target value for the gasLimit field of the new payload (GLOAS, execution-apis#796) */
+  targetGasLimit?: QUANTITY;
 };
 
 export type ClientVersionRpc = {
@@ -450,6 +452,7 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
       ? serializeInclusionList(data.inclusionListTransactions)
       : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
+    targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
   };
 }
 
@@ -467,6 +470,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
+    targetGasLimit: data.targetGasLimit !== undefined ? quantityToNum(data.targetGasLimit) : undefined,
   };
 }
 
