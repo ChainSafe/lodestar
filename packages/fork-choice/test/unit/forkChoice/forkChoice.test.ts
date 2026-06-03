@@ -191,6 +191,54 @@ describe("Forkchoice", () => {
     expect(forkCombined.nonAncestors).toEqual(forkNonAncestorBlocks);
   });
 
+  describe("getMaxWeightBlockAtSlot", () => {
+    const siblingBlockRoot = toHex(Buffer.alloc(32, 0xcc));
+    const buildSibling = (slot: number): ProtoBlock => ({
+      ...getBlock(slot),
+      blockRoot: siblingBlockRoot,
+      stateRoot: toHex(Buffer.alloc(32, 0xdd)),
+    });
+
+    it("returns null when no block has been seen at slot", () => {
+      populateProtoArray(genesisSlot + 2);
+      const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+      expect(forkchoice.getMaxWeightBlockAtSlot(genesisSlot + 100)).toBeNull();
+    });
+
+    it("returns the block with strictly greater weight among siblings", () => {
+      populateProtoArray(genesisSlot + 2);
+      const sibling = buildSibling(genesisSlot + 2);
+      protoArr.onBlock(sibling, sibling.slot, null);
+
+      const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+      const canonical = forkchoice.getCanonicalBlockAtSlot(genesisSlot + 2);
+      if (!canonical) throw Error("expected canonical block at slot 2");
+
+      const siblingRoot = canonical.blockRoot === siblingBlockRoot ? getBlockRoot(genesisSlot + 2) : siblingBlockRoot;
+      const siblingNode = protoArr.nodes.find((n) => n.blockRoot === siblingRoot && n.slot === genesisSlot + 2);
+      if (!siblingNode) throw Error("expected sibling node");
+      siblingNode.weight = 100;
+
+      const result = forkchoice.getMaxWeightBlockAtSlot(genesisSlot + 2);
+      expect(result?.blockRoot).toBe(siblingRoot);
+    });
+
+    it("prefers the canonical block on weight tie", () => {
+      populateProtoArray(genesisSlot + 2);
+      const sibling = buildSibling(genesisSlot + 2);
+      protoArr.onBlock(sibling, sibling.slot, null);
+
+      const forkchoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null);
+      const canonical = forkchoice.getCanonicalBlockAtSlot(genesisSlot + 2);
+      if (!canonical) throw Error("expected canonical block at slot 2");
+
+      // Both nodes still have weight 0 — tie. Seeding with canonical means strict `>` cannot
+      // displace it, regardless of insertion order in protoArray.nodes.
+      const result = forkchoice.getMaxWeightBlockAtSlot(genesisSlot + 2);
+      expect(result?.blockRoot).toBe(canonical.blockRoot);
+    });
+  });
+
   beforeAll(() => {
     expect(SLOTS_PER_EPOCH).toBe(32);
   });

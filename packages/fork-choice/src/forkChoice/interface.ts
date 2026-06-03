@@ -335,6 +335,11 @@ export interface IForkChoice {
   forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
   getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
   getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
+  /**
+   * Returns the highest-weight block at the given slot,
+   * or `null` if no block has been seen at that slot.
+   */
+  getMaxWeightBlockAtSlot(slot: Slot): ProtoBlock | null;
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
   /**

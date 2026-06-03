@@ -1110,10 +1110,10 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
+      const block = chain.forkChoice.getMaxWeightBlockAtSlot(slot);
       if (!block) {
         // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
-        throw new ApiError(404, `No canonical block found at slot=${slot}`);
+        throw new ApiError(404, `No block found at slot=${slot}`);
       }
 
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);

@@ -1363,6 +1363,28 @@ export class ForkChoice implements IForkChoice {
     return blocksAtSlot;
   }
 
+  /**
+   * Returns the highest-weight block at the given slot, or `null` if no block
+   * (canonical or not) has been seen at the slot. On weight ties, the canonical
+   * block is preferred — the search is seeded with the canonical block at slot
+   * and only replaced by a node with strictly greater weight.
+   *
+   * Used by the PTC validator API to know which block's payload PTC
+   * should attest to
+   *
+   */
+  getMaxWeightBlockAtSlot(slot: Slot): ProtoBlock | null {
+    let best = this.getCanonicalBlockAtSlot(slot) as ProtoNode | null;
+    const nodes = this.protoArray.nodes;
+    for (let i = 0, len = nodes.length; i < len; i++) {
+      const node = nodes[i];
+      if (node.slot === slot && (best === null || node.weight > best.weight)) {
+        best = node;
+      }
+    }
+    return best;
+  }
+
   /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
   getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult {
     const prevNode = this.protoArray.getNode(prevBlock.blockRoot, prevBlock.payloadStatus);

@@ -50,7 +50,7 @@ describe("api - validator - produceAttestationData", () => {
       );
     });
 
-    it("Should produce payload attestation data for the canonical block", async () => {
+    it("Should produce payload attestation data for the max-weight block at slot", async () => {
       const gloasConfig = createChainForkConfig({
         ...defaultChainConfig,
         ALTAIR_FORK_EPOCH: 0,
@@ -65,7 +65,7 @@ describe("api - validator - produceAttestationData", () => {
       modules.config = gloasConfig;
       api = getValidatorApi(defaultApiOptions, modules);
 
-      modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue({
+      modules.forkChoice.getMaxWeightBlockAtSlot.mockReturnValue({
         slot: 0,
         blockRoot: ZERO_HASH_HEX,
       } as ProtoBlock);
@@ -87,7 +87,7 @@ describe("api - validator - produceAttestationData", () => {
       expect(res.data.blobDataAvailable).toBe(true);
     });
 
-    it("Should throw 404 when no canonical block has been seen for the assigned slot", async () => {
+    it("Should throw 404 when no block (canonical or not) has been seen for the assigned slot", async () => {
       const gloasConfig = createChainForkConfig({
         ...defaultChainConfig,
         ALTAIR_FORK_EPOCH: 0,
@@ -102,9 +102,9 @@ describe("api - validator - produceAttestationData", () => {
       modules.config = gloasConfig;
       api = getValidatorApi(defaultApiOptions, modules);
 
-      modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue(null);
+      modules.forkChoice.getMaxWeightBlockAtSlot.mockReturnValue(null);
 
-      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow("No canonical block found at slot=1");
+      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow("No block found at slot=1");
     });
   });
 });
