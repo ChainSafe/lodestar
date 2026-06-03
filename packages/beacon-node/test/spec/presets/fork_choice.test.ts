@@ -234,20 +234,20 @@ const forkChoiceTest =
                     payloadAttestationMessage.data.slot
                   );
 
+                  // Slot check, matching the `validateGossipPayloadAttestationMessage` flow
                   if (clock.currentSlot !== payloadAttestationMessage.data.slot) {
                     throw Error(
                       `Message slot ${payloadAttestationMessage.data.slot} is not current slot ${clock.currentSlot}`
                     );
                   }
 
+                  // Signature verification, matching the `validateGossipPayloadAttestationMessage` flow
                   const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
-
                   const signatureSet = createSingleSignatureSetFromComponents(
                     validatorPubkey,
                     getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
                     payloadAttestationMessage.signature
                   );
-
                   let signatureValidity: boolean;
                   try {
                     signatureValidity = await chain.bls.verifySignatureSets([signatureSet], {
