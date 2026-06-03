@@ -48,6 +48,9 @@ export function processOperations(
         `Block contains incorrect number of deposits: depositCount=${body.deposits.length} expected=${maxDeposits}`
       );
     }
+  } else if (body.deposits.length !== 0) {
+    // Spec: `assert len(body.deposits) == 0` (process_operations#fulu)
+    throw new Error(`Block must not contain legacy deposits post-Fulu: depositCount=${body.deposits.length}`);
   }
 
   for (const proposerSlashing of body.proposerSlashings) {
