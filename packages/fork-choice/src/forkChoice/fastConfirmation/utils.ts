@@ -764,11 +764,22 @@ export function isConfirmedChainSafe(
   confirmedRoot: RootHex,
   logger?: Logger
 ): boolean {
-  if (!isAncestor(ctx, cache, confirmedRoot, store.currentEpochObservedJustifiedCheckpoint.rootHex)) {
+  const checkpointInConfirmedChain = getCheckpointForBlock(
+    ctx,
+    confirmedRoot,
+    store.currentEpochObservedJustifiedCheckpoint.epoch
+  );
+  if (
+    checkpointInConfirmedChain === null ||
+    !equalCheckpointWithHex(store.currentEpochObservedJustifiedCheckpoint, checkpointInConfirmedChain)
+  ) {
     logger?.debug("Fast confirmation chain-safety failed", {
       confirmedRoot,
-      reason: "confirmed_not_descendant_of_observed_justified",
+      reason: "observed_justified_checkpoint_not_in_confirmed_chain",
       observedJustifiedRoot: store.currentEpochObservedJustifiedCheckpoint.rootHex,
+      observedJustifiedEpoch: store.currentEpochObservedJustifiedCheckpoint.epoch,
+      checkpointRoot: checkpointInConfirmedChain?.rootHex,
+      checkpointEpoch: checkpointInConfirmedChain?.epoch,
     });
     return false;
   }
