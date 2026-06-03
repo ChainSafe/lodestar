@@ -89,7 +89,7 @@ pnpm vitest run --project unit -t "pattern"
 pnpm download-spec-tests
 pnpm test:spec
 
-# Run a single spec test file (from packages/beacon-node) — use spec-mainnet
+# Run a single spec test file (located in packages/beacon-node) from the repository root — use spec-mainnet
 # for the mainnet preset
 pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts
 
