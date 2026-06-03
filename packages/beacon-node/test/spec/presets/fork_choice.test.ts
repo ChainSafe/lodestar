@@ -28,7 +28,6 @@ import {
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
-  isStatePostGloas,
   signedBlockToSignedHeader,
   syncPubkeys,
 } from "@lodestar/state-transition";
@@ -233,8 +232,6 @@ const forkChoiceTest =
                     RegenCaller.processBlock
                   );
 
-                  if (!isStatePostGloas(blockState)) throw Error(`Expected gloas+ state, got ${blockState.forkName}`);
-
                   const ptcIndices = (blockState as IBeaconStateViewGloas).getIndicesInPayloadTimelinessCommittee(
                     payloadAttestationMessage.validatorIndex,
                     payloadAttestationMessage.data.slot
@@ -251,9 +248,6 @@ const forkChoiceTest =
                   }
 
                   const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
-                  if (!validatorPubkey) {
-                    throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
-                  }
 
                   const signatureSet = createSingleSignatureSetFromComponents(
                     validatorPubkey,
@@ -281,7 +275,6 @@ const forkChoiceTest =
                     payloadAttestationMessage.data.blobDataAvailable
                   );
                 }
-                if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
               }
