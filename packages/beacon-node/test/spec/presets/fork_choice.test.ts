@@ -220,6 +220,9 @@ const forkChoiceTest =
               try {
                 const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
                 const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRoot);
+                if (!protoBlock) {
+                  throw Error(`Block not found for root ${blockRoot}`);
+                }
 
                 if (protoBlock.slot === payloadAttestationMessage.data.slot) {
                   const blockState = await chain.regen.getBlockSlotState(
@@ -243,6 +246,9 @@ const forkChoiceTest =
 
                   // Signature verification, matching the `validateGossipPayloadAttestationMessage` flow
                   const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
+                  if (!validatorPubkey) {
+                    throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
+                  }
                   const signatureSet = createSingleSignatureSetFromComponents(
                     validatorPubkey,
                     getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
