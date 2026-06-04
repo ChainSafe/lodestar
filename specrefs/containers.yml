@@ -636,7 +636,9 @@
     </spec>
 
 - name: BeaconState#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const BeaconState =
   spec: |
     <spec container="BeaconState" fork="heze" hash="8a0dfed9">
     class BeaconState(Container):
@@ -1038,7 +1040,9 @@
     </spec>
 
 - name: ExecutionPayloadBid#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const ExecutionPayloadBid =
   spec: |
     <spec container="ExecutionPayloadBid" fork="heze" hash="1a81a347">
     class ExecutionPayloadBid(Container):
@@ -1209,7 +1213,9 @@
     </spec>
 
 - name: InclusionList#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const InclusionList =
   spec: |
     <spec container="InclusionList" fork="heze" hash="7c3fadd5">
     class InclusionList(Container):
@@ -1657,7 +1663,9 @@
     </spec>
 
 - name: SignedExecutionPayloadBid#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const SignedExecutionPayloadBid =
   spec: |
     <spec container="SignedExecutionPayloadBid" fork="heze" hash="ce64ecf2">
     class SignedExecutionPayloadBid(Container):
@@ -1678,7 +1686,9 @@
     </spec>
 
 - name: SignedInclusionList#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const SignedInclusionList =
   spec: |
     <spec container="SignedInclusionList" fork="heze" hash="d1f6abde">
     class SignedInclusionList(Container):

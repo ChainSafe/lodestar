@@ -183,7 +183,9 @@
     </spec>
 
 - name: InclusionListStore#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: export class InclusionListStore
   spec: |
     <spec dataclass="InclusionListStore" fork="heze" hash="5a6caa3b">
     class InclusionListStore:
@@ -364,7 +366,9 @@
     </spec>
 
 - name: PayloadAttributes#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const PayloadAttributes =
   spec: |
     <spec dataclass="PayloadAttributes" fork="heze" hash="b4d4fc2e">
     class PayloadAttributes:

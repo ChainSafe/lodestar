@@ -4353,7 +4353,9 @@
     </spec>
 
 - name: get_inclusion_list_bits#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: "getInclusionListBits(state: IBeaconStateViewHeze"
   spec: |
     <spec fn="get_inclusion_list_bits" fork="heze" hash="7508823e">
     def get_inclusion_list_bits(
@@ -4384,7 +4386,9 @@
     </spec>
 
 - name: get_inclusion_list_committee#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/shuffling.ts
+      search: export function getInclusionListCommittee(
   spec: |
     <spec fn="get_inclusion_list_committee" fork="heze" hash="26546ce3">
     def get_inclusion_list_committee(
@@ -4428,7 +4432,9 @@
     </spec>
 
 - name: get_inclusion_list_due_ms#heze
-  sources: []
+  sources:
+    - file: packages/config/src/forkConfig/index.ts
+      search: "getInclusionListDueMs(): number {"
   spec: |
     <spec fn="get_inclusion_list_due_ms" fork="heze" hash="d9b6a3e5">
     def get_inclusion_list_due_ms() -> uint64:
@@ -4463,7 +4469,9 @@
     </spec>
 
 - name: get_inclusion_list_transactions#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: "getInclusionListTransactions(state: IBeaconStateViewHeze"
   spec: |
     <spec fn="get_inclusion_list_transactions" fork="heze" hash="4e8a74ba">
     def get_inclusion_list_transactions(
@@ -6869,7 +6877,9 @@
     </spec>
 
 - name: is_inclusion_list_bits_inclusive#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: "isInclusionListBitsInclusive(state: IBeaconStateViewHeze"
   spec: |
     <spec fn="is_inclusion_list_bits_inclusive" fork="heze" hash="5ea16f62">
     def is_inclusion_list_bits_inclusive(
@@ -7054,7 +7064,9 @@
     </spec>
 
 - name: is_payload_inclusion_list_satisfied#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "isPayloadInclusionListSatisfied(blockRoot: RootHex)"
   spec: |
     <spec fn="is_payload_inclusion_list_satisfied" fork="heze" hash="2f119ca9">
     def is_payload_inclusion_list_satisfied(store: Store, root: Root) -> bool:
@@ -8551,7 +8563,9 @@
     </spec>
 
 - name: prepare_execution_payload#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts
+      search: export async function prepareExecutionPayload(
   spec: |
     <spec fn="prepare_execution_payload" fork="heze" hash="3531eee1">
     def prepare_execution_payload(
@@ -9992,7 +10006,9 @@
     </spec>
 
 - name: process_inclusion_list#heze
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
+      search: "processInclusionList(inclusionList: heze.InclusionList"
   spec: |
     <spec fn="process_inclusion_list" fork="heze" hash="adf98716">
     def process_inclusion_list(
@@ -11512,7 +11528,9 @@
     </spec>
 
 - name: record_payload_inclusion_list_satisfaction#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "recordPayloadInclusionListSatisfaction(blockRoot: RootHex"
   spec: |
     <spec fn="record_payload_inclusion_list_satisfaction" fork="heze" hash="da6e9709">
     def record_payload_inclusion_list_satisfaction(
@@ -11677,7 +11695,9 @@
     </spec>
 
 - name: should_extend_payload#heze
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "shouldExtendPayload(blockRoot: RootHex)"
   spec: |
     <spec fn="should_extend_payload" fork="heze" hash="38b03a9e">
     def should_extend_payload(store: Store, root: Root) -> bool:
@@ -13091,7 +13111,9 @@
     </spec>
 
 - name: upgrade_to_heze#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/slot/upgradeStateToHeze.ts
+      search: export function upgradeStateToHeze(
   spec: |
     <spec fn="upgrade_to_heze" fork="heze" hash="df21a261">
     def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:

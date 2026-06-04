@@ -179,7 +179,9 @@
     </spec>
 
 - name: INCLUSION_LIST_COMMITTEE_SIZE#heze
-  sources: []
+  sources:
+    - file: packages/params/src/presets/mainnet.ts
+      search: "INCLUSION_LIST_COMMITTEE_SIZE:"
   spec: |
     <spec preset_var="INCLUSION_LIST_COMMITTEE_SIZE" fork="heze" hash="780fb63c">
     INCLUSION_LIST_COMMITTEE_SIZE: uint64 = 16

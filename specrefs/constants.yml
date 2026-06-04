@@ -223,7 +223,9 @@
     </spec>
 
 - name: DOMAIN_INCLUSION_LIST_COMMITTEE#heze
-  sources: []
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_INCLUSION_LIST_COMMITTEE =
   spec: |
     <spec constant_var="DOMAIN_INCLUSION_LIST_COMMITTEE" fork="heze" hash="95ea05fa">
     DOMAIN_INCLUSION_LIST_COMMITTEE: DomainType = '0x0E000000'

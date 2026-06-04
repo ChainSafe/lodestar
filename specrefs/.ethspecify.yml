@@ -54,9 +54,6 @@ exceptions:
     - PAYLOAD_STATUS_PENDING#gloas
     - PTC_TIMELINESS_INDEX#gloas
 
-    # heze (not implemented)
-    - DOMAIN_INCLUSION_LIST_COMMITTEE#heze
-
     # phase0 fast confirmation / not implemented
     - COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
 
@@ -71,13 +68,6 @@ exceptions:
     - PartialDataColumnHeader#fulu
     - PartialDataColumnPartsMetadata#fulu
     - PartialDataColumnSidecar#fulu
-
-    # heze (not implemented)
-    - BeaconState#heze
-    - ExecutionPayloadBid#heze
-    - InclusionList#heze
-    - SignedExecutionPayloadBid#heze
-    - SignedInclusionList#heze
 
   dataclasses:
     # phase0
@@ -121,13 +111,7 @@ exceptions:
 
     # heze (not implemented)
     - GetInclusionListResponse#heze
-    - InclusionListStore#heze
-    - PayloadAttributes#heze
     - Store#heze
-
-  presets:
-    # heze (not implemented)
-    - INCLUSION_LIST_COMMITTEE_SIZE#heze
 
   functions:
     # phase0
@@ -424,22 +408,11 @@ exceptions:
     # heze (not implemented)
     - compute_fork_version#heze
     - get_forkchoice_store#heze
-    - get_inclusion_list_bits#heze
-    - get_inclusion_list_committee#heze
     - get_inclusion_list_committee_assignment#heze
-    - get_inclusion_list_due_ms#heze
     - get_inclusion_list_signature#heze
     - get_inclusion_list_store#heze
-    - get_inclusion_list_transactions#heze
-    - is_inclusion_list_bits_inclusive#heze
-    - is_payload_inclusion_list_satisfied#heze
     - is_valid_inclusion_list_signature#heze
     - on_inclusion_list#heze
-    - prepare_execution_payload#heze
-    - process_inclusion_list#heze
-    - record_payload_inclusion_list_satisfaction#heze
-    - should_extend_payload#heze
-    - upgrade_to_heze#heze
 
     # phase0 fast confirmation / not implemented
     - adjust_committee_weight_estimate_to_ensure_safety#phase0
@@ -487,12 +460,6 @@ exceptions:
     # phase0 fast confirmation / not implemented
     - CONFIRMATION_BYZANTINE_THRESHOLD#phase0
 
-    # heze (not implemented)
-    - HEZE_FORK_EPOCH#heze
-    - HEZE_FORK_VERSION#heze
-    - INCLUSION_LIST_DUE_BPS#heze
-    - MAX_BYTES_PER_INCLUSION_LIST#heze
-    - MAX_REQUEST_INCLUSION_LIST#heze
 
   custom_types:
     # phase0
