@@ -118,7 +118,10 @@ export type ResponseDataCodec<T, M> = {
   toJson: (data: T, meta: M) => unknown; // server
   fromJson: (data: unknown, meta: M) => T; // client
   serialize: (data: T, meta: M) => Uint8Array; // server
-  deserialize: (data: Uint8Array, meta: M) => T; // client
+  // `meta` is typed as `any` so SSZ `Type<T>.deserialize(data, opts?)` satisfies the shape.
+  // Route-specific deserializers (e.g. `WithVersion`) cast to their expected meta internally.
+  // biome-ignore lint/suspicious/noExplicitAny: contravariant workaround for ssz Type.deserialize(opts?)
+  deserialize: (data: Uint8Array, meta: any) => T; // client
 };
 
 export type ResponseMetadataCodec<T> = {

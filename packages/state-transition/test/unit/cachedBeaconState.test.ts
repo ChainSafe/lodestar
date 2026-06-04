@@ -6,10 +6,10 @@ import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
+import {interopPubkeysCached} from "../../src/testUtils/interop.js";
+import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
 import {EpochShuffling, calculateShufflingDecisionRoot} from "../../src/util/epochShuffling.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
-import {interopPubkeysCached} from "../utils/interop.js";
-import {createCachedBeaconStateTest} from "../utils/state.js";
 
 describe("CachedBeaconState", () => {
   vi.setConfig({testTimeout: 30_000, hookTimeout: 30_000});

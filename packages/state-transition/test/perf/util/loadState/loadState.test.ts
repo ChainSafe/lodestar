@@ -1,8 +1,8 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {PubkeyCache, createPubkeyCache} from "../../../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
+import {generatePerfTestCachedStateAltair} from "../../../../src/testUtils/util.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
-import {generatePerfTestCachedStateAltair} from "../../util.js";
 
 /**
  * This benchmark shows a stable performance from 2s to 3s on a Mac M1. And it does not really depend on the seed validators,

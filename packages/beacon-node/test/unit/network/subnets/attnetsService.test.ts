@@ -1,5 +1,6 @@
 import {MockedObject, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ZERO_HASH, getCurrentSlot} from "@lodestar/state-transition";
 import {SubnetID} from "@lodestar/types";
@@ -11,7 +12,6 @@ import {AttnetsService} from "../../../../src/network/subnets/attnetsService.js"
 import {CommitteeSubscription} from "../../../../src/network/subnets/interface.js";
 import {Clock, IClock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
-import {testLogger} from "../../../utils/logger.js";
 
 vi.mock("../../../../src/network/gossip/gossipsub.js");
 

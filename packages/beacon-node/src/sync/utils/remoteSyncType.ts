@@ -1,7 +1,7 @@
 import {IForkChoice} from "@lodestar/fork-choice";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot, Status} from "@lodestar/types";
-import {IBeaconChain} from "../../chain/interface.ts";
+import {IBeaconChain} from "../../chain/interface.js";
 import {ChainTarget} from "../range/utils/index.js";
 
 /** The type of peer relative to our current state */

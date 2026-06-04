@@ -25,6 +25,7 @@ export type ArchiveStoreOpts = StatesArchiveOpts & {
   archiveDataEpochs?: number;
   pruneHistory?: boolean;
   serveHistoricalState?: boolean;
+  nativeStateView?: boolean;
 };
 
 export type ProposalStats = {

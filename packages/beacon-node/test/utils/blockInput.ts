@@ -91,6 +91,10 @@ export class MockBlockInput implements IBlockInput {
     return this._timeCompleted ?? 0;
   }
 
+  getSerializedCacheKeys(): object[] {
+    return this._block ? [this._block] : [];
+  }
+
   waitForAllData(_timeout: number, _signal?: AbortSignal): Promise<DAData> {
     return Promise.resolve(null);
   }

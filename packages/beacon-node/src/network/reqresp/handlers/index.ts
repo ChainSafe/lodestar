@@ -6,14 +6,18 @@ import {
   BeaconBlocksByRootRequestType,
   BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequestType,
+  ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../../util/types.js";
 import {GetReqRespHandlerFn, ReqRespMethod} from "../types.js";
+import {onBeaconBlocksByHead} from "./beaconBlocksByHead.js";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange.js";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot.js";
 import {onBlobSidecarsByRange} from "./blobSidecarsByRange.js";
 import {onBlobSidecarsByRoot} from "./blobSidecarsByRoot.js";
 import {onDataColumnSidecarsByRange} from "./dataColumnSidecarsByRange.js";
 import {onDataColumnSidecarsByRoot} from "./dataColumnSidecarsByRoot.js";
+import {onExecutionPayloadEnvelopesByRange} from "./executionPayloadEnvelopesByRange.js";
+import {onExecutionPayloadEnvelopesByRoot} from "./executionPayloadEnvelopesByRoot.js";
 import {onLightClientBootstrap} from "./lightClientBootstrap.js";
 import {onLightClientFinalityUpdate} from "./lightClientFinalityUpdate.js";
 import {onLightClientOptimisticUpdate} from "./lightClientOptimisticUpdate.js";
@@ -44,6 +48,10 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
       const body = BeaconBlocksByRootRequestType(fork, chain.config).deserialize(req.data);
       return onBeaconBlocksByRoot(body, chain);
     },
+    [ReqRespMethod.BeaconBlocksByHead]: (req, peerId, peerClient) => {
+      const body = ssz.fulu.BeaconBlocksByHeadRequest.deserialize(req.data);
+      return onBeaconBlocksByHead(body, chain, peerId, peerClient);
+    },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
       const body = BlobSidecarsByRootRequestType(fork, chain.config).deserialize(req.data);
@@ -60,6 +68,15 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.DataColumnSidecarsByRoot]: (req, peerId, peerClient) => {
       const body = DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data);
       return onDataColumnSidecarsByRoot(body, chain, db, peerId, peerClient);
+    },
+
+    [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (req, peerId, peerClient) => {
+      const body = ExecutionPayloadEnvelopesByRootRequestType(chain.config).deserialize(req.data);
+      return onExecutionPayloadEnvelopesByRoot(body, chain, db, peerId, peerClient);
+    },
+    [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: (req) => {
+      const body = ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest.deserialize(req.data);
+      return onExecutionPayloadEnvelopesByRange(body, chain, db);
     },
 
     [ReqRespMethod.LightClientBootstrap]: (req) => {

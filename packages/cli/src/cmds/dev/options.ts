@@ -1,7 +1,7 @@
 import {CliCommandOptions, CliOptionDefinition} from "@lodestar/utils";
 import {NetworkName} from "../../networks/index.js";
 import {beaconNodeOptions, globalOptions} from "../../options/index.js";
-import {parseRange} from "../../util/format.ts";
+import {parseRange} from "../../util/format.js";
 import {BeaconArgs, beaconOptions} from "../beacon/options.js";
 import {IValidatorCliArgs, validatorOptions} from "../validator/options.js";
 

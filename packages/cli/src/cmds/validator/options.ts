@@ -60,6 +60,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
 
     "http.requestWireFormat"?: string;
     "http.responseWireFormat"?: string;
+    "http.requestTimeout"?: number;
 
     "clock.skipSlots"?: boolean;
 
@@ -330,6 +331,12 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "string",
     description: `Preferred wire format for HTTP responses from beacon node. Can be one of \`${WireFormat.json}\` or \`${WireFormat.ssz}\``,
     defaultDescription: `${defaultInit.responseWireFormat}`,
+    group: "http",
+  },
+
+  "http.requestTimeout": {
+    type: "number",
+    description: "Timeout in milliseconds for HTTP requests to the beacon node",
     group: "http",
   },
 

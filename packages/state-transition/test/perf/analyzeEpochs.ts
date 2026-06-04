@@ -11,8 +11,8 @@ import {
   parseAttesterFlags,
   processSlots,
 } from "../../src/index.js";
-import {getInfuraBeaconUrl} from "../utils/infura.js";
-import {createCachedBeaconStateTest} from "../utils/state.js";
+import {getInfuraBeaconUrl} from "../../src/testUtils/infura.js";
+import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
 import {csvAppend, readCsv} from "./csv.js";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.

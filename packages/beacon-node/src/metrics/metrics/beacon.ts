@@ -333,11 +333,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Time taken to verify data_column sidecar inclusion proof",
         buckets: [0.002, 0.004, 0.006, 0.008, 0.01, 0.05, 1, 2],
       }),
+      // single verification
       dataColumnSidecarKzgProofsVerificationTime: register.histogram({
         name: "beacon_data_column_sidecar_kzg_proofs_verification_seconds",
-        help: "Time taken to verify data_column sidecar kzg proofs",
+        help: "Time taken to verify single data_column sidecar kzg proofs",
         buckets: [0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2, 0.5, 1],
       }),
+      // batch verification
       kzgVerificationDataColumnBatchTime: register.histogram({
         name: "beacon_kzg_verification_data_column_batch_seconds",
         help: "Runtime of batched data column kzg verification",
@@ -361,9 +363,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Duration of engine_getBlobsV2 requests",
         buckets: [0.01, 0.05, 0.1, 0.5, 1, 2.5, 5, 7.5],
       }),
-      targetCustodyGroupCount: register.gauge({
-        name: "beacon_target_custody_group_count",
+      custodyGroupCount: register.gauge({
+        name: "beacon_custody_groups",
         help: "Total number of custody groups within a node",
+      }),
+      custodyGroupsBackfilled: register.gauge({
+        name: "beacon_custody_groups_backfilled",
+        help: "Total number of custody groups backfilled by a node",
       }),
       reconstructedColumns: register.counter({
         name: "beacon_data_availability_reconstructed_columns_total",

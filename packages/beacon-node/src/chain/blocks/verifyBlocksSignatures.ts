@@ -1,5 +1,10 @@
 import {BeaconConfig} from "@lodestar/config";
-import {CachedBeaconStateAllForks, getBlockSignatureSets} from "@lodestar/state-transition";
+import {
+  IBeaconStateView,
+  SyncCommitteeCacheEmpty,
+  getBlockSignatureSets,
+  isStatePostAltair,
+} from "@lodestar/state-transition";
 import {IndexedAttestation, SignedBeaconBlock} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -20,14 +25,16 @@ export async function verifyBlocksSignatures(
   bls: IBlsVerifier,
   logger: Logger,
   metrics: Metrics | null,
-  preState0: CachedBeaconStateAllForks,
+  preState0: IBeaconStateView,
   blocks: SignedBeaconBlock[],
   indexedAttestationsByBlock: IndexedAttestation[][],
   opts: ImportBlockOpts
 ): Promise<{verifySignaturesTime: number}> {
   const isValidPromises: Promise<boolean>[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
-  const currentSyncCommitteeIndexed = preState0.epochCtx.currentSyncCommitteeIndexed;
+  const currentSyncCommitteeIndexed = isStatePostAltair(preState0)
+    ? preState0.currentSyncCommitteeIndexed
+    : new SyncCommitteeCacheEmpty();
 
   // Verifies signatures after running state transition, so all SyncCommittee signed roots are known at this point.
   // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
@@ -41,7 +48,7 @@ export async function verifyBlocksSignatures(
       : //
         // Verify signatures per block to track which block is invalid
         bls.verifySignatureSets(
-          getBlockSignatureSets(config, currentSyncCommitteeIndexed, block, indexedAttestationsByBlock[i], {
+          getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
           })
         );

@@ -8,8 +8,8 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {generateCachedElectraState} from "../../../../beacon-node/test/utils/state.js";
 import {processConsolidationRequest} from "../../../src/block/processConsolidationRequest.js";
+import {generateCachedElectraState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("processConsolidationRequest", () => {

@@ -8,9 +8,9 @@ import {
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {BeaconStateCapella, CachedBeaconStateCapella} from "../../src/index.js";
-import {interopPubkeysCached} from "./interop.js";
+import {interopPubkeysCached} from "../../src/testUtils/interop.js";
+import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
 import {mulberry32} from "./rand.js";
-import {createCachedBeaconStateTest} from "./state.js";
 
 export interface WithdrawalOpts {
   excessBalance: number;

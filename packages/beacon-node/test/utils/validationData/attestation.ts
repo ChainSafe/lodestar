@@ -1,18 +1,19 @@
 import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {getEmptyLogger} from "@lodestar/logger/empty";
 import {DOMAIN_BEACON_ATTESTER} from "@lodestar/params";
 import {
+  BeaconStateView,
   DataAvailabilityStatus,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
-} from "../../../../state-transition/test/perf/util.js";
-import {getEmptyLogger} from "@lodestar/logger/empty";
+} from "@lodestar/state-transition/test-utils";
+import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
 import {BlsVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
@@ -80,8 +81,6 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
     parentBlockHash: null,
     payloadStatus: 2, // PayloadStatus.FULL
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const shufflingCache = new ShufflingCache(null, null, {}, [
@@ -155,9 +154,9 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
 
   // Add state to regen
   const regen = {
-    getState: async () => state,
+    getState: async () => new BeaconStateView(state),
     // TODO: remove this once we have a better way to get state
-    getStateSync: () => state,
+    getStateSync: () => new BeaconStateView(state),
   } as Partial<IStateRegenerator> as IStateRegenerator;
 
   const chain = {

@@ -1,8 +1,8 @@
 import {describe, expect, it} from "vitest";
 import {ssz} from "@lodestar/types";
 import {computeEpochAtSlot} from "../../../src/index.js";
+import {generateState} from "../../../src/testUtils/state.js";
 import {computeEpochShuffling, computeEpochShufflingAsync} from "../../../src/util/epochShuffling.js";
-import {generateState} from "../../utils/state.js";
 
 describe("EpochShuffling", () => {
   it("async and sync versions should be identical", async () => {

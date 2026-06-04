@@ -2,8 +2,8 @@ import type {FileHandle} from "node:fs/promises";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_HISTORICAL_ROOT, isForkPostCapella} from "@lodestar/params";
 import {BeaconState, Slot, capella, ssz} from "@lodestar/types";
-import {E2STORE_HEADER_SIZE, SlotIndex, readSlotIndex} from "../e2s.ts";
-import {readUint48} from "../util.ts";
+import {E2STORE_HEADER_SIZE, SlotIndex, readSlotIndex} from "../e2s.js";
+import {readUint48} from "../util.js";
 
 /**
  * Parsed components of an .era file name.

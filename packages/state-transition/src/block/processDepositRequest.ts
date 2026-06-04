@@ -1,8 +1,10 @@
 import {FAR_FUTURE_EPOCH, ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {BLSPubkey, Bytes32, UintNum64, electra, ssz} from "@lodestar/types";
+import {toPubkeyHex} from "@lodestar/utils";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
 import {findBuilderIndexByPubkey, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {computeEpochAtSlot, isValidatorKnown} from "../util/index.js";
+import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {isValidDepositSignature} from "./processDeposit.js";
 
 /**
@@ -74,35 +76,61 @@ function addBuilderToRegistry(
   }
 }
 
+// TODO GLOAS: the PendingDepositsLookup is currently scoped to a single envelope of
+// deposit-requests. We can track it as ephemeral within EpochCache and transfer to the next block
+// transition to reuse cached signature verifications.
+// See https://github.com/ChainSafe/lodestar/issues/9181
 export function processDepositRequest(
   fork: ForkSeq,
   state: CachedBeaconStateElectra | CachedBeaconStateGloas,
-  depositRequest: electra.DepositRequest
+  depositRequest: electra.DepositRequest,
+  pendingDepositsLookup?: PendingDepositsLookup
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
-  // Check if this is a builder or validator deposit
   if (fork >= ForkSeq.gloas) {
     const stateGloas = state as CachedBeaconStateGloas;
+    const lookup = pendingDepositsLookup ?? PendingDepositsLookup.build(stateGloas);
+    const pubkeyHex = toPubkeyHex(pubkey);
     const builderIndex = findBuilderIndexByPubkey(stateGloas, pubkey);
     const validatorIndex = state.epochCtx.getValidatorIndex(pubkey);
 
-    // Regardless of the withdrawal credentials prefix, if a builder/validator
-    // already exists with this pubkey, apply the deposit to their balance
     const isBuilder = builderIndex !== null;
     const isValidator = isValidatorKnown(state, validatorIndex);
-    const isBuilderPrefix = isBuilderWithdrawalCredential(withdrawalCredentials);
 
-    // Route to builder if it's an existing builder OR has builder prefix and is not a validator
-    if (isBuilder || (isBuilderPrefix && !isValidator)) {
-      // Apply builder deposits immediately
+    if (isBuilder) {
+      // Top up an existing builder regardless of withdrawal credential prefix
       applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
       return;
     }
+
+    // Only check the (expensive) "pending validator" condition when needed
+    if (
+      isBuilderWithdrawalCredential(withdrawalCredentials) &&
+      !isValidator &&
+      !lookup.hasPendingValidator(state.config, pubkeyHex)
+    ) {
+      applyDepositForBuilder(stateGloas, pubkey, withdrawalCredentials, amount, signature, state.slot);
+      return;
+    }
+
+    const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
+      pubkey,
+      withdrawalCredentials,
+      amount,
+      signature,
+      slot: state.slot,
+    });
+    // Keep the lookup in sync with state.pendingDeposits so later deposit-requests
+    // in the same envelope see this deposit
+    lookup.add(pendingDeposit, pubkeyHex);
+    state.pendingDeposits.push(pendingDeposit);
+    return;
   }
 
-  // Only set deposit_requests_start_index in Electra fork, not Gloas
-  if (fork < ForkSeq.gloas && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+  // Pre-Gloas (Electra) path
+  // depositRequestsStartIndex is only set in Electra, from Fulu the eth1 bridge deposit mechanism was removed.
+  if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     state.depositRequestsStartIndex = depositRequest.index;
   }
 

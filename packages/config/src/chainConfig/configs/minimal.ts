@@ -3,7 +3,7 @@ import {fromHex as b} from "@lodestar/utils";
 import {ChainConfig} from "../types.js";
 
 // Minimal config
-// https://github.com/ethereum/consensus-specs/blob/dev/configs/minimal.yaml
+// https://github.com/ethereum/consensus-specs/blob/master/configs/minimal.yaml
 
 export const chainConfig: ChainConfig = {
   // Extends the minimal preset
@@ -93,6 +93,8 @@ export const chainConfig: ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: 5000,
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
+  // 75% of SLOT_DURATION_MS
+  PAYLOAD_DUE_BPS: 7500,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -163,6 +165,14 @@ export const chainConfig: ChainConfig = {
   MAX_BLOBS_PER_BLOCK_ELECTRA: 9,
   // MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK_ELECTRA
   MAX_REQUEST_BLOB_SIDECARS_ELECTRA: 1152,
+
+  // Gloas (EIP-8061)
+  // [customized] 2**4 (= 16)
+  CHURN_LIMIT_QUOTIENT_GLOAS: 16,
+  // [customized] 2**5 (= 32)
+  CONSOLIDATION_CHURN_LIMIT_QUOTIENT: 32,
+  // [customized] 2**7 * 10**9 (= 128,000,000,000)
+  MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: 128000000000,
 
   // Fulu
   NUMBER_OF_CUSTODY_GROUPS: 128,

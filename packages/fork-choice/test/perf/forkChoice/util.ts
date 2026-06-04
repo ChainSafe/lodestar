@@ -38,6 +38,9 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
+
+      parentBlockHash: null,
+      payloadStatus: PayloadStatus.FULL,
     } as Omit<ProtoBlock, "targetRoot">,
     genesisSlot
   );
@@ -51,7 +54,6 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
         epoch: genesisEpoch,
         root: fromHexString(genesisRoot),
         rootHex: genesisRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances,
       totalBalance: computeTotalBalance(balances),
@@ -61,7 +63,6 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
         epoch: genesisEpoch,
         root: fromHexString(genesisRoot),
         rootHex: genesisRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances,
     },
@@ -69,13 +70,11 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       epoch: genesisEpoch,
       root: fromHexString(genesisRoot),
       rootHex: genesisRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     unrealizedFinalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisRoot),
       rootHex: genesisRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
@@ -110,8 +109,6 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
 
       parentBlockHash: null,
       payloadStatus: PayloadStatus.FULL,
-      builderIndex: null,
-      blockHashFromBid: null,
     };
 
     protoArr.onBlock(block, block.slot, null);

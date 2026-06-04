@@ -6,7 +6,7 @@ import {LightClientError, LightClientErrorCode} from "../errors/lightClientError
 import {IBeaconChain} from "../interface.js";
 import {updateReceivedTooEarly} from "./lightClientOptimisticUpdate.js";
 
-// https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#light_client_finality_update
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#light_client_finality_update
 export function validateLightClientFinalityUpdate(
   config: ChainForkConfig,
   chain: IBeaconChain,

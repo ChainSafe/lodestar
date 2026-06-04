@@ -9,6 +9,8 @@ import {
   DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_PROPOSER_PREFERENCES,
+  DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
@@ -496,11 +498,13 @@ export class ValidatorStore {
     logger?: LoggerVc
   ): Promise<gloas.SignedExecutionPayloadEnvelope> {
     // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
-    if (envelope.slot > currentSlot) {
-      throw Error(`Not signing envelope with slot ${envelope.slot} greater than current slot ${currentSlot}`);
+    if (envelope.payload.slotNumber > currentSlot) {
+      throw Error(
+        `Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`
+      );
     }
 
-    const signingSlot = envelope.slot;
+    const signingSlot = envelope.payload.slotNumber;
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
     const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
 
@@ -662,6 +666,77 @@ export class ValidatorStore {
 
     return {
       message: contributionAndProof,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signPayloadAttestation(
+    duty: routes.validator.PtcDuty,
+    data: gloas.PayloadAttestationData,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<gloas.PayloadAttestationMessage> {
+    if (data.slot > currentSlot) {
+      throw Error(`Not signing payload attestation with slot ${data.slot} greater than current slot ${currentSlot}`);
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+    this.validatePtcDuty(duty, data);
+
+    const signingSlot = data.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_PTC_ATTESTER);
+    const signingRoot = computeSigningRoot(ssz.gloas.PayloadAttestationData, data, domain);
+
+    logger?.debug("Signing payload attestation message", {
+      slot: signingSlot,
+      beaconBlockRoot: toRootHex(data.beaconBlockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      data,
+    };
+
+    return {
+      validatorIndex: duty.validatorIndex,
+      data,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signProposerPreferences(
+    duty: routes.validator.ProposerDuty,
+    dependentRoot: Uint8Array,
+    feeRecipient: ExecutionAddress,
+    gasLimit: number,
+    currentSlot: Slot
+  ): Promise<gloas.SignedProposerPreferences> {
+    if (duty.slot <= currentSlot) {
+      throw Error(`Not signing proposer preferences for past slot ${duty.slot} (current ${currentSlot})`);
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+
+    const message: gloas.ProposerPreferences = {
+      dependentRoot,
+      proposalSlot: duty.slot,
+      validatorIndex: duty.validatorIndex,
+      feeRecipient: fromHex(feeRecipient),
+      targetGasLimit: gasLimit,
+    };
+
+    const signingSlot = duty.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_PROPOSER_PREFERENCES);
+    const signingRoot = computeSigningRoot(ssz.gloas.ProposerPreferences, message, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.PROPOSER_PREFERENCES,
+      data: message,
+    };
+
+    return {
+      message,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
   }
@@ -831,14 +906,28 @@ export class ValidatorStore {
       throw Error(`Inconsistent duties during signing: duty.slot ${duty.slot} != att.slot ${data.slot}`);
     }
 
-    const isPostElectra = this.config.getForkSeq(data.slot) >= ForkSeq.electra;
+    const forkSeq = this.config.getForkSeq(data.slot);
+    const isPostElectra = forkSeq >= ForkSeq.electra;
+    const isPostGloas = forkSeq >= ForkSeq.gloas;
+
     if (!isPostElectra && duty.committeeIndex !== data.index) {
       throw Error(
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
-    if (isPostElectra && data.index !== 0) {
+    if (isPostGloas) {
+      // After Gloas, data.index signals payload status: 0 (EMPTY) or 1 (FULL)
+      if (data.index !== 0 && data.index !== 1) {
+        throw Error(`Invalid payload status index post-gloas during signing: data.index=${data.index}`);
+      }
+    } else if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
+    }
+  }
+
+  private validatePtcDuty(duty: routes.validator.PtcDuty, data: gloas.PayloadAttestationData): void {
+    if (duty.slot !== data.slot) {
+      throw Error(`Inconsistent PTC duties during signing: duty.slot ${duty.slot} != data.slot ${data.slot}`);
     }
   }
 

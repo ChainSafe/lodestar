@@ -1,5 +1,5 @@
 import {assert, describe, it} from "vitest";
-import {E2STORE_HEADER_SIZE, EntryType, parseEntryHeader} from "../../src/e2s.ts";
+import {E2STORE_HEADER_SIZE, EntryType, parseEntryHeader} from "../../src/e2s.js";
 
 function header(type: EntryType, dataLen: number): Uint8Array {
   const h = new Uint8Array(8);

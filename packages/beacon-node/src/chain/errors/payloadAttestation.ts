@@ -1,10 +1,11 @@
 import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
-import {GossipActionError} from "./gossipValidation.ts";
+import {GossipActionError} from "./gossipValidation.js";
 
 export enum PayloadAttestationErrorCode {
   NOT_CURRENT_SLOT = "PAYLOAD_ATTESTATION_ERROR_NOT_CURRENT_SLOT",
   PAYLOAD_ATTESTATION_ALREADY_KNOWN = "PAYLOAD_ATTESTATION_ERROR_PAYLOAD_ATTESTATION_ALREADY_KNOWN",
   UNKNOWN_BLOCK_ROOT = "PAYLOAD_ATTESTATION_ERROR_UNKNOWN_BLOCK_ROOT",
+  INVALID_BLOCK_SLOT = "PAYLOAD_ATTESTATION_ERROR_INVALID_BLOCK_SLOT",
   INVALID_BLOCK = "PAYLOAD_ATTESTATION_ERROR_INVALID_BLOCK",
   INVALID_ATTESTER = "PAYLOAD_ATTESTATION_ERROR_INVALID_ATTESTER",
   INVALID_SIGNATURE = "PAYLOAD_ATTESTATION_ERROR_INVALID_SIGNATURE",
@@ -18,6 +19,7 @@ export type PayloadAttestationErrorType =
       blockRoot: RootHex;
     }
   | {code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT; blockRoot: RootHex}
+  | {code: PayloadAttestationErrorCode.INVALID_BLOCK_SLOT; blockRoot: RootHex; blockSlot: Slot; slot: Slot}
   | {code: PayloadAttestationErrorCode.INVALID_BLOCK; blockRoot: RootHex}
   | {code: PayloadAttestationErrorCode.INVALID_ATTESTER; attesterIndex: ValidatorIndex}
   | {code: PayloadAttestationErrorCode.INVALID_SIGNATURE};

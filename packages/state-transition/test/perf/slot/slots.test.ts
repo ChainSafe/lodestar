@@ -1,8 +1,8 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {processSlot} from "../../../src/slot/index.js";
+import {generatePerfTestCachedStatePhase0} from "../../../src/testUtils/util.js";
 import {State} from "../types.js";
-import {generatePerfTestCachedStatePhase0} from "../util.js";
 
 // Test advancing through an empty slot, without any epoch transition
 

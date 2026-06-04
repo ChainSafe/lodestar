@@ -2,8 +2,8 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {ForkSeq} from "@lodestar/params";
 import {getExpectedWithdrawals} from "../../../src/block/processWithdrawals.js";
 import {CachedBeaconStateCapella} from "../../../src/index.js";
+import {numValidators} from "../../../src/testUtils/util.js";
 import {WithdrawalOpts, getExpectedWithdrawalsTestData} from "../../utils/capella.js";
-import {numValidators} from "../util.js";
 
 // PERF: Fixed cost for MAX_WITHDRAWALS_PER_PAYLOAD probes
 //  + cost 'proportional' to $VALIDATOR_COUNT with balances under MAX_EFFECTIVE_BALANCE or

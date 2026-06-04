@@ -52,8 +52,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const baseHeadBlock: ProtoBlockWithWeight = {
@@ -82,8 +80,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const baseParentHeadBlock: ProtoBlockWithWeight = {
@@ -111,8 +107,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const fcStore: IForkChoiceStore = {
@@ -122,7 +116,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         epoch: genesisEpoch,
         root: fromHexString(genesisBlock.blockRoot),
         rootHex: genesisBlock.blockRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances: new Uint16Array(Array(32).fill(150)),
       totalBalance: 32 * 150,
@@ -132,7 +125,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         epoch: genesisEpoch,
         root: fromHexString(genesisBlock.blockRoot),
         rootHex: genesisBlock.blockRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances: new Uint16Array(Array(32).fill(150)),
     },
@@ -140,13 +132,11 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     unrealizedFinalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),

@@ -19,7 +19,7 @@ import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {NetworkCoreMetrics} from "../core/metrics.js";
 import {INetworkEventBus, NetworkEvent} from "../events.js";
 import {MetadataController} from "../metadata.js";
-import {ClientKind} from "../peers/client.ts";
+import {ClientKind} from "../peers/client.js";
 import {PeersData} from "../peers/peersData.js";
 import {IPeerRpcScoreStore, PeerAction} from "../peers/score/index.js";
 import {StatusCache} from "../statusCache.js";
@@ -58,7 +58,7 @@ export type ReqRespBeaconNodeOpts = ReqRespOpts & {disableLightClientServer?: bo
  * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
- * https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/altair/light-client/p2p-interface.md#the-reqresp-domain
  */
 export class ReqRespBeaconNode extends ReqResp {
   private readonly metadataController: MetadataController;
@@ -286,6 +286,7 @@ export class ReqRespBeaconNode extends ReqResp {
         // instead of protocol version. This is not easily fixable with our current architecture.
         // See https://github.com/ChainSafe/lodestar/pull/8168 for more details.
         [protocols.StatusV2(fork, this.config), this.onStatus.bind(this)],
+        [protocols.BeaconBlocksByHead(fork, this.config), this.getHandler(ReqRespMethod.BeaconBlocksByHead)],
         [
           protocols.DataColumnSidecarsByRoot(fork, this.config),
           this.getHandler(ReqRespMethod.DataColumnSidecarsByRoot),
@@ -293,6 +294,19 @@ export class ReqRespBeaconNode extends ReqResp {
         [
           protocols.DataColumnSidecarsByRange(fork, this.config),
           this.getHandler(ReqRespMethod.DataColumnSidecarsByRange),
+        ]
+      );
+    }
+
+    if (ForkSeq[fork] >= ForkSeq.gloas) {
+      protocolsAtFork.push(
+        [
+          protocols.ExecutionPayloadEnvelopesByRoot(fork, this.config),
+          this.getHandler(ReqRespMethod.ExecutionPayloadEnvelopesByRoot),
+        ],
+        [
+          protocols.ExecutionPayloadEnvelopesByRange(fork, this.config),
+          this.getHandler(ReqRespMethod.ExecutionPayloadEnvelopesByRange),
         ]
       );
     }

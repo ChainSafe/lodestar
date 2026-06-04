@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
   EpochDifference,
+  ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
@@ -10,15 +11,14 @@ import {
 } from "@lodestar/fork-choice";
 import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  CachedBeaconStateAltair,
-  EpochCache,
+  IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isExecutionStateType,
   isStartSlotOfEpoch,
-  isStateValidatorsNodesPopulated,
+  isStatePostAltair,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
@@ -69,8 +69,8 @@ export async function importBlock(
   fullyVerifiedBlock: FullyVerifiedBlock,
   opts: ImportBlockOpts
 ): Promise<void> {
-  const {blockInput, postState, parentBlockSlot, executionStatus, dataAvailabilityStatus, indexedAttestations} =
-    fullyVerifiedBlock;
+  const {blockInput, postState, parentBlockSlot, dataAvailabilityStatus, indexedAttestations} = fullyVerifiedBlock;
+  let {executionStatus} = fullyVerifiedBlock;
   const block = blockInput.getBlock();
   const source = blockInput.getBlockSource();
   const {slot: blockSlot} = block.message;
@@ -95,7 +95,7 @@ export async function importBlock(
   // Without this, a supernode syncing from behind can accumulate many blocks worth of column
   // data in memory (up to 128 columns per block) causing OOM before persistence catches up.
   await this.unfinalizedBlockWrites.waitForSpace();
-  this.unfinalizedBlockWrites.push([blockInput]).catch((e) => {
+  this.unfinalizedBlockWrites.push(blockInput).catch((e) => {
     if (!isQueueErrorAborted(e)) {
       this.logger.error("Error pushing block to unfinalized write queue", {slot: blockSlot}, e as Error);
     }
@@ -105,13 +105,30 @@ export async function importBlock(
 
   // Should compute checkpoint balances before forkchoice.onBlock
   this.checkpointBalancesCache.processState(blockRootHex, postState);
+  if (fork >= ForkSeq.gloas) {
+    const parentRootHex = toRootHex(block.message.parentRoot);
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+    if (parentBlock === null) {
+      throw Error(`Parent block not found in forkChoice, parentRoot=${parentRootHex}`);
+    }
+    if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+      throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
+    }
+    executionStatus = parentBlock.executionStatus;
+  }
+
+  // getBeaconProposerOrNull will return null if head state is more than one epoch away
+  // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
+  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
+
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus
+    dataAvailabilityStatus,
+    expectedProposerIndex
   );
 
   // This adds the state necessary to process the next block
@@ -149,7 +166,7 @@ export async function importBlock(
         const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
         addAttestation.call(
           this,
-          postState.epochCtx,
+          postState,
           target,
           attDataRoot,
           attestation as Attestation<ForkPostElectra>,
@@ -246,8 +263,10 @@ export async function importBlock(
         if (ptcIndices.length > 0) {
           this.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
+            payloadAttestation.data.slot,
             ptcIndices,
-            payloadAttestation.data.payloadPresent
+            payloadAttestation.data.payloadPresent,
+            payloadAttestation.data.blobDataAvailable
           );
         }
       } catch (e) {
@@ -334,11 +353,13 @@ export async function importBlock(
       // we want to import block asap so do this in the next event loop
       callInNextEventLoop(() => {
         try {
-          this.lightClientServer?.onImportBlockHead(
-            block.message as BeaconBlock<ForkPostAltair>,
-            postState as CachedBeaconStateAltair,
-            parentBlockSlot
-          );
+          if (isStatePostAltair(postState)) {
+            this.lightClientServer?.onImportBlockHead(
+              block.message as BeaconBlock<ForkPostAltair>,
+              postState,
+              parentBlockSlot
+            );
+          }
         } catch (e) {
           this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
         }
@@ -357,11 +378,11 @@ export async function importBlock(
   // and the block is weak and can potentially be reorged out.
   let shouldOverrideFcu = false;
 
-  if (blockSlot >= currentSlot && isExecutionStateType(postState)) {
+  if (blockSlot >= currentSlot && isStatePostBellatrix(postState) && postState.isExecutionStateType) {
     let notOverrideFcuReason = NotReorgedReason.Unknown;
     const proposalSlot = blockSlot + 1;
     try {
-      const proposerIndex = postState.epochCtx.getBeaconProposer(proposalSlot);
+      const proposerIndex = postState.getBeaconProposer(proposalSlot);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
 
       if (feeRecipient) {
@@ -441,7 +462,7 @@ export async function importBlock(
     }
   }
 
-  if (!isStateValidatorsNodesPopulated(postState)) {
+  if (!postState.isStateValidatorsNodesPopulated()) {
     this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
   }
 
@@ -463,7 +484,7 @@ export async function importBlock(
     // Note: in-lined code from previos handler of ChainEvent.checkpoint
     this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
-    const activeValidatorsCount = checkpointState.epochCtx.currentShuffling.activeIndices.length;
+    const activeValidatorsCount = checkpointState.activeValidatorCount;
     this.metrics?.currentActiveValidators.set(activeValidatorsCount);
     this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
 
@@ -544,17 +565,17 @@ export async function importBlock(
   this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
   this.metrics?.proposerBalanceDeltaAny.observe(fullyVerifiedBlock.proposerBalanceDelta);
   this.validatorMonitor?.registerImportedBlock(block.message, fullyVerifiedBlock);
-  if (this.config.getForkSeq(blockSlot) >= ForkSeq.altair) {
+  if (isStatePostAltair(fullyVerifiedBlock.postState)) {
     this.validatorMonitor?.registerSyncAggregateInBlock(
       blockEpoch,
       (block as altair.SignedBeaconBlock).message.body.syncAggregate,
-      fullyVerifiedBlock.postState.epochCtx.currentSyncCommitteeIndexed.validatorIndices
+      fullyVerifiedBlock.postState.currentSyncCommitteeIndexed.validatorIndices
     );
   }
 
   if (isBlockInputColumns(blockInput)) {
     for (const {source} of blockInput.getSampledColumnsWithSource()) {
-      this.metrics?.importBlock.columnsBySource.inc({source});
+      this.metrics?.dataColumns.bySource.inc({source});
     }
   } else if (isBlockInputBlobs(blockInput)) {
     for (const {source} of blockInput.getAllBlobsWithSource()) {
@@ -590,7 +611,7 @@ export async function importBlock(
 export function addAttestationPreElectra(
   this: BeaconChain,
   // added to have the same signature as addAttestationPostElectra
-  _: EpochCache,
+  _: IBeaconStateView,
   target: phase0.Checkpoint,
   attDataRoot: string,
   attestation: Attestation,
@@ -607,7 +628,7 @@ export function addAttestationPreElectra(
 
 export function addAttestationPostElectra(
   this: BeaconChain,
-  epochCtx: EpochCache,
+  state: IBeaconStateView,
   target: phase0.Checkpoint,
   attDataRoot: string,
   attestation: Attestation<ForkPostElectra>,
@@ -625,7 +646,7 @@ export function addAttestationPostElectra(
   } else {
     const attSlot = attestation.data.slot;
     const attEpoch = computeEpochAtSlot(attSlot);
-    const decisionRoot = epochCtx.getShufflingDecisionRoot(attEpoch);
+    const decisionRoot = state.getShufflingDecisionRoot(attEpoch);
     const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
     const aggregationBools = attestation.aggregationBits.toBoolArray();
     let offset = 0;

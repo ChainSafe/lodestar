@@ -312,6 +312,19 @@ async function validateAttestationNoSignatureCheck(
             code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
           });
         }
+
+        // [REJECT] If `attestation.data.index == 1` (payload present for a past
+        //   block), the execution payload for `block` passes validation.
+        // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
+        // the corresponding execution payload for `block` has been seen (a client MAY queue
+        // attestations for processing once the payload is retrieved and SHOULD request the
+        // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
+        if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
+          throw new AttestationError(GossipAction.IGNORE, {
+            code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+            beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
+          });
+        }
       } else {
         // [REJECT] attestation.data.index == 0
         if (attData.index !== 0) {
@@ -601,10 +614,14 @@ export function verifyPropagationSlotRange(fork: ForkName, chain: IBeaconChain, 
   //
   // see: https://github.com/ethereum/consensus-specs/pull/3360
   if (ForkSeq[fork] < ForkSeq.deneb) {
+    const currentSlot = chain.clock.currentSlot;
+    const withinPastDisparity = currentSlot > 0 && chain.clock.isCurrentSlotGivenGossipDisparity(currentSlot - 1);
     const earliestPermissibleSlot = Math.max(
-      // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY
-      chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000) -
-        chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE,
+      // Pre-Deneb propagation is time-bounded: an attestation remains valid at the exact old
+      // boundary `compute_time_at_slot(slot + range + 1) + MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+      // Model that boundary by extending the lower slot bound by one additional slot only while
+      // the clock still considers the previous slot current given gossip disparity.
+      currentSlot - chain.config.ATTESTATION_PROPAGATION_SLOT_RANGE - (withinPastDisparity ? 1 : 0),
       0
     );
 

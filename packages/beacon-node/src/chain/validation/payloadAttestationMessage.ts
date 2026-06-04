@@ -1,24 +1,26 @@
 import {
-  CachedBeaconStateGloas,
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
+import {RegenCaller} from "../regen/index.js";
 
 export type PayloadAttestationValidationResult = {
   attDataRootHex: RootHex;
-  validatorCommitteeIndex: number;
+  validatorCommitteeIndices: number[];
 };
 
 export async function validateApiPayloadAttestationMessage(
   chain: IBeaconChain,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
-  return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
+  const prioritizeBls = true;
+  return validatePayloadAttestationMessage(chain, payloadAttestationMessage, prioritizeBls);
 }
 
 export async function validateGossipPayloadAttestationMessage(
@@ -30,7 +32,8 @@ export async function validateGossipPayloadAttestationMessage(
 
 async function validatePayloadAttestationMessage(
   chain: IBeaconChain,
-  payloadAttestationMessage: gloas.PayloadAttestationMessage
+  payloadAttestationMessage: gloas.PayloadAttestationMessage,
+  prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
   const epoch = computeEpochAtSlot(data.slot);
@@ -59,26 +62,51 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue attestation for processing
   // once the block is retrieved. Note a client might want to request payload after).
-  if (!chain.forkChoice.hasBlock(data.beaconBlockRoot)) {
+  const block = chain.forkChoice.getBlockDefaultStatus(data.beaconBlockRoot);
+  if (!block) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
       blockRoot: toRootHex(data.beaconBlockRoot),
     });
   }
 
-  const state = chain.getHeadState() as CachedBeaconStateGloas;
+  // [IGNORE] The block referenced by `data.beacon_block_root` is at slot `data.slot`,
+  // i.e. the block has `block.slot == data.slot`.
+  if (block.slot !== data.slot) {
+    throw new PayloadAttestationError(GossipAction.IGNORE, {
+      code: PayloadAttestationErrorCode.INVALID_BLOCK_SLOT,
+      blockRoot: toRootHex(data.beaconBlockRoot),
+      blockSlot: block.slot,
+      slot: data.slot,
+    });
+  }
 
   // [REJECT] The message's block `data.beacon_block_root` passes validation.
   // TODO GLOAS: implement this. Technically if we cannot get proto block from fork choice,
   // it is possible that the block didn't pass the validation
 
+  // Use the referenced block's branch state for the PTC committee check
+  const state = await chain.regen
+    .getBlockSlotState(block, data.slot, {dontTransferCache: true}, RegenCaller.validateGossipPayloadAttestationMessage)
+    .catch(() => {
+      throw new PayloadAttestationError(GossipAction.IGNORE, {
+        code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
+        blockRoot: toRootHex(data.beaconBlockRoot),
+      });
+    });
+
+  if (!isStatePostGloas(state)) {
+    throw new Error(`Expected gloas+ state for payload attestation validation, got fork=${state.forkName}`);
+  }
+
   // [REJECT] The message's validator index is within the payload committee in
   // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
   // processing the block up to the current slot as determined by the fork choice.
-  const ptc = state.epochCtx.getPayloadTimelinessCommittee(data.slot);
-  const validatorCommitteeIndex = ptc.indexOf(validatorIndex);
+  // The validator may occupy multiple PTC positions because `compute_ptc` samples
+  // by effective balance — collect all of them so duplicate votes are counted.
+  const validatorCommitteeIndices = state.getIndicesInPayloadTimelinessCommittee(validatorIndex, data.slot);
 
-  if (validatorCommitteeIndex === -1) {
+  if (validatorCommitteeIndices.length === 0) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_ATTESTER,
       attesterIndex: validatorIndex,
@@ -100,7 +128,7 @@ async function validatePayloadAttestationMessage(
     payloadAttestationMessage.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_SIGNATURE,
     });
@@ -111,6 +139,6 @@ async function validatePayloadAttestationMessage(
 
   return {
     attDataRootHex: toRootHex(ssz.gloas.PayloadAttestationData.hashTreeRoot(data)),
-    validatorCommitteeIndex,
+    validatorCommitteeIndices,
   };
 }

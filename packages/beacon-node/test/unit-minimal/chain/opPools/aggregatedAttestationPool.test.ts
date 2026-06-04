@@ -11,7 +11,12 @@ import {
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {CachedBeaconStateAllForks, CachedBeaconStateElectra, newFilledArray} from "@lodestar/state-transition";
+import {
+  BeaconStateView,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateElectra,
+  newFilledArray,
+} from "@lodestar/state-transition";
 import {Attestation, electra, phase0, ssz} from "@lodestar/types";
 import {
   AggregatedAttestationPool,
@@ -250,8 +255,9 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
       forkchoiceStub.getDependentRoot.mockReturnValue(ZERO_HASH_HEX);
 
       const shufflingCache = new ShufflingCache();
-      shufflingCache.processState(electraState);
-      const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, shufflingCache, electraState);
+      const stateView = new BeaconStateView(electraState);
+      shufflingCache.processState(stateView);
+      const blockAttestations = pool.getAttestationsForBlock(fork, forkchoiceStub, shufflingCache, stateView);
       // make sure test data is correct
       expect(packedCommitteeBits.length).toBe(packedAggregationBitsLen.length);
       expect(blockAttestations.length).toBe(packedCommitteeBits.length);

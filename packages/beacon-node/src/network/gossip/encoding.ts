@@ -24,12 +24,28 @@ const decoder = new snappyWasm.Decoder();
 // Shared buffer to convert msgId to string
 const sharedMsgIdBuf = Buffer.alloc(20);
 
+// Cache topic -> seed to avoid per-message allocations on the hot path.
+// Topics are a fixed set per fork (changes only at fork boundaries).
+const topicSeedCache = new Map<string, bigint>();
+
 /**
  * The function used to generate a gossipsub message id
  * We use the first 8 bytes of SHA256(data) for content addressing
  */
 export function fastMsgIdFn(rpcMsg: RPC.Message): string {
   if (rpcMsg.data) {
+    if (rpcMsg.topic) {
+      // Use topic-derived seed to prevent cross-topic deduplication of identical messages.
+      // SyncCommitteeMessages are published to multiple sync_committee_{subnet} topics with
+      // identical data, so hashing only the data incorrectly deduplicates across subnets.
+      // See https://github.com/ChainSafe/lodestar/issues/8294
+      let topicSeed = topicSeedCache.get(rpcMsg.topic);
+      if (topicSeed === undefined) {
+        topicSeed = xxhash.h64Raw(Buffer.from(rpcMsg.topic), h64Seed);
+        topicSeedCache.set(rpcMsg.topic, topicSeed);
+      }
+      return xxhash.h64Raw(rpcMsg.data, topicSeed).toString(16);
+    }
     return xxhash.h64Raw(rpcMsg.data, h64Seed).toString(16);
   }
   return "0000000000000000";

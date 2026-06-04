@@ -13,7 +13,17 @@ import {
   VERSIONED_HASH_VERSION_KZG,
 } from "@lodestar/params";
 import {signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, DataColumnSidecars, SSZTypesFor, SignedBeaconBlock, deneb, fulu, ssz} from "@lodestar/types";
+import {
+  BeaconBlockBody,
+  DataColumnSidecar,
+  SSZTypesFor,
+  SignedBeaconBlock,
+  deneb,
+  fulu,
+  gloas,
+  isGloasDataColumnSidecar,
+  ssz,
+} from "@lodestar/types";
 import {kzg} from "./kzg.js";
 
 type VersionHash = Uint8Array;
@@ -71,8 +81,8 @@ export function getBlobSidecars(
  * See https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/das-core.md#recover_matrix
  */
 export async function dataColumnMatrixRecovery(
-  partialSidecars: Map<number, fulu.DataColumnSidecar>
-): Promise<fulu.DataColumnSidecars | null> {
+  partialSidecars: Map<number, DataColumnSidecar>
+): Promise<DataColumnSidecar[] | null> {
   const columnCount = partialSidecars.size;
   if (columnCount < NUMBER_OF_COLUMNS / 2) {
     // We don't have enough columns to recover
@@ -92,7 +102,7 @@ export async function dataColumnMatrixRecovery(
     // should not happen because we check the size of the cache before this
     throw new Error("No data column found in cache to recover from");
   }
-  const blobCount = firstDataColumn.kzgCommitments.length;
+  const blobCount = firstDataColumn.column.length;
 
   const fullColumns: Array<Uint8Array[]> = Array.from(
     {length: NUMBER_OF_COLUMNS},
@@ -121,7 +131,7 @@ export async function dataColumnMatrixRecovery(
     }
   }
 
-  const result: fulu.DataColumnSidecars = new Array(NUMBER_OF_COLUMNS);
+  const result: DataColumnSidecar[] = new Array(NUMBER_OF_COLUMNS);
 
   for (let columnIndex = 0; columnIndex < NUMBER_OF_COLUMNS; columnIndex++) {
     let sidecar = partialSidecars.get(columnIndex);
@@ -131,14 +141,24 @@ export async function dataColumnMatrixRecovery(
       continue;
     }
 
-    sidecar = {
-      index: columnIndex,
-      column: fullColumns[columnIndex],
-      kzgCommitments: firstDataColumn.kzgCommitments,
-      kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
-      signedBlockHeader: firstDataColumn.signedBlockHeader,
-      kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
-    };
+    if (isGloasDataColumnSidecar(firstDataColumn)) {
+      sidecar = {
+        index: columnIndex,
+        column: fullColumns[columnIndex],
+        kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+        slot: firstDataColumn.slot,
+        beaconBlockRoot: firstDataColumn.beaconBlockRoot,
+      } satisfies gloas.DataColumnSidecar;
+    } else {
+      sidecar = {
+        index: columnIndex,
+        column: fullColumns[columnIndex],
+        kzgCommitments: firstDataColumn.kzgCommitments,
+        kzgProofs: Array.from({length: blobCount}, (_, rowIndex) => blobProofs[rowIndex][columnIndex]),
+        signedBlockHeader: firstDataColumn.signedBlockHeader,
+        kzgCommitmentsInclusionProof: firstDataColumn.kzgCommitmentsInclusionProof,
+      } satisfies fulu.DataColumnSidecar;
+    }
     result[columnIndex] = sidecar;
   }
 
@@ -149,7 +169,7 @@ export async function dataColumnMatrixRecovery(
  * Reconstruct blobs from a set of data columns, at least 50%+ of all the columns
  * must be provided to allow to reconstruct the full data matrix
  */
-export async function reconstructBlobs(sidecars: DataColumnSidecars, indices?: number[]): Promise<deneb.Blobs> {
+export async function reconstructBlobs(sidecars: DataColumnSidecar[], indices?: number[]): Promise<deneb.Blobs> {
   if (sidecars.length < NUMBER_OF_COLUMNS / 2) {
     throw Error(
       `Expected at least ${NUMBER_OF_COLUMNS / 2} data columns to reconstruct blobs, received ${sidecars.length}`
@@ -188,7 +208,7 @@ export async function reconstructBlobs(sidecars: DataColumnSidecars, indices?: n
  * Recover cells for specific blob indices from a set of data columns
  */
 async function recoverBlobCells(
-  partialSidecars: DataColumnSidecars,
+  partialSidecars: DataColumnSidecar[],
   blobIndices: number[]
 ): Promise<Map<number, fulu.Cell[]> | null> {
   const columnCount = partialSidecars.length;

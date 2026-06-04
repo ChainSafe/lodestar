@@ -18,6 +18,7 @@ import {
   BeaconStateBellatrix,
   BeaconStateCapella,
   BeaconStateExecutions,
+  BeaconStateGloas,
   CachedBeaconStateAllForks,
   CachedBeaconStateExecutions,
 } from "../types.js";
@@ -46,7 +47,11 @@ export function isExecutionEnabled(state: BeaconStateExecutions, block: BeaconBl
  * Merge is complete when the state includes execution layer data:
  * state.latestExecutionPayloadHeader NOT EMPTY or state is post-capella
  */
-export function isMergeTransitionComplete(state: BeaconStateExecutions): boolean {
+export function isMergeTransitionComplete(state: BeaconStateExecutions | BeaconStateGloas): boolean {
+  if (isGloasStateType(state)) {
+    return true;
+  }
+
   if (isCapellaStateType(state)) {
     // All networks have completed the merge transition before capella
     return true;
@@ -69,6 +74,11 @@ export function isCapellaStateType(state: BeaconStateAllForks): state is BeaconS
     (state as BeaconStateCapella).latestExecutionPayloadHeader !== undefined &&
     (state as BeaconStateCapella).latestExecutionPayloadHeader.withdrawalsRoot !== undefined
   );
+}
+
+/** Type guard for gloas.BeaconState */
+export function isGloasStateType(state: BeaconStateAllForks): state is BeaconStateGloas {
+  return (state as BeaconStateGloas).latestBlockHash !== undefined;
 }
 
 /** Type guard for bellatrix.CachedBeaconState */
@@ -143,7 +153,7 @@ export function executionPayloadToPayloadHeader(fork: ForkSeq, payload: Executio
   }
 
   if (fork >= ForkSeq.deneb) {
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/eip4844/beacon-chain.md#process_execution_payload
+    // https://github.com/ethereum/consensus-specs/blob/v1.3.0-rc.2/specs/eip4844/beacon-chain.md#process_execution_payload
     (bellatrixPayloadFields as deneb.ExecutionPayloadHeader).blobGasUsed = (
       payload as deneb.ExecutionPayloadHeader | deneb.ExecutionPayload
     ).blobGasUsed;

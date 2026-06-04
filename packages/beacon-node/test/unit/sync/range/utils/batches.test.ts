@@ -15,6 +15,7 @@ import {validPeerIdStr} from "../../../../utils/peer.js";
 
 describe("sync / range / batches", () => {
   const peer = validPeerIdStr;
+  const peerSyncMeta = {peerId: peer, client: "lodestar", custodyColumns: []};
 
   describe("validateBatchesStatus", () => {
     const testCases: {
@@ -222,14 +223,22 @@ describe("sync / range / batches", () => {
   });
 
   function createBatch(status: BatchStatus, startEpoch = 0): Batch {
-    const batch = new Batch(startEpoch, config, clock, new CustodyConfig({config, nodeId: Buffer.alloc(32)}));
+    const batch = new Batch(
+      startEpoch,
+      config,
+      clock,
+      new CustodyConfig({config, nodeId: Buffer.alloc(32)}),
+      false,
+      undefined,
+      Number.MAX_SAFE_INTEGER
+    );
 
     if (status === BatchStatus.AwaitingDownload) return batch;
 
-    batch.startDownloading(peer);
+    batch.startDownloading(peerSyncMeta);
     if (status === BatchStatus.Downloading) return batch;
 
-    batch.downloadingSuccess(peer, []);
+    batch.downloadingSuccess(peer, [], null);
     if (status === BatchStatus.AwaitingProcessing) return batch;
 
     batch.startProcessing();

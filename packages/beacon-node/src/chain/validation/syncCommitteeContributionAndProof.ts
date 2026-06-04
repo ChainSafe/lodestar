@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
-import {CachedBeaconStateAltair, isSyncCommitteeAggregator} from "@lodestar/state-transition";
+import {IBeaconStateView, isStatePostAltair, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ValidatorIndex, altair} from "@lodestar/types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -53,7 +53,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   }
 
   // [REJECT] The contribution has participants -- that is, any(contribution.aggregation_bits)
-  const syncCommitteeParticipantIndices = getContributionIndices(headState as CachedBeaconStateAltair, contribution);
+  const syncCommitteeParticipantIndices = getContributionIndices(headState, contribution);
   if (syncCommitteeParticipantIndices.length === 0) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.NO_PARTICIPANT,
@@ -83,12 +83,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
-    getSyncCommitteeContributionSignatureSet(
-      chain.config,
-      headState as CachedBeaconStateAltair,
-      contribution,
-      syncCommitteeParticipantIndices
-    ),
+    getSyncCommitteeContributionSignatureSet(chain.config, headState, contribution, syncCommitteeParticipantIndices),
   ];
 
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
@@ -109,12 +104,16 @@ export async function validateSyncCommitteeGossipContributionAndProof(
  * - pubkeyCache
  */
 function getContributionIndices(
-  state: CachedBeaconStateAltair,
+  state: IBeaconStateView,
   contribution: altair.SyncCommitteeContribution
 ): ValidatorIndex[] {
+  if (!isStatePostAltair(state)) {
+    throw new Error("Expected Altair state for sync committee contribution");
+  }
+
   const startIndex = contribution.subcommitteeIndex * SYNC_COMMITTEE_SUBNET_SIZE;
 
-  const syncCommittee = state.epochCtx.getIndexedSyncCommittee(contribution.slot);
+  const syncCommittee = state.getIndexedSyncCommittee(contribution.slot);
   // The bits in contribution.aggregationBits select validatorIndexes in the subcommittee starting at startIndex
   const subcommitteeValidatorIndices = syncCommittee.validatorIndices.slice(
     startIndex,

@@ -1,12 +1,12 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@lodestar/state-transition";
+import {IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {ZERO_HASH} from "../../../constants/index.js";
 
 /**
  * Compute a Checkpoint type from `state.latestBlockHeader`
  */
-export function getCheckpointFromState(checkpointState: CachedBeaconStateAllForks): phase0.Checkpoint {
+export function getCheckpointFromState(checkpointState: IBeaconStateView): phase0.Checkpoint {
   const slot = checkpointState.slot;
 
   if (slot % SLOTS_PER_EPOCH !== 0) {

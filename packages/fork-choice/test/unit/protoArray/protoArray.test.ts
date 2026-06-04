@@ -37,8 +37,6 @@ describe("ProtoArray", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
-        builderIndex: null,
-        blockHashFromBid: null,
       },
       genesisSlot
     );
@@ -68,8 +66,6 @@ describe("ProtoArray", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
-        builderIndex: null,
-        blockHashFromBid: null,
       },
       genesisSlot + 1,
       null
@@ -100,8 +96,6 @@ describe("ProtoArray", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
-        builderIndex: null,
-        blockHashFromBid: null,
       },
       genesisSlot + 1,
       null
@@ -133,7 +127,7 @@ describe("ProtoArray", () => {
     ];
 
     for (const [ancestorRoot, descendantRoot, isDescendant] of assertions) {
-      expect(fc.isDescendant(ancestorRoot, descendantRoot)).toBeWithMessage(
+      expect(fc.isDescendant(ancestorRoot, PayloadStatus.FULL, descendantRoot, PayloadStatus.FULL)).toBeWithMessage(
         isDescendant,
         `${descendantRoot} must be ${isDescendant ? "descendant" : "not descendant"} of ${ancestorRoot}`
       );

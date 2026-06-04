@@ -257,7 +257,8 @@ function linspace(from: number, count: number, step: number): number[] {
 
 function getAggregationBits(len: number, participants: number): BitArray {
   const bits = BitArray.fromBitLen(len);
-  for (let i = 0; i < participants; i++) {
+  const participantCount = Math.min(len, participants);
+  for (let i = 0; i < participantCount; i++) {
     bits.set(i, true);
   }
   return bits;

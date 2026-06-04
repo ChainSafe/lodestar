@@ -1,20 +1,17 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateGloas,
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
+  IBeaconStateView,
   ZERO_HASH,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   getAttesterSlashableIndices,
   isExecutionBlockBodyType,
-  isExecutionEnabled,
-  isExecutionStateType,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {computeUnrealizedCheckpoints} from "@lodestar/state-transition/epoch";
 import {
   AttesterSlashing,
   BeaconBlock,
@@ -33,11 +30,12 @@ import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
+  BlockExecutionStatus,
   ExecutionStatus,
   HEX_ZERO_HASH,
   LVHExecResponse,
-  MaybeValidExecutionStatus,
   NULL_VOTE_INDEX,
+  PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
   ProtoNode,
@@ -54,7 +52,7 @@ import {
   NotReorgedReason,
   ShouldOverrideForkChoiceUpdateResult,
 } from "./interface.js";
-import {CheckpointWithPayload, IForkChoiceStore, JustifiedBalances, toCheckpointWithPayload} from "./store.js";
+import {CheckpointWithHex, IForkChoiceStore, JustifiedBalances, toCheckpointWithHex} from "./store.js";
 
 export type ForkChoiceOpts = {
   proposerBoost?: boolean;
@@ -312,6 +310,23 @@ export class ForkChoice implements IForkChoice {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
 
+  getPreviousProposerBoostRoot(): RootHex {
+    return this.protoArray.getPreviousProposerBoostRoot();
+  }
+
+  /**
+   * Decides whether to extend an available payload from the previous slot,
+   * corresponding to the beacon block `blockRoot`.
+   */
+  shouldExtendPayload(blockRoot: RootHex): boolean {
+    return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
+  }
+
+  /** Spec: should_build_on_full(store, head) */
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
+    return this.protoArray.shouldBuildOnFull(head, slot);
+  }
+
   /**
    * To predict the proposer head of the next slot. That is, to predict if proposer-boost-reorg could happen.
    * Reason why we can't be certain is because information of the head block is not fully available yet
@@ -429,7 +444,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#is_parent_strong
+    // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#is_parent_strong
     const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
@@ -557,11 +572,11 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
-  getFinalizedCheckpoint(): CheckpointWithPayload {
+  getFinalizedCheckpoint(): CheckpointWithHex {
     return this.fcStore.finalizedCheckpoint;
   }
 
-  getJustifiedCheckpoint(): CheckpointWithPayload {
+  getJustifiedCheckpoint(): CheckpointWithHex {
     return this.fcStore.justified.checkpoint;
   }
 
@@ -586,11 +601,15 @@ export class ForkChoice implements IForkChoice {
    */
   onBlock(
     block: BeaconBlock,
-    state: CachedBeaconStateAllForks,
+    state: IBeaconStateView,
     blockDelaySec: number,
     currentSlot: Slot,
-    executionStatus: MaybeValidExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    executionStatus: BlockExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    // The expected proposer index on the canonical chain we are following.
+    // Calculated by our head state. We use it as part of the proposer
+    // boost decision making. No boost will be set if this is null.
+    expectedProposerIndex: ValidatorIndex | null
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
@@ -642,10 +661,7 @@ export class ForkChoice implements IForkChoice {
     // Check block is a descendant of the finalized block at the checkpoint finalized slot.
     const blockAncestorNode = this.getAncestor(parentRootHex, finalizedSlot);
     const fcStoreFinalized = this.fcStore.finalizedCheckpoint;
-    if (
-      blockAncestorNode.blockRoot !== fcStoreFinalized.rootHex ||
-      blockAncestorNode.payloadStatus !== fcStoreFinalized.payloadStatus
-    ) {
+    if (blockAncestorNode.blockRoot !== fcStoreFinalized.rootHex) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_BLOCK,
         err: {
@@ -666,19 +682,17 @@ export class ForkChoice implements IForkChoice {
       this.opts?.proposerBoost &&
       isTimely &&
       // only boost the first block we see
-      this.proposerBoostRoot === null
+      this.proposerBoostRoot === null &&
+      expectedProposerIndex !== null &&
+      block.proposerIndex === expectedProposerIndex
     ) {
       this.proposerBoostRoot = blockRootHex;
     }
 
-    // Get justified checkpoint with payload status for Gloas
-    const justifiedPayloadStatus = getCheckpointPayloadStatus(state, state.currentJustifiedCheckpoint.epoch);
-    const justifiedCheckpoint = toCheckpointWithPayload(state.currentJustifiedCheckpoint, justifiedPayloadStatus);
+    const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
 
-    // Get finalized checkpoint with payload status for Gloas
-    const finalizedPayloadStatus = getCheckpointPayloadStatus(state, state.finalizedCheckpoint.epoch);
-    const finalizedCheckpoint = toCheckpointWithPayload(state.finalizedCheckpoint, finalizedPayloadStatus);
+    const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
 
     // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
     // the justified checkpoint changes
@@ -700,57 +714,29 @@ export class ForkChoice implements IForkChoice {
     // This is an optimization. It should reduce the amount of times we run
     // `process_justification_and_finalization` by approximately 1/3rd when the chain is
     // performing optimally.
-    let unrealizedJustifiedCheckpoint: CheckpointWithPayload;
-    let unrealizedFinalizedCheckpoint: CheckpointWithPayload;
+    let unrealizedJustifiedCheckpoint: CheckpointWithHex;
+    let unrealizedFinalizedCheckpoint: CheckpointWithHex;
     if (this.opts?.computeUnrealized) {
       if (
         parentBlock.unrealizedJustifiedEpoch === blockEpoch &&
         parentBlock.unrealizedFinalizedEpoch + 1 >= blockEpoch
       ) {
         // reuse from parent, happens at 1/3 last blocks of epoch as monitored in mainnet
-        // Get payload status for unrealized justified checkpoint
-        const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
-          state,
-          parentBlock.unrealizedJustifiedEpoch
-        );
         unrealizedJustifiedCheckpoint = {
           epoch: parentBlock.unrealizedJustifiedEpoch,
           root: fromHex(parentBlock.unrealizedJustifiedRoot),
           rootHex: parentBlock.unrealizedJustifiedRoot,
-          payloadStatus: unrealizedJustifiedPayloadStatus,
         };
-        // Get payload status for unrealized finalized checkpoint
-        const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
-          state,
-          parentBlock.unrealizedFinalizedEpoch
-        );
         unrealizedFinalizedCheckpoint = {
           epoch: parentBlock.unrealizedFinalizedEpoch,
           root: fromHex(parentBlock.unrealizedFinalizedRoot),
           rootHex: parentBlock.unrealizedFinalizedRoot,
-          payloadStatus: unrealizedFinalizedPayloadStatus,
         };
       } else {
         // compute new, happens 2/3 first blocks of epoch as monitored in mainnet
-        const unrealized = computeUnrealizedCheckpoints(state);
-        // Get payload status for unrealized justified checkpoint
-        const unrealizedJustifiedPayloadStatus = getCheckpointPayloadStatus(
-          state,
-          unrealized.justifiedCheckpoint.epoch
-        );
-        unrealizedJustifiedCheckpoint = toCheckpointWithPayload(
-          unrealized.justifiedCheckpoint,
-          unrealizedJustifiedPayloadStatus
-        );
-        // Get payload status for unrealized finalized checkpoint
-        const unrealizedFinalizedPayloadStatus = getCheckpointPayloadStatus(
-          state,
-          unrealized.finalizedCheckpoint.epoch
-        );
-        unrealizedFinalizedCheckpoint = toCheckpointWithPayload(
-          unrealized.finalizedCheckpoint,
-          unrealizedFinalizedPayloadStatus
-        );
+        const unrealized = state.computeUnrealizedCheckpoints();
+        unrealizedJustifiedCheckpoint = toCheckpointWithHex(unrealized.justifiedCheckpoint);
+        unrealizedFinalizedCheckpoint = toCheckpointWithHex(unrealized.finalizedCheckpoint);
       }
     } else {
       unrealizedJustifiedCheckpoint = justifiedCheckpoint;
@@ -771,7 +757,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
-    const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots.get(targetSlot % SLOTS_PER_HISTORICAL_ROOT);
+    const targetRoot = slot === targetSlot ? blockRoot : state.getBlockRootAtSlot(targetSlot);
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
@@ -793,38 +779,41 @@ export class ForkChoice implements IForkChoice {
       unrealizedFinalizedRoot: unrealizedFinalizedCheckpoint.rootHex,
 
       ...(isGloasBeaconBlock(block)
-        ? {
-            executionPayloadBlockHash: toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash), // post-gloas, we don't know payload hash until we import execution payload. Set to parent payload hash for now
-            executionPayloadNumber: (() => {
-              // Determine parent's execution payload number based on which variant the block extends
-              const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
+        ? (() => {
+            // post-gloas, we don't know payload hash until we import execution payload. Set to
+            // parent payload hash for now, along with the gas limit/number of that parent payload
+            // (which is what bids built on top of this block will reference until a payload arrives).
+            // we also use parent hash to pass to EL via fcu
+            // see https://github.com/ethereum/consensus-specs/pull/5197
+            const parentBlockHashFromBid = toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash);
 
-              // If parent is pre-merge, return 0
-              if (parentBlock.executionPayloadBlockHash === null) {
-                return 0;
-              }
+            // Inherit parent payload's (number, gasLimit) for the PENDING/EMPTY variants.
+            // `parentBlock` is already the variant matching `parentBlockHashFromBid` —
+            // `getParent` (called above) resolves Gloas parents via
+            // `getBlockHexAndBlockHash(parentRoot, parentBlockHash)`, and pre-Gloas parents
+            // have a single variant. Pre-merge parents have null payload hash and zero values.
+            const parentMeta: {number: number; gasLimit: number} =
+              parentBlock.executionPayloadBlockHash === null
+                ? {number: 0, gasLimit: 0}
+                : {number: parentBlock.executionPayloadNumber, gasLimit: parentBlock.executionPayloadGasLimit};
 
-              // If parent is pre-Gloas, it only has FULL variant
-              if (parentBlock.parentBlockHash === null) {
-                return parentBlock.executionPayloadNumber;
-              }
-
-              // Parent is Gloas: get the variant that matches the parentBlockHash from bid
-              const parentVariant = this.getBlockHexAndBlockHash(parentRootHex, parentBlockHashFromBid);
-              if (parentVariant && parentVariant.executionPayloadBlockHash !== null) {
-                return parentVariant.executionPayloadNumber;
-              }
-              // Fallback to parent block's number (we know it's post-merge from check above)
-              return parentBlock.executionPayloadNumber;
-            })(),
-            executionStatus: this.getPostGloasExecStatus(executionStatus),
-            dataAvailabilityStatus,
-          }
-        : isExecutionBlockBodyType(block.body) && isExecutionStateType(state) && isExecutionEnabled(state, block)
+            return {
+              executionPayloadBlockHash: parentBlockHashFromBid,
+              executionPayloadNumber: parentMeta.number,
+              executionPayloadGasLimit: parentMeta.gasLimit,
+              executionStatus: this.getPostMergeExecStatus(executionStatus),
+              dataAvailabilityStatus,
+            };
+          })()
+        : isExecutionBlockBodyType(block.body) &&
+            isStatePostBellatrix(state) &&
+            state.isExecutionStateType &&
+            state.isExecutionEnabled(block)
           ? {
               executionPayloadBlockHash: toRootHex(block.body.executionPayload.blockHash),
               executionPayloadNumber: block.body.executionPayload.blockNumber,
-              executionStatus: this.getPreGloasExecStatus(executionStatus),
+              executionPayloadGasLimit: block.body.executionPayload.gasLimit,
+              executionStatus: this.getPostMergeExecStatus(executionStatus),
               dataAvailabilityStatus,
             }
           : {
@@ -834,10 +823,6 @@ export class ForkChoice implements IForkChoice {
             }),
 
       payloadStatus: isGloasBeaconBlock(block) ? PayloadStatus.PENDING : PayloadStatus.FULL,
-      builderIndex: isGloasBeaconBlock(block) ? block.body.signedExecutionPayloadBid.message.builderIndex : null,
-      blockHashFromBid: isGloasBeaconBlock(block)
-        ? toRootHex(block.body.signedExecutionPayloadBid.message.blockHash)
-        : null,
       parentBlockHash: parentHashHex,
     };
 
@@ -964,8 +949,14 @@ export class ForkChoice implements IForkChoice {
    * Updates the PTC votes for multiple validators attesting to a block
    * Spec: gloas/fork-choice.md#new-on_payload_attestation_message
    */
-  notifyPtcMessages(blockRoot: RootHex, ptcIndices: number[], payloadPresent: boolean): void {
-    this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent);
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    slot: Slot,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void {
+    this.protoArray.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
   }
 
   /**
@@ -977,15 +968,19 @@ export class ForkChoice implements IForkChoice {
     blockRoot: RootHex,
     executionPayloadBlockHash: RootHex,
     executionPayloadNumber: number,
-    executionPayloadStateRoot: RootHex
+    executionPayloadGasLimit: number,
+    executionStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): void {
     this.protoArray.onExecutionPayload(
       blockRoot,
       this.fcStore.currentSlot,
       executionPayloadBlockHash,
       executionPayloadNumber,
-      executionPayloadStateRoot,
-      this.proposerBoostRoot
+      executionPayloadGasLimit,
+      this.proposerBoostRoot,
+      executionStatus,
+      dataAvailabilityStatus
     );
   }
 
@@ -1043,17 +1038,54 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Same to hasBlock but without checking if the block is a descendant of the finalized root.
+   * Same as hasBlock but without checking if the block is a descendant of the finalized root.
    */
   hasBlockUnsafe(blockRoot: Root): boolean {
     return this.hasBlockHexUnsafe(toRootHex(blockRoot));
   }
 
   /**
-   * Same to hasBlockHex but without checking if the block is a descendant of the finalized root.
+   * Same as hasBlockHex but without checking if the block is a descendant of the finalized root.
    */
   hasBlockHexUnsafe(blockRoot: RootHex): boolean {
     return this.protoArray.hasBlock(blockRoot);
+  }
+
+  /**
+   * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
+   * without checking if the block is a descendant of the finalized root.
+   */
+  hasPayloadUnsafe(blockRoot: Root): boolean {
+    return this.hasPayloadHexUnsafe(toRootHex(blockRoot));
+  }
+
+  /**
+   * Same as hasPayloadUnsafe but accepts a hex-encoded block root.
+   */
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean {
+    return this.protoArray.hasPayload(blockRoot);
+  }
+
+  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    const votes = this.protoArray.getPTCVotes(blockRootHex);
+    if (votes === null) return null;
+    return votes.toBoolArray().map((v) => v ?? null);
+  }
+
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null {
+    return this.protoArray.getPTCVoteCounts(blockRootHex);
+  }
+
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedJustified.checkpoint;
+  }
+
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedFinalizedCheckpoint;
   }
 
   /**
@@ -1099,8 +1131,8 @@ export class ForkChoice implements IForkChoice {
   }
 
   getJustifiedBlock(): ProtoBlock {
-    const {rootHex, payloadStatus} = this.fcStore.justified.checkpoint;
-    const block = this.getBlockHex(rootHex, payloadStatus);
+    const {rootHex} = this.fcStore.justified.checkpoint;
+    const block = this.getBlockHexDefaultStatus(rootHex);
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
@@ -1111,8 +1143,8 @@ export class ForkChoice implements IForkChoice {
   }
 
   getFinalizedBlock(): ProtoBlock {
-    const {rootHex, payloadStatus} = this.fcStore.finalizedCheckpoint;
-    const block = this.getBlockHex(rootHex, payloadStatus);
+    const {rootHex} = this.fcStore.finalizedCheckpoint;
+    const block = this.getBlockHexDefaultStatus(rootHex);
     if (!block) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
@@ -1133,8 +1165,13 @@ export class ForkChoice implements IForkChoice {
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean {
-    return this.protoArray.isDescendant(ancestorRoot, descendantRoot);
+  isDescendant(
+    ancestorRoot: RootHex,
+    ancestorPayloadStatus: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantPayloadStatus: PayloadStatus
+  ): boolean {
+    return this.protoArray.isDescendant(ancestorRoot, ancestorPayloadStatus, descendantRoot, descendantPayloadStatus);
   }
 
   /**
@@ -1177,38 +1214,70 @@ export class ForkChoice implements IForkChoice {
    * Iterates backwards through block summaries, starting from a block root.
    * Return only the non-finalized blocks.
    */
-  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<ProtoBlock> {
-    return this.protoArray.iterateAncestorNodes(blockRoot);
+  iterateAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock> {
+    return this.protoArray.iterateAncestorNodes(blockRoot, payloadStatus);
   }
 
   /**
-   * Returns all blocks backwards starting from a block root.
-   * Return only the non-finalized blocks.
+   * Raw ancestor walk from `blockRoot` back toward the previous finalized block. Includes both
+   * `blockRoot` and the previous-finalized boundary as last element. Mirrors the semantics of
+   * `getAllAncestorAndNonAncestorBlocks.ancestors`
    */
-  getAllAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    const blocks = this.protoArray.getAllAncestorNodes(blockRoot);
-    // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
-    return blocks.slice(0, blocks.length - 1);
+  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
+    return this.protoArray.getAllAncestorNodes(blockRoot, payloadStatus);
   }
 
   /**
    * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  getAllNonAncestorBlocks(blockRoot: RootHex): ProtoBlock[] {
-    return this.protoArray.getAllNonAncestorNodes(blockRoot);
+  getAllNonAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
+    return this.protoArray.getAllNonAncestorNodes(blockRoot, payloadStatus);
   }
 
   /**
    * Returns both ancestor and non-ancestor blocks in a single traversal.
+   *
+   * `ancestors` is the raw walk and includes the previous finalized block as its last element —
+   * callers that don't want the boundary should slice it off themselves.
+   * Post-gloas for each block root, it returns exactly one variant of it.
    */
-  getAllAncestorAndNonAncestorBlocks(blockRoot: RootHex): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]} {
-    const {ancestors, nonAncestors} = this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot);
+  getAllAncestorAndNonAncestorBlocks(
+    blockRoot: RootHex,
+    payloadStatus: PayloadStatus
+  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]} {
+    return this.protoArray.getAllAncestorAndNonAncestorNodes(blockRoot, payloadStatus);
+  }
 
-    return {
-      // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
-      ancestors: ancestors.slice(0, ancestors.length - 1),
-      nonAncestors,
-    };
+  /**
+   * Same to getAllAncestorAndNonAncestorBlocks with default variant of ${blockRoot} to start with
+   */
+  getAllAncestorAndNonAncestorBlocksDefaultStatus(blockRoot: RootHex): {
+    ancestors: ProtoBlock[];
+    nonAncestors: ProtoBlock[];
+  } {
+    const defaultStatus = this.protoArray.getDefaultVariant(blockRoot);
+    if (defaultStatus === undefined) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: blockRoot,
+      });
+    }
+    return this.getAllAncestorAndNonAncestorBlocks(blockRoot, defaultStatus);
+  }
+
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null {
+    const blockRootHex = toRootHex(blockRoot);
+    if (blockRootHex === this.head.blockRoot) {
+      return this.head;
+    }
+
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot, this.head.payloadStatus)) {
+      if (block.blockRoot === blockRootHex) {
+        return block;
+      }
+    }
+
+    return null;
   }
 
   getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null {
@@ -1220,7 +1289,7 @@ export class ForkChoice implements IForkChoice {
       return this.head;
     }
 
-    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot, this.head.payloadStatus)) {
       if (block.slot === slot) {
         return block;
       }
@@ -1233,7 +1302,7 @@ export class ForkChoice implements IForkChoice {
       return this.head;
     }
 
-    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot)) {
+    for (const block of this.protoArray.iterateAncestorNodes(this.head.blockRoot, this.head.payloadStatus)) {
       if (slot >= block.slot) {
         return block;
       }
@@ -1246,23 +1315,15 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes;
   }
 
-  // TODO GLOAS: this function is ambiguous, consumer should also provide payload, or it should accept a ProtoBlock instead
-  // also consumer may want PENDING or EMPTY only
-  *forwardIterateDescendants(blockRoot: RootHex): IterableIterator<ProtoBlock> {
+  *forwardIterateDescendants(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock> {
     const rootsInChain = new Set([blockRoot]);
-
-    const blockVariants = this.protoArray.indices.get(blockRoot);
-    if (blockVariants === undefined) {
+    const blockIndex = this.protoArray.getNodeIndexByRootAndStatus(blockRoot, payloadStatus);
+    if (blockIndex === undefined) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
         root: blockRoot,
       });
     }
-
-    // Find the minimum index among all variants to start iteration
-    const blockIndex = Array.isArray(blockVariants)
-      ? Math.min(...blockVariants.filter((idx) => idx !== undefined))
-      : blockVariants;
 
     for (let i = blockIndex + 1; i < this.protoArray.nodes.length; i++) {
       const node = this.protoArray.nodes[i];
@@ -1271,6 +1332,17 @@ export class ForkChoice implements IForkChoice {
         yield node;
       }
     }
+  }
+
+  forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock> {
+    const defaultStatus = this.protoArray.getDefaultVariant(blockRoot);
+    if (defaultStatus === undefined) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK,
+        root: blockRoot,
+      });
+    }
+    return this.forwardIterateDescendants(blockRoot, defaultStatus);
   }
 
   /** Very expensive function, iterates the entire ProtoArray. TODO: Is this function even necessary? */
@@ -1410,7 +1482,7 @@ export class ForkChoice implements IForkChoice {
     return secFromSlot * 1000 <= proposerReorgCutoff;
   }
 
-  private getPreMergeExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PreMerge {
+  private getPreMergeExecStatus(executionStatus: BlockExecutionStatus): ExecutionStatus.PreMerge {
     if (executionStatus !== ExecutionStatus.PreMerge)
       throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
@@ -1424,20 +1496,12 @@ export class ForkChoice implements IForkChoice {
     return dataAvailabilityStatus;
   }
 
-  private getPreGloasExecStatus(
-    executionStatus: MaybeValidExecutionStatus
+  private getPostMergeExecStatus(
+    executionStatus: BlockExecutionStatus
   ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
-    if (executionStatus === ExecutionStatus.PreMerge || executionStatus === ExecutionStatus.PayloadSeparated)
+    if (executionStatus === ExecutionStatus.PreMerge)
       throw Error(
         `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid}, got ${executionStatus}`
-      );
-    return executionStatus;
-  }
-
-  private getPostGloasExecStatus(executionStatus: MaybeValidExecutionStatus): ExecutionStatus.PayloadSeparated {
-    if (executionStatus !== ExecutionStatus.PayloadSeparated)
-      throw Error(
-        `Invalid post-gloas execution status: expected: ${ExecutionStatus.PayloadSeparated}, got ${executionStatus}`
       );
     return executionStatus;
   }
@@ -1459,12 +1523,12 @@ export class ForkChoice implements IForkChoice {
    *
    * **`on_tick`**
    * May need the justified balances of:
-   * - unrealizedJustified: Already available in `CheckpointWithPayloadAndBalance`
+   * - unrealizedJustified: Already available in `CheckpointWithBalance`
    * Since this balances are already available the getter is just `() => balances`, without cache interaction
    */
   private updateCheckpoints(
-    justifiedCheckpoint: CheckpointWithPayload,
-    finalizedCheckpoint: CheckpointWithPayload,
+    justifiedCheckpoint: CheckpointWithHex,
+    finalizedCheckpoint: CheckpointWithHex,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     // Update justified checkpoint.
@@ -1484,8 +1548,8 @@ export class ForkChoice implements IForkChoice {
    * Update unrealized checkpoints in store if necessary
    */
   private updateUnrealizedCheckpoints(
-    unrealizedJustifiedCheckpoint: CheckpointWithPayload,
-    unrealizedFinalizedCheckpoint: CheckpointWithPayload,
+    unrealizedJustifiedCheckpoint: CheckpointWithHex,
+    unrealizedFinalizedCheckpoint: CheckpointWithHex,
     getJustifiedBalances: () => JustifiedBalances
   ): void {
     if (unrealizedJustifiedCheckpoint.epoch > this.fcStore.unrealizedJustified.checkpoint.epoch) {
@@ -1647,15 +1711,42 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    // For Gloas blocks, attestation index must be 0 or 1
-    if (isGloasBlock(block) && attestationData.index !== 0 && attestationData.index !== 1) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.INVALID_DATA_INDEX,
-          index: attestationData.index,
-        },
-      });
+    if (isGloasBlock(block)) {
+      // For Gloas blocks, attestation index must be 0 or 1
+      if (attestationData.index !== 0 && attestationData.index !== 1) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.INVALID_DATA_INDEX,
+            index: attestationData.index,
+          },
+        });
+      }
+
+      // Same-slot attestations can only vote for the PENDING variant
+      if (block.slot === slot && attestationData.index !== 0) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.INVALID_DATA_INDEX,
+            index: attestationData.index,
+          },
+        });
+      }
+
+      // If attesting for a full node, the payload must be known
+      if (attestationData.index === 1) {
+        const fullNodeIndex = this.protoArray.getNodeIndexByRootAndStatus(beaconBlockRootHex, PayloadStatus.FULL);
+        if (fullNodeIndex === undefined) {
+          throw new ForkChoiceError({
+            code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+            err: {
+              code: InvalidAttestationCode.UNKNOWN_PAYLOAD_STATUS,
+              beaconBlockRoot: beaconBlockRootHex,
+            },
+          });
+        }
+      }
     }
 
     this.validatedAttestationDatas.add(attDataRoot);
@@ -1824,7 +1915,7 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-// Approximate https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#calculate_committee_fraction
+// Approximate https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#calculate_committee_fraction
 // Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
 export function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,
@@ -1832,32 +1923,4 @@ export function getCommitteeFraction(
 ): number {
   const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
   return Math.floor((committeeWeight * config.committeePercent) / 100);
-}
-
-/**
- * Get the payload status for a checkpoint.
- *
- * Pre-Gloas: always FULL (payload embedded in block)
- * Gloas: determined by state.execution_payload_availability
- *
- * @param state - The state to check execution_payload_availability
- * @param checkpointEpoch - The epoch of the checkpoint
- */
-export function getCheckpointPayloadStatus(state: CachedBeaconStateAllForks, checkpointEpoch: number): PayloadStatus {
-  // Compute checkpoint slot first to determine the correct fork
-  const checkpointSlot = computeStartSlotAtEpoch(checkpointEpoch);
-  const fork = state.config.getForkSeq(checkpointSlot);
-
-  // Pre-Gloas: always FULL
-  if (fork < ForkSeq.gloas) {
-    return PayloadStatus.FULL;
-  }
-
-  // For Gloas, check state.execution_payload_availability
-  // - For non-skipped slots at checkpoint: returns false (EMPTY) since payload hasn't arrived yet
-  // - For skipped slots at checkpoint: returns the actual availability status from state
-  const gloasState = state as CachedBeaconStateGloas;
-  const payloadAvailable = gloasState.executionPayloadAvailability.get(checkpointSlot % SLOTS_PER_HISTORICAL_ROOT);
-
-  return payloadAvailable ? PayloadStatus.FULL : PayloadStatus.EMPTY;
 }

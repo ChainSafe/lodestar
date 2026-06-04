@@ -15,7 +15,8 @@ export const getNodePorts = (
   execution: {p2pPort: number; enginePort: number; httpPort: number};
 } => ({
   beacon: {
-    p2pPort: BN_P2P_BASE_PORT + 1 + nodeIndex,
+    // Stride by 2 to leave room for the QUIC port (p2pPort + 1)
+    p2pPort: BN_P2P_BASE_PORT + 1 + nodeIndex * 2,
     httpPort: BN_REST_BASE_PORT + 1 + nodeIndex,
   },
   validator: {

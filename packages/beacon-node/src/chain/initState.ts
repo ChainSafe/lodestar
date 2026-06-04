@@ -1,6 +1,12 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ZERO_HASH} from "@lodestar/params";
-import {BeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {ForkPostGloas, ForkSeq, ZERO_HASH} from "@lodestar/params";
+import {
+  BeaconStateAllForks,
+  BeaconStateGloas,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Logger, byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/index.js";
@@ -47,6 +53,13 @@ export function createGenesisBlock(config: ChainForkConfig, genesisState: Beacon
   const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = genesisState.hashTreeRoot();
   genesisBlock.message.stateRoot = stateRoot;
+
+  if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.gloas) {
+    const gloasBlock = genesisBlock as SignedBeaconBlock<ForkPostGloas>;
+    const gloasState = genesisState as BeaconStateGloas;
+    gloasBlock.message.body.signedExecutionPayloadBid.message = gloasState.latestExecutionPayloadBid.toValue();
+  }
+
   return genesisBlock;
 }
 
@@ -119,7 +132,7 @@ export async function checkAndPersistAnchorState(
   }
 }
 
-export function initBeaconMetrics(metrics: Metrics, state: BeaconStateAllForks): void {
+export function initBeaconMetrics(metrics: Metrics, state: IBeaconStateView): void {
   metrics.headSlot.set(state.slot);
   metrics.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   metrics.currentJustifiedEpoch.set(state.currentJustifiedCheckpoint.epoch);

@@ -3,6 +3,7 @@ import {routes} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BeaconStateView} from "@lodestar/state-transition";
 import {IChainOptions} from "../../../src/chain/options.js";
 import {PrepareNextSlotScheduler} from "../../../src/chain/prepareNextSlot.js";
 import {PayloadIdCache} from "../../../src/execution/engine/payloadIdCache.js";
@@ -105,7 +106,7 @@ describe("PrepareNextSlot scheduler", () => {
   it("bellatrix - should skip, no block proposer", async () => {
     getForkStub.mockReturnValue(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.mockReturnValue({slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
-    const state = generateCachedBellatrixState();
+    const state = new BeaconStateView(generateCachedBellatrixState());
     regenStub.getBlockSlotState.mockResolvedValue(state);
     await Promise.all([
       scheduler.prepareForNextSlot(SLOTS_PER_EPOCH - 1),
@@ -126,7 +127,7 @@ describe("PrepareNextSlot scheduler", () => {
     updateBuilderStatus.mockReturnValue(void 0);
     const state = generateCachedBellatrixState();
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
-    regenStub.getBlockSlotState.mockResolvedValue(state);
+    regenStub.getBlockSlotState.mockResolvedValue(new BeaconStateView(state));
     beaconProposerCacheStub.get.mockReturnValue("0x fee recipient address");
     (executionEngineStub as unknown as {payloadIdCache: PayloadIdCache}).payloadIdCache = new PayloadIdCache();
 

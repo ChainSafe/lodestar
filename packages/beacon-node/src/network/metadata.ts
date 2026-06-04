@@ -11,6 +11,7 @@ import {NetworkConfig} from "./networkConfig.js";
 
 export enum ENRKey {
   tcp = "tcp",
+  quic = "quic",
   eth2 = "eth2",
   attnets = "attnets",
   syncnets = "syncnets",

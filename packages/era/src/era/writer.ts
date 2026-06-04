@@ -3,14 +3,14 @@ import {format, parse} from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconState, SignedBeaconBlock, Slot} from "@lodestar/types";
-import {E2STORE_HEADER_SIZE, EntryType, SlotIndex, serializeSlotIndex, writeEntry} from "../e2s.ts";
-import {snappyCompress} from "../util.ts";
+import {E2STORE_HEADER_SIZE, EntryType, SlotIndex, serializeSlotIndex, writeEntry} from "../e2s.js";
+import {snappyCompress} from "../util.js";
 import {
   computeStartBlockSlotFromEraNumber,
   getShortHistoricalRoot,
   isSlotInRange,
   isValidEraStateSlot,
-} from "./util.ts";
+} from "./util.js";
 
 enum WriterStateType {
   InitGroup,

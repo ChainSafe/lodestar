@@ -1,4 +1,5 @@
 import {ApiClient, routes} from "@lodestar/api";
+import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Root, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
@@ -13,6 +14,11 @@ export type HeadEventData = {
   currentDutyDependentRoot: RootHex;
 };
 
+export type ExecutionPayloadAvailableEventData = {
+  slot: Slot;
+  blockRoot: RootHex;
+};
+
 type RunEveryFn = (event: HeadEventData) => Promise<void>;
 
 /**
@@ -24,26 +30,35 @@ export class ChainHeaderTracker {
   private readonly fns: RunEveryFn[] = [];
 
   constructor(
+    private readonly config: BeaconConfig,
     private readonly logger: Logger,
     private readonly api: ApiClient,
     private readonly emitter: ValidatorEventEmitter
   ) {}
 
   start(signal: AbortSignal): void {
-    this.logger.verbose("Subscribing to head event");
+    this.logger.verbose("Subscribing to validator events");
+
+    const topics = [EventType.head];
+    // We wait until the gloas fork is configured to avoid breaking
+    // connections with pre-gloas beacon nodes
+    if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
+      topics.push(EventType.executionPayloadAvailable);
+    }
+
     this.api.events
       .eventstream({
-        topics: [EventType.head],
+        topics,
         signal,
-        onEvent: this.onHeadUpdate,
+        onEvent: this.onEvent,
         onError: (e) => {
-          this.logger.error("Failed to receive head event", {}, e);
+          this.logger.error("Failed to receive validator event", {}, e);
         },
         onClose: () => {
-          this.logger.verbose("Closed stream for head event", {});
+          this.logger.verbose("Closed stream for validator events", {});
         },
       })
-      .catch((e) => this.logger.error("Failed to subscribe to head event", {}, e));
+      .catch((e) => this.logger.error("Failed to subscribe to validator events", {}, e));
   }
 
   getCurrentChainHead(slot: Slot): Root | null {
@@ -58,7 +73,7 @@ export class ChainHeaderTracker {
     this.fns.push(fn);
   }
 
-  private onHeadUpdate = (event: routes.events.BeaconEvent): void => {
+  private onEvent = (event: routes.events.BeaconEvent): void => {
     if (event.type === EventType.head) {
       const {message} = event;
       const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
@@ -83,6 +98,15 @@ export class ChainHeaderTracker {
         head: block,
         previousDuty: previousDutyDependentRoot,
         currentDuty: currentDutyDependentRoot,
+      });
+    }
+
+    if (event.type === EventType.executionPayloadAvailable) {
+      this.emitter.emit(ValidatorEvent.executionPayloadAvailable, event.message);
+
+      this.logger.verbose("Found execution payload available", {
+        slot: event.message.slot,
+        blockRoot: event.message.blockRoot,
       });
     }
   };

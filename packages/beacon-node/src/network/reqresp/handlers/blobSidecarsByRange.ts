@@ -2,7 +2,7 @@ import {ChainConfig} from "@lodestar/config";
 import {BLOB_SIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
-import {Slot, deneb} from "@lodestar/types";
+import {Epoch, Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -14,36 +14,43 @@ export async function* onBlobSidecarsByRange(
   db: IBeaconDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
-  const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, request);
+  const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);
   const endSlot = startSlot + count;
 
   const finalized = db.blobSidecarsArchive;
   const unfinalized = db.blobSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // Blobs are migrated to blobSidecarsArchive at finalization (including the finalized block
+  // itself), so the archive loop serves up to AND INCLUDING finalizedSlot and the headChain
+  // loop starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
+  const archiveMaxSlot = finalizedSlot;
 
   // Finalized range of blobs
-  if (startSlot <= finalizedSlot) {
+  if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
       gte: startSlot,
-      lt: endSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
       yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
     }
   }
 
   // Non-finalized range of blobs
-  if (endSlot > finalizedSlot) {
-    const headRoot = chain.forkChoice.getHeadRoot();
+  if (endSlot > archiveMaxSlot) {
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot);
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
 
-      // Must include only blobs in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      // Must include only blobs in the range requested, and skip anything the archive loop
+      // above already served via the block.slot > archiveMaxSlot filter.
+      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
@@ -93,6 +100,7 @@ export function* iterateBlobBytesFromWrapper(
 
 export function validateBlobSidecarsByRangeRequest(
   config: ChainConfig,
+  currentEpoch: Epoch,
   request: deneb.BlobSidecarsByRangeRequest
 ): deneb.BlobSidecarsByRangeRequest {
   const {startSlot} = request;
@@ -101,9 +109,20 @@ export function validateBlobSidecarsByRangeRequest(
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
+  }
+
+  // Spec: [max(current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH), current_epoch]
+  const minimumRequestEpoch = Math.max(
+    currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS,
+    config.DENEB_FORK_EPOCH
+  );
+  if (computeEpochAtSlot(startSlot) < minimumRequestEpoch) {
+    throw new ResponseError(
+      RespStatus.RESOURCE_UNAVAILABLE,
+      "startSlot is before MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS"
+    );
   }
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {

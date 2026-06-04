@@ -6,6 +6,17 @@ import {streamPair} from "@libp2p/utils";
 import {bench, describe} from "@chainsafe/benchmark";
 import {noise} from "@chainsafe/libp2p-noise";
 
+// Suppress StreamStateError from noise drain events firing after stream close.
+// This is a known race in @chainsafe/libp2p-noise where the encrypted stream's
+// drain handler fires after the underlying mock stream has started closing.
+// Without this handler the uncaught exception crashes the benchmark process.
+// Installed at module scope because the errors can fire during file loading
+// before any beforeAll hook has a chance to run.
+process.on("uncaughtException", (err: unknown): void => {
+  if (err instanceof Error && err.name === "StreamStateError") return;
+  throw err;
+});
+
 describe("network / noise / sendData", () => {
   const numberOfMessages = 1000;
 

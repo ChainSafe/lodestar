@@ -34,6 +34,15 @@
     BlobIndex = uint64
     </spec>
 
+- name: BlockAccessList#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const BlockAccessList =
+  spec: |
+    <spec custom_type="BlockAccessList" fork="gloas" hash="82183152">
+    BlockAccessList = ByteList[MAX_BYTES_PER_TRANSACTION]
+    </spec>
+
 - name: BuilderIndex#gloas
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
@@ -163,6 +172,13 @@
     ExecutionBranch = Vector[Bytes32, floorlog2(EXECUTION_PAYLOAD_GINDEX)]
     </spec>
 
+- name: ExecutionBranch#gloas
+  sources: []
+  spec: |
+    <spec custom_type="ExecutionBranch" fork="gloas" hash="55dfec8c">
+    ExecutionBranch = Vector[Bytes32, floorlog2(EXECUTION_BLOCK_HASH_GINDEX_GLOAS)]
+    </spec>
+
 - name: FinalityBranch#altair
   sources:
     - file: packages/types/src/altair/sszTypes.ts
@@ -288,6 +304,13 @@
   spec: |
     <spec custom_type="PayloadStatus" fork="gloas" hash="ccbcacae">
     PayloadStatus = uint8
+    </spec>
+
+- name: PayloadValidationStatus#bellatrix
+  sources: []
+  spec: |
+    <spec custom_type="PayloadValidationStatus" fork="bellatrix" hash="f1a196c7">
+    PayloadValidationStatus = uint8
     </spec>
 
 - name: Root#phase0
