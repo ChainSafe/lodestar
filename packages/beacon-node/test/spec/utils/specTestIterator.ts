@@ -79,11 +79,6 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after Gloas light client is implemented
     /^gloas\/light_client\/.*/,
     /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
-    // TODO-FULU: re-enable after the Fulu deposit-mechanism removal (consensus-specs #4704) is
-    // implemented. v1.7.0-alpha.9 regenerated these transition vectors so eth1-bridge deposits are
-    // no longer processed across the Electra to Fulu boundary; Lodestar still applies the Electra
-    // deposit flow, diverging the post-fork state root.
-    /^fulu\/transition\/.*/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
