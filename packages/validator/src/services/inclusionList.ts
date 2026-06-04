@@ -50,8 +50,6 @@ export class InclusionListService {
     if (duties.length === 0) {
       return;
     }
-    const fork = this.config.getForkName(slot);
-
     // Spec heze/validator.md: broadcast the signed inclusion list by `get_inclusion_list_due_ms()`
     // (~67% of slot) "built against the block for the current slot if it has been processed and
     // confirmed as head, or against the local head returned by `get_head()` otherwise". Submit on
@@ -60,7 +58,7 @@ export class InclusionListService {
     //       mempool view we'll query is post-slot. Note: if the import already completed before we
     //       were scheduled, the helper short-circuits via its tracked latest-imported slot.
     //   (b) the IL submission deadline — fallback for empty / missed slots, or when import is late.
-    const dueMs = Math.max(0, this.config.getInclusionListSubmissionDueMs(fork) - this.clock.msFromSlot(slot));
+    const dueMs = Math.max(0, this.config.getInclusionListDueMs() - this.clock.msFromSlot(slot));
     // Need to broadcast before deadline to ensure ILs are considered by attesters
     const beforeDueMs = 1000;
     await Promise.race([sleep(dueMs - beforeDueMs, signal), this.emitter.waitForExecutionPayloadImportedSlot(slot)]);

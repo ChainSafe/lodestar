@@ -239,14 +239,8 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
     getPayloadDueMs(): number {
       return this.getSlotComponentDurationMs(config.PAYLOAD_DUE_BPS);
     },
-    getInclusionListSubmissionDueMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.INCLUSION_LIST_SUBMISSION_DUE_BPS);
-    },
     getInclusionListDueMs(): number {
-      return this.getSlotComponentDurationMs(config.INCLUSION_LIST_SUBMISSION_DUE_BPS);
-    },
-    getProposerInclusionListCutoffMs(_fork: ForkName): number {
-      return this.getSlotComponentDurationMs(config.PROPOSER_INCLUSION_LIST_CUTOFF_BPS);
+      return this.getSlotComponentDurationMs(config.INCLUSION_LIST_DUE_BPS);
     },
 
     getSlotComponentDurationMs(basisPoints: number): number {

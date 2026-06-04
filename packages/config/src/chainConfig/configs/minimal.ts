@@ -74,9 +74,7 @@ export const chainConfig: ChainConfig = {
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
   // 67% of `SLOT_DURATION_MS`
-  INCLUSION_LIST_SUBMISSION_DUE_BPS: 6667,
-  // 92% of `SLOT_DURATION_MS`
-  PROPOSER_INCLUSION_LIST_CUTOFF_BPS: 9167,
+  INCLUSION_LIST_DUE_BPS: 6667,
   // 1667 basis points, ~17% of SLOT_DURATION_MS
   PROPOSER_REORG_CUTOFF_BPS: 1667,
   // 3333 basis points, ~33% of SLOT_DURATION_MS

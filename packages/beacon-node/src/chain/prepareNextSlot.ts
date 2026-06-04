@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostHeze} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
 import {
   IBeaconStateView,
   IBeaconStateViewBellatrix,
@@ -199,14 +199,10 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the
           // try/catch wrapper here.
-          // HEZE: We need to sleep until `PROPOSER_INCLUSION_LIST_CUTOFF_BPS` (~92% of slot) to make sure
-          // we have gathered all ILs
-          if (isForkPostHeze(fork)) {
-            await sleep(
-              this.chain.config.getProposerInclusionListCutoffMs(fork) - this.chain.clock.msFromSlot(clockSlot),
-              this.signal
-            );
-          }
+          // TODO HEZE: consensus-specs #5138 removed `PROPOSER_INCLUSION_LIST_CUTOFF_BPS`. Proposer
+          // IL-gather wait is now client-implementation. Dropped the pre-FCU sleep — proposer's IL
+          // view at block-production time is used. May need to re-add a wait if ILs arriving late
+          // are missed in practice.
           await prepareExecutionPayload(
             this.chain,
             this.logger,

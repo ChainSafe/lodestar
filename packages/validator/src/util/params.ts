@@ -320,8 +320,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     BLOB_SCHEDULE: fuluForkRelevant,
 
     // HEZE
-    INCLUSION_LIST_SUBMISSION_DUE_BPS: hezeForkRelevant,
-    PROPOSER_INCLUSION_LIST_CUTOFF_BPS: hezeForkRelevant,
+    INCLUSION_LIST_DUE_BPS: hezeForkRelevant,
     MAX_REQUEST_INCLUSION_LIST: hezeForkRelevant,
     MAX_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
     INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,

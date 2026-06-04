@@ -78,8 +78,7 @@ export type ChainConfig = {
   PAYLOAD_ATTESTATION_DUE_BPS: number;
   PAYLOAD_DUE_BPS: number;
 
-  INCLUSION_LIST_SUBMISSION_DUE_BPS: number;
-  PROPOSER_INCLUSION_LIST_CUTOFF_BPS: number;
+  INCLUSION_LIST_DUE_BPS: number;
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
@@ -210,8 +209,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   PAYLOAD_ATTESTATION_DUE_BPS: "number",
   PAYLOAD_DUE_BPS: "number",
 
-  INCLUSION_LIST_SUBMISSION_DUE_BPS: "number",
-  PROPOSER_INCLUSION_LIST_CUTOFF_BPS: "number",
+  INCLUSION_LIST_DUE_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",
