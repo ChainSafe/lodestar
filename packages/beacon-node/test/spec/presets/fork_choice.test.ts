@@ -24,6 +24,8 @@ import {
   IBeaconStateViewGloas,
   createCachedBeaconState,
   createPubkeyCache,
+  createSingleSignatureSetFromComponents,
+  getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
@@ -41,7 +43,8 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
-import {bnToNum, fromHex, toHex} from "@lodestar/utils";
+import {PayloadAttestationMessage} from "@lodestar/types/gloas";
+import {bnToNum, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {
   BlockInputBlobs,
   BlockInputColumns,
@@ -79,6 +82,7 @@ const COLUMN_FILE_NAME = "^(column)_([0-9a-zA-Z]+)$";
 const EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME = "^(execution_payload_envelope)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
+const PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME = "^(payload_attestation_message)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
 
@@ -199,6 +203,80 @@ const forkChoiceTest =
               const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
               if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
               chain.forkChoice.onAttesterSlashing(attesterSlashing);
+            }
+
+            // payload attestation message step
+            else if (isPayloadAttestationMessage(step)) {
+              const isValid = Boolean(step.valid ?? true);
+              logger.debug(`Step ${i}/${stepsLen} payload attestation message`, {
+                root: step.payload_attestation_message,
+                valid: isValid,
+              });
+              const payloadAttestationMessage = testcase.payloadAttestationMessages.get(
+                step.payload_attestation_message
+              );
+              if (!payloadAttestationMessage)
+                throw Error(`No payload attestation message ${step.payload_attestation_message}`);
+              try {
+                const blockRoot = toRootHex(payloadAttestationMessage.data.beaconBlockRoot);
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(blockRoot);
+                if (!protoBlock) {
+                  throw Error(`Block not found for root ${blockRoot}`);
+                }
+
+                if (protoBlock.slot === payloadAttestationMessage.data.slot) {
+                  const blockState = await chain.regen.getBlockSlotState(
+                    protoBlock,
+                    payloadAttestationMessage.data.slot,
+                    {dontTransferCache: true},
+                    RegenCaller.processBlock
+                  );
+
+                  const ptcIndices = (blockState as IBeaconStateViewGloas).getIndicesInPayloadTimelinessCommittee(
+                    payloadAttestationMessage.validatorIndex,
+                    payloadAttestationMessage.data.slot
+                  );
+
+                  // Slot check, matching the `validateGossipPayloadAttestationMessage` flow
+                  if (clock.currentSlot !== payloadAttestationMessage.data.slot) {
+                    throw Error(
+                      `Message slot ${payloadAttestationMessage.data.slot} is not current slot ${clock.currentSlot}`
+                    );
+                  }
+
+                  // Signature verification, matching the `validateGossipPayloadAttestationMessage` flow
+                  const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
+                  if (!validatorPubkey) {
+                    throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
+                  }
+                  const signatureSet = createSingleSignatureSetFromComponents(
+                    validatorPubkey,
+                    getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
+                    payloadAttestationMessage.signature
+                  );
+                  let signatureValidity: boolean;
+                  try {
+                    signatureValidity = await chain.bls.verifySignatureSets([signatureSet], {
+                      verifyOnMainThread: true,
+                      batchable: true,
+                      priority: true,
+                    });
+                  } catch {
+                    signatureValidity = false;
+                  }
+                  if (!signatureValidity) throw Error("Invalid payload attestation signature");
+
+                  chain.forkChoice.notifyPtcMessages(
+                    blockRoot,
+                    payloadAttestationMessage.data.slot,
+                    ptcIndices,
+                    payloadAttestationMessage.data.payloadPresent,
+                    payloadAttestationMessage.data.blobDataAvailable
+                  );
+                }
+              } catch (e) {
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
+              }
             }
 
             // block step
@@ -536,6 +614,24 @@ const forkChoiceTest =
                   `Invalid should override fcu result at step ${i}`
                 );
               }
+              if (step.checks.payload_timeliness_vote) {
+                expect(
+                  chain.forkChoice.getPayloadTimelinessVotes(step.checks.payload_timeliness_vote.block_root)
+                ).toEqualWithMessage(
+                  step.checks.payload_timeliness_vote.votes,
+                  `Invalid payload timeliness votes at step ${i}`
+                );
+              }
+              if (step.checks.payload_data_availability_vote) {
+                expect(
+                  chain.forkChoice.getPayloadDataAvailabilityVotes(
+                    step.checks.payload_data_availability_vote.block_root
+                  )
+                ).toEqualWithMessage(
+                  step.checks.payload_data_availability_vote.votes,
+                  `Invalid payload data availability votes at step ${i}`
+                );
+              }
             }
 
             // None of the above
@@ -562,6 +658,7 @@ const forkChoiceTest =
           [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.SignedExecutionPayloadEnvelope,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
+          [PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME]: ssz.gloas.PayloadAttestationMessage,
         },
         mapToTestCase: (t: Record<string, any>) => {
           // t has input file name as key
@@ -571,6 +668,7 @@ const forkChoiceTest =
           const executionPayloadEnvelopes = new Map<string, gloas.SignedExecutionPayloadEnvelope>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
+          const payloadAttestationMessages = new Map<string, PayloadAttestationMessage>();
           for (const key in t) {
             if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
 
@@ -598,6 +696,10 @@ const forkChoiceTest =
             if (attesterSlashingMatch) {
               attesterSlashings.set(key, t[key]);
             }
+            const payloadAttestationMessageMatch = key.match(PAYLOAD_ATTESTATION_MESSAGE_FILE_NAME);
+            if (payloadAttestationMessageMatch) {
+              payloadAttestationMessages.set(key, t[key]);
+            }
           }
           return {
             meta: t["meta"] as ForkChoiceTestCase["meta"],
@@ -610,6 +712,7 @@ const forkChoiceTest =
             executionPayloadEnvelopes,
             attestations,
             attesterSlashings,
+            payloadAttestationMessages,
           };
         },
         // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
@@ -652,7 +755,15 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnExecutionPayloadEnvelope | OnPayloadInfo | Checks;
+type Step =
+  | OnTick
+  | OnAttestation
+  | OnAttesterSlashing
+  | OnPayloadAttestationMessage
+  | OnBlock
+  | OnExecutionPayloadEnvelope
+  | OnPayloadInfo
+  | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -679,6 +790,16 @@ type OnAttesterSlashing = {
    * To execute `on_attester_slashing(store, attester_slashing)` with the given attester slashing.
    */
   attester_slashing: string;
+  /** optional, default to `true` */
+  valid?: number;
+};
+
+type OnPayloadAttestationMessage = {
+  /**
+   * the name of the `payload_attestation_message_<32-byte-root>.ssz_snappy` file.
+   * To execute `on_payload_attestation_message(store, payload_attestation_message)`.
+   */
+  payload_attestation_message: string;
   /** optional, default to `true` */
   valid?: number;
 };
@@ -729,6 +850,16 @@ type Checks = {
       validator_is_connected: boolean;
       result: boolean;
     };
+    /** Gloas: PTC timeliness votes per PTC position (`null` = member has not attested). */
+    payload_timeliness_vote?: {
+      block_root: RootHex;
+      votes: (boolean | null)[];
+    };
+    /** Gloas: PTC data-availability votes per PTC position (`null` = member has not attested). */
+    payload_data_availability_vote?: {
+      block_root: RootHex;
+      votes: (boolean | null)[];
+    };
   };
 };
 
@@ -746,6 +877,7 @@ type ForkChoiceTestCase = {
   executionPayloadEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
+  payloadAttestationMessages: Map<string, PayloadAttestationMessage>;
 };
 
 function isTick(step: Step): step is OnTick {
@@ -758,6 +890,10 @@ function isAttestation(step: Step): step is OnAttestation {
 
 function isAttesterSlashing(step: Step): step is OnAttesterSlashing {
   return typeof (step as OnAttesterSlashing).attester_slashing === "string";
+}
+
+function isPayloadAttestationMessage(step: Step): step is OnPayloadAttestationMessage {
+  return typeof (step as OnPayloadAttestationMessage).payload_attestation_message === "string";
 }
 
 function isBlock(step: Step): step is OnBlock {
