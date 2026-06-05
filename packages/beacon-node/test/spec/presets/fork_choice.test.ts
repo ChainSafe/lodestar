@@ -189,12 +189,12 @@ const forkChoiceTest =
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
               const headState = chain.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
-              const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation);
+              const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(
+                ForkSeq[fork],
+                attestation
+              );
               try {
-                chain.forkChoice.onAttestation(
-                  indexedAttestation,
-                  attDataRootHex
-                );
+                chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
@@ -745,7 +745,7 @@ const forkChoiceTest =
           // unconditionally. Only the altair vectors exercise the changed condition (other forks pass).
           name.endsWith("altair/fork_choice/on_block/pyspec_tests/justified_update_always_if_better") ||
           name.endsWith("altair/fork_choice/on_block/pyspec_tests/justified_update_not_realized_finality") ||
-          name.endsWith("altair/fork_choice/get_head/pyspec_tests/voting_source_beyond_two_epoch")
+          name.endsWith("altair/fork_choice/get_head/pyspec_tests/voting_source_beyond_two_epoch"),
       },
     };
   };
