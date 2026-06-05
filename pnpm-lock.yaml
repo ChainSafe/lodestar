@@ -214,6 +214,12 @@ importers:
       '@crate-crypto/node-eth-kzg':
         specifier: 0.9.1
         version: 0.9.1
+      '@ethereumjs/mpt':
+        specifier: ^10.1.2
+        version: 10.1.2
+      '@ethereumjs/rlp':
+        specifier: ^10.1.2
+        version: 10.1.2
       '@fastify/bearer-auth':
         specifier: ^10.0.1
         version: 10.0.1
@@ -292,6 +298,9 @@ importers:
       '@multiformats/multiaddr':
         specifier: ^13.0.1
         version: 13.0.1
+      '@noble/hashes':
+        specifier: ^2.0.1
+        version: 2.0.1
       datastore-core:
         specifier: ^11.0.2
         version: 11.0.2
@@ -1601,8 +1610,17 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@ethereumjs/mpt@10.1.2':
+    resolution: {integrity: sha512-dBlXpkP1ssp+AcUxsJUrY72LZuE1JQEp1AZn5mgmbBcd2Gwkpyi57q4zATlZbxrZUxp/K9UIidgqxQWcOCbo5g==}
+    engines: {node: '>=20'}
+
   '@ethereumjs/rlp@10.1.1':
     resolution: {integrity: sha512-jbnWTEwcpoY+gE0r+wxfDG9zgiu54DcTcwnc9sX3DsqKR4l5K7x2V8mQL3Et6hURa4DuT9g7z6ukwpBLFchszg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  '@ethereumjs/rlp@10.1.2':
+    resolution: {integrity: sha512-T5Zt6C2pd02Wd88Q9A5/UX+He1Q2Y1LntHxz/038tfbUMiqby4fYSSTLEDx+TEfJqw1BsJSBY/TSu6goUzlk+w==}
     engines: {node: '>=20'}
     hasBin: true
 
@@ -1610,6 +1628,10 @@ packages:
     resolution: {integrity: sha512-tqsQiBQDQdmPWE1xkkBq4rlSW5QZpLOUJ5RJh2/9fug+q9tnUhuZoVLk7s0scUIKTOzEtR72DFBXI4WiZcMpvw==}
     engines: {node: '>=14'}
     hasBin: true
+
+  '@ethereumjs/util@10.1.2':
+    resolution: {integrity: sha512-UPBgXtHHfQugoXOSAoeG3jdmPbl37cwV9y3XqTPAnw8tJj8np14TPV2uc5lOs7C2LMF9Ubn66zyaiYxgwGppng==}
+    engines: {node: '>=20'}
 
   '@ethersproject/abi@5.7.0':
     resolution: {integrity: sha512-351ktp42TiRcYB3H1OP8yajPeAQstMW/yCFokj/AthP9bLHzQFPlOrxOcwYEDkUAICmOHljvN4K39OMTMUa9RA==}
@@ -4527,6 +4549,10 @@ packages:
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
+  lru-cache@11.0.2:
+    resolution: {integrity: sha512-123qHRfJBmo2jXDbo/a5YOQrJoHF/GNQTLzQ5+IdK5pWpceK17yRc6ozlWd25FxvGKQbIUs91fDFkXmDHTKcyA==}
+    engines: {node: 20 || >=22}
+
   lru-cache@11.2.4:
     resolution: {integrity: sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg==}
     engines: {node: 20 || >=22}
@@ -6982,9 +7008,27 @@ snapshots:
   '@esbuild/win32-x64@0.24.2':
     optional: true
 
+  '@ethereumjs/mpt@10.1.2':
+    dependencies:
+      '@ethereumjs/rlp': 10.1.2
+      '@ethereumjs/util': 10.1.2
+      '@noble/hashes': 2.0.1
+      debug: 4.4.3
+      lru-cache: 11.0.2
+    transitivePeerDependencies:
+      - supports-color
+
   '@ethereumjs/rlp@10.1.1': {}
 
+  '@ethereumjs/rlp@10.1.2': {}
+
   '@ethereumjs/rlp@4.0.1': {}
+
+  '@ethereumjs/util@10.1.2':
+    dependencies:
+      '@ethereumjs/rlp': 10.1.2
+      '@noble/curves': 2.0.1
+      '@noble/hashes': 2.0.1
 
   '@ethersproject/abi@5.7.0':
     dependencies:
@@ -10554,6 +10598,8 @@ snapshots:
       tslib: 2.8.1
 
   lru-cache@10.4.3: {}
+
+  lru-cache@11.0.2: {}
 
   lru-cache@11.2.4: {}
 

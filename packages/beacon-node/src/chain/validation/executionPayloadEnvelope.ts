@@ -6,6 +6,7 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import {computeExecutionBlockHash} from "../../util/executionBlockHash.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
@@ -114,6 +115,24 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
+    });
+  }
+
+  // [REJECT] `payload.block_hash == keccak256(rlp(reconstructed_header))`.
+  // Defends PTC voters from a builder who keeps `payload.block_hash == bid.block_hash`
+  // but ships a payload whose contents would hash to a different value, leaving
+  // `engine_newPayload` to reject it after the PTC has already attested "present".
+  // See https://github.com/ethereum/consensus-specs/issues/5333.
+  const recomputed = await computeExecutionBlockHash({
+    payload,
+    parentBeaconBlockRoot: envelope.parentBeaconBlockRoot,
+    executionRequests: envelope.executionRequests,
+  });
+  if (!byteArrayEquals(recomputed, payload.blockHash)) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_RECOMPUTE_MISMATCH,
+      envelopeBlockHash: toRootHex(payload.blockHash),
+      recomputedBlockHash: toRootHex(recomputed),
     });
   }
 
