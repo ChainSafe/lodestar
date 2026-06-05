@@ -191,16 +191,18 @@ export function getBeaconBlockApi({
           try {
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
-            if (error instanceof BlockGossipError && error.type.code === BlockErrorCode.ALREADY_KNOWN) {
-              // Block has already been seen, e.g. via gossip racing the publish API. Benign.
-              chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-              return;
-            }
-            if (error instanceof BlockGossipError && error.type.code === BlockErrorCode.REPEAT_PROPOSAL) {
-              // The proposer already produced a block for this slot. Surfaced at `warn` so operators
-              // notice duplicate-proposal attempts; fallback / DVT setups can filter or rate-limit if needed.
-              chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
-              return;
+            if (error instanceof BlockGossipError) {
+              switch (error.type.code) {
+                case BlockErrorCode.ALREADY_KNOWN:
+                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                  return;
+                case BlockErrorCode.REPEAT_PROPOSAL:
+                  // The proposer already produced a block for this slot. Surfaced at `warn` so operators
+                  // notice duplicate-proposal attempts; fallback / DVT setups can filter or rate-limit if needed.
+                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
+                  return;
+              }
             }
 
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
