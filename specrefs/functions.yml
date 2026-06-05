@@ -4357,7 +4357,7 @@
     - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
       search: "getInclusionListBits(state: IBeaconStateViewHeze"
   spec: |
-    <spec fn="get_inclusion_list_bits" fork="heze" hash="7508823e">
+    <spec fn="get_inclusion_list_bits" fork="heze" hash="e7a02248">
     def get_inclusion_list_bits(
         store: InclusionListStore, state: BeaconState, slot: Slot, only_timely: bool = True
     ) -> Bitvector[INCLUSION_LIST_COMMITTEE_SIZE]:
@@ -4366,8 +4366,7 @@
         for valid and non-equivocating inclusion list submissions for the given ``slot``.
         """
         committee = get_inclusion_list_committee(state, slot)
-        committee_root = hash_tree_root(committee)
-        key = (slot, committee_root)
+        key = hash_tree_root(committee)
 
         inclusion_lists = store.inclusion_lists[key]
         equivocators = store.equivocators[key]
@@ -4473,13 +4472,12 @@
     - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
       search: "getInclusionListTransactions(state: IBeaconStateViewHeze"
   spec: |
-    <spec fn="get_inclusion_list_transactions" fork="heze" hash="4e8a74ba">
+    <spec fn="get_inclusion_list_transactions" fork="heze" hash="d0a6ae16">
     def get_inclusion_list_transactions(
         store: InclusionListStore, state: BeaconState, slot: Slot, only_timely: bool = True
     ) -> Sequence[Transaction]:
         committee = get_inclusion_list_committee(state, slot)
-        committee_root = hash_tree_root(committee)
-        key = (slot, committee_root)
+        key = hash_tree_root(committee)
 
         inclusion_lists = store.inclusion_lists[key]
         equivocators = store.equivocators[key]
@@ -10010,13 +10008,13 @@
     - file: packages/beacon-node/src/chain/opPools/inclusionListStore.ts
       search: "processInclusionList(inclusionList: heze.InclusionList"
   spec: |
-    <spec fn="process_inclusion_list" fork="heze" hash="adf98716">
+    <spec fn="process_inclusion_list" fork="heze" hash="da9e2308">
     def process_inclusion_list(
         store: InclusionListStore,
         inclusion_list: InclusionList,
         is_timely: bool,
     ) -> None:
-        key = (inclusion_list.slot, inclusion_list.inclusion_list_committee_root)
+        key = inclusion_list.inclusion_list_committee_root
 
         # Ignore `inclusion_list` from equivocators.
         if inclusion_list.validator_index in store.equivocators[key]:

@@ -39,8 +39,9 @@ export function processOperations(
   opts: ProcessBlockOpts = {verifySignatures: true},
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
-  // verify that outstanding deposits are processed up to the maximum number of deposits
-  const maxDeposits = getEth1DepositCount(state);
+  // verify that outstanding deposits are processed up to the maximum number of deposits.
+  // From Fulu the eth1 bridge deposit mechanism was removed, so blocks must not contain any deposits.
+  const maxDeposits = fork >= ForkSeq.fulu ? 0 : getEth1DepositCount(state);
   if (body.deposits.length !== maxDeposits) {
     throw new Error(
       `Block contains incorrect number of deposits: depositCount=${body.deposits.length} expected=${maxDeposits}`
