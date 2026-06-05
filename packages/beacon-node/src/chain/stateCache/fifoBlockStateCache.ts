@@ -168,12 +168,6 @@ export class FIFOBlockStateCache implements BlockStateCache {
   }
 
   /**
-   * No need for this implementation
-   * This is only to conform to the old api
-   */
-  deleteAllBeforeEpoch(): void {}
-
-  /**
    * ONLY FOR DEBUGGING PURPOSES. For lodestar debug API.
    */
   clear(): void {
