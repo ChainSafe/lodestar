@@ -5,6 +5,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -49,6 +50,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
@@ -109,6 +111,18 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
+
+    if (isForkPostGloas(fork)) {
+      chain.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: blockRoot,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+        sampledColumns: chain.custodyConfig.sampledColumns,
+        custodyColumns: chain.custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
+    }
+
     let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
@@ -234,7 +248,7 @@ export function getBeaconBlockApi({
           }
 
           try {
-            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], {
+            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], null, {
               ...opts,
               verifyOnly: true,
               skipVerifyBlockSignatures: true,
@@ -311,7 +325,10 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            if (
+              e instanceof BlockError &&
+              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+            ) {
               chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,
                 peer: IDENTITY_PEER_ID,
@@ -651,11 +668,10 @@ export function getBeaconBlockApi({
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
-      const slot = envelope.slot;
+      const slot = envelope.payload.slotNumber;
       const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
       const blockHashHex = toRootHex(envelope.payload.blockHash);
-      const stateRootHex = toRootHex(envelope.stateRoot);
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
@@ -740,7 +756,6 @@ export function getBeaconBlockApi({
         slot,
         blockRoot: blockRootHex,
         blockHash: blockHashHex,
-        stateRoot: stateRootHex,
         builderIndex: envelope.builderIndex,
         isSelfBuild,
         dataColumns: dataColumnSidecars.length,
@@ -768,7 +783,6 @@ export function getBeaconBlockApi({
         builderIndex: envelope.builderIndex,
         blockHash: blockHashHex,
         blockRoot: blockRootHex,
-        stateRoot: stateRootHex,
       });
 
       const sentPeersArr = await publishPromise;
@@ -776,9 +790,9 @@ export function getBeaconBlockApi({
       // Track metrics for data column publishing
       if (dataColumnSidecars.length > 0) {
         let columnsPublishedWithZeroPeers = 0;
-        // Skip first entry (envelope), track data columns
-        for (let i = 1; i < sentPeersArr.length; i++) {
-          const sentPeers = sentPeersArr[i] as number;
+        // Skip first entry (envelope); the final entry is processExecutionPayload(), which returns void.
+        for (let i = 0; i < dataColumnSidecars.length; i++) {
+          const sentPeers = sentPeersArr[i + 1] as number;
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
           if (sentPeers === 0) {
             columnsPublishedWithZeroPeers++;
@@ -809,6 +823,41 @@ export function getBeaconBlockApi({
         ...valLogMeta,
         delaySec,
         sentPeers: (sentPeersArr[0] as number) ?? 0,
+      });
+    },
+
+    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const bid = signedExecutionPayloadBid.message;
+      const slot = bid.slot;
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
+      }
+
+      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+      try {
+        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
+      }
+
+      const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
+
+      chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+        version: fork,
+        data: signedExecutionPayloadBid,
+      });
+
+      chain.logger.info("Published execution payload bid", {
+        slot,
+        builderIndex: bid.builderIndex,
+        blockHash: toRootHex(bid.blockHash),
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        value: bid.value,
+        sentPeers,
       });
     },
 

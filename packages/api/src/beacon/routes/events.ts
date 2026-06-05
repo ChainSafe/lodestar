@@ -108,6 +108,8 @@ export enum EventType {
   executionPayloadAvailable = "execution_payload_available",
   /** The node has received a `SignedExecutionPayloadBid` (from P2P or API) that passes gossip validation on the `execution_payload_bid` topic */
   executionPayloadBid = "execution_payload_bid",
+  /** The node has received a `SignedProposerPreferences` (from P2P or API) that passes gossip validation on the `proposer_preferences` topic */
+  proposerPreferences = "proposer_preferences",
 }
 
 export const eventTypes: {[K in EventType]: K} = {
@@ -132,6 +134,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.executionPayloadGossip]: EventType.executionPayloadGossip,
   [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
   [EventType.executionPayloadBid]: EventType.executionPayloadBid,
+  [EventType.proposerPreferences]: EventType.proposerPreferences,
 };
 
 export type EventData = {
@@ -186,7 +189,6 @@ export type EventData = {
     builderIndex: BuilderIndex;
     blockHash: RootHex;
     blockRoot: RootHex;
-    stateRoot: RootHex;
     executionOptimistic: boolean;
   };
   [EventType.executionPayloadGossip]: {
@@ -194,13 +196,13 @@ export type EventData = {
     builderIndex: BuilderIndex;
     blockHash: RootHex;
     blockRoot: RootHex;
-    stateRoot: RootHex;
   };
   [EventType.executionPayloadAvailable]: {
     slot: Slot;
     blockRoot: RootHex;
   };
   [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
+  [EventType.proposerPreferences]: {version: ForkName; data: gloas.SignedProposerPreferences};
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -376,7 +378,6 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
         blockRoot: stringType,
-        stateRoot: stringType,
         executionOptimistic: ssz.Boolean,
       },
       {jsonCase: "eth2"}
@@ -387,7 +388,6 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
         builderIndex: ssz.BuilderIndex,
         blockHash: stringType,
         blockRoot: stringType,
-        stateRoot: stringType,
       },
       {jsonCase: "eth2"}
     ),
@@ -399,6 +399,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       {jsonCase: "eth2"}
     ),
     [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
+    [EventType.proposerPreferences]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedProposerPreferences),
 
     [EventType.lightClientOptimisticUpdate]: WithVersion(
       (fork) => getPostAltairForkTypes(fork).LightClientOptimisticUpdate

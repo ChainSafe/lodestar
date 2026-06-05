@@ -103,6 +103,7 @@ export async function validateGossipBlock(
     if (chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHashHex) === null) {
       throw new BlockGossipError(GossipAction.IGNORE, {
         code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+        parentRoot,
         parentBlockHash: parentBlockHashHex,
       });
     }

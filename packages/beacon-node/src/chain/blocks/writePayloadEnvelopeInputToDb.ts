@@ -5,7 +5,7 @@ import {writeDataColumnsToDb} from "./writeBlockInputToDb.js";
 /**
  * Persists payload envelope data to DB. This operation must be eventually completed if a payload is imported.
  *
- * TODO GLOAS: Persist envelope metadata (stateRoot, executionRequests, builderIndex, etc.) without the full
+ * TODO GLOAS: Persist envelope metadata (executionRequests, builderIndex, etc.) without the full
  * execution payload body — only keep the blockHash reference. The EL already stores the payload.
  * See https://github.com/ChainSafe/lodestar/issues/5671
  */
@@ -33,23 +33,14 @@ export async function persistPayloadEnvelopeInput(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput
 ): Promise<void> {
-  await writePayloadEnvelopeInputToDb
-    .call(this, payloadInput)
-    .catch((e) => {
-      this.logger.error(
-        "Error persisting payload envelope in hot db",
-        {
-          slot: payloadInput.slot,
-          root: payloadInput.blockRootHex,
-        },
-        e
-      );
-    })
-    .finally(() => {
-      this.seenPayloadEnvelopeInputCache.prune(payloadInput.blockRootHex);
-      this.logger.debug("Pruned payload envelope input", {
+  await writePayloadEnvelopeInputToDb.call(this, payloadInput).catch((e) => {
+    this.logger.error(
+      "Error persisting payload envelope in hot db",
+      {
         slot: payloadInput.slot,
         root: payloadInput.blockRootHex,
-      });
-    });
+      },
+      e
+    );
+  });
 }

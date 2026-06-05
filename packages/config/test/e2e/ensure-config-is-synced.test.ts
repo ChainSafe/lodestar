@@ -18,6 +18,7 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // EIP-7805 (Inclusion Lists) - not yet implemented in Lodestar
   "VIEW_FREEZE_CUTOFF_BPS" as keyof ChainConfig,
   "INCLUSION_LIST_SUBMISSION_DUE_BPS" as keyof ChainConfig,
+  "INCLUSION_LIST_DUE_BPS" as keyof ChainConfig,
   "PROPOSER_INCLUSION_LIST_CUTOFF_BPS" as keyof ChainConfig,
   "MAX_REQUEST_INCLUSION_LIST" as keyof ChainConfig,
   "MAX_BYTES_PER_INCLUSION_LIST" as keyof ChainConfig,
@@ -28,6 +29,12 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // Future spec params not yet in Lodestar
   "EPOCHS_PER_SHUFFLING_PHASE" as keyof ChainConfig,
   "PROPOSER_SELECTION_GAP" as keyof ChainConfig,
+  // Gloas churn constants - not yet in local config
+  "CHURN_LIMIT_QUOTIENT_GLOAS" as keyof ChainConfig,
+  "CONSOLIDATION_CHURN_LIMIT_QUOTIENT" as keyof ChainConfig,
+  "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" as keyof ChainConfig,
+  // FCR params - not yet implemented in Lodestar
+  "CONFIRMATION_BYZANTINE_THRESHOLD" as keyof ChainConfig,
   // Future forks not yet implemented in Lodestar
   "HEZE_FORK_VERSION" as keyof ChainConfig,
   "HEZE_FORK_EPOCH" as keyof ChainConfig,

@@ -1,7 +1,7 @@
 import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
-import {PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
@@ -51,7 +51,6 @@ describe("gossip block validation", () => {
       epoch: 0,
       root: ZERO_HASH,
       rootHex: "",
-      payloadStatus: PayloadStatus.FULL,
     });
 
     // Reset seen cache
@@ -80,7 +79,6 @@ describe("gossip block validation", () => {
       epoch: Infinity,
       root: ZERO_HASH,
       rootHex: "",
-      payloadStatus: PayloadStatus.FULL,
     });
 
     await expectRejectedWithLodestarError(

@@ -311,11 +311,16 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
   if (!parentBlock?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: parent ${parentRootHex} has no latest valid execution hash`);
   }
+  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  if (!block?.executionPayloadBlockHash) {
+    throw new Error(`Cannot invalidate ${blockRootHex}: block has no execution payload hash`);
+  }
 
   chain.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
     invalidateFromParentBlockRoot: blockRootHex,
+    invalidateFromParentBlockHash: block.executionPayloadBlockHash,
   });
 }
 
@@ -470,6 +475,7 @@ export async function runGossipValidationTest(
         }
 
         const postState = computePostState(parentState, signedBlock, fork);
+        const expectedProposerIndex: number | null = chain.getHeadState().getBeaconProposerOrNull(slot);
 
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
@@ -481,7 +487,8 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Valid,
-            getDataAvailabilityStatusForFork(fork)
+            getDataAvailabilityStatusForFork(fork),
+            expectedProposerIndex
           );
           blockStatesByRoot.set(blockRootHex, postState);
           continue;
@@ -496,7 +503,8 @@ export async function runGossipValidationTest(
             0,
             slot,
             ExecutionStatus.Syncing,
-            getDataAvailabilityStatusForFork(fork)
+            getDataAvailabilityStatusForFork(fork),
+            expectedProposerIndex
           );
           blockStatesByRoot.set(blockRootHex, postState);
           invalidateImportedBlock(chain, blockRootHex, parentRootHex);

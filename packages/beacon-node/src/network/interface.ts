@@ -78,6 +78,7 @@ export interface INetwork extends INetworkCorePublic {
   // ReqResp
   sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
   sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
+  sendBeaconBlocksByHead(peerId: PeerIdStr, request: fulu.BeaconBlocksByHeadRequest): Promise<SignedBeaconBlock[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
@@ -112,6 +113,9 @@ export interface INetwork extends INetworkCorePublic {
   publishLightClientFinalityUpdate(update: LightClientFinalityUpdate): Promise<number>;
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
   publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
+  publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number>;
+  publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
+  publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;

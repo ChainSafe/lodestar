@@ -27,6 +27,7 @@ const BLS_TO_EXECUTION_CHANGE_WEIGHT = 0.05;
 const EXECUTION_PAYLOAD_WEIGHT = 0.5;
 const PAYLOAD_ATTESTATION_WEIGHT = 0.05;
 const EXECUTION_PAYLOAD_BID_WEIGHT = 0.05;
+const PROPOSER_PREFERENCES_WEIGHT = 0.05;
 
 const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
 const maxPositiveScore =
@@ -40,7 +41,8 @@ const maxPositiveScore =
     BLS_TO_EXECUTION_CHANGE_WEIGHT +
     EXECUTION_PAYLOAD_WEIGHT +
     PAYLOAD_ATTESTATION_WEIGHT +
-    EXECUTION_PAYLOAD_BID_WEIGHT);
+    EXECUTION_PAYLOAD_BID_WEIGHT +
+    PROPOSER_PREFERENCES_WEIGHT);
 
 /**
  * The following params is implemented by Lighthouse at
@@ -196,6 +198,17 @@ function getAllTopicsScoreParams(
     ] = getTopicScoreParams(config, precomputedParams, {
       topicWeight: EXECUTION_PAYLOAD_BID_WEIGHT,
       expectedMessageRate: 1024, // TODO GLOAS: Need an estimate for this
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
+    topicsParams[
+      stringifyGossipTopic(config, {
+        type: GossipType.proposer_preferences,
+        boundary,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: PROPOSER_PREFERENCES_WEIGHT,
+      // Upper bound ~64 messages per epoch: one per proposer across the current + next epoch.
+      expectedMessageRate: 64 / SLOTS_PER_EPOCH,
       firstMessageDecayTime: epochDurationMs * 100,
     });
 

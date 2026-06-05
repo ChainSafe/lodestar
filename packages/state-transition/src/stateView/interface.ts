@@ -41,7 +41,6 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
-import {ProcessExecutionPayloadEnvelopeOpts} from "../block/processExecutionPayloadEnvelope.js";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
@@ -90,6 +89,7 @@ export interface IBeaconStateView {
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
+  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
@@ -138,7 +138,13 @@ export interface IBeaconStateView {
   isStateValidatorsNodesPopulated(): boolean;
 
   // Serialization
-  loadOtherState(stateBytes: Uint8Array, seedValidatorsBytes?: Uint8Array): IBeaconStateView;
+  /** Set `preloadValidatorsAndBalances` only when the whole state will be consumed
+   *  immediately (e.g. CP reload before block replay). */
+  loadOtherState(
+    stateBytes: Uint8Array,
+    seedValidatorsBytes?: Uint8Array,
+    opts?: {preloadValidatorsAndBalances?: boolean}
+  ): IBeaconStateView;
   toValue(): BeaconState;
   serialize(): Uint8Array;
   serializedSize(): number;
@@ -187,13 +193,6 @@ export interface IBeaconStateViewAltair extends IBeaconStateView {
 export interface IBeaconStateViewBellatrix extends IBeaconStateViewAltair {
   forkName: ForkPostBellatrix;
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
-  /**
-   * Cross-fork accessor for the execution block hash of the most recently included payload.
-   * Pre-gloas: returns latestExecutionPayloadHeader.blockHash (bellatrix–fulu).
-   * Gloas+: returns the dedicated latestBlockHash state field (EIP-7732).
-   * Throws before bellatrix.
-   */
-  latestBlockHash: Bytes32;
   /**
    * The execution block number of the most recently included payload.
    * Named payloadBlockNumber (not latestBlockNumber) to mirror ExecutionPayloadHeader.blockNumber pre-gloas.
@@ -244,16 +243,25 @@ export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
 /** Gloas+ state fields — use isStatePostGloas() guard */
 export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   forkName: ForkPostGloas;
+  /** Removed from BeaconState in gloas. Use `latestBlockHash` instead. */
+  latestExecutionPayloadHeader: never;
+  /** Removed from BeaconState in gloas. */
+  payloadBlockNumber: never;
+  latestBlockHash: Bytes32;
   executionPayloadAvailability: BitArray;
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
-  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
-  processExecutionPayloadEnvelope(
-    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
-    opts?: ProcessExecutionPayloadEnvelopeOpts
-  ): IBeaconStateView;
+  getEpochPTCs(epoch: Epoch): Uint32Array[];
+  getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
+  /**
+   * Clone the state and apply parent execution payload effects.
+   * Used during block production and prepareNextSlot so that withdrawals and
+   * operation selection (e.g. voluntary exits) see the same post-apply state that the block
+   * processor will see at import.
+   */
+  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
 }
 
 /**
@@ -262,7 +270,43 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
  * forkName as ForkName since the class wraps any fork's state.
  * Sub-interfaces retain their narrowed forkName discriminants for caller-side type guards.
  */
-export type IBeaconStateViewLatestFork = Omit<IBeaconStateViewGloas, "forkName"> & {forkName: ForkName};
+export type IBeaconStateViewLatestFork = Omit<
+  IBeaconStateViewGloas,
+  "forkName" | "latestExecutionPayloadHeader" | "payloadBlockNumber"
+> & {
+  forkName: ForkName;
+  latestExecutionPayloadHeader: ExecutionPayloadHeader;
+  payloadBlockNumber: number;
+};
+
+/**
+ * Contract a BeaconStateView backing implementation must satisfy.
+ *
+ * Differs from `IBeaconStateViewLatestFork` in two ways:
+ * - `executionPayloadAvailability` is a raw `{uint8Array, bitLen}` POJO — a
+ *   native (`.node`) binding cannot construct a `BitArray` across FFI.
+ *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
+ * - Methods that produce another view (`stateTransition`, `processSlots`,
+ *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
+ *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
+ *   via `Parameters<...>` to avoid duplicating signatures.
+ *
+ * The TS-side `BeaconStateView` also structurally satisfies this contract since
+ * `BitArray` exposes `uint8Array` and `bitLen`.
+ */
+export type IBeaconStateViewNative = Omit<
+  IBeaconStateViewLatestFork,
+  "executionPayloadAvailability" | "loadOtherState" | "stateTransition" | "processSlots" | "withParentPayloadApplied"
+> & {
+  executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
+  stateTransition(...args: Parameters<IBeaconStateViewLatestFork["stateTransition"]>): IBeaconStateViewNative;
+  processSlots(...args: Parameters<IBeaconStateViewLatestFork["processSlots"]>): IBeaconStateViewNative;
+  withParentPayloadApplied(
+    ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
+  ): IBeaconStateViewNative;
+};
+
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
   return isForkPostAltair(state.forkName);
 }

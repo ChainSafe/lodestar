@@ -20,31 +20,37 @@ export async function* onBlobSidecarsByRange(
   const finalized = db.blobSidecarsArchive;
   const unfinalized = db.blobSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // Blobs are migrated to blobSidecarsArchive at finalization (including the finalized block
+  // itself), so the archive loop serves up to AND INCLUDING finalizedSlot and the headChain
+  // loop starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
+  const archiveMaxSlot = finalizedSlot;
 
   // Finalized range of blobs
-  if (startSlot <= finalizedSlot) {
+  if (startSlot <= archiveMaxSlot) {
     // Chain of blobs won't change
     for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
       gte: startSlot,
-      lt: endSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
       yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
     }
   }
 
   // Non-finalized range of blobs
-  if (endSlot > finalizedSlot) {
+  if (endSlot > archiveMaxSlot) {
     const headBlock = chain.forkChoice.getHead();
     const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
 
-      // Must include only blobs in the range requested
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      // Must include only blobs in the range requested, and skip anything the archive loop
+      // above already served via the block.slot > archiveMaxSlot filter.
+      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
         // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
         // re-org there's no need to abort the request
