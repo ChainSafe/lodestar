@@ -1952,7 +1952,7 @@ export class ForkChoice implements IForkChoice {
         const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
         this.fcStore.confirmedRoot = result.confirmedRoot;
       } catch (err) {
-        this.logger?.warn(
+        this.logger?.debug(
           "Fast confirmation failed",
           {slot: this.fcStore.currentSlot, head: this.head.blockRoot, confirmedRoot: this.fcStore.confirmedRoot},
           err as Error

@@ -81,7 +81,11 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     };
 
     if (changed) {
-      this.logger?.info(didReset ? "Reset fast confirmation" : "Updated fast confirmation", logContext);
+      if (didReset) {
+        this.logger?.warn("Reset fast confirmation", logContext);
+      } else {
+        this.logger?.debug("Updated fast confirmation", logContext);
+      }
     } else {
       this.logger?.debug("Unchanged fast confirmation", logContext);
     }
