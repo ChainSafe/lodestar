@@ -26,6 +26,7 @@ const sidebars: SidebarsConfig = {
             "run/beacon-management/starting-a-node",
             "run/beacon-management/beacon-cli",
             "run/beacon-management/data-retention",
+            "run/beacon-management/fast-confirmation",
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
             "run/beacon-management/syncing",
@@ -103,7 +104,6 @@ const sidebars: SidebarsConfig = {
           label: "Advanced Topics",
           items: [
             "contribution/advanced-topics/setting-up-a-testnet",
-            "contribution/advanced-topics/fast-confirmation",
           ],
         },
         "contribution/depgraph",

@@ -4,7 +4,7 @@ title: Fast Confirmation
 
 # Fast Confirmation
 
-Fast Confirmation is an experimental fork-choice extension that lets Lodestar derive a `confirmed` block that can move ahead of FFG finalization. It is designed for consumers that care about faster operational safety signals, such as bridges, exchanges, custodians, and settlement systems that want something stronger than "current head" but earlier than finality.
+Fast Confirmation is an experimental fork-choice extension that lets Lodestar derive a `confirmed` block earlier than FFG can finalize one. It is designed for consumers that care about faster operational safety signals, such as bridges, exchanges, custodians, and settlement systems that want something stronger than "current head" but earlier than finality.
 
 ## What it is
 
@@ -38,7 +38,7 @@ For bridge and exchange policies, the practical interpretation is:
 
 Lodestar tracks Fast Confirmation inside fork choice and exposes the current view through:
 
-- `GET /eth/v1/lodestar/fast_confirmation_info`
+- `GET /eth/v1/lodestar/fast_confirmation`
 
 The response includes:
 
@@ -66,7 +66,7 @@ Example response shape:
 
 For bridges, exchanges, and other operators, the practical mental model is:
 
-- if `confirmed.slot` is close to `head.slot`, the chain is showing strong recent support
+- if `confirmed.slot` is one or more slots behind `head.slot`, the chain may still be showing strong recent support
 - if `confirmed.slot` stalls while `head.slot` advances, attestation support is weaker or more ambiguous
 - if `confirmed` resets toward `finalized`, Lodestar detected that the previous confirmed branch no longer met the rule's safety conditions
 
@@ -84,7 +84,8 @@ The practical policy is:
 
 - Fast Confirmation is currently experimental and disabled by default.
 - Enabling it requires the node operator to turn on `--chain.fastConfirmation`.
-- `CONFIRMATION_BYZANTINE_THRESHOLD` defaults to `25` in Lodestar's chain config. Consumers usually do not need to set it manually unless they are running with a custom config.
-- In simple terms, that `25` means Lodestar does not trust all validator votes equally for Fast Confirmation. It asks: "would this block still look safe even if up to one quarter of the relevant voting power tried to pull fork choice toward another branch, voted inconsistently, or did not help at all?"
+- `CONFIRMATION_BYZANTINE_THRESHOLD` defaults to `25` in Lodestar's chain config and can be configured with `--params.CONFIRMATION_BYZANTINE_THRESHOLD` for custom deployments.
+- In simple terms, that `25` means Fast Confirmation remains safe under the assumption that up to one quarter of the relevant staked balance could be malicious, adversarial, equivocating, or unhelpful.
 - A block is only treated as `confirmed` if the remaining honest-looking support is still strong enough under that assumption.
 - Consumers should not assume that every Ethereum client exposes the same signal or the same API.
+- For external simulator data and cross-client comparison, see the EthPandaOps [FCR simulator report](https://ethpandaops.io/posts/fcr-simulator/) and [fastconfirm.it](https://fastconfirm.it/).
