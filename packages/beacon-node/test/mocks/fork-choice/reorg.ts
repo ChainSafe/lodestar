@@ -71,20 +71,6 @@ export class ReorgedForkChoice extends ForkChoice {
   }
 
   /**
-   * Tell `PrepareNextSlotScheduler` to anticipate the upcoming reorg so the execution
-   * layer pre-builds the right payload for slot `reorgedSlot+1`.
-   */
-  predictProposerHead(headBlock: ProtoBlock, secFromSlot: number, currentSlot: Slot): ProtoBlock {
-    if (currentSlot === this.reorgedSlot) {
-      const commonAncestor = this.getCommonAncestorBlock();
-      if (commonAncestor !== undefined) {
-        return commonAncestor;
-      }
-    }
-    return super.predictProposerHead(headBlock, secFromSlot, currentSlot);
-  }
-
-  /**
    * Behaves identically to `super.updateHead()` except for one thing: post-reorg, we
    * force-overwrite the base class's private `this.head` field to point at the new chain
    * instead of the orphan.
@@ -107,8 +93,7 @@ export class ReorgedForkChoice extends ForkChoice {
    * `reorgedSlot`) and the new chain (which skips it) descend from this block.
    *
    * The proposer of slot `reorgedSlot+1` builds directly on top of it (see
-   * `getProposerHead`), and `predictProposerHead` returns it so `PrepareNextSlotScheduler`
-   * can have the EL pre-build the matching payload (parent = commonAncestor's payload).
+   * `getProposerHead`).
    */
   private getCommonAncestorBlock(): ProtoBlock | undefined {
     if (this.reorgedSlot === undefined || this.reorgDistance === undefined) return undefined;

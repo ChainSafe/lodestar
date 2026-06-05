@@ -521,21 +521,6 @@ const forkChoiceTest =
                   `Invalid head payload status at step ${i}`
                 );
               }
-              if (step.checks.should_override_forkchoice_update) {
-                const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
-                  head,
-                  tickTime % (config.SLOT_DURATION_MS / 1000),
-                  currentSlot
-                );
-                if (result.shouldOverrideFcu === false) {
-                  logger.debug(`Not override fcu reason ${result.reason} at step ${i}`);
-                }
-                expect({result: result.shouldOverrideFcu, validator_is_connected: true}).toEqualWithMessage(
-                  step.checks.should_override_forkchoice_update,
-                  `Invalid should override fcu result at step ${i}`
-                );
-              }
             }
 
             // None of the above
@@ -725,10 +710,6 @@ type Checks = {
     proposer_boost_root?: RootHex;
     head_payload_status?: bigint;
     get_proposer_head?: string;
-    should_override_forkchoice_update?: {
-      validator_is_connected: boolean;
-      result: boolean;
-    };
   };
 };
 

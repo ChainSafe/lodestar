@@ -130,7 +130,7 @@ export class PrepareNextSlotScheduler {
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const proposerHead = this.chain.predictProposerHead(clockSlot);
+          const proposerHead = this.chain.getProposerHead(clockSlot);
           const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
           // If we predict we can reorg, update prepareState with proposer head block
@@ -147,7 +147,7 @@ export class PrepareNextSlotScheduler {
               prepareSlot,
               // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
               {dontTransferCache: !isEpochTransition},
-              RegenCaller.predictProposerHead
+              RegenCaller.getProposerHead
             );
             updatedHead = proposerHead;
           }

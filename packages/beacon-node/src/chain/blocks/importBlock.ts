@@ -376,7 +376,7 @@ export async function importBlock(
 
   // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
   // and the block is weak and can potentially be reorged out.
-  let shouldOverrideFcu = false;
+  const shouldOverrideFcu = false;
 
   if (blockSlot >= currentSlot && isStatePostBellatrix(postState) && postState.isExecutionStateType) {
     let notOverrideFcuReason = NotReorgedReason.Unknown;
@@ -385,22 +385,7 @@ export async function importBlock(
       const proposerIndex = postState.getBeaconProposer(proposalSlot);
       const feeRecipient = this.beaconProposerCache.get(proposerIndex);
 
-      if (feeRecipient) {
-        // We would set this to true if
-        //  1) This is a gossip block
-        //  2) We are proposer of next slot
-        //  3) Proposer boost reorg related flag is turned on (this is checked inside the function)
-        //  4) Block meets the criteria of being re-orged out (this is also checked inside the function)
-        const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
-          blockSummary,
-          this.clock.secFromSlot(currentSlot),
-          currentSlot
-        );
-        shouldOverrideFcu = result.shouldOverrideFcu;
-        if (!result.shouldOverrideFcu) {
-          notOverrideFcuReason = result.reason;
-        }
-      } else {
+      if (!feeRecipient) {
         notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
       }
     } catch (e) {

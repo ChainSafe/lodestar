@@ -83,7 +83,6 @@ export type StateGetOpts = {
 
 export enum FindHeadFnName {
   recomputeForkChoiceHead = "recomputeForkChoiceHead",
-  predictProposerHead = "predictProposerHead",
   getProposerHead = "getProposerHead",
 }
 
@@ -266,9 +265,6 @@ export interface IBeaconChain {
   getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
-
-  /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
-  predictProposerHead(slot: Slot): ProtoBlock;
 
   /** When proposerBoostReorg is enabled and we are proposing a block, this is called to determine which head block to build on */
   getProposerHead(slot: Slot): ProtoBlock;
