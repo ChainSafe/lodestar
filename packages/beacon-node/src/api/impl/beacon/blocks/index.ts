@@ -198,8 +198,9 @@ export function getBeaconBlockApi({
                   chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
                   return;
                 case BlockErrorCode.REPEAT_PROPOSAL:
-                  // The proposer already produced a block for this slot. Surfaced at `warn` so operators
-                  // notice duplicate-proposal attempts; fallback / DVT setups can filter or rate-limit if needed.
+                  // The proposer already produced a block for this slot. For a solo setup this is a
+                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
+                  // expected on every block where another node published first.
                   chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
                   return;
               }
