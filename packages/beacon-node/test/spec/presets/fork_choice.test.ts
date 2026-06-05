@@ -189,9 +189,10 @@ const forkChoiceTest =
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
               const headState = chain.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
+              const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation);
               try {
                 chain.forkChoice.onAttestation(
-                  headState.cachedState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
+                  indexedAttestation,
                   attDataRootHex
                 );
                 if (!isValid) throw Error("Expect error since this is a negative test");
