@@ -656,7 +656,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: JsonOnlyResponseCodec,
     },
     getFastConfirmationInfo: {
-      url: "/eth/v1/lodestar/fast_confirmation_info",
+      url: "/eth/v1/lodestar/fast_confirmation",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
