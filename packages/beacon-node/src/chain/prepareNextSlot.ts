@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostHeze} from "@lodestar/params";
 import {
   IBeaconStateView,
   IBeaconStateViewBellatrix,
@@ -26,6 +26,11 @@ import {RegenCaller} from "./regen/index.js";
 // TODO GLOAS: re-evaluate this timing
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 - 0.6667 * 12 = 4`). */
 export const PREPARE_NEXT_SLOT_BPS = 6667;
+
+// TODO HEZE: re-evaluate this timing
+/* Post-heze, after the base prepareSlot tick we additionally sleep until this BPS before issuing
+ * FCU so that ILs arriving past `INCLUSION_LIST_DUE_BPS` are still incorporated in the payload. */
+const PROPOSER_INCLUSION_LIST_CUTOFF_BPS = 9167;
 
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
@@ -199,10 +204,15 @@ export class PrepareNextSlotScheduler {
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the
           // try/catch wrapper here.
-          // TODO HEZE: consensus-specs #5138 removed `PROPOSER_INCLUSION_LIST_CUTOFF_BPS`. Proposer
-          // IL-gather wait is now client-implementation. Dropped the pre-FCU sleep — proposer's IL
-          // view at block-production time is used. May need to re-add a wait if ILs arriving late
-          // are missed in practice.
+          // Add artificial delay until PROPOSER_INCLUSION_LIST_CUTOFF_BPS so there is time
+          // for ILs to arrive before calling prepareExecutionPayload
+          if (isForkPostHeze(fork)) {
+            await sleep(
+              this.config.getSlotComponentDurationMs(PROPOSER_INCLUSION_LIST_CUTOFF_BPS) -
+                this.chain.clock.msFromSlot(clockSlot),
+              this.signal
+            );
+          }
           await prepareExecutionPayload(
             this.chain,
             this.logger,
