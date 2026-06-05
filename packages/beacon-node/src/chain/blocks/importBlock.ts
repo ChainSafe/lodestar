@@ -6,7 +6,6 @@ import {
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
-  NotReorgedReason,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -16,9 +15,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
-  isStartSlotOfEpoch,
   isStatePostAltair,
-  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
@@ -367,54 +364,9 @@ export async function importBlock(
     }
   }
 
-  // 6. Queue notifyForkchoiceUpdate to engine api
-  //
-  // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change in response to an onBlock event
-  // Notifying EL of head and finalized updates as below is usually done within the 1st 4s of the slot.
-  // If there is an advanced payload generation in the next slot, we'll notify EL again 4s before next
-  // slot via PrepareNextSlotScheduler. There is no harm updating the ELs with same data, it will just ignore it.
-
-  // Suppress fcu call if shouldOverrideFcu is true. This only happens if we have proposer boost reorg enabled
-  // and the block is weak and can potentially be reorged out.
-  const shouldOverrideFcu = false;
-
-  if (blockSlot >= currentSlot && isStatePostBellatrix(postState) && postState.isExecutionStateType) {
-    let notOverrideFcuReason = NotReorgedReason.Unknown;
-    const proposalSlot = blockSlot + 1;
-    try {
-      const proposerIndex = postState.getBeaconProposer(proposalSlot);
-      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
-
-      if (!feeRecipient) {
-        notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
-      }
-    } catch (e) {
-      if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
-      } else {
-        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
-      }
-    }
-
-    if (shouldOverrideFcu) {
-      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
-        blockRoot: blockRootHex,
-        slot: blockSlot,
-      });
-    } else {
-      this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
-      this.logger.verbose("Strong block detected. Not override fcu call", {
-        blockRoot: blockRootHex,
-        slot: blockSlot,
-        reason: notOverrideFcuReason,
-      });
-    }
-  }
-
   if (
     !this.opts.disableImportExecutionFcU &&
-    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) &&
-    !shouldOverrideFcu
+    (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch)
   ) {
     /**
      * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
