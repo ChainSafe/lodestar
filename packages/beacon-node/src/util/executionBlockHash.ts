@@ -15,16 +15,24 @@ const EMPTY_UNCLE_HASH = Uint8Array.from([
 const POST_MERGE_NONCE = new Uint8Array(8);
 const RLP_ZERO = new Uint8Array(0);
 
+/**
+ * Canonical root of an empty Merkle-Patricia trie: `keccak256(rlp(0x80))`.
+ * Returned directly when the trie has no entries to avoid spinning up a fresh MPT.
+ */
+const EMPTY_TRIE_ROOT = Uint8Array.from([
+  0x56, 0xe8, 0x1f, 0x17, 0x1b, 0xcc, 0x55, 0xa6, 0xff, 0x83, 0x45, 0xe6, 0x92, 0xc0, 0xf8, 0x6e, 0x5b, 0x48, 0xe0,
+  0x1b, 0x99, 0x6c, 0xad, 0xc0, 0x01, 0x62, 0x2f, 0xb5, 0xe3, 0x63, 0xb4, 0x21,
+]);
+
 function uintToBytes(n: number | bigint): Uint8Array {
-  const bn = typeof n === "bigint" ? n : BigInt(n);
+  let bn = typeof n === "bigint" ? n : BigInt(n);
   if (bn === 0n) return RLP_ZERO;
-  let hex = bn.toString(16);
-  if (hex.length & 1) hex = `0${hex}`;
-  const out = new Uint8Array(hex.length >>> 1);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  const bytes: number[] = [];
+  while (bn > 0n) {
+    bytes.unshift(Number(bn & 0xffn));
+    bn >>= 8n;
   }
-  return out;
+  return new Uint8Array(bytes);
 }
 
 function concatBytes(...arrs: Uint8Array[]): Uint8Array {
@@ -40,6 +48,7 @@ function concatBytes(...arrs: Uint8Array[]): Uint8Array {
 }
 
 async function indexedTrieRoot(values: Uint8Array[]): Promise<Uint8Array> {
+  if (values.length === 0) return EMPTY_TRIE_ROOT;
   const trie = await createMPT();
   for (let i = 0; i < values.length; i++) {
     await trie.put(RLP.encode(i), values[i]);
