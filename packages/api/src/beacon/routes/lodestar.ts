@@ -1,6 +1,17 @@
 import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {ArrayOf, BeaconState, Epoch, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
+import {ForkName} from "@lodestar/params";
+import {
+  ArrayOf,
+  AttesterSlashing,
+  BeaconState,
+  Epoch,
+  RootHex,
+  SignedBeaconBlock,
+  Slot,
+  ValidatorIndex,
+  ssz,
+} from "@lodestar/types";
 import {
   EmptyArgs,
   EmptyMeta,
@@ -11,10 +22,13 @@ import {
   JsonOnlyResponseCodec,
   WithVersion,
 } from "../../utils/codecs.js";
+import {toForkName} from "../../utils/fork.js";
+import {fromHeaders} from "../../utils/headers.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
 import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
+  MetaHeader,
   VersionCodec,
   VersionMeta,
 } from "../../utils/metadata.js";
@@ -382,9 +396,27 @@ export type Endpoints = {
     CustodyInfo,
     EmptyMeta
   >;
+
+  /** Craft attester slashings from the attestations in the provided blocks */
+  getAttesterSlashingsFromBlocks: Endpoint<
+    "POST",
+    {signedBlocks: SignedBeaconBlock[]},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    AttesterSlashing[],
+    VersionMeta
+  >;
 };
 
-export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpoints> {
+export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
+  function assertBlocksMatchFork(signedBlocks: SignedBeaconBlock[], expectedFork: ForkName): void {
+    for (const block of signedBlocks) {
+      const blockFork = config.getForkName(block.message.slot);
+      if (blockFork !== expectedFork) {
+        throw new Error(`Block at slot ${block.message.slot} is from fork ${blockFork}, expected ${expectedFork}`);
+      }
+    }
+  }
+
   return {
     writeHeapdump: {
       url: "/eth/v1/lodestar/write_heapdump",
@@ -601,6 +633,48 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
+    },
+    getAttesterSlashingsFromBlocks: {
+      url: "/eth/v1/lodestar/blocks/attester_slashings",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedBlocks}) => {
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
+        },
+        writeReqSsz: ({signedBlocks}) => {
+          if (signedBlocks.length === 0) throw new Error("No blocks provided.");
+          const fork = config.getForkName(signedBlocks[0].message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize(signedBlocks as SignedBeaconBlock<typeof fork>[]),
+            headers: {[MetaHeader.Version]: fork},
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const signedBlocks = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(body) as SignedBeaconBlock[];
+          assertBlocksMatchFork(signedBlocks, fork);
+          return {signedBlocks};
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: {
+        data: WithVersion((fork) => ArrayOf(ssz[fork].AttesterSlashing)),
+        meta: VersionCodec,
+      },
     },
   };
 }

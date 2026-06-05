@@ -1,8 +1,10 @@
 import {beforeEach, describe, expect, it} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode} from "../../../src/index.js";
+import {countNoVotes} from "../../../src/protoArray/protoArray.js";
 
 describe("Gloas Fork Choice", () => {
   const genesisEpoch = 0;
@@ -49,6 +51,7 @@ describe("Gloas Fork Choice", () => {
       timeliness: true,
       executionPayloadBlockHash: blockRoot, // Use blockRoot as execution hash
       executionPayloadNumber: slot,
+      executionPayloadGasLimit: 30000000,
       executionStatus: ExecutionStatus.Valid,
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
       parentBlockHash: parentBlockHash === undefined ? null : parentBlockHash,
@@ -277,9 +280,10 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // FULL should now exist
@@ -297,15 +301,50 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
       const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
 
       expect(fullNode?.parent).toBe(pendingIndex);
+    });
+
+    it("FULL node carries the executionPayloadGasLimit supplied to onExecutionPayload", () => {
+      // Distinct from the value in createTestBlock (30M) so we know it came from this call.
+      const deliveredGasLimit = 31_500_000;
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        deliveredGasLimit,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
+      if (fullNode === undefined || fullNode.executionPayloadBlockHash === null) {
+        throw new Error("expected post-merge FULL variant");
+      }
+      // FULL must carry the *delivered* gas limit, not the value the block was created with.
+      // This is the value bid validation reads as `parent_gas_limit` for child bids.
+      expect(fullNode.executionPayloadBlockHash).toBe("0x02");
+      expect(fullNode.executionPayloadGasLimit).toBe(deliveredGasLimit);
+
+      const pendingNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
+      if (pendingNode === undefined || pendingNode.executionPayloadBlockHash === null) {
+        throw new Error("expected post-merge PENDING variant");
+      }
+      // PENDING/EMPTY hold inherited parent-payload values, unchanged by onExecutionPayload.
+      expect(pendingNode.executionPayloadGasLimit).toBe(30_000_000);
     });
 
     it("is idempotent (calling twice does not create duplicate)", () => {
@@ -317,18 +356,20 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
       protoArray.onExecutionPayload(
         "0x02",
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Should still only have one FULL node
@@ -350,9 +391,10 @@ describe("Gloas Fork Choice", () => {
           gloasForkSlot - 1,
           "0x02",
           gloasForkSlot - 1,
-          stateRoot,
+          30000000,
           null,
-          ExecutionStatus.Valid
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
         )
       ).toThrow();
     });
@@ -364,9 +406,10 @@ describe("Gloas Fork Choice", () => {
           gloasForkSlot,
           "0x99",
           gloasForkSlot,
-          stateRoot,
+          30000000,
           null,
-          ExecutionStatus.Valid
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
         )
       ).toThrow();
     });
@@ -393,25 +436,89 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
       // Vote yes from validators at indices 0, 1, 2
-      protoArray.notifyPtcMessages("0x02", [0, 1, 2], true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0, 1, 2], true, true);
 
       // Still not timely (need >50% of PTC_SIZE)
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
+    });
+
+    it("notifyPtcMessages() ignores messages whose slot does not match the block slot", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      // Make execution payload available so isPayloadTimely() can reach the vote check
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      const threshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: threshold}, (_, i) => i);
+
+      // Slot does not match the block slot, must not mutate votes
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot + 1, indices, true, true);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(false);
+
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
+      expect(protoArray.isPayloadTimely("0x02")).toBe(true);
     });
 
     it("notifyPtcMessages() validates ptcIndex range", () => {
       const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, gloasForkSlot, null);
 
-      expect(() => protoArray.notifyPtcMessages("0x02", [-1], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessages("0x02", [PTC_SIZE + 1], true)).toThrow(/Invalid PTC index/);
-      expect(() => protoArray.notifyPtcMessages("0x02", [0, 1, PTC_SIZE], true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot, [-1], true, true)).toThrow(/Invalid PTC index/);
+      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot, [PTC_SIZE], true, true)).toThrow(
+        /Invalid PTC index/
+      );
+      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot, [PTC_SIZE + 1], true, true)).toThrow(
+        /Invalid PTC index/
+      );
+      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0, 1, PTC_SIZE], true, true)).toThrow(
+        /Invalid PTC index/
+      );
     });
 
     it("notifyPtcMessages() handles unknown block gracefully", () => {
       // Should not throw for unknown block
-      expect(() => protoArray.notifyPtcMessages("0x99", [0], true)).not.toThrow();
+      expect(() => protoArray.notifyPtcMessages("0x99", gloasForkSlot, [0], true, true)).not.toThrow();
+    });
+
+    it("getPTCVoteCounts() returns raw popcounts of attested / present / available votes", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      // No votes yet
+      expect(protoArray.getPTCVoteCounts("0x02")).toEqual({
+        attesterCount: 0,
+        payloadPresentCount: 0,
+        dataAvailableCount: 0,
+      });
+
+      // 3 validators vote present + available, 2 attest but vote against both
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0, 1, 2], true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [3, 4], false, false);
+
+      expect(protoArray.getPTCVoteCounts("0x02")).toEqual({
+        attesterCount: 5,
+        payloadPresentCount: 3,
+        dataAvailableCount: 3,
+      });
+    });
+
+    it("getPTCVoteCounts() returns null for pre-Gloas and unknown roots", () => {
+      // Pre-Gloas block (parentBlockHash === null) has no PTC vote maps
+      const preGloasBlock = createTestBlock(gloasForkSlot - 1, "0x03", genesisRoot);
+      protoArray.onBlock(preGloasBlock, gloasForkSlot - 1, null);
+      expect(protoArray.getPTCVoteCounts("0x03")).toBeNull();
+      // Unknown root
+      expect(protoArray.getPTCVoteCounts("0x99")).toBeNull();
     });
 
     it("isPayloadTimely() returns false when payload not locally available", () => {
@@ -421,7 +528,7 @@ describe("Gloas Fork Choice", () => {
       // Vote yes from majority of PTC
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
 
       // Without execution payload (no FULL variant), should return false
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
@@ -437,15 +544,16 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Vote yes from majority of PTC (>50%)
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
 
       // Should now be timely
       expect(protoArray.isPayloadTimely("0x02")).toBe(true);
@@ -461,15 +569,16 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Vote yes from exactly 50% (not >50%)
       const threshold = Math.floor(PTC_SIZE / 2);
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
 
       // Should not be timely (need >50%, not >=50%)
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
@@ -485,25 +594,26 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Vote mixed yes/no
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       // Vote yes from indices 0..threshold-1
       const yesIndices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", yesIndices, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, yesIndices, true, true);
       // Vote no from indices threshold..PTC_SIZE-1
       const noIndices = Array.from({length: PTC_SIZE - threshold}, (_, i) => i + threshold);
-      protoArray.notifyPtcMessages("0x02", noIndices, false);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, noIndices, false, false);
 
       // Should be timely (threshold met)
       expect(protoArray.isPayloadTimely("0x02")).toBe(true);
 
       // Change some yes votes to no
-      protoArray.notifyPtcMessages("0x02", [0, 1], false);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0, 1], false, false);
 
       // Should no longer be timely
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
@@ -521,7 +631,477 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.isPayloadTimely("0x02")).toBe(false);
 
       // notifyPtcMessages should be no-op
-      expect(() => protoArray.notifyPtcMessages("0x02", [0], true)).not.toThrow();
+      expect(() => protoArray.notifyPtcMessages("0x02", gloasForkSlot - 1, [0], true, true)).not.toThrow();
+    });
+  });
+
+  describe("countNoVotes() — popcount(attended AND NOT yes)", () => {
+    function bits(bitLen: number, setIndices: number[]): BitArray {
+      const arr = BitArray.fromBitLen(bitLen);
+      for (const i of setIndices) arr.set(i, true);
+      return arr;
+    }
+
+    it("returns 0 for empty bitvectors", () => {
+      const attended = BitArray.fromBitLen(PTC_SIZE);
+      const yes = BitArray.fromBitLen(PTC_SIZE);
+      expect(countNoVotes(attended, yes)).toBe(0);
+    });
+
+    it("returns 0 when every attended member also voted YES", () => {
+      const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
+      const attended = bits(PTC_SIZE, indices);
+      const yes = bits(PTC_SIZE, indices);
+      expect(countNoVotes(attended, yes)).toBe(0);
+    });
+
+    it("returns full attendance when no member voted YES", () => {
+      const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
+      const attended = bits(PTC_SIZE, indices);
+      const yes = BitArray.fromBitLen(PTC_SIZE);
+      expect(countNoVotes(attended, yes)).toBe(PTC_SIZE);
+    });
+
+    it("ignores yes bits set outside attended (None state must not become NO)", () => {
+      // Pathological: yes claims indices that never attended. AND NOT must exclude them.
+      const attended = BitArray.fromBitLen(PTC_SIZE);
+      const yes = bits(PTC_SIZE, [0, 1, 2]);
+      expect(countNoVotes(attended, yes)).toBe(0);
+    });
+
+    it("counts only attended-but-not-yes indices", () => {
+      // Attended: {0, 1, 2, 3, 4}. YES: {0, 1}. Expected NO count: {2, 3, 4} = 3.
+      const attended = bits(PTC_SIZE, [0, 1, 2, 3, 4]);
+      const yes = bits(PTC_SIZE, [0, 1]);
+      expect(countNoVotes(attended, yes)).toBe(3);
+    });
+
+    it("handles bits spread across multiple bytes", () => {
+      // Pick indices across several byte boundaries (only when PTC_SIZE is large enough).
+      if (PTC_SIZE < 24) return;
+      const attendedIndices = [0, 7, 8, 15, 16, 23];
+      const yesIndices = [7, 16]; // YES at one bit in bytes 0 and 2
+      const attended = bits(PTC_SIZE, attendedIndices);
+      const yes = bits(PTC_SIZE, yesIndices);
+      // NO bits = {0, 8, 15, 23} → 4
+      expect(countNoVotes(attended, yes)).toBe(4);
+    });
+
+    it("handles edge bits (first and last)", () => {
+      const attended = bits(PTC_SIZE, [0, PTC_SIZE - 1]);
+      const yes = bits(PTC_SIZE, [0]); // YES at first only
+      // NO = {PTC_SIZE - 1} → 1
+      expect(countNoVotes(attended, yes)).toBe(1);
+    });
+
+    it("disjoint attended and yes: NO count = popcount(attended)", () => {
+      // attended ∩ yes = ∅. So attended AND NOT yes == attended.
+      if (PTC_SIZE < 4) return;
+      const attended = bits(PTC_SIZE, [0, 1]);
+      const yes = bits(PTC_SIZE, [2, 3]);
+      expect(countNoVotes(attended, yes)).toBe(2);
+    });
+
+    it("matches a brute-force reference implementation across the bit range", () => {
+      // Cross-check the byte-wise popcount against a per-bit loop on a fixed pattern.
+      const attendedIndices: number[] = [];
+      const yesIndices: number[] = [];
+      for (let i = 0; i < PTC_SIZE; i++) {
+        if (i % 3 !== 0) attendedIndices.push(i); // ~2/3 attended
+        if (i % 5 === 0) yesIndices.push(i); // 1/5 vote YES (may or may not be attended)
+      }
+      const attended = bits(PTC_SIZE, attendedIndices);
+      const yes = bits(PTC_SIZE, yesIndices);
+
+      let expected = 0;
+      for (let i = 0; i < PTC_SIZE; i++) {
+        if (attended.get(i) && !yes.get(i)) expected++;
+      }
+      expect(countNoVotes(attended, yes)).toBe(expected);
+    });
+  });
+
+  describe("isPayloadNotTimely() — Spec: payload_timeliness(timely=False)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+    });
+
+    function makeFullBlock(): void {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+    }
+
+    it("returns true when payload not locally available (None spec branch)", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      // No FULL variant created — spec returns `not False = True`
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(true);
+    });
+
+    it("returns true when explicit timeliness-False votes exceed threshold", () => {
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      // payloadPresent=false ⇒ explicit timeliness NO vote
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, false, true);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(true);
+    });
+
+    it("non-attending PTC members do not count as NO votes (None != False)", () => {
+      makeFullBlock();
+      // Only a single explicit NO vote — the rest never attested (None)
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], false, true);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(false);
+    });
+
+    it("YES votes do not count as NO (popcount(attended AND NOT yes) excludes YES bits)", () => {
+      // If the algorithm were popcount(attended) instead of popcount(attended AND NOT yes),
+      // a full house of YES votes would erroneously trigger NO threshold.
+      makeFullBlock();
+      const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(false);
+    });
+
+    it("DA NO votes do not pollute timeliness NO count (cross-dimension isolation)", () => {
+      // Every PTC member votes (payloadPresent=true, blobDataAvailable=false).
+      // Timeliness YES → no timeliness NO votes. DA NO → DA NO threshold tripped.
+      // isPayloadNotTimely must read only payloadTimelinessVotes, not payloadDataAvailabilityVotes.
+      makeFullBlock();
+      const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(false);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(true);
+    });
+
+    it("flipping a NO vote to YES decrements the NO count below threshold", () => {
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, false, true);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(true);
+      // PTC member 0 changes their mind: NO → YES. NO count drops below threshold.
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], true, true);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(false);
+    });
+
+    it("mixed YES + NO votes count only the NO bits", () => {
+      // PTC_SIZE / 2 + 1 YES votes, then PTC_SIZE / 2 NO votes at non-overlapping indices.
+      // NO count = floor(PTC_SIZE / 2) which is exactly at threshold → false.
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const yesIndices = Array.from({length: overThreshold}, (_, i) => i);
+      const noIndices = Array.from({length: PTC_SIZE - overThreshold}, (_, i) => i + overThreshold);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, yesIndices, true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, noIndices, false, true);
+      // NO count = PTC_SIZE - overThreshold = floor(PTC_SIZE/2) - 1, well under threshold
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(false);
+    });
+
+    it("subset attended, all subset voted NO, subset > threshold → true", () => {
+      // Tri-state: indices [0..overThreshold) → False; rest → None.
+      // The explicit NO subset alone trips the threshold.
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, false, true);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(true);
+    });
+  });
+
+  describe("isPayloadDataAvailable() — Spec: payload_data_availability(available=True)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+    });
+
+    function makeFullBlock(): void {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+    }
+
+    it("returns false for unknown block", () => {
+      expect(protoArray.isPayloadDataAvailable("0x99")).toBe(false);
+    });
+
+    it("returns false when payload not locally available", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
+      // No FULL variant — spec returns `not True = False`
+      expect(protoArray.isPayloadDataAvailable("0x02")).toBe(false);
+    });
+
+    it("returns true when DA YES votes exceed threshold and payload available", () => {
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
+      expect(protoArray.isPayloadDataAvailable("0x02")).toBe(true);
+    });
+
+    it("returns false when DA YES votes exactly at threshold (>, not >=)", () => {
+      makeFullBlock();
+      const atThreshold = Math.floor(PTC_SIZE / 2);
+      const indices = Array.from({length: atThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
+      expect(protoArray.isPayloadDataAvailable("0x02")).toBe(false);
+    });
+  });
+
+  describe("isPayloadDataNotAvailable() — Spec: payload_data_availability(available=False)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+    });
+
+    function makeFullBlock(): void {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+    }
+
+    it("returns true when payload not locally available (None spec branch)", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(true);
+    });
+
+    it("returns true when explicit DA-False votes exceed threshold", () => {
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      // blobDataAvailable=false ⇒ explicit DA NO vote
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(true);
+    });
+
+    it("returns false when DA-False votes exactly at threshold (>, not >=)", () => {
+      makeFullBlock();
+      const atThreshold = Math.floor(PTC_SIZE / 2);
+      const indices = Array.from({length: atThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(false);
+    });
+
+    // Tri-state regression guard: a `daYes + daNo` two-bit encoding would have
+    // miscounted None as False. We track attendance separately to prevent that.
+    it("non-attending PTC members do not count as NO votes (None != False)", () => {
+      makeFullBlock();
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], true, false);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(false);
+    });
+
+    it("YES votes do not count as NO (popcount(attended AND NOT yes) excludes YES bits)", () => {
+      // If the algorithm were popcount(attended) instead of popcount(attended AND NOT yes),
+      // a full house of DA YES votes would erroneously trigger NO threshold.
+      makeFullBlock();
+      const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(false);
+    });
+
+    it("timeliness NO votes do not pollute DA NO count (cross-dimension isolation)", () => {
+      // Every PTC member votes (payloadPresent=false, blobDataAvailable=true).
+      // Timeliness NO → timeliness NO threshold tripped. DA YES → no DA NO votes.
+      // isPayloadDataNotAvailable must read only payloadDataAvailabilityVotes, not payloadTimelinessVotes.
+      makeFullBlock();
+      const indices = Array.from({length: PTC_SIZE}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, false, true);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(false);
+      expect(protoArray.isPayloadNotTimely("0x02")).toBe(true);
+    });
+
+    it("flipping a NO vote to YES decrements the NO count below threshold", () => {
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, false);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(true);
+      // PTC member 0 changes their mind: DA NO → DA YES. NO count drops below threshold.
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, [0], true, true);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(false);
+    });
+
+    it("mixed DA YES + NO votes count only the NO bits", () => {
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const yesIndices = Array.from({length: overThreshold}, (_, i) => i);
+      const noIndices = Array.from({length: PTC_SIZE - overThreshold}, (_, i) => i + overThreshold);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, yesIndices, true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, noIndices, true, false);
+      // NO count = PTC_SIZE - overThreshold = floor(PTC_SIZE/2) - 1, well under threshold
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(false);
+    });
+
+    it("tri-state combined: None + DA YES + DA NO, where NO subset alone trips threshold", () => {
+      // Partition PTC members into three groups:
+      //   - YES voters: indices [0, overThreshold)
+      //   - NO voters:  indices [overThreshold, overThreshold + overThreshold)
+      //   - None:       indices [overThreshold + overThreshold, PTC_SIZE)
+      // Verify isPayloadDataNotAvailable counts only the NO subset.
+      makeFullBlock();
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      // Bail out gracefully on small minimal configs where partition wouldn't fit.
+      if (overThreshold * 2 > PTC_SIZE) return;
+      const yesIndices = Array.from({length: overThreshold}, (_, i) => i);
+      const noIndices = Array.from({length: overThreshold}, (_, i) => i + overThreshold);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, yesIndices, true, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, noIndices, true, false);
+      expect(protoArray.isPayloadDataNotAvailable("0x02")).toBe(true);
+      // And confirm DA YES isn't ALSO tripped (the YES subset is also > threshold here).
+      expect(protoArray.isPayloadDataAvailable("0x02")).toBe(true);
+    });
+  });
+
+  describe("shouldBuildOnFull() — Spec: should_build_on_full(store, head)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+    });
+
+    function makeHead(payloadStatus: PayloadStatus): ProtoBlock {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      if (payloadStatus === PayloadStatus.FULL) {
+        protoArray.onExecutionPayload(
+          "0x02",
+          gloasForkSlot,
+          "0x02",
+          gloasForkSlot,
+          30000000,
+          null,
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
+        );
+      }
+      const node = getNodeByPayloadStatus(protoArray, "0x02", payloadStatus);
+      if (node === undefined) throw new Error(`No ${PayloadStatus[payloadStatus]} variant`);
+      return node;
+    }
+
+    it("throws when head is PENDING", () => {
+      const head = makeHead(PayloadStatus.PENDING);
+      expect(() => protoArray.shouldBuildOnFull(head, head.slot + 1)).toThrow(/PENDING/);
+    });
+
+    it("returns false when head is EMPTY", () => {
+      const head = makeHead(PayloadStatus.EMPTY);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
+    });
+
+    it("returns true when head is FULL and no DA NO votes", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      // No votes at all — isPayloadDataNotAvailable returns false → build on full
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
+    it("returns false when head is FULL and DA NO votes exceed threshold (reorg trigger)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, true, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
+    });
+
+    it("returns true when head is FULL and DA NO votes exactly at threshold (>, not >=)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const atThreshold = Math.floor(PTC_SIZE / 2);
+      const indices = Array.from({length: atThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, true, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
+    it("returns true when many PTC members did not vote and few NO votes are below threshold", () => {
+      // Guards against None being miscounted as NO — would force a spurious reorg.
+      const head = makeHead(PayloadStatus.FULL);
+      protoArray.notifyPtcMessages("0x02", head.slot, [0], true, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
+    it("returns false when head is FULL, data available but timeliness NO votes exceed threshold (late payload reorg)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      // payloadPresent=false (untimely), blobDataAvailable=true (data available)
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(false);
+    });
+
+    it("returns true when head is FULL and timeliness NO votes exactly at threshold (>, not >=)", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const atThreshold = Math.floor(PTC_SIZE / 2);
+      const indices = Array.from({length: atThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, true);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 1)).toBe(true);
+    });
+
+    it("returns true for a FULL head that is not from the previous slot, even with PTC voting against it", () => {
+      const head = makeHead(PayloadStatus.FULL);
+      const overThreshold = Math.floor(PTC_SIZE / 2) + 1;
+      const indices = Array.from({length: overThreshold}, (_, i) => i);
+      protoArray.notifyPtcMessages("0x02", head.slot, indices, false, false);
+      expect(protoArray.shouldBuildOnFull(head, head.slot + 2)).toBe(true);
     });
   });
 
@@ -546,9 +1126,10 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       const pendingIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING);
@@ -568,9 +1149,10 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02Hash",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Block B extends A's FULL (parentBlockHash matches)
@@ -600,7 +1182,16 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        blockSlot,
+        "0x02",
+        blockSlot,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -677,7 +1268,16 @@ describe("Gloas Fork Choice", () => {
       const blockSlot = gloasForkSlot + 10;
       const block = createTestBlock(blockSlot, "0x02", genesisRoot, genesisRoot);
       protoArray.onBlock(block, blockSlot, null);
-      protoArray.onExecutionPayload("0x02", blockSlot, "0x02", blockSlot, stateRoot, null, ExecutionStatus.Valid);
+      protoArray.onExecutionPayload(
+        "0x02",
+        blockSlot,
+        "0x02",
+        blockSlot,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       const emptyIndex = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
       if (emptyIndex === undefined) throw new Error("Expected emptyIndex to exist");
@@ -739,9 +1339,10 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Get block1's variants indices before pruning
@@ -792,15 +1393,16 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Set PTC votes for block1
       const threshold = Math.floor(PTC_SIZE / 2) + 1;
       const indices = Array.from({length: threshold}, (_, i) => i);
-      protoArray.notifyPtcMessages("0x02", indices, true);
+      protoArray.notifyPtcMessages("0x02", gloasForkSlot, indices, true, true);
 
       // Verify PTC votes are set
       expect(protoArray.isPayloadTimely("0x02")).toBe(true);
@@ -827,9 +1429,10 @@ describe("Gloas Fork Choice", () => {
         gloasForkSlot,
         "0x02",
         gloasForkSlot,
-        stateRoot,
+        30000000,
         null,
-        ExecutionStatus.Valid
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
       );
 
       // Verify all three variants exist via the public API
@@ -855,6 +1458,253 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.PENDING)).toBeUndefined();
       expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY)).toBeUndefined();
       expect(protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL)).toBeUndefined();
+    });
+  });
+
+  describe("Inherited executionStatus on gloas onBlock (F1)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      // Genesis block is Valid via createTestBlock default
+      protoArray.onBlock(createTestBlock(0, genesisRoot, "0x00"), 0, null);
+    });
+
+    it("PENDING/EMPTY inherit Syncing when caller passes Syncing", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block, gloasForkSlot, null);
+      const pending = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
+      const empty = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
+      expect(pending?.executionStatus).toBe(ExecutionStatus.Syncing);
+      expect(empty?.executionStatus).toBe(ExecutionStatus.Syncing);
+    });
+
+    it("PENDING/EMPTY inherit Valid when caller passes Valid", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Valid;
+      protoArray.onBlock(block, gloasForkSlot, null);
+      const pending = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING);
+      const empty = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY);
+      expect(pending?.executionStatus).toBe(ExecutionStatus.Valid);
+      expect(empty?.executionStatus).toBe(ExecutionStatus.Valid);
+    });
+  });
+
+  describe("Back-validation in onExecutionPayload (Fix #1)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      protoArray.onBlock(createTestBlock(0, genesisRoot, "0x00"), 0, null);
+    });
+
+    it("VALID payload back-validates Syncing FULL ancestor on chain", () => {
+      // block1 (gloas, FULL Syncing) → block2 (gloas) extends block1's FULL
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block1.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block1, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", "0x02");
+      block2.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block2, gloasForkSlot + 1, null);
+
+      // Pre-condition: block1 FULL is Syncing
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+
+      // VALID payload arrives for block2 — should walk up validating block1 FULL + PENDING
+      protoArray.onExecutionPayload(
+        "0x03",
+        gloasForkSlot + 1,
+        "0x03",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+    });
+
+    it("VALID payload does NOT validate alternative-timeline FULL", () => {
+      // Production semantic: gloas PENDING/EMPTY store parentBlockHash in executionPayloadBlockHash.
+      // FULL stores its own payload hash. Need different hashes to test alt-timeline correctly.
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block1.executionStatus = ExecutionStatus.Syncing;
+      block1.executionPayloadBlockHash = genesisRoot; // PENDING/EMPTY store parent's payload hash
+      protoArray.onBlock(block1, gloasForkSlot, null);
+
+      // block1 FULL arrives Syncing with its OWN payload hash
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02hash",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // block2 extends block1's EMPTY (parentBlockHash = genesisRoot, NOT block1's payload hash)
+      const block2 = createTestBlock(gloasForkSlot + 1, "0x03", "0x02", genesisRoot);
+      block2.executionStatus = ExecutionStatus.Syncing;
+      block2.executionPayloadBlockHash = genesisRoot; // PENDING/EMPTY store parent's payload hash
+      protoArray.onBlock(block2, gloasForkSlot + 1, null);
+
+      // VALID for block2 — walk should go through block1's EMPTY, NOT block1's FULL
+      protoArray.onExecutionPayload(
+        "0x03",
+        gloasForkSlot + 1,
+        "0x03",
+        gloasForkSlot + 1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      // block1 FULL must remain Syncing (not on this chain)
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      // block1 EMPTY (on the chain) should now be Valid
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.EMPTY)?.executionStatus).toBe(
+        ExecutionStatus.Valid
+      );
+    });
+
+    it("Syncing payload does NOT trigger back-validation", () => {
+      const block1 = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block1.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block1, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // FULL is Syncing, ancestors not validated
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+      expect(getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.PENDING)?.executionStatus).toBe(
+        ExecutionStatus.Syncing
+      );
+    });
+  });
+
+  describe("Parent variant disambiguation in validateLatestHash (F2)", () => {
+    let protoArray: ProtoArray;
+
+    beforeEach(() => {
+      protoArray = new ProtoArray({
+        pruneThreshold: 0,
+        justifiedEpoch: genesisEpoch,
+        justifiedRoot: genesisRoot,
+        finalizedEpoch: genesisEpoch,
+        finalizedRoot: genesisRoot,
+      });
+      protoArray.onBlock(createTestBlock(0, genesisRoot, "0x00"), 0, null);
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns FULL when hash matches FULL", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Syncing;
+      protoArray.onBlock(block, gloasForkSlot, null);
+      protoArray.onExecutionPayload(
+        "0x02",
+        gloasForkSlot,
+        "0x02hash",
+        gloasForkSlot,
+        30000000,
+        null,
+        ExecutionStatus.Syncing,
+        DataAvailabilityStatus.Available
+      );
+
+      // Look up by FULL's payload hash → should return FULL index
+      const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.FULL);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x02", "0x02hash");
+      expect(found).toBe(fullIdx);
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns EMPTY when hash matches EMPTY (parent's hash)", () => {
+      // For gloas EMPTY, executionPayloadBlockHash == bid.parentBlockHash (= genesisRoot here)
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      block.executionStatus = ExecutionStatus.Syncing;
+      block.executionPayloadBlockHash = genesisRoot; // production semantic for gloas PENDING/EMPTY
+      protoArray.onBlock(block, gloasForkSlot, null);
+
+      // FULL not added yet — only EMPTY available with hash = genesisRoot
+      const emptyIdx = protoArray.getNodeIndexByRootAndStatus("0x02", PayloadStatus.EMPTY);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x02", genesisRoot);
+      expect(found).toBe(emptyIdx);
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns undefined when no variant matches", () => {
+      const block = createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot);
+      protoArray.onBlock(block, gloasForkSlot, null);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x02", "0xunknown");
+      expect(found).toBeUndefined();
+    });
+
+    it("getNodeIndexByRootAndBlockHash returns pre-gloas FULL when hash matches", () => {
+      const preGloasBlock = createTestBlock(gloasForkSlot - 1, "0x05", genesisRoot);
+      protoArray.onBlock(preGloasBlock, gloasForkSlot - 1, null);
+      const fullIdx = protoArray.getNodeIndexByRootAndStatus("0x05", PayloadStatus.FULL);
+      const found = protoArray.getNodeIndexByRootAndBlockHash("0x05", "0x05");
+      expect(found).toBe(fullIdx);
     });
   });
 });

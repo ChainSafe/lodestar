@@ -2,45 +2,49 @@ import {EpochDifference, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Epoch, RootHex} from "@lodestar/types";
 
 /**
- * Get dependent root of a shuffling given attestation epoch and head block.
+ * Get dependent root of a shuffling given a message epoch and a proto block.
+ *
+ * Pre-gloas, this is used for attestation validation
+ * Post-gloas, this is also used for execution_payload_bid validation because post-fulu,
+ * a dependent root of a proposal duties is 1-epoch look ahead (instead of 0 as of pre-fulu)
  */
 export function getShufflingDependentRoot(
   forkChoice: IForkChoice,
-  attEpoch: Epoch,
-  blockEpoch: Epoch,
-  attHeadBlock: ProtoBlock
+  msgEpoch: Epoch,
+  protoBlockEpoch: Epoch,
+  protoBlock: ProtoBlock
 ): RootHex {
   let shufflingDependentRoot: RootHex;
-  if (blockEpoch === attEpoch) {
+  if (protoBlockEpoch === msgEpoch) {
     // current shuffling, this is equivalent to `headState.currentShuffling`
-    // given blockEpoch = attEpoch = n
+    // given protoBlockEpoch = msgEpoch = n
     //        epoch:       (n-2)   (n-1)     n     (n+1)
     //               |-------|-------|-------|-------|
-    // attHeadBlock     ------------------------^
+    // protoBlock       ------------------------^
     // shufflingDependentRoot ------^
-    shufflingDependentRoot = forkChoice.getDependentRoot(attHeadBlock, EpochDifference.previous);
-  } else if (blockEpoch === attEpoch - 1) {
+    shufflingDependentRoot = forkChoice.getDependentRoot(protoBlock, EpochDifference.previous);
+  } else if (protoBlockEpoch === msgEpoch - 1) {
     // next shuffling, this is equivalent to `headState.nextShuffling`
-    // given blockEpoch = n-1, attEpoch = n
+    // given protoBlockEpoch = n-1, msgEpoch = n
     //        epoch:       (n-2)   (n-1)     n     (n+1)
     //               |-------|-------|-------|-------|
-    // attHeadBlock     -------------------^
+    // protoBlock       -------------------^
     // shufflingDependentRoot ------^
-    shufflingDependentRoot = forkChoice.getDependentRoot(attHeadBlock, EpochDifference.current);
-  } else if (blockEpoch < attEpoch - 1) {
+    shufflingDependentRoot = forkChoice.getDependentRoot(protoBlock, EpochDifference.current);
+  } else if (protoBlockEpoch < msgEpoch - 1) {
     // this never happens with default chain option of maxSkipSlots = 32, however we still need to handle it
     // check the verifyHeadBlockAndTargetRoot() function above
-    // given blockEpoch = n-2, attEpoch = n
+    // given protoBlockEpoch = n-2, msgEpoch = n
     //        epoch:       (n-2)   (n-1)     n     (n+1)
     //               |-------|-------|-------|-------|
-    // attHeadBlock     -----------^
+    // protoBlock       -----------^
     // shufflingDependentRoot -----^
-    shufflingDependentRoot = attHeadBlock.blockRoot;
+    shufflingDependentRoot = protoBlock.blockRoot;
     // use lodestar_gossip_attestation_head_slot_to_attestation_slot metric to track this case
   } else {
-    // blockEpoch > attEpoch
+    // protoBlockEpoch > msgEpoch
     // should not happen, handled in verifyAttestationTargetRoot
-    throw Error(`attestation epoch ${attEpoch} is before head block epoch ${blockEpoch}`);
+    throw Error(`message epoch ${msgEpoch} is before proto block epoch ${protoBlockEpoch}`);
   }
 
   return shufflingDependentRoot;

@@ -8,6 +8,7 @@ export * from "./executionPayloadBid.js";
 export * from "./executionPayloadEnvelope.js";
 export * from "./gossipValidation.js";
 export * from "./payloadAttestation.js";
+export * from "./proposerPreferences.js";
 export * from "./proposerSlashingError.js";
 export * from "./syncCommitteeError.js";
 export * from "./voluntaryExitError.js";

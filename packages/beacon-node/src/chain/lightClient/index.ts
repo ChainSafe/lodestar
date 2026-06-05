@@ -2,12 +2,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  LightClientUpdateSummary,
-  isBetterUpdate,
-  toLightClientUpdateSummary,
-  upgradeLightClientHeader,
-} from "@lodestar/light-client/spec";
-import {
   ForkName,
   ForkPostAltair,
   ForkPostBellatrix,
@@ -27,6 +21,12 @@ import {
   computeSyncPeriodAtSlot,
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
+import {
+  LightClientUpdateSummary,
+  isBetterUpdate,
+  toLightClientUpdateSummary,
+  upgradeLightClientHeader,
+} from "@lodestar/state-transition/light-client";
 import {
   BeaconBlock,
   BeaconBlockBody,
@@ -269,6 +269,14 @@ export class LightClientServer {
     // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
     // While this function is only called for head blocks, best to disable.
     if (this.opts.disableLightClientServerOnImportBlockHead) {
+      return;
+    }
+
+    // TODO GLOAS: Light client updates for gloas are not yet updated in the spec.
+    // The block body no longer contains execution payload, so `blockToLightClientHeader`
+    // cannot construct a header from a gloas block. Skip all light client processing
+    // for post-gloas blocks, revisit once there is a spec for it.
+    if (this.config.getForkSeq(block.slot) >= ForkSeq.gloas) {
       return;
     }
 

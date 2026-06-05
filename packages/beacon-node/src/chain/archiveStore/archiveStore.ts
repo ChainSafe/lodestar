@@ -1,4 +1,4 @@
-import {CheckpointWithPayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
@@ -30,7 +30,6 @@ export enum ArchiveStoreTask {
   PruneHistory = "prune_history",
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
-  RegenPruneOnFinalized = "regen_prune_on_finalized",
   ForkchoicePrune = "forkchoice_prune",
   UpdateBackfillRange = "update_backfill_range",
 }
@@ -41,7 +40,7 @@ export enum ArchiveStoreTask {
  */
 export class ArchiveStore {
   private archiveMode: ArchiveMode;
-  private jobQueue: JobItemQueue<[CheckpointWithPayloadStatus], void>;
+  private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private archiveDataEpochs?: number;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
@@ -64,7 +63,7 @@ export class ArchiveStore {
     this.archiveMode = opts.archiveMode;
     this.archiveDataEpochs = opts.archiveDataEpochs;
 
-    this.jobQueue = new JobItemQueue<[CheckpointWithPayloadStatus], void>(this.processFinalizedCheckpoint, {
+    this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
       signal,
     });
@@ -166,7 +165,7 @@ export class ArchiveStore {
   //-------------------------------------------------------------------------
   // Event handlers
   //-------------------------------------------------------------------------
-  private onFinalizedCheckpoint = (finalized: CheckpointWithPayloadStatus): void => {
+  private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
     this.jobQueue.push(finalized).catch((e) => {
       if (!isQueueErrorAborted(e)) {
         this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
@@ -187,7 +186,7 @@ export class ArchiveStore {
     });
   };
 
-  private processFinalizedCheckpoint = async (finalized: CheckpointWithPayloadStatus): Promise<void> => {
+  private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
@@ -228,10 +227,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
       timer?.({source: ArchiveStoreTask.MaybeArchiveState});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
-      timer?.({source: ArchiveStoreTask.RegenPruneOnFinalized});
 
       // tasks rely on extended fork choice
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();

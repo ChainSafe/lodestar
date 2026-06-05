@@ -110,8 +110,8 @@ function loadInactivityScores(
   seedState: BeaconStateAltair,
   inactivityScoresBytes: Uint8Array
 ): void {
-  // migratedState starts with the same inactivityScores to seed state
-  migratedState.inactivityScores = seedState.inactivityScores.clone();
+  // true = do not transfer cache
+  migratedState.inactivityScores = seedState.inactivityScores.clone(true);
   const oldValidator = migratedState.inactivityScores.length;
   // UintNum64 = 8 bytes
   const newValidator = inactivityScoresBytes.length / 8;
@@ -187,8 +187,8 @@ function loadValidators(
   const newValidatorCount = Math.floor(newValidatorsBytes.length / VALIDATOR_BYTES_SIZE);
   const isMoreValidator = newValidatorCount >= seedValidatorCount;
   const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
-  // migrated state starts with the same validators to seed state
-  migratedState.validators = seedState.validators.clone();
+  // true = do not transfer cache
+  migratedState.validators = seedState.validators.clone(true);
   // 80% of validators serialization time comes from memory allocation
   // seedStateValidatorsBytes is an optimization at beacon-node side to avoid memory allocation here
   const seedValidatorsBytes = seedStateValidatorsBytes ?? seedState.validators.serialize();

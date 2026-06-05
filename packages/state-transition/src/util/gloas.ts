@@ -6,15 +6,20 @@ import {
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   MIN_DEPOSIT_AMOUNT,
+  MIN_SEED_LOOKAHEAD,
+  PTC_SIZE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
-import {CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeEpochAtSlot} from "./epoch.js";
+import {computeEpochShuffling} from "./epochShuffling.js";
 import {RootCache} from "./rootCache.js";
+import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
+import {getActiveValidatorIndices} from "./validator.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
   return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
@@ -66,6 +71,34 @@ export function convertValidatorIndexToBuilderIndex(validatorIndex: ValidatorInd
  */
 export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): boolean {
   return builder.depositEpoch < finalizedEpoch && builder.withdrawableEpoch === FAR_FUTURE_EPOCH;
+}
+
+/**
+ * Compute the gas limit that satisfies the EIP-1559 adjustment rule from `parentGasLimit`,
+ * clamping `targetGasLimit` into the allowed window of `±max(parentGasLimit / 1024, 1) - 1`.
+ *
+ * From https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
+ */
+export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: number): number {
+  const maxGasLimitDifference = Math.max(Math.floor(parentGasLimit / 1024), 1) - 1;
+
+  if (targetGasLimit > parentGasLimit) {
+    const gasDiff = targetGasLimit - parentGasLimit;
+    return parentGasLimit + Math.min(gasDiff, maxGasLimitDifference);
+  }
+
+  const gasDiff = parentGasLimit - targetGasLimit;
+  return parentGasLimit - Math.min(gasDiff, maxGasLimitDifference);
+}
+
+/**
+ * Check if `gasLimit` is compatible with `targetGasLimit` under the EIP-1559 transition rule
+ * from `parentGasLimit`. The bid must hit `targetGasLimit` when the target is within one
+ * adjustment step of the parent, otherwise it must hit the clamped boundary.
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/builder.md#new-is_gas_limit_target_compatible
+ */
+export function isGasLimitTargetCompatible(parentGasLimit: number, gasLimit: number, targetGasLimit: number): boolean {
+  return gasLimit === getExpectedGasLimit(parentGasLimit, targetGasLimit);
 }
 
 /**
@@ -167,6 +200,44 @@ export function isAttestationSameSlotRootCache(rootCache: RootCache, data: Attes
   return isMatchingBlockRoot && isCurrentBlockRoot;
 }
 
-export function isParentBlockFull(state: CachedBeaconStateGloas): boolean {
-  return byteArrayEquals(state.latestExecutionPayloadBid.blockHash, state.latestBlockHash);
+export function initializePtcWindow(state: CachedBeaconStateFulu): Uint32Array[] {
+  const ptcWindow: Uint32Array[] = Array.from({length: SLOTS_PER_EPOCH}, () => new Uint32Array(PTC_SIZE));
+  const currentEpoch = state.epochCtx.epoch;
+
+  for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
+    const epoch = currentEpoch + epochOffset;
+    const shuffling =
+      state.epochCtx.getShufflingAtEpochOrNull(epoch) ??
+      computeEpochShuffling(state, getActiveValidatorIndices(state, epoch), epoch);
+
+    ptcWindow.push(
+      ...computePayloadTimelinessCommitteesForEpoch(
+        state,
+        epoch,
+        shuffling.committees,
+        state.epochCtx.effectiveBalanceIncrements
+      )
+    );
+  }
+
+  return ptcWindow;
+}
+
+export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
+  previousPayloadTimelinessCommittees: Uint32Array[];
+  payloadTimelinessCommittees: Uint32Array[];
+  nextPayloadTimelinessCommittees: Uint32Array[];
+} {
+  const toUint32Arrays = (views: ReturnType<typeof state.ptcWindow.getReadonlyByRange>) =>
+    views.map((v) => Uint32Array.from(v.getAll()));
+
+  const previousPtcWindow = state.ptcWindow.getReadonlyByRange(0, SLOTS_PER_EPOCH);
+  const currentPtcWindow = state.ptcWindow.getReadonlyByRange(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
+  const nextPtcWindow = state.ptcWindow.getReadonlyByRange(2 * SLOTS_PER_EPOCH, SLOTS_PER_EPOCH);
+
+  return {
+    previousPayloadTimelinessCommittees: toUint32Arrays(previousPtcWindow),
+    payloadTimelinessCommittees: toUint32Arrays(currentPtcWindow),
+    nextPayloadTimelinessCommittees: toUint32Arrays(nextPtcWindow),
+  };
 }

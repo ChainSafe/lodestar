@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.41.1",
+  "version": "1.43.0",
   "type": "module",
   "exports": {
     ".": {
@@ -44,7 +44,6 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/reqresp": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "@lodestar/utils": "workspace:^",
-    "uint8arraylist": "^2.4.7"
+    "@lodestar/utils": "workspace:^"
   }
 }

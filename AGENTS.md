@@ -32,12 +32,9 @@ and serves as:
   config/           # Network configuration (mainnet, sepolia, etc.)
   db/               # Database abstraction (LevelDB)
   era/              # Era file handling for historical data
-  flare/            # CLI debugging/testing tool
   fork-choice/      # Fork choice implementation (proto-array)
-  light-client/     # Light client implementation
   logger/           # Logging utilities
   params/           # Consensus parameters and presets
-  prover/           # Execution API prover
   reqresp/          # libp2p request/response protocol
   spec-test-util/   # Test harness for consensus spec tests
   state-transition/ # State transition functions
@@ -91,6 +88,22 @@ pnpm vitest run --project unit -t "pattern"
 # Run spec tests (requires downloading first)
 pnpm download-spec-tests
 pnpm test:spec
+
+# Run a single spec test file (located in packages/beacon-node) from the repository root — use spec-mainnet
+# for the mainnet preset
+pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts
+
+# Filter spec tests within a file by pyspec test name pattern
+pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts \
+  -t "transition_with_voluntary_exit_right_after_fork"
+
+# Download nightly artifacts from ethereum/consensus-specs CI instead of a
+# stable release. Useful when testing against unreleased spec changes.
+# Requires GITHUB_TOKEN in the env or a repo-root .env file.
+pnpm download-spec-tests latest                                # latest scheduled master run
+pnpm download-spec-tests 2026-04-14                            # latest successful run on that date
+pnpm download-spec-tests latest <owner>/consensus-specs        # fork
+pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
 
 # Run e2e tests (requires docker environment)
 ./scripts/run_e2e_env.sh start

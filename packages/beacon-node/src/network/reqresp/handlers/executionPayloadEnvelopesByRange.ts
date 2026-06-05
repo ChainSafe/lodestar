@@ -20,13 +20,16 @@ export async function* onExecutionPayloadEnvelopesByRange(
   }
 
   const finalized = db.executionPayloadEnvelopeArchive;
-  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
+  // Use the finalized block's actual slot as the checkpoint epoch-boundary slot may be skipped
+  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // The finalized block's envelope stays in the hot db until the next finalization run
+  const archiveMaxSlot = finalizedSlot - 1;
 
   // Finalized range of envelopes
-  if (startSlot <= finalizedSlot) {
+  if (startSlot <= archiveMaxSlot) {
     for await (const {key, value: envelopeBytes} of finalized.binaryEntriesStream({
       gte: startSlot,
-      lt: endSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
     })) {
       const slot = finalized.decodeKey(key);
       yield {
@@ -37,7 +40,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
   }
 
   // Non-finalized range of envelopes
-  if (endSlot > finalizedSlot) {
+  if (endSlot > archiveMaxSlot) {
     const headBlock = chain.forkChoice.getHead();
     const headRoot = headBlock.blockRoot;
     const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
@@ -46,7 +49,7 @@ export async function* onExecutionPayloadEnvelopesByRange(
     for (let i = headChain.length - 1; i >= 0; i--) {
       const block = headChain[i];
 
-      if (block.slot >= startSlot && block.slot < endSlot) {
+      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
         // Skip EMPTY blocks
         if (block.payloadStatus !== PayloadStatus.FULL) {
           continue;
@@ -81,10 +84,12 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
   if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
-  // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
   if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
+
+  // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
+  // Archival nodes may still serve older retained payloads to allow genesis sync.
 
   if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
     count = config.MAX_REQUEST_BLOCKS_DENEB;

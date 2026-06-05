@@ -11,7 +11,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {ExecutionPayload, RootHex, bellatrix, deneb, ssz} from "@lodestar/types";
+import {ExecutionPayload, RootHex, bellatrix, deneb, gloas, ssz} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {INTEROP_BLOCK_HASH} from "../../node/utils/interop/state.js";
@@ -132,14 +132,17 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV2: this.notifyNewPayload.bind(this),
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
       engine_newPayloadV4: this.notifyNewPayload.bind(this),
+      engine_newPayloadV5: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
+      engine_forkchoiceUpdatedV4: this.notifyForkchoiceUpdate.bind(this),
       engine_getPayloadV1: this.getPayloadV1.bind(this),
       engine_getPayloadV2: this.getPayloadV5.bind(this),
       engine_getPayloadV3: this.getPayloadV5.bind(this),
       engine_getPayloadV4: this.getPayloadV5.bind(this),
       engine_getPayloadV5: this.getPayloadV5.bind(this),
+      engine_getPayloadV6: this.getPayloadV5.bind(this),
       engine_getPayloadBodiesByHashV1: this.getPayloadBodiesByHash.bind(this),
       engine_getPayloadBodiesByRangeV1: this.getPayloadBodiesByRange.bind(this),
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
@@ -377,6 +380,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
 
       if (ForkSeq[fork] >= ForkSeq.capella) {
         (executionPayload as ExecutionPayload<ForkPostCapella>).withdrawals = ssz.capella.Withdrawals.defaultValue();
+      }
+
+      if (ForkSeq[fork] >= ForkSeq.gloas && payloadAttributes.slotNumber != null) {
+        (executionPayload as gloas.ExecutionPayload).slotNumber = payloadAttributes.slotNumber;
       }
 
       this.preparingPayloads.set(payloadId, {
