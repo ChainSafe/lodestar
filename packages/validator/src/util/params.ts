@@ -330,7 +330,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
 
     // FastConfirmationRule
-    CONFIRMATION_BYZANTINE_THRESHOLD: true,
+    CONFIRMATION_BYZANTINE_THRESHOLD: false,
 
     CHURN_LIMIT_QUOTIENT_GLOAS: gloasForkRelevant,
     CONSOLIDATION_CHURN_LIMIT_QUOTIENT: gloasForkRelevant,
