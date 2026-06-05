@@ -89,6 +89,14 @@ pnpm vitest run --project unit -t "pattern"
 pnpm download-spec-tests
 pnpm test:spec
 
+# Run a single spec test file (located in packages/beacon-node) from the repository root — use spec-mainnet
+# for the mainnet preset
+pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts
+
+# Filter spec tests within a file by pyspec test name pattern
+pnpm vitest run --project spec-minimal test/spec/presets/transition.test.ts \
+  -t "transition_with_voluntary_exit_right_after_fork"
+
 # Download nightly artifacts from ethereum/consensus-specs CI instead of a
 # stable release. Useful when testing against unreleased spec changes.
 # Requires GITHUB_TOKEN in the env or a repo-root .env file.
