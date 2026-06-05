@@ -536,6 +536,18 @@
           "interval": "",
           "legendFormat": "Changed Heads",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "Total Requests",
+          "refId": "B"
         }
       ],
       "title": "ratio of updateHead() calls that change head",
@@ -1840,7 +1852,7 @@
   },
   "timezone": "utc",
   "title": "Lodestar - fork choice",
-  "uid": "dfdspdm1mjp4wa",
+  "uid": "lodestar_fork_choice",
   "version": 6,
   "weekStart": "monday"
 }
