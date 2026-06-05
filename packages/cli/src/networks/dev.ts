@@ -10,7 +10,8 @@ const devConfig: Partial<ChainConfig> = {
   CAPELLA_FORK_EPOCH: 0,
   DENEB_FORK_EPOCH: 0,
   ELECTRA_FORK_EPOCH: 0,
-  FULU_FORK_EPOCH: 1,
+  FULU_FORK_EPOCH: 0,
+  GLOAS_FORK_EPOCH: 1,
 };
 
 let chainConfig: ChainConfig;

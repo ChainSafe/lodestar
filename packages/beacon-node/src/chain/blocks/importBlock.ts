@@ -118,13 +118,19 @@ export async function importBlock(
     }
     executionStatus = parentBlock.executionStatus;
   }
+
+  // getBeaconProposerOrNull will return null if head state is more than one epoch away
+  // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
+  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
+
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus
+    dataAvailabilityStatus,
+    expectedProposerIndex
   );
 
   // This adds the state necessary to process the next block
@@ -259,8 +265,10 @@ export async function importBlock(
         if (ptcIndices.length > 0) {
           this.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
+            payloadAttestation.data.slot,
             ptcIndices,
-            payloadAttestation.data.payloadPresent
+            payloadAttestation.data.payloadPresent,
+            payloadAttestation.data.blobDataAvailable
           );
         }
       } catch (e) {

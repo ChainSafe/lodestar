@@ -112,6 +112,7 @@ export type PayloadAttributes = {
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
   slotNumber?: number; // EIP-7843
+  targetGasLimit?: number; // GLOAS (PayloadAttributesV4, execution-apis#796)
 };
 
 export type VersionedHashes = Uint8Array[];

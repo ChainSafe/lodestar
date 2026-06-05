@@ -1,4 +1,4 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient, HttpStatusCode, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
 import {Slot, gloas} from "@lodestar/types";
@@ -70,14 +70,23 @@ export class PtcService {
 
     try {
       const payloadAttestationData = await this.producePayloadAttestationData(slot);
+      // If no beacon block was seen for the assigned slot, do not submit a payload attestation
+      if (payloadAttestationData === null) {
+        this.logger.debug("Skipping payload attestation, no beacon block seen for slot", {slot});
+        return;
+      }
       await this.signAndPublishPayloadAttestations(slot, payloadAttestationData, duties);
     } catch (e) {
       this.logger.error("Error on PTC routine", {slot}, e as Error);
     }
   };
 
-  private async producePayloadAttestationData(slot: Slot): Promise<gloas.PayloadAttestationData> {
-    return (await this.api.validator.producePayloadAttestationData({slot})).value();
+  private async producePayloadAttestationData(slot: Slot): Promise<gloas.PayloadAttestationData | null> {
+    const res = await this.api.validator.producePayloadAttestationData({slot});
+    if (!res.ok && res.status === HttpStatusCode.NOT_FOUND) {
+      return null;
+    }
+    return res.value();
   }
 
   private async signAndPublishPayloadAttestations(
@@ -119,6 +128,8 @@ export class PtcService {
         this.logger.info("Published payload attestation messages", {
           slot,
           beaconBlockRoot: prettyBytes(beaconBlockRootHex),
+          payloadPresent: payloadAttestationData.payloadPresent,
+          blobDataAvailable: payloadAttestationData.blobDataAvailable,
           count: payloadAttestationMessages.length,
         });
         this.metrics?.publishedPayloadAttestations.inc(payloadAttestationMessages.length);

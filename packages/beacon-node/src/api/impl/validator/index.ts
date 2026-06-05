@@ -14,6 +14,7 @@ import {
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostElectra,
+  isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -913,20 +914,38 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      // TODO GLOAS: support producing blocks from builder bids
-      const source = ProducedBlockSource.engine;
-
-      // TODO GLOAS: needs to be updated after fork choice changes are merged
       const parentBlock = chain.getProposerHead(slot);
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);
       notOnOutOfRangeData(parentBlockRoot);
       metrics?.blockProductionSlotDelta.set(slot - parentSlot);
-      metrics?.blockProductionRequests.inc({source});
 
       const graffitiBytes = toGraffitiBytes(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(), chain.executionEngine.clientVersion, {})
+        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
       );
+
+      // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
+      // the user control bid source preferences and value comparison. Also add external builder api
+      // support when it is implemented.
+      const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
+      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+
+      const logCtx = {
+        slot,
+        parentSlot,
+        parentBlockRoot: parentBlockRootHex,
+        parentBlockHash: parentBlock.executionPayloadBlockHash,
+        fork,
+        ...(builderBid !== null
+          ? {
+              bidValue: builderBid.message.value,
+              builderIndex: builderBid.message.builderIndex,
+              bidBlockHash: toRootHex(builderBid.message.blockHash),
+            }
+          : {}),
+      };
+
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
         slot,
         parentBlock,
@@ -934,44 +953,76 @@ export function getValidatorApi(
         graffiti: graffitiBytes,
       });
 
-      let timer: undefined | ((opts: {source: ProducedBlockSource}) => number);
-      try {
-        timer = metrics?.blockProductionTime.startTimer();
-        const {block, executionPayloadValue, consensusBlockValue} = await chain.produceBlock({
-          slot,
-          parentBlock,
-          randaoReveal,
-          graffiti: graffitiBytes,
-          feeRecipient,
-          commonBlockBodyPromise,
-        });
+      const baseAttrs = {
+        slot,
+        parentBlock,
+        randaoReveal,
+        graffiti: graffitiBytes,
+        feeRecipient,
+        commonBlockBodyPromise,
+      };
 
-        metrics?.blockProductionSuccess.inc({source});
-        metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
-        metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
-        metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
-
-        const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
-        logger.verbose("Produced block", {
-          slot,
-          executionPayloadValue,
-          consensusBlockValue,
-          root: blockRoot,
-        });
-        if (chain.opts.persistProducedBlocks) {
-          void chain.persistBlock(block, "produced_engine_block");
-        }
-
-        return {
-          data: block as gloas.BeaconBlock,
-          meta: {
-            version: fork,
-            consensusBlockValue,
-          },
-        };
-      } finally {
-        timer?.({source});
+      metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
+      if (builderBid !== null) {
+        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
       }
+
+      const timed = <T>(source: ProducedBlockSource, fn: () => Promise<T>): Promise<T> => {
+        const t = metrics?.blockProductionTime.startTimer();
+        return fn().finally(() => t?.({source}));
+      };
+
+      // Always build local block. If builder bid available, also build with it in parallel and prefer it.
+      const [engineResult, bidResult] = await Promise.allSettled([
+        timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs)),
+        builderBid !== null
+          ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}))
+          : Promise.reject(),
+      ]);
+
+      let bestResult: typeof engineResult | null = null;
+      let source: ProducedBlockSource = ProducedBlockSource.engine;
+      if (builderBid !== null && bidResult.status === "fulfilled") {
+        source = ProducedBlockSource.builder;
+        bestResult = bidResult;
+        logger.info("Selected builder bid block", logCtx);
+      } else if (engineResult.status === "fulfilled") {
+        source = ProducedBlockSource.engine;
+        bestResult = engineResult;
+        if (builderBid !== null) {
+          logger.warn("Builder bid block production failed, using local block", logCtx);
+        }
+      }
+
+      if (bestResult === null || bestResult.status !== "fulfilled") {
+        const engineReason = engineResult.status === "rejected" ? engineResult.reason : undefined;
+        const bidReason = builderBid !== null && bidResult.status === "rejected" ? bidResult.reason : undefined;
+        logger.error("Block production failed", {...logCtx, engineReason, bidReason});
+        throw Error(`Block production failed: engine=${engineReason ?? "n/a"} builder=${bidReason ?? "n/a"}`);
+      }
+
+      const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
+
+      metrics?.blockProductionSuccess.inc({source});
+      metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
+      metrics?.blockProductionConsensusBlockValue.observe({source}, Number(formatWeiToEth(consensusBlockValue)));
+      metrics?.blockProductionExecutionPayloadValue.observe({source}, Number(formatWeiToEth(executionPayloadValue)));
+
+      const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
+      logger.verbose("Produced block", {
+        ...logCtx,
+        executionPayloadValue,
+        consensusBlockValue,
+        root: blockRoot,
+      });
+      if (chain.opts.persistProducedBlocks) {
+        void chain.persistBlock(block, "produced_engine_block");
+      }
+
+      return {
+        data: block as gloas.BeaconBlock,
+        meta: {version: fork, consensusBlockValue},
+      };
     },
 
     async produceAttestationData({committeeIndex, slot}) {
@@ -1059,15 +1110,34 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const block = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
+      const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
-        throw new ApiError(404, `No canonical block found at or before slot=${slot}`);
+        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
+        throw new ApiError(404, `No canonical block found at slot=${slot}`);
       }
 
-      const blockIsForSlot = block.slot === slot;
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
-      const payloadPresent = blockIsForSlot && (payloadInput?.hasPayloadEnvelope() ?? false);
-      const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
+      // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
+      // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
+      // the input's creation time.
+      const payloadDueSec = config.getPayloadDueMs() / 1000;
+      const payloadSeenSec =
+        payloadInput?.hasPayloadEnvelope() === true
+          ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
+          : null;
+      const payloadPresent = payloadSeenSec !== null && payloadSeenSec < payloadDueSec;
+      const blobDataAvailable = payloadInput?.hasAllData() === true;
+
+      logger.debug("Produced payload attestation data", {
+        slot,
+        blockRoot: block.blockRoot,
+        blockSlot: block.slot,
+        payloadPresent,
+        blobDataAvailable,
+        hasPayloadInput: payloadInput !== undefined,
+        payloadSeenSec,
+        payloadDueSec,
+      });
 
       return {
         data: {
@@ -1124,26 +1194,33 @@ export function getValidatorApi(
     async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
       notWhileSyncing();
 
-      // Early check that epoch is no more than current_epoch + 1, or allow for pre-genesis
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
-      if (currentEpoch >= 0 && epoch > nextEpoch) {
+      const startSlot = computeStartSlotAtEpoch(epoch);
+      const prepareNextSlotLookAheadMs =
+        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
+      const toNextEpochMs = msToNextEpoch();
+      const nearNextEpoch = toNextEpochMs < prepareNextSlotLookAheadMs;
+      // Post-Fulu the proposer lookahead is deterministic and known a full epoch ahead, so
+      // close to the boundary `currentEpoch + 2` is serveable from the upcoming-epoch
+      // checkpoint state (its `nextProposers`). Pre-Fulu / mid-epoch: `currentEpoch + 1` max.
+      const isPostFulu = isForkPostFulu(config.getForkName(startSlot));
+      const maxFutureEpoch = isPostFulu && nearNextEpoch && opts?.v2 ? nextEpoch + 1 : nextEpoch;
+      if (currentEpoch >= 0 && epoch > maxFutureEpoch) {
         throw new ApiError(400, `Requested epoch ${epoch} must not be more than one epoch in the future`);
       }
 
       const head = chain.forkChoice.getHead();
       let state: IBeaconStateView | undefined = undefined;
-      const startSlot = computeStartSlotAtEpoch(epoch);
-      const prepareNextSlotLookAheadMs =
-        config.SLOT_DURATION_MS - config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS);
-      const toNextEpochMs = msToNextEpoch();
       // validators may request next epoch's duties when it's close to next epoch
-      // this is to avoid missed block proposal due to 0 epoch look ahead
-      if (epoch === nextEpoch && toNextEpochMs < prepareNextSlotLookAheadMs) {
+      // this is to avoid missed block proposal due to 0 epoch look ahead.
+      // Post-Fulu, `nextEpoch + 1` is served from the same upcoming-epoch (`nextEpoch`)
+      // checkpoint state via its `nextProposers` (deterministic proposer lookahead).
+      if (nearNextEpoch && (epoch === nextEpoch || (isPostFulu && epoch === nextEpoch + 1))) {
         // wait for maximum 1 slot for cp state which is the timeout of validator api
         const cpState = await waitForCheckpointState({
           rootHex: head.blockRoot,
-          epoch,
+          epoch: nextEpoch,
         });
         if (cpState) {
           state = cpState;
@@ -1218,7 +1295,7 @@ export function getValidatorApi(
       // It should be set to the latest block applied to `self` or the genesis block root.
       const dependentRoot =
         // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
-        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state) ||
+        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state, epoch) ||
         (await getGenesisBlockRoot(state));
 
       return {

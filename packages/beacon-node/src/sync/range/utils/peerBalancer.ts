@@ -52,7 +52,8 @@ export class ChainPeersBalancer {
 
   /**
    * Return the most suitable peer to retry
-   * Sort peers by (1) no failed request (2) less active requests, then pick first
+   * Sort peers by (1) less active requests (2) most columns we need.
+   * Peers that failed this batch or already succeeded for the same request are excluded inside `filterPeers`.
    */
   bestPeerToRetryBatch(batch: Batch): PeerSyncMeta | undefined {
     if (batch.state.status !== BatchStatus.AwaitingDownload) {
@@ -63,10 +64,8 @@ export class ChainPeersBalancer {
     const pendingDataColumns = columnsRequest?.columns ?? this.custodyConfig.sampledColumns;
     const eligiblePeers = this.filterPeers(batch, pendingDataColumns, false);
 
-    const failedPeers = new Set(batch.getFailedPeers());
     const sortedBestPeers = sortBy(
       eligiblePeers,
-      ({syncInfo}) => (failedPeers.has(syncInfo.peerId) ? 1 : 0), // prefer peers without failed requests
       ({syncInfo}) => this.activeRequestsByPeer.get(syncInfo.peerId) ?? 0, // prefer peers with least active req
       ({columns}) => -1 * columns // prefer peers with the most columns
     );
@@ -117,8 +116,15 @@ export class ChainPeersBalancer {
       return eligiblePeers;
     }
 
+    // Skip peers that failed this batch, or that already returned the exact current request shape.
+    const failedPeers = new Set<PeerIdStr>(batch.getFailedPeers());
+
     for (const peer of this.peers) {
       const {earliestAvailableSlot, target, peerId} = peer;
+
+      if (failedPeers.has(peerId) || batch.hasPeerSucceededCurrentRequest(peer)) {
+        continue;
+      }
 
       const activeRequest = this.activeRequestsByPeer.get(peerId) ?? 0;
       if (noActiveRequest && activeRequest > 0) {

@@ -35,6 +35,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
@@ -1116,7 +1117,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       const slot = envelope.payload.slotNumber;
-      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+
+      logger.debug("Received gossip payload envelope", {
+        currentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        slot,
+        blockRoot: toRootHex(envelope.beaconBlockRoot),
+        delaySec,
+      });
+
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
@@ -1148,7 +1158,40 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
-        chain.logger.debug("Error processing execution payload from gossip", {slot, root: blockRootHex}, e as Error);
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
+
+        if (e instanceof PayloadError) {
+          switch (e.type.code) {
+            // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
+            // already verified the block is in fork choice
+            case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
+            case PayloadErrorCode.MISS_BLOCK_STATE:
+            case PayloadErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected EL client
+              logLevel = LogLevel.error;
+              break;
+            // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
+            case PayloadErrorCode.INVALID_SIGNATURE:
+            case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
+            case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+              // Misbehaving peer, but could highlight an issue in another client
+              logLevel = LogLevel.warn;
+              break;
+          }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
+        }
+        metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({
+          error: e instanceof PayloadError ? e.type.code : "NOT_PAYLOAD_ERROR",
+        });
+        chain.logger[logLevel](
+          "Error processing execution payload from gossip",
+          {slot, peer: peerIdStr, root: blockRootHex},
+          e as Error
+        );
       });
     },
     [GossipType.payload_attestation_message]: async ({
@@ -1163,7 +1206,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         const insertOutcome = chain.payloadAttestationPool.add(
           payloadAttestationMessage,
           validationResult.attDataRootHex,
-          validationResult.validatorCommitteeIndex
+          validationResult.validatorCommitteeIndices
         );
         metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
@@ -1171,8 +1214,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       chain.forkChoice.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-        [validationResult.validatorCommitteeIndex],
-        payloadAttestationMessage.data.payloadPresent
+        payloadAttestationMessage.data.slot,
+        validationResult.validatorCommitteeIndices,
+        payloadAttestationMessage.data.payloadPresent,
+        payloadAttestationMessage.data.blobDataAvailable
       );
     },
     [GossipType.execution_payload_bid]: async ({
@@ -1181,15 +1226,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
-      await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+      const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
       // Handle valid payload bid by storing in a bid pool
       try {
-        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid.message);
+        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid);
         metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }
+
+      chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.gossip, proposerIndex, executionPayloadBid.message);
 
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
         version: config.getForkName(executionPayloadBid.message.slot),
@@ -1203,6 +1250,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
+
+      chain.proposerPreferencesPool.add(signedProposerPreferences);
+      chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+        version: ForkName.gloas,
+        data: signedProposerPreferences,
+      });
     },
   };
 }
