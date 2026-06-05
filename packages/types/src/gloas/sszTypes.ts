@@ -122,10 +122,11 @@ export const IndexedPayloadAttestation = new ContainerType(
 
 export const ProposerPreferences = new ContainerType(
   {
+    dependentRoot: Root,
     proposalSlot: Slot,
     validatorIndex: ValidatorIndex,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintNum64,
+    targetGasLimit: UintNum64,
   },
   {typeName: "ProposerPreferences", jsonCase: "eth2"}
 );
@@ -181,6 +182,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     executionRequests: electraSsz.ExecutionRequests,
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
+    parentBeaconBlockRoot: Root,
   },
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
@@ -322,6 +324,7 @@ export const PayloadAttributes = new ContainerType(
   {
     ...denebSsz.PayloadAttributes.fields,
     slotNumber: Slot,
+    targetGasLimit: UintNum64,
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );

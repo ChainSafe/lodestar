@@ -9,12 +9,15 @@ import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 import {AttestationService} from "./services/attestation.js";
 import {BlockProposingService} from "./services/block.js";
+import {BlockDutiesService} from "./services/blockDuties.js";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
+import {ProposerPreferencesService} from "./services/proposerPreferences.js";
+import {PtcService} from "./services/ptc.js";
 import {SyncCommitteeService} from "./services/syncCommittee.js";
 import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
@@ -30,6 +33,7 @@ export type ValidatorModules = {
   slashingProtection: ISlashingProtection;
   blockProposingService: BlockProposingService;
   attestationService: AttestationService;
+  ptcService: PtcService;
   syncCommitteeService: SyncCommitteeService;
   config: BeaconConfig;
   api: ApiClient;
@@ -84,6 +88,7 @@ export class Validator {
   private readonly slashingProtection: ISlashingProtection;
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
+  private readonly ptcService: PtcService;
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
@@ -102,6 +107,7 @@ export class Validator {
     slashingProtection,
     blockProposingService,
     attestationService,
+    ptcService,
     syncCommitteeService,
     config,
     api,
@@ -118,6 +124,7 @@ export class Validator {
     this.slashingProtection = slashingProtection;
     this.blockProposingService = blockProposingService;
     this.attestationService = attestationService;
+    this.ptcService = ptcService;
     this.syncCommitteeService = syncCommitteeService;
     this.config = config;
     this.api = api;
@@ -225,13 +232,32 @@ export class Validator {
     // We set infinity to prevent MaxListenersExceededWarning which get logged when listeners > 10
     emitter.setMaxListeners(Infinity);
 
-    const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
+    const chainHeaderTracker = new ChainHeaderTracker(config, logger, api, emitter);
     const syncingStatusTracker = new SyncingStatusTracker(logger, api, clock, metrics);
 
-    const blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
-      broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
-      blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
-    });
+    const blockDutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      metrics
+    );
+
+    const blockProposingService = new BlockProposingService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      blockDutiesService,
+      metrics,
+      {
+        broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
+        blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
+      }
+    );
 
     const attestationService = new AttestationService(
       loggerVc,
@@ -247,6 +273,18 @@ export class Validator {
         afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction,
         distributedAggregationSelection: opts.distributed,
       }
+    );
+
+    const ptcService = new PtcService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      emitter,
+      chainHeaderTracker,
+      syncingStatusTracker,
+      metrics
     );
 
     const syncCommitteeService = new SyncCommitteeService(
@@ -265,6 +303,8 @@ export class Validator {
       }
     );
 
+    new ProposerPreferencesService(config, loggerVc, api, clock, validatorStore, blockDutiesService, metrics);
+
     return new Validator({
       opts,
       genesis,
@@ -272,6 +312,7 @@ export class Validator {
       slashingProtection,
       blockProposingService,
       attestationService,
+      ptcService,
       syncCommitteeService,
       config,
       api,
@@ -338,6 +379,7 @@ export class Validator {
   removeDutiesForKey(pubkey: PubkeyHex): void {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
+    this.ptcService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
   }
 

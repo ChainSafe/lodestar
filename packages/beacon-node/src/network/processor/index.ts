@@ -77,6 +77,7 @@ type WorkOpts = {
  */
 const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.beacon_block]: {bypassQueue: true},
+  [GossipType.execution_payload]: {bypassQueue: true},
   [GossipType.blob_sidecar]: {bypassQueue: true},
   [GossipType.data_column_sidecar]: {bypassQueue: true},
   [GossipType.beacon_aggregate_and_proof]: {},
@@ -89,7 +90,6 @@ const executeGossipWorkOrderObj: Record<GossipType, WorkOpts> = {
   [GossipType.sync_committee]: {},
   [GossipType.light_client_finality_update]: {},
   [GossipType.light_client_optimistic_update]: {},
-  [GossipType.execution_payload]: {bypassQueue: true},
   [GossipType.payload_attestation_message]: {},
   [GossipType.execution_payload_bid]: {},
   [GossipType.proposer_preferences]: {},
@@ -452,8 +452,7 @@ export class NetworkProcessor {
         }
         case GossipType.execution_payload: {
           // extractBlockSlotRootFn does not return a root for this topic.
-          // Extract beacon_block_root directly and proactively trigger block sync if missing.
-          // Do NOT await the block — the handler runs immediately; BlockInputSync handles recovery.
+          // Extract beacon_block_root directly
           const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
           if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
             this.searchUnknownBlock(
@@ -461,9 +460,10 @@ export class NetworkProcessor {
               BlockInputSource.network_processor,
               message.propagationSource.toString()
             );
+            // We always want to await the block
+            // This allows us to properly forward the payload envelope
+            preprocessResult = {action: PreprocessAction.AwaitBlock, root: blockRoot};
           }
-          // do not await the block, we want UnknownBlockSync to handle it.
-          preprocessResult = {action: PreprocessAction.PushToQueue};
           break;
         }
         case GossipType.execution_payload_bid: {

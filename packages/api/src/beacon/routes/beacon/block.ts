@@ -227,6 +227,20 @@ export type Endpoints = {
   >;
 
   /**
+   * Publish signed execution payload bid.
+   * Instructs the beacon node to broadcast a signed execution payload bid to the network,
+   * to be gossiped for potential inclusion in block building. A success response (20x) indicates
+   * that the bid passed gossip validation and was successfully broadcast onto the network.
+   */
+  publishExecutionPayloadBid: Endpoint<
+    "POST",
+    {signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
    * Get signed execution payload envelope.
    * Retrieves signed execution payload envelope for a given block id.
    */
@@ -602,7 +616,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     publishExecutionPayloadEnvelope: {
-      url: "/eth/v1/beacon/execution_payload_envelope",
+      url: "/eth/v1/beacon/execution_payload_envelopes",
       method: "POST",
       req: {
         writeReqJson: ({signedExecutionPayloadEnvelope}) => {
@@ -646,8 +660,52 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         requestWireFormat: WireFormat.ssz,
       },
     },
+    publishExecutionPayloadBid: {
+      url: "/eth/v1/beacon/execution_payload_bids",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedExecutionPayloadBid}) => {
+          const fork = config.getForkName(signedExecutionPayloadBid.message.slot);
+          return {
+            body: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.toJson(signedExecutionPayloadBid),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqJson: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.fromJson(body),
+          };
+        },
+        writeReqSsz: ({signedExecutionPayloadBid}) => {
+          const fork = config.getForkName(signedExecutionPayloadBid.message.slot);
+          return {
+            body: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid),
+            headers: {
+              [MetaHeader.Version]: fork,
+            },
+          };
+        },
+        parseReqSsz: ({body, headers}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            signedExecutionPayloadBid: getPostGloasForkTypes(fork).SignedExecutionPayloadBid.deserialize(body),
+          };
+        },
+        schema: {
+          body: Schema.Object,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
+    },
     getSignedExecutionPayloadEnvelope: {
-      url: "/eth/v1/beacon/execution_payload_envelope/{block_id}",
+      url: "/eth/v1/beacon/execution_payload_envelopes/{block_id}",
       method: "GET",
       req: blockIdOnlyReq,
       resp: {

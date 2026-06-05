@@ -49,6 +49,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true},
     },
   },
+  getPtcDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {
+      data: [{pubkey: new Uint8Array(48).fill(1), validatorIndex: 2, slot: 3}],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
   produceBlockV3: {
     args: {
       slot: 32000,
@@ -101,6 +108,10 @@ export const testData: GenericServerTestCases<Endpoints> = {
   produceAttestationData: {
     args: {committeeIndex: 2, slot: 32000},
     res: {data: ssz.phase0.AttestationData.defaultValue()},
+  },
+  producePayloadAttestationData: {
+    args: {slot: 32000},
+    res: {data: ssz.gloas.PayloadAttestationData.defaultValue(), meta: {version: ForkName.gloas}},
   },
   produceSyncCommitteeContribution: {
     args: {slot: 32000, subcommitteeIndex: 2, beaconBlockRoot: ZERO_HASH},

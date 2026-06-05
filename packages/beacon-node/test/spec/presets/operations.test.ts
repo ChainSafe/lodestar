@@ -68,6 +68,11 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
   },
 
+  voluntary_exit_churn: (state, testCase: {voluntary_exit: phase0.SignedVoluntaryExit}) => {
+    const fork = state.config.getForkSeq(state.slot);
+    blockFns.processVoluntaryExit(fork, state, testCase.voluntary_exit);
+  },
+
   execution_payload: (
     state,
     testCase: {

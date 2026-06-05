@@ -4,12 +4,23 @@ import {toKebab} from "./changeCase.js";
 const DEFAULT_SEPARATOR = "\n\n";
 const LINE_BREAK = "\n\n";
 
+const HTML_ENTITIES: Record<string, string> = {
+  "<": "&lt;",
+  ">": "&gt;",
+  "{": "&#123;",
+  "}": "&#125;",
+};
+
+// Encode characters that the docs renderer (MDX) would otherwise interpret as JSX/HTML.
+// Skip content inside backtick code spans — markdown code spans render literal text and do
+// NOT decode HTML entities, so encoding inside backticks would surface entity strings (e.g.
+// `&#123;state_id&#125;`) on the docs page. MDX also treats inline code as literal, so braces
+// inside backticks are safe to leave alone.
 function sanitizeDescription(description: string): string {
-  return description
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll("{", "&#123;")
-    .replaceAll("}", "&#125;");
+  return description.replace(/`[^`]*`|[<>{}]/g, (match) => {
+    if (match.startsWith("`")) return match;
+    return HTML_ENTITIES[match] ?? match;
+  });
 }
 
 function renderExampleBody(example: CliExample, lodestarCommand?: string): string {

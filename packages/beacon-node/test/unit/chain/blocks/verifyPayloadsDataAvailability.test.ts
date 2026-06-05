@@ -10,7 +10,15 @@ import {
   verifyPayloadsDataAvailability,
 } from "../../../../src/chain/blocks/verifyPayloadsDataAvailability.js";
 
-function buildPayloadEnvelopeInput({blobCount, sampledColumns}: {blobCount: number; sampledColumns: ColumnIndex[]}): {
+function buildPayloadEnvelopeInput({
+  blobCount,
+  sampledColumns,
+  daOutOfRange = false,
+}: {
+  blobCount: number;
+  sampledColumns: ColumnIndex[];
+  daOutOfRange?: boolean;
+}): {
   payloadInput: PayloadEnvelopeInput;
   signedEnvelope: gloas.SignedExecutionPayloadEnvelope;
 } {
@@ -29,6 +37,7 @@ function buildPayloadEnvelopeInput({blobCount, sampledColumns}: {blobCount: numb
     sampledColumns,
     custodyColumns: sampledColumns,
     timeCreatedSec: Date.now() / 1000,
+    daOutOfRange,
   });
 
   const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
@@ -147,6 +156,18 @@ describe("verifyPayloadsDataAvailability", () => {
     controller.abort();
     await expect(waitPromise).rejects.toThrow();
   });
+
+  it("emits OutOfRange when daOutOfRange=true and skips waiting for columns", async () => {
+    const sampled = [0, 1];
+    const {payloadInput} = buildPayloadEnvelopeInput({blobCount: 1, sampledColumns: sampled, daOutOfRange: true});
+
+    // Even with blobs declared and no columns delivered, hasAllData should be true at construction
+    expect(payloadInput.hasAllData()).toBe(true);
+
+    const controller = new AbortController();
+    const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], controller.signal);
+    expect(dataAvailabilityStatuses).toEqual([DataAvailabilityStatus.OutOfRange]);
+  });
 });
 
 describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
@@ -172,6 +193,7 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
       sampledColumns,
       custodyColumns: sampledColumns,
       timeCreatedSec: Date.now() / 1000,
+      daOutOfRange: false,
     });
 
     const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();

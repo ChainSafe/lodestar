@@ -5,6 +5,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -49,6 +50,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
@@ -109,6 +111,18 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
+
+    if (isForkPostGloas(fork)) {
+      chain.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: blockRoot,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+        sampledColumns: chain.custodyConfig.sampledColumns,
+        custodyColumns: chain.custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
+    }
+
     let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
@@ -809,6 +823,41 @@ export function getBeaconBlockApi({
         ...valLogMeta,
         delaySec,
         sentPeers: (sentPeersArr[0] as number) ?? 0,
+      });
+    },
+
+    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const bid = signedExecutionPayloadBid.message;
+      const slot = bid.slot;
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
+      }
+
+      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+      try {
+        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
+      }
+
+      const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
+
+      chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+        version: fork,
+        data: signedExecutionPayloadBid,
+      });
+
+      chain.logger.info("Published execution payload bid", {
+        slot,
+        builderIndex: bid.builderIndex,
+        blockHash: toRootHex(bid.blockHash),
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        value: bid.value,
+        sentPeers,
       });
     },
 
