@@ -13,10 +13,6 @@ const CONSTANT_NAMES_SKIP_LIST = new Set([
   "PAYLOAD_STATUS_VALID",
   "PAYLOAD_STATUS_INVALIDATED",
   "PAYLOAD_STATUS_NOT_VALIDATED",
-  // TODO: decide whether to expose EMPTY_BLOCK_HASH in the config API. New bellatrix constant in
-  // v1.7.0-alpha.9; a zero Hash32 only used in the terminal-block fork-choice check, so skipped for
-  // now like the PAYLOAD_STATUS_* constants above.
-  "EMPTY_BLOCK_HASH",
 ]);
 
 describe("api / impl / config", () => {

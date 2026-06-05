@@ -965,6 +965,14 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.getPTCVoteCounts(blockRootHex);
   }
 
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.protoArray.getPayloadTimelinessVotes(blockRootHex);
+  }
+
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.protoArray.getPayloadDataAvailabilityVotes(blockRootHex);
+  }
+
   getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
     return this.fcStore.unrealizedJustified.checkpoint;
   }
