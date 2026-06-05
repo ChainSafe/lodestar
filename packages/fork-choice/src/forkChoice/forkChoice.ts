@@ -1746,10 +1746,7 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   *
-   * Common logic of get_proposer_head()
-   * No one should be calling this function except these two
-   *
+   * No one should be calling this function except getProposerHead()
    */
   private getPreliminaryProposerHead(
     headBlock: ProtoBlock,

@@ -129,7 +129,7 @@ export class PrepareNextSlotScheduler {
         let updatedPrepareState = prepareState;
 
         if (feeRecipient) {
-          // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
+          // If we are proposing next slot, we need to determine if we can proposer-boost-reorg or not
           const proposerHead = this.chain.getProposerHead(clockSlot);
           const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
