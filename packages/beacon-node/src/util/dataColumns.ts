@@ -470,15 +470,17 @@ export async function recoverDataColumnSidecars(
     return DataColumnReconstructionCode.SuccessLate;
   }
 
-  // Once the node obtains a column through reconstruction,
-  // the node MUST expose the new column as if it had received it over the network.
-  // If the node is subscribed to the subnet corresponding to the column,
-  // it MUST send the reconstructed DataColumnSidecar to its topic mesh neighbors.
-  // If instead the node is not subscribed to the corresponding subnet,
-  // it SHOULD still expose the availability of the DataColumnSidecar as part of the gossip emission process.
-  // After exposing the reconstructed DataColumnSidecar to the network,
-  // the node MAY delete the DataColumnSidecar if it is not part of the node's custody requirement.
-  const sidecarsToPublish = [];
+  // Per consensus-specs PR #4657, only publish reconstructed columns the node is
+  // subscribed to (custody + sampling). Eagerly cross-seeding non-subscribed
+  // columns floods the network with duplicates because the sender has no
+  // visibility into which peers already saw the message via the topic mesh.
+  // This matches the getBlobsV2 path in `getDataColumnSidecarsFromExecution` and
+  // aligns with Lighthouse/Prysm. Capture missing sampled indices before adding
+  // any reconstructed columns so they are not filtered out by the subsequent
+  // `addColumn` calls.
+  const missingSampledColumns = new Set(input.getMissingSampledColumnMeta().missing);
+  const sidecarsReconstructed: DataColumnSidecar[] = [];
+  const sidecarsToPublish: DataColumnSidecar[] = [];
   for (const columnSidecar of fullSidecars) {
     if (!input.hasColumn(columnSidecar.index)) {
       if (input instanceof PayloadEnvelopeInput) {
@@ -501,11 +503,14 @@ export async function recoverDataColumnSidecars(
           source: BlockInputSource.recovery,
         });
       }
-      sidecarsToPublish.push(columnSidecar);
+      sidecarsReconstructed.push(columnSidecar);
+      if (missingSampledColumns.has(columnSidecar.index)) {
+        sidecarsToPublish.push(columnSidecar);
+      }
     }
   }
-  metrics?.peerDas.reconstructedColumns.inc(sidecarsToPublish.length);
-  metrics?.dataColumns.bySource.inc({source: BlockInputSource.recovery}, sidecarsToPublish.length);
+  metrics?.peerDas.reconstructedColumns.inc(sidecarsReconstructed.length);
+  metrics?.dataColumns.bySource.inc({source: BlockInputSource.recovery}, sidecarsReconstructed.length);
   emitter.emit(ChainEvent.publishDataColumns, sidecarsToPublish);
   // TODO: Can we record dataColumns.sentPeersPerSubnet metric somehow
   return DataColumnReconstructionCode.SuccessResolved;
