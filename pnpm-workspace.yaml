@@ -1,6 +1,27 @@
 packages:
   - packages/*
 
+allowBuilds:
+  "@chainsafe/lodestar-z": true
+  "@parcel/watcher": true
+  "@swc/core": true
+  "@vekexasia/bigint-buffer2": true
+  aws-sdk: true
+  classic-level: true
+  core-js: true
+  cpu-features: true
+  electron: true
+  esbuild: true
+  nx: true
+  ssh2: true
+
+catalog:
+  "@chainsafe/lodestar-z": "0.1.2-rc.7"
+  "@vitest/browser": "^4.0.7"
+  "@vitest/browser-playwright": "^4.0.7"
+  "@vitest/coverage-v8": "^4.0.7"
+  vitest: "^4.0.7"
+
 linkWorkspacePackages: true
 
 minimumReleaseAge: 2880
@@ -12,27 +33,6 @@ minimumReleaseAgeExclude:
   - "libp2p"
 
 nodeLinker: isolated
-
-catalog:
-  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#bing/tp-agg-changes"
-  "@vitest/browser": "^4.0.7"
-  "@vitest/browser-playwright": "^4.0.7"
-  "@vitest/coverage-v8": "^4.0.7"
-  vitest: "^4.0.7"
-
-allowBuilds:
-  "@parcel/watcher": true
-  "@swc/core": true
-  aws-sdk: true
-  "@vekexasia/bigint-buffer2": true
-  "@chainsafe/lodestar-z": true
-  classic-level: true
-  core-js: true
-  cpu-features: true
-  electron: true
-  esbuild: true
-  nx: true
-  ssh2: true
 
 onlyBuiltDependencies:
   - "@chainsafe/lodestar-z"
