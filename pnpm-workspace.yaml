@@ -16,7 +16,7 @@ allowBuilds:
   ssh2: true
 
 catalog:
-  "@chainsafe/lodestar-z": "0.1.2-rc.7"
+  "@chainsafe/lodestar-z": "github:ChainSafe/lodestar-z#6e81a9d000490f97fc033200eda49e974c530a14"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
