@@ -980,6 +980,12 @@ export async function validateColumnsByRangeResponse(
           missingIndices: prettyPrintIndices(request.columns),
         })
       );
+      // Gloas: the bid commits to blobs even for payloads that get orphaned, whose columns are
+      // pruned and unservable. Skip instead of truncating + re-requesting forever; DA is enforced
+      // on envelope processing. Pre-Gloas commitments are canonical, so keep strict.
+      if (isForkPostGloas(forkName)) {
+        continue;
+      }
       break;
     }
 
