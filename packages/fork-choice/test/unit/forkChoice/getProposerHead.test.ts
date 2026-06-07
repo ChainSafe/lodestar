@@ -140,6 +140,28 @@ describe("Forkchoice / GetProposerHead", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    confirmedRoot: genesisBlock.blockRoot,
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    previousEpochGreatestUnrealizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    previousEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    currentEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    previousEpochGreatestUnrealizedBalances: new Uint16Array(Array(32).fill(150)),
+    previousSlotHead: genesisBlock.blockRoot,
+    currentSlotHead: genesisBlock.blockRoot,
+    stateGetter: () => null,
   };
 
   // head block's weight < 30 is considered weak. parent block's total weight > 240 is considered strong

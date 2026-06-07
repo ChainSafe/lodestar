@@ -328,6 +328,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
+
+    // FastConfirmationRule
+    CONFIRMATION_BYZANTINE_THRESHOLD: false,
+
     CHURN_LIMIT_QUOTIENT_GLOAS: gloasForkRelevant,
     CONSOLIDATION_CHURN_LIMIT_QUOTIENT: gloasForkRelevant,
     MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: gloasForkRelevant,

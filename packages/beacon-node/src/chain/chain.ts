@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -382,6 +382,14 @@ export class BeaconChain implements IBeaconChain {
     blockStateCache.setHeadState(anchorState);
     checkpointStateCache.add(checkpoint, anchorState);
 
+    const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
+      if (stateRoot) return blockStateCache.get(stateRoot);
+
+      if (checkpoint) return checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex});
+
+      return null;
+    };
+
     const forkChoice = initializeForkChoice(
       config,
       emitter,
@@ -390,6 +398,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       opts,
       this.justifiedBalancesGetter.bind(this),
+      forkChoiceStateGetter,
       metrics,
       logger
     );

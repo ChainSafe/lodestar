@@ -136,6 +136,25 @@ export type CustodyInfo = {
   custodyColumns: number[];
 };
 
+export type FastConfirmationInfo = {
+  confirmed: {
+    rootHex: RootHex | null;
+    slot: Slot | null;
+  };
+  head: {
+    rootHex: RootHex;
+    slot: Slot;
+  };
+  justifiedCheckpoint: {
+    rootHex: RootHex;
+    epoch: Epoch;
+  };
+  finalizedCheckpoint: {
+    rootHex: RootHex;
+    epoch: Epoch;
+  };
+};
+
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
   writeHeapdump: Endpoint<
@@ -397,6 +416,8 @@ export type Endpoints = {
     EmptyMeta
   >;
 
+  getFastConfirmationInfo: Endpoint<"GET", EmptyArgs, EmptyRequest, FastConfirmationInfo, EmptyMeta>;
+
   /** Craft attester slashings from the attestations in the provided blocks */
   getAttesterSlashingsFromBlocks: Endpoint<
     "POST",
@@ -630,6 +651,12 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
     },
     getCustodyInfo: {
       url: "/eth/v1/lodestar/custody_info",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: JsonOnlyResponseCodec,
+    },
+    getFastConfirmationInfo: {
+      url: "/eth/v1/lodestar/fast_confirmation",
       method: "GET",
       req: EmptyRequestCodec,
       resp: JsonOnlyResponseCodec,
