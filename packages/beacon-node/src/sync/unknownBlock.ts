@@ -850,22 +850,25 @@ export class BlockInputSync {
     }
 
     const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
-    if (!payloadInput) {
-      if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
-        // Column commitments live on the block body, so an envelope-only entry has to pull the block first.
-        if (!this.pendingBlocks.has(rootHex)) {
-          this.addByRootHex(rootHex);
-        }
-
-        const pendingBlock = this.pendingBlocks.get(rootHex);
-        if (pendingBlock && this.network.getConnectedPeers().length > 0) {
-          await this.downloadBlock(pendingBlock);
-        }
-      } else {
-        this.logger.debug("Missing PayloadEnvelopeInput for known block while reconciling payload envelope", {
-          root: rootHex,
-        });
+    if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+      // Block not in fork choice yet. payloadInput may be seeded from the block body during download, so a
+      // non-null payloadInput does not imply the block is imported; defer regardless and pull the block first.
+      // onBlockImported re-triggers the search to resume this envelope.
+      if (!this.pendingBlocks.has(rootHex)) {
+        this.addByRootHex(rootHex);
       }
+
+      const pendingBlock = this.pendingBlocks.get(rootHex);
+      if (pendingBlock && this.network.getConnectedPeers().length > 0) {
+        await this.downloadBlock(pendingBlock);
+      }
+      return;
+    }
+
+    if (!payloadInput) {
+      this.logger.debug("Missing PayloadEnvelopeInput for known block while reconciling payload envelope", {
+        root: rootHex,
+      });
       return;
     }
 
@@ -1073,17 +1076,22 @@ export class BlockInputSync {
         }
 
         payloadInput ??= this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
-        if (!payloadInput) {
-          if (this.chain.forkChoice.hasBlockHex(rootHex)) {
-            throw new Error(`Missing PayloadEnvelopeInput for known block ${rootHex}`);
-          }
-          // Keep the validated envelope around, but wait for the block body before turning it into a full payload input.
+        if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+          // Block not in fork choice yet. Validating now would throw BLOCK_ROOT_UNKNOWN, so keep the downloaded
+          // envelope and wait for the block body; reconcilePayloadEnvelope validates once the block lands.
+          // payloadInput may be seeded from the block body during download, so a non-null payloadInput does not
+          // imply the block is imported.
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
             envelope,
             timeAddedSec: cacheItem.timeAddedSec,
             peerIdStrings: cacheItem.peerIdStrings,
           };
+        }
+
+        if (!payloadInput) {
+          // Block is in fork choice but no PayloadEnvelopeInput exists, should have been created during block import.
+          throw new Error(`Missing PayloadEnvelopeInput for known block ${rootHex}`);
         }
 
         if (!payloadInput.hasPayloadEnvelope()) {
