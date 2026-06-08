@@ -165,6 +165,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // tracked in https://github.com/ChainSafe/lodestar/issues/7957
 
     const logCtx = {
+      slot,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
@@ -184,19 +185,23 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
       peerIdStr,
     });
+
+    // Optimistically seed the payload-envelope cache too, mirroring seenBlockInputCache above.
+    // This ensures we have PayloadEnvelopeInput, even through "PARENT_UNKNOWN" error
+    // see https://github.com/ChainSafe/lodestar/issues/9475
+    if (isForkPostGloas(fork)) {
+      chain.seenPayloadEnvelopeInputCache.add({
+        blockRootHex,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+        sampledColumns: chain.custodyConfig.sampledColumns,
+        custodyColumns: chain.custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
+    }
+
     try {
       await validateGossipBlock(config, chain, signedBlock, fork);
-
-      if (isForkPostGloas(fork)) {
-        chain.seenPayloadEnvelopeInputCache.add({
-          blockRootHex,
-          block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
-          forkName: fork,
-          sampledColumns: chain.custodyConfig.sampledColumns,
-          custodyColumns: chain.custodyConfig.custodyColumns,
-          timeCreatedSec: seenTimestampSec,
-        });
-      }
 
       const blockInputMeta = blockInput.getLogMeta();
 
@@ -1120,9 +1125,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
 
       logger.debug("Received gossip payload envelope", {
+        slot,
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
-        slot,
         blockRoot: toRootHex(envelope.beaconBlockRoot),
         delaySec,
       });
