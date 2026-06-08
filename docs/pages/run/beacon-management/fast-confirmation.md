@@ -36,31 +36,24 @@ For bridge and exchange policies, the practical interpretation is:
 
 ## What Lodestar exposes
 
-Lodestar tracks Fast Confirmation inside fork choice and exposes the current view through:
+Lodestar tracks Fast Confirmation inside fork choice and publishes confirmations through the standard beacon-API event stream ([beacon-APIs #598](https://github.com/ethereum/beacon-APIs/pull/598)):
 
-- `GET /eth/v1/lodestar/fast_confirmation`
+- `GET /eth/v1/events?topics=fast_confirmation`
 
-The response includes:
+Each event fires once per slot when the Fast Confirmation Rule executes and carries:
 
-- `confirmed.rootHex` and `confirmed.slot`
-- the current `head`
-- the current `justifiedCheckpoint`
-- the current `finalizedCheckpoint`
+- `block` — the confirmed beacon block root
+- `slot` — the slot of the confirmed beacon block
+- `current_slot` — the clock slot at which the Fast Confirmation Rule executed
 
-This is the consumer-facing API to compare how far `confirmed` is behind or ahead of the usual checkpoint signals.
+Example event:
 
-Example response shape:
-
-```json
-{
-  "data": {
-    "confirmed": {"rootHex": "0x...", "slot": 123},
-    "head": {"rootHex": "0x...", "slot": 124},
-    "justifiedCheckpoint": {"rootHex": "0x...", "epoch": 3},
-    "finalizedCheckpoint": {"rootHex": "0x...", "epoch": 2}
-  }
-}
 ```
+event: fast_confirmation
+data: {"block": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", "slot": "1", "current_slot": "2"}
+```
+
+To compare the confirmed block against the chain's `head`, `justifiedCheckpoint`, and `finalizedCheckpoint`, use the standard beacon-API endpoints (`/eth/v1/beacon/headers/head` and `/eth/v1/beacon/states/head/finality_checkpoints`).
 
 ## How consumers should use it
 
