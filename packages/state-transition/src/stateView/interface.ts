@@ -23,6 +23,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -75,6 +76,8 @@ export interface IBeaconStateView {
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number;
   // Decision roots
   previousDecisionRoot: RootHex;
   currentDecisionRoot: RootHex;

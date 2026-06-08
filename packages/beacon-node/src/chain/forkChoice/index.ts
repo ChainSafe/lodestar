@@ -2,6 +2,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceStateGetter,
   ForkChoiceStore,
   JustifiedBalancesGetter,
   PayloadStatus,
@@ -45,6 +46,7 @@ export function initializeForkChoice(
   isFinalizedState: boolean,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -56,6 +58,7 @@ export function initializeForkChoice(
         state,
         opts,
         justifiedBalancesGetter,
+        stateGetter,
         metrics,
         logger
       )
@@ -66,6 +69,7 @@ export function initializeForkChoice(
         state,
         opts,
         justifiedBalancesGetter,
+        stateGetter,
         metrics,
         logger
       );
@@ -81,6 +85,7 @@ export function initializeForkChoiceFromFinalizedState(
   state: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -112,6 +117,7 @@ export function initializeForkChoiceFromFinalizedState(
       finalizedCheckpoint,
       justifiedBalances,
       justifiedBalancesGetter,
+      stateGetter,
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
@@ -172,6 +178,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   unfinalizedState: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -203,6 +210,7 @@ export function initializeForkChoiceFromUnfinalizedState(
     finalizedCheckpoint,
     justifiedBalances,
     justifiedBalancesGetter,
+    stateGetter,
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
