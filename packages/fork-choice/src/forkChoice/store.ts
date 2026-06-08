@@ -45,6 +45,7 @@ export interface IForkChoiceStore extends IFastConfirmationStore {
   unrealizedFinalizedCheckpoint: CheckpointWithHex;
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
+  notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
 }
 
 /**
@@ -83,6 +84,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
+      onFastConfirmation?: (data: {block: RootHex; slot: Slot; currentSlot: Slot}) => void;
     }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
@@ -130,6 +132,16 @@ export class ForkChoiceStore implements IForkChoiceStore {
     const cp = toCheckpointWithHex(checkpoint);
     this._finalizedCheckpoint = cp;
     this.events?.onFinalized(cp);
+  }
+
+  /**
+   * Notify subscribers that the Fast Confirmation Rule executed and produced
+   * `data.block` at `data.slot`. Per beacon-APIs PR #598, this fires once per
+   * FCR execution (i.e., once per slot when FCR is enabled), regardless of
+   * whether `confirmedRoot` actually changed.
+   */
+  notifyFastConfirmation(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void {
+    this.events?.onFastConfirmation?.(data);
   }
 }
 
