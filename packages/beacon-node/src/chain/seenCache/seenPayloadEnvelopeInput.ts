@@ -152,6 +152,14 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.size;
   }
 
+  prune(blockRootHex: RootHex): void {
+    const input = this.payloadInputs.get(blockRootHex);
+    if (input) {
+      this.evictPayloadInput(input);
+      this.logger?.verbose("SeenPayloadEnvelopeInput.prune deleted", {slot: input.slot, root: blockRootHex});
+    }
+  }
+
   pruneBelowParent(parentBlock: ProtoBlock): void {
     for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
       if (block.slot < parentBlock.slot) {

@@ -232,12 +232,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           throw e;
         }
 
-        if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
+        // IGNORE means the block is acceptable (e.g. FUTURE_SLOT, ALREADY_KNOWN), just not propagated.
+        // Keep the optimistically-added cache entries; they are pruned on finalization. Only REJECT
+        // (provably invalid) and unexpected errors prune below.
+        if (e.action === GossipAction.IGNORE) {
+          throw e;
         }
+
+        chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
       }
 
+      // REJECT or unexpected (non-BlockGossipError) error: drop the optimistically-added entries from
+      // both caches, keeping them consistent.
       chain.seenBlockInputCache.prune(blockRootHex);
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+      }
       throw e;
     }
   }
