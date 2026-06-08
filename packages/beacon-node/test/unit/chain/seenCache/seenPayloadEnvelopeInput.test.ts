@@ -50,7 +50,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     return rootHex;
   }
 
-  function protoBlock(blockRoot: RootHex, slot: number): ProtoBlock {
+  function protoBlock(blockRoot: RootHex, slot: number, payloadStatus = PayloadStatus.FULL): ProtoBlock {
     return {
       slot,
       blockRoot,
@@ -69,7 +69,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-      payloadStatus: PayloadStatus.FULL,
+      payloadStatus,
       parentBlockHash: null,
     };
   }
@@ -84,6 +84,26 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     expect(cache.get(oldRootHex)).toBeUndefined();
     expect(cache.get(newRootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent keeps EMPTY/PENDING ancestors below the parent slot (still need the envelope, #9475)", () => {
+    const emptyRootHex = addPayloadInput(1);
+    const fullRootHex = addPayloadInput(2);
+    const parentRootHex = addPayloadInput(3);
+    const parentBlock = protoBlock(parentRootHex, 3);
+
+    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([
+      parentBlock,
+      protoBlock(fullRootHex, 2, PayloadStatus.FULL),
+      protoBlock(emptyRootHex, 1, PayloadStatus.EMPTY),
+    ]);
+    cache.pruneBelowParent(parentBlock);
+
+    // FULL ancestor below the parent slot is pruned (imported, done); EMPTY ancestor is kept since
+    // we may still need to download its FULL payload envelope.
+    expect(cache.get(fullRootHex)).toBeUndefined();
+    expect(cache.get(emptyRootHex)).toBeDefined();
+    expect(cache.get(parentRootHex)).toBeDefined();
   });
 
   it("pruneBelowParent keeps payload inputs at the parent slot", () => {
@@ -111,6 +131,25 @@ describe("SeenPayloadEnvelopeInput", () => {
     const second = cache.add(props);
 
     expect(second).toBe(first);
+    expect(cache.size()).toBe(1);
+  });
+
+  it("prune removes a single entry by root and leaves others", () => {
+    const rootHex1 = addPayloadInput(1);
+    const rootHex2 = addPayloadInput(2);
+
+    cache.prune(rootHex1);
+
+    expect(cache.get(rootHex1)).toBeUndefined();
+    expect(cache.get(rootHex2)).toBeDefined();
+    expect(cache.size()).toBe(1);
+  });
+
+  it("prune is a no-op for an unknown root", () => {
+    const rootHex = addPayloadInput(1);
+
+    expect(() => cache.prune(`0x${"ab".repeat(32)}`)).not.toThrow();
+    expect(cache.get(rootHex)).toBeDefined();
     expect(cache.size()).toBe(1);
   });
 });

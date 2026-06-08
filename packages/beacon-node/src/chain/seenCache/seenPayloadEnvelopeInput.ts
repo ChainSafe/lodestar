@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -152,9 +152,21 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.size;
   }
 
+  prune(blockRootHex: RootHex): void {
+    const input = this.payloadInputs.get(blockRootHex);
+    if (input) {
+      this.evictPayloadInput(input);
+      this.logger?.verbose("SeenPayloadEnvelopeInput.prune deleted", {slot: input.slot, root: blockRootHex});
+    }
+  }
+
   pruneBelowParent(parentBlock: ProtoBlock): void {
     for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
-      if (block.slot < parentBlock.slot) {
+      // Only evict once the payload is FULL (imported) — the input is then done. Keep EMPTY/PENDING
+      // entries: on an EMPTY branch we may still need to download the FULL envelope (see #9475), and
+      // evicting here would make payload-by-root sync throw "Missing PayloadEnvelopeInput for known
+      // block". These are cheap (bid-only) and get cleaned up by pruneFinalized.
+      if (block.slot < parentBlock.slot && block.payloadStatus === PayloadStatus.FULL) {
         const input = this.payloadInputs.get(block.blockRoot);
         if (input) {
           this.evictPayloadInput(input);
