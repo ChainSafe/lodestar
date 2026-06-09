@@ -61,8 +61,15 @@ describe("network / noise / sendData", () => {
             await connA.close();
           })(),
           (async () => {
-            for await (const _chunk of connB) {
-              // Drain inbound messages
+            try {
+              for await (const _chunk of connB) {
+                // Drain inbound messages
+              }
+            } catch (err) {
+              // MockMuxer routes connA.close() as a reset frame on the inbound side,
+              // so the for-await consumer sees StreamResetError once draining ends.
+              // This is teardown noise, not a benchmark failure — rethrow anything else.
+              if (!(err instanceof Error) || err.name !== "StreamResetError") throw err;
             }
           })(),
         ]);
