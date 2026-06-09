@@ -106,6 +106,8 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoostReorg: true,
   computeUnrealized: true,
   fastConfirmation: false,
+  // CHAOS (devnet test only): deathstar features default ON, disable with --chain.chaosAlwaysBuildOnEmpty=false
+  chaosAlwaysBuildOnEmpty: true,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
