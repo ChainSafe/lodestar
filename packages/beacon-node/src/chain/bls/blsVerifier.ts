@@ -1,4 +1,4 @@
-import {blsBatch} from "@chainsafe/lodestar-z/bls-batch";
+import {type NativeHistogram, blsBatch} from "@chainsafe/lodestar-z/bls-batch";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -79,6 +79,23 @@ function isOperationalError(e: unknown): boolean {
   return e instanceof Error && OPERATIONAL_ERROR_CODES.has((e as {code?: string}).code ?? "");
 }
 
+type LabeledGauge = {set(labels: {le: string}, value: number): void};
+type ScalarGauge = {set(value: number): void};
+
+/**
+ * Re-emit a native-bucketed histogram (from blsBatch.stats()) as prometheus
+ * `_bucket{le}` / `_sum` / `_count` series. `counts` are already cumulative and the
+ * total (`count`) is the implicit `+Inf` bucket, matching prometheus histogram layout.
+ */
+function emitNativeHistogram(h: NativeHistogram, bucket: LabeledGauge, sum: ScalarGauge, count: ScalarGauge): void {
+  for (let i = 0; i < h.bounds.length; i++) {
+    bucket.set({le: String(h.bounds[i])}, h.counts[i]);
+  }
+  bucket.set({le: "+Inf"}, h.count);
+  sum.set(h.sum);
+  count.set(h.count);
+}
+
 /**
  * Split `arr` into consecutive chunks of at most `size`. Returns `[]` for an empty
  * input (so callers can skip empty buckets) and the original array un-copied when it
@@ -147,9 +164,41 @@ export class BlsVerifier implements IBlsVerifier {
     this.logger = logger;
     blsBatch.init(this.maxInflightJobs);
 
-    metrics?.blsVerifier.inflightJobs.addCollect(() => {
-      metrics.blsVerifier.inflightJobs.set(this.inflightJobs);
+    // Register the per-scrape sampler on the FIRST-registered blsVerifier metric so
+    // that, during getMetrics(), this callback runs (populating every sampled gauge
+    // below) before any of those gauges are read later in the same collection pass.
+    metrics?.blsVerifier.totalSigSets.addCollect(() => {
+      // A native binding failure here must NOT reject the whole /metrics scrape (which
+      // would blank ALL lodestar metrics, not just BLS). Sample best-effort.
+      try {
+        metrics.blsVerifier.inflightJobs.set(this.inflightJobs);
+        // Sample real native worker-pool occupancy once per scrape. These mirror the
+        // old worker-thread pool's queue_length / workers_busy gauges so the two
+        // implementations can be compared apples-to-apples.
+        const s = blsBatch.stats();
+        metrics.blsVerifier.queueLength.set(s.queued);
+        metrics.blsVerifier.workersBusy.set(s.running);
+        metrics.blsVerifier.workersTotal.set(s.workers);
+        metrics.blsVerifier.activeJobs.set(s.active);
+        metrics.blsVerifier.maxInflightJobs.set(s.maxInflight);
+
+        // Reconstruct the native-bucketed latency histograms into prometheus
+        // `_bucket{le}`/`_sum`/`_count` series under the legacy histogram names.
+        const m = metrics.blsVerifier;
+        emitNativeHistogram(s.queueWait, m.queueJobWaitBucket, m.queueJobWaitSum, m.queueJobWaitCount);
+        emitNativeHistogram(s.workerComputePerSigSet, m.workerComputeBucket, m.workerComputeSum, m.workerComputeCount);
+        emitNativeHistogram(s.aggregateWithRandomness, m.aggRandBucket, m.aggRandSum, m.aggRandCount);
+        emitNativeHistogram(s.pubkeysAggregation, m.pubkeysAggBucket, m.pubkeysAggSum, m.pubkeysAggCount);
+      } catch (e) {
+        this.logger.debug("Failed to sample blsBatch stats for metrics", {}, e as Error);
+      }
     });
+  }
+
+  /** Count errored signature sets: the unlabeled legacy total + the native operational/input breakdown. */
+  private countErroredSets(e: unknown, n: number): void {
+    this.metrics?.blsVerifier.errorJobsSigSets.inc(n);
+    this.metrics?.blsVerifier.errors.inc({type: isOperationalError(e) ? "operational" : "input"}, n);
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
@@ -214,37 +263,48 @@ export class BlsVerifier implements IBlsVerifier {
     message: Uint8Array
   ): Promise<boolean[]> {
     try {
-      // Try aggregate verification first (1 native job)
-      const isAllValid = await this.trackJob(() =>
-        blsBatch.asyncVerifySameMessage(
+      // Try aggregate verification first (1 native job). Started is counted only after
+      // native admission (asyncVerifySameMessage sync-throws if not admitted).
+      const isAllValid = await this.trackJob(() => {
+        const p = blsBatch.asyncVerifySameMessage(
           sets.map((s) => ({index: s.index, signature: s.signature})),
           message
-        )
-      );
+        );
+        this.metrics?.blsVerifier.jobsStarted.inc({type: "sameMessage"}, 1);
+        this.metrics?.blsVerifier.sigSetsStarted.inc({type: "sameMessage"}, sets.length);
+        return p;
+      });
 
       if (isAllValid) {
+        this.metrics?.blsVerifier.verifiedSigSets.inc(sets.length);
         return sets.map(() => true);
       }
     } catch (e) {
       // Don't retry our own operational failures (pool exhausted, shutdown, ...);
-      // rethrow so the whole call rejects and gossip maps it to Ignore.
-      if (isOperationalError(e)) throw e;
-      // A verification/bad-input error: fall through to per-set retry to isolate it.
+      // count + rethrow so the whole call rejects and gossip maps it to Ignore.
+      if (isOperationalError(e)) {
+        this.countErroredSets(e, sets.length);
+        throw e;
+      }
+      // A verification/bad-input error: fall through to per-set retry to isolate it
+      // (errored sets are counted per-set below, avoiding double-counting).
     }
 
-    // Aggregate failed — retry each individually (1 native job per set)
+    // Aggregate failed — retry each individually (1 native job per set). dispatchJob
+    // does the per-set started/verified/errored accounting.
     this.metrics?.blsVerifier.sameMessageRetries.inc(sets.length);
+    this.metrics?.blsVerifier.sameMessageRetryJobs.inc(1);
     return Promise.all(
-      sets.map(async (set) => {
-        try {
-          return await this.trackJob(() =>
-            blsBatch.asyncVerify(blsBatch.indexed, [{index: set.index, message, signature: set.signature}])
-          );
-        } catch (e) {
+      sets.map((set) =>
+        this.dispatchJob(
+          () => blsBatch.asyncVerify(blsBatch.indexed, [{index: set.index, message, signature: set.signature}]),
+          "sameMessage",
+          1
+        ).catch((e) => {
           if (isOperationalError(e)) throw e;
           return false;
-        }
-      })
+        })
+      )
     );
   }
 
@@ -280,6 +340,33 @@ export class BlsVerifier implements IBlsVerifier {
     }
   }
 
+  /**
+   * Dispatch one native pool job and account for it per-chunk:
+   * - `started` counters fire only AFTER native admission succeeds — asyncVerify*
+   *   throws SYNCHRONOUSLY (PoolExhausted/TooManySets) before returning a promise, so
+   *   a rejected dispatch is never miscounted as "started".
+   * - `verified` (true verdict) and `errored` sets are attributed to THIS chunk only,
+   *   so a partial failure in a multi-chunk call doesn't smear the count across chunks.
+   * Rejections are re-thrown so the caller's Promise.all still rejects.
+   */
+  private dispatchJob(submit: () => Promise<boolean>, type: "default" | "sameMessage", n: number): Promise<boolean> {
+    return this.trackJob(() => {
+      const p = submit(); // sync-throws on admission failure -> started not counted
+      this.metrics?.blsVerifier.jobsStarted.inc({type}, 1);
+      this.metrics?.blsVerifier.sigSetsStarted.inc({type}, n);
+      return p;
+    }).then(
+      (ok) => {
+        if (ok) this.metrics?.blsVerifier.verifiedSigSets.inc(n);
+        return ok;
+      },
+      (e: unknown) => {
+        this.countErroredSets(e, n); // only this chunk's sets errored
+        throw e;
+      }
+    );
+  }
+
   /** Synchronous verification on main thread via native sync methods */
   private verifySync(sets: ISignatureSet[]): boolean {
     try {
@@ -297,8 +384,10 @@ export class BlsVerifier implements IBlsVerifier {
         if (!blsBatch.verify(blsBatch.single, c)) return false;
       }
 
+      this.metrics?.blsVerifier.verifiedSigSets.inc(sets.length);
       return true;
     } catch (e) {
+      this.countErroredSets(e, sets.length);
       // Operational failures (pool exhausted, shutdown, ...) are not "invalid
       // signature" — rethrow so callers don't wrongly reject valid sets.
       if (isOperationalError(e)) throw e;
@@ -315,15 +404,16 @@ export class BlsVerifier implements IBlsVerifier {
 
       // Each typed bucket is split into <=MAX_SETS_PER_JOB chunks, one native job
       // each (the native layer rejects larger jobs); all chunks must verify.
+      // dispatchJob handles per-chunk started/verified/errored accounting.
       const promises: Promise<boolean>[] = [];
       for (const c of chunk(indexed, MAX_SETS_PER_JOB)) {
-        promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.indexed, c)));
+        promises.push(this.dispatchJob(() => blsBatch.asyncVerify(blsBatch.indexed, c), "default", c.length));
       }
       for (const c of chunk(aggregate, MAX_SETS_PER_JOB)) {
-        promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.aggregate, c)));
+        promises.push(this.dispatchJob(() => blsBatch.asyncVerify(blsBatch.aggregate, c), "default", c.length));
       }
       for (const c of chunk(single, MAX_SETS_PER_JOB)) {
-        promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.single, c)));
+        promises.push(this.dispatchJob(() => blsBatch.asyncVerify(blsBatch.single, c), "default", c.length));
       }
 
       const results = await Promise.all(promises);
@@ -331,6 +421,7 @@ export class BlsVerifier implements IBlsVerifier {
     } catch (e) {
       // Operational failures (pool exhausted, shutdown, ...) are not "invalid
       // signature" — rethrow so gossip maps to Ignore and block import retries.
+      // (Per-chunk error counting already happened in dispatchJob.)
       if (isOperationalError(e)) throw e;
       this.logger.debug("verifyAsync caught error", {sets: sets.length}, e as Error);
       return false;

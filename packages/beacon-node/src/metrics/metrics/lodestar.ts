@@ -394,20 +394,154 @@ export function createLodestarMetrics(
 
     // BLS verifier metrics
 
+    // Native BLS verifier metrics. Strategy (see BLS metric reuse audit):
+    //   - Cross-architecture signals REUSE the legacy `lodestar_bls_thread_pool_*`
+    //     names so the existing BLS / summary / networking / block-processor
+    //     dashboards light up for native nodes and native-vs-unstable comparison is
+    //     just "same panel, filter by instance". Reuse is only done where native
+    //     measures the IDENTICAL quantity; caveats (granularity/boundary/legacy
+    //     wording) are noted in `help`.
+    //   - Native-only signals (no honest legacy analogue) keep `lodestar_bls_verifier_*`.
+    //   - Worker_threads-only metrics (latency_to/from_worker, time_seconds_sum{workerId},
+    //     job_groups_started, single_thread_*, worker_thread_time_per_sigset,
+    //     prioritized_sig_sets) are intentionally NOT emitted — faking them would lie.
     blsVerifier: {
+      // ── Reused legacy names (cross-architecture; comparable apples-to-apples) ──
       totalSigSets: register.gauge({
-        name: "lodestar_bls_verifier_sig_sets_total",
+        name: "lodestar_bls_thread_pool_sig_sets_total",
         help: "Count of total signature sets submitted for verification",
       }),
       batchableSigSets: register.gauge({
-        name: "lodestar_bls_verifier_batchable_sig_sets_total",
+        name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
       }),
+      // NOT the legacy success_jobs_signature_sets_count: that counted sets whose JOB
+      // completed without an infra/crypto error (INCLUDING invalid-sig `false` verdicts).
+      // This counts only sets with a TRUE verdict, so it is kept native-named to avoid
+      // silently changing the meaning of a reused name.
+      verifiedSigSets: register.gauge({
+        name: "lodestar_bls_verifier_verified_sig_sets_total",
+        help: "Count of signature sets with a final TRUE verdict",
+      }),
+      jobsStarted: register.gauge<{type: "default" | "sameMessage"}>({
+        name: "lodestar_bls_thread_pool_jobs_started_total",
+        help: "Count of native verification jobs dispatched to the pool, by kind",
+        labelNames: ["type"],
+      }),
+      sigSetsStarted: register.gauge<{type: "default" | "sameMessage"}>({
+        name: "lodestar_bls_thread_pool_sig_sets_started_total",
+        help: "Count of signature sets dispatched to the native pool, by kind",
+        labelNames: ["type"],
+      }),
+      batchRetries: register.gauge({
+        name: "lodestar_bls_thread_pool_batch_retries_total",
+        help: "Count of batch failures that triggered per-job retry (JS batch-accumulator flush granularity)",
+      }),
+      batchSigsSuccess: register.gauge({
+        name: "lodestar_bls_thread_pool_batch_sigs_success_total",
+        help: "Count of signature sets verified successfully via batching (JS flush granularity)",
+      }),
+      sameMessageRetries: register.gauge({
+        name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
+        help: "Count of same-message sets retried individually after aggregate failure",
+      }),
+      sameMessageRetryJobs: register.gauge({
+        name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
+        help: "Count of same-message chunks whose aggregate verify failed and fell back to per-set retry",
+      }),
       mainThreadDuration: register.histogram({
-        name: "lodestar_bls_verifier_main_thread_time_seconds",
-        help: "Time to verify signatures synchronously on the main thread",
+        name: "lodestar_bls_thread_pool_main_thread_time_seconds",
+        help: "Time to verify signatures synchronously on the main thread (legacy name; native sync path)",
         buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5],
       }),
+      // Native worker-pool occupancy, sampled from blsBatch.stats() at scrape.
+      queueLength: register.gauge({
+        name: "lodestar_bls_thread_pool_queue_length",
+        help: "Jobs admitted but not yet picked up by a worker (native counts post-chunk sub-jobs; trend comparable, absolute not 1:1 vs worker_threads job-items)",
+      }),
+      workersBusy: register.gauge({
+        name: "lodestar_bls_thread_pool_workers_busy",
+        help: "Workers currently executing verification (native excludes IPC/clone latency, so reads slightly lower than worker_threads)",
+      }),
+      // Errored signature sets. The legacy metric is UNLABELED and dashboards do
+      // rate(error_jobs) / (rate(success_jobs) + rate(error_jobs)); adding a label here
+      // would break that vector match. So the reused legacy name stays unlabeled, and
+      // the operational-vs-input breakdown lives under a separate native name.
+      // (operational = pool backpressure/shutdown, rethrown -> gossip Ignore / import
+      // transient; input = malformed/crypto from untrusted data, mapped to false). A
+      // genuine invalid-signature verdict (false) is NOT counted in either.
+      errorJobsSigSets: register.gauge({
+        name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
+        help: "Count of errored signature sets (operational backpressure + input/crypto)",
+      }),
+      errors: register.gauge<{type: "operational" | "input"}>({
+        name: "lodestar_bls_verifier_errors_total",
+        help: "Errored signature sets by class (operational backpressure vs input/crypto)",
+        labelNames: ["type"],
+      }),
+
+      // Native-bucketed latency histograms reconstructed from blsBatch.stats() at
+      // scrape time (the worker pool cannot call .observe() per job without adding
+      // event-loop N-API per completion). Emitted as `_bucket{le}`/`_sum`/`_count`
+      // gauges under the legacy histogram names so the existing dashboards'
+      // rate(_sum)/rate(_count) and histogram_quantile(_bucket) panels resolve.
+      queueJobWaitBucket: register.gauge<{le: string}>({
+        name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds_bucket",
+        help: "Native queue residency (submit → worker pickup), cumulative buckets",
+        labelNames: ["le"],
+      }),
+      queueJobWaitSum: register.gauge({
+        name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds_sum",
+        help: "Native queue residency, cumulative seconds",
+      }),
+      queueJobWaitCount: register.gauge({
+        name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds_count",
+        help: "Native queue residency, observation count",
+      }),
+      aggRandBucket: register.gauge<{le: string}>({
+        name: "lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_bucket",
+        help: "Native same-message aggregateWithRandomness time, cumulative buckets",
+        labelNames: ["le"],
+      }),
+      aggRandSum: register.gauge({
+        name: "lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_sum",
+        help: "Native same-message aggregateWithRandomness time, cumulative seconds",
+      }),
+      aggRandCount: register.gauge({
+        name: "lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_count",
+        help: "Native same-message aggregateWithRandomness time, observation count",
+      }),
+      pubkeysAggBucket: register.gauge<{le: string}>({
+        name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds_bucket",
+        help: "Native aggregate-kind pubkey aggregation time, cumulative buckets",
+        labelNames: ["le"],
+      }),
+      pubkeysAggSum: register.gauge({
+        name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds_sum",
+        help: "Native aggregate-kind pubkey aggregation time, cumulative seconds",
+      }),
+      pubkeysAggCount: register.gauge({
+        name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds_count",
+        help: "Native aggregate-kind pubkey aggregation time, observation count",
+      }),
+      // Worker verify compute per sig set (run_fn ÷ sets). Legacy name's "worker_thread"
+      // is a wording caveat (native uses OS threads); the measured quantity — verify
+      // compute per set, excluding queue wait + dispatch — is identical.
+      workerComputeBucket: register.gauge<{le: string}>({
+        name: "lodestar_bls_worker_thread_time_per_sigset_seconds_bucket",
+        help: "Native worker verify compute per signature set, cumulative buckets",
+        labelNames: ["le"],
+      }),
+      workerComputeSum: register.gauge({
+        name: "lodestar_bls_worker_thread_time_per_sigset_seconds_sum",
+        help: "Native worker verify compute per signature set, cumulative seconds",
+      }),
+      workerComputeCount: register.gauge({
+        name: "lodestar_bls_worker_thread_time_per_sigset_seconds_count",
+        help: "Native worker verify compute per signature set, observation count",
+      }),
+
+      // ── Native-only signals (no honest legacy analogue) ──
       batchedJobCount: register.gauge({
         name: "lodestar_bls_verifier_batched_jobs_total",
         help: "Count of jobs flushed in batch",
@@ -416,21 +550,9 @@ export function createLodestarMetrics(
         name: "lodestar_bls_verifier_batched_sigs_total",
         help: "Count of signature sets flushed in batch",
       }),
-      batchSigsSuccess: register.gauge({
-        name: "lodestar_bls_verifier_batch_sigs_success_total",
-        help: "Count of signature sets verified successfully via batching",
-      }),
-      batchRetries: register.gauge({
-        name: "lodestar_bls_verifier_batch_retries_total",
-        help: "Count of batch failures that triggered per-job retry",
-      }),
       sameMessageSets: register.gauge({
         name: "lodestar_bls_verifier_same_message_sets_total",
         help: "Count of same-message signature sets submitted",
-      }),
-      sameMessageRetries: register.gauge({
-        name: "lodestar_bls_verifier_same_message_retries_total",
-        help: "Count of same-message sets retried individually after aggregate failure",
       }),
       asyncVerifyDuration: register.histogram({
         name: "lodestar_bls_verifier_async_time_seconds",
@@ -438,14 +560,16 @@ export function createLodestarMetrics(
         buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
       }),
       timePerSigSet: register.histogram({
+        // NOT the legacy worker_thread_time_per_sigset: that isolates worker-internal
+        // compute; this is whole-call wall time incl. queue wait. Kept native-named.
         name: "lodestar_bls_verifier_time_per_sigset_seconds",
-        help: "Time to verify each signature set",
+        help: "Wall-clock time to verify each signature set (incl. queue wait + dispatch)",
         // Time per sig ~0.9ms on good machines
         buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
       }),
       bufferWaitTime: register.histogram({
         name: "lodestar_bls_verifier_buffer_wait_time_seconds",
-        help: "Time from batchable job enqueue to batch flush",
+        help: "Time from batchable job enqueue to batch flush (JS accumulator; distinct from native queue wait)",
         buckets: [0.01, 0.02, 0.05, 0.1, 0.2, 0.5],
       }),
       batchFlushDuration: register.histogram({
@@ -460,7 +584,19 @@ export function createLodestarMetrics(
       }),
       inflightJobs: register.gauge({
         name: "lodestar_bls_verifier_inflight_jobs",
-        help: "Current number of inflight native BLS verification jobs",
+        help: "Current number of inflight native BLS verification jobs (JS-side, counts native sub-jobs after fan-out)",
+      }),
+      workersTotal: register.gauge({
+        name: "lodestar_bls_verifier_workers_total",
+        help: "Native BLS worker pool: number of worker threads (pool size)",
+      }),
+      activeJobs: register.gauge({
+        name: "lodestar_bls_verifier_active_jobs",
+        help: "Native BLS worker pool: jobs in flight (queued + running + awaiting completion)",
+      }),
+      maxInflightJobs: register.gauge({
+        name: "lodestar_bls_verifier_max_inflight_jobs",
+        help: "Native BLS worker pool: admission capacity (max in-flight jobs)",
       }),
     },
 

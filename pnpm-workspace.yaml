@@ -14,7 +14,7 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
-  "@chainsafe/lodestar-z": github:chainsafe/lodestar-z#cayman/bls-batch
+  "@chainsafe/lodestar-z": github:chainsafe/lodestar-z#57569f5c6ca5465122f0d4246d20714e52de068b
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"

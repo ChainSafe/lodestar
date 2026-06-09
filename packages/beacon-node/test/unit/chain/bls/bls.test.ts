@@ -4,6 +4,7 @@ import {SecretKey, Signature} from "@chainsafe/lodestar-z/blst";
 import {getEmptyLogger} from "@lodestar/logger/empty";
 import {ISignatureSet, SignatureSetType, getPubkeyCache} from "@lodestar/state-transition";
 import {BlsVerifier} from "../../../../src/chain/bls/blsVerifier.js";
+import {createMetricsTest} from "../../metrics/utils.js";
 
 describe("BlsVerifier ", () => {
   const numKeys = 3;
@@ -206,6 +207,150 @@ describe("BlsVerifier ", () => {
       await expect(verifier.verifySignatureSetsSameMessage(smSets, signingRoot)).rejects.toMatchObject({
         code: "PoolExhausted",
       });
+    });
+  });
+
+  // Observability wiring: native blsBatch.stats() is sampled into saturation
+  // gauges, and errored sig sets are counted by class. These are the metrics that
+  // make the native verifier comparable apples-to-apples with the unstable pool.
+  describe("metrics", () => {
+    type MetricJson = {name: string; values: {value: number; labels: Record<string, string>}[]};
+    // getMetricsAsJSON() is async and runs the registry collect callbacks
+    // (including the addCollect that samples blsBatch.stats()), then returns values.
+    const valuesOf = (arr: MetricJson[], name: string) => arr.find((m) => m.name === name)?.values;
+
+    it("samples native worker-pool occupancy into gauges", async () => {
+      const metrics = createMetricsTest();
+      new BlsVerifier(metrics, getEmptyLogger());
+      const arr = (await metrics.register.getMetricsAsJSON()) as MetricJson[];
+
+      expect(valuesOf(arr, "lodestar_bls_verifier_workers_total")?.[0]?.value).toBeGreaterThan(0);
+      // BlsVerifier sizes the native pool to maxInflightJobs = 1000.
+      expect(valuesOf(arr, "lodestar_bls_verifier_max_inflight_jobs")?.[0]?.value).toBe(1000);
+      // Saturation gauges reuse the legacy bls_thread_pool_* names (Option C). Idle: 0.
+      expect(valuesOf(arr, "lodestar_bls_thread_pool_queue_length")?.[0]?.value).toBe(0);
+      expect(valuesOf(arr, "lodestar_bls_thread_pool_workers_busy")?.[0]?.value).toBe(0);
+    });
+
+    it("counts operational errors by class and still rejects (no false verdict)", async () => {
+      const metrics = createMetricsTest();
+      const v = new BlsVerifier(metrics, getEmptyLogger());
+      const sets: ISignatureSet[] = secretKeys.map((sk, i) => ({
+        type: SignatureSetType.single,
+        pubkey: sk.toPublicKey(),
+        signingRoot: Buffer.alloc(32, i),
+        signature: sk.sign(Buffer.alloc(32, i)).toBytes(),
+      }));
+
+      vi.spyOn(blsBatch, "asyncVerify").mockImplementation(() => {
+        throw Object.assign(new Error("blsBatch: PoolExhausted"), {code: "PoolExhausted"});
+      });
+
+      await expect(v.verifySignatureSets(sets)).rejects.toMatchObject({code: "PoolExhausted"});
+
+      const arr = (await metrics.register.getMetricsAsJSON()) as MetricJson[];
+      // Legacy error name is UNLABELED (so the canonical error-ratio panel's vector
+      // match still resolves); the operational/input breakdown is native-named.
+      expect(
+        valuesOf(arr, "lodestar_bls_thread_pool_error_jobs_signature_sets_count")?.[0]?.value
+      ).toBeGreaterThanOrEqual(sets.length);
+      const operational =
+        valuesOf(arr, "lodestar_bls_verifier_errors_total")?.find((x) => x.labels.type === "operational")?.value ?? 0;
+      expect(operational).toBeGreaterThanOrEqual(sets.length);
+      // Admission-rejected (PoolExhausted) jobs must NOT be counted as "started".
+      const startedDefault =
+        valuesOf(arr, "lodestar_bls_thread_pool_jobs_started_total")?.find((x) => x.labels.type === "default")?.value ??
+        0;
+      expect(startedDefault).toBe(0);
+    });
+
+    it("attributes errors/started per-chunk on a partial multi-chunk failure", async () => {
+      const metrics = createMetricsTest();
+      const v = new BlsVerifier(metrics, getEmptyLogger());
+      const sk = secretKeys[0];
+      const root = Buffer.alloc(32, 7);
+      const one: ISignatureSet = {
+        type: SignatureSetType.single,
+        pubkey: sk.toPublicKey(),
+        signingRoot: root,
+        signature: sk.sign(root).toBytes(),
+      };
+      // 129 single sets -> 2 chunks: [128, 1]. asyncVerify is mocked, so set validity is moot.
+      const sets = Array.from({length: 129}, () => one);
+      const poolExhausted = Object.assign(new Error("blsBatch: PoolExhausted"), {code: "PoolExhausted"});
+      vi.spyOn(blsBatch, "asyncVerify")
+        .mockImplementationOnce(() => Promise.resolve(true)) // chunk 1 (128) admitted, true
+        .mockImplementationOnce(() => {
+          throw poolExhausted; // chunk 2 (1) fails at admission
+        });
+
+      await expect(v.verifySignatureSets(sets)).rejects.toMatchObject({code: "PoolExhausted"});
+      await new Promise((r) => setImmediate(r)); // let chunk-1's success accounting settle
+
+      const arr = (await metrics.register.getMetricsAsJSON()) as MetricJson[];
+      // Only the FAILING chunk's 1 set is errored — not all 129.
+      expect(valuesOf(arr, "lodestar_bls_thread_pool_error_jobs_signature_sets_count")?.[0]?.value).toBe(1);
+      // Only the ADMITTED chunk counts as started/verified; the rejected chunk never started.
+      expect(
+        valuesOf(arr, "lodestar_bls_thread_pool_sig_sets_started_total")?.find((x) => x.labels.type === "default")
+          ?.value
+      ).toBe(128);
+      expect(valuesOf(arr, "lodestar_bls_verifier_verified_sig_sets_total")?.[0]?.value).toBe(128);
+    });
+
+    it("emits reused throughput counters (sig_sets/started/success) under legacy names", async () => {
+      const metrics = createMetricsTest();
+      const v = new BlsVerifier(metrics, getEmptyLogger());
+      const sets: ISignatureSet[] = secretKeys.map((sk, i) => ({
+        type: SignatureSetType.single,
+        pubkey: sk.toPublicKey(),
+        signingRoot: Buffer.alloc(32, i),
+        signature: sk.sign(Buffer.alloc(32, i)).toBytes(),
+      }));
+
+      expect(await v.verifySignatureSets(sets)).toBe(true);
+
+      const arr = (await metrics.register.getMetricsAsJSON()) as MetricJson[];
+      expect(valuesOf(arr, "lodestar_bls_thread_pool_sig_sets_total")?.[0]?.value).toBeGreaterThanOrEqual(sets.length);
+      // True-verdict sets are native-named (NOT the legacy success_jobs, which counted
+      // error-free completion incl. invalid-sig false).
+      expect(valuesOf(arr, "lodestar_bls_verifier_verified_sig_sets_total")?.[0]?.value).toBeGreaterThanOrEqual(
+        sets.length
+      );
+      const startedDefault =
+        valuesOf(arr, "lodestar_bls_thread_pool_jobs_started_total")?.find((x) => x.labels.type === "default")?.value ??
+        0;
+      expect(startedDefault).toBeGreaterThanOrEqual(1);
+    });
+
+    it("reconstructs native latency histograms as _bucket{le}/_sum/_count under legacy names", async () => {
+      const metrics = createMetricsTest();
+      const v = new BlsVerifier(metrics, getEmptyLogger());
+      const sets: ISignatureSet[] = secretKeys.map((sk, i) => ({
+        type: SignatureSetType.single,
+        pubkey: sk.toPublicKey(),
+        signingRoot: Buffer.alloc(32, i),
+        signature: sk.sign(Buffer.alloc(32, i)).toBytes(),
+      }));
+
+      // Async path dispatches a pool job; on completion the native queue-wait
+      // histogram records one sample.
+      expect(await v.verifySignatureSets(sets)).toBe(true);
+
+      const arr = (await metrics.register.getMetricsAsJSON()) as MetricJson[];
+      for (const base of [
+        "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
+        "lodestar_bls_worker_thread_time_per_sigset_seconds",
+      ]) {
+        expect(valuesOf(arr, `${base}_count`)?.[0]?.value, base).toBeGreaterThanOrEqual(1);
+        const buckets = valuesOf(arr, `${base}_bucket`) ?? [];
+        // histogram_quantile() needs an +Inf bucket plus finite cumulative buckets.
+        expect(buckets.find((x) => x.labels.le === "+Inf")?.value, base).toBeGreaterThanOrEqual(1);
+        expect(
+          buckets.some((x) => x.labels.le !== "+Inf"),
+          base
+        ).toBe(true);
+      }
     });
   });
 });
