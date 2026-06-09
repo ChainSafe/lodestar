@@ -963,13 +963,9 @@ describe("UnknownBlockSync", () => {
         )
         .mockResolvedValueOnce(undefined);
 
-      let emitter!: ChainEventEmitter;
-      const processBlock = vi.fn().mockImplementation(async () => {
-        knownRoots.add(blockRootHex);
-        emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
-      });
+      const processBlock = vi.fn();
 
-      ({emitter} = setupPayloadSyncTest({
+      const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           processBlock,
           processExecutionPayload,
@@ -1017,7 +1013,12 @@ describe("UnknownBlockSync", () => {
           sendBeaconBlocksByRoot,
         },
         peers: [{peerId: peer}],
-      }));
+      });
+
+      processBlock.mockImplementation(async () => {
+        knownRoots.add(blockRootHex);
+        emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+      });
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
