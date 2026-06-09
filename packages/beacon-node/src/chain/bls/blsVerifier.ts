@@ -42,6 +42,15 @@ function splitByType(sets: ISignatureSet[]): SplitResult {
   return {indexed, aggregate, single};
 }
 
+/** Number of pubkeys aggregated (aggregate-type sets only), matching unstable's metric. */
+function getAggregatedPubkeysCount(sets: ISignatureSet[]): number {
+  let count = 0;
+  for (const set of sets) {
+    if (set.type === SignatureSetType.aggregate) count += set.indices.length;
+  }
+  return count;
+}
+
 /**
  * Native `blsBatch` caps every job at this many sets and throws `TooManySets` for
  * anything larger; it does NOT chunk internally. A single `verifySignatureSets` call
@@ -207,6 +216,8 @@ export class BlsVerifier implements IBlsVerifier {
     }
 
     this.metrics?.blsVerifier.totalSigSets.inc(sets.length);
+    // Pubkeys are aggregated on the main thread regardless of where verification runs.
+    this.metrics?.blsVerifier.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
     if (opts.batchable) {
       this.metrics?.blsVerifier.batchableSigSets.inc(sets.length);
     }

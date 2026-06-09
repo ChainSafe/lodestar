@@ -411,6 +411,12 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_sig_sets_total",
         help: "Count of total signature sets submitted for verification",
       }),
+      // Pubkeys aggregated for aggregate-type sets (sum of indices.length). Identical
+      // quantity to the legacy bls.aggregatedPubkeys, so the existing name is reused.
+      aggregatedPubkeys: register.gauge({
+        name: "lodestar_bls_aggregated_pubkeys_total",
+        help: "Total aggregated pubkeys for BLS validation",
+      }),
       batchableSigSets: register.gauge({
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",

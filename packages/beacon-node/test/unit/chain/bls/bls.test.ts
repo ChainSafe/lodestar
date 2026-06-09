@@ -264,6 +264,23 @@ describe("BlsVerifier ", () => {
       expect(startedDefault).toBe(0);
     });
 
+    it("counts aggregated pubkeys for aggregate-type sets under the legacy name", async () => {
+      const metrics = createMetricsTest();
+      const v = new BlsVerifier(metrics, getEmptyLogger());
+      vi.spyOn(blsBatch, "asyncVerify").mockResolvedValue(true);
+      const root = Buffer.alloc(32, 3);
+      const sig = secretKeys[0].sign(root).toBytes();
+      const sets: ISignatureSet[] = [
+        {type: SignatureSetType.aggregate, indices: [0, 1, 2], signingRoot: root, signature: sig},
+        {type: SignatureSetType.aggregate, indices: [0, 1], signingRoot: root, signature: sig},
+      ];
+
+      expect(await v.verifySignatureSets(sets)).toBe(true);
+
+      const arr = (await metrics.register.getMetricsAsJSON()) as MetricJson[];
+      expect(valuesOf(arr, "lodestar_bls_aggregated_pubkeys_total")?.[0]?.value).toBe(5); // 3 + 2
+    });
+
     it("attributes errors/started per-chunk on a partial multi-chunk failure", async () => {
       const metrics = createMetricsTest();
       const v = new BlsVerifier(metrics, getEmptyLogger());
