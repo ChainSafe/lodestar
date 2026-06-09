@@ -7,6 +7,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  PayloadStatus,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -294,6 +295,19 @@ export async function importBlock(
         previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
         currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
         executionOptimistic: isOptimisticBlock(newHead),
+      });
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(blockSlot),
+        data: {
+          slot: newHead.slot,
+          block: newHead.blockRoot,
+          state: newHead.stateRoot,
+          payloadStatus: toApiPayloadStatus(newHead.payloadStatus),
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+          currentEpochDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
+          nextEpochDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(newHead),
+        },
       });
     } catch (e) {
       // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
@@ -663,5 +677,15 @@ export function addAttestationPostElectra(
         true
       );
     }
+  }
+}
+
+function toApiPayloadStatus(status: PayloadStatus): "empty" | "full" {
+  switch (status) {
+    case PayloadStatus.FULL:
+      return "full";
+    case PayloadStatus.EMPTY:
+    case PayloadStatus.PENDING:
+      return "empty";
   }
 }
