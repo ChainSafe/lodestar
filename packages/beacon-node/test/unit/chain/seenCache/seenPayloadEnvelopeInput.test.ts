@@ -120,6 +120,30 @@ describe("SeenPayloadEnvelopeInput", () => {
     }
   });
 
+  it("pruneToMaxSize does not evict the just-inserted entry even if it has the lowest slot", () => {
+    // Fill the cache with high-slot entries (range-sync look-ahead state)
+    const maxSize = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
+    const highSlotBase = 1000;
+    const rootHexBySlot = new Map<number, string>();
+    for (let i = 0; i < maxSize; i++) {
+      const slot = highSlotBase + i;
+      rootHexBySlot.set(slot, addPayloadInput(slot));
+    }
+    expect(cache.size()).toBe(maxSize);
+
+    // Insert an entry whose slot is lower than every existing entry's slot — out-of-order range-sync
+    // response, reorg-recovery insert, etc. The triggering prune must NOT evict the just-inserted
+    // entry; it should evict the previously-lowest existing entry instead.
+    const lowSlot = 1;
+    const lowRootHex = addPayloadInput(lowSlot);
+
+    expect(cache.size()).toBe(maxSize);
+    // just-inserted entry survives
+    expect(cache.get(lowRootHex)).toBeDefined();
+    // previously-lowest entry is the one evicted
+    expect(cache.get(rootHexBySlot.get(highSlotBase) as string)).toBeUndefined();
+  });
+
   it("add returns the existing entry on duplicate root", () => {
     const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: 1});
     const props = {

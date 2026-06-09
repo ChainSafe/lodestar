@@ -124,7 +124,7 @@ export class SeenPayloadEnvelopeInput {
       root: props.blockRootHex,
       daOutOfRange,
     });
-    this.pruneToMaxSize();
+    this.pruneToMaxSize(props.blockRootHex);
     return input;
   }
 
@@ -146,7 +146,7 @@ export class SeenPayloadEnvelopeInput {
       root: props.blockRootHex,
       daOutOfRange,
     });
-    this.pruneToMaxSize();
+    this.pruneToMaxSize(props.blockRootHex);
     return input;
   }
 
@@ -177,20 +177,43 @@ export class SeenPayloadEnvelopeInput {
     }
   }
 
-  /** Evict the lowest-slot entries (oldest / furthest behind the head) once over the max size. */
-  private pruneToMaxSize(): void {
+  /**
+   * Evict the lowest-slot entries (oldest / furthest behind the head) once over the max size.
+   * `excludeRoot` protects the just-inserted entry from being evicted by its own triggering call,
+   * which matters when a reorg or out-of-order range-sync response inserts an entry whose slot is
+   * lower than every existing entry's slot.
+   */
+  private pruneToMaxSize(excludeRoot?: RootHex): void {
     let itemsToDelete = this.payloadInputs.size - MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE;
     if (itemsToDelete <= 0) {
       return;
     }
 
-    const sorted = [...this.payloadInputs.values()].sort((a, b) => a.slot - b.slot);
     let deletedCount = 0;
-    for (const input of sorted) {
-      this.evictPayloadInput(input);
-      deletedCount++;
-      if (--itemsToDelete <= 0) {
-        break;
+    if (itemsToDelete === 1) {
+      // Fast path for the per-insertion call: find the lowest-slot non-excluded entry in O(N) instead of
+      // paying for an O(N log N) sort of the whole cache.
+      let minInput: PayloadEnvelopeInput | undefined;
+      for (const input of this.payloadInputs.values()) {
+        if (input.blockRootHex === excludeRoot) continue;
+        if (minInput === undefined || input.slot < minInput.slot) {
+          minInput = input;
+        }
+      }
+      if (minInput !== undefined) {
+        this.evictPayloadInput(minInput);
+        deletedCount = 1;
+      }
+    } else {
+      const sorted = [...this.payloadInputs.values()]
+        .filter((input) => input.blockRootHex !== excludeRoot)
+        .sort((a, b) => a.slot - b.slot);
+      for (const input of sorted) {
+        this.evictPayloadInput(input);
+        deletedCount++;
+        if (--itemsToDelete <= 0) {
+          break;
+        }
       }
     }
 
