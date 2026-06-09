@@ -53,7 +53,7 @@ event: fast_confirmation
 data: {"block": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", "slot": "1", "current_slot": "2"}
 ```
 
-To compare the confirmed block against the chain's `head`, `justifiedCheckpoint`, and `finalizedCheckpoint`, use the standard beacon-API endpoints (`/eth/v1/beacon/headers/head` and `/eth/v1/beacon/states/head/finality_checkpoints`).
+To compare the confirmed block against the chain's `head` and `finalized_checkpoint`, consumers can subscribe to multiple event topics in a single stream (e.g., `GET /eth/v1/events?topics=fast_confirmation,head,finalized_checkpoint`), or fetch the same data from the standard beacon-API REST endpoints (`/eth/v1/beacon/headers/head` and `/eth/v1/beacon/states/head/finality_checkpoints`).
 
 ## How consumers should use it
 

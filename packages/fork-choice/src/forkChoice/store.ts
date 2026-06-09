@@ -136,9 +136,8 @@ export class ForkChoiceStore implements IForkChoiceStore {
 
   /**
    * Notify subscribers that the Fast Confirmation Rule executed and produced
-   * `data.block` at `data.slot`. Per beacon-APIs PR #598, this fires once per
-   * FCR execution (i.e., once per slot when FCR is enabled), regardless of
-   * whether `confirmedRoot` actually changed.
+   * `data.block` at `data.slot`. Fires once per FCR execution, even when
+   * `confirmedRoot` did not change from the prior slot.
    */
   notifyFastConfirmation(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void {
     this.events?.onFastConfirmation?.(data);

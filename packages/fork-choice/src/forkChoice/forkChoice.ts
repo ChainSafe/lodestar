@@ -1961,18 +1961,14 @@ export class ForkChoice implements IForkChoice {
         this.fcStore.confirmedRoot = result.confirmedRoot;
 
         const confirmedBlock = this.getBlockHexDefaultStatus(result.confirmedRoot);
-        if (confirmedBlock !== null) {
-          this.fcStore.notifyFastConfirmation?.({
-            block: result.confirmedRoot,
-            slot: confirmedBlock.slot,
-            currentSlot: this.fcStore.currentSlot,
-          });
-        } else {
-          this.logger?.debug("Fast confirmation produced root not in protoArray; skipping event", {
-            slot: this.fcStore.currentSlot,
-            confirmedRoot: result.confirmedRoot,
-          });
+        if (confirmedBlock === null) {
+          throw new Error(`Fast confirmation produced root not in protoArray: ${result.confirmedRoot}`);
         }
+        this.fcStore.notifyFastConfirmation?.({
+          block: result.confirmedRoot,
+          slot: confirmedBlock.slot,
+          currentSlot: this.fcStore.currentSlot,
+        });
       } catch (err) {
         this.logger?.debug(
           "Fast confirmation failed",
