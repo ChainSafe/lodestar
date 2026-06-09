@@ -761,6 +761,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -834,6 +835,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer: peerA,
         source: BlockInputSource.gossip,
       });
@@ -923,6 +925,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1018,6 +1021,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1074,6 +1078,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1123,6 +1128,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });

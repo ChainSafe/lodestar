@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {RootHex, gloas} from "@lodestar/types";
+import {RootHex, Slot, gloas} from "@lodestar/types";
 import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -215,7 +215,7 @@ export class BlockInputSync {
 
   private onUnknownEnvelopeBlockRoot = (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]): void => {
     try {
-      this.addByPayloadRootHex(data.rootHex, data.peer);
+      this.addByPayloadRootHex(data.rootHex, data.peer, data.slot);
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
       this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
@@ -349,13 +349,14 @@ export class BlockInputSync {
     }
   };
 
-  private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): boolean => {
+  private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr, slot?: Slot): boolean => {
     let pendingPayload = this.pendingPayloads.get(rootHex);
     let added = false;
     if (!pendingPayload) {
       pendingPayload = {
         status: PendingPayloadInputStatus.pending,
         rootHex,
+        slot,
         peerIdStrings: new Set(),
         timeAddedSec: Date.now() / 1000,
       };
@@ -363,6 +364,8 @@ export class BlockInputSync {
       added = true;
 
       this.logger.verbose("Added new payload rootHex to BlockInputSync.pendingPayloads", {
+        slot: slot ?? "unknown",
+        delaySec: slot != null ? this.chain.clock.secFromSlot(slot) : "unknown",
         root: rootHex,
         peerIdStr: peerIdStr ?? "unknown peer",
       });
