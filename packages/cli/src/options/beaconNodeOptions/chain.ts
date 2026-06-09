@@ -19,6 +19,7 @@ export type ChainArgs = {
   "chain.persistOrphanedBlocks"?: boolean;
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
+  "chain.chaosAlwaysBuildOnEmpty"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
@@ -60,6 +61,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
     proposerBoostReorg: args["chain.proposerBoostReorg"],
+    chaosAlwaysBuildOnEmpty: args["chain.chaosAlwaysBuildOnEmpty"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
@@ -196,6 +198,15 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Enable proposer boost reorg to reorg out a late block",
     defaultDescription: String(defaultOptions.chain.proposerBoostReorg),
+    group: "chain",
+  },
+
+  "chain.chaosAlwaysBuildOnEmpty": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "CHAOS (devnet test only): always build blocks on the EMPTY parent variant, orphaning the parent execution payload regardless of PTC votes",
+    defaultDescription: String(defaultOptions.chain.chaosAlwaysBuildOnEmpty),
     group: "chain",
   },
 

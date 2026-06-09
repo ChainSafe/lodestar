@@ -65,6 +65,8 @@ export type ForkChoiceOpts = {
   proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
   fastConfirmation?: boolean;
+  /** CHAOS (devnet test only): always build on the EMPTY parent variant, orphaning the parent payload regardless of PTC votes */
+  chaosAlwaysBuildOnEmpty?: boolean;
 };
 
 export enum UpdateHeadOpt {
@@ -390,6 +392,8 @@ export class ForkChoice implements IForkChoice {
 
   /** Spec: should_build_on_full(store, head) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
+    // CHAOS (devnet test only): always reorg the parent payload by building on EMPTY
+    if (this.opts?.chaosAlwaysBuildOnEmpty) return false;
     return this.protoArray.shouldBuildOnFull(head, slot);
   }
 
