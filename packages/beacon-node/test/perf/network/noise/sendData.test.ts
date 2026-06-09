@@ -72,11 +72,7 @@ describe("network / noise / sendData", () => {
               // for-await consumer sees StreamResetError once draining ends. The expected
               // teardown reset fires only after every message has been delivered — a reset
               // before all expected bytes arrived would be a real regression and must rethrow.
-              if (
-                !(err instanceof Error) ||
-                err.name !== "StreamResetError" ||
-                bytesReceived < expectedBytes
-              ) {
+              if (!(err instanceof Error) || err.name !== "StreamResetError" || bytesReceived < expectedBytes) {
                 throw err;
               }
             }
