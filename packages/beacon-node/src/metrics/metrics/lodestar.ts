@@ -866,6 +866,12 @@ export function createLodestarMetrics(
         labelNames: ["numBlobs"],
       }),
 
+      skippedSlots: register.histogram({
+        name: "lodestar_gossip_block_skipped_slots",
+        help: "Number of skipped slots between a gossip block and its parent (blockSlot - parentSlot - 1)",
+        buckets: [0, 1, 2, 4, 8, 16, 32],
+      }),
+
       processBlockErrors: register.gauge<{error: BlockErrorCode | "NOT_BLOCK_ERROR"}>({
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
