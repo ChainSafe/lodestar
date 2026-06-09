@@ -190,6 +190,7 @@ export class BlsVerifier implements IBlsVerifier {
         metrics.blsVerifier.workersTotal.set(s.workers);
         metrics.blsVerifier.activeJobs.set(s.active);
         metrics.blsVerifier.maxInflightJobs.set(s.maxInflight);
+        metrics.blsVerifier.workerTimeSeconds.set(s.workerTimeSeconds);
 
         // Reconstruct the native-bucketed latency histograms into prometheus
         // `_bucket{le}`/`_sum`/`_count` series under the legacy histogram names.
@@ -287,6 +288,7 @@ export class BlsVerifier implements IBlsVerifier {
       });
 
       if (isAllValid) {
+        this.metrics?.blsVerifier.successJobsSignatureSets.inc(sets.length);
         this.metrics?.blsVerifier.verifiedSigSets.inc(sets.length);
         return sets.map(() => true);
       }
@@ -368,6 +370,8 @@ export class BlsVerifier implements IBlsVerifier {
       return p;
     }).then(
       (ok) => {
+        // Resolved (true or false) => the job completed without error.
+        this.metrics?.blsVerifier.successJobsSignatureSets.inc(n);
         if (ok) this.metrics?.blsVerifier.verifiedSigSets.inc(n);
         return ok;
       },
@@ -395,6 +399,7 @@ export class BlsVerifier implements IBlsVerifier {
         if (!blsBatch.verify(blsBatch.single, c)) return false;
       }
 
+      this.metrics?.blsVerifier.successJobsSignatureSets.inc(sets.length);
       this.metrics?.blsVerifier.verifiedSigSets.inc(sets.length);
       return true;
     } catch (e) {

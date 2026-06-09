@@ -417,6 +417,14 @@ export function createLodestarMetrics(
         name: "lodestar_bls_aggregated_pubkeys_total",
         help: "Total aggregated pubkeys for BLS validation",
       }),
+      // Cumulative worker compute seconds (Σ run_fn across all jobs). The legacy
+      // time_seconds is a per-workerId histogram; native has no JS worker identity, so
+      // only the aggregate `_sum` is reproduced (the dashboards use it aggregated:
+      // sum(rate(time_seconds_sum)) for total compute, and as the compute/set divisor).
+      workerTimeSeconds: register.gauge({
+        name: "lodestar_bls_thread_pool_time_seconds_sum",
+        help: "Cumulative worker compute seconds (aggregate; legacy time_seconds without per-worker labels)",
+      }),
       batchableSigSets: register.gauge({
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
@@ -428,6 +436,15 @@ export function createLodestarMetrics(
       verifiedSigSets: register.gauge({
         name: "lodestar_bls_verifier_verified_sig_sets_total",
         help: "Count of signature sets with a final TRUE verdict",
+      }),
+      // Legacy semantics: signature sets whose verification job COMPLETED without an
+      // operational/crypto error (a `false` verdict still counts — it completed). This
+      // is the denominator the dashboards divide by (compute/set, success rate, error
+      // ratio), so the legacy name is reused. `verifiedSigSets` is the stricter
+      // true-verdict-only signal.
+      successJobsSignatureSets: register.gauge({
+        name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
+        help: "Count of signature sets whose verification job completed without error (verdict true or false)",
       }),
       jobsStarted: register.gauge<{type: "default" | "sameMessage"}>({
         name: "lodestar_bls_thread_pool_jobs_started_total",

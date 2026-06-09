@@ -329,11 +329,16 @@ describe("BlsVerifier ", () => {
 
       const arr = (await metrics.register.getMetricsAsJSON()) as MetricJson[];
       expect(valuesOf(arr, "lodestar_bls_thread_pool_sig_sets_total")?.[0]?.value).toBeGreaterThanOrEqual(sets.length);
-      // True-verdict sets are native-named (NOT the legacy success_jobs, which counted
-      // error-free completion incl. invalid-sig false).
+      // Legacy success_jobs = sets that completed without error (the dashboard divisor);
+      // verified_sig_sets = the stricter true-verdict-only native signal.
+      expect(
+        valuesOf(arr, "lodestar_bls_thread_pool_success_jobs_signature_sets_count")?.[0]?.value
+      ).toBeGreaterThanOrEqual(sets.length);
       expect(valuesOf(arr, "lodestar_bls_verifier_verified_sig_sets_total")?.[0]?.value).toBeGreaterThanOrEqual(
         sets.length
       );
+      // Aggregate worker compute seconds (legacy time_seconds_sum) accrues real time.
+      expect(valuesOf(arr, "lodestar_bls_thread_pool_time_seconds_sum")?.[0]?.value).toBeGreaterThan(0);
       const startedDefault =
         valuesOf(arr, "lodestar_bls_thread_pool_jobs_started_total")?.find((x) => x.labels.type === "default")?.value ??
         0;
