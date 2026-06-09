@@ -41,10 +41,8 @@ function runFCRRulesBenchmark(opts: Opts): void {
       const forkChoice = initializeForkChoice({...opts, fastConfirmation: true});
 
       const head = forkChoice.updateHead();
-      const prevBlock = forkChoice.getBlockHexDefaultStatus(head.parentRoot);
-      if (!prevBlock) throw Error("no prevBlock");
 
-      // Vote everyone for head
+      // Vote everyone for head so the FCR vote-map paths see a populated voteNextIndices.
       everyoneVotes(head, forkChoice);
 
       // Advance to second slot of epoch 2 (not epoch boundary)
@@ -60,25 +58,17 @@ function runFCRRulesBenchmark(opts: Opts): void {
       const store = forkChoice["fcStore"] as unknown as IFastConfirmationStore;
       if (!ctx) throw Error("fastConfirmationContext not initialized");
 
-      return {forkChoice, ctx, store, head, prevBlock, currentVoteIs1: true, currentSlot};
+      return {ctx, store};
     },
-    beforeEach: (data) => {
-      // Flip votes to force fresh vote map computation each iteration
-      const target = data.currentVoteIs1 ? data.prevBlock : data.head;
-      everyoneVotes(target, data.forkChoice);
-      data.currentVoteIs1 = !data.currentVoteIs1;
-      data.currentSlot = (data.currentSlot + 1) as Slot;
-
-      // Advance the slot (this calls updateHead + processAttestationQueue but NOT the FCR)
-      // We need to advance the slot so getCurrentSlot() returns the right value
-      data.forkChoice["fcStore"].currentSlot = data.currentSlot;
-      // Apply votes to proto array so getHead/isDescendant work correctly
-      data.forkChoice.updateHead();
-
-      return data;
-    },
+    // Pass-through: the bench harness invokes fn(beforeEach(inputAll)), so without a
+    // beforeEach fn would receive undefined. store is not mutated by the rule runner so
+    // no per-iteration reset is required.
+    beforeEach: (data) => data,
     fn: ({ctx, store}) => {
-      // Measure ONLY the FCR rules — build cache + snapshot + run rules
+      // Measure ONLY the FCR rules — build cache + snapshot + run rules.
+      // store is not mutated by runFastConfirmationRules (only the rule runner's caller
+      // would assign store.confirmedRoot), so each iteration replays the same work and
+      // no beforeEach reset is needed.
       const cache = createFastConfirmationCache();
       const snapshot = buildFastConfirmationSnapshot(ctx, store, cache);
       runFastConfirmationRules(snapshot, ctx, store, cache);
