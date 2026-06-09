@@ -217,8 +217,8 @@ export class BlockInputSync {
     try {
       this.addByPayloadRootHex(data.rootHex, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_DATA});
-      this.metrics?.blockInputSync.source.inc({source: data.source});
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
+      this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling unknownEnvelopeBlockRoot event", {}, e as Error);
     }
@@ -228,8 +228,8 @@ export class BlockInputSync {
     try {
       this.addByPayloadInput(data.payloadInput, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_DATA});
-      this.metrics?.blockInputSync.source.inc({source: data.source});
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_PAYLOAD_ENVELOPE});
+      this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling incompletePayloadEnvelope event", {}, e as Error);
     }

@@ -610,6 +610,11 @@ export function createLodestarMetrics(
         help: "The origination source of one of the BlockInputSync triggers",
         labelNames: ["source"],
       }),
+      payloadSource: register.gauge<{source: BlockInputSource}>({
+        name: "lodestar_payload_input_sync_source_total",
+        help: "Count of payload (execution payload envelope) sync triggers, labeled by their source",
+        labelNames: ["source"],
+      }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
         help: "Current size of UnknownBlockSync pending blocks cache",

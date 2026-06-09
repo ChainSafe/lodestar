@@ -19,7 +19,14 @@ export enum PendingBlockType {
    */
   INCOMPLETE_BLOCK_INPUT = "IncompleteBlockInput",
 
-  UNKNOWN_DATA = "unknown_data",
+  /**
+   * Payload analog of UNKNOWN_BLOCK_ROOT: we have a beacon block root but not its execution payload envelope.
+   */
+  UNKNOWN_PAYLOAD_BLOCK_ROOT = "unknown_payload_block_root",
+  /**
+   * Payload analog of INCOMPLETE_BLOCK_INPUT: we have a partial payload input that did not complete in time.
+   */
+  INCOMPLETE_PAYLOAD_ENVELOPE = "incomplete_payload_envelope",
 }
 
 export enum PendingBlockInputStatus {
