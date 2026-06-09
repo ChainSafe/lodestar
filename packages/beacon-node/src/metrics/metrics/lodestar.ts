@@ -889,7 +889,7 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_execution_payload_envelope_elapsed_time_till_received",
         help: "Time elapsed between slot time and the time execution payload envelope received",
         labelNames: ["source"],
-        buckets: [0.5, 1, 2, 4, 6, 12],
+        buckets: [1, 2, 3, 6, 9, 12],
       }),
       processPayloadErrors: register.gauge<{error: PayloadErrorCode | "NOT_PAYLOAD_ERROR"}>({
         name: "lodestar_gossip_execution_payload_envelope_process_payload_errors",
