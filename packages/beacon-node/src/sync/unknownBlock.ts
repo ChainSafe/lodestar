@@ -331,7 +331,10 @@ export class BlockInputSync {
       };
       this.pendingBlocks.set(blockInput.blockRootHex, pendingBlock);
 
-      this.logger.verbose("Added blockInput to BlockInputSync.pendingBlocks", pendingBlock.blockInput.getLogMeta());
+      this.logger.verbose("Added blockInput to BlockInputSync.pendingBlocks", {
+        ...pendingBlock.blockInput.getLogMeta(),
+        delaySec: this.chain.clock.secFromSlot(blockInput.slot),
+      });
     }
 
     if (peerIdStr) {
@@ -392,6 +395,13 @@ export class BlockInputSync {
     }
 
     this.pendingPayloads.set(payloadInput.blockRootHex, pendingPayload);
+
+    this.logger.verbose("Added payloadInput to BlockInputSync.pendingPayloads", {
+      slot: payloadInput.slot,
+      root: payloadInput.blockRootHex,
+      delaySec: this.chain.clock.secFromSlot(payloadInput.slot),
+    });
+
     const prunedItemCount = pruneSetToMax(this.pendingPayloads, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
       this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingPayloads`);
@@ -654,10 +664,12 @@ export class BlockInputSync {
     }
 
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
+    const blockSlot = getBlockInputSyncCacheItemSlot(block);
     const logCtx = {
-      slot: getBlockInputSyncCacheItemSlot(block),
+      slot: blockSlot,
       root: rootHex,
       pendingBlocks: this.pendingBlocks.size,
+      ...(typeof blockSlot === "number" && {delaySec: this.chain.clock.secFromSlot(blockSlot)}),
     };
 
     this.logger.verbose("BlockInputSync.downloadBlock()", logCtx);
@@ -679,6 +691,7 @@ export class BlockInputSync {
       const logCtx2 = {
         ...logCtx,
         slot: blockSlot,
+        delaySec,
         parentInForkChoice,
       };
       this.logger.verbose("Downloaded unknown block", logCtx2);
@@ -748,6 +761,12 @@ export class BlockInputSync {
     // this prevents unbundling attack
     // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
     const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.getBlock().message;
+    const logCtx = {
+      slot: blockSlot,
+      root: pendingBlock.blockInput.blockRootHex,
+      delaySec: this.chain.clock.secFromSlot(blockSlot),
+    };
+    this.logger.verbose("Processing downloaded block", logCtx);
     const fork = this.config.getForkName(blockSlot);
     const proposerBoostWindowMs = this.config.getAttestationDueMs(fork);
     if (
@@ -783,6 +802,7 @@ export class BlockInputSync {
     else this.metrics?.blockInputSync.processedBlocksSuccess.inc();
 
     if (!res.err) {
+      this.logger.verbose("Processed block from unknown sync", logCtx);
       // no need to update status to "processed", delete anyway
       this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
       // Re-enter the scheduler so descendants blocked on either parent blocks or parent payloads
@@ -922,10 +942,12 @@ export class BlockInputSync {
       return;
     }
 
+    const payloadSlot = getPayloadSyncCacheItemSlot(payload);
     const logCtx = {
-      slot: getPayloadSyncCacheItemSlot(payload),
+      slot: payloadSlot,
       root: rootHex,
       pendingPayloads: this.pendingPayloads.size,
+      ...(typeof payloadSlot === "number" && {delaySec: this.chain.clock.secFromSlot(payloadSlot)}),
     };
 
     this.logger.verbose("BlockInputSync.downloadPayload()", logCtx);
@@ -953,7 +975,11 @@ export class BlockInputSync {
 
   private async processPayload(pendingPayload: PendingPayloadInput): Promise<void> {
     const rootHex = pendingPayload.payloadInput.blockRootHex;
-    const logCtx = {slot: pendingPayload.payloadInput.slot, root: rootHex};
+    const logCtx = {
+      slot: pendingPayload.payloadInput.slot,
+      root: rootHex,
+      delaySec: this.chain.clock.secFromSlot(pendingPayload.payloadInput.slot),
+    };
 
     if (pendingPayload.status !== PendingPayloadInputStatus.downloaded) {
       this.logger.debug("Skipping payload processing before payload input is downloaded", {
@@ -980,6 +1006,7 @@ export class BlockInputSync {
     }
 
     pendingPayload.status = PendingPayloadInputStatus.processing;
+    this.logger.debug("Processing downloaded payload", logCtx);
 
     const res = await wrapError(this.chain.processExecutionPayload(pendingPayload.payloadInput));
     if (!res.err) {
@@ -1117,6 +1144,7 @@ export class BlockInputSync {
           rootHex,
           peerId,
           peerClient,
+          ...(typeof slot === "number" && {delaySec: this.chain.clock.secFromSlot(slot)}),
           hasPayload: pendingPayload.payloadInput.hasPayloadEnvelope(),
           hasAllData: pendingPayload.payloadInput.hasAllData(),
         });
@@ -1288,7 +1316,7 @@ export class BlockInputSync {
           this.metrics?.blockInputSync.fetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
         }
 
-        const logCtx = {slot, rootHex, peerId, peerClient};
+        const logCtx = {slot, rootHex, peerId, peerClient, delaySec: this.chain.clock.secFromSlot(slot)};
         this.logger.verbose("BlockInputSync.fetchBlockInput: successful download", logCtx);
         this.metrics?.blockInputSync.downloadByRoot.success.inc();
         const warnings = downloadResult.warnings;
