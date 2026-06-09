@@ -8,8 +8,7 @@ export async function validateApiBlsToExecutionChange(
   blsToExecutionChange: capella.SignedBLSToExecutionChange
 ): Promise<void> {
   const ignoreExists = true;
-  const prioritizeBls = true;
-  return validateBlsToExecutionChange(chain, blsToExecutionChange, {ignoreExists, prioritizeBls});
+  return validateBlsToExecutionChange(chain, blsToExecutionChange, {ignoreExists});
 }
 
 export async function validateGossipBlsToExecutionChange(
@@ -22,9 +21,9 @@ export async function validateGossipBlsToExecutionChange(
 async function validateBlsToExecutionChange(
   chain: IBeaconChain,
   blsToExecutionChange: capella.SignedBLSToExecutionChange,
-  opts: {ignoreExists?: boolean; prioritizeBls?: boolean} = {ignoreExists: false, prioritizeBls: false}
+  opts: {ignoreExists?: boolean} = {ignoreExists: false}
 ): Promise<void> {
-  const {ignoreExists, prioritizeBls} = opts;
+  const {ignoreExists} = opts;
   // [IGNORE] The blsToExecutionChange is the first valid blsToExecutionChange received for the validator with index
   // signedBLSToExecutionChange.message.validatorIndex.
   if (!ignoreExists && chain.opPool.hasSeenBlsToExecutionChange(blsToExecutionChange.message.validatorIndex)) {
@@ -55,7 +54,7 @@ async function validateBlsToExecutionChange(
   }
 
   const signatureSet = getBlsToExecutionChangeSignatureSet(config, blsToExecutionChange);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new BlsToExecutionChangeError(GossipAction.REJECT, {
       code: BlsToExecutionChangeErrorCode.INVALID_SIGNATURE,
     });

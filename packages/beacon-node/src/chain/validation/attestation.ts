@@ -200,20 +200,18 @@ export async function validateGossipAttestationsSameAttData(
  * Validate attestations from api
  * - no need to deserialize attestation
  * - no subnet
- * - prioritize bls signature set
  */
 export async function validateApiAttestation(
   fork: ForkName,
   chain: IBeaconChain,
   attestationOrBytes: ApiAttestation
 ): Promise<AttestationValidationResult> {
-  const prioritizeBls = true;
   const subnet = null;
 
   try {
     const step0Result = await validateAttestationNoSignatureCheck(fork, chain, attestationOrBytes, subnet);
     const {attestation, signatureSet, validatorIndex} = step0Result;
-    const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls});
+    const isValid = await chain.bls.verifySignatureSets([signatureSet], {batchable: true});
 
     if (isValid) {
       const targetEpoch = attestation.data.target.epoch;

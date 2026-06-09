@@ -19,8 +19,7 @@ export async function validateApiPayloadAttestationMessage(
   chain: IBeaconChain,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
-  const prioritizeBls = true;
-  return validatePayloadAttestationMessage(chain, payloadAttestationMessage, prioritizeBls);
+  return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
 }
 
 export async function validateGossipPayloadAttestationMessage(
@@ -32,8 +31,7 @@ export async function validateGossipPayloadAttestationMessage(
 
 async function validatePayloadAttestationMessage(
   chain: IBeaconChain,
-  payloadAttestationMessage: gloas.PayloadAttestationMessage,
-  prioritizeBls = false
+  payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
   const {data, validatorIndex} = payloadAttestationMessage;
   const epoch = computeEpochAtSlot(data.slot);
@@ -128,7 +126,7 @@ async function validatePayloadAttestationMessage(
     payloadAttestationMessage.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_SIGNATURE,
     });

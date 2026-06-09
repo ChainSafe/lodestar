@@ -7,8 +7,7 @@ export async function validateApiProposerSlashing(
   chain: IBeaconChain,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<void> {
-  const prioritizeBls = true;
-  return validateProposerSlashing(chain, proposerSlashing, prioritizeBls);
+  return validateProposerSlashing(chain, proposerSlashing);
 }
 
 export async function validateGossipProposerSlashing(
@@ -18,11 +17,7 @@ export async function validateGossipProposerSlashing(
   return validateProposerSlashing(chain, proposerSlashing);
 }
 
-async function validateProposerSlashing(
-  chain: IBeaconChain,
-  proposerSlashing: phase0.ProposerSlashing,
-  prioritizeBls = false
-): Promise<void> {
+async function validateProposerSlashing(chain: IBeaconChain, proposerSlashing: phase0.ProposerSlashing): Promise<void> {
   // [IGNORE] The proposer slashing is the first valid proposer slashing received for the proposer with index
   // proposer_slashing.signed_header_1.message.proposer_index.
   if (chain.opPool.hasSeenProposerSlashing(proposerSlashing.signedHeader1.message.proposerIndex)) {
@@ -46,7 +41,7 @@ async function validateProposerSlashing(
   }
 
   const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),

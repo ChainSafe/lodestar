@@ -1,8 +1,7 @@
-// Size the libuv threadpool to match available CPU cores.
-// The native BLS verifier dispatches async work to libuv (via N-API), and the default
-// pool size of 4 is far too small for BLS-heavy workloads. UV_THREADPOOL_SIZE is only
-// read once by libuv before the first async I/O, so it must be set at the earliest
-// entry point. Respect any explicit user override.
+// Size the libuv threadpool for native async I/O that still uses libuv.
+// BLS verification uses lodestar-z's dedicated worker pool, so UV_THREADPOOL_SIZE
+// is no longer a BLS sizing knob. It is still read once by libuv before the first
+// async I/O, so keep this at the earliest entry point and respect user overrides.
 
 import {availableParallelism} from "node:os";
 

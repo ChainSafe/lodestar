@@ -42,6 +42,59 @@ function splitByType(sets: ISignatureSet[]): SplitResult {
   return {indexed, aggregate, single};
 }
 
+/**
+ * Native `blsBatch` caps every job at this many sets and throws `TooManySets` for
+ * anything larger; it does NOT chunk internally. A single `verifySignatureSets` call
+ * can exceed this in one typed bucket — e.g. a maximally packed pre-electra block has
+ * up to 128 attestation + attester-slashing `aggregate` sets — so the consumer must
+ * split each bucket into chunks of this size and AND the results. Without this, a
+ * valid block's signatures would be reported invalid. The value is the single source
+ * of truth from the native module (`MAX_AGGREGATE_PER_JOB`).
+ */
+const MAX_SETS_PER_JOB = blsBatch.maxSetsPerJob;
+
+/**
+ * Native error `code`s that mean "the BLS subsystem could not run this job" rather
+ * than "the signature is invalid": pool backpressure, shutdown, and misconfiguration.
+ * These must NOT be conflated with a `false` verification result — for gossip that
+ * would wrongly REJECT (and penalize the sending peer), and for block import it would
+ * wrongly mark a valid block `INVALID_SIGNATURE`. Callers rethrow these so gossip maps
+ * them to Ignore and block import treats them as transient. Genuine bad-input/crypto
+ * errors (e.g. `DeserializationFailed`, `PointNotInGroup`) are NOT listed and keep the
+ * `false`/REJECT behavior.
+ */
+const OPERATIONAL_ERROR_CODES = new Set([
+  "PoolExhausted",
+  "PoolNotInitialized",
+  "PoolShuttingDown",
+  "MultipleNapiEnvsUnsupported",
+  "TooManySets",
+  "InvalidSetKind",
+  "InvalidMaxJobs",
+  "PubkeyIndexNotInitialized",
+  "InternalError",
+]);
+
+function isOperationalError(e: unknown): boolean {
+  return e instanceof Error && OPERATIONAL_ERROR_CODES.has((e as {code?: string}).code ?? "");
+}
+
+/**
+ * Split `arr` into consecutive chunks of at most `size`. Returns `[]` for an empty
+ * input (so callers can skip empty buckets) and the original array un-copied when it
+ * already fits in one chunk (the common case).
+ */
+function chunk<T>(arr: T[], size: number): T[][] {
+  if (arr.length <= size) {
+    return arr.length === 0 ? [] : [arr];
+  }
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}
+
 // --- Batch accumulator constants ---
 
 /**
@@ -72,12 +125,12 @@ type PendingJob = {
  * - `batchable` sets are buffered and flushed together via async native methods.
  * - All other sets are submitted immediately via async native methods.
  * - Retry logic: on batch failure, each caller's sets are reverified individually.
- * - Backpressure via `canAcceptWork()` using `inflightJobs` counter against `maxInflightJobs`.
+ * - Backpressure is owned by native `blsBatch.canAcceptWork()` so Lodestar does
+ *   not hide unlimited work behind JS Promises while the BLS worker pool is full.
  */
 export class BlsVerifier implements IBlsVerifier {
-  private maxInflightJobs = 40_000;
+  private readonly maxInflightJobs = 1000;
   private inflightJobs = 0;
-  private jobWaiters = new LinkedList<() => void>();
   private closed = false;
   private readonly metrics: Metrics | null;
   private readonly logger: Logger;
@@ -85,7 +138,6 @@ export class BlsVerifier implements IBlsVerifier {
   // Batch accumulator for batchable jobs
   private buffer: {
     jobs: LinkedList<PendingJob>;
-    prioritizedJobs: LinkedList<PendingJob>;
     sigCount: number;
     timeout: NodeJS.Timeout;
   } | null = null;
@@ -123,7 +175,7 @@ export class BlsVerifier implements IBlsVerifier {
     // Batchable: accumulate in buffer, flush on threshold or timeout
     if (opts.batchable) {
       return new Promise<boolean>((resolve, reject) => {
-        this.enqueueBatchable({sets, resolve, reject, enqueueTimeMs: Date.now()}, opts.priority ?? false);
+        this.enqueueBatchable({sets, resolve, reject, enqueueTimeMs: Date.now()});
       });
     }
 
@@ -133,8 +185,7 @@ export class BlsVerifier implements IBlsVerifier {
 
   async verifySignatureSetsSameMessage(
     sets: {index: number; signature: Uint8Array}[],
-    message: Uint8Array,
-    _opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
+    message: Uint8Array
   ): Promise<boolean[]> {
     if (sets.length === 0) {
       return [];
@@ -143,6 +194,25 @@ export class BlsVerifier implements IBlsVerifier {
     this.metrics?.blsVerifier.sameMessageSets.inc(sets.length);
     const timer = this.metrics?.blsVerifier.sameMessageDuration.startTimer();
 
+    try {
+      // Native caps each job at MAX_SETS_PER_JOB; verify each <=128 chunk as one
+      // aggregate job. A chunk that fails falls back to per-signature verification
+      // so failures stay isolated to that chunk instead of the whole set.
+      return (
+        await Promise.all(
+          chunk(sets, MAX_SETS_PER_JOB).map((chunkSets) => this.verifySameMessageChunk(chunkSets, message))
+        )
+      ).flat();
+    } finally {
+      timer?.();
+    }
+  }
+
+  /** Verify one <=MAX_SETS_PER_JOB same-message chunk, retrying its sets individually on failure */
+  private async verifySameMessageChunk(
+    sets: {index: number; signature: Uint8Array}[],
+    message: Uint8Array
+  ): Promise<boolean[]> {
     try {
       // Try aggregate verification first (1 native job)
       const isAllValid = await this.trackJob(() =>
@@ -153,29 +223,29 @@ export class BlsVerifier implements IBlsVerifier {
       );
 
       if (isAllValid) {
-        timer?.();
         return sets.map(() => true);
       }
-    } catch {
-      // Fall through to individual retry
+    } catch (e) {
+      // Don't retry our own operational failures (pool exhausted, shutdown, ...);
+      // rethrow so the whole call rejects and gossip maps it to Ignore.
+      if (isOperationalError(e)) throw e;
+      // A verification/bad-input error: fall through to per-set retry to isolate it.
     }
 
     // Aggregate failed — retry each individually (1 native job per set)
     this.metrics?.blsVerifier.sameMessageRetries.inc(sets.length);
-    const results = await Promise.all(
+    return Promise.all(
       sets.map(async (set) => {
         try {
           return await this.trackJob(() =>
             blsBatch.asyncVerify(blsBatch.indexed, [{index: set.index, message, signature: set.signature}])
           );
-        } catch {
+        } catch (e) {
+          if (isOperationalError(e)) throw e;
           return false;
         }
       })
     );
-
-    timer?.();
-    return results;
   }
 
   async close(): Promise<void> {
@@ -184,52 +254,29 @@ export class BlsVerifier implements IBlsVerifier {
     if (this.buffer) {
       clearTimeout(this.buffer.timeout);
       // Reject all buffered jobs
-      for (const job of this.buffer.prioritizedJobs) {
-        job.reject(Error("BlsVerifier closing"));
-      }
       for (const job of this.buffer.jobs) {
         job.reject(Error("BlsVerifier closing"));
       }
       this.buffer = null;
     }
-
-    // Unblock any jobs waiting for a slot so callers don't hang.
-    // They will see closed=true and throw without dispatching work.
-    for (const resolve of this.jobWaiters) {
-      resolve();
-    }
-    this.jobWaiters = new LinkedList<() => void>();
   }
 
   canAcceptWork(): boolean {
-    return this.inflightJobs < this.maxInflightJobs;
+    return !this.closed && blsBatch.canAcceptWork();
   }
 
   // --- Internal ---
 
-  /** Run a native async job, waiting for a slot if at capacity */
+  /** Run one native async job. Native blsBatch owns admission and backpressure. */
   private async trackJob<T>(fn: () => Promise<T>): Promise<T> {
-    if (this.inflightJobs >= this.maxInflightJobs) {
-      // Wait for a slot — when woken, the releasing job transfers its slot to us
-      await new Promise<void>((resolve) => {
-        this.jobWaiters.push(resolve);
-      });
-      if (this.closed) {
-        throw Error("BlsVerifier closing");
-      }
-    } else {
-      this.inflightJobs++;
+    if (this.closed) {
+      throw Error("BlsVerifier closing");
     }
+    this.inflightJobs++;
     try {
       return await fn();
     } finally {
-      if (this.jobWaiters.length > 0) {
-        // Transfer slot directly to next waiter
-        // biome-ignore lint/style/noNonNullAssertion: length check above
-        this.jobWaiters.shift()!();
-      } else {
-        this.inflightJobs--;
-      }
+      this.inflightJobs--;
     }
   }
 
@@ -238,31 +285,53 @@ export class BlsVerifier implements IBlsVerifier {
     try {
       const {indexed, aggregate, single} = splitByType(sets);
 
-      if (indexed.length > 0 && !blsBatch.verify(blsBatch.indexed, indexed)) return false;
-      if (aggregate.length > 0 && !blsBatch.verify(blsBatch.aggregate, aggregate)) return false;
-      if (single.length > 0 && !blsBatch.verify(blsBatch.single, single)) return false;
+      // Each typed bucket is split into <=MAX_SETS_PER_JOB chunks; the native
+      // layer rejects larger jobs. Short-circuit on the first failing chunk.
+      for (const c of chunk(indexed, MAX_SETS_PER_JOB)) {
+        if (!blsBatch.verify(blsBatch.indexed, c)) return false;
+      }
+      for (const c of chunk(aggregate, MAX_SETS_PER_JOB)) {
+        if (!blsBatch.verify(blsBatch.aggregate, c)) return false;
+      }
+      for (const c of chunk(single, MAX_SETS_PER_JOB)) {
+        if (!blsBatch.verify(blsBatch.single, c)) return false;
+      }
 
       return true;
     } catch (e) {
+      // Operational failures (pool exhausted, shutdown, ...) are not "invalid
+      // signature" — rethrow so callers don't wrongly reject valid sets.
+      if (isOperationalError(e)) throw e;
       this.logger.debug("verifySync caught error", {sets: sets.length}, e as Error);
       return false;
     }
   }
 
-  /** Async verification via native async methods (libuv threadpool) */
+  /** Async verification via the dedicated native BLS worker pool */
   private async verifyAsync(sets: ISignatureSet[]): Promise<boolean> {
     const timer = this.metrics?.blsVerifier.asyncVerifyDuration.startTimer();
     try {
       const {indexed, aggregate, single} = splitByType(sets);
 
+      // Each typed bucket is split into <=MAX_SETS_PER_JOB chunks, one native job
+      // each (the native layer rejects larger jobs); all chunks must verify.
       const promises: Promise<boolean>[] = [];
-      if (indexed.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.indexed, indexed)));
-      if (aggregate.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.aggregate, aggregate)));
-      if (single.length > 0) promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.single, single)));
+      for (const c of chunk(indexed, MAX_SETS_PER_JOB)) {
+        promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.indexed, c)));
+      }
+      for (const c of chunk(aggregate, MAX_SETS_PER_JOB)) {
+        promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.aggregate, c)));
+      }
+      for (const c of chunk(single, MAX_SETS_PER_JOB)) {
+        promises.push(this.trackJob(() => blsBatch.asyncVerify(blsBatch.single, c)));
+      }
 
       const results = await Promise.all(promises);
       return results.every((r) => r);
     } catch (e) {
+      // Operational failures (pool exhausted, shutdown, ...) are not "invalid
+      // signature" — rethrow so gossip maps to Ignore and block import retries.
+      if (isOperationalError(e)) throw e;
       this.logger.debug("verifyAsync caught error", {sets: sets.length}, e as Error);
       return false;
     } finally {
@@ -274,21 +343,16 @@ export class BlsVerifier implements IBlsVerifier {
   }
 
   /** Enqueue a batchable job into the buffer */
-  private enqueueBatchable(job: PendingJob, priority: boolean): void {
+  private enqueueBatchable(job: PendingJob): void {
     if (!this.buffer) {
       this.buffer = {
         jobs: new LinkedList<PendingJob>(),
-        prioritizedJobs: new LinkedList<PendingJob>(),
         sigCount: 0,
         timeout: setTimeout(() => this.flushBuffer(), BATCH_WAIT_MS),
       };
     }
 
-    if (priority) {
-      this.buffer.prioritizedJobs.push(job);
-    } else {
-      this.buffer.jobs.push(job);
-    }
+    this.buffer.jobs.push(job);
     this.buffer.sigCount += job.sets.length;
 
     if (this.buffer.sigCount >= MAX_BATCH_SIGS) {
@@ -303,10 +367,7 @@ export class BlsVerifier implements IBlsVerifier {
     if (!buf) return;
     this.buffer = null;
 
-    // Prioritized jobs go first
-    const allJobs = new LinkedList<PendingJob>();
-    for (const job of buf.prioritizedJobs) allJobs.push(job);
-    for (const job of buf.jobs) allJobs.push(job);
+    const allJobs = buf.jobs;
     if (allJobs.length === 0) return;
 
     this.metrics?.blsVerifier.batchedJobCount.inc(allJobs.length);
@@ -349,12 +410,13 @@ export class BlsVerifier implements IBlsVerifier {
         }
       },
       (error: Error) => {
-        // Total failure — retry each job individually
-        const retryPromises: Promise<void>[] = [];
+        // Native operational failure (backpressure/shutdown/etc): do not retry
+        // and add more work to the same saturated pool. Let gossip/import callers
+        // handle it as transient.
+        flushTimer?.();
         for (const job of allJobs) {
-          retryPromises.push(this.verifyAsync(job.sets).then(job.resolve, () => job.reject(error)));
+          job.reject(error);
         }
-        void Promise.all(retryPromises).finally(() => flushTimer?.());
       }
     );
   }

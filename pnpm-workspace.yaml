@@ -35,9 +35,6 @@ allowBuilds:
   ssh2: true
 
 overrides:
-  # Use the locally built newer lodestar-z (cayman/bls-batch @69ef4413, requires zig 0.16.0).
-  # TODO: switch back to the catalog github ref once the newer commit is published.
-  "@chainsafe/lodestar-z": "link:../lodestar-z"
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"

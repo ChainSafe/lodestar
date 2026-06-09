@@ -76,8 +76,7 @@ export async function validateApiSyncCommittee(
   headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
-  const prioritizeBls = true;
-  return validateSyncCommitteeSigOnly(chain, headState, syncCommittee, prioritizeBls);
+  return validateSyncCommitteeSigOnly(chain, headState, syncCommittee);
 }
 
 /**
@@ -86,11 +85,10 @@ export async function validateApiSyncCommittee(
 async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
   headState: IBeaconStateView,
-  syncCommittee: altair.SyncCommitteeMessage,
-  prioritizeBls = false
+  syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(chain.config, headState, syncCommittee);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });

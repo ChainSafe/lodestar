@@ -434,7 +434,7 @@ export function createLodestarMetrics(
       }),
       asyncVerifyDuration: register.histogram({
         name: "lodestar_bls_verifier_async_time_seconds",
-        help: "Time for async verification via native libuv threadpool",
+        help: "Time for async verification via the native BLS worker pool",
         buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1],
       }),
       timePerSigSet: register.histogram({

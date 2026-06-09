@@ -31,10 +31,8 @@ export async function validateApiAggregateAndProof(
   signedAggregateAndProof: SignedAggregateAndProof
 ): Promise<AggregateAndProofValidationResult> {
   const skipValidationKnownAttesters = true;
-  const prioritizeBls = true;
   return validateAggregateAndProof(fork, chain, signedAggregateAndProof, null, {
     skipValidationKnownAttesters,
-    prioritizeBls,
   });
 }
 
@@ -52,12 +50,11 @@ async function validateAggregateAndProof(
   chain: IBeaconChain,
   signedAggregateAndProof: SignedAggregateAndProof,
   serializedData: Uint8Array | null = null,
-  opts: {skipValidationKnownAttesters: boolean; prioritizeBls: boolean} = {
+  opts: {skipValidationKnownAttesters: boolean} = {
     skipValidationKnownAttesters: false,
-    prioritizeBls: false,
   }
 ): Promise<AggregateAndProofValidationResult> {
-  const {skipValidationKnownAttesters, prioritizeBls} = opts;
+  const {skipValidationKnownAttesters} = opts;
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -265,7 +262,7 @@ async function validateAggregateAndProof(
   ];
   // no need to write to SeenAttestationDatas
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 

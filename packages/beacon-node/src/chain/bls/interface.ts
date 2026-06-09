@@ -16,11 +16,6 @@ export type VerifySignatureOpts = {
    * Ignores the batchable option if true.
    */
   verifyOnMainThread?: boolean;
-
-  /**
-   * Some signature sets are more important than others, and should be verified first.
-   */
-  priority?: boolean;
 };
 
 export interface IBlsVerifier {
@@ -40,8 +35,7 @@ export interface IBlsVerifier {
    */
   verifySignatureSetsSameMessage(
     sets: {index: number; signature: Uint8Array}[],
-    message: Uint8Array,
-    opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
+    message: Uint8Array
   ): Promise<boolean[]>;
 
   /** Cleanup resources */

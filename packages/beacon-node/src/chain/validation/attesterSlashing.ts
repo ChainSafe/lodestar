@@ -12,8 +12,7 @@ export async function validateApiAttesterSlashing(
   chain: IBeaconChain,
   attesterSlashing: AttesterSlashing
 ): Promise<void> {
-  const prioritizeBls = true;
-  return validateAttesterSlashing(chain, attesterSlashing, prioritizeBls);
+  return validateAttesterSlashing(chain, attesterSlashing);
 }
 
 export async function validateGossipAttesterSlashing(
@@ -23,11 +22,7 @@ export async function validateGossipAttesterSlashing(
   return validateAttesterSlashing(chain, attesterSlashing);
 }
 
-export async function validateAttesterSlashing(
-  chain: IBeaconChain,
-  attesterSlashing: AttesterSlashing,
-  prioritizeBls = false
-): Promise<void> {
+export async function validateAttesterSlashing(chain: IBeaconChain, attesterSlashing: AttesterSlashing): Promise<void> {
   // [IGNORE] At least one index in the intersection of the attesting indices of each attestation has not yet been seen
   // in any prior attester_slashing (i.e.
   //   attester_slashed_indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices
@@ -68,7 +63,7 @@ export async function validateAttesterSlashing(
   }
 
   const signatureSets = getAttesterSlashingSignatureSets(chain.config, state.slot, attesterSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),
