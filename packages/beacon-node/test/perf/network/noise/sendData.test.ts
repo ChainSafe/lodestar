@@ -61,15 +61,24 @@ describe("network / noise / sendData", () => {
             await connA.close();
           })(),
           (async () => {
+            let bytesReceived = 0;
+            const expectedBytes = numberOfMessages * messageLength;
             try {
-              for await (const _chunk of connB) {
-                // Drain inbound messages
+              for await (const chunk of connB) {
+                bytesReceived += chunk.byteLength;
               }
             } catch (err) {
-              // MockMuxer routes connA.close() as a reset frame on the inbound side,
-              // so the for-await consumer sees StreamResetError once draining ends.
-              // This is teardown noise, not a benchmark failure — rethrow anything else.
-              if (!(err instanceof Error) || err.name !== "StreamResetError") throw err;
+              // MockMuxer routes connA.close() as a reset frame on the inbound side, so the
+              // for-await consumer sees StreamResetError once draining ends. The expected
+              // teardown reset fires only after every message has been delivered — a reset
+              // before all expected bytes arrived would be a real regression and must rethrow.
+              if (
+                !(err instanceof Error) ||
+                err.name !== "StreamResetError" ||
+                bytesReceived < expectedBytes
+              ) {
+                throw err;
+              }
             }
           })(),
         ]);
