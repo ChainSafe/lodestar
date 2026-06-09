@@ -16,6 +16,14 @@ export type VerifySignatureOpts = {
    * Ignores the batchable option if true.
    */
   verifyOnMainThread?: boolean;
+
+  /**
+   * Route to the native worker pool's high lane, drained before any queued low-lane
+   * backlog. Batchable (gossip) jobs are always high; immediate jobs default low —
+   * set this for latency-sensitive immediate verification (e.g. head-block import)
+   * so it cannot wait behind a range-sync segment backlog.
+   */
+  priority?: boolean;
 };
 
 export interface IBlsVerifier {

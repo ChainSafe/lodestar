@@ -3,6 +3,7 @@ import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {LinkedList} from "../../util/array.js";
+import {nextEventLoop} from "../../util/eventLoop.js";
 import {IBlsVerifier, VerifySignatureOpts} from "./interface.js";
 
 // --- Native set types (re-declared for local use in splitByType) ---
@@ -82,10 +83,20 @@ const OPERATIONAL_ERROR_CODES = new Set([
   "InvalidMaxJobs",
   "PubkeyIndexNotInitialized",
   "InternalError",
+  "VerifierClosing",
 ]);
 
 function isOperationalError(e: unknown): boolean {
   return e instanceof Error && OPERATIONAL_ERROR_CODES.has((e as {code?: string}).code ?? "");
+}
+
+/**
+ * Shutdown is transient, not "invalid signature": verifyAsync now yields between
+ * chunk dispatches, so close() can interleave mid-call — a plain (uncoded) Error
+ * here would be swallowed into a `false` verdict and mark valid blocks invalid.
+ */
+function verifierClosingError(): Error {
+  return Object.assign(new Error("blsVerifier: VerifierClosing"), {code: "VerifierClosing"});
 }
 
 type LabeledGauge = {set(labels: {le: string}, value: number): void};
@@ -240,8 +251,9 @@ export class BlsVerifier implements IBlsVerifier {
       });
     }
 
-    // Immediate async submission
-    return this.verifyAsync(sets);
+    // Immediate async submission. Low lane unless the caller marked it
+    // latency-sensitive (e.g. single head-block import).
+    return this.verifyAsync(sets, opts.priority ?? false);
   }
 
   async verifySignatureSetsSameMessage(
@@ -278,9 +290,11 @@ export class BlsVerifier implements IBlsVerifier {
       // Try aggregate verification first (1 native job). Started is counted only after
       // native admission (asyncVerifySameMessage sync-throws if not admitted).
       const isAllValid = await this.trackJob(() => {
+        // Same-message verification is gossip attestations — high lane.
         const p = blsBatch.asyncVerifySameMessage(
           sets.map((s) => ({index: s.index, signature: s.signature})),
-          message
+          message,
+          true
         );
         this.metrics?.blsVerifier.jobsStarted.inc({type: "sameMessage"}, 1);
         this.metrics?.blsVerifier.sigSetsStarted.inc({type: "sameMessage"}, sets.length);
@@ -310,7 +324,7 @@ export class BlsVerifier implements IBlsVerifier {
     return Promise.all(
       sets.map((set) =>
         this.dispatchJob(
-          () => blsBatch.asyncVerify(blsBatch.indexed, [{index: set.index, message, signature: set.signature}]),
+          () => blsBatch.asyncVerify(blsBatch.indexed, [{index: set.index, message, signature: set.signature}], true),
           "sameMessage",
           1
         ).catch((e) => {
@@ -328,7 +342,7 @@ export class BlsVerifier implements IBlsVerifier {
       clearTimeout(this.buffer.timeout);
       // Reject all buffered jobs
       for (const job of this.buffer.jobs) {
-        job.reject(Error("BlsVerifier closing"));
+        job.reject(verifierClosingError());
       }
       this.buffer = null;
     }
@@ -343,7 +357,7 @@ export class BlsVerifier implements IBlsVerifier {
   /** Run one native async job. Native blsBatch owns admission and backpressure. */
   private async trackJob<T>(fn: () => Promise<T>): Promise<T> {
     if (this.closed) {
-      throw Error("BlsVerifier closing");
+      throw verifierClosingError();
     }
     this.inflightJobs++;
     try {
@@ -412,8 +426,15 @@ export class BlsVerifier implements IBlsVerifier {
     }
   }
 
-  /** Async verification via the dedicated native BLS worker pool */
-  private async verifyAsync(sets: ISignatureSet[]): Promise<boolean> {
+  /**
+   * Async verification via the dedicated native BLS worker pool.
+   *
+   * `priority` routes jobs to the native pool's high lane (drained before any queued
+   * low-lane backlog). Buffered gossip passes true; immediate callers (block import,
+   * API flows) default to the low lane so a range-sync backlog can never starve
+   * latency-sensitive gossip verification.
+   */
+  private async verifyAsync(sets: ISignatureSet[], priority = false): Promise<boolean> {
     const timer = this.metrics?.blsVerifier.asyncVerifyDuration.startTimer();
     try {
       const {indexed, aggregate, single} = splitByType(sets);
@@ -421,15 +442,27 @@ export class BlsVerifier implements IBlsVerifier {
       // Each typed bucket is split into <=MAX_SETS_PER_JOB chunks, one native job
       // each (the native layer rejects larger jobs); all chunks must verify.
       // dispatchJob handles per-chunk started/verified/errored accounting.
+      //
+      // Multi-chunk calls yield to the event loop between dispatches: signature
+      // decompression happens on the workers, but aggregate-kind parsing still
+      // aggregates pubkeys on this thread (~tens of ms for block-import shapes).
       const promises: Promise<boolean>[] = [];
+      const dispatch = async (submit: () => Promise<boolean>, n: number): Promise<void> => {
+        if (promises.length > 0) await nextEventLoop();
+        const p = this.dispatchJob(submit, "default", n);
+        // Mark handled across the yield boundary (Promise.all below attaches the
+        // real handler a macrotask later, which Node would flag as unhandled).
+        p.catch(() => {});
+        promises.push(p);
+      };
       for (const c of chunk(indexed, MAX_SETS_PER_JOB)) {
-        promises.push(this.dispatchJob(() => blsBatch.asyncVerify(blsBatch.indexed, c), "default", c.length));
+        await dispatch(() => blsBatch.asyncVerify(blsBatch.indexed, c, priority), c.length);
       }
       for (const c of chunk(aggregate, MAX_SETS_PER_JOB)) {
-        promises.push(this.dispatchJob(() => blsBatch.asyncVerify(blsBatch.aggregate, c), "default", c.length));
+        await dispatch(() => blsBatch.asyncVerify(blsBatch.aggregate, c, priority), c.length);
       }
       for (const c of chunk(single, MAX_SETS_PER_JOB)) {
-        promises.push(this.dispatchJob(() => blsBatch.asyncVerify(blsBatch.single, c), "default", c.length));
+        await dispatch(() => blsBatch.asyncVerify(blsBatch.single, c, priority), c.length);
       }
 
       const results = await Promise.all(promises);
@@ -497,7 +530,8 @@ export class BlsVerifier implements IBlsVerifier {
 
     // Fire-and-forget the async batch verification
     const flushTimer = this.metrics?.blsVerifier.batchFlushDuration.startTimer();
-    this.verifyAsync(allSets).then(
+    // Buffered jobs are gossip (batchable callers) — high lane.
+    this.verifyAsync(allSets, true).then(
       (batchValid) => {
         if (batchValid) {
           // Entire batch valid — resolve all
@@ -511,7 +545,7 @@ export class BlsVerifier implements IBlsVerifier {
           this.metrics?.blsVerifier.batchRetries.inc(1);
           const retryPromises: Promise<void>[] = [];
           for (const job of allJobs) {
-            retryPromises.push(this.verifyAsync(job.sets).then(job.resolve, job.reject));
+            retryPromises.push(this.verifyAsync(job.sets, true).then(job.resolve, job.reject));
           }
           void Promise.all(retryPromises).finally(() => flushTimer?.());
         }

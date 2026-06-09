@@ -46,17 +46,21 @@ export async function verifyBlocksSignatures(
       ? // Skip all signature verification
         Promise.resolve(true)
       : //
-        // Verify signatures per block to track which block is invalid
+        // Verify signatures per block to track which block is invalid.
+        // A single block is the consensus-critical gossip/head (or API publish)
+        // import — high lane so it never waits behind a range-sync segment
+        // backlog. Multi-block segments ARE that backlog — low lane.
         bls.verifySignatureSets(
           getBlockSignatureSets(config, currentSyncCommitteeIndexed, preState0, block, indexedAttestationsByBlock[i], {
             skipProposerSignature: opts.validProposerSignature,
-          })
+          }),
+          {priority: blocks.length === 1}
         );
 
-    // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs). When syncing a 32 blocks
-    // segments it will block the event loop for 1400 ms, which is too much. This call will allow the event loop to
-    // yield, which will cause one block's state transition to run. However, the tradeoff is okay and doesn't slow sync
-    if ((i + 1) % 8 === 0) {
+    // getBlockSignatureSets() takes 45ms in benchmarks for 2022Q2 mainnet blocks (100 sigs), and native dispatch adds
+    // main-thread pubkey aggregation for aggregate-kind sets (~tens of ms for attestation-heavy blocks). Yielding
+    // every other block keeps single-tick event-loop stalls bounded near one block's cost without slowing sync.
+    if ((i + 1) % 2 === 0) {
       await nextEventLoop();
     }
   }
