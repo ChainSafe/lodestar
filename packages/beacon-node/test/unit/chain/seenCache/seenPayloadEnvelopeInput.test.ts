@@ -120,6 +120,20 @@ describe("SeenPayloadEnvelopeInput", () => {
     }
   });
 
+  it("excludes the just-inserted entry from pruning even when it is the lowest slot", () => {
+    const maxSize = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
+    const prevLowest = addPayloadInput(101);
+    for (let slot = 102; slot < 101 + maxSize; slot++) addPayloadInput(slot);
+    expect(cache.size()).toBe(maxSize);
+
+    // adding an older block (lowest slot) while at cap must not evict itself; the previous lowest
+    // (slot 101) is evicted instead. Guards the reorg / older-fork case.
+    const older = addPayloadInput(1);
+    expect(cache.size()).toBe(maxSize);
+    expect(cache.get(older)).toBeDefined();
+    expect(cache.get(prevLowest)).toBeUndefined();
+  });
+
   it("add returns the existing entry on duplicate root", () => {
     const {block, rootHex} = generateBlock({forkName: ForkName.gloas, slot: 1});
     const props = {

@@ -26,10 +26,11 @@ export type SeenPayloadEnvelopeInputModules = {
   logger?: Logger;
 };
 
-// Upper bound on the cache, enforced on insertion. pruneFinalized / pruneBelowParent only run on
-// finality or chain progression, so without this the cache grows unbounded during non-finality and
-// can OOM the node (see https://github.com/ChainSafe/lodestar/issues/9073). Sized to match
-// SeenBlockInput's MAX_BLOCK_INPUT_CACHE_SIZE so the range-sync look-ahead window stays resident.
+// Upper bound on the cache, enforced on every insertion. pruneFinalized / pruneBelowParent are both
+// dormant during catch-up (no finality; prepareNextSlot bails once the head is far behind the clock),
+// so without an insert-time cap the cache grows unbounded and OOMs the node
+// (see https://github.com/ChainSafe/lodestar/issues/9073). Same size as SeenBlockInput's
+// MAX_BLOCK_INPUT_CACHE_SIZE.
 const MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
 
 /**
@@ -124,7 +125,7 @@ export class SeenPayloadEnvelopeInput {
       root: props.blockRootHex,
       daOutOfRange,
     });
-    this.pruneToMaxSize();
+    this.pruneToMaxSize(props.blockRootHex);
     return input;
   }
 
@@ -146,7 +147,7 @@ export class SeenPayloadEnvelopeInput {
       root: props.blockRootHex,
       daOutOfRange,
     });
-    this.pruneToMaxSize();
+    this.pruneToMaxSize(props.blockRootHex);
     return input;
   }
 
@@ -177,27 +178,26 @@ export class SeenPayloadEnvelopeInput {
     }
   }
 
-  /** Evict the lowest-slot entries (oldest / furthest behind the head) once over the max size. */
-  private pruneToMaxSize(): void {
-    let itemsToDelete = this.payloadInputs.size - MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE;
-    if (itemsToDelete <= 0) {
-      return;
-    }
-
-    const sorted = [...this.payloadInputs.values()].sort((a, b) => a.slot - b.slot);
-    let deletedCount = 0;
-    for (const input of sorted) {
-      this.evictPayloadInput(input);
-      deletedCount++;
-      if (--itemsToDelete <= 0) {
-        break;
+  /**
+   * Enforce the size cap by evicting the lowest-slot entry (oldest / furthest behind the head).
+   * Called on every insertion so the cache is at most one over the cap. `excludeRoot` is never
+   * evicted, so an add can't remove itself when it is the lowest slot (e.g. an older block in a reorg).
+   */
+  private pruneToMaxSize(excludeRoot?: RootHex): void {
+    while (this.payloadInputs.size > MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE) {
+      let lowest: PayloadEnvelopeInput | undefined;
+      for (const input of this.payloadInputs.values()) {
+        if (input.blockRootHex === excludeRoot) continue;
+        if (lowest === undefined || input.slot < lowest.slot) lowest = input;
       }
+      if (lowest === undefined) break;
+      this.evictPayloadInput(lowest);
+      this.logger?.debug("SeenPayloadEnvelopeInput.pruneToMaxSize evicted entry", {
+        slot: lowest.slot,
+        root: lowest.blockRootHex,
+        maxSize: MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE,
+      });
     }
-
-    this.logger?.debug("SeenPayloadEnvelopeInput.pruneToMaxSize evicted entries", {
-      deletedCount,
-      maxSize: MAX_PAYLOAD_ENVELOPE_INPUT_CACHE_SIZE,
-    });
   }
 
   private evictPayloadInput(payloadInput: PayloadEnvelopeInput): void {
