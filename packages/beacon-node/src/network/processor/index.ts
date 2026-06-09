@@ -299,7 +299,7 @@ export class NetworkProcessor {
       return;
     }
     this.unknownEnvelopesBySlot.getOrDefault(slot).add(root);
-    this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, peer, source});
+    this.chain.emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {rootHex: root, slot, peer, source});
   }
 
   private onPendingGossipsubMessage = (message: PendingGossipsubMessage): void => {
