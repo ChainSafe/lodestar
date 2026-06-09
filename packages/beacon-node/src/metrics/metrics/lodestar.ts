@@ -610,7 +610,7 @@ export function createLodestarMetrics(
         help: "The origination source of one of the BlockInputSync triggers",
         labelNames: ["source"],
       }),
-      payloadSource: register.gauge<{source: BlockInputSource}>({
+      payloadSource: register.counter<{source: BlockInputSource}>({
         name: "lodestar_payload_input_sync_source_total",
         help: "Count of payload (execution payload envelope) sync triggers, labeled by their source",
         labelNames: ["source"],
