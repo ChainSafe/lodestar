@@ -39,7 +39,7 @@ export class ChainHeaderTracker {
   start(signal: AbortSignal): void {
     this.logger.verbose("Subscribing to validator events");
 
-    const topics = [EventType.head];
+    const topics = [EventType.head, EventType.headV2];
     // We wait until the gloas fork is configured to avoid breaking
     // connections with pre-gloas beacon nodes
     if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
@@ -98,6 +98,33 @@ export class ChainHeaderTracker {
         head: block,
         previousDuty: previousDutyDependentRoot,
         currentDuty: currentDutyDependentRoot,
+      });
+    }
+
+    if (event.type === EventType.headV2) {
+      const {data} = event.message;
+      const {slot, block, currentEpochDependentRoot, nextEpochDependentRoot} = data;
+      this.headBlockSlot = slot;
+      this.headBlockRoot = fromHex(block);
+
+      const headEventData = {
+        slot: this.headBlockSlot,
+        head: block,
+        previousDutyDependentRoot: currentEpochDependentRoot,
+        currentDutyDependentRoot: nextEpochDependentRoot,
+      }
+
+      for (const fn of this.fns) {
+        fn(headEventData).catch((e) => this.logger.error("Error calling head event handler", e));
+      }
+
+      this.emitter.emit(ValidatorEvent.chainHead, headEventData);
+
+      this.logger.verbose("Found new chain head", {
+        slot: slot,
+        head: block,
+        previousDuty: currentEpochDependentRoot,
+        currentDuty: nextEpochDependentRoot,
       });
     }
 
