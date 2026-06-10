@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, BeaconStateView} from "@lodestar/state-transition";
+import {BeaconStateAllForks, BeaconStateView, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
@@ -61,6 +61,7 @@ describe("get proposers api impl", () => {
   }
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -102,6 +103,22 @@ describe("get proposers api impl", () => {
     expect(cachedState.epochCtx.getBeaconProposers).not.toHaveBeenCalled();
     expect(cachedState.epochCtx.getBeaconProposersNextEpoch).toHaveBeenCalledOnce();
     expect(cachedState.epochCtx.getBeaconProposersPrevEpoch).not.toHaveBeenCalled();
+    expect(result.map((p) => p.slot)).toEqual(
+      Array.from({length: SLOTS_PER_EPOCH}, (_, i) => nextEpoch * SLOTS_PER_EPOCH + i)
+    );
+  });
+
+  it("should get v1 proposers for next epoch mid-epoch", async () => {
+    const nextEpoch = currentEpoch + 1;
+    const getBlockRootAtSlotSpy = vi.spyOn(BeaconStateView.prototype, "getBlockRootAtSlot");
+
+    const {data: result} = (await api.getProposerDuties({epoch: nextEpoch})) as {
+      data: routes.validator.ProposerDutyList;
+    };
+
+    expect(result.length).toBe(SLOTS_PER_EPOCH);
+    expect(getBlockRootAtSlotSpy).toHaveBeenCalledWith(currentSlot - 1);
+    expect(getBlockRootAtSlotSpy).not.toHaveBeenCalledWith(computeStartSlotAtEpoch(nextEpoch) - 1);
     expect(result.map((p) => p.slot)).toEqual(
       Array.from({length: SLOTS_PER_EPOCH}, (_, i) => nextEpoch * SLOTS_PER_EPOCH + i)
     );

@@ -17,30 +17,24 @@ import {computeStartSlotAtEpoch} from "./epoch.js";
 import {EpochShuffling} from "./epochShuffling.js";
 
 /**
- * Block root that decided the proposer shuffling for `proposalEpoch` (keys that shuffling).
- * Computed for the requested epoch, not `state.epoch`, so it is correct when `state` is one
- * epoch off the requested epoch (e.g. serving next-epoch duties from the current state).
+ * Block root that decided the proposer shuffling for the state used to serve proposer duties.
  *
  * Returns `null` when the genesis block decides its own shuffling (caller falls back to the
  * genesis block root).
  */
-export function proposerShufflingDecisionRoot(
-  fork: ForkName,
-  state: IBeaconStateView,
-  proposalEpoch: Epoch
-): Root | null {
-  const decisionSlot = proposerShufflingDecisionSlot(fork, proposalEpoch);
+export function proposerShufflingDecisionRoot(fork: ForkName, state: IBeaconStateView): Root | null {
+  const decisionSlot = proposerShufflingDecisionSlot(fork, state);
   if (state.slot === decisionSlot) {
     return null;
   }
   return state.getBlockRootAtSlot(decisionSlot);
 }
 
-/** Slot whose block root keys the proposer shuffling for `proposalEpoch`. */
-function proposerShufflingDecisionSlot(fork: ForkName, proposalEpoch: Epoch): Slot {
+/** Slot whose block root keys the proposer shuffling for `state`. */
+function proposerShufflingDecisionSlot(fork: ForkName, state: IBeaconStateView): Slot {
   // Post-Fulu the shuffling is decided one epoch earlier (deterministic proposer lookahead,
-  // MIN_SEED_LOOKAHEAD = 1); pre-Fulu it is the last block before `proposalEpoch`.
-  const decisionEpoch = isForkPostFulu(fork) ? proposalEpoch - 1 : proposalEpoch;
+  // MIN_SEED_LOOKAHEAD = 1); pre-Fulu it is the last block before `state.epoch`.
+  const decisionEpoch = isForkPostFulu(fork) ? state.epoch - 1 : state.epoch;
   return Math.max(computeStartSlotAtEpoch(decisionEpoch) - 1, 0);
 }
 

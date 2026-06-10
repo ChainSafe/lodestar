@@ -1295,7 +1295,7 @@ export function getValidatorApi(
       // It should be set to the latest block applied to `self` or the genesis block root.
       const dependentRoot =
         // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
-        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state, epoch) ||
+        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state) ||
         (await getGenesisBlockRoot(state));
 
       return {
