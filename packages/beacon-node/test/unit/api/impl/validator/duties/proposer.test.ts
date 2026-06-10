@@ -107,6 +107,23 @@ describe("get proposers api impl", () => {
     );
   });
 
+  // Regression for the V1 path: pre-Fulu decision-slot logic asks for the block root at
+  // `startSlot(nextEpoch) - 1`, which is in the future relative to a mid-epoch head state.
+  // The dep_root must fall back to the head block root instead of throwing.
+  it("should get proposers for next epoch via V1 from a mid-epoch head state", async () => {
+    const nextEpoch = currentEpoch + 1;
+    const {data: result, meta} = (await api.getProposerDuties({epoch: nextEpoch})) as {
+      data: routes.validator.ProposerDutyList;
+      meta: {dependentRoot: string};
+    };
+
+    expect(result.length).toBe(SLOTS_PER_EPOCH);
+    expect(meta.dependentRoot).toBe(zeroProtoBlock.blockRoot);
+    expect(result.map((p) => p.slot)).toEqual(
+      Array.from({length: SLOTS_PER_EPOCH}, (_, i) => nextEpoch * SLOTS_PER_EPOCH + i)
+    );
+  });
+
   it("should get proposers for historical epoch", async () => {
     const historicalEpoch = currentEpoch - 2;
     initializeState(currentSlot - 2 * SLOTS_PER_EPOCH + 1);

@@ -1291,12 +1291,16 @@ export function getValidatorApi(
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
       }
 
-      // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
-      // It should be set to the latest block applied to `self` or the genesis block root.
-      const dependentRoot =
-        // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
-        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state, epoch) ||
-        (await getGenesisBlockRoot(state));
+      // In v2 the dependent root is different after fulu due to deterministic proposer lookahead.
+      // `head.blockRoot` is used as the dep_root when the decision slot is not yet in
+      // `state.block_roots` (pre-Fulu next-epoch duties from a mid-epoch head state, or the
+      // genesis-decides-its-own-shuffling case at slot 0).
+      const dependentRoot = proposerShufflingDecisionRoot(
+        opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0,
+        state,
+        epoch,
+        fromHex(head.blockRoot)
+      );
 
       return {
         data: duties,
