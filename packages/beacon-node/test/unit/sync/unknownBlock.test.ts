@@ -761,6 +761,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -834,6 +835,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer: peerA,
         source: BlockInputSource.gossip,
       });
@@ -923,6 +925,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1021,8 +1024,11 @@ describe("UnknownBlockSync", () => {
         peers: [{peerId: peer}],
       }));
 
-      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+      // tsgo overload-resolution miss when emit is reached through a closure that captures emitter
+      // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys (see #9491).
+      (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1061,13 +1067,9 @@ describe("UnknownBlockSync", () => {
         )
         .mockResolvedValueOnce(undefined);
 
-      let emitter!: ChainEventEmitter;
-      const processBlock = vi.fn().mockImplementation(async () => {
-        knownRoots.add(blockRootHex);
-        emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
-      });
+      const processBlock = vi.fn();
 
-      ({emitter} = setupPayloadSyncTest({
+      const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           processBlock,
           processExecutionPayload,
@@ -1115,10 +1117,18 @@ describe("UnknownBlockSync", () => {
           sendBeaconBlocksByRoot,
         },
         peers: [{peerId: peer}],
-      }));
+      });
 
-      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+      processBlock.mockImplementation(async () => {
+        knownRoots.add(blockRootHex);
+        emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
+      });
+
+      // tsgo overload-resolution miss when emit is reached through a closure that captures emitter
+      // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys.
+      (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1175,6 +1185,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });
@@ -1224,6 +1235,7 @@ describe("UnknownBlockSync", () => {
 
       emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
+        slot: 0,
         peer,
         source: BlockInputSource.gossip,
       });

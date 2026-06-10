@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
@@ -121,6 +122,8 @@ export function initializeForkChoiceFromFinalizedState(
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+        onFastConfirmation: ({block, slot, currentSlot}) =>
+          emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
       }
     ),
 
@@ -214,6 +217,8 @@ export function initializeForkChoiceFromUnfinalizedState(
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      onFastConfirmation: ({block, slot, currentSlot}) =>
+        emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
     }
   );
 
