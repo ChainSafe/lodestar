@@ -107,6 +107,8 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
+  getConfirmedRoot(): RootHex;
+  getConfirmedBlock(): ProtoBlock | null;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
@@ -257,6 +259,9 @@ export interface IForkChoice {
     payloadPresentCount: number;
     dataAvailableCount: number;
   } | null;
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */

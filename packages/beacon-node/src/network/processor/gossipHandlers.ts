@@ -185,7 +185,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
     });
     try {
-      await validateGossipBlock(config, chain, signedBlock, fork);
+      const {skippedSlots} = await validateGossipBlock(config, chain, signedBlock, fork);
 
       if (isForkPostGloas(fork)) {
         chain.seenPayloadEnvelopeInputCache.add({
@@ -205,8 +205,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
+      metrics?.gossipBlock.skippedSlots.observe(skippedSlots);
 
-      logger.debug("Validated gossip block", {...blockInputMeta, ...logCtx, recvToValidation, validationTime});
+      logger.debug("Validated gossip block", {
+        ...blockInputMeta,
+        ...logCtx,
+        recvToValidation,
+        validationTime,
+        skippedSlots,
+      });
 
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
 
