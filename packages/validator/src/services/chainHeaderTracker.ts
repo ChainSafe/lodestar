@@ -112,7 +112,7 @@ export class ChainHeaderTracker {
         head: block,
         previousDutyDependentRoot: currentEpochDependentRoot,
         currentDutyDependentRoot: nextEpochDependentRoot,
-      }
+      };
 
       for (const fn of this.fns) {
         fn(headEventData).catch((e) => this.logger.error("Error calling head event handler", e));
