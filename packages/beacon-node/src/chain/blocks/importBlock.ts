@@ -297,7 +297,7 @@ export async function importBlock(
         executionOptimistic: isOptimisticBlock(newHead),
       });
       this.emitter.emit(routes.events.EventType.headV2, {
-        version: this.config.getForkName(blockSlot),
+        version: this.config.getForkName(newHead.slot),
         data: {
           slot: newHead.slot,
           block: newHead.blockRoot,
