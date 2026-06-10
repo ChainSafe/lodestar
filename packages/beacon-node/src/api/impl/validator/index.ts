@@ -1293,14 +1293,18 @@ export function getValidatorApi(
 
       // In v2 the dependent root is different after fulu due to deterministic proposer lookahead.
       // `head.blockRoot` is used as the dep_root when the decision slot is not yet in
-      // `state.block_roots` (pre-Fulu next-epoch duties from a mid-epoch head state, or the
-      // genesis-decides-its-own-shuffling case at slot 0).
-      const dependentRoot = proposerShufflingDecisionRoot(
-        opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0,
-        state,
-        epoch,
-        fromHex(head.blockRoot)
-      );
+      // `state.block_roots` (pre-Fulu next-epoch duties from a mid-epoch head state). For the
+      // genesis-decides-its-own-shuffling case (`state.slot === 0 && decisionSlot === 0`),
+      // `proposerShufflingDecisionRoot` returns `null` and we fall back to the canonical
+      // genesis root, because `head.blockRoot` is the current fork-choice head and may not
+      // equal the genesis root if the chain has advanced.
+      const dependentRoot =
+        proposerShufflingDecisionRoot(
+          opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0,
+          state,
+          epoch,
+          fromHex(head.blockRoot)
+        ) ?? (await getGenesisBlockRoot(state));
 
       return {
         data: duties,

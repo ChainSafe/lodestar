@@ -23,18 +23,27 @@ import {EpochShuffling} from "./epochShuffling.js";
  *
  * `headBlockRoot` is the canonical head block root applied to `state`. When the decision
  * slot is at or after `state.slot` (e.g. serving pre-Fulu `currentEpoch + 1` duties from
- * a mid-epoch head state, or the genesis-decides-its-own-shuffling case), the head block
- * root is returned as the dependent root. This matches the beacon-API V1 rule of using
- * the latest block applied to state when the decision slot is not yet in `block_roots`,
- * and aligns with Lighthouse's `proposer_shuffling_decision_root_at_epoch` behavior.
+ * a mid-epoch head state), the head block root is returned as the dependent root. This
+ * matches the beacon-API V1 rule of using the latest block applied to state when the
+ * decision slot is not yet in `block_roots`, and aligns with Lighthouse's
+ * `proposer_shuffling_decision_root_at_epoch` behavior.
+ *
+ * Returns `null` for the genesis-decides-its-own-shuffling case (`state.slot === 0 &&
+ * decisionSlot === 0`); the caller must fall back to the canonical genesis block root
+ * (typically via `getGenesisBlockRoot(state)`), because `headBlockRoot` may not equal
+ * the genesis root when the chain has advanced and we are serving epoch-0 duties from a
+ * loaded genesis state.
  */
 export function proposerShufflingDecisionRoot(
   fork: ForkName,
   state: IBeaconStateView,
   proposalEpoch: Epoch,
   headBlockRoot: Root
-): Root {
+): Root | null {
   const decisionSlot = proposerShufflingDecisionSlot(fork, proposalEpoch);
+  if (state.slot === 0 && decisionSlot === 0) {
+    return null;
+  }
   if (state.slot <= decisionSlot) {
     return headBlockRoot;
   }
