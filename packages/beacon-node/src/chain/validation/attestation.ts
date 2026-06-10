@@ -416,6 +416,7 @@ async function validateAttestationNoSignatureCheck(
       attestationOrCache.attestation.data.target.root,
       attSlot,
       attEpoch,
+      attData.index,
       RegenCaller.validateGossipAttestation,
       chain.opts.maxSkipSlots
     );
@@ -675,10 +676,11 @@ export function verifyHeadBlockAndTargetRoot(
   targetRoot: Root,
   attestationSlot: Slot,
   attestationEpoch: Epoch,
+  attestationIndex: number,
   caller: RegenCaller,
   maxSkipSlots?: number
 ): ProtoBlock {
-  const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);
+  const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot, attestationSlot, attestationIndex);
   // Lighthouse rejects the attestation, however Lodestar only ignores considering it's not against the spec
   // it's more about a DOS protection to us
   // With verifyPropagationSlotRange() and maxSkipSlots = 32, it's unlikely we have to regenerate states in queue
@@ -770,10 +772,23 @@ export function getAttestationDataSigningRoot(config: BeaconConfig, data: phase0
  * it's still fine to ignore here because there's no need for us to handle attestations that are
  * already finalized.
  */
-function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): ProtoBlock {
+function verifyHeadBlockIsKnown(
+  chain: IBeaconChain,
+  beaconBlockRoot: Root,
+  attestationSlot: Slot,
+  index: number
+): ProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
-  const headBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
+  let headBlock: ProtoBlock | null;
+  try {
+    headBlock = chain.forkChoice.getAttestationHeadBlock(toRootHex(beaconBlockRoot), attestationSlot, index);
+  } catch (_e) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE,
+      attDataIndex: index,
+    });
+  }
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,

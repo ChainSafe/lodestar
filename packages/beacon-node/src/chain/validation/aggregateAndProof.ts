@@ -194,6 +194,7 @@ async function validateAggregateAndProof(
     attTarget.root,
     attSlot,
     attEpoch,
+    attData.index,
     RegenCaller.validateGossipAggregateAndProof,
     chain.opts.maxSkipSlots
   );

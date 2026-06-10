@@ -121,6 +121,10 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
       if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
+    getAttestationHeadBlock: (rootHex) => {
+      if (rootHex !== toHexString(beaconBlockRoot)) return null;
+      return headBlock;
+    },
     getDependentRoot: () => state.epochCtx.currentDecisionRoot,
   } as Partial<IForkChoice> as IForkChoice;
 

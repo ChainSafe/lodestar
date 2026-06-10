@@ -269,6 +269,12 @@ export interface IForkChoice {
   getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null;
   getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
+  /**
+   * Resolve the ProtoBlock variant an attestation votes for from its payload-status
+   * vote (`data.index`) and slot. Returns null if the block root or the derived variant
+   * node is unknown. See ForkChoice.getAttestationHeadBlock.
+   */
+  getAttestationHeadBlock(beaconBlockRootHex: RootHex, attSlot: Slot, index: number): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
   /** Spec: should_build_on_full(store, head) */

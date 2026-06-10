@@ -900,36 +900,21 @@ export class ForkChoice implements IForkChoice {
     // Post-gloas:
     // - always add weight to PENDING
     // - if message.slot > block.slot, it also add weights to FULL or EMPTY
-    let payloadStatus: PayloadStatus;
-
     // We need to retrieve block to check if it's Gloas and to compare slot
     // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
     const block = this.getBlockHexDefaultStatus(blockRootHex);
-
-    if (block && isGloasBlock(block)) {
-      // Post-Gloas block: determine FULL/EMPTY/PENDING based on slot and committee index
-      // If slot > block.slot, we can determine FULL or EMPTY. Else always PENDING
-      if (slot > block.slot) {
-        if (attestationData.index === 1) {
-          payloadStatus = PayloadStatus.FULL;
-        } else if (attestationData.index === 0) {
-          payloadStatus = PayloadStatus.EMPTY;
-        } else {
-          throw new ForkChoiceError({
-            code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-            err: {
-              code: InvalidAttestationCode.INVALID_DATA_INDEX,
-              index: attestationData.index,
-            },
-          });
-        }
-      } else {
-        payloadStatus = PayloadStatus.PENDING;
-      }
-    } else {
-      // Pre-Gloas block or block not found: always FULL
-      payloadStatus = PayloadStatus.FULL;
+    if (block === null) {
+      // validateOnAttestation() above rejects attestations whose beacon block root is unknown
+      // (UNKNOWN_HEAD_BLOCK), so the block is always known here.
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK,
+          beaconBlockRoot: blockRootHex,
+        },
+      });
     }
+    const payloadStatus = this.getAttestationPayloadStatus(block, slot, attestationData.index);
 
     if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of attestation.attestingIndices) {
@@ -1152,6 +1137,83 @@ export class ForkChoice implements IForkChoice {
     }
 
     return this.getBlockHex(blockRoot, defaultStatus);
+  }
+
+  /**
+   * Derive the payload-status variant an attestation votes for, per is_supporting_vote
+   * (gloas/fork-choice.md). `block` must be the default-status block already resolved.
+   * - pre-gloas block: always FULL
+   * - gloas, attSlot === block.slot (same slot): PENDING, and index must be 0 (payload not
+   *   yet revealed, so a same-slot attester cannot indicate payload present)
+   * - gloas, attSlot > block.slot: index === 1 -> FULL, index === 0 -> EMPTY
+   * Throws ForkChoiceError(ATTESTS_TO_FUTURE_BLOCK) when attSlot < block.slot (an attestation
+   * cannot vote for a block in a future slot), or INVALID_DATA_INDEX for a non-zero same-slot
+   * index or an index >= 2.
+   */
+  private getAttestationPayloadStatus(block: ProtoBlock, attSlot: Slot, index: number): PayloadStatus {
+    if (!isGloasBlock(block)) {
+      return PayloadStatus.FULL;
+    }
+    if (attSlot < block.slot) {
+      throw new ForkChoiceError({
+        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+        err: {
+          code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK,
+          block: block.slot,
+          attestation: attSlot,
+        },
+      });
+    }
+
+    if (attSlot === block.slot) {
+      // Same-slot attestation: payload is not revealed yet, index must be 0
+      if (index !== 0) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+          err: {
+            code: InvalidAttestationCode.INVALID_DATA_INDEX,
+            index,
+          },
+        });
+      }
+      return PayloadStatus.PENDING;
+    }
+
+    // attSlot > block.slot
+    if (index === 1) {
+      return PayloadStatus.FULL;
+    }
+    if (index === 0) {
+      return PayloadStatus.EMPTY;
+    }
+    throw new ForkChoiceError({
+      code: ForkChoiceErrorCode.INVALID_ATTESTATION,
+      err: {
+        code: InvalidAttestationCode.INVALID_DATA_INDEX,
+        index,
+      },
+    });
+  }
+
+  /**
+   * Resolve the ProtoBlock variant an attestation votes for, per is_supporting_vote
+   * (gloas/fork-choice.md). Uses the same index -> payloadStatus derivation as onAttestation.
+   * Returns null if the block root is unknown OR the derived variant node is absent
+   * (e.g. FULL requested before the execution payload has been imported via onExecutionPayload).
+   * Throws ForkChoiceError(INVALID_DATA_INDEX) for index >= 2 on a past gloas block.
+   */
+  getAttestationHeadBlock(beaconBlockRootHex: RootHex, attSlot: Slot, index: number): ProtoBlock | null {
+    const block = this.getBlockHexDefaultStatus(beaconBlockRootHex);
+    if (block === null) {
+      return null;
+    }
+    const payloadStatus = this.getAttestationPayloadStatus(block, attSlot, index);
+    // block is the default variant, so block.payloadStatus is the default variant status:
+    // same-slot (PENDING) and pre-gloas (FULL) reuse it without a second lookup
+    if (payloadStatus === block.payloadStatus) {
+      return block;
+    }
+    return this.getBlockHex(beaconBlockRootHex, payloadStatus);
   }
 
   /**
