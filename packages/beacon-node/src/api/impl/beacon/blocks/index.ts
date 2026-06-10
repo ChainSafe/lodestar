@@ -742,12 +742,19 @@ export function getBeaconBlockApi({
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
-      payloadInput.addPayloadEnvelope({
-        envelope: signedExecutionPayloadEnvelope,
-        source: PayloadEnvelopeInputSource.api,
-        seenTimestampSec,
-        peerIdStr: undefined,
-      });
+      if (!payloadInput.hasPayloadEnvelope()) {
+        payloadInput.addPayloadEnvelope({
+          envelope: signedExecutionPayloadEnvelope,
+          source: PayloadEnvelopeInputSource.api,
+          seenTimestampSec,
+          peerIdStr: undefined,
+        });
+      } else {
+        chain.logger.debug("Execution payload envelope already set, skipping duplicate", {
+          slot,
+          blockRoot: blockRootHex,
+        });
+      }
 
       if (dataColumnSidecars.length > 0) {
         for (const columnSidecar of dataColumnSidecars) {
