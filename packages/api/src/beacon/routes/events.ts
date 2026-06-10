@@ -307,19 +307,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       },
       {jsonCase: "eth2"}
     ),
-    [EventType.headV2]: {
-      toJson: ({data, version}) => ({
-        version,
-        data: headV2.toJson(data),
-      }),
-      fromJson: (val) => {
-        const {version} = VersionType.fromJson(val);
-        return {
-          version,
-          data: headV2.fromJson((val as {data: unknown}).data),
-        };
-      },
-    },
+    [EventType.headV2]: WithVersion(() => headV2),
     [EventType.block]: new ContainerType(
       {
         slot: ssz.Slot,
