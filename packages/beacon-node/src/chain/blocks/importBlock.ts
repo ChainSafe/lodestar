@@ -680,12 +680,13 @@ export function addAttestationPostElectra(
   }
 }
 
-function toApiPayloadStatus(status: PayloadStatus): "empty" | "full" {
+function toApiPayloadStatus(status?: PayloadStatus): "empty" | "full" {
   switch (status) {
     case PayloadStatus.FULL:
       return "full";
     case PayloadStatus.EMPTY:
     case PayloadStatus.PENDING:
+    default:
       return "empty";
   }
 }
