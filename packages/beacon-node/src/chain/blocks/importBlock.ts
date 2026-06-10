@@ -12,6 +12,7 @@ import {
 import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   IBeaconStateView,
+  IBeaconStateViewGloas,
   RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -252,11 +253,26 @@ export async function importBlock(
   if (isGloasBeaconBlock(block.message)) {
     for (const payloadAttestation of block.message.body.payloadAttestations) {
       try {
-        // Extract PTC indices from aggregation bits
+        // Extract PTC indices from aggregation bits, deduplicating by validator so a
+        // validator that occupies multiple PTC slots is counted at most once.
+        // NOTE: intentionally acts as if PR #5222 ("count PTC votes from duplicated
+        // validators") is NOT implemented — duplicate votes from the same validator are ignored.
+        const ptcSlot = payloadAttestation.data.slot;
+        // postState is gloas here (guarded by isGloasBeaconBlock above)
+        const ptcCommittee = (postState as IBeaconStateViewGloas).getEpochPTCs(computeEpochAtSlot(ptcSlot))[
+          ptcSlot % SLOTS_PER_EPOCH
+        ];
+        const seenValidators = new Set<number>();
         const ptcIndices: number[] = [];
         for (let i = 0; i < payloadAttestation.aggregationBits.bitLen; i++) {
           if (payloadAttestation.aggregationBits.get(i)) {
-            ptcIndices.push(i);
+            const validatorIndex = ptcCommittee[i];
+            if (!seenValidators.has(validatorIndex)) {
+              seenValidators.add(validatorIndex);
+              // Use the validator's first PTC slot so it maps to the same bit the gossip
+              // path sets (getIndexInPayloadTimelinessCommittee), avoiding cross-path double counts.
+              ptcIndices.push(ptcCommittee.indexOf(validatorIndex));
+            }
           }
         }
 
