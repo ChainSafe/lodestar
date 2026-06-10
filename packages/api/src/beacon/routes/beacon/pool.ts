@@ -1,6 +1,14 @@
-import {ValueOf} from "@chainsafe/ssz";
-import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostElectra, ForkPreElectra, isForkPostElectra} from "@lodestar/params";
+import { ValueOf } from "@chainsafe/ssz";
+import { ChainForkConfig } from "@lodestar/config";
+import {
+  ForkName,
+  ForkPostElectra,
+  ForkPreElectra,
+  MAX_PAYLOAD_ATTESTATIONS,
+  PTC_SIZE,
+  SLOTS_PER_EPOCH,
+  isForkPostElectra,
+} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -23,10 +31,10 @@ import {
   EmptyResponseData,
   WithVersion,
 } from "../../../utils/codecs.js";
-import {toForkName} from "../../../utils/fork.js";
-import {fromHeaders} from "../../../utils/headers.js";
-import {Endpoint, RouteDefinitions, Schema} from "../../../utils/index.js";
-import {MetaHeader, VersionCodec, VersionMeta} from "../../../utils/metadata.js";
+import { toForkName } from "../../../utils/fork.js";
+import { fromHeaders } from "../../../utils/headers.js";
+import { Endpoint, RouteDefinitions, Schema } from "../../../utils/index.js";
+import { MetaHeader, VersionCodec, VersionMeta } from "../../../utils/metadata.js";
 
 const SingleAttestationListTypePhase0 = ArrayOf(ssz.phase0.Attestation);
 const SingleAttestationListTypeElectra = ArrayOf(ssz.electra.SingleAttestation);
@@ -39,6 +47,14 @@ const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
 const ExecutionProofListType = ArrayOf(ssz.eip8025.ExecutionProof);
+const PayloadAttestationListType = ArrayOf(ssz.gloas.PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS);
+const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
+// 2 * SLOTS_PER_EPOCH max normally; getAll() may return up to 3 * SLOTS_PER_EPOCH during non-finality
+const MAX_PROPOSER_PREFERENCES_PER_REQUEST = 3 * SLOTS_PER_EPOCH;
+const SignedProposerPreferencesListType = ArrayOf(
+  ssz.gloas.SignedProposerPreferences,
+  MAX_PROPOSER_PREFERENCES_PER_REQUEST
+);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
@@ -48,11 +64,15 @@ type AttesterSlashingListPhase0 = ValueOf<typeof AttesterSlashingListTypePhase0>
 type AttesterSlashingListElectra = ValueOf<typeof AttesterSlashingListTypeElectra>;
 type AttesterSlashingList = AttesterSlashingListPhase0 | AttesterSlashingListElectra;
 
+type ExecutionProofList = ValueOf<typeof ExecutionProofListType>;
+
 type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
 type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeListType>;
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
-type ExecutionProofList = ValueOf<typeof ExecutionProofListType>;
+type PayloadAttestationList = ValueOf<typeof PayloadAttestationListType>;
+type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
+type SignedProposerPreferencesList = ValueOf<typeof SignedProposerPreferencesListType>;
 
 export type Endpoints = {
   /**
@@ -61,8 +81,8 @@ export type Endpoints = {
    */
   getPoolAttestations: Endpoint<
     "GET",
-    {slot?: Slot; committeeIndex?: CommitteeIndex},
-    {query: {slot?: number; committee_index?: number}},
+    { slot?: Slot; committeeIndex?: CommitteeIndex },
+    { query: { slot?: number; committee_index?: number } },
     AttestationListPhase0,
     EmptyMeta
   >;
@@ -73,9 +93,33 @@ export type Endpoints = {
    */
   getPoolAttestationsV2: Endpoint<
     "GET",
-    {slot?: Slot; committeeIndex?: CommitteeIndex},
-    {query: {slot?: number; committee_index?: number}},
+    { slot?: Slot; committeeIndex?: CommitteeIndex },
+    { query: { slot?: number; committee_index?: number } },
     AttestationList,
+    VersionMeta
+  >;
+
+  /**
+   * Get payload attestations from operations pool
+   * Retrieves payload attestations known by the node but not necessarily incorporated into any block.
+   */
+  getPoolPayloadAttestations: Endpoint<
+    "GET",
+    { slot?: Slot },
+    { query: { slot?: number } },
+    PayloadAttestationList,
+    VersionMeta
+  >;
+
+  /**
+   * Get signed proposer preferences from operations pool
+   * Retrieves proposer preferences known by the node but not necessarily incorporated into any block.
+   */
+  getPoolProposerPreferences: Endpoint<
+    "GET",
+    { slot?: Slot },
+    { query: { slot?: number } },
+    SignedProposerPreferencesList,
     VersionMeta
   >;
 
@@ -154,8 +198,8 @@ export type Endpoints = {
    */
   submitPoolAttestations: Endpoint<
     "POST",
-    {signedAttestations: SingleAttestation<ForkPreElectra>[]},
-    {body: unknown},
+    { signedAttestations: SingleAttestation<ForkPreElectra>[] },
+    { body: unknown },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -170,8 +214,8 @@ export type Endpoints = {
    */
   submitPoolAttestationsV2: Endpoint<
     "POST",
-    {signedAttestations: SingleAttestation[]},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    { signedAttestations: SingleAttestation[] },
+    { body: unknown; headers: { [MetaHeader.Version]: string } },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -182,8 +226,8 @@ export type Endpoints = {
    */
   submitPoolAttesterSlashings: Endpoint<
     "POST",
-    {attesterSlashing: phase0.AttesterSlashing},
-    {body: unknown},
+    { attesterSlashing: phase0.AttesterSlashing },
+    { body: unknown },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -194,8 +238,8 @@ export type Endpoints = {
    */
   submitPoolAttesterSlashingsV2: Endpoint<
     "POST",
-    {attesterSlashing: AttesterSlashing},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    { attesterSlashing: AttesterSlashing },
+    { body: unknown; headers: { [MetaHeader.Version]: string } },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -206,8 +250,8 @@ export type Endpoints = {
    */
   submitPoolProposerSlashings: Endpoint<
     "POST",
-    {proposerSlashing: phase0.ProposerSlashing},
-    {body: unknown},
+    { proposerSlashing: phase0.ProposerSlashing },
+    { body: unknown },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -218,8 +262,8 @@ export type Endpoints = {
    */
   submitPoolVoluntaryExit: Endpoint<
     "POST",
-    {signedVoluntaryExit: phase0.SignedVoluntaryExit},
-    {body: unknown},
+    { signedVoluntaryExit: phase0.SignedVoluntaryExit },
+    { body: unknown },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -230,8 +274,8 @@ export type Endpoints = {
    */
   submitPoolBLSToExecutionChange: Endpoint<
     "POST",
-    {blsToExecutionChanges: capella.SignedBLSToExecutionChange[]},
-    {body: unknown},
+    { blsToExecutionChanges: capella.SignedBLSToExecutionChange[] },
+    { body: unknown },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -242,28 +286,52 @@ export type Endpoints = {
    */
   submitPoolSyncCommitteeSignatures: Endpoint<
     "POST",
-    {signatures: SyncCommitteeMessageList},
-    {body: unknown},
+    { signatures: SyncCommitteeMessageList },
+    { body: unknown },
     EmptyResponseData,
     EmptyMeta
   >;
 
   /**
-   * Get ExecutionProofs from operations pool (EIP-8025)
-   * Retrieves execution proofs known by the node, optionally filtered by slot.
-   */
-  getPoolExecutionProofs: Endpoint<"GET", {slot?: Slot}, {query: {slot?: number}}, ExecutionProofList, EmptyMeta>;
+  * Get ExecutionProofs from operations pool (EIP-8025)
+  * Retrieves execution proofs known by the node, optionally filtered by slot.
+  */
+  getPoolExecutionProofs: Endpoint<"GET", { slot?: Slot }, { query: { slot?: number } }, ExecutionProofList, EmptyMeta>;
 
   /**
-   * Submit an ExecutionProof to the node's pool (EIP-8025)
-   * Submits an execution proof to the beacon node.
-   * The proof will be validated and stored in the execution proof pool.
-   * If valid, the proof will be published to the gossip network.
-   */
+  * Submit an ExecutionProof to the node's pool (EIP-8025)
+  * Submits an execution proof to the beacon node.
+  * The proof will be validated and stored in the execution proof pool.
+  * If valid, the proof will be published to the gossip network.
+  */
   submitPoolExecutionProofs: Endpoint<
     "POST",
-    {executionProof: ExecutionProof},
-    {body: unknown},
+    { executionProof: ExecutionProof },
+    { body: unknown },
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Submit payload attestation messages
+   * Submits payload attestation messages to the beacon node.
+   */
+  submitPayloadAttestationMessages: Endpoint<
+    "POST",
+    { payloadAttestationMessages: PayloadAttestationMessageList },
+    { body: unknown; headers: { [MetaHeader.Version]: string } },
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Submit signed proposer preferences
+   * Submits signed proposer preferences to the beacon node.
+   */
+  submitSignedProposerPreferences: Endpoint<
+    "POST",
+    { signedProposerPreferences: SignedProposerPreferencesList },
+    { body: unknown; headers: { [MetaHeader.Version]: string } },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -275,9 +343,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/attestations",
       method: "GET",
       req: {
-        writeReq: ({slot, committeeIndex}) => ({query: {slot, committee_index: committeeIndex}}),
-        parseReq: ({query}) => ({slot: query.slot, committeeIndex: query.committee_index}),
-        schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
+        writeReq: ({ slot, committeeIndex }) => ({ query: { slot, committee_index: committeeIndex } }),
+        parseReq: ({ query }) => ({ slot: query.slot, committeeIndex: query.committee_index }),
+        schema: { query: { slot: Schema.Uint, committee_index: Schema.Uint } },
       },
       resp: {
         data: AttestationListTypePhase0,
@@ -288,12 +356,38 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v2/beacon/pool/attestations",
       method: "GET",
       req: {
-        writeReq: ({slot, committeeIndex}) => ({query: {slot, committee_index: committeeIndex}}),
-        parseReq: ({query}) => ({slot: query.slot, committeeIndex: query.committee_index}),
-        schema: {query: {slot: Schema.Uint, committee_index: Schema.Uint}},
+        writeReq: ({ slot, committeeIndex }) => ({ query: { slot, committee_index: committeeIndex } }),
+        parseReq: ({ query }) => ({ slot: query.slot, committeeIndex: query.committee_index }),
+        schema: { query: { slot: Schema.Uint, committee_index: Schema.Uint } },
       },
       resp: {
         data: WithVersion((fork) => (isForkPostElectra(fork) ? AttestationListTypeElectra : AttestationListTypePhase0)),
+        meta: VersionCodec,
+      },
+    },
+    getPoolPayloadAttestations: {
+      url: "/eth/v1/beacon/pool/payload_attestations",
+      method: "GET",
+      req: {
+        writeReq: ({ slot }) => ({ query: { slot } }),
+        parseReq: ({ query }) => ({ slot: query.slot }),
+        schema: { query: { slot: Schema.Uint } },
+      },
+      resp: {
+        data: PayloadAttestationListType,
+        meta: VersionCodec,
+      },
+    },
+    getPoolProposerPreferences: {
+      url: "/eth/v1/beacon/pool/proposer_preferences",
+      method: "GET",
+      req: {
+        writeReq: ({ slot }) => ({ query: { slot } }),
+        parseReq: ({ query }) => ({ slot: query.slot }),
+        schema: { query: { slot: Schema.Uint } },
+      },
+      resp: {
+        data: SignedProposerPreferencesListType,
         meta: VersionCodec,
       },
     },
@@ -348,10 +442,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/attestations",
       method: "POST",
       req: {
-        writeReqJson: ({signedAttestations}) => ({body: SingleAttestationListTypePhase0.toJson(signedAttestations)}),
-        parseReqJson: ({body}) => ({signedAttestations: SingleAttestationListTypePhase0.fromJson(body)}),
-        writeReqSsz: ({signedAttestations}) => ({body: SingleAttestationListTypePhase0.serialize(signedAttestations)}),
-        parseReqSsz: ({body}) => ({signedAttestations: SingleAttestationListTypePhase0.deserialize(body)}),
+        writeReqJson: ({ signedAttestations }) => ({ body: SingleAttestationListTypePhase0.toJson(signedAttestations) }),
+        parseReqJson: ({ body }) => ({ signedAttestations: SingleAttestationListTypePhase0.fromJson(body) }),
+        writeReqSsz: ({ signedAttestations }) => ({ body: SingleAttestationListTypePhase0.serialize(signedAttestations) }),
+        parseReqSsz: ({ body }) => ({ signedAttestations: SingleAttestationListTypePhase0.deserialize(body) }),
         schema: {
           body: Schema.ObjectArray,
         },
@@ -362,16 +456,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v2/beacon/pool/attestations",
       method: "POST",
       req: {
-        writeReqJson: ({signedAttestations}) => {
+        writeReqJson: ({ signedAttestations }) => {
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
             body: isForkPostElectra(fork)
               ? SingleAttestationListTypeElectra.toJson(signedAttestations as SingleAttestation<ForkPostElectra>[])
               : SingleAttestationListTypePhase0.toJson(signedAttestations as SingleAttestation<ForkPreElectra>[]),
-            headers: {[MetaHeader.Version]: fork},
+            headers: { [MetaHeader.Version]: fork },
           };
         },
-        parseReqJson: ({body, headers}) => {
+        parseReqJson: ({ body, headers }) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             signedAttestations: isForkPostElectra(fork)
@@ -379,16 +473,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
               : SingleAttestationListTypePhase0.fromJson(body),
           };
         },
-        writeReqSsz: ({signedAttestations}) => {
+        writeReqSsz: ({ signedAttestations }) => {
           const fork = config.getForkName(signedAttestations[0]?.data.slot ?? 0);
           return {
             body: isForkPostElectra(fork)
               ? SingleAttestationListTypeElectra.serialize(signedAttestations as SingleAttestation<ForkPostElectra>[])
               : SingleAttestationListTypePhase0.serialize(signedAttestations as SingleAttestation<ForkPreElectra>[]),
-            headers: {[MetaHeader.Version]: fork},
+            headers: { [MetaHeader.Version]: fork },
           };
         },
-        parseReqSsz: ({body, headers}) => {
+        parseReqSsz: ({ body, headers }) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             signedAttestations: isForkPostElectra(fork)
@@ -398,7 +492,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         schema: {
           body: Schema.ObjectArray,
-          headers: {[MetaHeader.Version]: Schema.String},
+          headers: { [MetaHeader.Version]: Schema.String },
         },
       },
       resp: EmptyResponseCodec,
@@ -407,10 +501,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/attester_slashings",
       method: "POST",
       req: {
-        writeReqJson: ({attesterSlashing}) => ({body: ssz.phase0.AttesterSlashing.toJson(attesterSlashing)}),
-        parseReqJson: ({body}) => ({attesterSlashing: ssz.phase0.AttesterSlashing.fromJson(body)}),
-        writeReqSsz: ({attesterSlashing}) => ({body: ssz.phase0.AttesterSlashing.serialize(attesterSlashing)}),
-        parseReqSsz: ({body}) => ({attesterSlashing: ssz.phase0.AttesterSlashing.deserialize(body)}),
+        writeReqJson: ({ attesterSlashing }) => ({ body: ssz.phase0.AttesterSlashing.toJson(attesterSlashing) }),
+        parseReqJson: ({ body }) => ({ attesterSlashing: ssz.phase0.AttesterSlashing.fromJson(body) }),
+        writeReqSsz: ({ attesterSlashing }) => ({ body: ssz.phase0.AttesterSlashing.serialize(attesterSlashing) }),
+        parseReqSsz: ({ body }) => ({ attesterSlashing: ssz.phase0.AttesterSlashing.deserialize(body) }),
         schema: {
           body: Schema.Object,
         },
@@ -421,16 +515,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v2/beacon/pool/attester_slashings",
       method: "POST",
       req: {
-        writeReqJson: ({attesterSlashing}) => {
+        writeReqJson: ({ attesterSlashing }) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
             body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.toJson(attesterSlashing)
               : ssz.phase0.AttesterSlashing.toJson(attesterSlashing),
-            headers: {[MetaHeader.Version]: fork},
+            headers: { [MetaHeader.Version]: fork },
           };
         },
-        parseReqJson: ({body, headers}) => {
+        parseReqJson: ({ body, headers }) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             attesterSlashing: isForkPostElectra(fork)
@@ -438,16 +532,16 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
               : ssz.phase0.AttesterSlashing.fromJson(body),
           };
         },
-        writeReqSsz: ({attesterSlashing}) => {
+        writeReqSsz: ({ attesterSlashing }) => {
           const fork = config.getForkName(Number(attesterSlashing.attestation1.data.slot));
           return {
             body: isForkPostElectra(fork)
               ? ssz.electra.AttesterSlashing.serialize(attesterSlashing as electra.AttesterSlashing)
               : ssz.phase0.AttesterSlashing.serialize(attesterSlashing as phase0.AttesterSlashing),
-            headers: {[MetaHeader.Version]: fork},
+            headers: { [MetaHeader.Version]: fork },
           };
         },
-        parseReqSsz: ({body, headers}) => {
+        parseReqSsz: ({ body, headers }) => {
           const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
           return {
             attesterSlashing: isForkPostElectra(fork)
@@ -457,7 +551,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         schema: {
           body: Schema.Object,
-          headers: {[MetaHeader.Version]: Schema.String},
+          headers: { [MetaHeader.Version]: Schema.String },
         },
       },
       resp: EmptyResponseCodec,
@@ -466,10 +560,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/proposer_slashings",
       method: "POST",
       req: {
-        writeReqJson: ({proposerSlashing}) => ({body: ssz.phase0.ProposerSlashing.toJson(proposerSlashing)}),
-        parseReqJson: ({body}) => ({proposerSlashing: ssz.phase0.ProposerSlashing.fromJson(body)}),
-        writeReqSsz: ({proposerSlashing}) => ({body: ssz.phase0.ProposerSlashing.serialize(proposerSlashing)}),
-        parseReqSsz: ({body}) => ({proposerSlashing: ssz.phase0.ProposerSlashing.deserialize(body)}),
+        writeReqJson: ({ proposerSlashing }) => ({ body: ssz.phase0.ProposerSlashing.toJson(proposerSlashing) }),
+        parseReqJson: ({ body }) => ({ proposerSlashing: ssz.phase0.ProposerSlashing.fromJson(body) }),
+        writeReqSsz: ({ proposerSlashing }) => ({ body: ssz.phase0.ProposerSlashing.serialize(proposerSlashing) }),
+        parseReqSsz: ({ body }) => ({ proposerSlashing: ssz.phase0.ProposerSlashing.deserialize(body) }),
         schema: {
           body: Schema.Object,
         },
@@ -480,10 +574,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/voluntary_exits",
       method: "POST",
       req: {
-        writeReqJson: ({signedVoluntaryExit}) => ({body: ssz.phase0.SignedVoluntaryExit.toJson(signedVoluntaryExit)}),
-        parseReqJson: ({body}) => ({signedVoluntaryExit: ssz.phase0.SignedVoluntaryExit.fromJson(body)}),
-        writeReqSsz: ({signedVoluntaryExit}) => ({body: ssz.phase0.SignedVoluntaryExit.serialize(signedVoluntaryExit)}),
-        parseReqSsz: ({body}) => ({signedVoluntaryExit: ssz.phase0.SignedVoluntaryExit.deserialize(body)}),
+        writeReqJson: ({ signedVoluntaryExit }) => ({ body: ssz.phase0.SignedVoluntaryExit.toJson(signedVoluntaryExit) }),
+        parseReqJson: ({ body }) => ({ signedVoluntaryExit: ssz.phase0.SignedVoluntaryExit.fromJson(body) }),
+        writeReqSsz: ({ signedVoluntaryExit }) => ({ body: ssz.phase0.SignedVoluntaryExit.serialize(signedVoluntaryExit) }),
+        parseReqSsz: ({ body }) => ({ signedVoluntaryExit: ssz.phase0.SignedVoluntaryExit.deserialize(body) }),
         schema: {
           body: Schema.Object,
         },
@@ -494,14 +588,14 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/bls_to_execution_changes",
       method: "POST",
       req: {
-        writeReqJson: ({blsToExecutionChanges}) => ({
+        writeReqJson: ({ blsToExecutionChanges }) => ({
           body: SignedBLSToExecutionChangeListType.toJson(blsToExecutionChanges),
         }),
-        parseReqJson: ({body}) => ({blsToExecutionChanges: SignedBLSToExecutionChangeListType.fromJson(body)}),
-        writeReqSsz: ({blsToExecutionChanges}) => ({
+        parseReqJson: ({ body }) => ({ blsToExecutionChanges: SignedBLSToExecutionChangeListType.fromJson(body) }),
+        writeReqSsz: ({ blsToExecutionChanges }) => ({
           body: SignedBLSToExecutionChangeListType.serialize(blsToExecutionChanges),
         }),
-        parseReqSsz: ({body}) => ({blsToExecutionChanges: SignedBLSToExecutionChangeListType.deserialize(body)}),
+        parseReqSsz: ({ body }) => ({ blsToExecutionChanges: SignedBLSToExecutionChangeListType.deserialize(body) }),
         schema: {
           body: Schema.ObjectArray,
         },
@@ -512,10 +606,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/sync_committees",
       method: "POST",
       req: {
-        writeReqJson: ({signatures}) => ({body: SyncCommitteeMessageListType.toJson(signatures)}),
-        parseReqJson: ({body}) => ({signatures: SyncCommitteeMessageListType.fromJson(body)}),
-        writeReqSsz: ({signatures}) => ({body: SyncCommitteeMessageListType.serialize(signatures)}),
-        parseReqSsz: ({body}) => ({signatures: SyncCommitteeMessageListType.deserialize(body)}),
+        writeReqJson: ({ signatures }) => ({ body: SyncCommitteeMessageListType.toJson(signatures) }),
+        parseReqJson: ({ body }) => ({ signatures: SyncCommitteeMessageListType.fromJson(body) }),
+        writeReqSsz: ({ signatures }) => ({ body: SyncCommitteeMessageListType.serialize(signatures) }),
+        parseReqSsz: ({ body }) => ({ signatures: SyncCommitteeMessageListType.deserialize(body) }),
         schema: {
           body: Schema.ObjectArray,
         },
@@ -526,9 +620,9 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/execution_proofs",
       method: "GET",
       req: {
-        writeReq: ({slot}) => ({query: {slot}}),
-        parseReq: ({query}) => ({slot: query.slot}),
-        schema: {query: {slot: Schema.Uint}},
+        writeReq: ({ slot }) => ({ query: { slot } }),
+        parseReq: ({ query }) => ({ slot: query.slot }),
+        schema: { query: { slot: Schema.Uint } },
       },
       resp: {
         data: ExecutionProofListType,
@@ -539,12 +633,66 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/beacon/pool/execution_proofs",
       method: "POST",
       req: {
-        writeReqJson: ({executionProof}) => ({body: ssz.eip8025.ExecutionProof.toJson(executionProof)}),
-        parseReqJson: ({body}) => ({executionProof: ssz.eip8025.ExecutionProof.fromJson(body)}),
-        writeReqSsz: ({executionProof}) => ({body: ssz.eip8025.ExecutionProof.serialize(executionProof)}),
-        parseReqSsz: ({body}) => ({executionProof: ssz.eip8025.ExecutionProof.deserialize(body)}),
+        writeReqJson: ({ executionProof }) => ({ body: ssz.eip8025.ExecutionProof.toJson(executionProof) }),
+        parseReqJson: ({ body }) => ({ executionProof: ssz.eip8025.ExecutionProof.fromJson(body) }),
+        writeReqSsz: ({ executionProof }) => ({ body: ssz.eip8025.ExecutionProof.serialize(executionProof) }),
+        parseReqSsz: ({ body }) => ({ executionProof: ssz.eip8025.ExecutionProof.deserialize(body) }),
         schema: {
           body: Schema.Object,
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    submitPayloadAttestationMessages: {
+      url: "/eth/v1/beacon/pool/payload_attestations",
+      method: "POST",
+      req: {
+        writeReqJson: ({ payloadAttestationMessages }) => ({
+          body: PayloadAttestationMessageListType.toJson(payloadAttestationMessages),
+          headers: { [MetaHeader.Version]: ForkName.gloas },
+        }),
+        parseReqJson: ({ body, headers }) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return { payloadAttestationMessages: PayloadAttestationMessageListType.fromJson(body) };
+        },
+        writeReqSsz: ({ payloadAttestationMessages }) => ({
+          body: PayloadAttestationMessageListType.serialize(payloadAttestationMessages),
+          headers: { [MetaHeader.Version]: ForkName.gloas },
+        }),
+        parseReqSsz: ({ body, headers }) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return { payloadAttestationMessages: PayloadAttestationMessageListType.deserialize(body) };
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: { [MetaHeader.Version]: Schema.String },
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    submitSignedProposerPreferences: {
+      url: "/eth/v1/beacon/pool/proposer_preferences",
+      method: "POST",
+      req: {
+        writeReqJson: ({ signedProposerPreferences }) => ({
+          body: SignedProposerPreferencesListType.toJson(signedProposerPreferences),
+          headers: { [MetaHeader.Version]: ForkName.gloas },
+        }),
+        parseReqJson: ({ body, headers }) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return { signedProposerPreferences: SignedProposerPreferencesListType.fromJson(body) };
+        },
+        writeReqSsz: ({ signedProposerPreferences }) => ({
+          body: SignedProposerPreferencesListType.serialize(signedProposerPreferences),
+          headers: { [MetaHeader.Version]: ForkName.gloas },
+        }),
+        parseReqSsz: ({ body, headers }) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return { signedProposerPreferences: SignedProposerPreferencesListType.deserialize(body) };
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: { [MetaHeader.Version]: Schema.String },
         },
       },
       resp: EmptyResponseCodec,

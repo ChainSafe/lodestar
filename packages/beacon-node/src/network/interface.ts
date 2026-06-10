@@ -1,4 +1,4 @@
-import type {Identify} from "@libp2p/identify";
+import type { Identify } from "@libp2p/identify";
 import type {
   ComponentLogger,
   ConnectionGater,
@@ -14,9 +14,9 @@ import type {
   TypedEventTarget,
   Upgrader,
 } from "@libp2p/interface";
-import type {AddressManager, ConnectionManager, Registrar, TransportManager} from "@libp2p/interface-internal";
-import type {Datastore} from "interface-datastore";
-import type {Libp2p as ILibp2p} from "libp2p";
+import type { AddressManager, ConnectionManager, Registrar, TransportManager } from "@libp2p/interface-internal";
+import type { Datastore } from "interface-datastore";
+import type { Libp2p as ILibp2p } from "libp2p";
 import {
   AttesterSlashing,
   DataColumnSidecar,
@@ -36,21 +36,21 @@ import {
   gloas,
   phase0,
 } from "@lodestar/types";
-import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
-import {CustodyConfig} from "../util/dataColumns.js";
-import {PeerIdStr} from "../util/peerId.js";
+import { BlockInputSource } from "../chain/blocks/blockInput/types.js";
+import { CustodyConfig } from "../util/dataColumns.js";
+import { PeerIdStr } from "../util/peerId.js";
 import {
   BeaconBlocksByRootRequest,
   BlobSidecarsByRootRequest,
   DataColumnSidecarsByRootRequest,
   ExecutionPayloadEnvelopesByRootRequest,
 } from "../util/types.js";
-import {INetworkCorePublic} from "./core/types.js";
-import {INetworkEventBus} from "./events.js";
-import {GossipType} from "./gossip/interface.js";
-import {PeerAction} from "./peers/index.js";
-import {PeerSyncMeta} from "./peers/peersData.js";
-import {PendingGossipsubMessage} from "./processor/types.js";
+import { INetworkCorePublic } from "./core/types.js";
+import { INetworkEventBus } from "./events.js";
+import { GossipType } from "./gossip/interface.js";
+import { PeerAction } from "./peers/index.js";
+import { PeerSyncMeta } from "./peers/peersData.js";
+import { PendingGossipsubMessage } from "./processor/types.js";
 
 /**
  * The architecture of the network looks like so:
@@ -79,6 +79,7 @@ export interface INetwork extends INetworkCorePublic {
   // ReqResp
   sendBeaconBlocksByRange(peerId: PeerIdStr, request: phase0.BeaconBlocksByRangeRequest): Promise<SignedBeaconBlock[]>;
   sendBeaconBlocksByRoot(peerId: PeerIdStr, request: BeaconBlocksByRootRequest): Promise<SignedBeaconBlock[]>;
+  sendBeaconBlocksByHead(peerId: PeerIdStr, request: fulu.BeaconBlocksByHeadRequest): Promise<SignedBeaconBlock[]>;
   sendBlobSidecarsByRange(peerId: PeerIdStr, request: deneb.BlobSidecarsByRangeRequest): Promise<deneb.BlobSidecar[]>;
   sendBlobSidecarsByRoot(peerId: PeerIdStr, request: BlobSidecarsByRootRequest): Promise<deneb.BlobSidecar[]>;
   sendDataColumnSidecarsByRange(
@@ -114,6 +115,9 @@ export interface INetwork extends INetworkCorePublic {
   publishLightClientOptimisticUpdate(update: LightClientOptimisticUpdate): Promise<number>;
   publishSignedExecutionPayloadEnvelope(signedEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<number>;
   publishExecutionProof(signedProof: SignedExecutionProof): Promise<number>;
+  publishSignedExecutionPayloadBid(signedBid: gloas.SignedExecutionPayloadBid): Promise<number>;
+  publishPayloadAttestationMessage(payloadAttestationMessage: gloas.PayloadAttestationMessage): Promise<number>;
+  publishProposerPreferences(signedProposerPreferences: gloas.SignedProposerPreferences): Promise<number>;
 
   // Debug
   dumpGossipQueue(gossipType: GossipType): Promise<PendingGossipsubMessage[]>;
@@ -143,4 +147,4 @@ export type LodestarComponents = {
   metrics?: Metrics;
 };
 
-export type Libp2p = ILibp2p<{components: LodestarComponents; identify: Identify}>;
+export type Libp2p = ILibp2p<{ components: LodestarComponents; identify: Identify }>;

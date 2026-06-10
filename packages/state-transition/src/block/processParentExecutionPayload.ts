@@ -3,14 +3,15 @@ import {BeaconBlock, electra, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
+import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
-import {getPendingValidatorPubkeys, processDepositRequest} from "./processDepositRequest.js";
+import {processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
 
 /**
  * Process parent execution payload effects as the first step of processBlock.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-process_parent_execution_payload
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-process_parent_execution_payload
  */
 export function processParentExecutionPayload(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
   const bid = block.body.signedExecutionPayloadBid.message;
@@ -42,7 +43,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  * Called from processParentExecutionPayload during block processing, and from the validator during
  * block production before computing withdrawals.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
 export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: electra.ExecutionRequests): void {
   const fork = state.config.getForkSeq(state.slot);
@@ -54,9 +55,9 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
   // Process execution requests from parent's payload. The execution
   // requests are processed at state.slot (child's slot), not the parent's slot.
   if (requests.deposits.length > 0) {
-    const pendingValidatorPubkeys = getPendingValidatorPubkeys(state.config, state);
+    const pendingDepositsLookup = PendingDepositsLookup.build(state);
     for (const deposit of requests.deposits) {
-      processDepositRequest(fork, state, deposit, pendingValidatorPubkeys);
+      processDepositRequest(fork, state, deposit, pendingDepositsLookup);
     }
   }
 
@@ -94,7 +95,7 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
  * Settle a builder payment at the given index: move its withdrawal (if any) to the
  * pending withdrawals list and clear the payment slot.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/beacon-chain.md#new-settle_builder_payment
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-settle_builder_payment
  */
 function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: number): void {
   if (paymentIndex >= state.builderPendingPayments.length) {

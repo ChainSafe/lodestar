@@ -5,6 +5,7 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -49,6 +50,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
@@ -109,6 +111,18 @@ export function getBeaconBlockApi({
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
+
+    if (isForkPostGloas(fork)) {
+      chain.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: blockRoot,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+        sampledColumns: chain.custodyConfig.sampledColumns,
+        custodyColumns: chain.custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
+    }
+
     let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
@@ -191,11 +205,19 @@ export function getBeaconBlockApi({
           try {
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
-            if (error instanceof BlockGossipError && error.type.code === BlockErrorCode.ALREADY_KNOWN) {
-              chain.logger.debug("Ignoring known block during publishing", valLogMeta);
-              // Blocks might already be published by another node as part of a fallback setup or DVT cluster
-              // and can reach our node by gossip before the api. The error can be ignored and should not result in a 500 response.
-              return;
+            if (error instanceof BlockGossipError) {
+              switch (error.type.code) {
+                case BlockErrorCode.ALREADY_KNOWN:
+                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                  return;
+                case BlockErrorCode.REPEAT_PROPOSAL:
+                  // The proposer already produced a block for this slot. For a solo setup this is a
+                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
+                  // expected on every block where another node published first.
+                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
+                  return;
+              }
             }
 
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
@@ -809,6 +831,41 @@ export function getBeaconBlockApi({
         ...valLogMeta,
         delaySec,
         sentPeers: (sentPeersArr[0] as number) ?? 0,
+      });
+    },
+
+    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const bid = signedExecutionPayloadBid.message;
+      const slot = bid.slot;
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
+      }
+
+      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+      try {
+        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
+      }
+
+      const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
+
+      chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+        version: fork,
+        data: signedExecutionPayloadBid,
+      });
+
+      chain.logger.info("Published execution payload bid", {
+        slot,
+        builderIndex: bid.builderIndex,
+        blockHash: toRootHex(bid.blockHash),
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        value: bid.value,
+        sentPeers,
       });
     },
 

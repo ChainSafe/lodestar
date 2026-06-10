@@ -1,7 +1,9 @@
+import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceStateGetter,
   ForkChoiceStore,
   JustifiedBalancesGetter,
   PayloadStatus,
@@ -46,6 +48,7 @@ export function initializeForkChoice(
   isFinalizedState: boolean,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -57,6 +60,7 @@ export function initializeForkChoice(
         state,
         opts,
         justifiedBalancesGetter,
+        stateGetter,
         metrics,
         logger
       )
@@ -67,6 +71,7 @@ export function initializeForkChoice(
         state,
         opts,
         justifiedBalancesGetter,
+        stateGetter,
         metrics,
         logger
       );
@@ -82,6 +87,7 @@ export function initializeForkChoiceFromFinalizedState(
   state: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -113,9 +119,12 @@ export function initializeForkChoiceFromFinalizedState(
       finalizedCheckpoint,
       justifiedBalances,
       justifiedBalancesGetter,
+      stateGetter,
       {
         onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
         onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+        onFastConfirmation: ({block, slot, currentSlot}) =>
+          emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
       }
     ),
 
@@ -141,9 +150,11 @@ export function initializeForkChoiceFromFinalizedState(
               executionPayloadBlockHash: isStatePostGloas(state)
                 ? toRootHex(state.latestBlockHash)
                 : toRootHex(state.latestExecutionPayloadHeader.blockHash),
-              // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas (EIP-7732 removed
-              // latestExecutionPayloadHeader). Using 0 as unavailable fallback until a solution is found.
+              // TODO GLOAS: executionPayloadNumber/GasLimit are not tracked in BeaconState post-gloas
+              // (EIP-7732 removed latestExecutionPayloadHeader). Using 0 as unavailable fallback —
+              // see initializeForkChoiceFromUnfinalizedState for the same caveat on validation.
               executionPayloadNumber: isStatePostGloas(state) ? 0 : state.payloadBlockNumber,
+              executionPayloadGasLimit: isStatePostGloas(state) ? 0 : state.latestExecutionPayloadHeader.gasLimit,
               executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
             }
           : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
@@ -171,6 +182,7 @@ export function initializeForkChoiceFromUnfinalizedState(
   unfinalizedState: IBeaconStateView,
   opts: ForkChoiceOpts,
   justifiedBalancesGetter: JustifiedBalancesGetter,
+  stateGetter: ForkChoiceStateGetter,
   metrics: Metrics | null,
   logger?: Logger
 ): ForkChoice {
@@ -202,9 +214,12 @@ export function initializeForkChoiceFromUnfinalizedState(
     finalizedCheckpoint,
     justifiedBalances,
     justifiedBalancesGetter,
+    stateGetter,
     {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      onFastConfirmation: ({block, slot, currentSlot}) =>
+        emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
     }
   );
 
@@ -233,9 +248,17 @@ export function initializeForkChoiceFromUnfinalizedState(
           executionPayloadBlockHash: isStatePostGloas(unfinalizedState)
             ? toRootHex(unfinalizedState.latestBlockHash)
             : toRootHex(unfinalizedState.latestExecutionPayloadHeader.blockHash),
-          // TODO GLOAS: executionPayloadNumber is not tracked in BeaconState post-gloas (EIP-7732 removed
-          // latestExecutionPayloadHeader). Using 0 as unavailable fallback until a solution is found.
+          // TODO GLOAS: executionPayloadNumber/GasLimit are not tracked in BeaconState post-gloas
+          // (EIP-7732 removed latestExecutionPayloadHeader). Using 0 as unavailable fallback until
+          // a solution is found. The 0 doesn't gate validation in practice: at boot the head's
+          // PENDING variant's `executionPayloadBlockHash` is the *parent's* payload hash (per the
+          // PENDING/EMPTY convention), so gossip bids that reference the head's *own* payload
+          // hash won't match this variant anyway and will IGNORE until `onExecutionPayload`
+          // upgrades the head to FULL with real values.
           executionPayloadNumber: isStatePostGloas(unfinalizedState) ? 0 : unfinalizedState.payloadBlockNumber,
+          executionPayloadGasLimit: isStatePostGloas(unfinalizedState)
+            ? 0
+            : unfinalizedState.latestExecutionPayloadHeader.gasLimit,
           executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
         }
       : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),

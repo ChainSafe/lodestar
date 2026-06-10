@@ -62,6 +62,7 @@ export type ForkConfig = {
   getSyncMessageDueMs(fork: ForkName): number;
   getSyncContributionDueMs(fork: ForkName): number;
   getProposerReorgCutoffMs(fork: ForkName): number;
+  getPayloadDueMs(): number;
 
   /** Convert basis points to milliseconds into the slot */
   getSlotComponentDurationMs(basisPoints: number): number;

@@ -31,10 +31,13 @@ ETH
 Edgington
 Erigon
 Esat
+EthPandaOps
 EthStaker
 EtherScan
 Ethereum
 EthereumJS
+FCR
+FFG
 FINDNODE
 FX
 Flamegraph
@@ -159,6 +162,7 @@ env
 envs
 ephemery
 ethers
+fastconfirm
 feeRecipient
 flamegraph
 flamegraphs

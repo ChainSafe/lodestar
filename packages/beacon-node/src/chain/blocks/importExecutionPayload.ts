@@ -1,7 +1,8 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
-import {isStatePostGloas} from "@lodestar/state-transition";
-import {fromHex} from "@lodestar/utils";
+import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {isErrorAborted} from "@lodestar/utils";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
@@ -20,6 +21,7 @@ export enum PayloadErrorCode {
   EXECUTION_ENGINE_INVALID = "PAYLOAD_ERROR_EXECUTION_ENGINE_INVALID",
   EXECUTION_ENGINE_ERROR = "PAYLOAD_ERROR_EXECUTION_ENGINE_ERROR",
   BLOCK_NOT_IN_FORK_CHOICE = "PAYLOAD_ERROR_BLOCK_NOT_IN_FORK_CHOICE",
+  MISS_BLOCK_STATE = "PAYLOAD_ERROR_MISS_BLOCK_STATE",
   ENVELOPE_VERIFICATION_ERROR = "PAYLOAD_ERROR_ENVELOPE_VERIFICATION_ERROR",
   INVALID_SIGNATURE = "PAYLOAD_ERROR_INVALID_SIGNATURE",
 }
@@ -37,6 +39,10 @@ export type PayloadErrorType =
     }
   | {
       code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE;
+      blockRootHex: string;
+    }
+  | {
+      code: PayloadErrorCode.MISS_BLOCK_STATE;
       blockRootHex: string;
     }
   | {
@@ -60,7 +66,6 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
   switch (status) {
     case ExecutionPayloadStatus.VALID:
       return ExecutionStatus.Valid;
-    // TODO GLOAS: Handle optimistic import for payload
     case ExecutionPayloadStatus.SYNCING:
     case ExecutionPayloadStatus.ACCEPTED:
       return ExecutionStatus.Syncing;
@@ -85,12 +90,14 @@ function toForkChoiceExecutionStatus(status: ExecutionPayloadStatus): PayloadExe
  * 4. Verify envelope (fields against state, signature, and EL in parallel where possible)
  * 5. Persist verified payload envelope to hot DB (waits for write-queue space for backpressure)
  * 6. Update fork choice (transitions the block's PENDING variant to FULL)
- * 7. Record metrics for payload envelope and column sources
- * 8. Emit `execution_payload` event
+ * 7. Queue notifyForkchoiceUpdate to engine api
+ * 8. Record metrics for payload envelope and column sources
+ * 9. Emit `execution_payload` event
  */
 export async function importExecutionPayload(
   this: BeaconChain,
   payloadInput: PayloadEnvelopeInput,
+  dataAvailabilityStatus: DataAvailabilityStatus,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
   const signedEnvelope = payloadInput.getPayloadEnvelope();
@@ -121,12 +128,19 @@ export async function importExecutionPayload(
   }
 
   // 3. Regenerate state for envelope verification
-  const blockState = await this.regen.getBlockSlotState(
-    protoBlock,
-    protoBlock.slot,
-    {dontTransferCache: true},
-    RegenCaller.processBlock
-  );
+  const blockState = await this.regen
+    .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.importExecutionPayload)
+    .catch(() =>
+      // only happen at the 1st batch of skipped slot checkpoint sync
+      this.regen.getClosestHeadState(protoBlock)
+    );
+
+  if (blockState == null) {
+    throw new PayloadError({
+      code: PayloadErrorCode.MISS_BLOCK_STATE,
+      blockRootHex: protoBlock.blockRoot,
+    });
+  }
   if (!isStatePostGloas(blockState)) {
     throw new PayloadError({
       code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
@@ -157,7 +171,7 @@ export async function importExecutionPayload(
       fork,
       envelope.payload,
       payloadInput.getVersionedHashes(),
-      fromHex(protoBlock.parentRoot),
+      envelope.parentBeaconBlockRoot,
       envelope.executionRequests
     ),
 
@@ -219,23 +233,45 @@ export async function importExecutionPayload(
 
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
-  this.forkChoice.onExecutionPayload(blockRootHex, blockHashHex, envelope.payload.blockNumber, execStatus);
+  this.forkChoice.onExecutionPayload(
+    blockRootHex,
+    blockHashHex,
+    envelope.payload.blockNumber,
+    envelope.payload.gasLimit,
+    execStatus,
+    dataAvailabilityStatus
+  );
 
-  // 7. Record metrics for payload envelope and column sources
-  this.metrics?.importPayload.bySource.inc({source: payloadInput.getPayloadEnvelopeSource().source});
+  // 7. Queue notifyForkchoiceUpdate to engine api
+  const head = this.forkChoice.getHead();
+  if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    this.executionEngine.notifyForkchoiceUpdate(fork, blockHashHex, safeBlockHash, finalizedBlockHash).catch((e) => {
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+        this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
+      }
+    });
+  }
+
+  // 8. Record metrics for payload envelope and column sources
+  const delaySec = this.clock.secFromSlot(slot);
+  this.metrics?.importPayload.elapsedTimeTillImported.observe(
+    {source: payloadInput.getPayloadEnvelopeSource().source},
+    delaySec
+  );
   for (const {source} of payloadInput.getSampledColumnsWithSource()) {
     this.metrics?.importPayload.columnsBySource.inc({source});
   }
 
-  // 8. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
+  // 9. Emit event after payload is fully verified and imported to fork choice, only for recent enough payloads
   if (this.clock.currentSlot - slot < EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS) {
     this.emitter.emit(routes.events.EventType.executionPayload, {
       slot,
       builderIndex: envelope.builderIndex,
       blockHash: blockHashHex,
       blockRoot: blockRootHex,
-      // TODO GLOAS: revisit once we support optimistic import
-      executionOptimistic: false,
+      executionOptimistic: execStatus === ExecutionStatus.Syncing,
     });
   }
 
@@ -244,6 +280,7 @@ export async function importExecutionPayload(
     builderIndex: envelope.builderIndex,
     blockRoot: blockRootHex,
     blockHash: blockHashHex,
+    delaySec,
   });
 }
 
@@ -261,6 +298,6 @@ export async function processExecutionPayload(
   signal: AbortSignal,
   opts: ImportPayloadOpts = {}
 ): Promise<void> {
-  await verifyPayloadsDataAvailability([payloadInput], signal);
-  await importExecutionPayload.call(this, payloadInput, opts);
+  const {dataAvailabilityStatuses} = await verifyPayloadsDataAvailability([payloadInput], signal);
+  await importExecutionPayload.call(this, payloadInput, dataAvailabilityStatuses[0], opts);
 }

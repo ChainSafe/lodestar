@@ -35,6 +35,7 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
@@ -52,6 +53,8 @@ import {
   ExecutionPayloadEnvelopeErrorCode,
   GossipAction,
   GossipActionError,
+  PayloadAttestationError,
+  PayloadAttestationErrorCode,
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
@@ -183,7 +186,19 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
     });
     try {
-      await validateGossipBlock(config, chain, signedBlock, fork);
+      const {skippedSlots} = await validateGossipBlock(config, chain, signedBlock, fork);
+
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex,
+          block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+          forkName: fork,
+          sampledColumns: chain.custodyConfig.sampledColumns,
+          custodyColumns: chain.custodyConfig.custodyColumns,
+          timeCreatedSec: seenTimestampSec,
+        });
+      }
+
       const blockInputMeta = blockInput.getLogMeta();
 
       const recvToValidation = Date.now() / 1000 - seenTimestampSec;
@@ -191,8 +206,15 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       metrics?.gossipBlock.gossipValidation.recvToValidation.observe(recvToValidation);
       metrics?.gossipBlock.gossipValidation.validationTime.observe(validationTime);
+      metrics?.gossipBlock.skippedSlots.observe(skippedSlots);
 
-      logger.debug("Validated gossip block", {...blockInputMeta, ...logCtx, recvToValidation, validationTime});
+      logger.debug("Validated gossip block", {
+        ...blockInputMeta,
+        ...logCtx,
+        recvToValidation,
+        validationTime,
+        skippedSlots,
+      });
 
       chain.emitter.emit(routes.events.EventType.blockGossip, {slot, block: blockRootHex});
 
@@ -594,6 +616,24 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // Returns the delay between the start of `block.slot` and `current time`
         const delaySec = chain.clock.secFromSlot(slot);
         metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
+
+        if (isForkPostGloas(blockInput.forkName)) {
+          const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockInput.blockRootHex);
+          // This payloadInput should have been created just after gossip validation
+          if (!payloadInput) {
+            throw Error(
+              `PayloadEnvelopeInput not seeded for block ${blockInput.blockRootHex} during gossip processing`
+            );
+          }
+
+          // Immediately attempt fetch of data columns from execution engine as the bid contains kzg commitments
+          // which is all the information we need so there is no reason to delay until execution payload arrives
+          // TODO GLOAS: If we want EL retries after this initial attempt, add an explicit retry policy here
+          // (for example later in the slot). Do not couple retries to incoming gossip columns.
+          // Columns fetched here feed payloadInput.addColumn, which resolves waitForAllData for any
+          // in-flight importExecutionPayload. No processExecutionPayload trigger needed from this path.
+          chain.getBlobsTracker.triggerGetBlobs(payloadInput);
+        }
       })
       .catch((e) => {
         // Adjust verbosity based on error type
@@ -1071,13 +1111,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const {beaconBlockRoot} = signedEnvelope.message;
           const slot = signedEnvelope.message.payload.slotNumber;
           logger.debug("Gossip envelope has error", {slot, root: toRootHex(beaconBlockRoot), code: e.type.code});
-          if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN) {
-            chain.emitter.emit(ChainEvent.envelopeUnknownBlock, {
-              envelope: signedEnvelope,
-              peer: peerIdStr,
-              source: BlockInputSource.gossip,
-            });
-          }
 
           if (e.action === GossipAction.REJECT) {
             chain.persistInvalidSszValue(
@@ -1092,7 +1125,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       const slot = envelope.payload.slotNumber;
-      const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
+      const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+
+      logger.debug("Received gossip payload envelope", {
+        currentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
+        slot,
+        blockRoot: toRootHex(envelope.beaconBlockRoot),
+        delaySec,
+      });
+
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
 
@@ -1124,7 +1166,40 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       });
 
       chain.processExecutionPayload(payloadInput, {validSignature: true}).catch((e) => {
-        chain.logger.debug("Error processing execution payload from gossip", {slot, root: blockRootHex}, e as Error);
+        // Adjust verbosity based on error type
+        let logLevel: LogLevel;
+
+        if (e instanceof PayloadError) {
+          switch (e.type.code) {
+            // BLOCK_NOT_IN_FORK_CHOICE should not happen, validateGossipExecutionPayloadEnvelope above
+            // already verified the block is in fork choice
+            case PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE:
+            case PayloadErrorCode.MISS_BLOCK_STATE:
+            case PayloadErrorCode.EXECUTION_ENGINE_ERROR:
+              // Errors might indicate an issue with our node or the connected EL client
+              logLevel = LogLevel.error;
+              break;
+            // INVALID_SIGNATURE should not happen, signature is verified during gossip validation
+            case PayloadErrorCode.INVALID_SIGNATURE:
+            case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
+            case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipPayload");
+              // Misbehaving peer, but could highlight an issue in another client
+              logLevel = LogLevel.warn;
+              break;
+          }
+        } else {
+          // Any unexpected error
+          logLevel = LogLevel.error;
+        }
+        metrics?.gossipExecutionPayloadEnvelope.processPayloadErrors.inc({
+          error: e instanceof PayloadError ? e.type.code : "NOT_PAYLOAD_ERROR",
+        });
+        chain.logger[logLevel](
+          "Error processing execution payload from gossip",
+          {slot, peer: peerIdStr, root: blockRootHex},
+          e as Error
+        );
       });
     },
     [GossipType.payload_attestation_message]: async ({
@@ -1139,7 +1214,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         const insertOutcome = chain.payloadAttestationPool.add(
           payloadAttestationMessage,
           validationResult.attDataRootHex,
-          validationResult.validatorCommitteeIndex
+          validationResult.validatorCommitteeIndices
         );
         metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
@@ -1147,8 +1222,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
       chain.forkChoice.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-        [validationResult.validatorCommitteeIndex],
-        payloadAttestationMessage.data.payloadPresent
+        payloadAttestationMessage.data.slot,
+        validationResult.validatorCommitteeIndices,
+        payloadAttestationMessage.data.payloadPresent,
+        payloadAttestationMessage.data.blobDataAvailable
       );
     },
     [GossipType.execution_payload_bid]: async ({
@@ -1157,15 +1234,17 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
-      await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+      const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
       // Handle valid payload bid by storing in a bid pool
       try {
-        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid.message);
+        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid);
         metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
       }
+
+      chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.gossip, proposerIndex, executionPayloadBid.message);
 
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
         version: config.getForkName(executionPayloadBid.message.slot),
@@ -1179,6 +1258,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
+
+      chain.proposerPreferencesPool.add(signedProposerPreferences);
+      chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+        version: ForkName.gloas,
+        data: signedProposerPreferences,
+      });
     },
     [GossipType.execution_proof]: async ({
       gossipData,
@@ -1327,10 +1412,12 @@ export async function validateGossipFnRetryUnknownRoot<T>(
     try {
       return await fn();
     } catch (e) {
-      if (
-        e instanceof AttestationError &&
-        e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
-      ) {
+      const isUnknownAttestationRoot =
+        e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT;
+      const isUnknownPayloadAttestationRoot =
+        e instanceof PayloadAttestationError && e.type.code === PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT;
+
+      if (isUnknownAttestationRoot || isUnknownPayloadAttestationRoot) {
         if (unknownBlockRootRetries === 0) {
           // Trigger unknown block root search here
           const rootHex = toRootHex(blockRoot);

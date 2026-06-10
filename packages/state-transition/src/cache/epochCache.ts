@@ -38,9 +38,9 @@ import {
   computeEpochAtSlot,
   computeProposers,
   computeSyncPeriodAtEpoch,
-  getActivationChurnLimit,
   getChurnLimit,
   getSeed,
+  getValidatorActivationChurnLimit,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
 } from "../util/index.js";
@@ -478,7 +478,7 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
-    const activationChurnLimit = getActivationChurnLimit(
+    const activationChurnLimit = getValidatorActivationChurnLimit(
       config,
       config.getForkSeq(state.slot),
       currentShuffling.activeIndices.length
@@ -652,7 +652,7 @@ export class EpochCache {
     // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
     // transition and the result is valid until the end of the next epoch transition
     this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
-    this.activationChurnLimit = getActivationChurnLimit(
+    this.activationChurnLimit = getValidatorActivationChurnLimit(
       this.config,
       this.config.getForkSeq(state.slot),
       this.currentShuffling.activeIndices.length
@@ -782,14 +782,17 @@ export class EpochCache {
    */
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
-    if (epoch !== this.currentShuffling.epoch) {
-      throw new EpochCacheError({
-        code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
-        currentEpoch: this.currentShuffling.epoch,
-        requestedEpoch: epoch,
-      });
+    if (epoch === this.currentShuffling.epoch) {
+      return this.proposers[slot % SLOTS_PER_EPOCH];
     }
-    return this.proposers[slot % SLOTS_PER_EPOCH];
+    if (epoch === this.nextEpoch) {
+      return this.getBeaconProposersNextEpoch()[slot % SLOTS_PER_EPOCH];
+    }
+    throw new EpochCacheError({
+      code: EpochCacheErrorCode.PROPOSER_EPOCH_MISMATCH,
+      currentEpoch: this.currentShuffling.epoch,
+      requestedEpoch: epoch,
+    });
   }
 
   getBeaconProposers(): ValidatorIndex[] {

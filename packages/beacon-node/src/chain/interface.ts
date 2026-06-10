@@ -49,6 +49,7 @@ import {
   ExecutionProofPool,
   OpPool,
   PayloadAttestationPool,
+  ProposerPreferencesPool,
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "./opPools/index.js";
@@ -135,6 +136,7 @@ export interface IBeaconChain {
   /** EIP-8025: Verifier for execution proofs — swap implementation for real zkvm prover */
   readonly executionProofVerifier: IZkvmExecutionProofVerifier;
   readonly payloadAttestationPool: PayloadAttestationPool;
+  readonly proposerPreferencesPool: ProposerPreferencesPool;
   readonly opPool: OpPool;
 
   // Gossip seen cache

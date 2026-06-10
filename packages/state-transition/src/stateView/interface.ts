@@ -23,6 +23,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -75,6 +76,8 @@ export interface IBeaconStateView {
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number;
   // Decision roots
   previousDecisionRoot: RootHex;
   currentDecisionRoot: RootHex;
@@ -89,6 +92,7 @@ export interface IBeaconStateView {
   currentProposers: ValidatorIndex[];
   nextProposers: ValidatorIndex[];
   getBeaconProposer(slot: Slot): ValidatorIndex;
+  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null;
 
   // Validators and balances
   effectiveBalanceIncrements: EffectiveBalanceIncrements;
@@ -252,13 +256,15 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   payloadExpectedWithdrawals: capella.Withdrawal[];
   getBuilder(index: BuilderIndex): gloas.Builder;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
-  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number;
+  getEpochPTCs(epoch: Epoch): Uint32Array[];
+  getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
   /**
-   * Compute expected withdrawals as if the parent was FULL.
-   * Clones the state, applies parent payload effects, then computes withdrawals.
-   * Used by prepare_execution_payload when building on FULL parent.
+   * Clone the state and apply parent execution payload effects.
+   * Used during block production and prepareNextSlot so that withdrawals and
+   * operation selection (e.g. voluntary exits) see the same post-apply state that the block
+   * processor will see at import.
    */
-  getExpectedWithdrawalsForFullParent(executionRequests: electra.ExecutionRequests): capella.Withdrawal[];
+  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
 }
 
 /**
@@ -275,6 +281,35 @@ export type IBeaconStateViewLatestFork = Omit<
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
   payloadBlockNumber: number;
 };
+
+/**
+ * Contract a BeaconStateView backing implementation must satisfy.
+ *
+ * Differs from `IBeaconStateViewLatestFork` in two ways:
+ * - `executionPayloadAvailability` is a raw `{uint8Array, bitLen}` POJO — a
+ *   native (`.node`) binding cannot construct a `BitArray` across FFI.
+ *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
+ * - Methods that produce another view (`stateTransition`, `processSlots`,
+ *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
+ *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
+ *   via `Parameters<...>` to avoid duplicating signatures.
+ *
+ * The TS-side `BeaconStateView` also structurally satisfies this contract since
+ * `BitArray` exposes `uint8Array` and `bitLen`.
+ */
+export type IBeaconStateViewNative = Omit<
+  IBeaconStateViewLatestFork,
+  "executionPayloadAvailability" | "loadOtherState" | "stateTransition" | "processSlots" | "withParentPayloadApplied"
+> & {
+  executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
+  stateTransition(...args: Parameters<IBeaconStateViewLatestFork["stateTransition"]>): IBeaconStateViewNative;
+  processSlots(...args: Parameters<IBeaconStateViewLatestFork["processSlots"]>): IBeaconStateViewNative;
+  withParentPayloadApplied(
+    ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
+  ): IBeaconStateViewNative;
+};
+
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
   return isForkPostAltair(state.forkName);
 }

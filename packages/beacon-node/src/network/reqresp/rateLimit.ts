@@ -40,6 +40,10 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     },
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
+  [ReqRespMethod.BeaconBlocksByHead]: {
+    byPeer: {quota: config.MAX_REQUEST_BLOCKS_DENEB, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BeaconBlocksByHead, (req) => req.count),
+  },
   [ReqRespMethod.BlobSidecarsByRange]: {
     // Rationale: MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
     byPeer: {

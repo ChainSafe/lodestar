@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import {BeaconBlock, Epoch, RootHex, Slot, isGloasBeaconBlock, phase0} from "@lodestar/types";
+import {BeaconBlock, Epoch, RootHex, Slot, phase0} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {JobItemQueue} from "../../util/queue/index.js";
@@ -88,12 +88,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    */
   getPreStateSync(block: BeaconBlock): IBeaconStateView | null {
     const parentRoot = toRootHex(block.parentRoot);
-    const parentBlock = isGloasBeaconBlock(block)
-      ? this.forkChoice.getBlockHexAndBlockHash(
-          parentRoot,
-          toRootHex(block.body.signedExecutionPayloadBid.message.parentBlockHash)
-        )
-      : this.forkChoice.getBlockHexDefaultStatus(parentRoot);
+    const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRoot);
     if (!parentBlock) {
       throw new RegenError({
         code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
@@ -146,11 +141,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void {
     this.checkpointStateCache.prune(finalizedEpoch, justifiedEpoch);
     this.blockStateCache.prune(headStateRoot);
-  }
-
-  pruneOnFinalized(finalizedEpoch: number): void {
-    this.checkpointStateCache.pruneFinalized(finalizedEpoch);
-    this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
   }
 
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void {
