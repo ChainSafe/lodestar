@@ -12,7 +12,7 @@ import {RegenCaller} from "../regen/index.js";
 
 export type PayloadAttestationValidationResult = {
   attDataRootHex: RootHex;
-  validatorCommitteeIndices: number[];
+  validatorCommitteeIndex: number;
 };
 
 export async function validateApiPayloadAttestationMessage(
@@ -102,11 +102,9 @@ async function validatePayloadAttestationMessage(
   // [REJECT] The message's validator index is within the payload committee in
   // `get_ptc(state, data.slot)`. The `state` is the head state corresponding to
   // processing the block up to the current slot as determined by the fork choice.
-  // The validator may occupy multiple PTC positions because `compute_ptc` samples
-  // by effective balance — collect all of them so duplicate votes are counted.
-  const validatorCommitteeIndices = state.getIndicesInPayloadTimelinessCommittee(validatorIndex, data.slot);
+  const validatorCommitteeIndex = state.getIndexInPayloadTimelinessCommittee(validatorIndex, data.slot);
 
-  if (validatorCommitteeIndices.length === 0) {
+  if (validatorCommitteeIndex === -1) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_ATTESTER,
       attesterIndex: validatorIndex,
@@ -139,6 +137,6 @@ async function validatePayloadAttestationMessage(
 
   return {
     attDataRootHex: toRootHex(ssz.gloas.PayloadAttestationData.hashTreeRoot(data)),
-    validatorCommitteeIndices,
+    validatorCommitteeIndex,
   };
 }

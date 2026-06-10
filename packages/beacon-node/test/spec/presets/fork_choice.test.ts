@@ -239,7 +239,9 @@ const forkChoiceTest =
                     RegenCaller.processBlock
                   );
 
-                  const ptcIndices = (blockState as IBeaconStateViewGloas).getIndicesInPayloadTimelinessCommittee(
+                  const validatorCommitteeIndex = (
+                    blockState as IBeaconStateViewGloas
+                  ).getIndexInPayloadTimelinessCommittee(
                     payloadAttestationMessage.validatorIndex,
                     payloadAttestationMessage.data.slot
                   );
@@ -273,13 +275,15 @@ const forkChoiceTest =
                   }
                   if (!signatureValidity) throw Error("Invalid payload attestation signature");
 
-                  chain.forkChoice.notifyPtcMessages(
-                    blockRoot,
-                    payloadAttestationMessage.data.slot,
-                    ptcIndices,
-                    payloadAttestationMessage.data.payloadPresent,
-                    payloadAttestationMessage.data.blobDataAvailable
-                  );
+                  if (validatorCommitteeIndex !== -1) {
+                    chain.forkChoice.notifyPtcMessages(
+                      blockRoot,
+                      payloadAttestationMessage.data.slot,
+                      [validatorCommitteeIndex],
+                      payloadAttestationMessage.data.payloadPresent,
+                      payloadAttestationMessage.data.blobDataAvailable
+                    );
+                  }
                 }
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;

@@ -57,7 +57,7 @@ export class PayloadAttestationPool {
   add(
     message: gloas.PayloadAttestationMessage,
     payloadAttDataRootHex: RootHex,
-    validatorCommitteeIndices: number[]
+    validatorCommitteeIndex: number
   ): InsertOutcome {
     const slot = message.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -85,10 +85,10 @@ export class PayloadAttestationPool {
     const aggregate = aggregateByDataRoot.get(payloadAttDataRootHex);
     if (aggregate) {
       // Aggregate msg into aggregate
-      return aggregateMessageInto(message, validatorCommitteeIndices, aggregate);
+      return aggregateMessageInto(message, validatorCommitteeIndex, aggregate);
     }
     // Create a new aggregate with data
-    aggregateByDataRoot.set(payloadAttDataRootHex, messageToAggregate(message, validatorCommitteeIndices));
+    aggregateByDataRoot.set(payloadAttDataRootHex, messageToAggregate(message, validatorCommitteeIndex));
 
     return InsertOutcome.NewData;
   }
@@ -150,49 +150,25 @@ export class PayloadAttestationPool {
   }
 }
 
-function messageToAggregate(
-  message: gloas.PayloadAttestationMessage,
-  validatorCommitteeIndices: number[]
-): AggregateFast {
-  const aggregationBits = BitArray.fromBitLen(PTC_SIZE);
-  for (const index of validatorCommitteeIndices) {
-    aggregationBits.set(index, true);
-  }
-  const sig = signatureFromBytesNoCheck(message.signature);
-  // The validator signed once but occupies `validatorCommitteeIndices.length` PTC positions.
-  // Verification aggregates the pubkey once per set bit, so the signature must be aggregated
-  // the same number of times for the BLS check to balance — same pattern as sync committee.
-  const signature =
-    validatorCommitteeIndices.length === 1
-      ? sig
-      : aggregateSignatures(new Array(validatorCommitteeIndices.length).fill(sig));
+function messageToAggregate(message: gloas.PayloadAttestationMessage, validatorCommitteeIndex: number): AggregateFast {
   return {
-    aggregationBits,
+    aggregationBits: BitArray.fromSingleBit(PTC_SIZE, validatorCommitteeIndex),
     data: message.data,
-    signature,
+    signature: signatureFromBytesNoCheck(message.signature),
   };
 }
 
 function aggregateMessageInto(
   message: gloas.PayloadAttestationMessage,
-  validatorCommitteeIndices: number[],
+  validatorCommitteeIndex: number,
   aggregate: AggregateFast
 ): InsertOutcome {
-  // Gossip dedup via `seenPayloadAttesters` is keyed by (epoch, validatorIndex), so the same
-  // validator's message is never processed twice — all of its bits are set together or none.
-  // Checking the first index is sufficient.
-  if (aggregate.aggregationBits.get(validatorCommitteeIndices[0]) === true) {
+  if (aggregate.aggregationBits.get(validatorCommitteeIndex) === true) {
     return InsertOutcome.AlreadyKnown;
   }
 
-  for (const index of validatorCommitteeIndices) {
-    aggregate.aggregationBits.set(index, true);
-  }
-  const sig = signatureFromBytesNoCheck(message.signature);
-  aggregate.signature = aggregateSignatures([
-    aggregate.signature,
-    ...new Array(validatorCommitteeIndices.length).fill(sig),
-  ]);
+  aggregate.aggregationBits.set(validatorCommitteeIndex, true);
+  aggregate.signature = aggregateSignatures([aggregate.signature, signatureFromBytesNoCheck(message.signature)]);
 
   return InsertOutcome.Aggregated;
 }

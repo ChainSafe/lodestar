@@ -901,8 +901,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return cached;
   }
 
-  getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[] {
-    return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
+  getIndexInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number {
+    return this.binding.getIndexInPayloadTimelinessCommittee(validatorIndex, slot);
   }
 
   withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {

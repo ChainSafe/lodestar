@@ -1221,7 +1221,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         const insertOutcome = chain.payloadAttestationPool.add(
           payloadAttestationMessage,
           validationResult.attDataRootHex,
-          validationResult.validatorCommitteeIndices
+          validationResult.validatorCommitteeIndex
         );
         metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
@@ -1230,7 +1230,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       chain.forkChoice.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
         payloadAttestationMessage.data.slot,
-        validationResult.validatorCommitteeIndices,
+        [validationResult.validatorCommitteeIndex],
         payloadAttestationMessage.data.payloadPresent,
         payloadAttestationMessage.data.blobDataAvailable
       );
