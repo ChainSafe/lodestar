@@ -1,6 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {
   buildFastConfirmationSnapshot,
@@ -77,9 +76,11 @@ function runFCRRulesBenchmark(opts: Opts): void {
 }
 
 function everyoneVotes(vote: ProtoBlock, forkChoice: ForkChoice): void {
-  const nextEpoch = computeEpochAtSlot(vote.slot);
   const nextRoot = vote.blockRoot;
   for (let i = 0; i < forkChoice["balances"].length; i++) {
-    forkChoice["addLatestMessage"](i, nextEpoch, nextRoot, PayloadStatus.FULL);
+    // addLatestMessage's second arg is `nextSlot: Slot`, not an epoch — pass vote.slot directly so
+    // the internal computeEpochAtSlot(nextSlot) lands on the correct vote epoch instead of
+    // computeEpochAtSlot(epoch)=0 making every vote look 3 epochs stale.
+    forkChoice["addLatestMessage"](i, vote.slot, nextRoot, PayloadStatus.FULL);
   }
 }
