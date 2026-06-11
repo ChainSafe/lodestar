@@ -377,6 +377,15 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
+  {
+    signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "SignedExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
+);
+
 export const BeaconBlockBody = new ProgressiveContainerType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,

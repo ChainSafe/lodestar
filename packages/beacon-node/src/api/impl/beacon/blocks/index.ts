@@ -48,6 +48,7 @@ import {
   ProduceFullFulu,
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
+import {validateCellsAndKzgCommitments} from "../../../../chain/produceBlock/validateBlobsAndKzgCommitments.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
 import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
@@ -651,7 +652,9 @@ export function getBeaconBlockApi({
     publishBlockV2,
     publishBlindedBlockV2,
 
-    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
+    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope, blobs, kzgProofs, broadcastValidation}) {
+      // TODO GLOAS: honor broadcastValidation (gossip|consensus|consensus_and_equivocation) per beacon-APIs PR #580
+      void broadcastValidation;
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
       const slot = envelope.payload.slotNumber;
@@ -685,11 +688,52 @@ export function getBeaconBlockApi({
 
       await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        // The block is awaited above (queuing if the envelope arrived first), and both the API and
+        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
+        // should exist here.
+        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
+      }
+
+      if ((blobs === undefined) !== (kzgProofs === undefined)) {
+        throw new ApiError(400, "blobs and kzgProofs must both be supplied or both omitted");
+      }
+      const hasSuppliedBlobs = blobs !== undefined && kzgProofs !== undefined;
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
 
-      if (isSelfBuild) {
-        // For self-builds, construct and publish data column sidecars from cached block production data
+      if (hasSuppliedBlobs) {
+        const expectedBlobs = payloadInput.getBlobKzgCommitments().length;
+        if (blobs.length !== expectedBlobs) {
+          throw new ApiError(400, `Expected ${expectedBlobs} blobs to match bid kzg_commitments, got ${blobs.length}`);
+        }
+        if (kzgProofs.length !== blobs.length * NUMBER_OF_COLUMNS) {
+          throw new ApiError(
+            400,
+            `Expected ${blobs.length * NUMBER_OF_COLUMNS} kzg_proofs for ${blobs.length} blobs, got ${kzgProofs.length}`
+          );
+        }
+        if (blobs.length > 0) {
+          const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+          const cells = blobs.map((blob) => kzg.computeCells(blob));
+          try {
+            await validateCellsAndKzgCommitments(payloadInput.getBlobKzgCommitments(), kzgProofs, cells);
+          } catch (e) {
+            throw new ApiError(
+              400,
+              `Invalid supplied blobs/kzg_proofs against bid kzg_commitments: ${(e as Error).message}`
+            );
+          }
+          const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+            cells: rowCells,
+            proofs: kzgProofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+          }));
+          dataColumnSidecars = getGloasDataColumnSidecars(slot, envelope.beaconBlockRoot, cellsAndProofs);
+          timer?.();
+        }
+      } else if (isSelfBuild) {
+        // Stateful self-build path: reconstruct data column sidecars from cached cells + proofs.
         const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
         if (cachedResult === undefined) {
           throw new ApiError(404, `No cached block production result found for block root ${blockRootHex}`);
@@ -714,22 +758,12 @@ export function getBeaconBlockApi({
           dataColumnSidecars = getGloasDataColumnSidecars(slot, envelope.beaconBlockRoot, cellsAndProofs);
           timer?.();
         }
-      } else {
-        // TODO GLOAS: will this api be used by builders or only for self-building?
       }
 
       // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         await sleep(msToBlockSlot);
-      }
-
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-      if (!payloadInput) {
-        // The block is awaited above (queuing if the envelope arrived first), and both the API and
-        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
-        // should exist here.
-        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
       payloadInput.addPayloadEnvelope({

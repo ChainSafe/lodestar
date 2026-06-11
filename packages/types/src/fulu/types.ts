@@ -2,6 +2,7 @@ import {ValueOf} from "@chainsafe/ssz";
 import * as ssz from "./sszTypes.js";
 
 export type KZGProof = ValueOf<typeof ssz.KZGProof>;
+export type KZGProofs = ValueOf<typeof ssz.KZGProofs>;
 export type Blob = ValueOf<typeof ssz.Blob>;
 
 export type Metadata = ValueOf<typeof ssz.Metadata>;
