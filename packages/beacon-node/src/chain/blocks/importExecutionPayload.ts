@@ -1,13 +1,26 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  EpochDifference,
+  ExecutionStatus,
+  PayloadExecutionStatus,
+  PayloadStatus,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
+import {toApiPayloadStatus} from "./importBlock.js";
 import {ImportPayloadOpts} from "./types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -252,6 +265,27 @@ export async function importExecutionPayload(
         this.logger.error("Error pushing notifyForkchoiceUpdate()", {blockHashHex, finalizedBlockHash}, e);
       }
     });
+  }
+
+  if (this.headV2PayloadStatusCache.get(head.blockRoot)?.status !== PayloadStatus.FULL) {
+    try {
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(head.slot),
+        data: {
+          slot: head.slot,
+          block: head.blockRoot,
+          state: head.stateRoot,
+          payloadStatus: toApiPayloadStatus(head.payloadStatus),
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+          currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
+          nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      });
+      this.headV2PayloadStatusCache.set(head.blockRoot, {status: head.payloadStatus, slot: head.slot});
+    } catch (e) {
+      this.logger.debug("Error emitting head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
+    }
   }
 
   // 8. Record metrics for payload envelope and column sources

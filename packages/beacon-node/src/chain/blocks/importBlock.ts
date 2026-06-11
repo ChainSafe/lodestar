@@ -309,6 +309,7 @@ export async function importBlock(
           executionOptimistic: isOptimisticBlock(newHead),
         },
       });
+      this.headV2PayloadStatusCache.set(newHead.blockRoot, {status: newHead.payloadStatus, slot: newHead.slot});
     } catch (e) {
       // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
       this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
@@ -680,7 +681,7 @@ export function addAttestationPostElectra(
   }
 }
 
-function toApiPayloadStatus(status?: PayloadStatus): "empty" | "full" {
+export function toApiPayloadStatus(status?: PayloadStatus): "empty" | "full" {
   switch (status) {
     case PayloadStatus.FULL:
       return "full";
