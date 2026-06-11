@@ -39,11 +39,12 @@ export class ChainHeaderTracker {
   start(signal: AbortSignal): void {
     this.logger.verbose("Subscribing to validator events");
 
-    const topics = [EventType.head, EventType.headV2];
+    const topics = [EventType.head];
     // We wait until the gloas fork is configured to avoid breaking
     // connections with pre-gloas beacon nodes
     if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
       topics.push(EventType.executionPayloadAvailable);
+      topics.push(EventType.headV2);
     }
 
     this.api.events
