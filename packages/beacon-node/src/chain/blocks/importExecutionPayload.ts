@@ -266,7 +266,10 @@ export async function importExecutionPayload(
     });
   }
 
-  if (this.headV2PayloadStatusCache.get(head.blockRoot)?.status !== PayloadStatus.FULL && head.payloadStatus === PayloadStatus.FULL) {
+  if (
+    this.headV2PayloadStatusCache.get(head.blockRoot)?.status !== PayloadStatus.FULL &&
+    head.payloadStatus === PayloadStatus.FULL
+  ) {
     try {
       this.emitter.emit(routes.events.EventType.headV2, {
         version: this.config.getForkName(head.slot),

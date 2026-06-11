@@ -42,9 +42,11 @@ export class ChainHeaderTracker {
     const topics = [EventType.head];
     // We wait until the gloas fork is configured to avoid breaking
     // connections with pre-gloas beacon nodes
+    // Post-gloas BNs are required to support head_v2 per beacon-APIs#590,
+    // so we assume any gloas-configured BN will accept this topic.
     if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
-      topics.push(EventType.executionPayloadAvailable);
       topics.push(EventType.headV2);
+      topics.push(EventType.executionPayloadAvailable);
     }
 
     this.api.events
@@ -75,7 +77,8 @@ export class ChainHeaderTracker {
   }
 
   private onEvent = (event: routes.events.BeaconEvent): void => {
-    if (event.type === EventType.head) {
+    // Use head_v2 instead when gloas is configured, as head is deprecated post-gloas
+    if (event.type === EventType.head && this.config.GLOAS_FORK_EPOCH === Infinity) {
       const {message} = event;
       const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
       this.headBlockSlot = slot;

@@ -313,7 +313,7 @@ export async function importBlock(
       this.metrics?.headV2PayloadStatusCacheSize.set(this.headV2PayloadStatusCache.size);
     } catch (e) {
       // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-      this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
+      this.logger.debug("Error emitting head/head_v2 event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
     }
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
