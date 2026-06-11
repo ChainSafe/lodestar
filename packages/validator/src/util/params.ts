@@ -142,12 +142,12 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // fulu
     FULU_FORK_VERSION: fuluForkRelevant,
     FULU_FORK_EPOCH: fuluForkRelevant,
-    // HEZE
-    HEZE_FORK_VERSION: hezeForkRelevant,
-    HEZE_FORK_EPOCH: hezeForkRelevant,
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,
+    // heze
+    HEZE_FORK_VERSION: hezeForkRelevant,
+    HEZE_FORK_EPOCH: hezeForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: false, // Deprecated
@@ -319,12 +319,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
 
-    // HEZE
-    INCLUSION_LIST_DUE_BPS: hezeForkRelevant,
-    MAX_REQUEST_INCLUSION_LIST: hezeForkRelevant,
-    MAX_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
-    INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
-
     // GLOAS
     ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,
     AGGREGATE_DUE_BPS_GLOAS: gloasForkRelevant,
@@ -338,6 +332,12 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
+
+    // HEZE
+    INCLUSION_LIST_DUE_BPS: hezeForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: hezeForkRelevant,
+    MAX_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
+    INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: false,

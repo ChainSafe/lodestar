@@ -104,16 +104,15 @@ export type BeaconPreset = {
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
 
-  // HEZE
-  ///////////
-  INCLUSION_LIST_COMMITTEE_SIZE: number;
-
   // GLOAS
   PTC_SIZE: number;
   MAX_PAYLOAD_ATTESTATIONS: number;
   BUILDER_REGISTRY_LIMIT: number;
   BUILDER_PENDING_WITHDRAWALS_LIMIT: number;
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: number;
+
+  // HEZE
+  INCLUSION_LIST_COMMITTEE_SIZE: number;
 };
 
 /**
@@ -223,16 +222,15 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
 
-  // HEZE
-  ///////////
-  INCLUSION_LIST_COMMITTEE_SIZE: "number",
-
   // GLOAS
   PTC_SIZE: "number",
   MAX_PAYLOAD_ATTESTATIONS: "number",
   BUILDER_REGISTRY_LIMIT: "number",
   BUILDER_PENDING_WITHDRAWALS_LIMIT: "number",
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: "number",
+
+  // HEZE
+  INCLUSION_LIST_COMMITTEE_SIZE: "number",
 };
 
 type BeaconPresetTypes = {
