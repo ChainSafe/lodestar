@@ -735,7 +735,8 @@ const forkChoiceTest =
         shouldSkip: (_testcase, name, _index) =>
           name.includes("invalid_incorrect_proof") ||
           // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
-          (name.includes("gloas") &&
+          // heze inherits gloas fork-choice, so the same proposer-boost-dependent-roots scenarios apply.
+          ((name.includes("gloas") || name.includes("heze")) &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||

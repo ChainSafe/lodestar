@@ -162,6 +162,7 @@ export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
 export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
+export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([14, 0, 0, 0]);
 
 // Application specific domains
 
@@ -314,6 +315,9 @@ export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
 // ssz.fulu.BeaconBlockBody.getPathInfo(['blobKzgCommitments']).gindex
 export const KZG_COMMITMENTS_GINDEX = 27;
 export const KZG_COMMITMENTS_SUBTREE_INDEX = KZG_COMMITMENTS_GINDEX - 2 ** KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH;
+
+// HEZE
+export const INCLUSION_LIST_COMMITTEE_SIZE = 16;
 
 // Gloas Misc
 export const BUILDER_INDEX_FLAG = 2 ** 40;

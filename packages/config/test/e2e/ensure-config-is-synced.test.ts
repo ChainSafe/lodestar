@@ -15,13 +15,10 @@ import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
 const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // BLOB_SCHEDULE is an array/JSON format that requires special parsing
   "BLOB_SCHEDULE" as keyof ChainConfig,
-  // EIP-7805 (Inclusion Lists) - not yet implemented in Lodestar
+  // HEZE (EIP-7805 Inclusion Lists) - timing params absent in the heze boilerplate (FOCIL feature, not yet implemented)
   "VIEW_FREEZE_CUTOFF_BPS" as keyof ChainConfig,
   "INCLUSION_LIST_SUBMISSION_DUE_BPS" as keyof ChainConfig,
-  "INCLUSION_LIST_DUE_BPS" as keyof ChainConfig,
   "PROPOSER_INCLUSION_LIST_CUTOFF_BPS" as keyof ChainConfig,
-  "MAX_REQUEST_INCLUSION_LIST" as keyof ChainConfig,
-  "MAX_BYTES_PER_INCLUSION_LIST" as keyof ChainConfig,
   // Networking params that may be in presets instead of chainConfig
   "ATTESTATION_SUBNET_COUNT" as keyof ChainConfig,
   "ATTESTATION_SUBNET_EXTRA_BITS" as keyof ChainConfig,
@@ -34,8 +31,6 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   "CONSOLIDATION_CHURN_LIMIT_QUOTIENT" as keyof ChainConfig,
   "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" as keyof ChainConfig,
   // Future forks not yet implemented in Lodestar
-  "HEZE_FORK_VERSION" as keyof ChainConfig,
-  "HEZE_FORK_EPOCH" as keyof ChainConfig,
   "EIP7928_FORK_VERSION" as keyof ChainConfig,
   "EIP7928_FORK_EPOCH" as keyof ChainConfig,
   "EIP8025_FORK_VERSION" as keyof ChainConfig,
@@ -49,6 +44,7 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   "ELECTRA_FORK_EPOCH",
   "FULU_FORK_EPOCH",
   "GLOAS_FORK_EPOCH",
+  "HEZE_FORK_EPOCH",
   // Terminal values are network-specific
   "TERMINAL_TOTAL_DIFFICULTY",
   "TERMINAL_BLOCK_HASH",

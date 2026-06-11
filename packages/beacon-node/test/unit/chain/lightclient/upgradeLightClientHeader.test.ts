@@ -17,6 +17,7 @@ describe("UpgradeLightClientHeader", () => {
     ELECTRA_FORK_EPOCH: 5,
     FULU_FORK_EPOCH: 6,
     GLOAS_FORK_EPOCH: 7,
+    HEZE_FORK_EPOCH: 8,
   });
 
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
@@ -32,6 +33,7 @@ describe("UpgradeLightClientHeader", () => {
       electra: ssz.deneb.LightClientHeader.defaultValue(),
       fulu: ssz.deneb.LightClientHeader.defaultValue(),
       gloas: ssz.deneb.LightClientHeader.defaultValue(),
+      heze: ssz.deneb.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -43,6 +45,7 @@ describe("UpgradeLightClientHeader", () => {
       electra: 164,
       fulu: 216,
       gloas: 235,
+      heze: 260,
     };
   });
 

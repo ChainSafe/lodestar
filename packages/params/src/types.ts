@@ -104,6 +104,10 @@ export type BeaconPreset = {
   FIELD_ELEMENTS_PER_EXT_BLOB: number;
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: number;
 
+  // HEZE
+  ///////////
+  INCLUSION_LIST_COMMITTEE_SIZE: number;
+
   // GLOAS
   PTC_SIZE: number;
   MAX_PAYLOAD_ATTESTATIONS: number;
@@ -218,6 +222,10 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   FIELD_ELEMENTS_PER_CELL: "number",
   FIELD_ELEMENTS_PER_EXT_BLOB: "number",
   KZG_COMMITMENTS_INCLUSION_PROOF_DEPTH: "number",
+
+  // HEZE
+  ///////////
+  INCLUSION_LIST_COMMITTEE_SIZE: "number",
 
   // GLOAS
   PTC_SIZE: "number",
