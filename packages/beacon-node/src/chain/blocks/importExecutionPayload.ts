@@ -20,7 +20,6 @@ import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
-import {toApiPayloadStatus} from "./importBlock.js";
 import {ImportPayloadOpts} from "./types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -267,7 +266,7 @@ export async function importExecutionPayload(
     });
   }
 
-  if (this.headV2PayloadStatusCache.get(head.blockRoot)?.status !== PayloadStatus.FULL) {
+  if (this.headV2PayloadStatusCache.get(head.blockRoot)?.status !== PayloadStatus.FULL && head.payloadStatus === PayloadStatus.FULL) {
     try {
       this.emitter.emit(routes.events.EventType.headV2, {
         version: this.config.getForkName(head.slot),
@@ -275,14 +274,14 @@ export async function importExecutionPayload(
           slot: head.slot,
           block: head.blockRoot,
           state: head.stateRoot,
-          payloadStatus: toApiPayloadStatus(head.payloadStatus),
+          payloadStatus: "full",
           epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
           currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
           nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
           executionOptimistic: isOptimisticBlock(head),
         },
       });
-      this.headV2PayloadStatusCache.set(head.blockRoot, {status: head.payloadStatus, slot: head.slot});
+      this.headV2PayloadStatusCache.set(head.blockRoot, {status: PayloadStatus.FULL, slot: head.slot});
       this.metrics?.headV2PayloadStatusCacheSize.set(this.headV2PayloadStatusCache.size);
     } catch (e) {
       this.logger.debug("Error emitting head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
