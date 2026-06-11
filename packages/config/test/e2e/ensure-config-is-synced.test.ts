@@ -15,10 +15,6 @@ import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
 const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // BLOB_SCHEDULE is an array/JSON format that requires special parsing
   "BLOB_SCHEDULE" as keyof ChainConfig,
-  // HEZE (EIP-7805 Inclusion Lists) - timing params absent in the heze boilerplate (FOCIL feature, not yet implemented)
-  "VIEW_FREEZE_CUTOFF_BPS" as keyof ChainConfig,
-  "INCLUSION_LIST_SUBMISSION_DUE_BPS" as keyof ChainConfig,
-  "PROPOSER_INCLUSION_LIST_CUTOFF_BPS" as keyof ChainConfig,
   // Networking params that may be in presets instead of chainConfig
   "ATTESTATION_SUBNET_COUNT" as keyof ChainConfig,
   "ATTESTATION_SUBNET_EXTRA_BITS" as keyof ChainConfig,
