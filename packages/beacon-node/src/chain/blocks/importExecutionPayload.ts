@@ -283,6 +283,7 @@ export async function importExecutionPayload(
         },
       });
       this.headV2PayloadStatusCache.set(head.blockRoot, {status: head.payloadStatus, slot: head.slot});
+      this.metrics?.headV2PayloadStatusCacheSize.set(this.headV2PayloadStatusCache.size);
     } catch (e) {
       this.logger.debug("Error emitting head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
     }

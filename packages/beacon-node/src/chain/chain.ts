@@ -1502,6 +1502,7 @@ export class BeaconChain implements IBeaconChain {
         this.headV2PayloadStatusCache.delete(blockRoot);
       }
     }
+    this.metrics?.headV2PayloadStatusCacheSize.set(this.headV2PayloadStatusCache.size);
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {
