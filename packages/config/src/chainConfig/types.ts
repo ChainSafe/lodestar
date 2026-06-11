@@ -143,6 +143,8 @@ export type ChainConfig = {
   MAX_REQUEST_INCLUSION_LIST: number;
   MAX_BYTES_PER_INCLUSION_LIST: number;
   INCLUSION_LIST_COMMITTEE_SIZE: number;
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -274,6 +276,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",
+
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: "number",
 };
 
 export type BlobScheduleEntry = {

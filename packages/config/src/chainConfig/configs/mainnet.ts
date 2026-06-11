@@ -221,4 +221,8 @@ export const chainConfig: ChainConfig = {
       MAX_BLOBS_PER_BLOCK: 21,
     },
   ],
+
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };

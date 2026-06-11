@@ -1,6 +1,7 @@
 import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {ForkChoiceStateGetter, IFastConfirmationStore} from "./fastConfirmation/types.ts";
 import {CheckpointWithBalance, CheckpointWithTotalBalance} from "./interface.js";
 
 /**
@@ -38,7 +39,7 @@ export type JustifiedBalancesGetter = (
  * - The actual block DAG in `ProtoArray`.
  * - `time` is represented using `Slot` instead of UNIX epoch `u64`.
  */
-export interface IForkChoiceStore {
+export interface IForkChoiceStore extends IFastConfirmationStore {
   currentSlot: Slot;
   get justified(): CheckpointWithTotalBalance;
   set justified(justified: CheckpointWithBalance);
@@ -48,6 +49,7 @@ export interface IForkChoiceStore {
   justifiedBalancesGetter: JustifiedBalancesGetter;
   equivocatingIndices: Set<ValidatorIndex>;
   payloadInclusionListSatisfaction: PayloadInclusionListSatisfactionStore;
+  notifyFastConfirmation?(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void;
 }
 
 /**
@@ -63,19 +65,36 @@ export class ForkChoiceStore implements IForkChoiceStore {
   currentSlot: Slot;
   payloadInclusionListSatisfaction = new PayloadInclusionListSatisfactionStore();
 
+  // Fast Confirmation Rule spec fields
+  confirmedRoot: RootHex;
+  previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
+  previousEpochGreatestUnrealizedCheckpoint: CheckpointWithHex;
+  previousSlotHead: RootHex;
+  currentSlotHead: RootHex;
+
+  // Fast Confirmation Rule internal fields
+  previousEpochObservedJustifiedBalances: JustifiedBalances;
+  currentEpochObservedJustifiedBalances: JustifiedBalances;
+  previousEpochGreatestUnrealizedBalances: JustifiedBalances;
+  stateGetter: ForkChoiceStateGetter;
+
   constructor(
     currentSlot: Slot,
     justifiedCheckpoint: phase0.Checkpoint,
     finalizedCheckpoint: phase0.Checkpoint,
     justifiedBalances: EffectiveBalanceIncrements,
     justifiedBalancesGetter: JustifiedBalancesGetter,
+    stateGetter: ForkChoiceStateGetter,
     private readonly events?: {
       onJustified: (cp: CheckpointWithHex) => void;
       onFinalized: (cp: CheckpointWithHex) => void;
+      onFastConfirmation?: (data: {block: RootHex; slot: Slot; currentSlot: Slot}) => void;
     }
   ) {
     this.justifiedBalancesGetter = justifiedBalancesGetter;
     this.currentSlot = currentSlot;
+    this.stateGetter = stateGetter;
     const justified = {
       checkpoint: toCheckpointWithHex(justifiedCheckpoint),
       balances: justifiedBalances,
@@ -85,6 +104,22 @@ export class ForkChoiceStore implements IForkChoiceStore {
     this.unrealizedJustified = justified;
     this._finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
     this.unrealizedFinalizedCheckpoint = this._finalizedCheckpoint;
+
+    // Initialize Fast Confirmation fields conservatively from finalized, matching
+    // the spec's get_fast_confirmation_store() behavior.
+    const finalizedCheckpointWithHex = toCheckpointWithHex(finalizedCheckpoint);
+    const finalizedState = stateGetter({checkpoint: finalizedCheckpointWithHex});
+    const finalizedBalances = finalizedState?.effectiveBalanceIncrements ?? justifiedBalances;
+    const anchorRoot = finalizedCheckpointWithHex.rootHex;
+    this.previousEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
+    this.currentEpochObservedJustifiedCheckpoint = finalizedCheckpointWithHex;
+    this.previousEpochGreatestUnrealizedCheckpoint = finalizedCheckpointWithHex;
+    this.confirmedRoot = anchorRoot;
+    this.previousEpochObservedJustifiedBalances = finalizedBalances;
+    this.currentEpochObservedJustifiedBalances = finalizedBalances;
+    this.previousEpochGreatestUnrealizedBalances = finalizedBalances;
+    this.previousSlotHead = anchorRoot;
+    this.currentSlotHead = anchorRoot;
   }
 
   get justified(): CheckpointWithTotalBalance {
@@ -102,6 +137,15 @@ export class ForkChoiceStore implements IForkChoiceStore {
     const cp = toCheckpointWithHex(checkpoint);
     this._finalizedCheckpoint = cp;
     this.events?.onFinalized(cp);
+  }
+
+  /**
+   * Notify subscribers that the Fast Confirmation Rule executed and produced
+   * `data.block` at `data.slot`. Fires once per FCR execution, even when
+   * `confirmedRoot` did not change from the prior slot.
+   */
+  notifyFastConfirmation(data: {block: RootHex; slot: Slot; currentSlot: Slot}): void {
+    this.events?.onFastConfirmation?.(data);
   }
 }
 

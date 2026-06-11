@@ -108,6 +108,8 @@ export interface IForkChoice {
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
   getAttesterHead(): ProtoBlock;
+  getConfirmedRoot(): RootHex;
+  getConfirmedBlock(): ProtoBlock | null;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;

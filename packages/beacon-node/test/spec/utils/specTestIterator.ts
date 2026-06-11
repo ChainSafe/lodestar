@@ -30,6 +30,7 @@ export interface SkipOpts {
 const coveredTestRunners = [
   "light_client",
   "epoch_processing",
+  "fast_confirmation",
   "finality",
   "fork",
   "fork_choice",
@@ -79,7 +80,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     // TODO-GLOAS: re-enable after Gloas light client is implemented
     /^gloas\/light_client\/.*/,
-    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/
+    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
     /^heze\/light_client\/.*/,
     /^heze\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
   ],

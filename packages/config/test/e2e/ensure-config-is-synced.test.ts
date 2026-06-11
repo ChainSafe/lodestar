@@ -29,8 +29,6 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   "CHURN_LIMIT_QUOTIENT_GLOAS" as keyof ChainConfig,
   "CONSOLIDATION_CHURN_LIMIT_QUOTIENT" as keyof ChainConfig,
   "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" as keyof ChainConfig,
-  // FCR params - not yet implemented in Lodestar
-  "CONFIRMATION_BYZANTINE_THRESHOLD" as keyof ChainConfig,
   // Future forks not yet implemented in Lodestar
   "HEZE_FORK_VERSION" as keyof ChainConfig,
   "HEZE_FORK_EPOCH" as keyof ChainConfig,

@@ -205,4 +205,7 @@ export const chainConfig: ChainConfig = {
   MAX_BYTES_PER_INCLUSION_LIST: 8192,
   // 2**4 (= 16)
   INCLUSION_LIST_COMMITTEE_SIZE: 16,
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };
