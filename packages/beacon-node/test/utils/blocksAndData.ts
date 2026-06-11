@@ -35,21 +35,21 @@ export const CAPELLA_FORK_EPOCH = 0;
 export const DENEB_FORK_EPOCH = 10;
 export const ELECTRA_FORK_EPOCH = 20;
 export const FULU_FORK_EPOCH = 30;
-export const HEZE_FORK_EPOCH = 40;
-export const GLOAS_FORK_EPOCH = 50;
+export const GLOAS_FORK_EPOCH = 40;
+export const HEZE_FORK_EPOCH = 50;
 export const config = createChainForkConfig({
   ...defaultChainConfig,
   CAPELLA_FORK_EPOCH,
   DENEB_FORK_EPOCH,
   ELECTRA_FORK_EPOCH,
   FULU_FORK_EPOCH,
-  HEZE_FORK_EPOCH,
   GLOAS_FORK_EPOCH,
+  HEZE_FORK_EPOCH,
 });
 export const clock = new Clock({
   config,
   // For our testing we want the clock to be at head of the latest fork
-  genesisTime: Date.now() / 1000 - SLOTS_PER_EPOCH * GLOAS_FORK_EPOCH * (config.SLOT_DURATION_MS / 1000),
+  genesisTime: Date.now() / 1000 - SLOTS_PER_EPOCH * HEZE_FORK_EPOCH * (config.SLOT_DURATION_MS / 1000),
   signal: new AbortController().signal,
 });
 export const privateKey = await generateKeyPair("secp256k1");
@@ -61,8 +61,8 @@ export const slots: Record<ForkPostCapella, number> = {
   deneb: computeStartSlotAtEpoch(DENEB_FORK_EPOCH),
   electra: computeStartSlotAtEpoch(ELECTRA_FORK_EPOCH),
   fulu: computeStartSlotAtEpoch(FULU_FORK_EPOCH),
-  heze: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
   gloas: computeStartSlotAtEpoch(GLOAS_FORK_EPOCH),
+  heze: computeStartSlotAtEpoch(HEZE_FORK_EPOCH),
 };
 
 /**

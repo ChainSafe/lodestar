@@ -81,21 +81,21 @@ function getForkConfig({
       prevVersion: Buffer.from([0, 0, 0, 5]),
       prevForkName: ForkName.electra,
     },
-    heze: {
-      name: ForkName.heze,
-      seq: ForkSeq.heze,
-      epoch: heze,
-      version: Buffer.from([0, 0, 0, 7]),
-      prevVersion: Buffer.from([0, 0, 0, 6]),
-      prevForkName: ForkName.fulu,
-    },
     gloas: {
       name: ForkName.gloas,
       seq: ForkSeq.gloas,
       epoch: gloas,
+      version: Buffer.from([0, 0, 0, 7]),
+      prevVersion: Buffer.from([0, 0, 0, 6]),
+      prevForkName: ForkName.fulu,
+    },
+    heze: {
+      name: ForkName.heze,
+      seq: ForkSeq.heze,
+      epoch: heze,
       version: Buffer.from([0, 0, 0, 8]),
       prevVersion: Buffer.from([0, 0, 0, 7]),
-      prevForkName: ForkName.heze,
+      prevForkName: ForkName.gloas,
     },
   };
   const forksAscendingEpochOrder = Object.values(forks);

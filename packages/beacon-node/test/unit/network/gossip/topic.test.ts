@@ -6,7 +6,7 @@ import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/networ
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
 
 describe("network / gossip / topic", () => {
-  const config = createBeaconConfig({...chainConfig, HEZE_FORK_EPOCH: 600000, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
+  const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 600000, HEZE_FORK_EPOCH: 700000}, ZERO_HASH);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
