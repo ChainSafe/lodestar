@@ -69,13 +69,6 @@ exceptions:
     - PartialDataColumnPartsMetadata#fulu
     - PartialDataColumnSidecar#fulu
 
-    # heze (not implemented)
-    - BeaconState#heze
-    - ExecutionPayloadBid#heze
-    - InclusionList#heze
-    - SignedExecutionPayloadBid#heze
-    - SignedInclusionList#heze
-
   dataclasses:
     # phase0
     - ForkChoiceNode#phase0
