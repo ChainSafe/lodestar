@@ -1,4 +1,6 @@
 import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
   BYTES_PER_FIELD_ELEMENT,
   BYTES_PER_LOGS_BLOOM,
   CELLS_PER_EXT_BLOB,
@@ -205,16 +207,27 @@ export type WithdrawalRpc = {
 };
 
 /**
- * ExecutionRequestsRpc only holds at most 3 elements and no repeated type:
- * - ssz'ed DepositRequests
- * - ssz'ed WithdrawalRequests
- * - ssz'ed ConsolidationRequests
+ * ExecutionRequestsRpc holds at most 5 elements and no repeated type, ordered by
+ * the single-byte request type prefix:
+ * - ssz'ed DepositRequests          (0x00)
+ * - ssz'ed WithdrawalRequests       (0x01)
+ * - ssz'ed ConsolidationRequests    (0x02)
+ * - ssz'ed BuilderDepositRequests   (0x03, GLOAS:EIP-8282)
+ * - ssz'ed BuilderExitRequests      (0x04, GLOAS:EIP-8282)
  */
-export type ExecutionRequestsRpc = (DepositRequestsRpc | WithdrawalRequestsRpc | ConsolidationRequestsRpc)[];
+export type ExecutionRequestsRpc = (
+  | DepositRequestsRpc
+  | WithdrawalRequestsRpc
+  | ConsolidationRequestsRpc
+  | BuilderDepositRequestsRpc
+  | BuilderExitRequestsRpc
+)[];
 
 export type DepositRequestsRpc = DATA;
 export type WithdrawalRequestsRpc = DATA;
 export type ConsolidationRequestsRpc = DATA;
+export type BuilderDepositRequestsRpc = DATA;
+export type BuilderExitRequestsRpc = DATA;
 
 export type BlobAndProofRpc = {
   blob: DATA;
@@ -526,13 +539,36 @@ function deserializeConsolidationRequests(serialized: ConsolidationRequestsRpc):
   return ssz.electra.ConsolidationRequests.deserialize(dataToBytes(serialized, null));
 }
 
+function serializeBuilderDepositRequests(
+  builderDepositRequests: gloas.BuilderDepositRequests
+): BuilderDepositRequestsRpc {
+  const requestsBytes = ssz.gloas.BuilderDepositRequests.serialize(builderDepositRequests);
+  return bytesToData(prefixRequests(requestsBytes, BUILDER_DEPOSIT_REQUEST_TYPE));
+}
+
+function deserializeBuilderDepositRequests(serialized: BuilderDepositRequestsRpc): gloas.BuilderDepositRequests {
+  return ssz.gloas.BuilderDepositRequests.deserialize(dataToBytes(serialized, null));
+}
+
+function serializeBuilderExitRequests(builderExitRequests: gloas.BuilderExitRequests): BuilderExitRequestsRpc {
+  const requestsBytes = ssz.gloas.BuilderExitRequests.serialize(builderExitRequests);
+  return bytesToData(prefixRequests(requestsBytes, BUILDER_EXIT_REQUEST_TYPE));
+}
+
+function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): gloas.BuilderExitRequests {
+  return ssz.gloas.BuilderExitRequests.deserialize(dataToBytes(serialized, null));
+}
+
 /**
  * This is identical to get_execution_requests_list in
  * https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.8/specs/electra/beacon-chain.md#new-get_execution_requests_list
+ *
+ * Gloas extends the list with builder deposits (0x03) and builder exits (0x04) per
+ * https://github.com/ethereum/consensus-specs/pull/5359 (EIP-8282).
  */
 export function serializeExecutionRequests(executionRequests: ExecutionRequests): ExecutionRequestsRpc {
   const {deposits, withdrawals, consolidations} = executionRequests;
-  const result = [];
+  const result: ExecutionRequestsRpc = [];
 
   if (deposits.length !== 0) {
     result.push(serializeDepositRequests(deposits));
@@ -546,14 +582,27 @@ export function serializeExecutionRequests(executionRequests: ExecutionRequests)
     result.push(serializeConsolidationRequests(consolidations));
   }
 
+  const gloasRequests = executionRequests as Partial<gloas.ExecutionRequests>;
+  if (gloasRequests.builderDeposits !== undefined && gloasRequests.builderDeposits.length !== 0) {
+    result.push(serializeBuilderDepositRequests(gloasRequests.builderDeposits));
+  }
+
+  if (gloasRequests.builderExits !== undefined && gloasRequests.builderExits.length !== 0) {
+    result.push(serializeBuilderExitRequests(gloasRequests.builderExits));
+  }
+
   return result;
 }
 
 export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): ExecutionRequests {
-  const result: ExecutionRequests = {
+  // Gloas-shaped result is a structural superset of electra/fulu — extra fields are dropped on
+  // assignment to fork-narrower types at the call site.
+  const result: gloas.ExecutionRequests = {
     deposits: [],
     withdrawals: [],
     consolidations: [],
+    builderDeposits: [],
+    builderExits: [],
   };
 
   if (serialized.length === 0) {
@@ -599,6 +648,14 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
       }
       case CONSOLIDATION_REQUEST_TYPE: {
         result.consolidations = deserializeConsolidationRequests(requests);
+        break;
+      }
+      case BUILDER_DEPOSIT_REQUEST_TYPE: {
+        result.builderDeposits = deserializeBuilderDepositRequests(requests);
+        break;
+      }
+      case BUILDER_EXIT_REQUEST_TYPE: {
+        result.builderExits = deserializeBuilderExitRequests(requests);
         break;
       }
     }

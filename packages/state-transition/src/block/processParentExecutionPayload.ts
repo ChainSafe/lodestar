@@ -1,9 +1,10 @@
 import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {BeaconBlock, electra, ssz} from "@lodestar/types";
+import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
-import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
+import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
+import {processBuilderExitRequest} from "./processBuilderExitRequest.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
@@ -26,7 +27,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   }
 
   // Parent was FULL -- verify the bid commitment and apply the payload
-  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(requests);
+  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(requests);
   if (!byteArrayEquals(requestsRoot, parentBid.executionRequestsRoot)) {
     throw new Error(
       `Parent execution requests root mismatch actual=${toRootHex(requestsRoot)} expected=${toRootHex(parentBid.executionRequestsRoot)}`
@@ -45,7 +46,7 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
-export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: electra.ExecutionRequests): void {
+export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: gloas.ExecutionRequests): void {
   const fork = state.config.getForkSeq(state.slot);
   const parentBid = state.latestExecutionPayloadBid;
   const parentSlot = parentBid.slot;
@@ -54,11 +55,8 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
 
   // Process execution requests from parent's payload. The execution
   // requests are processed at state.slot (child's slot), not the parent's slot.
-  if (requests.deposits.length > 0) {
-    const pendingDepositsLookup = PendingDepositsLookup.build(state);
-    for (const deposit of requests.deposits) {
-      processDepositRequest(fork, state, deposit, pendingDepositsLookup);
-    }
+  for (const deposit of requests.deposits) {
+    processDepositRequest(fork, state, deposit);
   }
 
   for (const withdrawal of requests.withdrawals) {
@@ -67,6 +65,16 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
 
   for (const consolidation of requests.consolidations) {
     processConsolidationRequest(state, consolidation);
+  }
+
+  // [New in Gloas:EIP8282]
+  for (const builderDeposit of requests.builderDeposits) {
+    processBuilderDepositRequest(state, builderDeposit);
+  }
+
+  // [New in Gloas:EIP8282]
+  for (const builderExit of requests.builderExits) {
+    processBuilderExitRequest(state, builderExit);
   }
 
   // Settle the builder payment
@@ -110,8 +118,14 @@ function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: numbe
   state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
 }
 
-function assertEmptyExecutionRequests(requests: electra.ExecutionRequests): void {
-  if (requests.deposits.length !== 0 || requests.withdrawals.length !== 0 || requests.consolidations.length !== 0) {
+function assertEmptyExecutionRequests(requests: gloas.ExecutionRequests): void {
+  if (
+    requests.deposits.length !== 0 ||
+    requests.withdrawals.length !== 0 ||
+    requests.consolidations.length !== 0 ||
+    requests.builderDeposits.length !== 0 ||
+    requests.builderExits.length !== 0
+  ) {
     throw new Error("Parent execution requests must be empty when parent block is EMPTY");
   }
 }

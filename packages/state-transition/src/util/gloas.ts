@@ -1,8 +1,11 @@
+import {PublicKey, Signature, verify} from "@chainsafe/blst";
+import {BeaconConfig} from "@lodestar/config";
 import {
   BUILDER_INDEX_FLAG,
   BUILDER_PAYMENT_THRESHOLD_DENOMINATOR,
   BUILDER_PAYMENT_THRESHOLD_NUMERATOR,
   BUILDER_WITHDRAWAL_PREFIX,
+  DOMAIN_BUILDER_DEPOSIT,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   MIN_DEPOSIT_AMOUNT,
@@ -10,15 +13,18 @@ import {
   PTC_SIZE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {BuilderIndex, Epoch, ValidatorIndex, gloas} from "@lodestar/types";
+import {BuilderIndex, Epoch, ValidatorIndex, gloas, ssz} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
+import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";
+import {computeDomain} from "./domain.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {computeEpochShuffling} from "./epochShuffling.js";
 import {RootCache} from "./rootCache.js";
 import {computePayloadTimelinessCommitteesForEpoch} from "./seed.js";
+import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
@@ -240,4 +246,72 @@ export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
     payloadTimelinessCommittees: toUint32Arrays(currentPtcWindow),
     nextPayloadTimelinessCommittees: toUint32Arrays(nextPtcWindow),
   };
+}
+
+/**
+ * Add a new builder to the builders registry. Reuses slots from exited and fully withdrawn
+ * builders when available, otherwise appends.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-add_builder_to_registry
+ */
+export function addBuilderToRegistry(
+  state: CachedBeaconStateGloas,
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  slot: number
+): void {
+  const currentEpoch = computeEpochAtSlot(state.slot);
+  const depositEpoch = computeEpochAtSlot(slot);
+
+  let builderIndex = state.builders.length;
+  for (let i = 0; i < state.builders.length; i++) {
+    const builder = state.builders.getReadonly(i);
+    if (builder.withdrawableEpoch <= currentEpoch && builder.balance === 0) {
+      builderIndex = i;
+      break;
+    }
+  }
+
+  const newBuilder = ssz.gloas.Builder.toViewDU({
+    pubkey,
+    version,
+    executionAddress,
+    balance: amount,
+    depositEpoch,
+    withdrawableEpoch: FAR_FUTURE_EPOCH,
+  });
+
+  if (builderIndex < state.builders.length) {
+    state.builders.set(builderIndex, newBuilder);
+  } else {
+    state.builders.push(newBuilder);
+  }
+}
+
+/**
+ * Verify the proof of possession on a builder deposit request.
+ *
+ * The dedicated `DOMAIN_BUILDER_DEPOSIT` (vs the validator `DOMAIN_DEPOSIT`) prevents replay
+ * of validator deposit signatures against the builder deposit contract and vice versa.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-is_valid_builder_deposit_signature
+ */
+export function isValidBuilderDepositSignature(config: BeaconConfig, request: gloas.BuilderDepositRequest): boolean {
+  const depositMessage = {
+    pubkey: request.pubkey,
+    withdrawalCredentials: request.withdrawalCredentials,
+    amount: request.amount,
+  };
+  // fork-agnostic domain, matching validator deposit signing
+  const domain = computeDomain(DOMAIN_BUILDER_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
+  try {
+    const publicKey = PublicKey.fromBytes(request.pubkey, true);
+    const signature = Signature.fromBytes(request.signature, true);
+    return verify(signingRoot, publicKey, signature);
+  } catch (_e) {
+    return false;
+  }
 }
