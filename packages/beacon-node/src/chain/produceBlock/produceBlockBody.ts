@@ -350,7 +350,7 @@ export async function produceBlockBody<T extends BlockType>(
       value: 0,
       executionPayment: 0,
       blobKzgCommitments: blobsBundle.commitments,
-      executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
+      executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
