@@ -14,10 +14,6 @@ export function processDepositRequest(
     // mechanism was removed.
     state.depositRequestsStartIndex = depositRequest.index;
   }
-  // Note: `process_deposit_request` is intentionally unchanged in Gloas — builder onboarding moved to
-  // `process_builder_deposit_request`. A regular DepositRequest carrying `BUILDER_WITHDRAWAL_PREFIX = 0x03`
-  // still creates a regular validator (see consensus-specs #5359); the prefix is only meaningful for
-  // pre-fork pending deposits handled by `onboard_builders_from_pending_deposits` at the fork.
 
   // Add validator deposits to the queue
   const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
