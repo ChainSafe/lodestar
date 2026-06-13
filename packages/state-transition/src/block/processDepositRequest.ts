@@ -1,7 +1,7 @@
 import {ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {addBuilderToRegistry, findBuilderIndexByPubkey, isValidBuilderDepositSignature} from "../util/gloas.js";
 
 export function processDepositRequest(
   fork: ForkSeq,
@@ -10,16 +10,10 @@ export function processDepositRequest(
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
-  if (fork >= ForkSeq.gloas) {
-    // [New in Gloas:EIP8282] Builder-credentialed deposits on the validator deposit contract are
-    // inert post-fork: not appended to pending_deposits, ETH forfeited in the immutable deposit
-    // contract. Builders are created and topped up only via BuilderDepositRequest.
-    if (isBuilderWithdrawalCredential(withdrawalCredentials)) {
-      return;
-    }
-  } else if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+  if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     // depositRequestsStartIndex is only set in Electra. From Fulu the eth1 bridge deposit
-    // mechanism was removed.
+    // mechanism was removed. In Gloas (EIP-8282) `process_deposit_request` is unchanged from
+    // Fulu — builder onboarding is handled by `processBuilderDepositRequest`.
     state.depositRequestsStartIndex = depositRequest.index;
   }
 
@@ -32,4 +26,33 @@ export function processDepositRequest(
     slot: state.slot,
   });
   state.pendingDeposits.push(pendingDeposit);
+}
+
+/**
+ * Register a new builder or top up an existing builder's balance from a deposit.
+ * Verifies the proof of possession on first appearance; top-ups ignore credentials and signature.
+ *
+ * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-apply_deposit_for_builder
+ */
+export function applyDepositForBuilder(
+  state: CachedBeaconStateGloas,
+  pubkey: Uint8Array,
+  withdrawalCredentials: Uint8Array,
+  amount: number,
+  signature: Uint8Array,
+  slot: number
+): void {
+  const builderIndex = findBuilderIndexByPubkey(state, pubkey);
+
+  if (builderIndex === null) {
+    if (isValidBuilderDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
+      addBuilderToRegistry(state, pubkey, withdrawalCredentials[0], withdrawalCredentials.subarray(12), amount, slot);
+    }
+    return;
+  }
+
+  // Top up an existing builder. Withdrawal credentials and signature are ignored — the existing
+  // registration is unchanged, matching the validator deposit contract's top-up semantics.
+  const builder = state.builders.get(builderIndex);
+  builder.balance += amount;
 }

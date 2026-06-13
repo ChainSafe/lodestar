@@ -298,19 +298,21 @@ export function addBuilderToRegistry(
  *
  * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-is_valid_builder_deposit_signature
  */
-export function isValidBuilderDepositSignature(config: BeaconConfig, request: gloas.BuilderDepositRequest): boolean {
-  const depositMessage = {
-    pubkey: request.pubkey,
-    withdrawalCredentials: request.withdrawalCredentials,
-    amount: request.amount,
-  };
+export function isValidBuilderDepositSignature(
+  config: BeaconConfig,
+  pubkey: Uint8Array,
+  withdrawalCredentials: Uint8Array,
+  amount: number,
+  signature: Uint8Array
+): boolean {
+  const depositMessage = {pubkey, withdrawalCredentials, amount};
   // fork-agnostic domain, matching validator deposit signing
   const domain = computeDomain(DOMAIN_BUILDER_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   try {
-    const publicKey = PublicKey.fromBytes(request.pubkey, true);
-    const signature = Signature.fromBytes(request.signature, true);
-    return verify(signingRoot, publicKey, signature);
+    const publicKey = PublicKey.fromBytes(pubkey, true);
+    const sig = Signature.fromBytes(signature, true);
+    return verify(signingRoot, publicKey, sig);
   } catch (_e) {
     return false;
   }
