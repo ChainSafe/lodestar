@@ -1,7 +1,6 @@
 import {ForkSeq, UNSET_DEPOSIT_REQUESTS_START_INDEX} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
 import {CachedBeaconStateElectra, CachedBeaconStateGloas} from "../types.js";
-import {isBuilderWithdrawalCredential} from "../util/gloas.js";
 
 export function processDepositRequest(
   fork: ForkSeq,
@@ -10,18 +9,15 @@ export function processDepositRequest(
 ): void {
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
-  if (fork >= ForkSeq.gloas) {
-    // [New in Gloas:EIP8282] Builder-credentialed deposits on the validator deposit contract are
-    // inert post-fork: not appended to pending_deposits, ETH forfeited in the immutable deposit
-    // contract. Builders are created and topped up only via BuilderDepositRequest.
-    if (isBuilderWithdrawalCredential(withdrawalCredentials)) {
-      return;
-    }
-  } else if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
+  if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     // depositRequestsStartIndex is only set in Electra. From Fulu the eth1 bridge deposit
     // mechanism was removed.
     state.depositRequestsStartIndex = depositRequest.index;
   }
+  // Note: `process_deposit_request` is intentionally unchanged in Gloas — builder onboarding moved to
+  // `process_builder_deposit_request`. A regular DepositRequest carrying `BUILDER_WITHDRAWAL_PREFIX = 0x03`
+  // still creates a regular validator (see consensus-specs #5359); the prefix is only meaningful for
+  // pre-fork pending deposits handled by `onboard_builders_from_pending_deposits` at the fork.
 
   // Add validator deposits to the queue
   const pendingDeposit = ssz.electra.PendingDeposit.toViewDU({
