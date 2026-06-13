@@ -12,8 +12,7 @@ export function processDepositRequest(
 
   if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
     // depositRequestsStartIndex is only set in Electra. From Fulu the eth1 bridge deposit
-    // mechanism was removed. In Gloas (EIP-8282) `process_deposit_request` is unchanged from
-    // Fulu — builder onboarding is handled by `processBuilderDepositRequest`.
+    // mechanism was removed.
     state.depositRequestsStartIndex = depositRequest.index;
   }
 
