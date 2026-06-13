@@ -750,10 +750,21 @@ export function getBeaconBlockApi({
           peerIdStr: undefined,
         });
       } else {
-        chain.logger.debug("Execution payload envelope already set, skipping duplicate", {
-          slot,
-          blockRoot: blockRootHex,
-        });
+        const existingEnvelope = payloadInput.getPayloadEnvelope();
+        const existingBlockHashHex = toRootHex(existingEnvelope.message.payload.blockHash);
+        if (blockHashHex !== existingBlockHashHex) {
+          chain.logger.warn("Execution payload envelope already set with a DIFFERENT block hash", {
+            slot,
+            blockRoot: blockRootHex,
+            existingBlockHash: existingBlockHashHex,
+            newBlockHash: blockHashHex,
+          });
+        } else {
+          chain.logger.debug("Execution payload envelope already set, skipping duplicate", {
+            slot,
+            blockRoot: blockRootHex,
+          });
+        }
       }
 
       if (dataColumnSidecars.length > 0) {
