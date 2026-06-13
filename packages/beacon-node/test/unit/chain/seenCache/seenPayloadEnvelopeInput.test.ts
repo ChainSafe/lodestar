@@ -1,12 +1,11 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
-import {MAX_LOOK_AHEAD_EPOCHS} from "../../../../src/sync/constants.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getMockedClock} from "../../../mocks/clock.js";
 import {config, generateBlock} from "../../../utils/blocksAndData.js";
@@ -115,43 +114,6 @@ describe("SeenPayloadEnvelopeInput", () => {
     cache.pruneBelowParent(parentBlock);
 
     expect(cache.get(rootHex)).toBeDefined();
-  });
-
-  it("pruneToMaxSize bounds the cache on insertion, evicting the lowest-slot entries", () => {
-    // pruneFinalized / pruneBelowParent never run here, so the insertion-time cap is the only bound
-    const maxSize = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
-    const overflow = 5;
-
-    const rootHexBySlot = new Map<number, string>();
-    for (let slot = 1; slot <= maxSize + overflow; slot++) {
-      rootHexBySlot.set(slot, addPayloadInput(slot));
-    }
-
-    // never grows past the cap despite no finality-based pruning
-    expect(cache.size()).toBe(maxSize);
-
-    // the oldest (lowest-slot) entries are evicted ...
-    for (let slot = 1; slot <= overflow; slot++) {
-      expect(cache.get(rootHexBySlot.get(slot) as string)).toBeUndefined();
-    }
-    // ... and the most recent window is retained
-    for (let slot = overflow + 1; slot <= maxSize + overflow; slot++) {
-      expect(cache.get(rootHexBySlot.get(slot) as string)).toBeDefined();
-    }
-  });
-
-  it("excludes the just-inserted entry from pruning even when it is the lowest slot", () => {
-    const maxSize = (MAX_LOOK_AHEAD_EPOCHS + 1) * SLOTS_PER_EPOCH;
-    const prevLowest = addPayloadInput(101);
-    for (let slot = 102; slot < 101 + maxSize; slot++) addPayloadInput(slot);
-    expect(cache.size()).toBe(maxSize);
-
-    // adding an older block (lowest slot) while at cap must not evict itself; the previous lowest
-    // (slot 101) is evicted instead. Guards the reorg / older-fork case.
-    const older = addPayloadInput(1);
-    expect(cache.size()).toBe(maxSize);
-    expect(cache.get(older)).toBeDefined();
-    expect(cache.get(prevLowest)).toBeUndefined();
   });
 
   it("add returns the existing entry on duplicate root", () => {
