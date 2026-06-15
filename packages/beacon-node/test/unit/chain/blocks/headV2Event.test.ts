@@ -7,9 +7,10 @@ import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeac
 
 const {EventType} = routes.events;
 
-const blockRoot = "0xaabb";
+const blockRoot1 = "0xaabb";
+const blockRoot2 = "0xbbcc";
 
-function protoBlock(slot: number, payloadStatus: PayloadStatus): ProtoBlock {
+function protoBlock(blockRoot: string, slot: number, payloadStatus: PayloadStatus): ProtoBlock {
   return {
     slot,
     blockRoot,
@@ -47,7 +48,7 @@ describe("head_v2 event emission", () => {
     const events: routes.events.EventData[typeof EventType.headV2][] = [];
     chain.emitter.on(EventType.headV2, (data) => events.push(data));
 
-    emitHeadV2.call(chain, protoBlock(slot, PayloadStatus.EMPTY));
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.EMPTY), true);
 
     expect(events).toHaveLength(1);
     expect(events[0].data.payloadStatus).toBe("empty");
@@ -57,8 +58,8 @@ describe("head_v2 event emission", () => {
     const events: routes.events.EventData[typeof EventType.headV2][] = [];
     chain.emitter.on(EventType.headV2, (data) => events.push(data));
 
-    emitHeadV2.call(chain, protoBlock(slot, PayloadStatus.EMPTY));
-    emitHeadV2.call(chain, protoBlock(slot, PayloadStatus.FULL));
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.EMPTY), true);
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.FULL), false);
 
     expect(events).toHaveLength(2);
     expect(events[0].data.payloadStatus).toBe("empty");
@@ -69,8 +70,8 @@ describe("head_v2 event emission", () => {
     const events: routes.events.EventData[typeof EventType.headV2][] = [];
     chain.emitter.on(EventType.headV2, (data) => events.push(data));
 
-    emitHeadV2.call(chain, protoBlock(slot, PayloadStatus.EMPTY));
-    emitHeadV2.call(chain, protoBlock(slot, PayloadStatus.EMPTY));
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.EMPTY), true);
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.EMPTY), false);
 
     expect(events).toHaveLength(1);
     expect(events[0].data.payloadStatus).toBe("empty");
@@ -80,10 +81,22 @@ describe("head_v2 event emission", () => {
     const events: routes.events.EventData[typeof EventType.headV2][] = [];
     chain.emitter.on(EventType.headV2, (data) => events.push(data));
 
-    emitHeadV2.call(chain, protoBlock(slot, PayloadStatus.FULL));
-    emitHeadV2.call(chain, protoBlock(slot, PayloadStatus.FULL));
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.FULL), true);
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.FULL), false);
 
     expect(events).toHaveLength(1);
+    expect(events[0].data.payloadStatus).toBe("full");
+  });
+
+  it("re-emits on head change to already-cached root (reorg)", () => {
+    const events: routes.events.EventData[typeof EventType.headV2][] = [];
+    chain.emitter.on(EventType.headV2, (data) => events.push(data));
+
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.FULL), true);
+    emitHeadV2.call(chain, protoBlock(blockRoot2, slot, PayloadStatus.FULL), true);
+    emitHeadV2.call(chain, protoBlock(blockRoot1, slot, PayloadStatus.FULL), true);
+
+    expect(events).toHaveLength(3);
     expect(events[0].data.payloadStatus).toBe("full");
   });
 });

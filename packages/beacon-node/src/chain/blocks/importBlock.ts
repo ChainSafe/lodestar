@@ -296,7 +296,7 @@ export async function importBlock(
         currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
         executionOptimistic: isOptimisticBlock(newHead),
       });
-      emitHeadV2.call(this, newHead);
+      emitHeadV2.call(this, newHead, true);
     } catch (e) {
       // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
       this.logger.debug("Error emitting head/head_v2 event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);

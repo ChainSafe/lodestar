@@ -4,8 +4,9 @@ import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-trans
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {BeaconChain} from "../chain.js";
 
-export function emitHeadV2(this: BeaconChain, head: ProtoBlock) {
+export function emitHeadV2(this: BeaconChain, head: ProtoBlock, headChanged: boolean) {
   if (
+    headChanged ||
     !this.headV2PayloadStatusCache.has(head.blockRoot) ||
     (this.headV2PayloadStatusCache.get(head.blockRoot)?.status !== PayloadStatus.FULL &&
       head.payloadStatus === PayloadStatus.FULL)

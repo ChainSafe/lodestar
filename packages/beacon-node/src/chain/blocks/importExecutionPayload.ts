@@ -256,7 +256,7 @@ export async function importExecutionPayload(
   }
 
   try {
-    emitHeadV2.call(this, head);
+    emitHeadV2.call(this, head, false);
   } catch (e) {
     this.logger.debug("Error emitting head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
   }
