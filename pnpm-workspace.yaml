@@ -20,6 +20,7 @@ catalog:
   vitest: "^4.0.7"
 
 allowBuilds:
+  "@chainsafe/lodestar-z": true
   "@parcel/watcher": true
   "@swc/core": true
   aws-sdk: true

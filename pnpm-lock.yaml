@@ -354,8 +354,8 @@ importers:
         version: 1.0.2
     devDependencies:
       '@chainsafe/lodestar-z':
-        specifier: link:../../../lodestar-z-native-stf
-        version: link:../../../lodestar-z-native-stf
+        specifier: git+https://github.com/chainsafe/lodestar-z#bing/native-stf
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4753bb1132c1d47d6341c8011d528d49952bd2b7
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -763,8 +763,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/lodestar-z':
-        specifier: link:../../../lodestar-z-native-stf
-        version: link:../../../lodestar-z-native-stf
+        specifier: git+https://github.com/chainsafe/lodestar-z#bing/native-stf
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4753bb1132c1d47d6341c8011d528d49952bd2b7
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -1282,6 +1282,10 @@ packages:
     resolution: {integrity: sha512-vXpS0MOC97z019X9Vxjr1pAPaKk97Jc4AC9G1IKnx3fhL+1utZOHeKf6MHd75QXcJgVyUDmL56LSLrUrcrN25g==}
     engines: {node: '>= 22'}
 
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4753bb1132c1d47d6341c8011d528d49952bd2b7':
+    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4753bb1132c1d47d6341c8011d528d49952bd2b7}
+    version: 0.1.2-rc.6
+
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
@@ -1417,6 +1421,10 @@ packages:
 
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
+
+  '@chainsafe/zapi@2.0.0':
+    resolution: {integrity: sha512-5HXO76Ep4tYU5NngsBSgE5t/xMQQZnap+Q9PKDXOa1Oe3VaP0hU2+visNlaxW7RrVK1plF0cGMIamLubpNdefw==}
+    hasBin: true
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -7048,6 +7056,10 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.1
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.1
 
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4753bb1132c1d47d6341c8011d528d49952bd2b7':
+    dependencies:
+      '@chainsafe/zapi': 2.0.0
+
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
@@ -7151,6 +7163,8 @@ snapshots:
       tiny-worker: 2.3.0
     transitivePeerDependencies:
       - supports-color
+
+  '@chainsafe/zapi@2.0.0': {}
 
   '@colors/colors@1.5.0': {}
 

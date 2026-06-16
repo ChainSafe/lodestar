@@ -76,7 +76,7 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^",
-    "@chainsafe/lodestar-z": "link:../../../lodestar-z-native-stf",
+    "@chainsafe/lodestar-z": "git+https://github.com/chainsafe/lodestar-z#bing/native-stf",
     "@vekexasia/bigint-buffer2": "^1.1.1"
   },
   "devDependencies": {
