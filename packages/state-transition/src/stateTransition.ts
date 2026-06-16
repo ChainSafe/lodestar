@@ -1,8 +1,4 @@
-import nativeBindings from "@chainsafe/lodestar-z";
-import {
-  BeaconStateView as NativeBeaconStateView,
-  stateTransition as nativeStateTransition,
-} from "@chainsafe/lodestar-z/state-transition";
+import nativeBindings, {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -130,7 +126,7 @@ export function stateTransition(
       .getForkTypes(signedBlock.message.slot)
       .SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
     const nativeView = NativeBeaconStateView.createFromBytes(state.serialize());
-    const postNative = nativeStateTransition(nativeView, blockBytes, options);
+    const postNative = nativeView.stateTransition(blockBytes, options);
     return reloadCachedState(state, postNative.serialize());
   }
 

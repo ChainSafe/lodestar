@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
-import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z/state-transition";
+import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";

@@ -1,4 +1,4 @@
-import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z/state-transition";
+import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z";
 import {BeaconConfig} from "@lodestar/config";
 import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
@@ -31,9 +31,9 @@ type NativeOpts = {
  */
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    // The native BeaconStateView's getVoluntaryExitValidity returns a string-literal union with the same
-    // members as the TS `VoluntaryExitValidity` enum, but TS treats the enum nominally — single-step cast.
-    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateView;
+    // The native view is runtime-compatible with IBeaconStateView, but its native-only stateTransition
+    // accepts SSZ bytes instead of a Lodestar block value.
+    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as unknown as IBeaconStateView;
   }
   const {anchorState, config, pubkeyCache} = opts;
   const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
@@ -71,9 +71,9 @@ type RegenNativeOpts = {
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    // The native BeaconStateView's getVoluntaryExitValidity returns a string-literal union with the same
-    // members as the TS `VoluntaryExitValidity` enum, but TS treats the enum nominally — single-step cast.
-    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateView;
+    // The native view is runtime-compatible with IBeaconStateView, but its native-only stateTransition
+    // accepts SSZ bytes instead of a Lodestar block value.
+    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as unknown as IBeaconStateView;
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
