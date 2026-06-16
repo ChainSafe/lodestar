@@ -1,0 +1,500 @@
+  419  jj st
+  420  jj log --reversed
+  421  jj edit yus
+  422  jj st
+  423  jj split
+  424  jj edit yus
+  425  jj squash
+  426  jj st
+  427  jj log --reversed
+  428  jj edit mxl
+  429  jj st
+  430  rm bindings/napi/stateTransition.zig 
+  431  jj st
+  432  jj split
+  433  jj st
+  434  jj diff
+  435  jj st
+  436  jj diff src/state_transition/
+  437  jj st
+  438  jj diff bindings/napi/config.zig 
+  439  jj st
+  440  jj diff bindings/napi/BeaconStateView.zig 
+  441  jj t
+  442  jj st
+  443  jj split
+  444  jj st
+  445  jj diff
+  446  jj st
+  447  jj diff src
+  448  nvim src/state_transition/cache/pubkey_cache.zig 
+  449  jj st
+  450  claude --dangerously-skip-permissions
+  451  jj st
+  452  jj squash --from @ --onto main src/state_transition/cache/pubkey_cache.zig 
+  453  j st
+  454  jj st
+  455  jj log --reversed
+  456  jj new main
+  457  jj st
+  458  jj log --reversed
+  459  jj edit rlm
+  460  jj st
+  461  jj diff
+  462  pnpm i
+  463  pnpm test
+  464  jj st
+  465  zig build test:state_transition
+  466  jj st
+  467  rm bindings/test/.tmp-teardown-20515.mjs 
+  468  jj st
+  469  jj describe -m "chore: add no-op test for syncPubkeys when pk cache shrinks"
+  470  jj bookmark create bing/test-pk-cache-shrink
+  471  jj git push -b bing/test-pk-cache-shrink
+  472  jj describe
+  473  jj git push
+  474  jj st
+  475  jj new bing/native-stf
+  476  jj st
+  477  jj log --reversed
+  478  jj edit xto
+  479  jj st
+  480  jj diff
+  481  jj st
+  482  nvim bindings/napi/config.zig 
+  483  jj st
+  484  jj diff bindings/napi/config.zig 
+  485  jj new main
+  486  nvim
+  487  jj st
+  488  jj st
+  489  jj log bing/native-stf
+  490  jj log -b bing/native-stf
+  491  jj log -r bing/native-stf
+  492  jj new bing/native-stf
+  493  jj log --reversed
+  494  jj edit xto
+  495  jj st
+  496  jj diff bindings/napi/config.zig 
+  497  jj diff bindings/napi/config.zig 
+  498  q
+  499  exit
+  500  nvim
+  501  jj st
+  502  jj diff
+  503  nvim
+  504  jj st
+  505  jj diff src/config/networks
+  506  nvim
+  507  jj st
+  508  jj restore src/config/networks/
+  509  nvim bindings/napi/config.zig 
+  510  jj diff bindings/
+  511  nvim bindings/napi/config.zig 
+  512  jj st
+  513  nvim src/config/ChainConfig.zig 
+  514  j st
+  515  jj st
+  516  jj diff
+  517  jj st
+  518  jj diff src
+  519  jj restore src
+  520  jj diff src
+  521  jj st
+  522  nvim bindings/napi/config.zig 
+  523  jj st
+  524  jj diff
+  525  nvim bindings/napi/config.zig 
+  526  jj diff
+  527  nvim
+  528  nvim
+  529  jj st
+  530  jj diff
+  531  nvim
+  532  cd ..
+  533  c dzapi
+  534  cd zap
+  535  cd zapi
+  536  nvim
+  537  cd ..
+  538  cd lodestar-z
+  539  nvim
+  540  pnpm i
+  541  nvim bindings/napi/config.zig 
+  542  pnpm i
+  543  nvim bindings/napi/config.zig 
+  544  pnpm i
+  545  nvim bindings/napi/config.zig 
+  546  pnpm i
+  547  pnpm test
+  548  rm bindings/test/config.test.ts 
+  549  nvim bindings/test/beaconStateView.test.ts 
+  550  jj st
+  551  rm bindings/test/.tmp-teardown-51966.mjs 
+  552  jj st
+  553  jj diff
+  554  nvim
+  555  jj desribe
+  556  jj describe
+  557  jj st
+  558  nvim bindings/napi/config.zig 
+  559  jj gi tpush
+  560  jj gi tpush
+  561  jj git push
+  562  nvim
+  563  nvim
+  564  jj gi tpush
+  565  jj git push
+  566  jj st
+  567  jj new bing/native-stf
+  568  jj st
+  569  jj log --reversed
+  570  jj edit xto
+  571  jj st
+  572  jj rebase -r 12 --onto @
+  573  jj st
+  574  jj new kkp
+  575  nvmi bindings/napi/config.zig 
+  576  nvim bindings/napi/config.zig 
+  577  jjst
+  578  jj undo
+  579  jj st
+  580  jj diff
+  581  jj st
+  582  jj diff bindings/napi/root.zig 
+  583  jj st
+  584  jj split
+  585  jj st
+  586  jj abandon
+  587  jj rebase -r 12 --onto @
+  588  jj show bing/fix-config
+  589  jj rebase -r 47cf9f731abd50ae61c383532ece1680262dbb6e --onto 
+  590  jj rebase -r 47cf9f731abd50ae61c383532ece1680262dbb6e --onto @
+  591  jj st
+  592  jj log --reversed
+  593  jj edit kkp
+  594  jj st
+  595  jj squash
+  596  jj st
+  597  jj edit pmx
+  598  jj st
+  599  jj b m bing/native-stf
+  600  jj git push
+  601  jj git push -b bing/native-stf
+  602  jj st
+  603  jj new
+  604  jj st
+  605  jj st
+  606  jj diff
+  607  jj st
+  608  jj st
+  609  jj st
+  610  cd .
+  611  cd ..
+  612  cd lodestar-stf
+  613  jj st
+  614  jj edit tr
+  615  jj edit 9d
+  616  jj st
+  617  jj diff
+  618  jj describe -m "remove unused import"
+  619  jj log --reversed
+  620  jj jj st
+  621  jj st
+  622  jj b s bing/lodestar-z-stf
+  623  jj git push
+  624  jj st
+  625  jj st
+  626  jj st
+  627  jj st
+  628  jj st
+  629  jj new
+  630  jj st
+  631  jj st
+  632  jj st
+  633  jj st
+  634  jj st
+  635  jj st
+  636  nvim
+  637  nvim pnpm-workspace.yaml 
+  638  pnpm update @chainsafe/lodestar-z
+  639  nvim pnpm-workspace.yaml 
+  640  nvim pnpm-workspace.yaml 
+  641  nvim pnpm-workspace.yaml 
+  642  pnpm update @chainsafe/lodestar-z
+  643  jj st
+  644  jj diff
+  645  jj describe -m "don't use local links ofr lodestar-z"
+  646  jj b m bing/lodestar-z-stf
+  647  jj git push
+  648  cd ..
+  649  cd lodestar-z-native-stf
+  650  jj st
+  651  jj workspace update-stale
+  652  jj st
+  653  jj log --reversed
+  654  jj new bing/native-stf main "merge 'main' into 'bing/native-stf'"
+  655  jj new bing/native-stf main -m "merge 'main' into 'bing/native-stf'"
+  656  jj b s bing/native-stf
+  657  jj git push
+  658  jj st
+  659  jj gi tpush 
+  660  jj gi tpush
+  661  jj git push
+  662  jj st
+  663  jj new
+  664  pnpm biome check --fix
+  665  jj st
+  666  jj diff
+  667  jj st
+  668  pnpm biome check --fix
+  669  nvim bindings/test/beaconStateView.test.ts 
+  670  pnpm biome check --fix
+  671  jj st
+  672  nvim  bindings/test/index.test.ts 
+  673  pnpm biome check --fix
+  674  jj st
+  675  jj describe -m "fmt lint"
+  676  jj b m bing/native-stf
+  677  jj git push
+  678  jj st
+  679  jj new
+  680  zig fmt --check .
+  681  jj st
+  682  zig fmt --check . --fix
+  683  zig fmt .
+  684  jj st
+  685  jj diff
+  686  jj describe -m "zig fmt"
+  687  jj b s bing/native-stf
+  688  jj git push
+  689  jj st
+  690  cd ..
+  691  cd lodestar-stf
+  692  jj st
+  693  jj new
+  694  pnpm update @chainsafe/lodestar-z
+  695  jj st
+  696  pnpm update @chainsafe/lodestar-z --force
+  697  jj st
+  698  jj st
+  699  For your git branch dependency, if the spec is already:
+  700  pnpm update @chainsafe/lodestar-z --latest
+  701  jj st
+  702  jj diff
+  703  pnpm update @chainsafe/lodestar-z --recursive
+  704  jj st
+  705  jj diff
+  706  jj describe -m "bump lodestar-z"
+  707  jj b m bing/lodestar-z-stf
+  708  jj git push
+  709  jj st
+  710  jj new
+  711  jj st
+  712  jj st
+  713  nvim .github/workflows/
+  714  rg USE_NATIVE
+  715  rg NATIVE_
+  716  LODESTAR_NATIVE_STF=true pnpm test:spec:minimal
+  717  LODESTAR_NATIVE_STF=true pnpm test:spec
+  718  nvim packages/state-transition/src/stateTransition.ts 
+  719  nvim
+  720  nvim .github/
+  721  cd ..
+  722  cd lodestar-z-native-stf
+  723  nvim
+  724  jj st
+  725  jj new
+  726  rm bindings/src/state-transition.*
+  727  jj st
+  728  rg stateTransition
+  729  nvim
+  730  nvim
+  731  zig build build-lib:bindings
+  732  jj st
+  733  jj diff
+  734  jj describe -m "remove redundant stateTransition bindings; it's now part of BeaconStateView"
+  735  jj b s bing/native-stf
+  736  jj git push
+  737  cd ..
+  738  cd lodestar-stf
+  739  pnpm update @chainsafe/lodestar-z --recursive
+  740  jj st
+  741  jj diff
+  742  jj describe -m "bump lodestar-z"
+  743  jj b m bing/lodestar-z-stf
+  744  jj gi tpush
+  745  jj git push
+  746  cd ..
+  747  cd lodestar-z-native-stf
+  748  pnpm test
+  749  jj st
+  750  nvim
+  751  cd ..
+  752  cd lodestar-stf
+  753  nvim
+  754  jj st
+  755  cd ..
+  756  cd lodestar-z-native-stf
+  757  jj st
+  758  jj edit yyqt
+  759  jj b s bing/native-stf
+  760  jj b s bing/native-stf --allow-backwards
+  761  jj git push
+  762  jj git push
+  763  jj log --reversed
+  764  jj git push -b bing/native-stf
+  765  jj st
+  766  nvim bindings/
+  767  cd ..
+  768  cd lodestar-z-native-stf
+  769  jj st
+  770  jj new
+  771  jj show yyqt
+  772  jj st
+  773  jj diff
+  774  nvim src/state_transition/cache/pubkey_cache.zig 
+  775  jj st
+  776  jj log --reversed
+  777  jj st
+  778  jj diff
+  779  jj log --reversed
+  780  jj show rlm
+  781  jj st
+  782  jj diff
+  783  jj st
+  784  jj st
+  785  jj st
+  786  jj st
+  787  jj st
+  788  jj st
+  789  jj log --reversed
+  790  jj show rlmzxpvp
+  791  jj diff
+  792  jj st
+  793  jj abandon
+  794  jj show rlmzxpvp
+  795  jj rebase -r 2f73dc83281dd31625dde8688757a3f481108747 --onto @
+  796  jj st
+  797  jj log --reversed
+  798  jj edit rlm
+  799  jj squash
+  800  jj st
+  801  jj edit okmv
+  802  jj b m bing/native-stf
+  803  jj git push -b bing/native-stf
+  804  jj new
+  805  jj st
+  806  jj st
+  807  jj diff
+  808  jj st
+  809  jj diff
+  810  cd ..
+  811  cd lodestar-stf
+  812  jj st
+  813  jj diff
+  814  jj st
+  815  jj diff
+  816  nvim
+  817  cd ..
+  818  cd lodestar-z-native-stf
+  819  zig build build-lib:bindings
+  820  jj st
+  821  jj st
+  822  jj diff
+  823  cd ..
+  824  cd lodestar-z
+  825  jj st
+  826  ls src/state_transition/utils
+  827  ls src/state_transition/
+  828  ls src/state_transition/utils
+  829  cd src/state_transition/
+  830  ls
+  831  ls utils/block_root.zig 
+  832  nvim utils/epoch.zig 
+  833  jj st
+  834  jj git fetch
+  835  jj st
+  836  cd ..
+  837  cd ..
+  838  cd ..
+  839  cd lodestar-stf
+  840  jj st
+  841  jj diff
+  842  jj diff
+  843  j st
+  844  jj st
+  845  jj st
+  846  jj diff
+  847  cd ..
+  848  cd lodestar-z
+  849  jj st
+  850  cd ..
+  851  cd lodestar-z-native-stf
+  852  jj st
+  853  jj diff
+  854  jj restore
+  855  jj new main
+  856  jj st
+  857  jj git fetch
+  858  jj log --reversed
+  859  jj workspace update
+  860  jj workspace update-stale
+  861  cd ..
+  862  cd lodestra-z
+  863  cd lodestar-z
+  864  jj git fetch
+  865  jj st
+  866  jj new main
+  867  cd ..
+  868  cd lodestar-z-native-stf
+  869  jj git fetch
+  870  jj new main
+  871  jj log --reversed
+  872  jj st
+  873  jj diff
+  874  nvim
+  875  cd ..
+  876  cd lodestar-stf
+  877  nvim
+  878  j st
+  879  jj st
+  880  jj diff
+  881  jj st
+  882  jj diff packages/state-transition/src/
+  883  nvim packages/state-transition/src/stateTransition.ts 
+  884  cd ..
+  885  cd lodestar-stf
+  886  nvim
+  887  cd ..
+  888  cd lodestar-z-native-sf
+  889  cd lodestar-z-native-stf
+  890  nvim
+  891  zig build build-lib:bindings
+  892  zig build build-lib:bindings
+  893  zig build build-lib:bindings
+  894  zig build build-lib:bindings
+  895  zig build build-lib:bindings
+  896  zig build build-lib:bindings
+  897  zig build build-lib:bindings
+  898  zig build build-lib:bindings
+  899  zig build build-lib:bindings
+  900  jj st
+  901  jj describe -m "use stateTransition not as class"
+  902  jj bookmark create bing/non-class-stf
+  903  jj diff
+  904  jj st
+  905  jj new main
+  906  jj st
+  907  jj diff
+  908  cd .
+  909  cd ..
+  910  cd lodestar-stf
+  911  pnpm update @chainsafe/lodestar-z
+  912  pnpm i
+  913  pnpm build
+  914  pnpm build
+  915  history | grep 'LODESTAR_'
+  916  history
+  917  nvim history
+  918  history >> asf.tzt

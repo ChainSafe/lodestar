@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
-import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z";
+import {BeaconStateView as BeaconStateViewZig, stateTransition} from "@chainsafe/lodestar-z/state-transition";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {phase0, ssz} from "@lodestar/types";
@@ -57,11 +57,11 @@ describe("NativeBeaconStateView parity", () => {
       dataAvailabilityStatus: DataAvailabilityStatus.Available,
     };
 
-    const zigPre: NativeBeaconStateView = NativeBeaconStateView.createFromBytes(stateBytes);
+    const zigPre = BeaconStateViewZig.createFromBytes(stateBytes);
     expect(zigPre.hashTreeRoot()).toEqual(cached.hashTreeRoot());
     expect(zigPre.serialize()).toEqual(stateBytes);
     const blockBytes = ssz.phase0.SignedBeaconBlock.serialize(block);
-    const zigPost = zigPre.stateTransition(blockBytes, opts);
+    const zigPost = stateTransition(zigPre, blockBytes, opts);
 
     const tsPost: IBeaconStateView = new BeaconStateView(cached).stateTransition(block, opts, {});
 

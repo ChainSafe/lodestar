@@ -1,4 +1,4 @@
-import nativeBindings, {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z";
+import bindings from "@chainsafe/lodestar-z";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -52,7 +52,7 @@ function reloadCachedState(prev: CachedBeaconStateAllForks, postStateBytes: Uint
 }
 
 function configureNativeStateTransition(state: CachedBeaconStateAllForks): void {
-  nativeBindings.config.set(state.config, state.genesisValidatorsRoot);
+  bindings.config.set(state.config, state.genesisValidatorsRoot);
 }
 
 // Multifork capable state transition
@@ -125,8 +125,8 @@ export function stateTransition(
     const blockBytes = config
       .getForkTypes(signedBlock.message.slot)
       .SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
-    const nativeView = NativeBeaconStateView.createFromBytes(state.serialize());
-    const postNative = nativeView.stateTransition(blockBytes, options);
+    const nativeView = bindings.BeaconStateView.createFromBytes(state.serialize());
+    const postNative = bindings.stateTransition(nativeView, blockBytes, options);
     return reloadCachedState(state, postNative.serialize());
   }
 
@@ -202,7 +202,7 @@ export function processSlots(
 ): CachedBeaconStateAllForks {
   if (useNativeStateTransition && state.config.getForkSeq(slot) !== ForkSeq.gloas) {
     configureNativeStateTransition(state);
-    const nativeView = NativeBeaconStateView.createFromBytes(state.serialize());
+    const nativeView = bindings.BeaconStateView.createFromBytes(state.serialize());
     const postNative = nativeView.processSlots(slot, {
       dontTransferCache: epochTransitionCacheOpts?.dontTransferCache,
     });
