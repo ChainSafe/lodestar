@@ -1,4 +1,4 @@
-import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z";
+import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z/state-transition";
 import {BeaconConfig} from "@lodestar/config";
 import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
