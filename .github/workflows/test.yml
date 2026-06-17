@@ -229,3 +229,35 @@ jobs:
       - name: Spec tests validator
         run: pnpm test:spec
         working-directory: packages/validator
+
+  spec-tests-native:
+    name: Spec tests (native)
+    needs: build
+    runs-on: warp-ubuntu-2204-x64-4x
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [24]
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: "./.github/actions/setup-and-build"
+        with:
+          node: ${{ matrix.node }}
+
+      # Download spec tests with cache
+      - name: Restore spec tests cache
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: packages/beacon-node/spec-tests
+          key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
+      - name: Download spec tests
+        run: pnpm download-spec-tests
+      # Run them in different steps to quickly identifying which command failed
+      # Otherwise just doing `pnpm test:spec` you can't tell which specific suite failed
+      # many of the suites have identical names for minimal and mainnet
+      - name: Spec tests minimal
+        run: LODESTAR_NATIVE_STF=true pnpm test:spec:minimal
+        working-directory: packages/beacon-node
+      - name: Spec tests mainnet
+        run: NLODESTAR_NATIVE_STF=true ODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:mainnet
+        working-directory: packages/beacon-node
