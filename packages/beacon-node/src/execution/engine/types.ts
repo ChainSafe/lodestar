@@ -566,7 +566,7 @@ function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): glo
  * Gloas extends the list with builder deposits (0x03) and builder exits (0x04) per
  * https://github.com/ethereum/consensus-specs/pull/5359 (EIP-8282).
  */
-export function serializeExecutionRequests(executionRequests: ExecutionRequests): ExecutionRequestsRpc {
+export function serializeExecutionRequests(fork: ForkName, executionRequests: ExecutionRequests): ExecutionRequestsRpc {
   const {deposits, withdrawals, consolidations} = executionRequests;
   const result: ExecutionRequestsRpc = [];
 
@@ -583,6 +583,19 @@ export function serializeExecutionRequests(executionRequests: ExecutionRequests)
   }
 
   const gloasRequests = executionRequests as Partial<gloas.ExecutionRequests>;
+
+  // Builder requests (0x03/0x04) only exist post-gloas. Never emit them into a pre-gloas
+  // (newPayloadV4) request, symmetric with deserializeExecutionRequests rejecting them.
+  if (ForkSeq[fork] < ForkSeq.gloas) {
+    if (
+      (gloasRequests.builderDeposits !== undefined && gloasRequests.builderDeposits.length !== 0) ||
+      (gloasRequests.builderExits !== undefined && gloasRequests.builderExits.length !== 0)
+    ) {
+      throw Error(`Builder requests are not supported pre-gloas fork=${fork}`);
+    }
+    return result;
+  }
+
   if (gloasRequests.builderDeposits !== undefined && gloasRequests.builderDeposits.length !== 0) {
     result.push(serializeBuilderDepositRequests(gloasRequests.builderDeposits));
   }

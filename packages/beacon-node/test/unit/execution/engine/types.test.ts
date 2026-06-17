@@ -1,5 +1,12 @@
 import {describe, expect, it} from "vitest";
-import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, ForkName, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
+import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
+  CONSOLIDATION_REQUEST_TYPE,
+  DEPOSIT_REQUEST_TYPE,
+  ForkName,
+  WITHDRAWAL_REQUEST_TYPE,
+} from "@lodestar/params";
 import {ExecutionRequests, gloas, ssz} from "@lodestar/types";
 import {fromHex, strip0xPrefix} from "@lodestar/utils";
 import {deserializeExecutionRequests, serializeExecutionRequests} from "../../../../src/execution/engine/types.js";
@@ -13,7 +20,7 @@ describe("execution / engine / types", () => {
         consolidations: [ssz.electra.ConsolidationRequest.defaultValue()],
       };
 
-      const serialized = serializeExecutionRequests(executionRequests).map(strip0xPrefix);
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests).map(strip0xPrefix);
 
       // Assert 1-byte request_type prefix is set correctly
       expect(serialized.length).toBe(3);
@@ -40,7 +47,7 @@ describe("execution / engine / types", () => {
         consolidations: [ssz.electra.ConsolidationRequest.defaultValue()],
       };
 
-      const serialized = serializeExecutionRequests(executionRequests).map(strip0xPrefix);
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests).map(strip0xPrefix);
 
       // Assert withdrawals are omitted
       expect(serialized.length).toBe(2);
@@ -63,9 +70,37 @@ describe("execution / engine / types", () => {
         consolidations: [],
       };
 
-      const serialized = serializeExecutionRequests(executionRequests);
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests);
 
       expect(serialized.length).toBe(0);
+    });
+
+    it("should serialize builder requests post-gloas", () => {
+      const executionRequests: gloas.ExecutionRequests = {
+        deposits: [],
+        withdrawals: [],
+        consolidations: [],
+        builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
+        builderExits: [ssz.gloas.BuilderExitRequest.defaultValue()],
+      };
+
+      const serialized = serializeExecutionRequests(ForkName.gloas, executionRequests).map(strip0xPrefix);
+
+      expect(serialized.length).toBe(2);
+      expect(Number(serialized[0].substring(0, 2))).toBe(BUILDER_DEPOSIT_REQUEST_TYPE);
+      expect(Number(serialized[1].substring(0, 2))).toBe(BUILDER_EXIT_REQUEST_TYPE);
+    });
+
+    it("should throw if builder requests are present pre-gloas", () => {
+      const executionRequests: gloas.ExecutionRequests = {
+        deposits: [],
+        withdrawals: [],
+        consolidations: [],
+        builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
+        builderExits: [],
+      };
+
+      expect(() => serializeExecutionRequests(ForkName.electra, executionRequests)).toThrow();
     });
   });
 
@@ -95,7 +130,7 @@ describe("execution / engine / types", () => {
       expect(executionRequests.withdrawals.length).toBe(2);
       expect(executionRequests.consolidations.length).toBe(1);
 
-      expect(serializeExecutionRequests(executionRequests)).toEqual(serializedRequests);
+      expect(serializeExecutionRequests(ForkName.electra, executionRequests)).toEqual(serializedRequests);
     });
 
     it("should correctly deserialize if execution request is omitted", () => {
@@ -107,7 +142,7 @@ describe("execution / engine / types", () => {
       expect(executionRequests.withdrawals.length).toBe(0);
       expect(executionRequests.consolidations.length).toBe(1);
 
-      expect(serializeExecutionRequests(executionRequests)).toEqual(serializedOmitted);
+      expect(serializeExecutionRequests(ForkName.electra, executionRequests)).toEqual(serializedOmitted);
     });
 
     it("should throw an error if execution requests order is incorrect", () => {
@@ -142,13 +177,13 @@ describe("execution / engine / types", () => {
         builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
         builderExits: [ssz.gloas.BuilderExitRequest.defaultValue()],
       };
-      const serialized = serializeExecutionRequests(gloasRequests);
+      const serialized = serializeExecutionRequests(ForkName.gloas, gloasRequests);
 
       // post-gloas: builder requests are accepted and round-trip
       const deserialized = deserializeExecutionRequests(ForkName.gloas, serialized) as gloas.ExecutionRequests;
       expect(deserialized.builderDeposits).toEqual(gloasRequests.builderDeposits);
       expect(deserialized.builderExits).toEqual(gloasRequests.builderExits);
-      expect(serializeExecutionRequests(deserialized)).toEqual(serialized);
+      expect(serializeExecutionRequests(ForkName.gloas, deserialized)).toEqual(serialized);
 
       // pre-gloas: builder request types must be rejected, not silently accepted
       expect(() => deserializeExecutionRequests(ForkName.electra, serialized)).toThrow();
