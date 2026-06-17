@@ -105,6 +105,7 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoost: true,
   proposerBoostReorg: true,
   computeUnrealized: true,
+  fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,

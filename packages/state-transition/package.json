@@ -69,7 +69,6 @@
     "@chainsafe/blst": "^2.2.0",
     "@chainsafe/lodestar-z": "github:chainsafe/lodestar-z#bing/export-stf",
     "@chainsafe/persistent-merkle-tree": "^1.2.5",
-    "@chainsafe/persistent-ts": "^1.0.0",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.4.0",
     "@chainsafe/swap-or-not-shuffle": "^1.2.1",
