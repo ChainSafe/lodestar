@@ -259,5 +259,5 @@ jobs:
         run: LODESTAR_NATIVE_STF=true pnpm test:spec:minimal
         working-directory: packages/beacon-node
       - name: Spec tests mainnet
-        run: NLODESTAR_NATIVE_STF=true ODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:mainnet
+        run: LODESTAR_NATIVE_STF=true ODE_OPTIONS='--max-old-space-size=4096' pnpm test:spec:mainnet
         working-directory: packages/beacon-node
