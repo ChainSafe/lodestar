@@ -3,7 +3,10 @@ import path from "node:path";
 import {describe, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
+import {useNativeStateTransition} from "@lodestar/state-transition";
 import {RunnerType, TestRunner} from "./types.js";
+
+type NativePubkeyCache = typeof import("@chainsafe/lodestar-z/pubkeys").pubkeyCache;
 
 const ARTIFACT_FILENAMES = new Set([
   // MacOS artifacts
@@ -47,6 +50,14 @@ const coveredTestRunners = [
   "ssz_static",
   "transition",
 ];
+
+let nativePubkeyCachePromise: Promise<NativePubkeyCache> | null = null;
+
+async function resetNativePubkeyCache(): Promise<void> {
+  nativePubkeyCachePromise ??= import("@chainsafe/lodestar-z/pubkeys").then(({pubkeyCache}) => pubkeyCache);
+  const nativePubkeyCache = await nativePubkeyCachePromise;
+  nativePubkeyCache.reset();
+}
 
 // NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
 // to an issue marking it as pending to re-enable and an aproximate timeline of when it will
@@ -174,12 +185,23 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
+              const testFunctionWithNativeReset: typeof testFunction = async (
+                testCase,
+                directoryName,
+                testCaseName
+              ) => {
+                if (useNativeStateTransition) {
+                  await resetNativePubkeyCache();
+                }
+                return testFunction(testCase, directoryName, testCaseName);
+              };
+
               if (opts.skippedTests && options.shouldSkip === undefined) {
                 options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
                   return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
                 };
               }
-              describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
+              describeDirectorySpecTest(testId, testSuiteDirpath, testFunctionWithNativeReset, options);
             }
           }
         }

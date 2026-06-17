@@ -50,6 +50,7 @@
     "@lerna-lite/run": "^4.9.4",
     "@lerna-lite/version": "^4.9.4",
     "@lodestar/params": "workspace:",
+    "@lodestar/state-transition": "workspace:*",
     "@types/node": "^24.10.1",
     "@typescript/native-preview": "7.0.0-dev.20260303.1",
     "@vitest/browser": "catalog:",

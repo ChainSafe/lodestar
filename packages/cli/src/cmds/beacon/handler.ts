@@ -7,7 +7,12 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {createBeaconStateView, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
+import {
+  createBeaconStateView,
+  createPubkeyCache,
+  setUseNativeStateTransition,
+  syncPubkeys,
+} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -80,6 +85,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const pubkeyCache = createPubkeyCache();
     syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+    if (args["chain.nativeStateView"]) {
+      setUseNativeStateTransition(true);
+    }
     const anchorStateView = args["chain.nativeStateView"]
       ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
       : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
