@@ -352,7 +352,7 @@ export function parseExecutionPayload(
     data = response.executionPayload;
     blobsBundle = response.blobsBundle ? parseBlobsBundle(response.blobsBundle) : undefined;
     executionRequests = response.executionRequests
-      ? deserializeExecutionRequests(response.executionRequests)
+      ? deserializeExecutionRequests(fork, response.executionRequests)
       : undefined;
     shouldOverrideBuilder = response.shouldOverrideBuilder ?? false;
   } else {
@@ -594,7 +594,7 @@ export function serializeExecutionRequests(executionRequests: ExecutionRequests)
   return result;
 }
 
-export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): ExecutionRequests {
+export function deserializeExecutionRequests(fork: ForkName, serialized: ExecutionRequestsRpc): ExecutionRequests {
   // Gloas-shaped result is a structural superset of electra/fulu — extra fields are dropped on
   // assignment to fork-narrower types at the call site.
   const result: gloas.ExecutionRequests = {
@@ -651,10 +651,16 @@ export function deserializeExecutionRequests(serialized: ExecutionRequestsRpc): 
         break;
       }
       case BUILDER_DEPOSIT_REQUEST_TYPE: {
+        if (ForkSeq[fork] < ForkSeq.gloas) {
+          throw Error(`Builder deposit request is not supported pre-gloas fork=${fork}`);
+        }
         result.builderDeposits = deserializeBuilderDepositRequests(requests);
         break;
       }
       case BUILDER_EXIT_REQUEST_TYPE: {
+        if (ForkSeq[fork] < ForkSeq.gloas) {
+          throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
+        }
         result.builderExits = deserializeBuilderExitRequests(requests);
         break;
       }

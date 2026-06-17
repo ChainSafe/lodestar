@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
-import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
-import {ExecutionRequests, ssz} from "@lodestar/types";
+import {CONSOLIDATION_REQUEST_TYPE, DEPOSIT_REQUEST_TYPE, ForkName, WITHDRAWAL_REQUEST_TYPE} from "@lodestar/params";
+import {ExecutionRequests, gloas, ssz} from "@lodestar/types";
 import {fromHex, strip0xPrefix} from "@lodestar/utils";
 import {deserializeExecutionRequests, serializeExecutionRequests} from "../../../../src/execution/engine/types.js";
 
@@ -89,7 +89,7 @@ describe("execution / engine / types", () => {
     ];
 
     it("should deserialize execution requests according to EIP-7685", () => {
-      const executionRequests = deserializeExecutionRequests(serializedRequests);
+      const executionRequests = deserializeExecutionRequests(ForkName.electra, serializedRequests);
 
       expect(executionRequests.deposits.length).toBe(2);
       expect(executionRequests.withdrawals.length).toBe(2);
@@ -101,7 +101,7 @@ describe("execution / engine / types", () => {
     it("should correctly deserialize if execution request is omitted", () => {
       const serializedOmitted = [serializedRequests[0], serializedRequests[2]];
 
-      const executionRequests = deserializeExecutionRequests(serializedOmitted);
+      const executionRequests = deserializeExecutionRequests(ForkName.electra, serializedOmitted);
 
       expect(executionRequests.deposits.length).toBe(2);
       expect(executionRequests.withdrawals.length).toBe(0);
@@ -113,25 +113,45 @@ describe("execution / engine / types", () => {
     it("should throw an error if execution requests order is incorrect", () => {
       const serializedUnordered = [serializedRequests[0], serializedRequests[2], serializedRequests[1]];
 
-      expect(() => deserializeExecutionRequests(serializedUnordered)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedUnordered)).toThrow();
     });
 
     it("should throw an error if execution request is missing type prefix", () => {
       const serializedNoPrefix = [serializedRequests[0], `0x${serializedRequests[1].slice(4)}`];
 
-      expect(() => deserializeExecutionRequests(serializedNoPrefix)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedNoPrefix)).toThrow();
     });
 
     it("should throw an error if execution request has incorrect prefix", () => {
       const serializedWrongPrefix = [serializedRequests[0], `0x05${serializedRequests[1].slice(4)}`];
 
-      expect(() => deserializeExecutionRequests(serializedWrongPrefix)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedWrongPrefix)).toThrow();
     });
 
     it("should throw an error if execution request has no data", () => {
       const serializedNoData = [serializedRequests[0], "0x01", serializedRequests[2]];
 
-      expect(() => deserializeExecutionRequests(serializedNoData)).toThrow();
+      expect(() => deserializeExecutionRequests(ForkName.electra, serializedNoData)).toThrow();
+    });
+
+    it("should reject builder requests pre-gloas and deserialize them post-gloas", () => {
+      const gloasRequests: gloas.ExecutionRequests = {
+        deposits: [],
+        withdrawals: [],
+        consolidations: [],
+        builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
+        builderExits: [ssz.gloas.BuilderExitRequest.defaultValue()],
+      };
+      const serialized = serializeExecutionRequests(gloasRequests);
+
+      // post-gloas: builder requests are accepted and round-trip
+      const deserialized = deserializeExecutionRequests(ForkName.gloas, serialized) as gloas.ExecutionRequests;
+      expect(deserialized.builderDeposits).toEqual(gloasRequests.builderDeposits);
+      expect(deserialized.builderExits).toEqual(gloasRequests.builderExits);
+      expect(serializeExecutionRequests(deserialized)).toEqual(serialized);
+
+      // pre-gloas: builder request types must be rejected, not silently accepted
+      expect(() => deserializeExecutionRequests(ForkName.electra, serialized)).toThrow();
     });
   });
 });
