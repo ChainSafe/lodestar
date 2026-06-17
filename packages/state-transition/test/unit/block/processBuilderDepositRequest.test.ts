@@ -6,8 +6,17 @@ import {ssz} from "@lodestar/types";
 
 const isValidBuilderDepositSignatureMock = vi.hoisted(() =>
   // Treat the first byte of the BLS signature as the verification flag so each test can opt in
-  // or out of PoP success without performing real BLS arithmetic.
-  vi.fn((_config: unknown, request: {signature: Uint8Array}) => request.signature[0] === 1)
+  // or out of PoP success without performing real BLS arithmetic. Mirrors the real positional
+  // signature: (config, pubkey, withdrawalCredentials, amount, signature).
+  vi.fn(
+    (
+      _config: unknown,
+      _pubkey: Uint8Array,
+      _withdrawalCredentials: Uint8Array,
+      _amount: number,
+      signature: Uint8Array
+    ) => signature[0] === 1
+  )
 );
 
 vi.mock("../../../src/util/gloas.js", async (importOriginal) => {
