@@ -1,7 +1,7 @@
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {Root, RootHex} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
-import {IForkChoice} from "./interface.js";
+import {IForkChoiceRead} from "./interface.js";
 
 /**
  * Under honest majority and certain network synchronicity assumptions there exists a block
@@ -10,7 +10,7 @@ import {IForkChoice} from "./interface.js";
  *
  * @deprecated The merged fast-confirmation spec only defines `get_safe_execution_block_hash`.
  */
-export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
+export function getSafeBeaconBlockRoot(fc: IForkChoiceRead): Root {
   const confirmedRoot = fc.getConfirmedRoot();
   if (confirmedRoot && fc.hasBlockHex(confirmedRoot)) {
     return fromHex(confirmedRoot);
@@ -23,7 +23,7 @@ export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
  *
  * https://github.com/ethereum/consensus-specs/blob/master/fork_choice/safe-block.md#get_safe_execution_block_hash
  */
-export function getSafeExecutionBlockHash(forkChoice: IForkChoice): RootHex {
+export function getSafeExecutionBlockHash(forkChoice: IForkChoiceRead): RootHex {
   const confirmedRoot = forkChoice.getConfirmedRoot();
   if (confirmedRoot) {
     const confirmedBlock = forkChoice.getBlockHexDefaultStatus(confirmedRoot);

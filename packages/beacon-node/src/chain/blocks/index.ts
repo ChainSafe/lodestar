@@ -103,7 +103,7 @@ export async function processBlocks(
     // and we need to further propagate
     if (segmentExecStatus.execAborted !== null) {
       if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
+        this.beaconEngine.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
       }
       throw segmentExecStatus.execAborted.execError;
     }

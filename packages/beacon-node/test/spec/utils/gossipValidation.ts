@@ -316,7 +316,7 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
     throw new Error(`Cannot invalidate ${blockRootHex}: block has no execution payload hash`);
   }
 
-  chain.forkChoice.validateLatestHash({
+  chain.beaconEngine.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
     invalidateFromParentBlockRoot: blockRootHex,
@@ -480,8 +480,8 @@ export async function runGossipValidationTest(
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
           clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
+          chain.beaconEngine.forkChoice.updateTime(slot);
+          chain.beaconEngine.forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -496,8 +496,8 @@ export async function runGossipValidationTest(
 
         if (blockEntry.payload_status === "INVALIDATED") {
           clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
+          chain.beaconEngine.forkChoice.updateTime(slot);
+          chain.beaconEngine.forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -512,7 +512,7 @@ export async function runGossipValidationTest(
         }
 
         clock.setSlot(slot);
-        chain.forkChoice.updateTime(slot);
+        chain.beaconEngine.forkChoice.updateTime(slot);
 
         const blockImport = BlockInputPreData.createFromBlock({
           forkName: fork,
@@ -684,7 +684,7 @@ async function validateMessageForTopic(
       await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
       chain.opPool.insertAttesterSlashing(fork, slashing);
-      chain.forkChoice.onAttesterSlashing(slashing);
+      chain.beaconEngine.forkChoice.onAttesterSlashing(slashing);
       break;
     }
 

@@ -121,7 +121,7 @@ export async function importBlock(
   // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
   const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
 
-  const blockSummary = this.forkChoice.onBlock(
+  const blockSummary = this.beaconEngine.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
@@ -178,7 +178,7 @@ export async function importBlock(
           opts.importAttestations === AttestationImportOpt.Force ||
           (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
         ) {
-          this.forkChoice.onAttestation(
+          this.beaconEngine.forkChoice.onAttestation(
             indexedAttestation,
             attDataRoot,
             opts.importAttestations === AttestationImportOpt.Force
@@ -242,7 +242,7 @@ export async function importBlock(
     for (const slashing of block.message.body.attesterSlashings) {
       try {
         // all AttesterSlashings are valid before reaching this
-        this.forkChoice.onAttesterSlashing(slashing);
+        this.beaconEngine.forkChoice.onAttesterSlashing(slashing);
       } catch (e) {
         this.logger.warn("Error processing AttesterSlashing from block", {slot: blockSlot}, e as Error);
       }
@@ -263,7 +263,7 @@ export async function importBlock(
         }
 
         if (ptcIndices.length > 0) {
-          this.forkChoice.notifyPtcMessages(
+          this.beaconEngine.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
             payloadAttestation.data.slot,
             ptcIndices,

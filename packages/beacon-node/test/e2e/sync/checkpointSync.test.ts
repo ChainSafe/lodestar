@@ -107,7 +107,7 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
     if (nodeAHeadFull === null || nodeAHeadFull.executionPayloadBlockHash === null) {
       throw Error(`No FULL variant found on Node A for synced head root=${bn2Head.blockRoot}`);
     }
-    bn2.chain.forkChoice.onExecutionPayload(
+    bn2.chain.beaconEngine.forkChoice.onExecutionPayload(
       bn2Head.blockRoot,
       nodeAHeadFull.executionPayloadBlockHash,
       nodeAHeadFull.executionPayloadNumber,

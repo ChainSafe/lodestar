@@ -174,7 +174,7 @@ const fastConfirmationTest =
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
               const decisionRoot = headState.getShufflingDecisionRoot(attEpoch);
-              chain.forkChoice.onAttestation(
+              chain.beaconEngine.forkChoice.onAttestation(
                 chain.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
                 attDataRootHex
               );
@@ -188,7 +188,7 @@ const fastConfirmationTest =
               });
               const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
               if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
-              chain.forkChoice.onAttesterSlashing(attesterSlashing);
+              chain.beaconEngine.forkChoice.onAttesterSlashing(attesterSlashing);
             }
 
             // block step

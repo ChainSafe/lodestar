@@ -230,7 +230,7 @@ export class ArchiveStore {
 
       // tasks rely on extended fork choice
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      const prunedBlocks = this.chain.forkChoice.prune(finalized.rootHex);
+      const prunedBlocks = this.chain.beaconEngine.forkChoice.prune(finalized.rootHex);
       timer?.({source: ArchiveStoreTask.ForkchoicePrune});
 
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();

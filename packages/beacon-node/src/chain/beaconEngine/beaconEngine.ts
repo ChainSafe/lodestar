@@ -164,6 +164,10 @@ export class BeaconEngine implements IBeaconEngine {
     });
   }
 
+  // TODO - beacon engine: scalar state reads (getBeaconProposer, getValidator, getBalance,
+  // getRandaoMix, getBlockRootAtSlot, getStateRootAtSlot, getShufflingDecisionRoot). Deferred —
+  // signature shape (state vs stateRoot) to be decided alongside Phase 4 bytes-first.
+
   /**
    * `ForkChoice.onBlock` must never throw for a block that is valid with respect to the network
    * `justifiedBalancesGetter()` must never throw and it should always return a state.

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {IForkChoiceRead, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -700,7 +700,7 @@ export async function prepareExecutionPayload(
   chain: {
     executionEngine: IExecutionEngine;
     config: ChainForkConfig;
-    forkChoice: IForkChoice;
+    forkChoice: IForkChoiceRead;
     proposerPreferencesPool: ProposerPreferencesPool;
   },
   logger: Logger,
@@ -801,7 +801,7 @@ export function getPayloadAttributesForSSE(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
-    forkChoice: IForkChoice;
+    forkChoice: IForkChoiceRead;
     proposerPreferencesPool: ProposerPreferencesPool;
   },
   {
@@ -859,7 +859,7 @@ function preparePayloadAttributes(
   fork: ForkPostBellatrix,
   chain: {
     config: ChainForkConfig;
-    forkChoice: IForkChoice;
+    forkChoice: IForkChoiceRead;
     proposerPreferencesPool: ProposerPreferencesPool;
   },
   {
@@ -953,7 +953,7 @@ function preparePayloadAttributes(
  * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
  */
 function getProposerTargetGasLimit(
-  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  chain: {forkChoice: IForkChoiceRead; proposerPreferencesPool: ProposerPreferencesPool},
   prepareSlot: Slot,
   parentBlockRoot: Root,
   parentBlockHash: Bytes32

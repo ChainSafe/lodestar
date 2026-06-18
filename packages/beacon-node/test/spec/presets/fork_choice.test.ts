@@ -194,7 +194,7 @@ const forkChoiceTest =
                 attestation
               );
               try {
-                chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+                chain.beaconEngine.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
@@ -209,7 +209,7 @@ const forkChoiceTest =
               });
               const attesterSlashing = testcase.attesterSlashings.get(step.attester_slashing);
               if (!attesterSlashing) throw Error(`No attester slashing ${step.attester_slashing}`);
-              chain.forkChoice.onAttesterSlashing(attesterSlashing);
+              chain.beaconEngine.forkChoice.onAttesterSlashing(attesterSlashing);
             }
 
             // payload attestation message step
@@ -273,7 +273,7 @@ const forkChoiceTest =
                   }
                   if (!signatureValidity) throw Error("Invalid payload attestation signature");
 
-                  chain.forkChoice.notifyPtcMessages(
+                  chain.beaconEngine.forkChoice.notifyPtcMessages(
                     blockRoot,
                     payloadAttestationMessage.data.slot,
                     ptcIndices,

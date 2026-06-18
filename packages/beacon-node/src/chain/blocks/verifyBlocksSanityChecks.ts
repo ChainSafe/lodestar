@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {IForkChoiceRead, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -24,7 +24,7 @@ import {ImportBlockOpts} from "./types.js";
  */
 export function verifyBlocksSanityChecks(
   chain: {
-    forkChoice: IForkChoice;
+    forkChoice: IForkChoiceRead;
     clock: IClock;
     config: ChainForkConfig;
     opts: IChainOptions;

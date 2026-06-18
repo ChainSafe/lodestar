@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoiceRead, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -164,8 +164,9 @@ export class BeaconChain implements IBeaconChain {
   get bls(): IBlsVerifier {
     return this.beaconEngine.bls;
   }
-  // TODO - beacon engine: remove this
-  get forkChoice(): IForkChoice {
+  // Read facet only — writes go through `beaconEngine.forkChoice`. TODO - beacon engine: remove this
+  // getter in Phase 6 when the facade holds no state.
+  get forkChoice(): IForkChoiceRead {
     return this.beaconEngine.forkChoice;
   }
   readonly clock: IClock;
@@ -1152,7 +1153,7 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+      return this.beaconEngine.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
@@ -1167,7 +1168,11 @@ export class BeaconChain implements IBeaconChain {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetPredictedProposerHead, secFromSlot, slot}).head;
+      return this.beaconEngine.forkChoice.updateAndGetHead({
+        mode: UpdateHeadOpt.GetPredictedProposerHead,
+        secFromSlot,
+        slot,
+      }).head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
@@ -1182,7 +1187,7 @@ export class BeaconChain implements IBeaconChain {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
+      const {head, isHeadTimely, notReorgedReason} = this.beaconEngine.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
         secFromSlot,
         slot,
@@ -1352,7 +1357,7 @@ export class BeaconChain implements IBeaconChain {
       this.processShutdownCallback(this.forkChoice.irrecoverableError);
     }
 
-    this.forkChoice.updateTime(slot);
+    this.beaconEngine.forkChoice.updateTime(slot);
     this.metrics?.clockSlot.set(slot);
 
     this.attestationPool.prune(slot);

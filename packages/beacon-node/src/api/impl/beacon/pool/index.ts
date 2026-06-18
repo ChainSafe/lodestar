@@ -286,7 +286,8 @@ export function getBeaconPoolApi({
             );
             metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
 
-            chain.forkChoice.notifyPtcMessages(
+            // TODO - beacon engine: refactor to beaconEngine.notifyPtcMessages()
+            chain.beaconEngine.forkChoice.notifyPtcMessages(
               toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
               payloadAttestationMessage.data.slot,
               validatorCommitteeIndices,

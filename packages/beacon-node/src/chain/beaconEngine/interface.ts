@@ -1,4 +1,5 @@
 import {BeaconConfig} from "@lodestar/config";
+import {IForkChoice} from "@lodestar/fork-choice";
 import {PubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
@@ -36,4 +37,8 @@ export type BeaconEngineModules = {
  */
 export interface IBeaconEngine {
   readonly config: BeaconConfig;
+  // Full fork choice (read + write). The engine owns it; writes are routed here while the flows that
+  // perform them still live facade-side. TODO - beacon engine: narrow to a read facet as those flows
+  // (gossip → Phase 3, migrateFinalized/prune → Phase 5) move into the engine.
+  readonly forkChoice: IForkChoice;
 }

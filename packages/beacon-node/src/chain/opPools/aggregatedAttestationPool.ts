@@ -1,7 +1,7 @@
 import {Signature, aggregateSignatures} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoiceRead} from "@lodestar/fork-choice";
 import {
   ForkName,
   ForkSeq,
@@ -209,7 +209,7 @@ export class AggregatedAttestationPool {
 
   getAttestationsForBlock(
     fork: ForkName,
-    forkChoice: IForkChoice,
+    forkChoice: IForkChoiceRead,
     shufflingCache: ShufflingCache,
     state: IBeaconStateView
   ): Attestation[] {
@@ -226,7 +226,7 @@ export class AggregatedAttestationPool {
    */
   getAttestationsForBlockElectra(
     fork: ForkName,
-    forkChoice: IForkChoice,
+    forkChoice: IForkChoiceRead,
     shufflingCache: ShufflingCache,
     state: IBeaconStateView
   ): electra.Attestation[] {
@@ -802,7 +802,7 @@ export function getNotSeenValidatorsFn(
  * See also: https://github.com/ChainSafe/lodestar/issues/4333
  */
 export function getValidateAttestationDataFn(
-  forkChoice: IForkChoice,
+  forkChoice: IForkChoiceRead,
   state: IBeaconStateView
 ): ValidateAttestationDataFn {
   const cachedValidatedAttestationData = new Map<string, InvalidAttestationData | null>();
@@ -848,7 +848,7 @@ export function getValidateAttestationDataFn(
  * Return `null` if the shuffling is valid, otherwise return an `InvalidAttestationData` reason.
  */
 function isValidShuffling(
-  forkChoice: IForkChoice,
+  forkChoice: IForkChoiceRead,
   state: IBeaconStateView,
   blockRootHex: RootHex,
   targetEpoch: Epoch
