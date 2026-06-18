@@ -2,6 +2,7 @@ import assert from "node:assert";
 import {bench, describe} from "@chainsafe/benchmark";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
+import type {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";
@@ -53,7 +54,7 @@ describe("validate gossip attestation", () => {
       id: `batch validate gossip attestation - vc ${vc} - chunk ${chunkSize}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {
-        await validateGossipAttestationsSameAttData(fork, chain, attestationOrBytesArr);
+        await validateGossipAttestationsSameAttData(fork, chain.beaconEngine as BeaconEngine, attestationOrBytesArr);
       },
       runsFactor: chunkSize,
     });

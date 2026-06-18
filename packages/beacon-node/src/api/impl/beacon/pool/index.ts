@@ -23,11 +23,8 @@ import {
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
-import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
-import {validateApiPayloadAttestationMessage} from "../../../../chain/validation/payloadAttestationMessage.js";
-import {validateGossipProposerPreferences} from "../../../../chain/validation/proposerPreferences.js";
+import {toElectraSingleAttestation} from "../../../../chain/validation/index.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
-import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
@@ -81,7 +78,9 @@ export function getBeaconPoolApi({
       await Promise.all(
         signedProposerPreferences.map(async (signed, i) => {
           try {
-            await validateGossipProposerPreferences(chain, signed);
+            // TODO - beacon engine: get bytes from the api
+            const preferencesBytes = ssz.gloas.SignedProposerPreferences.serialize(signed);
+            await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes, signed);
 
             chain.proposerPreferencesPool.add(signed);
             await network.publishProposerPreferences(signed);
@@ -144,7 +143,8 @@ export function getBeaconPoolApi({
       await Promise.all(
         signedAttestations.map(async (attestation, i) => {
           try {
-            const validateFn = () => validateApiAttestation(fork, chain, {attestation, serializedData: null});
+            const validateFn = () =>
+              chain.beaconEngine.validateApiAttestation(fork, {attestation, serializedData: null});
             const {slot, beaconBlockRoot} = attestation.data;
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
@@ -269,7 +269,7 @@ export function getBeaconPoolApi({
       await Promise.all(
         payloadAttestationMessages.map(async (payloadAttestationMessage, i) => {
           try {
-            const validateFn = () => validateApiPayloadAttestationMessage(chain, payloadAttestationMessage);
+            const validateFn = () => chain.beaconEngine.validateApiPayloadAttestationMessage(payloadAttestationMessage);
             const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
             const {attDataRootHex, validatorCommitteeIndices} = await validateGossipFnRetryUnknownRoot(
               validateFn,
@@ -365,7 +365,7 @@ export function getBeaconPoolApi({
 
             // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
             // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
-            await validateApiSyncCommittee(chain, state, signature);
+            await chain.beaconEngine.validateApiSyncCommittee(state, signature);
 
             // The same validator can appear multiple times in the sync committee. It can appear multiple times per
             // subnet even. First compute on which subnet the signature must be broadcasted to.

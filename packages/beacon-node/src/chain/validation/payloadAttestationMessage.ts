@@ -6,8 +6,8 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {GossipAction, PayloadAttestationError, PayloadAttestationErrorCode} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export type PayloadAttestationValidationResult = {
@@ -16,22 +16,22 @@ export type PayloadAttestationValidationResult = {
 };
 
 export async function validateApiPayloadAttestationMessage(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
   const prioritizeBls = true;
-  return validatePayloadAttestationMessage(chain, payloadAttestationMessage, prioritizeBls);
+  return validatePayloadAttestationMessage(engine, payloadAttestationMessage, prioritizeBls);
 }
 
 export async function validateGossipPayloadAttestationMessage(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   payloadAttestationMessage: gloas.PayloadAttestationMessage
 ): Promise<PayloadAttestationValidationResult> {
-  return validatePayloadAttestationMessage(chain, payloadAttestationMessage);
+  return validatePayloadAttestationMessage(engine, payloadAttestationMessage);
 }
 
 async function validatePayloadAttestationMessage(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   payloadAttestationMessage: gloas.PayloadAttestationMessage,
   prioritizeBls = false
 ): Promise<PayloadAttestationValidationResult> {
@@ -39,10 +39,10 @@ async function validatePayloadAttestationMessage(
   const epoch = computeEpochAtSlot(data.slot);
 
   // [IGNORE] The message's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance), i.e. `data.slot == current_slot`.
-  if (!chain.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
+  if (!engine.clock.isCurrentSlotGivenGossipDisparity(data.slot)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.NOT_CURRENT_SLOT,
-      currentSlot: chain.clock.currentSlot,
+      currentSlot: engine.clock.currentSlot,
       slot: data.slot,
     });
   }
@@ -50,7 +50,7 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The `payload_attestation_message` is the first valid message received
   // from the validator with index `payload_attestation_message.validator_index`.
   // A single validator can participate PTC at most once per epoch
-  if (chain.seenPayloadAttesters.isKnown(epoch, validatorIndex)) {
+  if (engine.seenPayloadAttesters.isKnown(epoch, validatorIndex)) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN,
       validatorIndex,
@@ -62,7 +62,7 @@ async function validatePayloadAttestationMessage(
   // [IGNORE] The message's block `data.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue attestation for processing
   // once the block is retrieved. Note a client might want to request payload after).
-  const block = chain.forkChoice.getBlockDefaultStatus(data.beaconBlockRoot);
+  const block = engine.forkChoice.getBlockDefaultStatus(data.beaconBlockRoot);
   if (!block) {
     throw new PayloadAttestationError(GossipAction.IGNORE, {
       code: PayloadAttestationErrorCode.UNKNOWN_BLOCK_ROOT,
@@ -86,7 +86,7 @@ async function validatePayloadAttestationMessage(
   // it is possible that the block didn't pass the validation
 
   // Use the referenced block's branch state for the PTC committee check
-  const state = await chain.regen
+  const state = await engine.regen
     .getBlockSlotState(block, data.slot, {dontTransferCache: true}, RegenCaller.validateGossipPayloadAttestationMessage)
     .catch(() => {
       throw new PayloadAttestationError(GossipAction.IGNORE, {
@@ -114,7 +114,7 @@ async function validatePayloadAttestationMessage(
   }
 
   // [REJECT] `payload_attestation_message.signature` is valid with respect to the validator's public key.
-  const validatorPubkey = chain.pubkeyCache.get(validatorIndex);
+  const validatorPubkey = engine.pubkeyCache.get(validatorIndex);
   if (!validatorPubkey) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_ATTESTER,
@@ -124,18 +124,18 @@ async function validatePayloadAttestationMessage(
 
   const signatureSet = createSingleSignatureSetFromComponents(
     validatorPubkey,
-    getPayloadAttestationDataSigningRoot(chain.config, data),
+    getPayloadAttestationDataSigningRoot(engine.config, data),
     payloadAttestationMessage.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (!(await engine.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new PayloadAttestationError(GossipAction.REJECT, {
       code: PayloadAttestationErrorCode.INVALID_SIGNATURE,
     });
   }
 
   // Valid
-  chain.seenPayloadAttesters.add(epoch, validatorIndex);
+  engine.seenPayloadAttesters.add(epoch, validatorIndex);
 
   return {
     attDataRootHex: toRootHex(ssz.gloas.PayloadAttestationData.hashTreeRoot(data)),

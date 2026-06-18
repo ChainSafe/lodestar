@@ -26,7 +26,6 @@ export type IChainOptions = IBeaconEngineOptions &
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
-    maxSkipSlots?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */
@@ -35,7 +34,6 @@ export type IChainOptions = IBeaconEngineOptions &
     maxCachedProducedRoots?: number;
     initialCustodyGroupCount?: number;
     broadcastValidationStrictness?: string;
-    minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
     nativeStateView?: boolean;

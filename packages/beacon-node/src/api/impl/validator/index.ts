@@ -73,8 +73,6 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
-import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
@@ -1535,7 +1533,7 @@ export function getValidatorApi(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const validateFn = () => validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
+            const validateFn = () => chain.beaconEngine.validateApiAggregateAndProof(fork, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
@@ -1594,11 +1592,14 @@ export function getValidatorApi(
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
-              chain,
-              contributionAndProof,
-              true // skip known participants check
-            );
+            // TODO - engine: get bytes from api
+            const contributionBytes = ssz.altair.SignedContributionAndProof.serialize(contributionAndProof);
+            const {syncCommitteeParticipantIndices} =
+              await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(
+                contributionBytes,
+                contributionAndProof,
+                true // skip known participants check
+              );
             const insertOutcome = chain.syncContributionAndProofPool.add(
               contributionAndProof.message,
               syncCommitteeParticipantIndices.length,

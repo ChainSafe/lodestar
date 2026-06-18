@@ -1,8 +1,8 @@
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {IBeaconStateView, isStatePostAltair, isSyncCommitteeAggregator} from "@lodestar/state-transition";
 import {ValidatorIndex, altair} from "@lodestar/types";
+import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors/index.js";
-import {IBeaconChain} from "../interface.js";
 import {
   getContributionAndProofSignatureSet,
   getSyncCommitteeContributionSignatureSet,
@@ -14,7 +14,7 @@ import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee.js";
  * Spec v1.1.0-beta.2
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   signedContributionAndProof: altair.SignedContributionAndProof,
   skipValidationKnownParticipants = false
 ): Promise<{syncCommitteeParticipantIndices: ValidatorIndex[]}> {
@@ -22,8 +22,8 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   const {contribution, aggregatorIndex} = contributionAndProof;
   const {subcommitteeIndex, slot} = contribution;
 
-  const headState = chain.getHeadState();
-  validateGossipSyncCommitteeExceptSig(chain, headState, subcommitteeIndex, {
+  const headState = engine.getHeadState();
+  validateGossipSyncCommitteeExceptSig(engine, headState, subcommitteeIndex, {
     slot,
     validatorIndex: contributionAndProof.aggregatorIndex,
   });
@@ -38,7 +38,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // _[IGNORE]_ A valid sync committee contribution with equal `slot`, `beacon_block_root` and `subcommittee_index` whose
   // `aggregation_bits` is non-strict superset has _not_ already been seen.
-  if (!skipValidationKnownParticipants && chain.seenContributionAndProof.participantsKnown(contribution)) {
+  if (!skipValidationKnownParticipants && engine.seenContributionAndProof.participantsKnown(contribution)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
     });
@@ -46,7 +46,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
-  if (chain.seenContributionAndProof.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)) {
+  if (engine.seenContributionAndProof.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
     });
@@ -76,24 +76,24 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData
     // derived from the contribution by the validator with index contribution_and_proof.aggregator_index.
-    getSyncCommitteeSelectionProofSignatureSet(chain.config, headState, contributionAndProof),
+    getSyncCommitteeSelectionProofSignatureSet(engine.config, headState, contributionAndProof),
 
     // [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
-    getContributionAndProofSignatureSet(chain.config, headState, signedContributionAndProof),
+    getContributionAndProofSignatureSet(engine.config, headState, signedContributionAndProof),
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
-    getSyncCommitteeContributionSignatureSet(chain.config, headState, contribution, syncCommitteeParticipantIndices),
+    getSyncCommitteeContributionSignatureSet(engine.config, headState, contribution, syncCommitteeParticipantIndices),
   ];
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+  if (!(await engine.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });
   }
 
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
-  chain.seenContributionAndProof.add(contributionAndProof, syncCommitteeParticipantIndices.length);
+  engine.seenContributionAndProof.add(contributionAndProof, syncCommitteeParticipantIndices.length);
 
   return {syncCommitteeParticipantIndices};
 }

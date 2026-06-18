@@ -6,8 +6,8 @@ import {
 } from "@lodestar/state-transition";
 import {IndexedAttestation, RootHex, SignedAggregateAndProof, electra, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 import {
   getAttestationDataSigningRoot,
@@ -27,12 +27,12 @@ export type AggregateAndProofValidationResult = {
 
 export async function validateApiAggregateAndProof(
   fork: ForkName,
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   signedAggregateAndProof: SignedAggregateAndProof
 ): Promise<AggregateAndProofValidationResult> {
   const skipValidationKnownAttesters = true;
   const prioritizeBls = true;
-  return validateAggregateAndProof(fork, chain, signedAggregateAndProof, null, {
+  return validateAggregateAndProof(fork, engine, signedAggregateAndProof, null, {
     skipValidationKnownAttesters,
     prioritizeBls,
   });
@@ -40,16 +40,16 @@ export async function validateApiAggregateAndProof(
 
 export async function validateGossipAggregateAndProof(
   fork: ForkName,
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   signedAggregateAndProof: SignedAggregateAndProof,
   serializedData: Uint8Array
 ): Promise<AggregateAndProofValidationResult> {
-  return validateAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
+  return validateAggregateAndProof(fork, engine, signedAggregateAndProof, serializedData);
 }
 
 async function validateAggregateAndProof(
   fork: ForkName,
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   signedAggregateAndProof: SignedAggregateAndProof,
   serializedData: Uint8Array | null = null,
   opts: {skipValidationKnownAttesters: boolean; prioritizeBls: boolean} = {
@@ -81,7 +81,7 @@ async function validateAggregateAndProof(
       });
     }
     // [REJECT] `aggregate.data.index == 0` if `block.slot == aggregate.data.slot`.
-    const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
+    const block = engine.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
 
     // If block is unknown, we don't handle it here. It will throw error later on at `verifyHeadBlockAndTargetRoot()`
     if (block !== null && block.slot === attData.slot && attData.index !== 0) {
@@ -96,7 +96,13 @@ async function validateAggregateAndProof(
     // the corresponding execution payload for `block` has been seen (a client MAY queue
     // attestations for processing once the payload is retrieved and SHOULD request the
     // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
-    if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
+    // TODO - beacon engine: unstable uses engine.seenPayloadEnvelope() which also checks the facade-owned
+    // seenPayloadEnvelopeInputCache; the engine has only the forkChoice branch.
+    if (
+      block !== null &&
+      attData.index === 1 &&
+      !engine.forkChoice.hasPayloadHexUnsafe(toRootHex(attData.beaconBlockRoot))
+    ) {
       throw new AttestationError(GossipAction.IGNORE, {
         code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
         beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
@@ -123,15 +129,17 @@ async function validateAggregateAndProof(
   }
 
   const seenAttDataKey = serializedData ? getSeenAttDataKeyFromSignedAggregateAndProof(fork, serializedData) : null;
-  const cachedAttData = seenAttDataKey ? chain.seenAttestationDatas.get(attSlot, committeeIndex, seenAttDataKey) : null;
+  const cachedAttData = seenAttDataKey
+    ? engine.seenAttestationDatas.get(attSlot, committeeIndex, seenAttDataKey)
+    : null;
 
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
 
-  chain.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
+  engine.metrics?.gossipAttestation.attestationSlotToClockSlot.observe(
     {caller: RegenCaller.validateGossipAggregateAndProof},
-    chain.clock.currentSlot - attSlot
+    engine.clock.currentSlot - attSlot
   );
 
   if (!cachedAttData) {
@@ -151,13 +159,13 @@ async function validateAggregateAndProof(
     // [IGNORE] the epoch of `aggregate.data.slot` is either the current or previous epoch
     //   (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance)
     // -- i.e. `compute_epoch_at_slot(aggregate.data.slot) in (get_previous_epoch(state), get_current_epoch(state))`
-    verifyPropagationSlotRange(fork, chain, attSlot);
+    verifyPropagationSlotRange(fork, engine, attSlot);
   }
 
   // [IGNORE] The aggregate is the first valid aggregate received for the aggregator with
   // index aggregate_and_proof.aggregator_index for the epoch aggregate.data.target.epoch.
   const aggregatorIndex = aggregateAndProof.aggregatorIndex;
-  if (chain.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
+  if (engine.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN,
       targetEpoch,
@@ -172,7 +180,7 @@ async function validateAggregateAndProof(
     : toRootHex(ssz.phase0.AttestationData.hashTreeRoot(attData));
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, committeeIndex, attDataRootHex, aggregationBits)
+    engine.seenAggregatedAttestations.isKnown(targetEpoch, committeeIndex, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
@@ -189,21 +197,21 @@ async function validateAggregateAndProof(
   // [REJECT] The aggregate attestation's target block is an ancestor of the block named in the LMD vote
   // -- i.e. `get_checkpoint_block(store, aggregate.data.beacon_block_root, aggregate.data.target.epoch) == aggregate.data.target.root`
   const attHeadBlock = verifyHeadBlockAndTargetRoot(
-    chain,
+    engine,
     attData.beaconBlockRoot,
     attTarget.root,
     attSlot,
     attEpoch,
     RegenCaller.validateGossipAggregateAndProof,
-    chain.opts.maxSkipSlots
+    engine.opts.maxSkipSlots
   );
 
   // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-  // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
+  // > Altready check in `engine.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
   const shuffling = await getShufflingForAttestationVerification(
-    chain,
+    engine,
     attEpoch,
     attHeadBlock,
     RegenCaller.validateGossipAttestation
@@ -252,27 +260,27 @@ async function validateAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(chain.config, attData);
+  const signingRoot = cachedAttData ? cachedAttData.signingRoot : getAttestationDataSigningRoot(engine.config, attData);
   const indexedAttestationSignatureSet = createAggregateSignatureSetFromComponents(
     indexedAttestation.attestingIndices,
     signingRoot,
     indexedAttestation.signature
   );
   const signatureSets = [
-    getSelectionProofSignatureSet(chain.config, attSlot, aggregatorIndex, signedAggregateAndProof),
-    getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregatorIndex, signedAggregateAndProof),
+    getSelectionProofSignatureSet(engine.config, attSlot, aggregatorIndex, signedAggregateAndProof),
+    getAggregateAndProofSignatureSet(engine.config, attEpoch, aggregatorIndex, signedAggregateAndProof),
     indexedAttestationSignatureSet,
   ];
   // no need to write to SeenAttestationDatas
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  if (!(await engine.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
 
   // It's important to double check that the attestation still hasn't been observed, since
   // there can be a race-condition if we receive two attestations at the same time and
   // process them in different threads.
-  if (chain.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
+  if (engine.seenAggregators.isKnown(targetEpoch, aggregatorIndex)) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN,
       targetEpoch,
@@ -283,7 +291,7 @@ async function validateAggregateAndProof(
   // Same race-condition check as above for seen aggregators
   if (
     !skipValidationKnownAttesters &&
-    chain.seenAggregatedAttestations.isKnown(targetEpoch, committeeIndex, attDataRootHex, aggregationBits)
+    engine.seenAggregatedAttestations.isKnown(targetEpoch, committeeIndex, attDataRootHex, aggregationBits)
   ) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.ATTESTERS_ALREADY_KNOWN,
@@ -292,8 +300,8 @@ async function validateAggregateAndProof(
     });
   }
 
-  chain.seenAggregators.add(targetEpoch, aggregatorIndex);
-  chain.seenAggregatedAttestations.add(
+  engine.seenAggregators.add(targetEpoch, aggregatorIndex);
+  engine.seenAggregatedAttestations.add(
     targetEpoch,
     committeeIndex,
     attDataRootHex,

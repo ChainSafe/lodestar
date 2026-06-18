@@ -48,9 +48,6 @@ import {
   ProduceFullFulu,
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
-import {validateGossipBlock} from "../../../../chain/validation/block.js";
-import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
-import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
@@ -202,7 +199,9 @@ export function getBeaconBlockApi({
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
           try {
-            await validateGossipBlock(config, chain, signedBlock, fork);
+            // TODO - engine: get block bytes from upstream
+            const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock);
+            await chain.beaconEngine.validateGossipBlock(blockBytes, signedBlock, fork);
           } catch (error) {
             if (error instanceof BlockGossipError) {
               switch (error.type.code) {
@@ -683,7 +682,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
 
-      await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+      await chain.beaconEngine.validateApiExecutionPayloadEnvelope(signedExecutionPayloadEnvelope);
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
@@ -833,7 +832,7 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+      await chain.beaconEngine.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
 
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);

@@ -180,6 +180,9 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     shufflingCache,
     opts: defaultChainOptions,
   } as Partial<IBeaconChain> as IBeaconChain;
+  // The gossip validators are BeaconEngine methods reading engine collaborators; in this flat fixture
+  // the facade doubles as the engine, so `chain.beaconEngine` exposes the same collaborators.
+  (chain as {beaconEngine: unknown}).beaconEngine = chain;
 
   return {chain, attestation, subnet, validatorIndex};
 }

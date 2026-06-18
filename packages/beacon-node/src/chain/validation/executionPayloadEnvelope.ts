@@ -6,26 +6,26 @@ import {
 } from "@lodestar/state-transition";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
+import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode, GossipAction} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadEnvelope(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(engine, executionPayloadEnvelope);
 }
 
 export async function validateGossipExecutionPayloadEnvelope(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(chain, executionPayloadEnvelope);
+  return validateExecutionPayloadEnvelope(engine, executionPayloadEnvelope);
 }
 
 async function validateExecutionPayloadEnvelope(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
 ): Promise<void> {
   const envelope = executionPayloadEnvelope.message;
@@ -35,7 +35,7 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The envelope's block root `envelope.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
-  const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
+  const block = engine.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
@@ -45,8 +45,8 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  const envelopeBlock = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
-  const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  const envelopeBlock = engine.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+  const payloadInput = engine.seenPayloadEnvelopeInputCache.get(blockRootHex);
   if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN,
@@ -64,7 +64,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `payload.slotNumber >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
+  const finalizedCheckpoint = engine.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (payload.slotNumber < finalizedSlot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -116,7 +116,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // Get the block state to verify the builder's signature.
-  const blockState = await chain.regen
+  const blockState = await engine.regen
     .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
     .catch(() => {
       throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -132,14 +132,14 @@ async function validateExecutionPayloadEnvelope(
   // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified
   // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
-    chain.config,
-    chain.pubkeyCache,
+    engine.config,
+    engine.pubkeyCache,
     blockState,
     executionPayloadEnvelope,
     payloadInput.proposerIndex
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
+  if (!(await engine.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
     });

@@ -1,14 +1,35 @@
 import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
-import {PubkeyCache} from "@lodestar/state-transition";
+import {ForkName} from "@lodestar/params";
+import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {
+  SignedAggregateAndProof,
+  SignedBeaconBlock,
+  SubnetID,
+  ValidatorIndex,
+  altair,
+  deneb,
+  fulu,
+  gloas,
+} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {IClock} from "../../util/clock.js";
+import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
+import {AggregateAndProofValidationResult} from "../validation/aggregateAndProof.js";
+import {
+  ApiAttestation,
+  AttestationValidationResult,
+  BatchResult,
+  GossipAttestation,
+} from "../validation/attestation.js";
+import {GossipBlockValidationResult} from "../validation/block.js";
+import {PayloadAttestationValidationResult} from "../validation/payloadAttestationMessage.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {IBeaconEngineOptions} from "./options.js";
 
@@ -41,4 +62,74 @@ export interface IBeaconEngine {
   // perform them still live facade-side. TODO - beacon engine: narrow to a read facet as those flows
   // (gossip → Phase 3, migrateFinalized/prune → Phase 5) move into the engine.
   readonly forkChoice: IForkChoice;
+
+  // Gossip validation flows. The first parameter is the message's SSZ bytes (unused by the JS engine,
+  // required by the native engine's bytes-first contract), followed by the deserialized object.
+  validateGossipBlock(
+    blockBytes: Uint8Array,
+    signedBlock: SignedBeaconBlock,
+    fork: ForkName
+  ): Promise<GossipBlockValidationResult>;
+  validateGossipSyncCommittee(
+    syncCommitteeBytes: Uint8Array,
+    syncCommittee: altair.SyncCommitteeMessage,
+    subnet: SubnetID
+  ): Promise<{indicesInSubcommittee: number[]}>;
+  validateApiSyncCommittee(headState: IBeaconStateView, syncCommittee: altair.SyncCommitteeMessage): Promise<void>;
+  validateSyncCommitteeGossipContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof,
+    skipValidationKnownParticipants?: boolean
+  ): Promise<{syncCommitteeParticipantIndices: ValidatorIndex[]}>;
+  validateGossipBlobSidecar(
+    blobBytes: Uint8Array,
+    fork: ForkName,
+    blobSidecar: deneb.BlobSidecar,
+    subnet: SubnetID
+  ): Promise<void>;
+  validateGossipFuluDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    dataColumnSidecar: fulu.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<void>;
+  validateGossipGloasDataColumnSidecar(
+    dataColumnBytes: Uint8Array,
+    payloadInput: PayloadEnvelopeInput,
+    dataColumnSidecar: gloas.DataColumnSidecar,
+    gossipSubnet: SubnetID
+  ): Promise<void>;
+  validateGossipPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<PayloadAttestationValidationResult>;
+  validateApiPayloadAttestationMessage(
+    payloadAttestationMessage: gloas.PayloadAttestationMessage
+  ): Promise<PayloadAttestationValidationResult>;
+  validateGossipAttestationsSameAttData(fork: ForkName, attestations: GossipAttestation[]): Promise<BatchResult>;
+  validateApiAttestation(fork: ForkName, attestationOrBytes: ApiAttestation): Promise<AttestationValidationResult>;
+  validateGossipAggregateAndProof(
+    aggregateBytes: Uint8Array,
+    fork: ForkName,
+    signedAggregateAndProof: SignedAggregateAndProof
+  ): Promise<AggregateAndProofValidationResult>;
+  validateApiAggregateAndProof(
+    fork: ForkName,
+    signedAggregateAndProof: SignedAggregateAndProof
+  ): Promise<AggregateAndProofValidationResult>;
+  validateGossipExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+  ): Promise<void>;
+  validateApiExecutionPayloadEnvelope(executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope): Promise<void>;
+  validateGossipExecutionPayloadBid(
+    bidBytes: Uint8Array,
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+  ): Promise<{proposerIndex: ValidatorIndex}>;
+  validateApiExecutionPayloadBid(
+    signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
+  ): Promise<{proposerIndex: ValidatorIndex}>;
+  validateGossipProposerPreferences(
+    preferencesBytes: Uint8Array,
+    signedProposerPreferences: gloas.SignedProposerPreferences
+  ): Promise<void>;
 }

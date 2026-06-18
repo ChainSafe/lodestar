@@ -204,11 +204,15 @@ export type MockedBeaconChainOptions = {
 export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): MockedBeaconChain {
   const {clock, genesisTime, config} = opts ?? {};
   // @ts-expect-error
-  return new BeaconChain({
+  const chain = new BeaconChain({
     clock: clock ?? "fake",
     genesisTime: genesisTime ?? 0,
     config: config ?? defaultConfig,
   }) as MockedBeaconChain;
+  // The gossip validators are now BeaconEngine methods that read engine collaborators. In this flat
+  // mock the facade doubles as the engine, so `chain.beaconEngine.forkChoice === chain.forkChoice` etc.
+  (chain as {beaconEngine: unknown}).beaconEngine = chain;
+  return chain;
 }
 
 export type MockedForkChoice = Mocked<ForkChoice>;

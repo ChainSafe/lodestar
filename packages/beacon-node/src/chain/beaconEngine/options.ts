@@ -30,4 +30,8 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
   ForkChoiceOpts &
   BlsMultiThreadWorkerPoolOptions & {
     blsVerifyAllMainThread?: boolean;
+    /** Gossip block/blob/data-column validation observes (no longer gates) skipped slots */
+    maxSkipSlots?: number;
+    /** Min number of same-message signature sets to batch in gossip attestation validation */
+    minSameMessageSignatureSetsToBatch: number;
   };

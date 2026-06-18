@@ -13,7 +13,6 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {
-  EpochShuffling,
   IBeaconStateView,
   PubkeyCache,
   computeEndSlotAtEpoch,
@@ -194,11 +193,17 @@ export class BeaconChain implements IBeaconChain {
   get syncContributionAndProofPool(): SyncContributionAndProofPool {
     return this.beaconEngine.syncContributionAndProofPool;
   }
-  readonly executionPayloadBidPool: ExecutionPayloadBidPool;
+  // TODO - beacon engine: remove this
+  get executionPayloadBidPool(): ExecutionPayloadBidPool {
+    return this.beaconEngine.executionPayloadBidPool;
+  }
   get payloadAttestationPool(): PayloadAttestationPool {
     return this.beaconEngine.payloadAttestationPool;
   }
-  readonly proposerPreferencesPool = new ProposerPreferencesPool();
+  // TODO - beacon engine: remove this
+  get proposerPreferencesPool(): ProposerPreferencesPool {
+    return this.beaconEngine.proposerPreferencesPool;
+  }
   get opPool(): OpPool {
     return this.beaconEngine.opPool;
   }
@@ -213,10 +218,22 @@ export class BeaconChain implements IBeaconChain {
   get seenPayloadAttesters(): SeenPayloadAttesters {
     return this.beaconEngine.seenPayloadAttesters;
   }
-  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
-  readonly seenProposerPreferences = new SeenProposerPreferences();
-  readonly seenBlockProposers = new SeenBlockProposers();
+  // TODO - beacon engine: remove this
+  get seenAggregatedAttestations(): SeenAggregatedAttestations {
+    return this.beaconEngine.seenAggregatedAttestations;
+  }
+  // TODO - beacon engine: remove this
+  get seenExecutionPayloadBids(): SeenExecutionPayloadBids {
+    return this.beaconEngine.seenExecutionPayloadBids;
+  }
+  // TODO - beacon engine: remove this
+  get seenProposerPreferences(): SeenProposerPreferences {
+    return this.beaconEngine.seenProposerPreferences;
+  }
+  // TODO - beacon engine: remove this
+  get seenBlockProposers(): SeenBlockProposers {
+    return this.beaconEngine.seenBlockProposers;
+  }
   get seenSyncCommitteeMessages(): SeenSyncCommitteeMessages {
     return this.beaconEngine.seenSyncCommitteeMessages;
   }
@@ -385,9 +402,6 @@ export class BeaconChain implements IBeaconChain {
     );
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    this.executionPayloadBidPool = new ExecutionPayloadBidPool();
-
-    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
 
@@ -418,6 +432,10 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
+    // Facade-owned (DA assembly) but shared with the engine for gossip validation. Injected here (not via
+    // the engine constructor) because it depends on the engine's own forkChoice.
+    // TODO - beacon engine: remove this once ownership is settled in a later phase.
+    this.beaconEngine.seenPayloadEnvelopeInputCache = this.seenPayloadEnvelopeInputCache;
 
     const anchorBlockSlot = anchorState.latestBlockHeader.slot;
     if (isStatePostGloas(anchorState) && anchorBlockSlot > 0) {
@@ -559,6 +577,7 @@ export class BeaconChain implements IBeaconChain {
     await this.opPool.toPersisted(this.db);
   }
 
+  // TODO - beacon engine: remove this
   getHeadState(): IBeaconStateView {
     // head state should always exist
     const head = this.forkChoice.getHead();
@@ -1270,44 +1289,6 @@ export class BeaconChain implements IBeaconChain {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(typeName, sszBytes, sszBytes, suffix);
     }
-  }
-
-  /**
-   * Regenerate state for attestation verification, this does not happen with default chain option of maxSkipSlots = 32 .
-   * However, need to handle just in case. Lodestar doesn't support multiple regen state requests for attestation verification
-   * at the same time, bounded inside "ShufflingCache.insertPromise()" function.
-   * Leave this function in chain instead of attestatation verification code to make sure we're aware of its performance impact.
-   */
-  async regenStateForAttestationVerification(
-    attEpoch: Epoch,
-    shufflingDependentRoot: RootHex,
-    attHeadBlock: ProtoBlock,
-    regenCaller: RegenCaller
-  ): Promise<EpochShuffling> {
-    // this is to prevent multiple calls to get shuffling for the same epoch and dependent root
-    // any subsequent calls of the same epoch and dependent root will wait for this promise to resolve
-    this.shufflingCache.insertPromise(attEpoch, shufflingDependentRoot);
-    const blockEpoch = computeEpochAtSlot(attHeadBlock.slot);
-
-    let state: IBeaconStateView;
-    if (blockEpoch < attEpoch - 1) {
-      // thanks to one epoch look ahead, we don't need to dial up to attEpoch
-      const targetSlot = computeStartSlotAtEpoch(attEpoch - 1);
-      this.metrics?.gossipAttestation.useHeadBlockStateDialedToTargetEpoch.inc({caller: regenCaller});
-      state = await this.regen.getBlockSlotState(attHeadBlock, targetSlot, {dontTransferCache: true}, regenCaller);
-    } else if (blockEpoch > attEpoch) {
-      // should not happen, handled inside attestation verification code
-      throw Error(`Block epoch ${blockEpoch} is after attestation epoch ${attEpoch}`);
-    } else {
-      // should use either current or next shuffling of head state
-      // it's not likely to hit this since these shufflings are cached already
-      // so handle just in case
-      this.metrics?.gossipAttestation.useHeadBlockState.inc({caller: regenCaller});
-      state = await this.regen.getState(attHeadBlock.stateRoot, regenCaller);
-    }
-    // resolve the promise to unblock other calls of the same epoch and dependent root
-    this.shufflingCache.processState(state);
-    return state.getShufflingAtEpoch(attEpoch);
   }
 
   private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {

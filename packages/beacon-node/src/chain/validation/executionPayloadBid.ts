@@ -11,26 +11,26 @@ import {
 import {ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
+import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 export async function validateApiExecutionPayloadBid(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
-  return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
+  return validateExecutionPayloadBid(engine, signedExecutionPayloadBid);
 }
 
 export async function validateGossipExecutionPayloadBid(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
-  return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
+  return validateExecutionPayloadBid(engine, signedExecutionPayloadBid);
 }
 
 async function validateExecutionPayloadBid(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
   const bid = signedExecutionPayloadBid.message;
@@ -38,7 +38,7 @@ async function validateExecutionPayloadBid(
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
 
   // [IGNORE] `bid.slot` is the current slot or the next slot.
-  const currentSlot = chain.clock.currentSlot;
+  const currentSlot = engine.clock.currentSlot;
   if (bid.slot !== currentSlot && bid.slot !== currentSlot + 1) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
@@ -50,7 +50,7 @@ async function validateExecutionPayloadBid(
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
   // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
   // proposer-preferences lookup below from a known fork-choice block.
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+  const parentBlock = engine.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
   if (parentBlock === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
@@ -81,7 +81,7 @@ async function validateExecutionPayloadBid(
   // letting a raw `ForkChoiceError` escape the `GossipActionError` contract.
   const dependentRootHex = (() => {
     try {
-      return getShufflingDependentRoot(chain.forkChoice, bidEpoch, computeEpochAtSlot(parentBlock.slot), parentBlock);
+      return getShufflingDependentRoot(engine.forkChoice, bidEpoch, computeEpochAtSlot(parentBlock.slot), parentBlock);
     } catch {
       return null;
     }
@@ -98,7 +98,7 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  const proposerPreferences = chain.proposerPreferencesPool.get(bid.slot, dependentRootHex);
+  const proposerPreferences = engine.proposerPreferencesPool.get(bid.slot, dependentRootHex);
   if (proposerPreferences === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES,
@@ -109,7 +109,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Use the bid's parent branch state for builder checks
-  const state = await chain.regen
+  const state = await engine.regen
     .getBlockSlotState(parentBlock, bid.slot, {dontTransferCache: true}, RegenCaller.validateGossipExecutionPayloadBid)
     .catch(() => {
       throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
@@ -176,7 +176,7 @@ async function validateExecutionPayloadBid(
   // payload's hash) and EMPTY parents (EMPTY/PENDING variants carry the inherited parent
   // payload's hash, since the new block doesn't have its own payload). Variant carries the
   // executed payload's gas_limit, which we use as `parent_gas_limit` below.
-  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, parentBlockHashHex);
+  const parentPayloadVariant = engine.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, parentBlockHashHex);
   if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
@@ -204,7 +204,7 @@ async function validateExecutionPayloadBid(
   // consensus layer -- i.e. validate that
   // `len(bid.blob_kzg_commitments) <= get_blob_parameters(compute_epoch_at_slot(bid.slot)).max_blobs_per_block`.
   const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
-  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  const maxBlobsPerBlock = engine.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
   if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.TOO_MANY_KZG_COMMITMENTS,
@@ -214,7 +214,7 @@ async function validateExecutionPayloadBid(
   }
 
   // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
+  if (engine.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
@@ -226,7 +226,7 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] this bid is the highest value bid seen for the tuple
   // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
+  const bestBid = engine.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
   if (bestBid !== null && bestBid.message.value >= bid.value) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
@@ -259,11 +259,11 @@ async function validateExecutionPayloadBid(
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
     PublicKey.fromBytes(builder.pubkey),
-    getExecutionPayloadBidSigningRoot(chain.config, state.slot, bid),
+    getExecutionPayloadBidSigningRoot(engine.config, state.slot, bid),
     signedExecutionPayloadBid.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  if (!(await engine.bls.verifySignatureSets([signatureSet]))) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
       builderIndex: bid.builderIndex,
@@ -272,7 +272,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex);
+  engine.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }

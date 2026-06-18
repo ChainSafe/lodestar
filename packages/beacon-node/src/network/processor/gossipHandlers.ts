@@ -58,31 +58,17 @@ import {
   SyncCommitteeError,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {validateGossipBlobSidecar} from "../../chain/validation/blobSidecar.js";
-import {
-  validateGossipFuluDataColumnSidecar,
-  validateGossipGloasDataColumnSidecar,
-} from "../../chain/validation/dataColumnSidecar.js";
-import {validateGossipExecutionPayloadBid} from "../../chain/validation/executionPayloadBid.js";
-import {validateGossipExecutionPayloadEnvelope} from "../../chain/validation/executionPayloadEnvelope.js";
 import {
   AggregateAndProofValidationResult,
   GossipAttestation,
   toElectraSingleAttestation,
-  validateGossipAggregateAndProof,
-  validateGossipAttestationsSameAttData,
   validateGossipAttesterSlashing,
-  validateGossipBlock,
   validateGossipBlsToExecutionChange,
   validateGossipProposerSlashing,
-  validateGossipSyncCommittee,
   validateGossipVoluntaryExit,
-  validateSyncCommitteeGossipContributionAndProof,
 } from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
-import {validateGossipPayloadAttestationMessage} from "../../chain/validation/payloadAttestationMessage.js";
-import {validateGossipProposerPreferences} from "../../chain/validation/proposerPreferences.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
 import {Metrics} from "../../metrics/index.js";
 import {kzgCommitmentToVersionedHash} from "../../util/blobs.js";
@@ -149,6 +135,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconBlock(
     signedBlock: SignedBeaconBlock,
+    blockBytes: Uint8Array,
     fork: ForkName,
     peerIdStr: string,
     seenTimestampSec: number
@@ -185,7 +172,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       peerIdStr,
     });
     try {
-      const {skippedSlots} = await validateGossipBlock(config, chain, signedBlock, fork);
+      const {skippedSlots} = await chain.beaconEngine.validateGossipBlock(blockBytes, signedBlock, fork);
 
       if (isForkPostGloas(fork)) {
         chain.seenPayloadEnvelopeInputCache.add({
@@ -246,6 +233,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconBlob(
     blobSidecar: deneb.BlobSidecar,
+    blobBytes: Uint8Array,
     subnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
@@ -260,7 +248,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipBlobSidecar(fork, chain, blobSidecar, subnet);
+      await chain.beaconEngine.validateGossipBlobSidecar(blobBytes, fork, blobSidecar, subnet);
       const blockInput = chain.seenBlockInputCache.getByBlob({
         blockRootHex,
         blobSidecar,
@@ -331,7 +319,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validateBeaconDataColumn(
     dataColumnSidecar: fulu.DataColumnSidecar,
-    _dataColumnBytes: Uint8Array,
+    dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
@@ -380,7 +368,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipFuluDataColumnSidecar(chain, dataColumnSidecar, gossipSubnet, metrics);
+      await chain.beaconEngine.validateGossipFuluDataColumnSidecar(dataColumnBytes, dataColumnSidecar, gossipSubnet);
       const blockInput = chain.seenBlockInputCache.getByColumn({
         blockRootHex,
         columnSidecar: dataColumnSidecar,
@@ -442,6 +430,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
   async function validatePayloadDataColumn(
     dataColumnSidecar: gloas.DataColumnSidecar,
+    dataColumnBytes: Uint8Array,
     gossipSubnet: SubnetID,
     peerIdStr: string,
     seenTimestampSec: number
@@ -499,7 +488,12 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     const recvToValLatency = Date.now() / 1000 - seenTimestampSec;
 
     try {
-      await validateGossipGloasDataColumnSidecar(chain, payloadInput, dataColumnSidecar, gossipSubnet, metrics);
+      await chain.beaconEngine.validateGossipGloasDataColumnSidecar(
+        dataColumnBytes,
+        payloadInput,
+        dataColumnSidecar,
+        gossipSubnet
+      );
 
       const addedColumn = payloadInput.addColumn({
         columnSidecar: dataColumnSidecar,
@@ -685,7 +679,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
 
       const signedBlock = sszDeserialize(topic, serializedData);
-      const blockInput = await validateBeaconBlock(signedBlock, topic.boundary.fork, peerIdStr, seenTimestampSec);
+      const blockInput = await validateBeaconBlock(
+        signedBlock,
+        serializedData,
+        topic.boundary.fork,
+        peerIdStr,
+        seenTimestampSec
+      );
       chain.serializedCache.set(signedBlock, serializedData);
       handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
     },
@@ -704,7 +704,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (config.getForkSeq(blobSlot) < ForkSeq.deneb) {
         throw new GossipActionError(GossipAction.REJECT, {code: "PRE_DENEB_BLOCK"});
       }
-      const blockInput = await validateBeaconBlob(blobSidecar, topic.subnet, peerIdStr, seenTimestampSec);
+      const blockInput = await validateBeaconBlob(
+        blobSidecar,
+        serializedData,
+        topic.subnet,
+        peerIdStr,
+        seenTimestampSec
+      );
       chain.serializedCache.set(blobSidecar, serializedData);
       if (!blockInput.hasBlockAndAllData()) {
         const cutoffTimeMs = getCutoffTimeMs(chain, blobSlot, BLOCK_AVAILABILITY_CUTOFF_MS);
@@ -756,6 +762,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         // After gloas, data columns are tracked in PayloadEnvelopeInput
         const payloadInput = await validatePayloadDataColumn(
           dataColumnSidecar,
+          serializedData,
           topic.subnet,
           peerIdStr,
           seenTimestampSec
@@ -896,7 +903,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {fork} = topic.boundary;
 
       try {
-        validationResult = await validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData);
+        validationResult = await chain.beaconEngine.validateGossipAggregateAndProof(
+          serializedData,
+          fork,
+          signedAggregateAndProof
+        );
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(
@@ -1002,15 +1013,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.sync_committee_contribution_and_proof>) => {
       const {serializedData} = gossipData;
       const contributionAndProof = sszDeserialize(topic, serializedData);
-      const {syncCommitteeParticipantIndices} = await validateSyncCommitteeGossipContributionAndProof(
-        chain,
-        contributionAndProof
-      ).catch((e) => {
-        if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "gossip_reject");
-        }
-        throw e;
-      });
+      const {syncCommitteeParticipantIndices} = await chain.beaconEngine
+        .validateSyncCommitteeGossipContributionAndProof(serializedData, contributionAndProof)
+        .catch((e) => {
+          if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+            chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "gossip_reject");
+          }
+          throw e;
+        });
 
       // Handler
       chain.validatorMonitor?.registerGossipSyncContributionAndProof(
@@ -1036,7 +1046,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {subnet} = topic;
       let indicesInSubcommittee: number[] = [0];
       try {
-        indicesInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indicesInSubcommittee;
+        indicesInSubcommittee = (
+          await chain.beaconEngine.validateGossipSyncCommittee(serializedData, syncCommittee, subnet)
+        ).indicesInSubcommittee;
       } catch (e) {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
           chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, syncCommittee, "gossip_reject");
@@ -1104,7 +1116,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // unlike BlockInput, we send the envelope into UnknownBlockInput sync
       // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
       try {
-        await validateGossipExecutionPayloadEnvelope(chain, signedEnvelope);
+        await chain.beaconEngine.validateGossipExecutionPayloadEnvelope(serializedData, signedEnvelope);
       } catch (e) {
         if (e instanceof ExecutionPayloadEnvelopeError) {
           const {beaconBlockRoot} = signedEnvelope.message;
@@ -1207,7 +1219,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.payload_attestation_message>) => {
       const {serializedData} = gossipData;
       const payloadAttestationMessage = sszDeserialize(topic, serializedData);
-      const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
+      const validationResult = await chain.beaconEngine.validateGossipPayloadAttestationMessage(
+        serializedData,
+        payloadAttestationMessage
+      );
 
       try {
         const insertOutcome = chain.payloadAttestationPool.add(
@@ -1233,7 +1248,10 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
-      const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+      const {proposerIndex} = await chain.beaconEngine.validateGossipExecutionPayloadBid(
+        serializedData,
+        executionPayloadBid
+      );
 
       // Handle valid payload bid by storing in a bid pool
       try {
@@ -1256,7 +1274,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.proposer_preferences>) => {
       const {serializedData} = gossipData;
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
-      await validateGossipProposerPreferences(chain, signedProposerPreferences);
+      await chain.beaconEngine.validateGossipProposerPreferences(serializedData, signedProposerPreferences);
 
       chain.proposerPreferencesPool.add(signedProposerPreferences);
       chain.emitter.emit(routes.events.EventType.proposerPreferences, {
@@ -1290,9 +1308,8 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         attDataBase64: param.gossipData.indexed,
         subnet: param.topic.subnet,
       })) as GossipAttestation[];
-      const {results: validationResults, batchableBls} = await validateGossipAttestationsSameAttData(
+      const {results: validationResults, batchableBls} = await chain.beaconEngine.validateGossipAttestationsSameAttData(
         fork,
-        chain,
         validationParams
       );
       for (const [i, validationResult] of validationResults.entries()) {

@@ -51,7 +51,7 @@ describe("getShufflingForAttestationVerification", () => {
       return Promise.resolve(null);
     });
     const resultShuffling = await getShufflingForAttestationVerification(
-      chain,
+      chain.beaconEngine,
       attEpoch,
       attHeadBlock as ProtoBlock,
       RegenCaller.validateGossipAttestation
@@ -81,7 +81,7 @@ describe("getShufflingForAttestationVerification", () => {
       return Promise.resolve(null);
     });
     const resultShuffling = await getShufflingForAttestationVerification(
-      chain,
+      chain.beaconEngine,
       attEpoch,
       attHeadBlock as ProtoBlock,
       RegenCaller.validateGossipAttestation
@@ -108,10 +108,12 @@ describe("getShufflingForAttestationVerification", () => {
       }
       return Promise.resolve(null);
     });
-    chain.regenStateForAttestationVerification.mockImplementationOnce(() => Promise.resolve(expectedShuffling));
+    vi.mocked(chain.beaconEngine.regenStateForAttestationVerification).mockImplementationOnce(() =>
+      Promise.resolve(expectedShuffling)
+    );
 
     const resultShuffling = await getShufflingForAttestationVerification(
-      chain,
+      chain.beaconEngine,
       attEpoch,
       attHeadBlock as ProtoBlock,
       RegenCaller.validateGossipAttestation
@@ -130,7 +132,7 @@ describe("getShufflingForAttestationVerification", () => {
     } as Partial<ProtoBlock>;
     try {
       await getShufflingForAttestationVerification(
-        chain,
+        chain.beaconEngine,
         attEpoch,
         attHeadBlock as ProtoBlock,
         RegenCaller.validateGossipAttestation

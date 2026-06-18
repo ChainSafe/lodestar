@@ -667,7 +667,10 @@ describe("UnknownBlockSync", () => {
         custodyConfig,
         genesisTime: 0,
         metrics: null,
-        serializedCache: {delete: vi.fn()} as unknown as IBeaconChain["serializedCache"],
+        serializedCache: {
+          get: vi.fn().mockReturnValue(undefined),
+          delete: vi.fn(),
+        } as unknown as IBeaconChain["serializedCache"],
         getBlockByRoot: vi.fn().mockResolvedValue(null),
         processExecutionPayload: vi.fn().mockResolvedValue(undefined),
         seenPayloadEnvelopeInputCache: {
@@ -682,6 +685,11 @@ describe("UnknownBlockSync", () => {
           hasBlockHex: vi.fn().mockReturnValue(false),
           getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         } as unknown as IForkChoice,
+        // Envelope validation is now a BeaconEngine method; route it to the mocked module fn so the
+        // existing `validateGossipExecutionPayloadEnvelope` assertions still observe the calls.
+        beaconEngine: {
+          validateGossipExecutionPayloadEnvelope,
+        } as unknown as IBeaconChain["beaconEngine"],
         ...chainOverrides,
       } as IBeaconChain;
 

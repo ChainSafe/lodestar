@@ -33,11 +33,8 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
-import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
-import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
@@ -610,7 +607,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipBlock(chain.config, chain, signedBlock, fork);
+      await chain.beaconEngine.validateGossipBlock(bytes, signedBlock, fork);
       chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
       break;
     }
@@ -632,7 +629,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipAggregateAndProof(fork, chain, aggregate, bytes);
+      await validateGossipAggregateAndProof(fork, chain.beaconEngine, aggregate, bytes);
       break;
     }
 
@@ -665,7 +662,7 @@ async function validateMessageForTopic(
         subnet: Number(message.subnet_id ?? 0),
       };
 
-      const batchResult = await validateGossipAttestationsSameAttData(fork, chain, [gossipAttestation]);
+      const batchResult = await validateGossipAttestationsSameAttData(fork, chain.beaconEngine, [gossipAttestation]);
       const first = batchResult.results[0];
       if (first?.err) throw first.err;
       break;
@@ -700,7 +697,7 @@ async function validateMessageForTopic(
       const syncCommitteeMessage = rejectOnInvalidSerializedBytes(() =>
         ssz.altair.SyncCommitteeMessage.deserialize(bytes)
       );
-      await validateGossipSyncCommittee(chain, syncCommitteeMessage, Number(message.subnet_id ?? 0));
+      await chain.beaconEngine.validateGossipSyncCommittee(bytes, syncCommitteeMessage, Number(message.subnet_id ?? 0));
       break;
     }
 
@@ -708,7 +705,7 @@ async function validateMessageForTopic(
       const signedContributionAndProof = rejectOnInvalidSerializedBytes(() =>
         ssz.altair.SignedContributionAndProof.deserialize(bytes)
       );
-      await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
+      await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(bytes, signedContributionAndProof);
       break;
     }
 
