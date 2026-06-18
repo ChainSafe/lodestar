@@ -1,9 +1,9 @@
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
+import {IBeaconEngineOptions} from "./beaconEngine/options.js";
 import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
-import {ShufflingCacheOpts} from "./shufflingCache.js";
 import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
@@ -14,18 +14,14 @@ import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
-export type IChainOptions = BlockProcessOpts &
-  PoolOpts &
-  SeenCacheOpts &
+export type IChainOptions = IBeaconEngineOptions &
+  BlockProcessOpts &
   ForkChoiceOpts &
   ArchiveStoreOpts &
   FIFOBlockStateCacheOpts &
   PersistentCheckpointStateCacheOpts &
-  ShufflingCacheOpts &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
-    blsVerifyAllMainThread?: boolean;
-    blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
@@ -81,20 +77,6 @@ export type BlockProcessOpts = {
   skipVerifyExecutionPayload?: boolean;
   /** Used to specify to skip block signatures validation */
   skipVerifyBlockSignatures?: boolean;
-};
-
-export type PoolOpts = {
-  /**
-   * Only preaggregate attestation/sync committee message since clockSlot - preaggregateSlotDistance
-   */
-  preaggregateSlotDistance?: number;
-};
-
-export type SeenCacheOpts = {
-  /**
-   * Slot distance from current slot to cache AttestationData
-   */
-  attDataCacheSlotDistance?: number;
 };
 
 export const defaultChainOptions: IChainOptions = {

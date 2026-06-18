@@ -1,11 +1,17 @@
 import {BeaconConfig} from "@lodestar/config";
+import {PubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
+import {IClock} from "../../util/clock.js";
+import {IBeaconEngineOptions} from "./options.js";
 
 export type BeaconEngineModules = {
+  opts: IBeaconEngineOptions;
   config: BeaconConfig;
   logger: Logger;
   metrics: Metrics | null;
+  clock: IClock;
+  pubkeyCache: PubkeyCache;
 };
 
 /**

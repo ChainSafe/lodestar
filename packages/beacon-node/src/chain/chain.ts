@@ -75,7 +75,7 @@ import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
-import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -164,7 +164,9 @@ export class BeaconChain implements IBeaconChain {
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly beaconEngine: BeaconEngine;
-  readonly bls: IBlsVerifier;
+  get bls(): IBlsVerifier {
+    return this.beaconEngine.bls;
+  }
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
@@ -176,26 +178,50 @@ export class BeaconChain implements IBeaconChain {
   readonly unfinalizedPayloadEnvelopeWrites: JobItemQueue<[PayloadEnvelopeInput], void>;
 
   // Ops pool
-  readonly attestationPool: AttestationPool;
-  readonly aggregatedAttestationPool: AggregatedAttestationPool;
-  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool;
+  get attestationPool(): AttestationPool {
+    return this.beaconEngine.attestationPool;
+  }
+  get aggregatedAttestationPool(): AggregatedAttestationPool {
+    return this.beaconEngine.aggregatedAttestationPool;
+  }
+  get syncCommitteeMessagePool(): SyncCommitteeMessagePool {
+    return this.beaconEngine.syncCommitteeMessagePool;
+  }
+  get syncContributionAndProofPool(): SyncContributionAndProofPool {
+    return this.beaconEngine.syncContributionAndProofPool;
+  }
   readonly executionPayloadBidPool: ExecutionPayloadBidPool;
-  readonly payloadAttestationPool: PayloadAttestationPool;
+  get payloadAttestationPool(): PayloadAttestationPool {
+    return this.beaconEngine.payloadAttestationPool;
+  }
   readonly proposerPreferencesPool = new ProposerPreferencesPool();
-  readonly opPool: OpPool;
+  get opPool(): OpPool {
+    return this.beaconEngine.opPool;
+  }
 
   // Gossip seen cache
-  readonly seenAttesters = new SeenAttesters();
-  readonly seenAggregators = new SeenAggregators();
-  readonly seenPayloadAttesters = new SeenPayloadAttesters();
+  get seenAttesters(): SeenAttesters {
+    return this.beaconEngine.seenAttesters;
+  }
+  get seenAggregators(): SeenAggregators {
+    return this.beaconEngine.seenAggregators;
+  }
+  get seenPayloadAttesters(): SeenPayloadAttesters {
+    return this.beaconEngine.seenPayloadAttesters;
+  }
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenProposerPreferences = new SeenProposerPreferences();
   readonly seenBlockProposers = new SeenBlockProposers();
-  readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-  readonly seenContributionAndProof: SeenContributionAndProof;
-  readonly seenAttestationDatas: SeenAttestationDatas;
+  get seenSyncCommitteeMessages(): SeenSyncCommitteeMessages {
+    return this.beaconEngine.seenSyncCommitteeMessages;
+  }
+  get seenContributionAndProof(): SeenContributionAndProof {
+    return this.beaconEngine.seenContributionAndProof;
+  }
+  get seenAttestationDatas(): SeenAttestationDatas {
+    return this.beaconEngine.seenAttestationDatas;
+  }
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
   // Seen cache for liveness checks
@@ -206,7 +232,9 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
-  readonly shufflingCache: ShufflingCache;
+  get shufflingCache(): ShufflingCache {
+    return this.beaconEngine.shufflingCache;
+  }
 
   /**
    * Cache produced results (ExecutionPayload, DA Data) from the local execution so that we can send
@@ -293,28 +321,17 @@ export class BeaconChain implements IBeaconChain {
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
-    this.beaconEngine = new BeaconEngine({config, logger, metrics}, anchorState);
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    // by default, verify signatures on both main threads and worker threads
-    const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics, pubkeyCache})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, pubkeyCache});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
+    this.beaconEngine = new BeaconEngine({opts, config, logger, metrics, clock, pubkeyCache}, anchorState);
+
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    this.attestationPool = new AttestationPool(config, clock, this.opts?.preaggregateSlotDistance, metrics);
-    this.aggregatedAttestationPool = new AggregatedAttestationPool(this.config, metrics);
-    this.syncCommitteeMessagePool = new SyncCommitteeMessagePool(config, clock, this.opts?.preaggregateSlotDistance);
-    this.syncContributionAndProofPool = new SyncContributionAndProofPool(config, clock, metrics, logger);
     this.executionPayloadBidPool = new ExecutionPayloadBidPool();
-    this.payloadAttestationPool = new PayloadAttestationPool(config, clock, metrics);
-    this.opPool = new OpPool(config);
 
     this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
-    this.seenContributionAndProof = new SeenContributionAndProof(metrics);
-    this.seenAttestationDatas = new SeenAttestationDatas(metrics, this.opts?.attDataCacheSlotDistance);
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
@@ -342,21 +359,6 @@ export class BeaconChain implements IBeaconChain {
     });
 
     this._earliestAvailableSlot = anchorState.slot;
-
-    this.shufflingCache = new ShufflingCache(metrics, logger, this.opts, [
-      {
-        shuffling: anchorState.getPreviousShuffling(),
-        decisionRoot: anchorState.previousDecisionRoot,
-      },
-      {
-        shuffling: anchorState.getCurrentShuffling(),
-        decisionRoot: anchorState.currentDecisionRoot,
-      },
-      {
-        shuffling: anchorState.getNextShuffling(),
-        decisionRoot: anchorState.nextDecisionRoot,
-      },
-    ]);
 
     // Global cache of validators pubkey/index mapping
     this.pubkeyCache = pubkeyCache;
@@ -458,7 +460,6 @@ export class BeaconChain implements IBeaconChain {
 
     this.clock = clock;
     this.regen = regen;
-    this.bls = bls;
     this.emitter = emitter;
 
     this.getBlobsTracker = new GetBlobsTracker({
