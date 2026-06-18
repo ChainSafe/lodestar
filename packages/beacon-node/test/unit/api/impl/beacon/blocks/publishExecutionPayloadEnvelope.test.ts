@@ -166,4 +166,62 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     expect(modules.chain.processExecutionPayload).toHaveBeenCalledTimes(1);
     expect(modules.network.publishSignedExecutionPayloadEnvelope).toHaveBeenCalledTimes(1);
   });
+
+  it("propagates a non-ENVELOPE_ALREADY_KNOWN validation error (different code)", async () => {
+    vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValue(
+      new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
+      })
+    );
+    const input = makeInput({hasEnvelope: false});
+    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+
+    await expect(
+      api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
+    ).rejects.toThrow();
+
+    expect(input.addPayloadEnvelope).not.toHaveBeenCalled();
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
+
+  it("propagates a non-envelope validation error (plain Error)", async () => {
+    vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValue(new Error("boom"));
+    const input = makeInput({hasEnvelope: false});
+    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+
+    await expect(
+      api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
+    ).rejects.toThrow();
+
+    expect(input.addPayloadEnvelope).not.toHaveBeenCalled();
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
+
+  it("rejects 404 when the block is unknown (before validation)", async () => {
+    when(modules.forkChoice.getBlockHex).calledWith(blockRootHex, PayloadStatus.EMPTY).thenReturn(null);
+
+    await expect(
+      api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
+    ).rejects.toMatchObject({statusCode: 404});
+
+    expect(validateApiExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
+
+  it("rejects 400 on slot mismatch (before validation)", async () => {
+    when(modules.forkChoice.getBlockHex)
+      .calledWith(blockRootHex, PayloadStatus.EMPTY)
+      .thenReturn(generateProtoBlock({slot: slot + 1}));
+
+    await expect(
+      api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
+    ).rejects.toMatchObject({statusCode: 400});
+
+    expect(validateApiExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
 });
