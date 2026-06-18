@@ -41,7 +41,13 @@ import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {ChainEvent} from "../../../../chain/emitter.js";
-import {BlockError, BlockErrorCode, BlockGossipError, ExecutionPayloadEnvelopeError, ExecutionPayloadEnvelopeErrorCode} from "../../../../chain/errors/index.js";
+import {
+  BlockError,
+  BlockErrorCode,
+  BlockGossipError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../../../../chain/errors/index.js";
 import {
   BlockType,
   ProduceFullBellatrix,
@@ -697,20 +703,28 @@ export function getBeaconBlockApi({
       try {
         await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
       } catch (e) {
-        if (e instanceof ExecutionPayloadEnvelopeError) {
-          if (e.type.code === ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN) {
+        // idempotent behavior towards an already received envelope
+        if (
+          e instanceof ExecutionPayloadEnvelopeError &&
+          e.type.code === ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN
+        ) {
+          const existing = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+          const existingEnvelope = existing?.hasPayloadEnvelope() ? existing.getPayloadEnvelope() : undefined;
+          const existingBlockHashHex = existingEnvelope && toRootHex(existingEnvelope.message.payload.blockHash);
+          if (existingBlockHashHex !== undefined && existingBlockHashHex !== blockHashHex) {
+            chain.logger.warn("Execution payload envelope already known with a DIFFERENT block hash", {
+              slot,
+              blockRoot: blockRootHex,
+              existingBlockHash: existingBlockHashHex,
+              newBlockHash: blockHashHex,
+            });
+          } else {
             chain.logger.debug("Execution payload envelope already known, skipping duplicate", {
               slot,
               blockRoot: blockRootHex,
             });
-            return;
           }
-          if (e.type.code === ExecutionPayloadEnvelopeErrorCode.BLOCK_HASH_MISMATCH) {
-            chain.logger.warn("Execution payload envelope block hash mismatch", {
-              slot,
-              blockRoot: blockRootHex,
-            });
-          }
+          return; // 200 OK
         }
         throw e;
       }
