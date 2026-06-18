@@ -688,12 +688,13 @@ export function getBeaconBlockApi({
       // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
       let block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
+        const msToSlotEnd = Math.max(0, config.SLOT_DURATION_MS - chain.clock.msFromSlot(slot));
         chain.logger.debug("Execution payload envelope received before block, waiting for block to be imported", {
           blockRoot: blockRootHex,
           slot,
+          msToSlotEnd,
         });
         // Wait until the end of the slot for the block to arrive (via API or gossip)
-        const msToSlotEnd = Math.max(0, config.SLOT_DURATION_MS - chain.clock.msFromSlot(slot));
         await waitForBlockImported(chain, blockRootHex, msToSlotEnd);
         block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
         if (block === null) {
