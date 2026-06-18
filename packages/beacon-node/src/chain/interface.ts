@@ -31,6 +31,7 @@ import {CustodyConfig} from "../util/dataColumns.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
+import {IBeaconEngine} from "./beaconEngine/index.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
@@ -107,6 +108,7 @@ export interface IBeaconChain {
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
 
+  readonly beaconEngine: IBeaconEngine;
   readonly bls: IBlsVerifier;
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;

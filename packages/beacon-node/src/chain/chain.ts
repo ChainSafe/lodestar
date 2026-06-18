@@ -67,6 +67,7 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
+import {BeaconEngine} from "./beaconEngine/index.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
@@ -162,6 +163,7 @@ export class BeaconChain implements IBeaconChain {
 
   readonly anchorStateLatestBlockSlot: Slot;
 
+  readonly beaconEngine: BeaconEngine;
   readonly bls: IBlsVerifier;
   readonly forkChoice: IForkChoice;
   readonly clock: IClock;
@@ -291,6 +293,7 @@ export class BeaconChain implements IBeaconChain {
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
+    this.beaconEngine = new BeaconEngine({config, logger, metrics}, anchorState);
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
