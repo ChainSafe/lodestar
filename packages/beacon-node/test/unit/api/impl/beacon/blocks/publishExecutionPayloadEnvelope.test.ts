@@ -90,6 +90,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
 
     expect(input.addPayloadEnvelope).toHaveBeenCalledTimes(1);
     expect(modules.chain.processExecutionPayload).toHaveBeenCalledTimes(1);
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).toHaveBeenCalledTimes(1);
   });
 
   it("VC retry: envelope already in cache → 200, not added again", async () => {
@@ -102,6 +103,8 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     ).resolves.toBeUndefined();
 
     expect(input.addPayloadEnvelope).not.toHaveBeenCalled();
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(modules.chain.logger.debug).toHaveBeenCalledWith(
       "Execution payload envelope already known, skipping duplicate",
       expect.objectContaining({slot, blockRoot: blockRootHex})
@@ -117,6 +120,8 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
     ).resolves.toBeUndefined();
 
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(modules.chain.logger.debug).toHaveBeenCalledWith(
       "Execution payload envelope already known, skipping duplicate",
       expect.objectContaining({slot, blockRoot: blockRootHex})
@@ -134,6 +139,8 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
     ).resolves.toBeUndefined();
 
+    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(input.addPayloadEnvelope).not.toHaveBeenCalled();
     expect(modules.chain.logger.warn).toHaveBeenCalledWith(
       "Execution payload envelope already known with a DIFFERENT block hash",
@@ -157,5 +164,6 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
 
     expect(input.addPayloadEnvelope).not.toHaveBeenCalled();
     expect(modules.chain.processExecutionPayload).toHaveBeenCalledTimes(1);
+    expect(modules.network.publishSignedExecutionPayloadEnvelope).toHaveBeenCalledTimes(1);
   });
 });
