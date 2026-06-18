@@ -73,3 +73,33 @@ export async function getBlockResponse(
 
   return res;
 }
+
+/**
+ * Resolves when the beacon block `blockRootHex` is imported (seen via the API or gossip) or after
+ * `timeoutMs`, whichever comes first. The caller needs to re-check fork choice to tell them apart.
+ */
+export function waitForBlockImported(chain: IBeaconChain, blockRootHex: RootHex, timeoutMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const onBlock = (data: routes.events.EventData[routes.events.EventType.block]): void => {
+      if (data.block === blockRootHex) {
+        finish();
+      }
+    };
+
+    const finish = (): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      chain.emitter.off(routes.events.EventType.block, onBlock);
+      resolve();
+    };
+
+    timer = setTimeout(finish, timeoutMs);
+    chain.emitter.on(routes.events.EventType.block, onBlock);
+  });
+}

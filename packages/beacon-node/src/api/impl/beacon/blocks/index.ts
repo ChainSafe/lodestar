@@ -69,7 +69,7 @@ import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
-import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
+import {getBlockResponse, toBeaconHeaderResponse, waitForBlockImported} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -686,9 +686,19 @@ export function getBeaconBlockApi({
       }
 
       // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
-      const block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+      let block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
-        throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+        chain.logger.debug("Execution payload envelope received before block, waiting for block to be imported", {
+          blockRoot: blockRootHex,
+          slot,
+        });
+        // Wait until the end of the slot for the block to arrive (via API or gossip)
+        const msToSlotEnd = Math.max(0, config.SLOT_DURATION_MS - chain.clock.msFromSlot(slot));
+        await waitForBlockImported(chain, blockRootHex, msToSlotEnd);
+        block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+        if (block === null) {
+          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+        }
       }
       if (block.slot !== slot) {
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
@@ -735,10 +745,11 @@ export function getBeaconBlockApi({
         await sleep(msToBlockSlot);
       }
 
-      // TODO GLOAS: if block and payload are submitted in parallel, payloadInput may not yet exist.
-      // A queuing mechanism is needed to handle this case. See https://github.com/ChainSafe/lodestar/issues/8915
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (!payloadInput) {
+        // The block is awaited above (queuing if the envelope arrived first), and both the API and
+        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
+        // should exist here.
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
