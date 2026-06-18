@@ -2,13 +2,11 @@ import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {DEFAULT_ARCHIVE_MODE} from "./archiveStore/constants.js";
 import {ArchiveMode, ArchiveStoreOpts} from "./archiveStore/interface.js";
 import {IBeaconEngineOptions} from "./beaconEngine/options.js";
-import {ForkChoiceOpts} from "./forkChoice/index.js";
 import {LightClientServerOpts} from "./lightClient/index.js";
-import {DEFAULT_MAX_BLOCK_STATES, FIFOBlockStateCacheOpts} from "./stateCache/fifoBlockStateCache.js";
+import {DEFAULT_MAX_BLOCK_STATES} from "./stateCache/fifoBlockStateCache.js";
 import {
   DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   DEFAULT_MAX_CP_STATE_ON_DISK,
-  PersistentCheckpointStateCacheOpts,
 } from "./stateCache/persistentCheckpointsCache.js";
 import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
@@ -16,10 +14,7 @@ export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
 export type IChainOptions = IBeaconEngineOptions &
   BlockProcessOpts &
-  ForkChoiceOpts &
   ArchiveStoreOpts &
-  FIFOBlockStateCacheOpts &
-  PersistentCheckpointStateCacheOpts &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
     blacklistedBlocks?: string[];

@@ -194,6 +194,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     const protoBlocksAsc = blocksToReplay.reverse();
     for (const [i, protoBlock] of protoBlocksAsc.entries()) {
       replaySlots[i] = protoBlock.slot;
+      // TODO - beacon engine: cannot have this seenBlockInputCache
+      // use a separate cache in BeaconEngine?
       const blockInput = this.modules.seenBlockInputCache.get(protoBlock.blockRoot);
       blockPromises[i] = blockInput?.hasBlock()
         ? Promise.resolve(blockInput.getBlock())

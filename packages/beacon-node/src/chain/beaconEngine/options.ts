@@ -1,5 +1,8 @@
 import {BlsMultiThreadWorkerPoolOptions} from "../bls/index.js";
+import {ForkChoiceOpts} from "../forkChoice/index.js";
 import {ShufflingCacheOpts} from "../shufflingCache.js";
+import {FIFOBlockStateCacheOpts} from "../stateCache/fifoBlockStateCache.js";
+import {PersistentCheckpointStateCacheOpts} from "../stateCache/persistentCheckpointsCache.js";
 
 export type PoolOpts = {
   /**
@@ -22,6 +25,9 @@ export type SeenCacheOpts = {
 export type IBeaconEngineOptions = ShufflingCacheOpts &
   PoolOpts &
   SeenCacheOpts &
+  FIFOBlockStateCacheOpts &
+  PersistentCheckpointStateCacheOpts &
+  ForkChoiceOpts &
   BlsMultiThreadWorkerPoolOptions & {
     blsVerifyAllMainThread?: boolean;
   };

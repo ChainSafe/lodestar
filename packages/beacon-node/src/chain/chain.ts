@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -13,7 +13,6 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {
-  EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
   PubkeyCache,
@@ -78,7 +77,7 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
-import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
+import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
@@ -119,9 +118,6 @@ import {ShufflingCache} from "./shufflingCache.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
-import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
-import {CheckpointStateCache} from "./stateCache/types.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -164,13 +160,20 @@ export class BeaconChain implements IBeaconChain {
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly beaconEngine: BeaconEngine;
+  // TODO - beacon engine: remove this?
   get bls(): IBlsVerifier {
     return this.beaconEngine.bls;
   }
-  readonly forkChoice: IForkChoice;
+  // TODO - beacon engine: remove this
+  get forkChoice(): IForkChoice {
+    return this.beaconEngine.forkChoice;
+  }
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly regen: QueuedStateRegenerator;
+  // TODO - beacon engine: remove this
+  get regen(): QueuedStateRegenerator {
+    return this.beaconEngine.regen;
+  }
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly archiveStore: ArchiveStore;
@@ -231,7 +234,13 @@ export class BeaconChain implements IBeaconChain {
   readonly pubkeyCache: PubkeyCache;
 
   readonly beaconProposerCache: BeaconProposerCache;
-  readonly checkpointBalancesCache: CheckpointBalancesCache;
+
+  // TODO - beacon engine: remove this
+  get checkpointBalancesCache(): CheckpointBalancesCache {
+    return this.beaconEngine.checkpointBalancesCache;
+  }
+
+  // TODO - beacon engine: remove this
   get shufflingCache(): ShufflingCache {
     return this.beaconEngine.shufflingCache;
   }
@@ -326,12 +335,9 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
-    this.beaconEngine = new BeaconEngine({opts, config, logger, metrics, clock, pubkeyCache}, anchorState);
-
-    this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-    this.executionPayloadBidPool = new ExecutionPayloadBidPool();
-
-    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
+    this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
+    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
+    this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
@@ -344,9 +350,8 @@ export class BeaconChain implements IBeaconChain {
       initialCustodyGroupCount,
     });
 
-    this.beaconProposerCache = new BeaconProposerCache(opts);
-    this.checkpointBalancesCache = new CheckpointBalancesCache();
     this.serializedCache = new SerializedCache();
+    // seenBlockInputCache stays facade-owned but is built before the engine so it can be injected into regen.
     this.seenBlockInputCache = new SeenBlockInput({
       config,
       custodyConfig: this.custodyConfig,
@@ -358,68 +363,39 @@ export class BeaconChain implements IBeaconChain {
       logger,
     });
 
+    this.beaconEngine = new BeaconEngine(
+      {
+        opts,
+        config,
+        logger,
+        metrics,
+        clock,
+        pubkeyCache,
+        bufferPool: this.bufferPool,
+        cpStateDatastore: this.cpStateDatastore,
+        emitter,
+        signal,
+        db,
+        validatorMonitor,
+        seenBlockInputCache: this.seenBlockInputCache,
+        isAnchorStateFinalized,
+      },
+      anchorState
+    );
+
+    this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
+    this.executionPayloadBidPool = new ExecutionPayloadBidPool();
+
+    this.seenAggregatedAttestations = new SeenAggregatedAttestations(metrics);
+
+    this.beaconProposerCache = new BeaconProposerCache(opts);
+
     this._earliestAvailableSlot = anchorState.slot;
 
     // Global cache of validators pubkey/index mapping
     this.pubkeyCache = pubkeyCache;
 
-    const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
-    const blockStateCache = new FIFOBlockStateCache(this.opts, {metrics});
-    this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
-
-    this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
-    const checkpointStateCache: CheckpointStateCache = new PersistentCheckpointStateCache(
-      {
-        config,
-        metrics,
-        logger,
-        clock,
-        blockStateCache,
-        bufferPool: this.bufferPool,
-        datastore: this.cpStateDatastore,
-      },
-      this.opts
-    );
-
     const {checkpoint} = anchorState.computeAnchorCheckpoint();
-    blockStateCache.add(anchorState);
-    blockStateCache.setHeadState(anchorState);
-    checkpointStateCache.add(checkpoint, anchorState);
-
-    const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
-      if (stateRoot) return blockStateCache.get(stateRoot);
-
-      if (checkpoint) return checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex});
-
-      return null;
-    };
-
-    const forkChoice = initializeForkChoice(
-      config,
-      emitter,
-      clock.currentSlot,
-      anchorState,
-      isAnchorStateFinalized,
-      opts,
-      this.justifiedBalancesGetter.bind(this),
-      forkChoiceStateGetter,
-      metrics,
-      logger
-    );
-
-    const regen = new QueuedStateRegenerator({
-      config,
-      forkChoice,
-      blockStateCache,
-      checkpointStateCache,
-      seenBlockInputCache: this.seenBlockInputCache,
-      db,
-      metrics,
-      validatorMonitor,
-      logger,
-      emitter,
-      signal,
-    });
 
     if (!opts.disableLightClientServer) {
       this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
@@ -430,12 +406,11 @@ export class BeaconChain implements IBeaconChain {
     this.blockProcessor = new BlockProcessor(this, metrics, opts, signal);
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
-    this.forkChoice = forkChoice;
-
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
       clock,
-      forkChoice,
+      // TODO - beacon engine: cannot have forkchoice here
+      forkChoice: this.beaconEngine.forkChoice,
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
@@ -459,7 +434,6 @@ export class BeaconChain implements IBeaconChain {
     }
 
     this.clock = clock;
-    this.regen = regen;
     this.emitter = emitter;
 
     this.getBlobsTracker = new GetBlobsTracker({
@@ -1329,95 +1303,6 @@ export class BeaconChain implements IBeaconChain {
     // resolve the promise to unblock other calls of the same epoch and dependent root
     this.shufflingCache.processState(state);
     return state.getShufflingAtEpoch(attEpoch);
-  }
-
-  /**
-   * `ForkChoice.onBlock` must never throw for a block that is valid with respect to the network
-   * `justifiedBalancesGetter()` must never throw and it should always return a state.
-   * @param blockState state that declares justified checkpoint `checkpoint`
-   */
-  private justifiedBalancesGetter(
-    checkpoint: CheckpointWithHex,
-    blockState: IBeaconStateView
-  ): EffectiveBalanceIncrements {
-    this.metrics?.balancesCache.requests.inc();
-
-    const effectiveBalances = this.checkpointBalancesCache.get(checkpoint);
-    if (effectiveBalances) {
-      return effectiveBalances;
-    }
-    // not expected, need metrics
-    this.metrics?.balancesCache.misses.inc();
-    this.logger.debug("checkpointBalances cache miss", {
-      epoch: checkpoint.epoch,
-      root: checkpoint.rootHex,
-    });
-
-    const {state, stateId, shouldWarn} = this.closestJustifiedBalancesStateToCheckpoint(checkpoint, blockState);
-    this.metrics?.balancesCache.closestStateResult.inc({stateId});
-    if (shouldWarn) {
-      this.logger.warn("currentJustifiedCheckpoint state not avail, using closest state", {
-        checkpointEpoch: checkpoint.epoch,
-        checkpointRoot: checkpoint.rootHex,
-        stateId,
-        stateSlot: state.slot,
-        stateRoot: toRootHex(state.hashTreeRoot()),
-      });
-    }
-
-    return state.getEffectiveBalanceIncrementsZeroInactive();
-  }
-
-  /**
-   * - Assumptions + invariant this function is based on:
-   * - Our cache can only persist X states at once to prevent OOM
-   * - Some old states (including to-be justified checkpoint) may / must be dropped from the cache
-   * - Thus, there is no guarantee that the state for a justified checkpoint will be available in the cache
-   * @param blockState state that declares justified checkpoint `checkpoint`
-   */
-  private closestJustifiedBalancesStateToCheckpoint(
-    checkpoint: CheckpointWithHex,
-    blockState: IBeaconStateView
-  ): {state: IBeaconStateView; stateId: string; shouldWarn: boolean} {
-    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
-    const state = this.regen.getCheckpointStateSync(checkpointHex);
-    if (state) {
-      return {state, stateId: "checkpoint_state", shouldWarn: false};
-    }
-
-    // Check if blockState is in the same epoch, not need to iterate the fork-choice then
-    if (computeEpochAtSlot(blockState.slot) === checkpoint.epoch) {
-      return {state: blockState, stateId: "block_state_same_epoch", shouldWarn: true};
-    }
-
-    // Find a state in the same branch of checkpoint at same epoch. Balances should exactly the same
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendantsDefaultStatus(checkpoint.rootHex)) {
-      if (computeEpochAtSlot(descendantBlock.slot) === checkpoint.epoch) {
-        const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
-        if (descendantBlockState) {
-          return {state: descendantBlockState, stateId: "descendant_state_same_epoch", shouldWarn: true};
-        }
-      }
-    }
-
-    // Check if blockState is in the next epoch, not need to iterate the fork-choice then
-    if (computeEpochAtSlot(blockState.slot) === checkpoint.epoch + 1) {
-      return {state: blockState, stateId: "block_state_next_epoch", shouldWarn: true};
-    }
-
-    // Find a state in the same branch of checkpoint at a latter epoch. Balances are not the same, but should be close
-    // Note: must call .forwardIterateDescendants() again since nodes are not sorted
-    for (const descendantBlock of this.forkChoice.forwardIterateDescendantsDefaultStatus(checkpoint.rootHex)) {
-      if (computeEpochAtSlot(descendantBlock.slot) > checkpoint.epoch) {
-        const descendantBlockState = this.regen.getStateSync(descendantBlock.stateRoot);
-        if (descendantBlockState) {
-          return {state: blockState, stateId: "descendant_state_latter_epoch", shouldWarn: true};
-        }
-      }
-    }
-
-    // If there's no state available in the same branch of checkpoint use blockState regardless of its epoch
-    return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
 
   private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
