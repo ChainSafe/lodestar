@@ -30,6 +30,7 @@ import {
   isGloasStateType,
   signedBlockToSignedHeader,
   syncPubkeys,
+  useNativeStateTransition,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -734,6 +735,8 @@ const forkChoiceTest =
         // integrated
         shouldSkip: (_testcase, name, _index) =>
           name.includes("invalid_incorrect_proof") ||
+          // TODO(bing): uncomment on gloas support
+          (name.includes("gloas") && useNativeStateTransition) ||
           // TODO GLOAS: These tests will be unskipped by https://github.com/ChainSafe/lodestar/pull/9233
           (name.includes("gloas") &&
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
