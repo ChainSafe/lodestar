@@ -174,6 +174,7 @@ export async function verifyBlocksInEpoch(
       // Run state transition only
       // TODO: Ensure it yields to allow flushing to workers and engine API
       verifyBlocksStateTransitionOnly(
+        this.config,
         preState0,
         blockInputs,
         // hack availability for state transition eval as availability is separately determined

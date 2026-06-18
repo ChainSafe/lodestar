@@ -1,9 +1,15 @@
+import bindings from "@chainsafe/lodestar-z";
+import type {BeaconConfig} from "@lodestar/config";
+import {ForkSeq} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
   StateHashTreeRootSource,
+  StateTransitionOpts,
+  useNativeStateTransition,
 } from "@lodestar/state-transition";
+import type {SignedBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -22,6 +28,7 @@ import {ImportBlockOpts} from "./types.js";
  *   - Check state root matches
  */
 export async function verifyBlocksStateTransitionOnly(
+  config: BeaconConfig,
   preState0: IBeaconStateView,
   blocks: IBlockInput[],
   dataAvailabilityStatuses: DataAvailabilityStatus[],
@@ -34,6 +41,7 @@ export async function verifyBlocksStateTransitionOnly(
   const postStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
+  const seedValidatorsBytes = preState0.serializeValidators();
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
@@ -44,22 +52,23 @@ export async function verifyBlocksStateTransitionOnly(
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const postState = preState.stateTransition(
-      block,
-      {
-        // NOTE: Assume valid for now while sending payload to execution engine in parallel
-        // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
-        executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailabilityStatus,
-        // false because it's verified below with better error typing
-        verifyStateRoot: false,
-        // if block is trusted don't verify proposer or op signature
-        verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
-        verifySignatures: !useBlsBatchVerify && !validSignatures,
-        dontTransferCache: false,
-      },
-      {metrics, validatorMonitor}
-    );
+    const stfOpts: StateTransitionOpts = {
+      // NOTE: Assume valid for now while sending payload to execution engine in parallel
+      // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailabilityStatus,
+      // false because it's verified below with better error typing
+      verifyStateRoot: false,
+      // if block is trusted don't verify proposer or op signature
+      verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
+      verifySignatures: !useBlsBatchVerify && !validSignatures,
+      dontTransferCache: false,
+    };
+
+    const postState =
+      useNativeStateTransition && config.getForkSeq(block.message.slot) !== ForkSeq.gloas
+        ? runNativeStateTransition(config, preState0, seedValidatorsBytes, preState, block, stfOpts)
+        : preState.stateTransition(block, stfOpts, {metrics, validatorMonitor});
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
@@ -109,4 +118,22 @@ export async function verifyBlocksStateTransitionOnly(
   }
 
   return {postStates, proposerBalanceDeltas, verifyStateTime};
+}
+
+function runNativeStateTransition(
+  config: BeaconConfig,
+  stateLoader: IBeaconStateView,
+  seedValidatorsBytes: Uint8Array,
+  preState: IBeaconStateView,
+  block: SignedBeaconBlock,
+  stfOpts: StateTransitionOpts
+): IBeaconStateView {
+  bindings.config.set(config, preState.genesisValidatorsRoot);
+  const blockBytes = config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
+  const postState = bindings.stateTransition(
+    bindings.BeaconStateView.createFromBytes(preState.serialize()),
+    blockBytes,
+    stfOpts
+  );
+  return stateLoader.loadOtherState(postState.serialize(), seedValidatorsBytes);
 }
