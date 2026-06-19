@@ -356,28 +356,14 @@ export async function produceBlockBody<T extends BlockType>(
       blobKzgCommitments: blobsBundle.commitments,
       executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
     };
-    // Spec heze/builder.md: bid.inclusion_list_bits = get_inclusion_list_bits(store, state, slot-1, only_timely=False)
-    let bid: gloas.ExecutionPayloadBid | heze.ExecutionPayloadBid = baseBid;
-    if (isStatePostHeze(currentState)) {
-      const inclusionListBits = this.inclusionListStore.getInclusionListBits(currentState, blockSlot - 1, false);
-      // Spec heze/validator.md: bid.inclusion_list_bits MUST satisfy is_inclusion_list_bits_inclusive.
-      // For self-build the bits are derived from our own view so this holds by construction; assert
-      // defensively to catch any future divergence (e.g. external builder-bid path).
-      if (
-        !this.inclusionListStore.isInclusionListBitsInclusive(currentState, blockSlot - 1, inclusionListBits, false)
-      ) {
-        throw Error("bid.inclusion_list_bits does not satisfy is_inclusion_list_bits_inclusive");
-      }
-      bid = {...baseBid, inclusionListBits};
-    }
-    const signedBid: gloas.SignedExecutionPayloadBid | heze.SignedExecutionPayloadBid = {
-      message: bid,
+    const signedBid: gloas.SignedExecutionPayloadBid = {
+      message: baseBid,
       signature: G2_POINT_AT_INFINITY,
     };
 
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
-    gloasBody.signedExecutionPayloadBid = signedBid as gloas.SignedExecutionPayloadBid;
+    gloasBody.signedExecutionPayloadBid = signedBid;
     gloasBody.payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(
       parentBlock.blockRoot,
       blockSlot - 1

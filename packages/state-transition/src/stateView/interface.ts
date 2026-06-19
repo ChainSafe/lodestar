@@ -273,7 +273,6 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
 /** Heze+ state fields — use isStatePostHeze() guard */
 export interface IBeaconStateViewHeze extends IBeaconStateViewGloas {
   forkName: ForkPostHeze;
-  /** Modified in heze: ExecutionPayloadBid carries `inclusion_list_bits`. */
   latestExecutionPayloadBid: heze.ExecutionPayloadBid;
   /**
    * Spec heze/beacon-chain.md `get_inclusion_list_committee`. Returns the IL committee for `slot`,

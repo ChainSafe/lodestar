@@ -45,21 +45,11 @@ export const InclusionListByCommitteeIndicesRequest = new ContainerType(
   {typeName: "InclusionListByCommitteeIndicesRequest", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadBid = new ContainerType(
-  {
-    ...gloasSsz.ExecutionPayloadBid.fields,
-    inclusionListBits: new BitVectorType(INCLUSION_LIST_COMMITTEE_SIZE), // [New in Heze:EIP7805]
-  },
-  {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
-);
+// [EIP7805] consensus-specs#5371 removed `inclusion_list_bits` from the bid, so Heze no longer
+// modifies `ExecutionPayloadBid` / `SignedExecutionPayloadBid`; they are identical to Gloas.
+export const ExecutionPayloadBid = gloasSsz.ExecutionPayloadBid;
 
-export const SignedExecutionPayloadBid = new ContainerType(
-  {
-    message: ExecutionPayloadBid,
-    signature: BLSSignature,
-  },
-  {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
-);
+export const SignedExecutionPayloadBid = gloasSsz.SignedExecutionPayloadBid;
 
 export const DataColumnSidecar = gloasSsz.DataColumnSidecar;
 export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
@@ -67,7 +57,6 @@ export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
 export const BeaconState = new ContainerType(
   {
     ...gloasSsz.BeaconState.fields,
-    latestExecutionPayloadBid: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
   },
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
@@ -75,7 +64,6 @@ export const BeaconState = new ContainerType(
 export const BeaconBlockBody = new ContainerType(
   {
     ...gloasSsz.BeaconBlockBody.fields,
-    signedExecutionPayloadBid: SignedExecutionPayloadBid, // [Modified in Heze:EIP7805]
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );

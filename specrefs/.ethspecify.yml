@@ -408,9 +408,11 @@ exceptions:
     # heze (not implemented)
     - compute_fork_version#heze
     - get_forkchoice_store#heze
+    - get_inclusion_list_bits#heze
     - get_inclusion_list_committee_assignment#heze
     - get_inclusion_list_signature#heze
     - get_inclusion_list_store#heze
+    - is_inclusion_list_bits_inclusive#heze
     - is_valid_inclusion_list_signature#heze
     - on_inclusion_list#heze
 

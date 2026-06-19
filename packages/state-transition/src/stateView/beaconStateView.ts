@@ -370,11 +370,9 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     }
 
     if (this._latestExecutionPayloadBid === null) {
-      // For pre-heze gloas states the bid has no `inclusion_list_bits`; the heze field defaults
-      // to an unset bitvector at runtime, so the wider heze type is a safe upper bound.
       this._latestExecutionPayloadBid = (
         this.cachedState as CachedBeaconStateGloas
-      ).latestExecutionPayloadBid.toValue() as heze.ExecutionPayloadBid;
+      ).latestExecutionPayloadBid.toValue();
     }
     return this._latestExecutionPayloadBid;
   }

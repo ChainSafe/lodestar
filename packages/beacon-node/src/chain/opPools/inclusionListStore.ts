@@ -1,4 +1,3 @@
-import {BitArray} from "@chainsafe/ssz";
 import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import type {IBeaconStateViewHeze} from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, bellatrix, heze, ssz} from "@lodestar/types";
@@ -39,8 +38,6 @@ function makeKey(slot: Slot, committeeRoot: Uint8Array | RootHex): CommitteeKey 
  * Spec helpers exposed:
  * - `processInclusionList(il, isTimely)`
  * - `getInclusionListTransactions(state, slot, onlyTimely)`
- * - `getInclusionListBits(state, slot, onlyTimely)`
- * - `isInclusionListBitsInclusive(state, slot, bits, onlyTimely)`
  */
 export class InclusionListStore {
   // (slot, committee_root) -> il_root -> InclusionList
@@ -154,44 +151,6 @@ export class InclusionListStore {
       }
     }
     return out;
-  }
-
-  /**
-   * Spec heze/inclusion-list.md `get_inclusion_list_bits`.
-   * Bit i is set iff the ith committee member submitted a valid, non-equivocating IL at `slot`.
-   */
-  getInclusionListBits(state: IBeaconStateViewHeze, slot: Slot, onlyTimely = true): BitArray {
-    const committee = state.getInclusionListCommittee(slot);
-    const key = makeKey(slot, ssz.heze.InclusionListCommittee.hashTreeRoot([...committee]));
-
-    const submitted = new Set<ValidatorIndex>();
-    const stored = this.inclusionLists.get(key);
-    if (stored) {
-      const equivocators = this.equivocators.get(key);
-      for (const [ilRoot, il] of stored) {
-        if (equivocators?.has(il.validatorIndex)) continue;
-        if (onlyTimely && !this.inclusionListTimeliness.get(ilRoot)) continue;
-        submitted.add(il.validatorIndex);
-      }
-    }
-
-    const bits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
-    for (let i = 0; i < committee.length; i++) {
-      if (submitted.has(committee[i])) bits.set(i, true);
-    }
-    return bits;
-  }
-
-  /**
-   * Spec heze/inclusion-list.md `is_inclusion_list_bits_inclusive`.
-   * Returns true iff `bits` is a superset of the locally observed bits.
-   */
-  isInclusionListBitsInclusive(state: IBeaconStateViewHeze, slot: Slot, bits: BitArray, onlyTimely = true): boolean {
-    const local = this.getInclusionListBits(state, slot, onlyTimely);
-    for (let i = 0; i < INCLUSION_LIST_COMMITTEE_SIZE; i++) {
-      if (local.get(i) && !bits.get(i)) return false;
-    }
-    return true;
   }
 
   /** Drop entries older than `clockSlot - SLOTS_RETAINED`. */

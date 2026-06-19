@@ -62,22 +62,8 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   stateHezeView.builderPendingPayments = stateHezeCloned.builderPendingPayments;
   stateHezeView.builderPendingWithdrawals = stateHezeCloned.builderPendingWithdrawals;
 
-  // [Modified in Heze:EIP7805] inclusion_list_bits = Bitvector[INCLUSION_LIST_COMMITTEE_SIZE]() (default zero)
-  const oldBid = stateHezeCloned.latestExecutionPayloadBid;
-  const newBid = ssz.heze.ExecutionPayloadBid.defaultViewDU();
-  newBid.parentBlockHash = oldBid.parentBlockHash;
-  newBid.parentBlockRoot = oldBid.parentBlockRoot;
-  newBid.blockHash = oldBid.blockHash;
-  newBid.prevRandao = oldBid.prevRandao;
-  newBid.feeRecipient = oldBid.feeRecipient;
-  newBid.gasLimit = oldBid.gasLimit;
-  newBid.builderIndex = oldBid.builderIndex;
-  newBid.slot = oldBid.slot;
-  newBid.value = oldBid.value;
-  newBid.executionPayment = oldBid.executionPayment;
-  newBid.blobKzgCommitments = oldBid.blobKzgCommitments;
-  newBid.executionRequestsRoot = oldBid.executionRequestsRoot;
-  stateHezeView.latestExecutionPayloadBid = newBid;
+  // [EIP7805] consensus-specs#5371: Heze `ExecutionPayloadBid` == Gloas; copy it over unchanged.
+  stateHezeView.latestExecutionPayloadBid = stateHezeCloned.latestExecutionPayloadBid;
 
   stateHezeView.payloadExpectedWithdrawals = stateHezeCloned.payloadExpectedWithdrawals;
   stateHezeView.ptcWindow = stateHezeCloned.ptcWindow;
