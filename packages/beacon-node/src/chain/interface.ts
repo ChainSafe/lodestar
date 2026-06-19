@@ -18,7 +18,6 @@ import {
   altair,
   capella,
   deneb,
-  electra,
   gloas,
   phase0,
   rewards,
@@ -236,7 +235,7 @@ export interface IBeaconChain {
     blockSlot: Slot,
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
-  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<electra.ExecutionRequests>;
+  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{

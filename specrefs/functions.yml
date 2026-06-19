@@ -168,7 +168,7 @@
 
 - name: apply_deposit_for_builder#gloas
   sources:
-    - file: packages/state-transition/src/block/processDepositRequest.ts
+    - file: packages/state-transition/src/block/processBuilderDepositRequest.ts
       search: export function applyDepositForBuilder(
   spec: |
     <spec fn="apply_deposit_for_builder" fork="gloas" hash="e4bc98c7">

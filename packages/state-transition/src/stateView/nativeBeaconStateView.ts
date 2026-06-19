@@ -905,7 +905,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }
 
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
     const view = new NativeBeaconStateView(this.binding.withParentPayloadApplied(executionRequests));
     if (!isStatePostGloas(view)) {
       throw new Error("Expected gloas state from withParentPayloadApplied");
