@@ -8,6 +8,7 @@ import {
   ExecutionPayloadStatus,
   processSlots,
   stateTransition,
+  useNativeStateTransition,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
@@ -52,6 +53,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      shouldSkip: () => useNativeStateTransition && fork === ForkName.gloas,
     },
   };
 };
@@ -90,6 +92,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         expectEqualBeaconState(fork, expected, actual);
       },
       // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      shouldSkip: () => useNativeStateTransition && fork === ForkName.gloas,
     },
   };
 };
