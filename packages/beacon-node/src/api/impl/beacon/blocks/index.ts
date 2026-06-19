@@ -463,7 +463,11 @@ export function getBeaconBlockApi({
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlockV2({signedBlockContents, broadcastValidation}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+      return publishBlockV2(
+        {signedBlockContents, broadcastValidation},
+        {...context, sszBytes: null},
+        {...opts, ignoreIfKnown: true}
+      );
     }
   };
 
