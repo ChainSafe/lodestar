@@ -79,6 +79,7 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
         amount,
         builderIndex,
       }),
+      proposerIndex: state.epochCtx.getBeaconProposer(state.slot),
     });
 
     state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);

@@ -73,6 +73,7 @@ export const BuilderPendingPayment = new ContainerType(
   {
     weight: UintNum64,
     withdrawal: BuilderPendingWithdrawal,
+    proposerIndex: ValidatorIndex,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
 );
