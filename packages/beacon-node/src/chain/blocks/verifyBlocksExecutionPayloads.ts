@@ -8,7 +8,7 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkSeq} from "@lodestar/params";
-import {IBeaconStateView, isExecutionBlockBodyType, isStatePostBellatrix} from "@lodestar/state-transition";
+import {isExecutionBlockBodyType} from "@lodestar/state-transition";
 import {bellatrix, electra} from "@lodestar/types";
 import {ErrorAborted, Logger, toRootHex} from "@lodestar/utils";
 import {ExecutionPayloadStatus, IExecutionEngine} from "../../execution/engine/interface.js";
@@ -57,7 +57,6 @@ export async function verifyBlocksExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
   parentBlock: ProtoBlock,
   blockInputs: IBlockInput[],
-  preState0: IBeaconStateView,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<SegmentExecStatus> {
@@ -95,7 +94,7 @@ export async function verifyBlocksExecutionPayload(
     if (signal.aborted) {
       throw new ErrorAborted("verifyBlockExecutionPayloads");
     }
-    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput, preState0);
+    const verifyResponse = await verifyBlockExecutionPayload(chain, blockInput);
 
     // If execError has happened, then we need to extract the segmentExecStatus and return
     if (verifyResponse.execError !== null) {
@@ -139,8 +138,7 @@ export async function verifyBlocksExecutionPayload(
  */
 export async function verifyBlockExecutionPayload(
   chain: VerifyBlockExecutionPayloadModules,
-  blockInput: IBlockInput,
-  preState0: IBeaconStateView
+  blockInput: IBlockInput
 ): Promise<VerifyBlockExecutionResponse> {
   const block = blockInput.getBlock();
 
@@ -150,14 +148,18 @@ export async function verifyBlockExecutionPayload(
     return {executionStatus: ExecutionStatus.Syncing, lvhResponse: undefined, execError: null};
   }
 
-  /** Not null if execution is enabled */
-  const executionPayloadEnabled =
-    isStatePostBellatrix(preState0) &&
-    preState0.isExecutionStateType &&
-    isExecutionBlockBodyType(block.message.body) &&
-    preState0.isExecutionEnabled(block.message)
-      ? block.message.body.executionPayload
-      : null;
+  // TODO - beacon engine: this caused failed spec tests?
+  // the BeaconEngine cannot provide a BeaconState
+  // const executionPayloadEnabled =
+  //   isStatePostBellatrix(preState0) &&
+  //   preState0.isExecutionStateType &&
+  //   isExecutionBlockBodyType(block.message.body) &&
+  //   preState0.isExecutionEnabled(block.message)
+  //     ? block.message.body.executionPayload
+  //     : null;
+  const executionPayloadEnabled = isExecutionBlockBodyType(block.message.body)
+    ? block.message.body.executionPayload
+    : null;
 
   if (!executionPayloadEnabled) {
     // Pre-merge block, no execution payload to verify

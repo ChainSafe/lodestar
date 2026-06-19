@@ -436,6 +436,9 @@ export class BeaconChain implements IBeaconChain {
     // the engine constructor) because it depends on the engine's own forkChoice.
     // TODO - beacon engine: remove this once ownership is settled in a later phase.
     this.beaconEngine.seenPayloadEnvelopeInputCache = this.seenPayloadEnvelopeInputCache;
+    // Inject lightClientServer post-construction (created after engine, depends on nothing from engine)
+    // TODO - beacon engine
+    this.beaconEngine.lightClientServer = this.lightClientServer;
 
     const anchorBlockSlot = anchorState.latestBlockHeader.slot;
     if (isStatePostGloas(anchorState) && anchorBlockSlot > 0) {
@@ -548,6 +551,7 @@ export class BeaconChain implements IBeaconChain {
     // Caller must check that epoch is not older that current epoch - 1
     // else the caches for that epoch may already be pruned.
 
+    // TODO - beacon engine: consider move all of these caches to BeaconEngine
     return (
       // Dedicated cache for liveness checks, registers attesters seen through blocks.
       // Note: this check should be cheaper + overlap with counting participants of aggregates from gossip.

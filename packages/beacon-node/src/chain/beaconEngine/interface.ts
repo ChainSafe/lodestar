@@ -1,8 +1,10 @@
 import {BeaconConfig} from "@lodestar/config";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {BlockExecutionStatus, IForkChoice, PayloadExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
-import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
+  Root,
+  RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   SubnetID,
@@ -17,8 +19,12 @@ import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {IClock} from "../../util/clock.js";
+import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
-import {ChainEventEmitter} from "../emitter.js";
+import {ImportBlockOpts} from "../blocks/types.js";
+import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
+import {LightClientServer} from "../lightClient/index.js";
+import {BlockProcessOpts} from "../options.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {AggregateAndProofValidationResult} from "../validation/aggregateAndProof.js";
@@ -45,6 +51,36 @@ export type BeaconEngineModules = {
   validatorMonitor: ValidatorMonitor | null;
   seenBlockInputCache: SeenBlockInput;
   isAnchorStateFinalized: boolean;
+  lightClientServer?: LightClientServer;
+};
+
+export type ImportBlockResult = {
+  headChanged: boolean;
+  head: {
+    block: string;
+    slot: number;
+    state: string;
+    epochTransition: boolean;
+    previousDutyDependentRoot: string;
+    currentDutyDependentRoot: string;
+    executionOptimistic: boolean;
+  } | null;
+  reorg: ReorgEventData | null;
+  blockSummary: ProtoBlock | null;
+  proposerIndexNextSlot: number | null;
+  isExecutionState: boolean;
+  prevFinalizedEpoch: number;
+  currFinalizedEpoch: number;
+  oldHeadBlockRoot: string;
+  newHeadBlockRoot: string;
+  attestations: {blockEpoch: number; attestingIndices: number[]}[];
+  blockMeta: {
+    slot: number;
+    blockRootHex: string;
+    proposerBalanceDelta: number;
+    parentBlockSlot: number;
+    seenTimestampSec: number;
+  };
 };
 
 /**
@@ -140,4 +176,20 @@ export interface IBeaconEngine {
     preferencesBytes: Uint8Array,
     signedProposerPreferences: gloas.SignedProposerPreferences
   ): Promise<GossipValidationResult<void>>;
+  verifyBlocks(
+    _blockBytes: Uint8Array[],
+    parentBlock: ProtoBlock,
+    blockInputs: IBlockInput[],
+    opts: BlockProcessOpts & ImportBlockOpts,
+    signal: AbortSignal
+  ): Promise<{verifyStateTime: number; verifySignaturesTime: number}>;
+  // `blockRoot` is the SSZ root as raw bytes (the verify output handle, import input) — bytes-first for
+  // the native engine FFI. The JS engine keys its internal cache by hex (converted here).
+  importBlock(
+    blockRoot: Root,
+    executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<ImportBlockResult>;
+  discardVerifiedBlocks(blockRootHexes: RootHex[]): void;
 }

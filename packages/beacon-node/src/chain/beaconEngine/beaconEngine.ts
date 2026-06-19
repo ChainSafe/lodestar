@@ -1,16 +1,48 @@
+import {BitArray} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
 import {
+  AncestorStatus,
+  BlockExecutionStatus,
+  CheckpointWithHex,
+  EpochDifference,
+  ExecutionStatus,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+  ForkChoiceStateGetter,
+  IForkChoice,
+  PayloadExecutionStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
+import {
+  ForkName,
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  GENESIS_SLOT,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
+import {
+  DataAvailabilityStatus,
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
   PubkeyCache,
+  RootCache,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  computeTimeAtSlot,
+  isStatePostAltair,
+  isStatePostBellatrix,
 } from "@lodestar/state-transition";
 import {
+  Attestation,
+  BeaconBlock,
   Epoch,
+  IndexedAttestation,
+  Root,
   RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
@@ -18,16 +50,31 @@ import {
   ValidatorIndex,
   altair,
   deneb,
+  electra,
   fulu,
   gloas,
+  isGloasBeaconBlock,
+  phase0,
+  ssz,
 } from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
+import {isBlockInputBlobs, isBlockInputColumns} from "../blocks/blockInput/blockInput.js";
+import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
+import {AttestationImportOpt, ImportBlockOpts} from "../blocks/types.js";
+import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
+import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
+import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
-import {initializeForkChoice} from "../forkChoice/index.js";
+import {ChainEvent, ChainEventEmitter, ReorgEventData} from "../emitter.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
+import {LightClientServer} from "../lightClient/index.js";
 import {
   AggregatedAttestationPool,
   AttestationPool,
@@ -38,6 +85,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "../opPools/index.js";
+import {BlockProcessOpts} from "../options.js";
 import {QueuedStateRegenerator, RegenCaller} from "../regen/index.js";
 import {
   SeenAggregators,
@@ -55,7 +103,7 @@ import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js"
 import {SeenAttestationDatas} from "../seenCache/seenAttestationData.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
-import {PersistentCheckpointStateCache} from "../stateCache/persistentCheckpointsCache.js";
+import {PersistentCheckpointStateCache, toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
 import {
   AggregateAndProofValidationResult,
@@ -88,9 +136,19 @@ import {
 import {validateGossipProposerPreferences} from "../validation/proposerPreferences.js";
 import {validateApiSyncCommittee, validateGossipSyncCommittee} from "../validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syncCommitteeContributionAndProof.js";
+import {ValidatorMonitor} from "../validatorMonitor.js";
 import {GossipValidationResult, fromResult, runGossipValidation} from "./gossipValidationResult.js";
-import {BeaconEngineModules, IBeaconEngine} from "./interface.js";
+import {BeaconEngineModules, IBeaconEngine, ImportBlockResult} from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
+
+type VerifiedBlockBundle = {
+  postState: IBeaconStateView;
+  blockInput: IBlockInput;
+  indexedAttestations: IndexedAttestation[];
+  proposerBalanceDelta: number;
+  parentBlockSlot: number;
+  seenTimestampSec: number;
+};
 
 /**
  * JS implementation of the consensus engine. Transitional in Phase 0: constructed inside
@@ -142,6 +200,10 @@ export class BeaconEngine implements IBeaconEngine {
   // it depends on the engine's own `forkChoice`. TODO - beacon engine: revisit ownership in a later phase.
   readonly seenBlockInputCache: SeenBlockInput;
   seenPayloadEnvelopeInputCache!: SeenPayloadEnvelopeInput;
+  readonly validatorMonitor: ValidatorMonitor | null;
+  lightClientServer: LightClientServer | undefined;
+  private readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
+  private readonly emitter: ChainEventEmitter;
 
   constructor(modules: BeaconEngineModules, anchorState: IBeaconStateView) {
     const {
@@ -167,6 +229,9 @@ export class BeaconEngine implements IBeaconEngine {
     this.clock = clock;
     this.pubkeyCache = pubkeyCache;
     this.seenBlockInputCache = seenBlockInputCache;
+    this.validatorMonitor = validatorMonitor;
+    this.lightClientServer = modules.lightClientServer;
+    this.emitter = emitter;
 
     // by default, verify signatures on both main threads and worker threads
     this.bls = opts.blsVerifyAllMainThread
@@ -441,6 +506,533 @@ export class BeaconEngine implements IBeaconEngine {
     signedProposerPreferences: gloas.SignedProposerPreferences
   ): Promise<GossipValidationResult<void>> {
     return runGossipValidation(() => validateGossipProposerPreferences(this, signedProposerPreferences));
+  }
+
+  async verifyBlocks(
+    _blockBytes: Uint8Array[],
+    parentBlock: ProtoBlock,
+    blockInputs: IBlockInput[],
+    opts: BlockProcessOpts & ImportBlockOpts,
+    signal: AbortSignal
+  ): Promise<{verifyStateTime: number; verifySignaturesTime: number}> {
+    const blocks = blockInputs.map((bi) => bi.getBlock());
+    const block0 = blocks[0];
+    if (!block0) throw Error("Empty blockInputs");
+    const block0Epoch = computeEpochAtSlot(block0.message.slot);
+    const fork = this.config.getForkSeq(block0.message.slot);
+
+    const preState0 = await this.regen
+      .getPreState(block0.message, {dontTransferCache: false}, RegenCaller.processBlocksInEpoch)
+      .catch((e) => {
+        throw new BlockError(block0, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
+      });
+
+    this.shufflingCache.processState(preState0);
+
+    if (block0Epoch !== computeEpochAtSlot(preState0.slot)) {
+      throw Error(`preState at slot ${preState0.slot} must be dialed to block epoch ${block0Epoch}`);
+    }
+
+    const indexedAttestationsByBlock: IndexedAttestation[][] = [];
+    for (const [i, block] of blocks.entries()) {
+      indexedAttestationsByBlock[i] = block.message.body.attestations.map((attestation) => {
+        const attEpoch = computeEpochAtSlot(attestation.data.slot);
+        const decisionRoot = preState0.getShufflingDecisionRoot(attEpoch);
+        return this.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, fork, attestation);
+      });
+    }
+
+    const [{postStates, proposerBalanceDeltas, verifyStateTime}, {verifySignaturesTime}] = await Promise.all([
+      verifyBlocksStateTransitionOnly(
+        preState0,
+        blockInputs,
+        blocks.map(() => DataAvailabilityStatus.Available),
+        this.logger,
+        this.metrics,
+        this.validatorMonitor,
+        signal,
+        opts
+      ),
+      opts.skipVerifyBlockSignatures !== true
+        ? verifyBlocksSignatures(
+            this.config,
+            this.bls,
+            this.logger,
+            this.metrics,
+            preState0,
+            blocks,
+            indexedAttestationsByBlock,
+            opts
+          )
+        : Promise.resolve({verifySignaturesTime: Date.now()}),
+    ]);
+
+    for (let i = 0; i < blockInputs.length; i++) {
+      const blockInput = blockInputs[i];
+      const blockRootHex = blockInput.blockRootHex;
+      this.verifiedBlocks.set(blockRootHex, {
+        postState: postStates[i],
+        blockInput,
+        indexedAttestations: indexedAttestationsByBlock[i],
+        proposerBalanceDelta: proposerBalanceDeltas[i],
+        parentBlockSlot: i === 0 ? parentBlock.slot : blocks[i - 1].message.slot,
+        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
+      });
+    }
+
+    return {verifyStateTime, verifySignaturesTime};
+  }
+
+  async importBlock(
+    blockRoot: Root,
+    executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<ImportBlockResult> {
+    // bytes-first input (native engine FFI); the JS cache is keyed by hex.
+    const blockRootHex = toRootHex(blockRoot);
+    const v = this.verifiedBlocks.get(blockRootHex);
+    if (!v) throw Error(`No verified block found for root ${blockRootHex}`);
+
+    try {
+      return await this._importBlock(v, executionStatus, dataAvailabilityStatus, opts);
+    } finally {
+      this.verifiedBlocks.delete(blockRootHex);
+    }
+  }
+
+  private async _importBlock(
+    v: VerifiedBlockBundle,
+    executionStatus: BlockExecutionStatus | PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    opts: ImportBlockOpts
+  ): Promise<ImportBlockResult> {
+    const {blockInput, postState, parentBlockSlot, indexedAttestations, proposerBalanceDelta, seenTimestampSec} = v;
+    let execStatus = executionStatus;
+    const block = blockInput.getBlock();
+    const source = blockInput.getBlockSource();
+    const {slot: blockSlot} = block.message;
+    const blockRootHex = blockInput.blockRootHex;
+    const currentSlot = this.forkChoice.getTime();
+    const currentEpoch = computeEpochAtSlot(currentSlot);
+    const blockEpoch = computeEpochAtSlot(blockSlot);
+    const prevFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+    const blockDelaySec = seenTimestampSec - computeTimeAtSlot(this.config, blockSlot, postState.genesisTime);
+    const fork = this.config.getForkSeq(blockSlot);
+    const isExecutionState = isStatePostBellatrix(postState) && postState.isExecutionStateType;
+
+    // 2. Import block to fork choice
+    this.checkpointBalancesCache.processState(blockRootHex, postState);
+    if (fork >= ForkSeq.gloas) {
+      const parentRootHex = toRootHex(block.message.parentRoot);
+      const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+      if (parentBlock === null) {
+        throw Error(`Parent block not found in forkChoice, parentRoot=${parentRootHex}`);
+      }
+      if (parentBlock.executionStatus === ExecutionStatus.Invalid) {
+        throw Error(`Parent block has invalid execution status, parentRoot=${parentRootHex}`);
+      }
+      execStatus = parentBlock.executionStatus;
+    }
+
+    // getBeaconProposerOrNull returns null if the head state is more than one epoch away from the
+    // block slot; we skip the proposer-boost canonical check as we cannot determine the proposer.
+    const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
+
+    const blockSummary = this.forkChoice.onBlock(
+      block.message,
+      postState,
+      blockDelaySec,
+      currentSlot,
+      execStatus,
+      dataAvailabilityStatus,
+      expectedProposerIndex
+    );
+
+    this.regen.processState(blockRootHex, postState);
+    this.metrics?.importBlock.bySource.inc({source: source.source});
+    this.logger.verbose("Added block to forkchoice and state cache", {slot: blockSlot, root: blockRootHex});
+
+    // 3. Import attestations to fork choice
+    const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
+    const attestationsResult: {blockEpoch: number; attestingIndices: number[]}[] = [];
+
+    if (
+      opts.importAttestations === AttestationImportOpt.Force ||
+      (opts.importAttestations !== AttestationImportOpt.Skip &&
+        blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+    ) {
+      const attestations = block.message.body.attestations;
+      const rootCache = new RootCache(postState);
+      const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
+
+      const addAttestation =
+        fork >= ForkSeq.electra ? this.addAttestationPostElectra.bind(this) : this.addAttestationPreElectra.bind(this);
+
+      for (let i = 0; i < attestations.length; i++) {
+        const attestation = attestations[i];
+        try {
+          const indexedAttestation = indexedAttestations[i];
+          const {target, beaconBlockRoot} = attestation.data;
+          const attDataRoot = toRootHex(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+
+          addAttestation(
+            postState,
+            target,
+            attDataRoot,
+            attestation as Attestation<ForkPostElectra>,
+            indexedAttestation
+          );
+
+          if (
+            opts.importAttestations === AttestationImportOpt.Force ||
+            (target.epoch <= currentEpoch && target.epoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT)
+          ) {
+            this.forkChoice.onAttestation(
+              indexedAttestation,
+              attDataRoot,
+              opts.importAttestations === AttestationImportOpt.Force
+            );
+          }
+
+          attestationsResult.push({blockEpoch, attestingIndices: Array.from(indexedAttestation.attestingIndices)});
+
+          const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
+          const missedSlotVote =
+            attestation.data.slot > GENESIS_SLOT &&
+            ssz.Root.equals(
+              rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
+              rootCache.getBlockRootAtSlot(attestation.data.slot)
+            );
+          this.validatorMonitor?.registerAttestationInBlock(
+            indexedAttestation,
+            parentBlockSlot,
+            correctHead,
+            missedSlotVote,
+            blockRootHex,
+            blockSlot
+          );
+        } catch (e) {
+          if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
+            let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
+            if (errWithCount === undefined) {
+              errWithCount = {error: e as Error, count: 1};
+              invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
+            } else {
+              errWithCount.count++;
+            }
+          } else {
+            this.logger.warn("Error processing attestation from block", {slot: blockSlot}, e as Error);
+          }
+        }
+      }
+
+      for (const {error, count} of invalidAttestationErrorsByCode.values()) {
+        this.logger.warn(
+          "Error processing attestations from block",
+          {slot: blockSlot, erroredAttestations: count},
+          error
+        );
+      }
+    }
+
+    // 4. Import attester slashings
+    if (
+      opts.importAttestations === AttestationImportOpt.Force ||
+      (opts.importAttestations !== AttestationImportOpt.Skip &&
+        blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT - 1 - MAX_SEED_LOOKAHEAD)
+    ) {
+      for (const slashing of block.message.body.attesterSlashings) {
+        try {
+          this.forkChoice.onAttesterSlashing(slashing);
+        } catch (e) {
+          this.logger.warn("Error processing AttesterSlashing from block", {slot: blockSlot}, e as Error);
+        }
+      }
+    }
+
+    // 4.5. Import payload attestations (Gloas)
+    if (isGloasBeaconBlock(block.message)) {
+      for (const payloadAttestation of block.message.body.payloadAttestations) {
+        try {
+          const ptcIndices: number[] = [];
+          for (let i = 0; i < payloadAttestation.aggregationBits.bitLen; i++) {
+            if (payloadAttestation.aggregationBits.get(i)) {
+              ptcIndices.push(i);
+            }
+          }
+          if (ptcIndices.length > 0) {
+            this.forkChoice.notifyPtcMessages(
+              toRootHex(payloadAttestation.data.beaconBlockRoot),
+              payloadAttestation.data.slot,
+              ptcIndices,
+              payloadAttestation.data.payloadPresent,
+              payloadAttestation.data.blobDataAvailable
+            );
+          }
+        } catch (e) {
+          this.logger.warn("Error processing PayloadAttestation from block", {slot: blockSlot}, e as Error);
+        }
+      }
+    }
+
+    // 5. Compute head
+    const oldHead = this.forkChoice.getHead();
+    const oldHeadBlockRoot = oldHead.blockRoot;
+
+    this.metrics?.forkChoice.requests.inc();
+    const newHeadTimer = this.metrics?.forkChoice.findHead.startTimer({caller: ForkchoiceCaller.importBlock});
+    let newHead: ProtoBlock;
+    try {
+      newHead = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
+      throw e;
+    } finally {
+      newHeadTimer?.();
+    }
+
+    const currFinalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+
+    let headChanged = false;
+    let headResult: ImportBlockResult["head"] = null;
+    let reorg: ReorgEventData | null = null;
+
+    if (newHead.blockRoot !== oldHead.blockRoot) {
+      headChanged = true;
+
+      this.regen.updateHeadState(newHead, postState);
+
+      try {
+        headResult = {
+          block: newHead.blockRoot,
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+          slot: newHead.slot,
+          state: newHead.stateRoot,
+          previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
+          currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(newHead),
+        };
+      } catch (e) {
+        this.logger.debug("Error building head event data", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
+      }
+
+      const delaySec = this.clock.secFromSlot(newHead.slot);
+      this.logger.verbose("New chain head", {slot: newHead.slot, root: newHead.blockRoot, delaySec});
+
+      if (this.metrics) {
+        this.metrics.headSlot.set(newHead.slot);
+        if (delaySec < (SLOTS_PER_EPOCH * this.config.SLOT_DURATION_MS) / 1000) {
+          this.metrics.importBlock.elapsedTimeTillBecomeHead.observe(delaySec);
+          const cutOffSec = this.config.getAttestationDueMs(this.config.getForkName(blockSlot)) / 1000;
+          if (delaySec > cutOffSec) {
+            this.metrics.importBlock.setHeadAfterCutoff.inc();
+          }
+        }
+      }
+
+      this.syncContributionAndProofPool.prune(newHead.slot);
+      this.seenContributionAndProof.prune(newHead.slot);
+
+      this.metrics?.forkChoice.changedHead.inc();
+
+      const ancestorResult = this.forkChoice.getCommonAncestorDepth(oldHead, newHead);
+      if (ancestorResult.code === AncestorStatus.CommonAncestor) {
+        reorg = {
+          depth: ancestorResult.depth,
+          epoch: computeEpochAtSlot(newHead.slot),
+          slot: newHead.slot,
+          newHeadBlock: newHead.blockRoot,
+          oldHeadBlock: oldHead.blockRoot,
+          newHeadState: newHead.stateRoot,
+          oldHeadState: oldHead.stateRoot,
+          executionOptimistic: isOptimisticBlock(newHead),
+        };
+        this.metrics?.forkChoice.reorg.inc();
+        this.metrics?.forkChoice.reorgDistance.observe(ancestorResult.depth);
+      }
+
+      if (blockEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+        callInNextEventLoop(() => {
+          try {
+            if (isStatePostAltair(postState)) {
+              this.lightClientServer?.onImportBlockHead(
+                block.message as BeaconBlock<ForkPostAltair>,
+                postState,
+                parentBlockSlot
+              );
+            }
+          } catch (e) {
+            this.logger.verbose("Error lightClientServer.onImportBlock", {slot: blockSlot}, e as Error);
+          }
+        });
+      }
+    }
+
+    const parentEpoch = computeEpochAtSlot(parentBlockSlot);
+    if (parentEpoch < blockEpoch) {
+      this.shufflingCache.processState(postState);
+      this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    }
+
+    if (blockSlot % SLOTS_PER_EPOCH === 0) {
+      const checkpointState = postState;
+      const cp = getCheckpointFromState(checkpointState);
+      this.regen.addCheckpointState(cp, checkpointState);
+      this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
+      this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
+
+      const activeValidatorsCount = checkpointState.activeValidatorCount;
+      this.metrics?.currentActiveValidators.set(activeValidatorsCount);
+      this.metrics?.currentValidators.set({status: "active"}, activeValidatorsCount);
+
+      const parentBlockSummary = isGloasBeaconBlock(block.message)
+        ? this.forkChoice.getBlockHexAndBlockHash(
+            toRootHex(checkpointState.latestBlockHeader.parentRoot),
+            toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash)
+          )
+        : this.forkChoice.getBlockDefaultStatus(checkpointState.latestBlockHeader.parentRoot);
+
+      if (parentBlockSummary) {
+        const justifiedCheckpoint = checkpointState.currentJustifiedCheckpoint;
+        const justifiedEpoch = justifiedCheckpoint.epoch;
+        const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
+        if (justifiedEpoch > preJustifiedEpoch) {
+          this.logger.verbose("Checkpoint justified", toCheckpointHex(justifiedCheckpoint));
+          this.metrics?.previousJustifiedEpoch.set(checkpointState.previousJustifiedCheckpoint.epoch);
+          this.metrics?.currentJustifiedEpoch.set(justifiedCheckpoint.epoch);
+        }
+        const finalizedCheckpoint = checkpointState.finalizedCheckpoint;
+        const finalizedEpoch = finalizedCheckpoint.epoch;
+        const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
+        if (finalizedEpoch > preFinalizedEpoch) {
+          this.emitter.emit(routes.events.EventType.finalizedCheckpoint, {
+            block: toRootHex(finalizedCheckpoint.root),
+            epoch: finalizedCheckpoint.epoch,
+            state: toRootHex(checkpointState.hashTreeRoot()),
+            executionOptimistic: false,
+          });
+          this.logger.verbose("Checkpoint finalized", toCheckpointHex(finalizedCheckpoint));
+          this.metrics?.finalizedEpoch.set(finalizedCheckpoint.epoch);
+        }
+      }
+    }
+
+    let proposerIndexNextSlot: number | null = null;
+    if (blockSlot >= currentSlot && isExecutionState) {
+      try {
+        proposerIndexNextSlot = postState.getBeaconProposer(blockSlot + 1);
+      } catch {
+        // epoch boundary, proposer shuffle not yet stable
+      }
+    }
+
+    if (!postState.isStateValidatorsNodesPopulated()) {
+      this.logger.verbose("After importBlock caching postState without SSZ cache", {slot: postState.slot});
+    }
+
+    this.metrics?.parentBlockDistance.observe(blockSlot - parentBlockSlot);
+    this.metrics?.proposerBalanceDeltaAny.observe(proposerBalanceDelta);
+    this.validatorMonitor?.registerImportedBlock(block.message, {proposerBalanceDelta});
+    if (isStatePostAltair(postState)) {
+      this.validatorMonitor?.registerSyncAggregateInBlock(
+        blockEpoch,
+        (block as altair.SignedBeaconBlock).message.body.syncAggregate,
+        postState.currentSyncCommitteeIndexed.validatorIndices
+      );
+    }
+
+    if (isBlockInputColumns(blockInput)) {
+      for (const {source} of blockInput.getSampledColumnsWithSource()) {
+        this.metrics?.dataColumns.bySource.inc({source});
+      }
+    } else if (isBlockInputBlobs(blockInput)) {
+      for (const {source} of blockInput.getAllBlobsWithSource()) {
+        this.metrics?.importBlock.blobsBySource.inc({blobsSource: source});
+      }
+    }
+
+    return {
+      headChanged,
+      head: headResult,
+      reorg,
+      blockSummary,
+      proposerIndexNextSlot,
+      isExecutionState,
+      prevFinalizedEpoch,
+      currFinalizedEpoch,
+      oldHeadBlockRoot,
+      newHeadBlockRoot: newHead.blockRoot,
+      attestations: attestationsResult,
+      blockMeta: {
+        slot: blockSlot,
+        blockRootHex,
+        proposerBalanceDelta,
+        parentBlockSlot,
+        seenTimestampSec,
+      },
+    };
+  }
+
+  private addAttestationPreElectra(
+    _state: IBeaconStateView,
+    target: phase0.Checkpoint,
+    attDataRoot: string,
+    attestation: Attestation,
+    indexedAttestation: phase0.IndexedAttestation
+  ): void {
+    this.seenAggregatedAttestations.add(
+      target.epoch,
+      attestation.data.index,
+      attDataRoot,
+      {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+      true
+    );
+  }
+
+  private addAttestationPostElectra(
+    state: IBeaconStateView,
+    target: phase0.Checkpoint,
+    attDataRoot: string,
+    attestation: Attestation<ForkPostElectra>,
+    indexedAttestation: electra.IndexedAttestation
+  ): void {
+    const committeeIndices = attestation.committeeBits.getTrueBitIndexes();
+    if (committeeIndices.length === 1) {
+      this.seenAggregatedAttestations.add(
+        target.epoch,
+        committeeIndices[0],
+        attDataRoot,
+        {aggregationBits: attestation.aggregationBits, trueBitCount: indexedAttestation.attestingIndices.length},
+        true
+      );
+    } else {
+      const attSlot = attestation.data.slot;
+      const attEpoch = computeEpochAtSlot(attSlot);
+      const decisionRoot = state.getShufflingDecisionRoot(attEpoch);
+      const committees = this.shufflingCache.getBeaconCommittees(attEpoch, decisionRoot, attSlot, committeeIndices);
+      const aggregationBools = attestation.aggregationBits.toBoolArray();
+      let offset = 0;
+      for (let i = 0; i < committees.length; i++) {
+        const committee = committees[i];
+        const aggregationBits = BitArray.fromBoolArray(aggregationBools.slice(offset, offset + committee.length));
+        const trueBitCount = aggregationBits.getTrueBitIndexes().length;
+        offset += committee.length;
+        this.seenAggregatedAttestations.add(
+          target.epoch,
+          committeeIndices[i],
+          attDataRoot,
+          {aggregationBits, trueBitCount},
+          true
+        );
+      }
+    }
+  }
+
+  discardVerifiedBlocks(blockRootHexes: string[]): void {
+    for (const r of blockRootHexes) {
+      this.verifiedBlocks.delete(r);
+    }
   }
 
   // TODO - beacon engine: scalar state reads (getBeaconProposer, getValidator, getBalance,
