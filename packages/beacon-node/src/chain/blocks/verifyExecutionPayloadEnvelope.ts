@@ -61,9 +61,9 @@ export function verifyExecutionPayloadEnvelope(
       `Prev randao mismatch between bid and payload bid=${toHex(bid.prevRandao)} payload=${toHex(payload.prevRandao)}`
     );
   }
-  if (Number(bid.gasLimit) !== payload.gasLimit) {
+  if (bid.gasLimit !== payload.gasLimit) {
     throw new Error(
-      `Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${Number(bid.gasLimit)}`
+      `Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${bid.gasLimit}`
     );
   }
   if (!byteArrayEquals(bid.blockHash, payload.blockHash)) {
