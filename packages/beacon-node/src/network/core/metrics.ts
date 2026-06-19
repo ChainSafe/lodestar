@@ -127,6 +127,80 @@ export function createNetworkCoreMetrics(register: RegistryMetricCreator) {
         name: "lodestar_peer_manager_starved_bool",
         help: "Whether lodestar is starved of data while syncing",
       }),
+      // Core selection/pruning phase of the heartbeat, split out of heartbeatDuration so it
+      // can be attributed on its own. Divide by peersEvaluated for time-per-peer.
+      prioritizePeersDuration: register.histogram({
+        name: "lodestar_peer_manager_prioritize_peers_seconds",
+        help: "prioritizePeers function duration in seconds, the core peer selection/pruning algorithm",
+        buckets: [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1],
+      }),
+      // Score decay + map prune over every tracked peer, split out of heartbeatDuration.
+      // This loop iterates the whole score store, so divide by scoreMapSize (not
+      // peersEvaluated) for time-per-peer.
+      scoreUpdateDuration: register.histogram({
+        name: "lodestar_peer_score_update_seconds",
+        help: "Peer score store update (decay + prune over all peers) duration in seconds",
+        buckets: [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1],
+      }),
+      // Denominator for prioritizePeersDuration: it scales with the number of connected
+      // healthy peers, so time-per-peer (prioritizePeersDuration / this) is the comparable
+      // figure. For scoreUpdateDuration use scoreMapSize instead.
+      peersEvaluated: register.histogram({
+        name: "lodestar_peer_manager_peers_evaluated_count",
+        help: "Number of connected healthy peers evaluated by prioritizePeers per heartbeat, denominator for prioritize_peers_seconds",
+        buckets: [0, 25, 50, 75, 100, 150, 200],
+      }),
+      // Every peer the manager intends to disconnect. Covers both the top-of-heartbeat
+      // bad-score disconnects ("banned"/"score_too_low") and the prioritization reasons;
+      // the older peersRequestedToDisconnect gauge only recorded the latter. Counts intent,
+      // not completion (goodbye is fire-and-forget).
+      peersPruned: register.counter<{reason: string}>({
+        name: "lodestar_peer_manager_peers_pruned_total",
+        help: "Total peers the peer manager intends to disconnect, labeled by reason (incl. bad-score and prioritization reasons)",
+        labelNames: ["reason"],
+      }),
+      // Actual peer count per active subnet, to check the min-peers-per-subnet invariant.
+      // Buckets straddle the target (TARGET_SUBNET_PEERS = 6).
+      peersPerActiveSubnet: register.histogram<{type: SubnetType}>({
+        name: "lodestar_peer_manager_peers_per_active_subnet",
+        help: "Histogram of connected peer count per active subnet, labeled by subnet type",
+        labelNames: ["type"],
+        buckets: [0, 2, 4, 6, 8, 12],
+      }),
+      // Live outbound ratio, to check the OUTBOUND_PEERS_RATIO (10%) invariant (issue #2215).
+      // Denominator is connected healthy peers (banned/disconnected already removed).
+      outboundPeersRatio: register.gauge({
+        name: "lodestar_peer_manager_outbound_peers_ratio",
+        help: "Ratio of outbound peers to total connected healthy peers, verifies the outbound peers invariant",
+      }),
+      // Score state crossings (Healthy/Disconnected/Banned). Sensitive to the decay formula,
+      // thresholds, and gossip-score weighting.
+      scoreStateTransitions: register.counter<{from: string; to: string}>({
+        name: "lodestar_peer_score_state_transitions_total",
+        help: "Total peer score state transitions, labeled by from and to state (Healthy/Disconnected/Banned)",
+        labelNames: ["from", "to"],
+      }),
+      // Entry count of the score store (not bytes). Reflects the prune-to-MAX_ENTRIES /
+      // SCORE_THRESHOLD retention logic. Also the denominator for scoreUpdateDuration
+      // time-per-peer (that loop iterates the whole store, not just connected peers).
+      scoreMapSize: register.gauge({
+        name: "lodestar_peer_manager_score_map_size",
+        help: "Current number of entries in the peer score store",
+      }),
+      // Entry count of the connectedPeers map (not bytes). Should track libp2p_peers; a
+      // persistent gap indicates the connection leak guarded by leakedConnectionsCount.
+      connectedPeersMapSize: register.gauge({
+        name: "lodestar_peer_manager_connected_peers_map_size",
+        help: "Current number of entries in the peer manager connectedPeers map",
+      }),
+      // assertPeerRelevance outcome per Status exchange: "relevant", an irrelevant reason
+      // code, or "error". Fires on every status evaluation (inbound requests and our own
+      // requestStatus responses both route through onStatus).
+      relevanceCheck: register.counter<{result: string}>({
+        name: "lodestar_peer_relevance_check_total",
+        help: "Total peer relevance checks on Status, labeled by result (relevant or irrelevant reason code)",
+        labelNames: ["result"],
+      }),
     },
     leakedConnectionsCount: register.gauge({
       name: "lodestar_peer_manager_leaked_connections_count",
