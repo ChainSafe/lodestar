@@ -54,19 +54,12 @@ export const SignedExecutionPayloadBid = gloasSsz.SignedExecutionPayloadBid;
 export const DataColumnSidecar = gloasSsz.DataColumnSidecar;
 export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
 
-export const BeaconState = new ContainerType(
-  {
-    ...gloasSsz.BeaconState.fields,
-  },
-  {typeName: "BeaconState", jsonCase: "eth2"}
-);
+// [EIP7805] consensus-specs#5371 removed `inclusion_list_bits` from the bid (the only Heze
+// delta in these containers), so Heze `BeaconState` / `BeaconBlockBody` are now identical to
+// Gloas — reuse the Gloas containers directly (same convention as fulu's `BeaconBlock`).
+export const BeaconState = gloasSsz.BeaconState;
 
-export const BeaconBlockBody = new ContainerType(
-  {
-    ...gloasSsz.BeaconBlockBody.fields,
-  },
-  {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
+export const BeaconBlockBody = gloasSsz.BeaconBlockBody;
 
 export const BeaconBlock = new ContainerType(
   {
