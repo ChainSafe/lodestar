@@ -148,6 +148,9 @@ export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
 export const BUILDER_WITHDRAWAL_PREFIX = 0x03;
 
+// Version for an execution payload builder
+export const PAYLOAD_BUILDER_VERSION = 0;
+
 // Domain types
 
 export const DOMAIN_BEACON_PROPOSER = Uint8Array.from([0, 0, 0, 0]);
