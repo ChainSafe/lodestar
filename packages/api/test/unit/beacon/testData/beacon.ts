@@ -69,19 +69,11 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {blockId: "head"},
     res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
-  publishBlock: {
-    args: {signedBlockContents: ssz.electra.SignedBlockContents.defaultValue()},
-    res: undefined,
-  },
   publishBlockV2: {
     args: {
       signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
       broadcastValidation: BroadcastValidation.consensus,
     },
-    res: undefined,
-  },
-  publishBlindedBlock: {
-    args: {signedBlindedBlock: ssz.electra.SignedBlindedBeaconBlock.defaultValue()},
     res: undefined,
   },
   publishBlindedBlockV2: {
