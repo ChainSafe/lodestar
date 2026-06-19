@@ -145,4 +145,32 @@ describe("processBuilderDepositRequest", () => {
     expect(builder.executionAddress).toEqual(originalAddress);
     expect(builder.version).toBe(BUILDER_WITHDRAWAL_PREFIX);
   });
+
+  it("resets the withdrawable epoch when topping up an exited builder", () => {
+    const slot = SLOTS_PER_EPOCH * 2;
+    const state = buildGloasState(slot);
+    const pubkey = Uint8Array.from({length: 48}, (_, i) => i + 1);
+    const executionAddress = Uint8Array.from({length: 20}, (_, i) => i + 1);
+
+    // Exited builder: finite withdrawableEpoch
+    state.builders.push(
+      ssz.gloas.Builder.toViewDU({
+        pubkey,
+        version: BUILDER_WITHDRAWAL_PREFIX,
+        executionAddress,
+        balance: 1_000_000_000,
+        depositEpoch: 0,
+        withdrawableEpoch: 1,
+      })
+    );
+
+    const request = makeBuilderDepositRequest({pubkey, executionAddress, amount: 1_000_000_000});
+
+    processBuilderDepositRequest(state, request);
+
+    const builder = state.builders.get(0);
+    expect(builder.balance).toBe(2_000_000_000);
+    const currentEpoch = Math.floor(slot / SLOTS_PER_EPOCH);
+    expect(builder.withdrawableEpoch).toBe(currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY);
+  });
 });
