@@ -25,6 +25,10 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
+import {
+  GossipValidationResult,
+  GossipValidationStatus,
+} from "../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
@@ -334,6 +338,16 @@ function isDescendantAtFinalizedCheckpoint(
   }
 }
 
+/**
+ * Engine validate methods now return a GossipValidationResult instead of throwing. Re-throw the failure
+ * (as a GossipActionError keyed on status/code) so the surrounding throw-based test flow is preserved.
+ */
+function assertAccepted(res: GossipValidationResult<unknown>): void {
+  if (res.status === GossipValidationStatus.Accept) return;
+  const action = res.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE;
+  throw res.error ?? new GossipActionError(action, {code: res.code});
+}
+
 function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
   if (e instanceof GossipActionError) {
     return e.action === GossipAction.IGNORE ? "ignore" : "reject";
@@ -607,7 +621,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await chain.beaconEngine.validateGossipBlock(bytes, signedBlock, fork);
+      assertAccepted(await chain.beaconEngine.validateGossipBlock(bytes, signedBlock, fork));
       chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
       break;
     }
@@ -697,7 +711,13 @@ async function validateMessageForTopic(
       const syncCommitteeMessage = rejectOnInvalidSerializedBytes(() =>
         ssz.altair.SyncCommitteeMessage.deserialize(bytes)
       );
-      await chain.beaconEngine.validateGossipSyncCommittee(bytes, syncCommitteeMessage, Number(message.subnet_id ?? 0));
+      assertAccepted(
+        await chain.beaconEngine.validateGossipSyncCommittee(
+          bytes,
+          syncCommitteeMessage,
+          Number(message.subnet_id ?? 0)
+        )
+      );
       break;
     }
 
@@ -705,7 +725,9 @@ async function validateMessageForTopic(
       const signedContributionAndProof = rejectOnInvalidSerializedBytes(() =>
         ssz.altair.SignedContributionAndProof.deserialize(bytes)
       );
-      await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(bytes, signedContributionAndProof);
+      assertAccepted(
+        await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(bytes, signedContributionAndProof)
+      );
       break;
     }
 

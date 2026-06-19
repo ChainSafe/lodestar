@@ -11,15 +11,11 @@ import {
 import {isStatePostAltair} from "@lodestar/state-transition";
 import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
+import {GossipValidationStatus} from "../../../../chain/beaconEngine/gossipValidationResult.js";
 import {
-  AttestationError,
   AttestationErrorCode,
-  GossipAction,
-  PayloadAttestationError,
   PayloadAttestationErrorCode,
-  ProposerPreferencesError,
   ProposerPreferencesErrorCode,
-  SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
@@ -77,10 +73,27 @@ export function getBeaconPoolApi({
 
       await Promise.all(
         signedProposerPreferences.map(async (signed, i) => {
+          const logCtx = {
+            slot: signed.message.proposalSlot,
+            validatorIndex: signed.message.validatorIndex,
+            dependentRoot: toRootHex(signed.message.dependentRoot),
+          };
           try {
             // TODO - beacon engine: get bytes from the api
             const preferencesBytes = ssz.gloas.SignedProposerPreferences.serialize(signed);
-            await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes, signed);
+            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes, signed);
+            if (res.status !== GossipValidationStatus.Accept) {
+              if (res.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+                logger.debug("Ignoring known signed proposer preferences", logCtx);
+                return;
+              }
+              failures.push({index: i, message: res.error?.message ?? res.code});
+              logger.verbose(`Error on submitSignedProposerPreferences [${i}]`, logCtx, res.error);
+              if (res.status === GossipValidationStatus.Reject) {
+                chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
+              }
+              return;
+            }
 
             chain.proposerPreferencesPool.add(signed);
             await network.publishProposerPreferences(signed);
@@ -89,22 +102,8 @@ export function getBeaconPoolApi({
               data: signed,
             });
           } catch (e) {
-            const logCtx = {
-              slot: signed.message.proposalSlot,
-              validatorIndex: signed.message.validatorIndex,
-              dependentRoot: toRootHex(signed.message.dependentRoot),
-            };
-
-            if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
-              logger.debug("Ignoring known signed proposer preferences", logCtx);
-              return;
-            }
-
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(`Error on submitSignedProposerPreferences [${i}]`, logCtx, e as Error);
-            if (e instanceof ProposerPreferencesError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
-            }
           }
         })
       );
@@ -142,6 +141,7 @@ export function getBeaconPoolApi({
 
       await Promise.all(
         signedAttestations.map(async (attestation, i) => {
+          const logCtx = {slot: attestation.data.slot, index: attestation.data.index};
           try {
             const validateFn = () =>
               chain.beaconEngine.validateApiAttestation(fork, {attestation, serializedData: null});
@@ -149,8 +149,23 @@ export function getBeaconPoolApi({
             // when a validator is configured with multiple beacon node urls, this attestation data may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
+            const res = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            if (res.status !== GossipValidationStatus.Accept) {
+              if (res.code === AttestationErrorCode.ATTESTATION_ALREADY_KNOWN) {
+                // Attestations might already be published by another node as part of a fallback setup or DVT cluster
+                // and can reach our node by gossip before the api. Should not result in a 500 response.
+                logger.debug("Ignoring known attestation", logCtx);
+                return;
+              }
+              failures.push({index: i, message: res.error?.message ?? res.code});
+              logger.verbose(`Error on submitPoolAttestations [${i}]`, logCtx, res.error);
+              if (res.status === GossipValidationStatus.Reject) {
+                chain.persistInvalidSszValue(sszTypesFor(fork).SingleAttestation, attestation, "api_reject");
+              }
+              return;
+            }
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
-              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+              res.value;
 
             if (network.shouldAggregate(subnet, slot)) {
               const insertOutcome = chain.attestationPool.add(
@@ -188,20 +203,9 @@ export function getBeaconPoolApi({
               sentPeers
             );
           } catch (e) {
-            const logCtx = {slot: attestation.data.slot, index: attestation.data.index};
-
-            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.ATTESTATION_ALREADY_KNOWN) {
-              logger.debug("Ignoring known attestation", logCtx);
-              // Attestations might already be published by another node as part of a fallback setup or DVT cluster
-              // and can reach our node by gossip before the api. The error can be ignored and should not result in a 500 response.
-              return;
-            }
-
+            // Validation no longer throws (handled above); this catches post-validation failures (publish/pool add).
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(`Error on submitPoolAttestations [${i}]`, logCtx, e as Error);
-            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(sszTypesFor(fork).SingleAttestation, attestation, "api_reject");
-            }
           }
         })
       );
@@ -268,16 +272,32 @@ export function getBeaconPoolApi({
 
       await Promise.all(
         payloadAttestationMessages.map(async (payloadAttestationMessage, i) => {
+          const logCtx = {
+            slot: payloadAttestationMessage.data.slot,
+            validatorIndex: payloadAttestationMessage.validatorIndex,
+            beaconBlockRoot: toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+          };
           try {
             const validateFn = () => chain.beaconEngine.validateApiPayloadAttestationMessage(payloadAttestationMessage);
             const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
-            const {attDataRootHex, validatorCommitteeIndices} = await validateGossipFnRetryUnknownRoot(
-              validateFn,
-              network,
-              chain,
-              slot,
-              beaconBlockRoot
-            );
+            const res = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            if (res.status !== GossipValidationStatus.Accept) {
+              if (res.code === PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN) {
+                logger.debug("Ignoring known payload attestation message", logCtx);
+                return;
+              }
+              failures.push({index: i, message: res.error?.message ?? res.code});
+              logger.verbose(`Error on submitPayloadAttestationMessages [${i}]`, logCtx, res.error);
+              if (res.status === GossipValidationStatus.Reject) {
+                chain.persistInvalidSszValue(
+                  ssz.gloas.PayloadAttestationMessage,
+                  payloadAttestationMessage,
+                  "api_reject"
+                );
+              }
+              return;
+            }
+            const {attDataRootHex, validatorCommitteeIndices} = res.value;
 
             const insertOutcome = chain.payloadAttestationPool.add(
               payloadAttestationMessage,
@@ -297,29 +317,8 @@ export function getBeaconPoolApi({
 
             await network.publishPayloadAttestationMessage(payloadAttestationMessage);
           } catch (e) {
-            const logCtx = {
-              slot: payloadAttestationMessage.data.slot,
-              validatorIndex: payloadAttestationMessage.validatorIndex,
-              beaconBlockRoot: toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-            };
-
-            if (
-              e instanceof PayloadAttestationError &&
-              e.type.code === PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN
-            ) {
-              logger.debug("Ignoring known payload attestation message", logCtx);
-              return;
-            }
-
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(`Error on submitPayloadAttestationMessages [${i}]`, logCtx, e as Error);
-            if (e instanceof PayloadAttestationError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(
-                ssz.gloas.PayloadAttestationMessage,
-                payloadAttestationMessage,
-                "api_reject"
-              );
-            }
           }
         })
       );
@@ -365,7 +364,19 @@ export function getBeaconPoolApi({
 
             // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
             // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
-            await chain.beaconEngine.validateApiSyncCommittee(state, signature);
+            const res = await chain.beaconEngine.validateApiSyncCommittee(state, signature);
+            if (res.status !== GossipValidationStatus.Accept) {
+              failures.push({index: i, message: res.error?.message ?? res.code});
+              logger.verbose(
+                `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+                {slot: signature.slot, validatorIndex: signature.validatorIndex},
+                res.error
+              );
+              if (res.status === GossipValidationStatus.Reject) {
+                chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, signature, "api_reject");
+              }
+              return;
+            }
 
             // The same validator can appear multiple times in the sync committee. It can appear multiple times per
             // subnet even. First compute on which subnet the signature must be broadcasted to.
@@ -401,9 +412,6 @@ export function getBeaconPoolApi({
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
               e as Error
             );
-            if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.altair.SyncCommitteeMessage, signature, "api_reject");
-            }
           }
         })
       );

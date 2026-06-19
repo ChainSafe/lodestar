@@ -60,14 +60,9 @@ import {
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
+import {GossipValidationStatus} from "../../../chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
-import {
-  AttestationError,
-  AttestationErrorCode,
-  GossipAction,
-  SyncCommitteeError,
-  SyncCommitteeErrorCode,
-} from "../../../chain/errors/index.js";
+import {AttestationErrorCode, SyncCommitteeErrorCode} from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
@@ -1531,6 +1526,10 @@ export function getValidatorApi(
 
       await Promise.all(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
+          const logCtx = {
+            slot: signedAggregateAndProof.message.aggregate.data.slot,
+            index: signedAggregateAndProof.message.aggregate.data.index,
+          };
           try {
             // TODO: Validate in batch
             const validateFn = () => chain.beaconEngine.validateApiAggregateAndProof(fork, signedAggregateAndProof);
@@ -1538,8 +1537,20 @@ export function getValidatorApi(
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
             // see https://github.com/ChainSafe/lodestar/issues/5098
-            const {indexedAttestation, committeeValidatorIndices, attDataRootHex} =
-              await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            const res = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
+            if (res.status !== GossipValidationStatus.Accept) {
+              if (res.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
+                logger.debug("Ignoring known signedAggregateAndProof", logCtx);
+                return; // Ok to submit the same aggregate twice
+              }
+              failures.push({index: i, message: res.error?.message ?? res.code});
+              logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, res.error);
+              if (res.status === GossipValidationStatus.Reject) {
+                chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
+              }
+              return;
+            }
+            const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = res.value;
 
             const insertOutcome = chain.aggregatedAttestationPool.add(
               signedAggregateAndProof.message.aggregate,
@@ -1552,21 +1563,8 @@ export function getValidatorApi(
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
             chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
-            const logCtx = {
-              slot: signedAggregateAndProof.message.aggregate.data.slot,
-              index: signedAggregateAndProof.message.aggregate.data.index,
-            };
-
-            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
-              logger.debug("Ignoring known signedAggregateAndProof", logCtx);
-              return; // Ok to submit the same aggregate twice
-            }
-
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(`Error on publishAggregateAndProofs [${i}]`, logCtx, e as Error);
-            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
-            }
           }
         })
       );
@@ -1590,16 +1588,32 @@ export function getValidatorApi(
 
       await Promise.all(
         contributionAndProofs.map(async (contributionAndProof, i) => {
+          const logCtx = {
+            slot: contributionAndProof.message.contribution.slot,
+            subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
+          };
           try {
             // TODO: Validate in batch
             // TODO - engine: get bytes from api
             const contributionBytes = ssz.altair.SignedContributionAndProof.serialize(contributionAndProof);
-            const {syncCommitteeParticipantIndices} =
-              await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(
-                contributionBytes,
-                contributionAndProof,
-                true // skip known participants check
-              );
+            const res = await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(
+              contributionBytes,
+              contributionAndProof,
+              true // skip known participants check
+            );
+            if (res.status !== GossipValidationStatus.Accept) {
+              if (res.code === SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN) {
+                logger.debug("Ignoring known contributionAndProof", logCtx);
+                return; // Ok to submit the same aggregate twice
+              }
+              failures.push({index: i, message: res.error?.message ?? res.code});
+              logger.verbose(`Error on publishContributionAndProofs [${i}]`, logCtx, res.error);
+              if (res.status === GossipValidationStatus.Reject) {
+                chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
+              }
+              return;
+            }
+            const {syncCommitteeParticipantIndices} = res.value;
             const insertOutcome = chain.syncContributionAndProofPool.add(
               contributionAndProof.message,
               syncCommitteeParticipantIndices.length,
@@ -1608,24 +1622,8 @@ export function getValidatorApi(
             metrics?.opPool.syncContributionAndProofPool.apiInsertOutcome.inc({insertOutcome});
             await network.publishContributionAndProof(contributionAndProof);
           } catch (e) {
-            const logCtx = {
-              slot: contributionAndProof.message.contribution.slot,
-              subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
-            };
-
-            if (
-              e instanceof SyncCommitteeError &&
-              e.type.code === SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN
-            ) {
-              logger.debug("Ignoring known contributionAndProof", logCtx);
-              return; // Ok to submit the same aggregate twice
-            }
-
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(`Error on publishContributionAndProofs [${i}]`, logCtx, e as Error);
-            if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
-            }
           }
         })
       );

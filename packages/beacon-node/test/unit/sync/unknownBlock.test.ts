@@ -9,6 +9,7 @@ import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
+import {accept} from "../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
@@ -730,7 +731,11 @@ describe("UnknownBlockSync", () => {
 
     beforeEach(() => {
       vi.useFakeTimers({shouldAdvanceTime: true});
-      vi.mocked(validateGossipExecutionPayloadEnvelope).mockReset().mockResolvedValue(undefined);
+      // Routed as the BeaconEngine method (see setupPayloadSyncTest), which returns a GossipValidationResult.
+      // The mock keeps the free-fn `Promise<void>` type, so cast the engine-shaped value through void.
+      vi.mocked(validateGossipExecutionPayloadEnvelope)
+        .mockReset()
+        .mockResolvedValue(accept(undefined) as unknown as void);
       vi.mocked(validateGloasBlockDataColumnSidecars).mockReset().mockResolvedValue(undefined);
     });
 
@@ -980,6 +985,7 @@ describe("UnknownBlockSync", () => {
         if (!blockImported) {
           throw new Error("EXECUTION_PAYLOAD_ENVELOPE_ERROR_BLOCK_ROOT_UNKNOWN");
         }
+        return accept(undefined) as unknown as void;
       });
 
       ({emitter} = setupPayloadSyncTest({
