@@ -111,8 +111,8 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
     blockFns.processConsolidationRequest(state as CachedBeaconStateElectra, testCase.consolidation_request);
   },
 
-  execution_payload_bid: (state, testCase: {block: gloas.BeaconBlock}) => {
-    blockFns.processExecutionPayloadBid(state as CachedBeaconStateGloas, testCase.block);
+  execution_payload_bid: (state, testCase: {execution_payload_bid: gloas.SignedExecutionPayloadBid}) => {
+    blockFns.processExecutionPayloadBid(state as CachedBeaconStateGloas, testCase.execution_payload_bid);
   },
 
   parent_execution_payload: (state, testCase: {block: gloas.BeaconBlock}) => {
@@ -189,6 +189,7 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         payload_attestation: ssz.gloas.PayloadAttestation,
         builder_deposit_request: ssz.gloas.BuilderDepositRequest,
         builder_exit_request: ssz.gloas.BuilderExitRequest,
+        execution_payload_bid: ssz.gloas.SignedExecutionPayloadBid,
       },
       shouldError: (testCase) => testCase.post === undefined,
       getExpected: (testCase) => testCase.post,
