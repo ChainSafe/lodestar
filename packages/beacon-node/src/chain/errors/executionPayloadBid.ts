@@ -3,6 +3,7 @@ import {GossipActionError} from "./gossipValidation.js";
 
 export enum ExecutionPayloadBidErrorCode {
   BUILDER_NOT_ELIGIBLE = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_NOT_ELIGIBLE",
+  INVALID_BUILDER_VERSION = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_BUILDER_VERSION",
   NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
   BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
@@ -20,6 +21,12 @@ export enum ExecutionPayloadBidErrorCode {
 
 export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE; builderIndex: BuilderIndex}
+  | {
+      code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION;
+      builderIndex: BuilderIndex;
+      version: number;
+      expectedVersion: number;
+    }
   | {
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT;
       builderIndex: BuilderIndex;
