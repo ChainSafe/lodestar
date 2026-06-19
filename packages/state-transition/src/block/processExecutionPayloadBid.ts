@@ -1,15 +1,17 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconBlock, gloas, ssz} from "@lodestar/types";
+import {BUILDER_INDEX_SELF_BUILD, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
 import {CachedBeaconStateGloas} from "../types.js";
 import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.js";
-import {getCurrentEpoch, getRandaoMix} from "../util/index.js";
+import {getBlockRootAtSlot, getCurrentEpoch, getRandaoMix} from "../util/index.js";
 
-export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block: BeaconBlock<ForkPostGloas>): void {
-  const signedBid = block.body.signedExecutionPayloadBid;
+export function processExecutionPayloadBid(
+  state: CachedBeaconStateGloas,
+  signedBid: gloas.SignedExecutionPayloadBid
+): void {
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;
 
@@ -42,8 +44,12 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     }
   }
 
-  if (bid.slot !== block.slot) {
-    throw Error(`Bid slot ${bid.slot} does not match block slot ${block.slot}`);
+  if (bid.slot !== state.slot) {
+    throw Error(`Bid slot ${bid.slot} does not match state slot ${state.slot}`);
+  }
+
+  if (state.slot <= GENESIS_SLOT) {
+    throw Error(`Execution payload bid not allowed at genesis slot ${state.slot}`);
   }
 
   if (!byteArrayEquals(bid.parentBlockHash, state.latestBlockHash)) {
@@ -52,9 +58,10 @@ export function processExecutionPayloadBid(state: CachedBeaconStateGloas, block:
     );
   }
 
-  if (!byteArrayEquals(bid.parentBlockRoot, block.parentRoot)) {
+  const parentBlockRoot = getBlockRootAtSlot(state, state.slot - 1);
+  if (!byteArrayEquals(bid.parentBlockRoot, parentBlockRoot)) {
     throw Error(
-      `Parent block root ${toRootHex(bid.parentBlockRoot)} of bid does not match block's parent root ${toRootHex(block.parentRoot)}`
+      `Parent block root ${toRootHex(bid.parentBlockRoot)} of bid does not match state's parent block root ${toRootHex(parentBlockRoot)}`
     );
   }
 

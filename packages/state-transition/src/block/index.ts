@@ -85,7 +85,10 @@ export function processBlock(
   }
 
   if (fork >= ForkSeq.gloas) {
-    processExecutionPayloadBid(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
+    processExecutionPayloadBid(
+      state as CachedBeaconStateGloas,
+      (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
+    );
   }
 
   processRandao(state, block, verifySignatures);
