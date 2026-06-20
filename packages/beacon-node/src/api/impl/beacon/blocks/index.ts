@@ -83,6 +83,15 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  */
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 
+function assertDataColumnsWithinAvailableWindow(chain: ApiModules["chain"], slot: number, blockRootHex: string): void {
+  if (slot < chain.earliestAvailableSlot) {
+    throw new ApiError(
+      404,
+      `Data column sidecars are not available for slot=${slot}, root=${blockRootHex}, earliestAvailableSlot=${chain.earliestAvailableSlot}`
+    );
+  }
+}
+
 export function getBeaconBlockApi({
   chain,
   config,
@@ -903,6 +912,8 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
+          assertDataColumnsWithinAvailableWindow(chain, block.message.slot, blockRootHex);
+
           const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
@@ -995,6 +1006,8 @@ export function getBeaconBlockApi({
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
+          assertDataColumnsWithinAvailableWindow(chain, block.message.slot, blockRootHex);
+
           const dataColumnSidecars = await chain.getDataColumnSidecars(block.message.slot, blockRootHex);
 
           if (dataColumnSidecars.length === 0) {
