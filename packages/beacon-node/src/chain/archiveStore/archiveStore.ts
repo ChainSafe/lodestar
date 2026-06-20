@@ -42,7 +42,7 @@ export class ArchiveStore {
   private archiveMode: ArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
-  private archiveDataEpochs?: number;
+  private _archiveDataEpochs?: number;
   private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
@@ -61,7 +61,7 @@ export class ArchiveStore {
     this.opts = opts;
     this.signal = signal;
     this.archiveMode = opts.archiveMode;
-    this.archiveDataEpochs = opts.archiveDataEpochs;
+    this._archiveDataEpochs = opts.archiveDataEpochs;
 
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH,
@@ -93,6 +93,10 @@ export class ArchiveStore {
         {once: true}
       );
     }
+  }
+
+  get archiveDataEpochs(): number | undefined {
+    return this._archiveDataEpochs;
   }
 
   async init(): Promise<void> {
@@ -200,7 +204,7 @@ export class ArchiveStore {
         this.logger,
         finalized,
         this.chain.clock.currentEpoch,
-        this.archiveDataEpochs,
+        this._archiveDataEpochs,
         this.chain.opts.persistOrphanedBlocks,
         this.chain.opts.persistOrphanedBlocksDir
       );

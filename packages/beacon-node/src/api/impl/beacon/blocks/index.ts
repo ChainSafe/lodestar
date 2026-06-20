@@ -34,6 +34,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {computeDataColumnSidecarsAvailabilityStartSlot} from "../../../../chain/archiveStore/utils/dataColumnSidecarsAvailability.js";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -84,10 +85,19 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 
 function assertDataColumnsWithinAvailableWindow(chain: ApiModules["chain"], slot: number, blockRootHex: string): void {
-  if (slot < chain.earliestAvailableSlot) {
+  const earliestDataColumnSlot = Math.max(
+    chain.earliestAvailableSlot,
+    computeDataColumnSidecarsAvailabilityStartSlot(
+      chain.config,
+      chain.clock.currentEpoch,
+      chain.archiveStore.archiveDataEpochs
+    )
+  );
+
+  if (slot < earliestDataColumnSlot) {
     throw new ApiError(
       404,
-      `Data column sidecars are not available for slot=${slot}, root=${blockRootHex}, earliestAvailableSlot=${chain.earliestAvailableSlot}`
+      `Data column sidecars are not available for slot=${slot}, root=${blockRootHex}, earliestAvailableSlot=${earliestDataColumnSlot}`
     );
   }
 }

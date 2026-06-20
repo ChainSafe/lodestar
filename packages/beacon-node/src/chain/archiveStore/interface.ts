@@ -51,6 +51,8 @@ export interface StateArchiveStrategy {
 }
 
 export interface IArchiveStore {
+  readonly archiveDataEpochs?: number;
+
   /**
    * Initialize archive store and load any worker required
    */

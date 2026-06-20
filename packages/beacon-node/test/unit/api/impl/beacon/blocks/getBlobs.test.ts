@@ -1,5 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {ForkName, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
@@ -23,7 +24,9 @@ describe("api - beacon - blob sidecars", () => {
     blockRoot: string;
     getDataColumnSidecars: ReturnType<typeof vi.fn>;
   } {
-    const {block} = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+    const blockSlot = computeStartSlotAtEpoch(config.FULU_FORK_EPOCH);
+    const currentEpoch = config.FULU_FORK_EPOCH + config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS + 1;
+    const {block} = generateBlockWithColumnSidecars({forkName: ForkName.fulu, slot: blockSlot});
     const blockRoot = toRootHex(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
     const getDataColumnSidecars = vi.fn();
 
@@ -44,13 +47,21 @@ describe("api - beacon - blob sidecars", () => {
         configurable: true,
       },
       earliestAvailableSlot: {
-        value: block.message.slot + 1,
+        value: block.message.slot - 1,
+        configurable: true,
+      },
+      archiveStore: {
+        value: {archiveDataEpochs: undefined},
         configurable: true,
       },
       getDataColumnSidecars: {
         value: getDataColumnSidecars,
         configurable: true,
       },
+    });
+    Object.defineProperty(modules.chain.clock, "currentEpoch", {
+      value: currentEpoch,
+      configurable: true,
     });
 
     return {blockId: String(block.message.slot), blockRoot, getDataColumnSidecars};
