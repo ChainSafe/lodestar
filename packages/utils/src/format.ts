@@ -119,8 +119,8 @@ export function prettyPrintIndices(indices: number[]): string {
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes < 0) {
-    throw new Error("bytes must be a positive number, got " + bytes);
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    throw new Error("bytes must be a finite non-negative number, got " + bytes);
   }
 
   if (bytes === 0) {

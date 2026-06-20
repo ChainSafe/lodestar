@@ -183,4 +183,11 @@ describe("formatBytes", () => {
       expect(formatBytes(input)).toBe(output);
     });
   }
+
+  const invalidTestCases = [-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+  for (const input of invalidTestCases) {
+    it(`should reject invalid byte count ${input}`, () => {
+      expect(() => formatBytes(input)).toThrow("bytes must be a finite non-negative number");
+    });
+  }
 });
