@@ -46,10 +46,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
-  getBlockAttestations: {
-    args: {blockId: "head"},
-    res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {executionOptimistic: true, finalized: false}},
-  },
   getBlockAttestationsV2: {
     args: {blockId: "head"},
     res: {
@@ -115,10 +111,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
 
   // pool
 
-  getPoolAttestations: {
-    args: {slot: 1, committeeIndex: 2},
-    res: {data: [ssz.phase0.Attestation.defaultValue()]},
-  },
   getPoolAttestationsV2: {
     args: {slot: 1, committeeIndex: 2},
     res: {data: [ssz.electra.Attestation.defaultValue()], meta: {version: ForkName.electra}},
@@ -130,10 +122,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getPoolProposerPreferences: {
     args: {slot: 1},
     res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
-  },
-  getPoolAttesterSlashings: {
-    args: undefined,
-    res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
   },
   getPoolAttesterSlashingsV2: {
     args: undefined,
@@ -151,16 +139,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: undefined,
     res: {data: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
   },
-  submitPoolAttestations: {
-    args: {signedAttestations: [ssz.phase0.Attestation.defaultValue()]},
-    res: undefined,
-  },
   submitPoolAttestationsV2: {
     args: {signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]},
-    res: undefined,
-  },
-  submitPoolAttesterSlashings: {
-    args: {attesterSlashing: ssz.phase0.AttesterSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolAttesterSlashingsV2: {
