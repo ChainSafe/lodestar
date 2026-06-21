@@ -1960,7 +1960,9 @@ export class ProtoArray {
     for (const node of this.iterateAncestorNodes(descendantRoot, descendantPayloadStatus)) {
       if (node.blockRoot === ancestorNode.blockRoot) {
         // Gloas is_ancestor: a PENDING ancestor matches any payload variant of the same block.
-        return node.payloadStatus === ancestorNode.payloadStatus || ancestorNode.payloadStatus === PayloadStatus.PENDING;
+        return (
+          node.payloadStatus === ancestorNode.payloadStatus || ancestorNode.payloadStatus === PayloadStatus.PENDING
+        );
       }
       // Ancestors are iterated in decreasing slot, so once we reach the ancestor's slot
       // without a root match it cannot be in this chain.
