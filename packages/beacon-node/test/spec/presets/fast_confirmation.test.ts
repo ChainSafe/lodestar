@@ -10,6 +10,7 @@ import {
   ACTIVE_PRESET,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreDeneb,
   ForkPreFulu,
   ForkPreGloas,
@@ -41,6 +42,7 @@ import {bnToNum, fromHex, toHex} from "@lodestar/utils";
 import {
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.ts";
@@ -239,7 +241,30 @@ const fastConfirmationTest =
                 let blockImport;
                 const forkSeq = config.getForkSeq(slot);
 
-                if (forkSeq >= ForkSeq.fulu) {
+                if (forkSeq >= ForkSeq.gloas) {
+                  // Gloas blocks don't carry blobs/columns directly on the block body.
+                  // Blob KZG commitments are nested inside signedExecutionPayloadBid.
+                  // Use BlockInputNoData since DA is handled separately via execution payload envelopes.
+                  blockImport = BlockInputNoData.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
+                  // importBlock requires a PayloadEnvelopeInput to exist for gloas blocks; in
+                  // production this is seeded by gossip / by-root / by-range / API producers.
+                  // Spec tests bypass those, so seed it here to mirror the gossip-handler path.
+                  chain.seenPayloadEnvelopeInputCache.add({
+                    blockRootHex,
+                    block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                    forkName: fork,
+                    sampledColumns: chain.custodyConfig.sampledColumns,
+                    custodyColumns: chain.custodyConfig.custodyColumns,
+                    timeCreatedSec: Date.now() / 1000,
+                  });
+                } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
                     columns = [];
                   }
@@ -692,13 +717,5 @@ specTestIterator(
   {
     ...defaultSkipOpts,
     skippedRunners: [],
-    skippedTestSuites: [
-      ...(defaultSkipOpts.skippedTestSuites ?? []),
-      // TODO-GLOAS: lodestar's fast-confirmation rule is block-root based and does not model the
-      // ePBS payload_status dimension required by specs/gloas/fast-confirmation.md (PTC payload
-      // presence/timeliness, get_node_for_root with PAYLOAD_STATUS_PENDING). Head/justified/
-      // finalized/proposer-head all match; only getConfirmedRoot diverges. Unskip with the gloas FCR port.
-      /^gloas\/fast_confirmation\/.*/,
-    ],
   }
 );

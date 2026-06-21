@@ -1961,7 +1961,11 @@ export class ProtoArray {
       if (node.slot < ancestorNode.slot) {
         return false;
       }
-      if (node.blockRoot === ancestorNode.blockRoot && node.payloadStatus === ancestorNode.payloadStatus) {
+      // Gloas is_ancestor: a PENDING ancestor matches any payload variant of the same block.
+      if (
+        node.blockRoot === ancestorNode.blockRoot &&
+        (node.payloadStatus === ancestorNode.payloadStatus || ancestorNode.payloadStatus === PayloadStatus.PENDING)
+      ) {
         return true;
       }
     }
