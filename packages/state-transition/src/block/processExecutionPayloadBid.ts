@@ -1,5 +1,5 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
-import {BUILDER_INDEX_SELF_BUILD, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, GENESIS_SLOT, PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
@@ -31,6 +31,13 @@ export function processExecutionPayloadBid(
     // Verify that the builder is active
     if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} is not active`);
+    }
+
+    // Verify that the builder is a payload builder
+    if (builder.version !== PAYLOAD_BUILDER_VERSION) {
+      throw Error(
+        `Invalid execution payload bid: builder ${builderIndex} version ${builder.version} != ${PAYLOAD_BUILDER_VERSION}`
+      );
     }
 
     // Verify that the builder has funds to cover the bid
@@ -86,6 +93,7 @@ export function processExecutionPayloadBid(
         amount,
         builderIndex,
       }),
+      proposerIndex: state.epochCtx.getBeaconProposer(state.slot),
     });
 
     state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);

@@ -122,6 +122,14 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
   payload_attestation: (state, testCase: {payload_attestation: gloas.PayloadAttestation}) => {
     blockFns.processPayloadAttestation(state as CachedBeaconStateGloas, testCase.payload_attestation);
   },
+
+  builder_deposit_request: (state, testCase: {builder_deposit_request: gloas.BuilderDepositRequest}) => {
+    blockFns.processBuilderDepositRequest(state as CachedBeaconStateGloas, testCase.builder_deposit_request);
+  },
+
+  builder_exit_request: (state, testCase: {builder_exit_request: gloas.BuilderExitRequest}) => {
+    blockFns.processBuilderExitRequest(state as CachedBeaconStateGloas, testCase.builder_exit_request);
+  },
 };
 
 export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => T | void;
@@ -179,6 +187,8 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
         payload_attestation: ssz.gloas.PayloadAttestation,
+        builder_deposit_request: ssz.gloas.BuilderDepositRequest,
+        builder_exit_request: ssz.gloas.BuilderExitRequest,
         execution_payload_bid: ssz.gloas.SignedExecutionPayloadBid,
       },
       shouldError: (testCase) => testCase.post === undefined,

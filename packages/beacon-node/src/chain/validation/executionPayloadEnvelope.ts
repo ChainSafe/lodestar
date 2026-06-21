@@ -106,7 +106,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
-  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
