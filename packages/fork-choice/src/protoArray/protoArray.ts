@@ -1958,15 +1958,14 @@ export class ProtoArray {
     }
 
     for (const node of this.iterateAncestorNodes(descendantRoot, descendantPayloadStatus)) {
-      if (node.slot < ancestorNode.slot) {
-        return false;
+      if (node.blockRoot === ancestorNode.blockRoot) {
+        // Gloas is_ancestor: a PENDING ancestor matches any payload variant of the same block.
+        return node.payloadStatus === ancestorNode.payloadStatus || ancestorNode.payloadStatus === PayloadStatus.PENDING;
       }
-      // Gloas is_ancestor: a PENDING ancestor matches any payload variant of the same block.
-      if (
-        node.blockRoot === ancestorNode.blockRoot &&
-        (node.payloadStatus === ancestorNode.payloadStatus || ancestorNode.payloadStatus === PayloadStatus.PENDING)
-      ) {
-        return true;
+      // Ancestors are iterated in decreasing slot, so once we reach the ancestor's slot
+      // without a root match it cannot be in this chain.
+      if (node.slot <= ancestorNode.slot) {
+        return false;
       }
     }
     return false;

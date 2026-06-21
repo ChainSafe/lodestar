@@ -262,7 +262,7 @@ const fastConfirmationTest =
                     forkName: fork,
                     sampledColumns: chain.custodyConfig.sampledColumns,
                     custodyColumns: chain.custodyConfig.custodyColumns,
-                    timeCreatedSec: Date.now() / 1000,
+                    timeCreatedSec: tickTime,
                   });
                 } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
