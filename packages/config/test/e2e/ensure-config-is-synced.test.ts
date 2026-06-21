@@ -22,10 +22,6 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // Future spec params not yet in Lodestar
   "EPOCHS_PER_SHUFFLING_PHASE" as keyof ChainConfig,
   "PROPOSER_SELECTION_GAP" as keyof ChainConfig,
-  // Gloas churn constants - not yet in local config
-  "CHURN_LIMIT_QUOTIENT_GLOAS" as keyof ChainConfig,
-  "CONSOLIDATION_CHURN_LIMIT_QUOTIENT" as keyof ChainConfig,
-  "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS" as keyof ChainConfig,
   // Future forks not yet implemented in Lodestar
   "EIP7928_FORK_VERSION" as keyof ChainConfig,
   "EIP7928_FORK_EPOCH" as keyof ChainConfig,
