@@ -393,7 +393,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           blobs,
           proofs,
         }),
-        executionRequests: serializeExecutionRequests({
+        executionRequests: serializeExecutionRequests(fork, {
           deposits: ssz.electra.DepositRequests.defaultValue(),
           withdrawals: ssz.electra.WithdrawalRequests.defaultValue(),
           consolidations: ssz.electra.ConsolidationRequests.defaultValue(),
