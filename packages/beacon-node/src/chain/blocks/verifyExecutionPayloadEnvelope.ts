@@ -62,9 +62,7 @@ export function verifyExecutionPayloadEnvelope(
     );
   }
   if (bid.gasLimit !== payload.gasLimit) {
-    throw new Error(
-      `Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${bid.gasLimit}`
-    );
+    throw new Error(`Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${bid.gasLimit}`);
   }
   if (!byteArrayEquals(bid.blockHash, payload.blockHash)) {
     throw new Error(
