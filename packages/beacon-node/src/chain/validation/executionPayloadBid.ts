@@ -232,6 +232,18 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // [REJECT] `bid.prev_randao` is the correct RANDAO mix -- i.e. validate that
+  // `bid.prev_randao == get_randao_mix(parent_state, get_current_epoch(parent_state))`.
+  const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));
+  if (!byteArrayEquals(bid.prevRandao, randaoMix)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_PREV_RANDAO,
+      builderIndex: bid.builderIndex,
+      bidPrevRandao: toHex(bid.prevRandao),
+      expectedPrevRandao: toHex(randaoMix),
+    });
+  }
+
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
     PublicKey.fromBytes(builder.pubkey),
