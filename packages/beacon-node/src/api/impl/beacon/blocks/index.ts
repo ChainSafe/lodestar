@@ -588,7 +588,7 @@ export function getBeaconBlockApi({
       const slot = signedBlindedBlock.message.slot;
       const blockRoot = toRootHex(
         chain.config
-          .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
+          .getPostBellatrixForkTypes(slot)
           .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
       );
       const fork = config.getForkName(slot);
