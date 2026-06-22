@@ -896,14 +896,16 @@ export class ForkChoice implements IForkChoice {
 
     this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot, forceImport);
 
-    // Pre-gloas: payload is always present
-    // Post-gloas:
-    // - always add weight to PENDING
-    // - if message.slot > block.slot, it also add weights to FULL or EMPTY
+    // Determine which variant the attestation supports
+    //
+    // Pre-gloas: payload is always present, vote goes to FULL.
+    // Post-gloas, message.slot <= block.slot: voter could not have seen the payload yet, vote goes
+    //   to PENDING (supports the beacon block root regardless of which payload variant reveals).
+    // Post-gloas, message.slot > block.slot: committee index encodes payload_present —
+    //   index 0 → EMPTY, index 1 → FULL.
+    //
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-get_supported_node
     let payloadStatus: PayloadStatus;
-
-    // We need to retrieve block to check if it's Gloas and to compare slot
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
     const block = this.getBlockHexDefaultStatus(blockRootHex);
 
     if (block && isGloasBlock(block)) {
