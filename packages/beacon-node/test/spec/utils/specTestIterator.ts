@@ -7,6 +7,9 @@ import {useNativeStateTransition} from "@lodestar/state-transition";
 import {RunnerType, TestRunner} from "./types.js";
 
 type NativePubkeyCache = typeof import("@chainsafe/lodestar-z/pubkeys").pubkeyCache;
+type NativeStateTransition = typeof import("@chainsafe/lodestar-z/state-transition") & {
+  deinitStateTransition: () => void;
+};
 
 const ARTIFACT_FILENAMES = new Set([
   // MacOS artifacts
@@ -52,11 +55,20 @@ const coveredTestRunners = [
 ];
 
 let nativePubkeyCachePromise: Promise<NativePubkeyCache> | null = null;
+let nativeStateTransitionPromise: Promise<NativeStateTransition> | null = null;
 
 async function resetNativePubkeyCache(): Promise<void> {
   nativePubkeyCachePromise ??= import("@chainsafe/lodestar-z/pubkeys").then(({pubkeyCache}) => pubkeyCache);
   const nativePubkeyCache = await nativePubkeyCachePromise;
   nativePubkeyCache.reset();
+}
+
+async function resetNativeStateTransition(): Promise<void> {
+  nativeStateTransitionPromise ??= import("@chainsafe/lodestar-z/state-transition").then(
+    (stateTransition) => stateTransition as NativeStateTransition
+  );
+  const nativeStateTransition = await nativeStateTransitionPromise;
+  nativeStateTransition.deinitStateTransition();
 }
 
 // NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
@@ -191,6 +203,7 @@ export function specTestIterator(
                 testCaseName
               ) => {
                 if (useNativeStateTransition) {
+                  await resetNativeStateTransition();
                   await resetNativePubkeyCache();
                 }
                 return testFunction(testCase, directoryName, testCaseName);
