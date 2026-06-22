@@ -1,6 +1,7 @@
 import bindings from "@chainsafe/lodestar-z";
+import type {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
@@ -119,12 +120,20 @@ export function stateTransition(
   const block = signedBlock.message;
   const fork = state.config.getForkSeq(block.slot);
 
+  var blockBytes: Uint8Array;
   if (useNativeStateTransition && fork !== ForkSeq.gloas) {
     const {config} = state;
     configureNativeStateTransition(state);
-    const blockBytes = config
-      .getForkTypes(signedBlock.message.slot)
-      .SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
+    const blockSlot = block.slot;
+
+    if (isBlindedBeaconBlock(signedBlock.message)) {
+      blockBytes = config
+        .getPostBellatrixForkTypes(blockSlot)
+        .SignedBlindedBeaconBlock.serialize(signedBlock as SignedBlindedBeaconBlock);
+    } else {
+      blockBytes = config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
+    }
+
     const nativeView = bindings.BeaconStateView.createFromBytes(state.serialize());
     const postNative = bindings.stateTransition(nativeView, blockBytes, options);
     return reloadCachedState(state, postNative.serialize());
