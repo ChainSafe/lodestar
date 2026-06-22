@@ -7,6 +7,7 @@ import {
   isForkPostAltair,
   isForkPostElectra,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -127,7 +128,7 @@ export function getGossipSSZType(topic: GossipTopic) {
     case GossipType.payload_attestation_message:
       return ssz.gloas.PayloadAttestationMessage;
     case GossipType.execution_payload_bid:
-      return ssz.gloas.SignedExecutionPayloadBid;
+      return isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
   }
