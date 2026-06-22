@@ -1,6 +1,5 @@
 import {LogData} from "@lodestar/logger";
 import {ForkSeq} from "@lodestar/params";
-import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
@@ -75,10 +74,9 @@ export async function handleColumnSidecarUnavailability({
 }
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
-  if (requestedColumns.length === 0) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
-  }
-
+  // An empty `columns` list is valid SSZ for `List[ColumnIndex, NUMBER_OF_COLUMNS]` and is not forbidden by the
+  // spec. Return no available columns so callers skip this identifier (by-root) or respond empty (by-range)
+  // instead of aborting the whole stream, matching the behavior of all other CL clients.
   const {custodyColumns, custodyColumnsIndex} = chain.custodyConfig;
   const availableColumns: ColumnIndex[] = [];
   const missingColumns: ColumnIndex[] = [];
