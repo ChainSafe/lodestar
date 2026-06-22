@@ -467,12 +467,16 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#is_parent_strong
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_parent_strong
+    // For Gloas: measure support for the parent beacon block root regardless of its payload status by
+    // looking up the PENDING variant.
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_parent_strong
     const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
     });
-    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentBlock.payloadStatus);
+    const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : parentBlock.payloadStatus;
+    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentStrongVariant);
     // If parentNode is unavailable, give up reorg
     if (parentNode === undefined || parentNode.weight <= parentThreshold) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotStrong};
@@ -1910,11 +1914,13 @@ export class ForkChoice implements IForkChoice {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.HeadBlockIsTimely};
     }
 
-    // No reorg if we are at epoch boundary where proposer shuffling could change
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_shuffling_stable
-    const isShufflingStable = slot % SLOTS_PER_EPOCH !== 0;
-    if (!isShufflingStable) {
-      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.NotShufflingStable};
+    // No reorg if we are at an epoch boundary
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_epoch_boundary
+    // Note: spec's `is_epoch_boundary` returns true when slot is NOT at the boundary; we
+    //       name the local var by the blocking state (true = at boundary) for readability.
+    const isAtEpochBoundary = slot % SLOTS_PER_EPOCH === 0;
+    if (isAtEpochBoundary) {
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.AtEpochBoundary};
     }
 
     // No reorg if headBlock and parentBlock are not ffg competitive

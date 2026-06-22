@@ -405,7 +405,7 @@ export async function importBlock(
       }
     } catch (e) {
       if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+        notOverrideFcuReason = NotReorgedReason.AtEpochBoundary;
       } else {
         this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
       }
