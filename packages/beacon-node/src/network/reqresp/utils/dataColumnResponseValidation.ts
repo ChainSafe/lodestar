@@ -77,6 +77,10 @@ export function validateRequestedDataColumns(chain: IBeaconChain, requestedColum
   // An empty `columns` list is valid SSZ for `List[ColumnIndex, NUMBER_OF_COLUMNS]` and is not forbidden by the
   // spec. Return no available columns so callers skip this identifier (by-root) or respond empty (by-range)
   // instead of aborting the whole stream, matching the behavior of all other CL clients.
+  if (requestedColumns.length === 0) {
+    return [];
+  }
+
   const {custodyColumns, custodyColumnsIndex} = chain.custodyConfig;
   const availableColumns: ColumnIndex[] = [];
   const missingColumns: ColumnIndex[] = [];
