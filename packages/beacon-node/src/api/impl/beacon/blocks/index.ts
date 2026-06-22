@@ -11,7 +11,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostDeneb,
-  isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -599,23 +598,6 @@ export function getBeaconBlockApi({
           finalized,
           version: fork,
         },
-      };
-    },
-
-    async getBlockAttestations({blockId}) {
-      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const fork = config.getForkName(block.message.slot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getBlockAttestationsV2 to retrieve block attestations for post-electra fork=${fork}`
-        );
-      }
-
-      return {
-        data: block.message.body.attestations,
-        meta: {executionOptimistic, finalized},
       };
     },
 

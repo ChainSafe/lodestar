@@ -5,7 +5,6 @@ import {
   ForkPostGloas,
   ForkPreBellatrix,
   ForkPreDeneb,
-  ForkPreElectra,
   isForkPostBellatrix,
   isForkPostDeneb,
   isForkPostGloas,
@@ -96,18 +95,6 @@ export type Endpoints = {
     {params: {block_id: string}},
     SignedBlindedBeaconBlock | SignedBeaconBlock<ForkPreBellatrix>,
     ExecutionOptimisticFinalizedAndVersionMeta
-  >;
-
-  /**
-   * Get block attestations
-   * Retrieves attestation included in requested block.
-   */
-  getBlockAttestations: Endpoint<
-    "GET",
-    BlockArgs,
-    {params: {block_id: string}},
-    BeaconBlockBody<ForkPreElectra>["attestations"],
-    ExecutionOptimisticAndFinalizedMeta
   >;
 
   /**
@@ -284,15 +271,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           isForkPostBellatrix(fork) ? ssz[fork].SignedBlindedBeaconBlock : ssz[fork].SignedBeaconBlock
         ),
         meta: ExecutionOptimisticFinalizedAndVersionCodec,
-      },
-    },
-    getBlockAttestations: {
-      url: "/eth/v1/beacon/blocks/{block_id}/attestations",
-      method: "GET",
-      req: blockIdOnlyReq,
-      resp: {
-        data: ssz.phase0.BeaconBlockBody.fields.attestations,
-        meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },
     getBlockAttestationsV2: {
