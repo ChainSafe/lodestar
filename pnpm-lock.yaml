@@ -346,7 +346,7 @@ importers:
     devDependencies:
       '@chainsafe/lodestar-z':
         specifier: github:chainsafe/lodestar-z#bing/export-stf
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/7bc8a73e8c4df1859859c96d6bbd3274daccf6f7
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cb60a8f27dc68fc15c15cb4a25bfb0cfcb2436a4
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -740,7 +740,7 @@ importers:
         version: 2.2.0
       '@chainsafe/lodestar-z':
         specifier: github:chainsafe/lodestar-z#bing/export-stf
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/7bc8a73e8c4df1859859c96d6bbd3274daccf6f7
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cb60a8f27dc68fc15c15cb4a25bfb0cfcb2436a4
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -1283,8 +1283,8 @@ packages:
   '@chainsafe/lodestar-z@0.1.1':
     resolution: {integrity: sha512-ZEYDSJlTC40NlQAdCISw3U4rmZr1OcIdzviJXkWBaXY6lMryNdZpIyhmwDX5GTmTqWTiuuTSun+MSN3UJUxGNA==}
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/7bc8a73e8c4df1859859c96d6bbd3274daccf6f7':
-    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/7bc8a73e8c4df1859859c96d6bbd3274daccf6f7}
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cb60a8f27dc68fc15c15cb4a25bfb0cfcb2436a4':
+    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cb60a8f27dc68fc15c15cb4a25bfb0cfcb2436a4}
     version: 0.1.2-rc.9
 
   '@chainsafe/netmask@2.0.0':
@@ -6830,7 +6830,7 @@ snapshots:
       '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 0.1.1
       '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 0.1.1
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/7bc8a73e8c4df1859859c96d6bbd3274daccf6f7':
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/cb60a8f27dc68fc15c15cb4a25bfb0cfcb2436a4':
     dependencies:
       '@chainsafe/zapi': 2.0.0
 
