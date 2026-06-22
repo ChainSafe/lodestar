@@ -11,7 +11,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostDeneb,
-  isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
@@ -94,7 +93,7 @@ export function getBeaconBlockApi({
   ApiModules,
   "chain" | "config" | "metrics" | "network" | "db"
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
-  const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
+  const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation},
     _context,
     opts: PublishBlockOpts = {}
@@ -406,8 +405,8 @@ export function getBeaconBlockApi({
     }
   };
 
-  const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
-    {signedBlindedBlock},
+  const publishBlindedBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlockV2"] = async (
+    {signedBlindedBlock, broadcastValidation},
     context,
     opts: PublishBlockOpts = {}
   ) => {
@@ -437,7 +436,7 @@ export function getBeaconBlockApi({
       );
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, opts);
+      return publishBlockV2({signedBlockContents, broadcastValidation}, {...context, sszBytes: null}, opts);
     }
 
     const source = ProducedBlockSource.builder;
@@ -463,7 +462,11 @@ export function getBeaconBlockApi({
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+      return publishBlockV2(
+        {signedBlockContents, broadcastValidation},
+        {...context, sszBytes: null},
+        {...opts, ignoreIfKnown: true}
+      );
     }
   };
 
@@ -598,23 +601,6 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlockAttestations({blockId}) {
-      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const fork = config.getForkName(block.message.slot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getBlockAttestationsV2 to retrieve block attestations for post-electra fork=${fork}`
-        );
-      }
-
-      return {
-        data: block.message.body.attestations,
-        meta: {executionOptimistic, finalized},
-      };
-    },
-
     async getBlockAttestationsV2({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
@@ -662,16 +648,8 @@ export function getBeaconBlockApi({
       };
     },
 
-    publishBlock,
-    publishBlindedBlock,
-
-    async publishBlindedBlockV2(args, context, opts) {
-      await publishBlindedBlock(args, context, opts);
-    },
-
-    async publishBlockV2(args, context, opts) {
-      await publishBlock(args, context, opts);
-    },
+    publishBlockV2,
+    publishBlindedBlockV2,
 
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
