@@ -158,17 +158,6 @@ export type Endpoints = {
     ExecutionOptimisticAndFinalizedMeta
   >;
 
-  /**
-   * Publish a signed block.
-   * Instructs the beacon node to broadcast a newly signed beacon block to the beacon network,
-   * to be included in the beacon chain. The beacon node is not required to validate the signed
-   * `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
-   * successful. The beacon node is expected to integrate the new block into its state, and
-   * therefore validate the block internally, however blocks which fail the validation are still
-   * broadcast but a different status code is returned (202)
-   *
-   * Returns if the block was validated successfully and has been broadcast. It has also been integrated into the beacon node's database.
-   */
   publishBlockV2: Endpoint<
     "POST",
     {
@@ -180,10 +169,6 @@ export type Endpoints = {
     EmptyMeta
   >;
 
-  /**
-   * Publish a signed blinded block by submitting it to the mev relay and patching in the block
-   * transactions beacon node gets in response.
-   */
   publishBlindedBlockV2: Endpoint<
     "POST",
     {
