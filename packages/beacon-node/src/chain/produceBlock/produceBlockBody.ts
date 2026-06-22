@@ -48,6 +48,7 @@ import {
   electra,
   fulu,
   gloas,
+  heze,
   ssz,
 } from "@lodestar/types";
 import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
@@ -933,6 +934,11 @@ function preparePayloadAttributes(
       parentBlockRoot,
       parentBlockHash
     );
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = [];
   }
 
   return payloadAttributes;
