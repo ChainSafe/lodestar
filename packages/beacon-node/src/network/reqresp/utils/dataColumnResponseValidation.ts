@@ -1,6 +1,5 @@
 import {LogData} from "@lodestar/logger";
 import {ForkSeq} from "@lodestar/params";
-import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
@@ -76,7 +75,7 @@ export async function handleColumnSidecarUnavailability({
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
   if (requestedColumns.length === 0) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+    return [];
   }
 
   const {custodyColumns, custodyColumnsIndex} = chain.custodyConfig;
