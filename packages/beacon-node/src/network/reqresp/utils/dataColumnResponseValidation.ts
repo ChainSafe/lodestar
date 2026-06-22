@@ -74,9 +74,6 @@ export async function handleColumnSidecarUnavailability({
 }
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
-  // An empty `columns` list is valid SSZ for `List[ColumnIndex, NUMBER_OF_COLUMNS]` and is not forbidden by the
-  // spec. Return no available columns so callers skip this identifier (by-root) or respond empty (by-range)
-  // instead of aborting the whole stream, matching the behavior of all other CL clients.
   if (requestedColumns.length === 0) {
     return [];
   }
