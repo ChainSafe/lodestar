@@ -405,71 +405,6 @@ export function getBeaconBlockApi({
     }
   };
 
-  const publishBlindedBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlockV2"] = async (
-    {signedBlindedBlock, broadcastValidation},
-    context,
-    opts: PublishBlockOpts = {}
-  ) => {
-    const slot = signedBlindedBlock.message.slot;
-    const blockRoot = toRootHex(
-      chain.config
-        .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
-        .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
-    );
-    const fork = config.getForkName(slot);
-
-    if (isForkPostGloas(fork)) {
-      throw new ApiError(400, `Blinded blocks are not available for post-gloas fork=${fork}`);
-    }
-
-    // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
-    const producedResult = chain.blockProductionCache.get(blockRoot);
-    if (producedResult !== undefined && producedResult.type !== BlockType.Blinded) {
-      const source = ProducedBlockSource.engine;
-      chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
-
-      const signedBlockContents = reconstructSignedBlockContents(
-        fork,
-        signedBlindedBlock,
-        (producedResult as ProduceFullBellatrix).executionPayload ?? null,
-        (producedResult as ProduceFullDeneb).blobsBundle ?? null
-      );
-
-      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlockV2({signedBlockContents, broadcastValidation}, {...context, sszBytes: null}, opts);
-    }
-
-    const source = ProducedBlockSource.builder;
-
-    if (isForkPostFulu(fork)) {
-      await submitBlindedBlockToBuilder(chain, {
-        data: signedBlindedBlock,
-        bytes: context?.sszBytes,
-      });
-      chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
-    } else {
-      // TODO: After fulu is live and all builders support submitBlindedBlockV2, we can safely remove
-      // this code block and related functions
-      chain.logger.debug("Reconstructing full signed block contents", {slot, blockRoot, source});
-
-      const signedBlockContents = await reconstructBuilderSignedBlockContents(chain, {
-        data: signedBlindedBlock,
-        bytes: context?.sszBytes,
-      });
-
-      // the full block is published by relay and it's possible that the block is already known to us
-      // by gossip
-      //
-      // see: https://github.com/ChainSafe/lodestar/issues/5404
-      chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlockV2(
-        {signedBlockContents, broadcastValidation},
-        {...context, sszBytes: null},
-        {...opts, ignoreIfKnown: true}
-      );
-    }
-  };
-
   return {
     async getBlockHeaders({slot, parentRoot}) {
       // TODO - SLOW CODE: This code seems like it could be improved
@@ -649,7 +584,66 @@ export function getBeaconBlockApi({
     },
 
     publishBlockV2,
-    publishBlindedBlockV2,
+    async publishBlindedBlockV2({signedBlindedBlock, broadcastValidation}, context, opts: PublishBlockOpts = {}) {
+      const slot = signedBlindedBlock.message.slot;
+      const blockRoot = toRootHex(
+        chain.config
+          .getPostBellatrixForkTypes(signedBlindedBlock.message.slot)
+          .BlindedBeaconBlock.hashTreeRoot(signedBlindedBlock.message)
+      );
+      const fork = config.getForkName(slot);
+
+      if (isForkPostGloas(fork)) {
+        throw new ApiError(400, `Blinded blocks are not available for post-gloas fork=${fork}`);
+      }
+
+      // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
+      const producedResult = chain.blockProductionCache.get(blockRoot);
+      if (producedResult !== undefined && producedResult.type !== BlockType.Blinded) {
+        const source = ProducedBlockSource.engine;
+        chain.logger.debug("Reconstructing the full signed block contents", {slot, blockRoot, source});
+
+        const signedBlockContents = reconstructSignedBlockContents(
+          fork,
+          signedBlindedBlock,
+          (producedResult as ProduceFullBellatrix).executionPayload ?? null,
+          (producedResult as ProduceFullDeneb).blobsBundle ?? null
+        );
+
+        chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+        return publishBlockV2({signedBlockContents, broadcastValidation}, {...context, sszBytes: null}, opts);
+      }
+
+      const source = ProducedBlockSource.builder;
+
+      if (isForkPostFulu(fork)) {
+        await submitBlindedBlockToBuilder(chain, {
+          data: signedBlindedBlock,
+          bytes: context?.sszBytes,
+        });
+        chain.logger.info("Submitted blinded block to builder for publishing", {slot, blockRoot});
+      } else {
+        // TODO: After fulu is live and all builders support submitBlindedBlockV2, we can safely remove
+        // this code block and related functions
+        chain.logger.debug("Reconstructing full signed block contents", {slot, blockRoot, source});
+
+        const signedBlockContents = await reconstructBuilderSignedBlockContents(chain, {
+          data: signedBlindedBlock,
+          bytes: context?.sszBytes,
+        });
+
+        // the full block is published by relay and it's possible that the block is already known to us
+        // by gossip
+        //
+        // see: https://github.com/ChainSafe/lodestar/issues/5404
+        chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
+        return publishBlockV2(
+          {signedBlockContents, broadcastValidation},
+          {...context, sszBytes: null},
+          {...opts, ignoreIfKnown: true}
+        );
+      }
+    },
 
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
