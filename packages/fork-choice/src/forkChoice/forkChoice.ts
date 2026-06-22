@@ -1916,8 +1916,6 @@ export class ForkChoice implements IForkChoice {
 
     // No reorg if we are at an epoch boundary
     // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_epoch_boundary
-    // Note: spec's `is_epoch_boundary` returns true when slot is NOT at the boundary; we
-    //       name the local var by the blocking state (true = at boundary) for readability.
     const isAtEpochBoundary = slot % SLOTS_PER_EPOCH === 0;
     if (isAtEpochBoundary) {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.AtEpochBoundary};
