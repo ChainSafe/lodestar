@@ -651,14 +651,12 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     _modules: StateTransitionModules
   ): IBeaconStateView {
     const blockSlot = signedBlock.message.slot;
-    var blockBytes: Uint8Array;
-    if (isBlindedBeaconBlock(signedBlock.message)) {
-      blockBytes = this.config
-        .getPostBellatrixForkTypes(blockSlot)
-        .SignedBlindedBeaconBlock.serialize(signedBlock as SignedBlindedBeaconBlock);
-    } else {
-      blockBytes = this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
-    }
+
+    const blockBytes = isBlindedBeaconBlock(signedBlock.message)
+      ? this.config
+          .getPostBellatrixForkTypes(blockSlot)
+          .SignedBlindedBeaconBlock.serialize(signedBlock as SignedBlindedBeaconBlock)
+      : this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
 
     return new NativeBeaconStateView(this.nativeView.stateTransition(blockBytes, options), this.config);
   }
