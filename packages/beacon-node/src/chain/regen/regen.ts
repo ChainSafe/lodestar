@@ -1,13 +1,16 @@
-import {ChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
+  NativeBeaconStateView,
   StateHashTreeRootSource,
+  StateTransitionOpts,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
+  createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {BeaconBlock, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
@@ -220,6 +223,17 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     }
 
     const stateTransitionTimer = this.modules.metrics?.regenGetState.stateTransition.startTimer({caller});
+
+    const stfOpts: StateTransitionOpts = {
+      // Replay previously imported blocks, assume valid and available
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+      verifyStateRoot: false,
+      verifyProposer: false,
+      verifySignatures: false,
+      dontTransferCache: false,
+    };
+
     for (const b of protoBlocksAsc) {
       const block = blocksByRoot.get(b.blockRoot);
       // just to make compiler happy, we checked in the above for loop already
@@ -234,19 +248,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         // Only advances state trusting block's signture and hashes.
         // We are only running the state transition to get a specific state's data.
         // stateTransition() does the clone() inside, transfer cache to make the regen faster
-        state = state.stateTransition(
-          block,
-          {
-            // Replay previously imported blocks, assume valid and available
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyStateRoot: false,
-            verifyProposer: false,
-            verifySignatures: false,
-            dontTransferCache: false,
-          },
-          this.modules
-        );
+        state = state.stateTransition(block, stfOpts, this.modules);
 
         const hashTreeRootTimer = this.modules.metrics?.stateHashTreeRootTime.startTimer({
           source: StateHashTreeRootSource.regenState,
@@ -314,7 +316,16 @@ async function processSlotsByCheckpoint(
   regenCaller: RegenCaller,
   opts: StateRegenerationOpts
 ): Promise<IBeaconStateView> {
-  let postState = await processSlotsToNearestCheckpoint(modules, preState, slot, regenCaller, opts);
+  const slotPreState =
+    preState instanceof NativeBeaconStateView
+      ? createBeaconStateViewForHistoricalRegen({
+          useNative: false,
+          config: createBeaconConfig(modules.config, preState.genesisValidatorsRoot),
+          stateBytes: preState.serialize(),
+        })
+      : preState;
+
+  let postState = await processSlotsToNearestCheckpoint(modules, slotPreState, slot, regenCaller, opts);
   if (postState.slot < slot) {
     postState = postState.processSlots(slot, opts, modules);
   }

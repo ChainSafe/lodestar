@@ -5,6 +5,8 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
+  type IBeaconStateViewNative,
+  NativeBeaconStateView,
   StateHashTreeRootSource,
   StateTransitionOpts,
   useNativeStateTransition,
@@ -18,6 +20,8 @@ import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
+
+type NativeBindingStateView = ReturnType<(typeof bindings.BeaconStateView)["createFromBytes"]>;
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -41,12 +45,13 @@ export async function verifyBlocksStateTransitionOnly(
   const postStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
-  const seedValidatorsBytes = preState0.serializeValidators();
+  let seedValidatorsBytes: Uint8Array | null = null;
+  let nativeState: NativeBindingStateView | null = null;
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
     const block = blocks[i].getBlock();
-    const preState = i === 0 ? preState0 : postStates[i - 1];
+    let preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
     // STFN - per_slot_processing() + per_block_processing()
@@ -65,10 +70,24 @@ export async function verifyBlocksStateTransitionOnly(
       dontTransferCache: false,
     };
 
-    const postState =
-      useNativeStateTransition && config.getForkSeq(block.message.slot) !== ForkSeq.gloas
-        ? runNativeStateTransition(config, preState0, seedValidatorsBytes, preState, block, stfOpts)
-        : preState.stateTransition(block, stfOpts, {metrics, validatorMonitor});
+    const useNativeForBlock = useNativeStateTransition && config.getForkSeq(block.message.slot) !== ForkSeq.gloas;
+    if (!useNativeForBlock && nativeState !== null) {
+      seedValidatorsBytes ??= preState0.serializeValidators();
+      preState = preState0.loadOtherState(nativeState.serialize(), seedValidatorsBytes);
+      nativeState = null;
+      if (i > 0) {
+        postStates[i - 1] = preState;
+      }
+    }
+
+    let postState: IBeaconStateView;
+    if (useNativeForBlock) {
+      const postNative = runNativeStateTransition(config, preState, block, stfOpts, nativeState);
+      nativeState = postNative;
+      postState = new NativeBeaconStateView(postNative as unknown as IBeaconStateViewNative);
+    } else {
+      postState = preState.stateTransition(block, stfOpts, {metrics, validatorMonitor});
+    }
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
@@ -122,18 +141,16 @@ export async function verifyBlocksStateTransitionOnly(
 
 function runNativeStateTransition(
   config: BeaconConfig,
-  stateLoader: IBeaconStateView,
-  seedValidatorsBytes: Uint8Array,
   preState: IBeaconStateView,
   block: SignedBeaconBlock,
-  stfOpts: StateTransitionOpts
-): IBeaconStateView {
+  stfOpts: StateTransitionOpts,
+  nativeState: NativeBindingStateView | null
+): NativeBindingStateView {
   bindings.config.set(config, preState.genesisValidatorsRoot);
   const blockBytes = config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
-  const postState = bindings.stateTransition(
-    bindings.BeaconStateView.createFromBytes(preState.serialize()),
+  return bindings.stateTransition(
+    nativeState ?? bindings.BeaconStateView.createFromBytes(preState.serialize()),
     blockBytes,
     stfOpts
   );
-  return stateLoader.loadOtherState(postState.serialize(), seedValidatorsBytes);
 }
