@@ -6,7 +6,6 @@ import {
   IBeaconStateView,
   NativeBeaconStateView,
   StateHashTreeRootSource,
-  StateTransitionOpts,
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
