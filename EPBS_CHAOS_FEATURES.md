@@ -33,7 +33,8 @@ make the lib consumer default-on via `!== false`.
 
 First feature shipped this way: `--chain.chaosAlwaysBuildOnEmpty` (Tier 1 #4,
 always build on the EMPTY parent variant; default true). It is binary, so it has
-no threshold.
+no threshold. Second: `--chain.chaosOmitPtcOnEmptyBuild` (Tier 1 #4b, omit the
+reorged slot's PTC attestations when building on empty; default true, also binary).
 
 ## How ePBS changes the threat model
 
@@ -125,6 +126,28 @@ deliberately build on the EMPTY variant of N, orphaning N's would-be full block.
   select the empty parent.
 - Effect: exercises the new payload-status reorg resistance and its interaction
   with proposer boost. The ePBS analog of an ex-ante reorg. Composes with #1.
+
+### 4b. Omit PTC attestations when building on empty (withhold reorg evidence)
+
+When building on the EMPTY parent variant (#4), also drop the parent slot's
+`payload_attestations` from the produced block — exactly the votes that prove the
+orphaned payload was timely. A reorging proposer naturally would not advertise the
+evidence against its own reorg.
+
+- Injection point: gate the `getPayloadAttestationsForBlock` call on the
+  build-on-empty branch in
+  `packages/beacon-node/src/chain/produceBlock/produceBlockBody.ts` (both the
+  builder-bid `!isExtendingPayload` and self-build `!isBuildingOnFull` paths) and
+  pack `[]` instead.
+- Effect: consumers that tally PTC timeliness from the on-chain aggregate's bits
+  WITHOUT self-expanding a validator's vote to all its positions (e.g. Prysm:
+  `process_block.go handleBlockPayloadAttestations`, gossip + own production are
+  1-bit/validator) fall back to their gossip-only count (~committee size, below
+  `PAYLOAD_TIMELY_THRESHOLD`) and treat the genuinely timely payload as
+  not-timely, so they FOLLOW the reorg instead of rejecting it. Clients that
+  self-expand from gossip (Lodestar #5222) still reject it. Composes with #4: it
+  turns #4 from a self-defeating "dumb" reorg (the reorg block ships the proof
+  against itself) into one that flips non-self-expanding clients.
 
 ---
 

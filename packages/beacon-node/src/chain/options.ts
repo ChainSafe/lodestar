@@ -53,6 +53,8 @@ export type IChainOptions = BlockProcessOpts &
     faultInspectionWindow?: number;
     /** Allowed unrevealed payloads within the fault inspection window */
     allowedFaults?: number;
+    /** CHAOS (devnet test only): omit the parent slot's PTC attestations when building on the EMPTY parent variant */
+    chaosOmitPtcOnEmptyBuild?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -113,6 +115,8 @@ export const defaultChainOptions: IChainOptions = {
   fastConfirmation: false,
   // CHAOS (devnet test only): deathstar features default ON, disable with --chain.chaosAlwaysBuildOnEmpty=false
   chaosAlwaysBuildOnEmpty: true,
+  // CHAOS (devnet test only): withhold reorged slot's PTC attestations when building on empty, disable with --chain.chaosOmitPtcOnEmptyBuild=false
+  chaosOmitPtcOnEmptyBuild: true,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,

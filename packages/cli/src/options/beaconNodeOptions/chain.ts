@@ -19,6 +19,7 @@ export type ChainArgs = {
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
   "chain.chaosAlwaysBuildOnEmpty"?: boolean;
+  "chain.chaosOmitPtcOnEmptyBuild"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
@@ -61,6 +62,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     proposerBoost: args["chain.proposerBoost"],
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     chaosAlwaysBuildOnEmpty: args["chain.chaosAlwaysBuildOnEmpty"],
+    chaosOmitPtcOnEmptyBuild: args["chain.chaosOmitPtcOnEmptyBuild"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
@@ -203,6 +205,15 @@ Will double processing times. Use only for debugging purposes.",
     description:
       "CHAOS (devnet test only): always build blocks on the EMPTY parent variant, orphaning the parent execution payload regardless of PTC votes",
     defaultDescription: String(defaultOptions.chain.chaosAlwaysBuildOnEmpty),
+    group: "chain",
+  },
+
+  "chain.chaosOmitPtcOnEmptyBuild": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "CHAOS (devnet test only): when building on the EMPTY parent variant (reorging its payload), omit that slot's PTC attestations from the block, so consumers that count on-chain aggregate bits without self-expanding (e.g. Prysm) tally below PTC quorum and follow the reorg",
+    defaultDescription: String(defaultOptions.chain.chaosOmitPtcOnEmptyBuild),
     group: "chain",
   },
 
