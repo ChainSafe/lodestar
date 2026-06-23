@@ -308,7 +308,14 @@ export type IBeaconStateViewNative = Omit<
   | "getBeaconCommittee"
   | "currentSyncCommittee"
   | "nextSyncCommittee"
+  | "pendingDeposits"
+  | "pendingPartialWithdrawals"
+  | "proposerLookahead"
 > & {
+  pendingDeposits: Uint8Array;
+  pendingPartialWithdrawals: Uint8Array;
+  proposerLookahead: Uint32Array;
+
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   currentSyncCommittee: altair.SyncCommittee;
   nextSyncCommittee: altair.SyncCommittee;
