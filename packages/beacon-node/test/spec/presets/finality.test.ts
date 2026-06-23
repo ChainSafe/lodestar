@@ -5,7 +5,9 @@ import {
   BeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  createNativeStateTransitionContext,
   stateTransition,
+  useNativeStateTransition,
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -19,11 +21,13 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
   return {
     testFunction: (testcase) => {
       let state = createCachedBeaconStateTest(testcase.pre, getConfig(fork));
+      const nativeContext =
+        useNativeStateTransition && fork !== ForkName.gloas ? createNativeStateTransitionContext(state) : null;
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
-        state = stateTransition(state, signedBlock, {
+        const stateTransitionOpts = {
           // Should assume payload valid and blob data available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
@@ -31,9 +35,16 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
           verifyProposer: verify,
           verifySignatures: verify,
           assertCorrectProgressiveBalances,
-        });
+        };
+
+        if (nativeContext) {
+          nativeContext.stateTransition(signedBlock, stateTransitionOpts);
+        } else {
+          state = stateTransition(state, signedBlock, stateTransitionOpts);
+        }
       }
 
+      state = nativeContext?.toCachedState() ?? state;
       state.commit();
       return state;
     },

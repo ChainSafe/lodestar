@@ -6,6 +6,7 @@ import {
   BeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  createNativeStateTransitionContext,
   stateTransition,
   useNativeStateTransition,
 } from "@lodestar/state-transition";
@@ -53,9 +54,11 @@ const transition =
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
 
         let state = createCachedBeaconStateTest(testcase.pre, testConfig);
+        const nativeContext =
+          useNativeStateTransition && forkNext !== ForkName.gloas ? createNativeStateTransitionContext(state) : null;
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
-          state = stateTransition(state, signedBlock, {
+          const stateTransitionOpts = {
             // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,
             dataAvailabilityStatus: DataAvailabilityStatus.Available,
@@ -63,9 +66,15 @@ const transition =
             verifyProposer: false,
             verifySignatures: false,
             assertCorrectProgressiveBalances,
-          });
+          };
+
+          if (nativeContext) {
+            nativeContext.stateTransition(signedBlock, stateTransitionOpts);
+          } else {
+            state = stateTransition(state, signedBlock, stateTransitionOpts);
+          }
         }
-        return state;
+        return nativeContext?.toCachedState() ?? state;
       },
       options: {
         inputTypes: inputTypeSszTreeViewDU,

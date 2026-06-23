@@ -6,6 +6,7 @@ import {
   BeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
+  createNativeStateTransitionContext,
   processSlots,
   stateTransition,
   useNativeStateTransition,
@@ -63,10 +64,12 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
     testFunction: (testcase) => {
       const stateTB = testcase.pre;
       let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
+      const nativeContext =
+        useNativeStateTransition && fork !== ForkName.gloas ? createNativeStateTransitionContext(wrappedState) : null;
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
-        wrappedState = stateTransition(wrappedState, signedBlock, {
+        const stateTransitionOpts = {
           // Assume valid and available for this test
           executionPayloadStatus: ExecutionPayloadStatus.valid,
           dataAvailabilityStatus: DataAvailabilityStatus.Available,
@@ -74,9 +77,15 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
           verifyProposer: verify,
           verifySignatures: verify,
           assertCorrectProgressiveBalances,
-        });
+        };
+
+        if (nativeContext) {
+          nativeContext.stateTransition(signedBlock, stateTransitionOpts);
+        } else {
+          wrappedState = stateTransition(wrappedState, signedBlock, stateTransitionOpts);
+        }
       }
-      return wrappedState;
+      return nativeContext?.toCachedState() ?? wrappedState;
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,

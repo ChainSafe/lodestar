@@ -188,9 +188,13 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: isValid});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState() as BeaconStateView;
+              const headState = chain.getHeadState();
+              const attestationEpoch = attestation.data.target.epoch;
+              const shufflingDecisionRoot = headState.getShufflingDecisionRoot(attestationEpoch);
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
-              const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(
+              const indexedAttestation = chain.shufflingCache.getIndexedAttestation(
+                attestationEpoch,
+                shufflingDecisionRoot,
                 ForkSeq[fork],
                 attestation
               );
