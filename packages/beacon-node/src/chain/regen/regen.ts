@@ -1,16 +1,13 @@
-import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
-  NativeBeaconStateView,
   StateHashTreeRootSource,
-  StateTransitionOpts,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {BeaconBlock, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
