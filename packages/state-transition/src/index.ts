@@ -52,6 +52,7 @@ export {
   type IBeaconStateViewElectra,
   type IBeaconStateViewFulu,
   type IBeaconStateViewGloas,
+  type IBeaconStateViewNative,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -60,6 +61,7 @@ export {
   isStatePostFulu,
   isStatePostGloas,
 } from "./stateView/interface.js";
+export {NativeBeaconStateView} from "./stateView/nativeBeaconStateView.js";
 export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
 export type {
   BeaconStateAllForks,

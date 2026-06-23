@@ -55,6 +55,54 @@ function configureNativeStateTransition(state: CachedBeaconStateAllForks): void 
   bindings.config.set(state.config, state.genesisValidatorsRoot);
 }
 
+function serializeNativeSignedBlock(
+  config: CachedBeaconStateAllForks["config"],
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
+): Uint8Array {
+  const blockSlot = signedBlock.message.slot;
+  if (isBlindedBeaconBlock(signedBlock.message)) {
+    return config
+      .getPostBellatrixForkTypes(blockSlot)
+      .SignedBlindedBeaconBlock.serialize(signedBlock as SignedBlindedBeaconBlock);
+  }
+
+  return config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
+}
+
+export class NativeStateTransitionContext {
+  private nativeView: ReturnType<(typeof bindings.BeaconStateView)["createFromBytes"]>;
+
+  constructor(private readonly seedState: CachedBeaconStateAllForks) {
+    configureNativeStateTransition(seedState);
+    this.nativeView = bindings.BeaconStateView.createFromBytes(seedState.serialize());
+  }
+
+  stateTransition(
+    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    options: StateTransitionOpts = {
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+    }
+  ): void {
+    const block = signedBlock.message;
+    const fork = this.seedState.config.getForkSeq(block.slot);
+    if (fork === ForkSeq.gloas) {
+      throw new Error("Native state transition does not support Gloas");
+    }
+
+    const blockBytes = serializeNativeSignedBlock(this.seedState.config, signedBlock);
+    this.nativeView = bindings.stateTransition(this.nativeView, blockBytes, options);
+  }
+
+  toCachedState(): CachedBeaconStateAllForks {
+    return reloadCachedState(this.seedState, this.nativeView.serialize());
+  }
+}
+
+export function createNativeStateTransitionContext(state: CachedBeaconStateAllForks): NativeStateTransitionContext {
+  return new NativeStateTransitionContext(state);
+}
+
 // Multifork capable state transition
 
 // NOTE DENEB: Mandatory BlockExternalData to decide if block is available or not
@@ -119,23 +167,10 @@ export function stateTransition(
   const block = signedBlock.message;
   const fork = state.config.getForkSeq(block.slot);
 
-  var blockBytes: Uint8Array;
   if (useNativeStateTransition && fork !== ForkSeq.gloas) {
-    const {config} = state;
-    configureNativeStateTransition(state);
-    const blockSlot = block.slot;
-
-    if (isBlindedBeaconBlock(signedBlock.message)) {
-      blockBytes = config
-        .getPostBellatrixForkTypes(blockSlot)
-        .SignedBlindedBeaconBlock.serialize(signedBlock as SignedBlindedBeaconBlock);
-    } else {
-      blockBytes = config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
-    }
-
-    const nativeView = bindings.BeaconStateView.createFromBytes(state.serialize());
-    const postNative = bindings.stateTransition(nativeView, blockBytes, options);
-    return reloadCachedState(state, postNative.serialize());
+    const nativeContext = createNativeStateTransitionContext(state);
+    nativeContext.stateTransition(signedBlock, options);
+    return nativeContext.toCachedState();
   }
 
   const {verifyStateRoot = true, verifyProposer = true} = options;

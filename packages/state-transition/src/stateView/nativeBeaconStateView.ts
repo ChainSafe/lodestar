@@ -262,6 +262,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   }
 
   getBlockRootAtSlot(slot: Slot): Root {
+    if (typeof slot !== "number" || !Number.isSafeInteger(slot) || slot < 0) {
+      throw new Error(`NativeBeaconStateView.getBlockRootAtSlot invalid slot=${slot.toString()}`);
+    }
     let cached = this._getBlockRootAtSlot.get(slot);
     if (cached === undefined) {
       cached = this.binding.getBlockRootAtSlot(slot);
