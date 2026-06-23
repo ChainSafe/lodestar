@@ -89,7 +89,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       setUseNativeStateTransition(true);
     }
     const anchorStateView = args["chain.nativeStateView"]
-      ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
+      ? createBeaconStateView({useNative: true, config: beaconConfig, stateBytes: anchorStateBytes})
       : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
 
     const node = await BeaconNode.init({
