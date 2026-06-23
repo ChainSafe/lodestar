@@ -6,14 +6,13 @@ import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   stateTransition,
-  useNativeStateTransition,
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
-import {createNativeStateTransitionRunner} from "../utils/nativeStateTransition.js";
+import {createNativeStateTransitionRunner, useNativeStateTransition} from "../utils/nativeStateTransition.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 

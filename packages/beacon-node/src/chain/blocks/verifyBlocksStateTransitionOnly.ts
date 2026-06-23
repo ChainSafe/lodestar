@@ -7,9 +7,6 @@ import {
   NativeBeaconStateView,
   StateHashTreeRootSource,
   StateTransitionOpts,
-  createBeaconStateView,
-  createBeaconStateViewForHistoricalRegen,
-  useNativeStateTransition,
 } from "@lodestar/state-transition";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
@@ -48,6 +45,11 @@ export async function verifyBlocksStateTransitionOnly(
     const block = blocks[i].getBlock();
     let preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
+    const blockFork = config.getForkSeq(block.message.slot);
+
+    if (preState instanceof NativeBeaconStateView && blockFork === ForkSeq.gloas) {
+      throw new Error(`NativeBeaconStateView does not support Gloas state transition at slot ${block.message.slot}`);
+    }
 
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
@@ -64,22 +66,6 @@ export async function verifyBlocksStateTransitionOnly(
       verifySignatures: !useBlsBatchVerify && !validSignatures,
       dontTransferCache: false,
     };
-
-    const useNativeForBlock = useNativeStateTransition && config.getForkSeq(block.message.slot) !== ForkSeq.gloas;
-    if (useNativeForBlock && !(preState instanceof NativeBeaconStateView)) {
-      preState = createBeaconStateView({useNative: true, config, stateBytes: preState.serialize()});
-      if (i > 0) {
-        postStates[i - 1] = preState;
-      }
-    }
-
-    // If we switch to gloas in the middle of blocks, we need to get back to TS
-    if (!useNativeForBlock && preState instanceof NativeBeaconStateView) {
-      preState = createBeaconStateViewForHistoricalRegen({useNative: false, config, stateBytes: preState.serialize()});
-      if (i > 0) {
-        postStates[i - 1] = preState;
-      }
-    }
 
     const postState = preState.stateTransition(block, stfOpts, {metrics, validatorMonitor});
 

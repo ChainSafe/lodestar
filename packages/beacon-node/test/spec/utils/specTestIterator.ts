@@ -3,7 +3,7 @@ import path from "node:path";
 import {describe, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
-import {useNativeStateTransition} from "@lodestar/state-transition";
+import {useNativeStateTransition} from "./nativeStateTransition.js";
 import {RunnerType, TestRunner} from "./types.js";
 
 type NativePubkeyCache = typeof import("@chainsafe/lodestar-z/pubkeys").pubkeyCache;

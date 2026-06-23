@@ -4,17 +4,22 @@ import {SignedBeaconBlock, SignedBlindedBeaconBlock, isBlindedBeaconBlock} from 
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 
 /**
- * Runs multi-block spec fixtures through one native state instance.
+ * Spec-test-only native transition toggle.
  *
- * The public `stateTransition(CachedBeaconStateAllForks, block)` API must return
- * a Lodestar cached state, so its native branch serializes TS state into native
- * and reloads the TS caches after every block. Doing that per block during spec tests is costly.
+ * Production native selection is made by constructing the initial `IBeaconStateView`
+ * at boot. Spec tests still start from SSZ fixtures so we need a environment variable to opt
+ * into the native runner.
+ */
+export const useNativeStateTransition = process.env.LODESTAR_NATIVE_STF === "true";
+
+/**
+ * Runs multi-block spec fixtures through one native state instance.
  *
  * This runner creates the native view once, applies all blocks in
  * native, and only converts back to a Lodestar cached state for the final
  * spec-state comparison.
  *
- * This should only be used for tests.
+ * NOTE: This should only be used for tests.
  */
 export class NativeStateTransitionRunner {
   private nativeView: IBeaconStateViewNative;
@@ -24,12 +29,22 @@ export class NativeStateTransitionRunner {
     this.nativeView = bindings.BeaconStateView.createFromBytes(seedState.serialize()) as IBeaconStateViewNative;
   }
 
+  /**
+   * Applies one fixture block to the current native state.
+   *
+   * Blocks are still loaded by Lodestar's spec harness as typed SSZ values, so
+   * this method serializes the block before crossing the N-API boundary.
+   */
   stateTransition(signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock, options: StateTransitionOpts): void {
     const blockBytes = serializeNativeSignedBlock(this.seedState, signedBlock);
     this.nativeView = this.nativeView.stateTransition(blockBytes, options);
   }
 
+  /**
+   * Converts the final native state back into a Lodestar cached state for spec assertions.
+   */
   toCachedState(): CachedBeaconStateAllForks {
+    // Spec comparison helpers expect Lodestar cached states, so convert once after the fixture's block sequence.
     const postStateBytes = this.nativeView.serialize();
     const postState = this.seedState.config
       .getForkTypes(this.nativeView.slot)
@@ -38,10 +53,16 @@ export class NativeStateTransitionRunner {
   }
 }
 
+/**
+ * Creates a native transition runner seeded from a Lodestar cached state fixture.
+ */
 export function createNativeStateTransitionRunner(state: CachedBeaconStateAllForks): NativeStateTransitionRunner {
   return new NativeStateTransitionRunner(state);
 }
 
+/**
+ * Serializes full and blinded signed blocks with the SSZ type matching the block slot.
+ */
 function serializeNativeSignedBlock(
   state: CachedBeaconStateAllForks,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
