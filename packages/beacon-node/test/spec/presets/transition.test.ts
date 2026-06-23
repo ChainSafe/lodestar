@@ -6,7 +6,6 @@ import {
   BeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  createNativeStateTransitionContext,
   stateTransition,
   useNativeStateTransition,
 } from "@lodestar/state-transition";
@@ -16,6 +15,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createNativeStateTransitionRunner} from "../utils/nativeStateTransition.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
@@ -55,7 +55,8 @@ const transition =
 
         let state = createCachedBeaconStateTest(testcase.pre, testConfig);
         const nativeContext =
-          useNativeStateTransition && forkNext !== ForkName.gloas ? createNativeStateTransitionContext(state) : null;
+          useNativeStateTransition && forkNext !== ForkName.gloas ? createNativeStateTransitionRunner(state) : null;
+
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
           const stateTransitionOpts = {
@@ -74,6 +75,7 @@ const transition =
             state = stateTransition(state, signedBlock, stateTransitionOpts);
           }
         }
+
         return nativeContext?.toCachedState() ?? state;
       },
       options: {

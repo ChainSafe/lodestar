@@ -20,6 +20,7 @@ import {
   upgradeStateToGloas,
 } from "./slot/index.js";
 import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
+import type {IBeaconStateViewNative} from "./stateView/interface.js";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -67,40 +68,6 @@ function serializeNativeSignedBlock(
   }
 
   return config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
-}
-
-export class NativeStateTransitionContext {
-  private nativeView: ReturnType<(typeof bindings.BeaconStateView)["createFromBytes"]>;
-
-  constructor(private readonly seedState: CachedBeaconStateAllForks) {
-    configureNativeStateTransition(seedState);
-    this.nativeView = bindings.BeaconStateView.createFromBytes(seedState.serialize());
-  }
-
-  stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
-    options: StateTransitionOpts = {
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailabilityStatus: DataAvailabilityStatus.Available,
-    }
-  ): void {
-    const block = signedBlock.message;
-    const fork = this.seedState.config.getForkSeq(block.slot);
-    if (fork === ForkSeq.gloas) {
-      throw new Error("Native state transition does not support Gloas");
-    }
-
-    const blockBytes = serializeNativeSignedBlock(this.seedState.config, signedBlock);
-    this.nativeView = bindings.stateTransition(this.nativeView, blockBytes, options);
-  }
-
-  toCachedState(): CachedBeaconStateAllForks {
-    return reloadCachedState(this.seedState, this.nativeView.serialize());
-  }
-}
-
-export function createNativeStateTransitionContext(state: CachedBeaconStateAllForks): NativeStateTransitionContext {
-  return new NativeStateTransitionContext(state);
 }
 
 // Multifork capable state transition
@@ -168,9 +135,10 @@ export function stateTransition(
   const fork = state.config.getForkSeq(block.slot);
 
   if (useNativeStateTransition && fork !== ForkSeq.gloas) {
-    const nativeContext = createNativeStateTransitionContext(state);
-    nativeContext.stateTransition(signedBlock, options);
-    return nativeContext.toCachedState();
+    configureNativeStateTransition(state);
+    const nativeView = bindings.BeaconStateView.createFromBytes(state.serialize()) as IBeaconStateViewNative;
+    const postNative = nativeView.stateTransition(serializeNativeSignedBlock(state.config, signedBlock), options);
+    return reloadCachedState(state, postNative.serialize());
   }
 
   const {verifyStateRoot = true, verifyProposer = true} = options;
@@ -245,7 +213,7 @@ export function processSlots(
 ): CachedBeaconStateAllForks {
   if (useNativeStateTransition && state.config.getForkSeq(slot) !== ForkSeq.gloas) {
     configureNativeStateTransition(state);
-    const nativeView = bindings.BeaconStateView.createFromBytes(state.serialize());
+    const nativeView = bindings.BeaconStateView.createFromBytes(state.serialize()) as IBeaconStateViewNative;
     const postNative = nativeView.processSlots(slot, {
       dontTransferCache: epochTransitionCacheOpts?.dontTransferCache,
     });

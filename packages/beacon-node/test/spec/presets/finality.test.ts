@@ -5,7 +5,6 @@ import {
   BeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  createNativeStateTransitionContext,
   stateTransition,
   useNativeStateTransition,
 } from "@lodestar/state-transition";
@@ -14,6 +13,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createNativeStateTransitionRunner} from "../utils/nativeStateTransition.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
@@ -22,7 +22,7 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
     testFunction: (testcase) => {
       let state = createCachedBeaconStateTest(testcase.pre, getConfig(fork));
       const nativeContext =
-        useNativeStateTransition && fork !== ForkName.gloas ? createNativeStateTransitionContext(state) : null;
+        useNativeStateTransition && fork !== ForkName.gloas ? createNativeStateTransitionRunner(state) : null;
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;

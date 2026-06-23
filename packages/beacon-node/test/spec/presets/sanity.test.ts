@@ -6,7 +6,6 @@ import {
   BeaconStateAllForks,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  createNativeStateTransitionContext,
   processSlots,
   stateTransition,
   useNativeStateTransition,
@@ -17,6 +16,7 @@ import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {createNativeStateTransitionRunner} from "../utils/nativeStateTransition.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
@@ -65,7 +65,7 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
       const stateTB = testcase.pre;
       let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
       const nativeContext =
-        useNativeStateTransition && fork !== ForkName.gloas ? createNativeStateTransitionContext(wrappedState) : null;
+        useNativeStateTransition && fork !== ForkName.gloas ? createNativeStateTransitionRunner(wrappedState) : null;
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
