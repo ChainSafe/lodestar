@@ -1,11 +1,12 @@
-import {BeaconStateView as NativeBeaconStateView} from "@chainsafe/lodestar-z/state-transition";
-import {BeaconConfig} from "@lodestar/config";
-import {PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
+import bindings from "@chainsafe/lodestar-z";
+import type {BeaconConfig} from "@lodestar/config";
+import {type PubkeyCache, createPubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
-import {BeaconStateAllForks} from "../cache/types.js";
+import type {BeaconStateAllForks} from "../cache/types.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
 import {BeaconStateView} from "./beaconStateView.js";
-import {IBeaconStateView} from "./interface.js";
+import type {IBeaconStateView, IBeaconStateViewNative} from "./interface.js";
+import {NativeBeaconStateView} from "./nativeBeaconStateView.js";
 
 // ---- createBeaconStateView (startup path) ----
 
@@ -18,6 +19,7 @@ type NodeJSOpts = {
 
 type NativeOpts = {
   useNative: true;
+  config: BeaconConfig;
   stateBytes: Uint8Array;
 };
 
@@ -31,9 +33,11 @@ type NativeOpts = {
  */
 export function createBeaconStateView(opts: NodeJSOpts | NativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    // The native view is runtime-compatible with IBeaconStateView, but its native-only stateTransition
-    // accepts SSZ bytes instead of a Lodestar block value.
-    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as unknown as IBeaconStateView;
+    bindings.config.set(opts.config, opts.config.genesisValidatorsRoot);
+    return new NativeBeaconStateView(
+      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
+      opts.config
+    );
   }
   const {anchorState, config, pubkeyCache} = opts;
   const cachedState = createCachedBeaconState(anchorState, {config, pubkeyCache}, {skipSyncPubkeys: true});
@@ -61,6 +65,7 @@ type RegenNodeJSOpts = {
 
 type RegenNativeOpts = {
   useNative: true;
+  config: BeaconConfig;
   stateBytes: Uint8Array;
 };
 
@@ -71,9 +76,11 @@ type RegenNativeOpts = {
  */
 export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | RegenNativeOpts): IBeaconStateView {
   if (opts.useNative) {
-    // The native view is runtime-compatible with IBeaconStateView, but its native-only stateTransition
-    // accepts SSZ bytes instead of a Lodestar block value.
-    return NativeBeaconStateView.createFromBytes(opts.stateBytes) as unknown as IBeaconStateView;
+    bindings.config.set(opts.config, opts.config.genesisValidatorsRoot);
+    return new NativeBeaconStateView(
+      bindings.BeaconStateView.createFromBytes(opts.stateBytes) as IBeaconStateViewNative,
+      opts.config
+    );
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
