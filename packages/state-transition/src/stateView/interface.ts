@@ -289,25 +289,41 @@ export type IBeaconStateViewLatestFork = Omit<
  * - `executionPayloadAvailability` is a raw `{uint8Array, bitLen}` POJO — a
  *   native (`.node`) binding cannot construct a `BitArray` across FFI.
  *   `NativeBeaconStateView` lifts it back to `BitArray` for beacon-node.
- * - Methods that produce another view (`stateTransition`, `processSlots`,
- *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
- *   so callers can re-wrap without an `as unknown` cast. Param lists are reused
- *   via `Parameters<...>` to avoid duplicating signatures.
+ * - Methods that produce another view return `IBeaconStateViewNative` so callers
+ *   can re-wrap without an `as unknown` cast.
+ * - `stateTransition` accepts SSZ-serialized block bytes. `NativeBeaconStateView`
+ *   adapts Lodestar's block-value API to this lower-level native API.
  *
  * The TS-side `BeaconStateView` also structurally satisfies this contract since
  * `BitArray` exposes `uint8Array` and `bitLen`.
  */
 export type IBeaconStateViewNative = Omit<
   IBeaconStateViewLatestFork,
-  "executionPayloadAvailability" | "loadOtherState" | "stateTransition" | "processSlots" | "withParentPayloadApplied"
+  | "executionPayloadAvailability"
+  | "loadOtherState"
+  | "stateTransition"
+  | "processSlots"
+  | "withParentPayloadApplied"
+  | "getIndicesInPayloadTimelinessCommittee"
+  | "getBeaconCommittee"
+  | "currentSyncCommittee"
+  | "nextSyncCommittee"
 > & {
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  currentSyncCommittee: altair.SyncCommittee;
+  nextSyncCommittee: altair.SyncCommittee;
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
-  stateTransition(...args: Parameters<IBeaconStateViewLatestFork["stateTransition"]>): IBeaconStateViewNative;
-  processSlots(...args: Parameters<IBeaconStateViewLatestFork["processSlots"]>): IBeaconStateViewNative;
+  stateTransition(signedBlockBytes: Uint8Array, options?: StateTransitionOpts): IBeaconStateViewNative;
+  processSlots(
+    slot: Slot,
+    epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean}
+  ): IBeaconStateViewNative;
   withParentPayloadApplied(
     ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
   ): IBeaconStateViewNative;
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array | number[];
+  getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];
+  getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
 };
 
 export function isStatePostAltair(state: IBeaconStateView): state is IBeaconStateViewAltair {
