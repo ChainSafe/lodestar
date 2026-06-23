@@ -34,9 +34,9 @@ import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
 import {RewardCache} from "../cache/rewardCache.js";
-import type {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
+import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
-import type {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
+import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
 import {
   IBeaconStateView,
@@ -132,6 +132,9 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private readonly _getIndexedSyncCommitteeAtEpoch = new Map<Epoch, SyncCommitteeCache>();
   private readonly _getIndexedSyncCommittee = new Map<Slot, SyncCommitteeCache>();
   private readonly _getSingleProof = new Map<bigint, Uint8Array[]>();
+  // TODO(bing): add caches when native supports gloas
+  // private readonly _getEpochPTCs = new Map<Epoch, Uint32Array[]>();
+  // private readonly _getBuilder = new Map<BuilderIndex, gloas.Builder>();
 
   // No-arg method caches
   private _getPreviousShuffling: EpochShuffling | null = null;
