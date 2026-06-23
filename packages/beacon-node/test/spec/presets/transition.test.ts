@@ -2,22 +2,18 @@ import path from "node:path";
 import {ChainConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
   stateViewToBeaconState,
   useNativeStateTransition,
 } from "../utils/stateTransition.js";
-import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn} from "../utils/types.js";
 import {getPreviousFork} from "./fork.test.js";
 
@@ -58,17 +54,20 @@ const transition =
 
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
-          const stateTransitionOpts = {
-            // Assume valid and available for this test
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyStateRoot: true,
-            verifyProposer: false,
-            verifySignatures: false,
-            assertCorrectProgressiveBalances,
-          };
 
-          state = state.stateTransition(signedBlock, stateTransitionOpts, {});
+          state = state.stateTransition(
+            signedBlock,
+            {
+              // Assume valid and available for this test
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyStateRoot: true,
+              verifyProposer: false,
+              verifySignatures: false,
+              assertCorrectProgressiveBalances,
+            },
+            {}
+          );
         }
 
         return stateViewToBeaconState(forkNext, state);

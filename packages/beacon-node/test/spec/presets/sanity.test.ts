@@ -7,12 +7,12 @@ import {bnToNum} from "@lodestar/utils";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
   stateViewToBeaconState,
   useNativeStateTransition,
 } from "../utils/stateTransition.js";
-import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
 const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuite) => {
@@ -58,17 +58,20 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
-        const stateTransitionOpts = {
-          // Assume valid and available for this test
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyStateRoot: verify,
-          verifyProposer: verify,
-          verifySignatures: verify,
-          assertCorrectProgressiveBalances,
-        };
 
-        state = state.stateTransition(signedBlock, stateTransitionOpts, {});
+        state = state.stateTransition(
+          signedBlock,
+          {
+            // Assume valid and available for this test
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+            verifyStateRoot: verify,
+            verifyProposer: verify,
+            verifySignatures: verify,
+            assertCorrectProgressiveBalances,
+          },
+          {}
+        );
       }
       return stateViewToBeaconState(fork, state);
     },
