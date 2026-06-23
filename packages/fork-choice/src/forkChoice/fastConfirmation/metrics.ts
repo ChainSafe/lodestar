@@ -35,9 +35,9 @@ export function getFastConfirmationMetrics(register: MetricsRegisterExtra) {
         name: "lodestar_fast_confirmation_votes_tracked",
         help: "Number of checkpoint votes tracked by fast confirmation",
       }),
-      resets: register.gauge({
+      resets: register.counter({
         name: "lodestar_fast_confirmation_resets_total",
-        help: "Count of fast confirmation resets due to reorgs",
+        help: "Total number of fast confirmation resets (any cause)",
       }),
       // Standardized Fast Confirmation metrics
       slot: register.gauge({
