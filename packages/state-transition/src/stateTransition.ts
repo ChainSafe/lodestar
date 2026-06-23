@@ -1,12 +1,10 @@
-import bindings from "@chainsafe/lodestar-z";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, ssz} from "@lodestar/types";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
 import {ProcessBlockOpts} from "./block/types.js";
 import {EpochTransitionCache, EpochTransitionCacheOpts, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
-import {createCachedBeaconState} from "./cache/stateCache.js";
 import {EpochTransitionStep, processEpoch} from "./epoch/index.js";
 import {BeaconStateTransitionMetrics, onPostStateMetrics, onStateCloneMetrics} from "./metrics.js";
 import {verifyProposerSignature} from "./signatureSets/index.js";
@@ -20,7 +18,6 @@ import {
   upgradeStateToGloas,
 } from "./slot/index.js";
 import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
-import type {IBeaconStateViewNative} from "./stateView/interface.js";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -32,35 +29,6 @@ import {
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
-import {getStateTypeFromBytes} from "./util/sszBytes.js";
-
-function reloadCachedState(prev: CachedBeaconStateAllForks, postStateBytes: Uint8Array): CachedBeaconStateAllForks {
-  const {config, epochCtx} = prev;
-  const view = getStateTypeFromBytes(config, postStateBytes).deserializeToViewDU(postStateBytes);
-  return createCachedBeaconState(
-    view,
-    {config, pubkeyCache: epochCtx.pubkeyCache},
-    {skipSyncPubkeys: true}
-  ) as CachedBeaconStateAllForks;
-}
-
-function configureNativeStateTransition(state: CachedBeaconStateAllForks): void {
-  bindings.config.set(state.config, state.genesisValidatorsRoot);
-}
-
-function serializeNativeSignedBlock(
-  config: CachedBeaconStateAllForks["config"],
-  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
-): Uint8Array {
-  const blockSlot = signedBlock.message.slot;
-  if (isBlindedBeaconBlock(signedBlock.message)) {
-    return config
-      .getPostBellatrixForkTypes(blockSlot)
-      .SignedBlindedBeaconBlock.serialize(signedBlock as SignedBlindedBeaconBlock);
-  }
-
-  return config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
-}
 
 // Multifork capable state transition
 
