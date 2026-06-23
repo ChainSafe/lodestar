@@ -126,11 +126,19 @@ export function runFastConfirmationRules(
     reasons.add(decision.reason);
   }
 
+  // Detect a reorg directly from ancestry instead of the reset reason: when the confirmed block is
+  // both epoch-behind and not an ancestor of head, `resetIfBehindOrNotAncestorOrUnsafe` records
+  // `ResetBehind` (it takes precedence), so keying off `ResetNotAncestor` alone would miss reorgs
+  // that cross an epoch boundary.
+  const initialConfirmedBlock = getBlock(ctx, cache, snapshot.confirmedRoot);
+  const didReorg =
+    initialConfirmedBlock !== null && !isAncestor(ctx, cache, snapshot.headRoot, snapshot.confirmedRoot);
+
   return {
     confirmedRoot: decision.confirmedRoot,
     didReset: decision.didReset,
     reason: decision.reason,
-    didReorg: reasons.has(FastConfirmationDecisionReason.ResetNotAncestor),
+    didReorg,
     // A fallback is a revert to finality: a reset whose final confirmed root is the finalized
     // checkpoint. A later rule may advance the confirmed root forward, which is not a fallback.
     didFallback: decision.didReset && decision.confirmedRoot === snapshot.finalizedRoot,

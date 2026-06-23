@@ -387,6 +387,54 @@ describe("fast confirmation", () => {
     expect(result.didRestart).toBe(false);
   });
 
+  it("runFastConfirmationRules reports a reorg when the confirmed block is both epoch-behind and not an ancestor of head", () => {
+    const confirmed = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT);
+    const head = makeBlock(2 * SLOTS_PER_EPOCH, rootFromNumber(999));
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), confirmed, head];
+    const state = makeState(32, 32, [head.slot]);
+    const store = makeStore(
+      confirmed.blockRoot,
+      ZERO_ROOT,
+      ZERO_ROOT,
+      0,
+      0,
+      confirmed.blockRoot,
+      head.blockRoot,
+      state
+    );
+    const ctx = makeContext(
+      (2 * SLOTS_PER_EPOCH) as Slot,
+      head.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state
+    );
+    const snapshot = makeSnapshot(
+      (2 * SLOTS_PER_EPOCH) as Slot,
+      2,
+      head.blockRoot,
+      confirmed.blockRoot,
+      confirmed.slot,
+      0,
+      ZERO_ROOT,
+      ZERO_ROOT,
+      0,
+      ZERO_ROOT,
+      0
+    );
+
+    const result = runFastConfirmationRules(snapshot, ctx, store, createFastConfirmationCache());
+
+    expect(result.confirmedRoot).toBe(ZERO_ROOT);
+    expect(result.didReset).toBe(true);
+    // `resetIfBehindOrNotAncestorOrUnsafe` records `ResetBehind` (it takes precedence over
+    // `ResetNotAncestor`), but the reorg must still be detected from ancestry
+    expect(result.didReorg).toBe(true);
+    expect(result.didFallback).toBe(true);
+    expect(result.didRestart).toBe(false);
+  });
+
   it("runFastConfirmationRules only resets an unsafe confirmed chain at epoch start", () => {
     const confirmed = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT);
     const head = makeBlock(SLOTS_PER_EPOCH, confirmed.blockRoot);
