@@ -1,21 +1,17 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
-import {
-  BeaconStateAllForks,
-  DataAvailabilityStatus,
-  ExecutionPayloadStatus,
-} from "@lodestar/state-transition";
+import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
 import {
   createBeaconStateViewForTest,
   stateViewToBeaconState,
   useNativeStateTransition,
 } from "../utils/stateTransition.js";
-import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 
 const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
@@ -26,17 +22,19 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
-        const stateTransitionOpts = {
-          // Should assume payload valid and blob data available for this test
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyStateRoot: false,
-          verifyProposer: verify,
-          verifySignatures: verify,
-          assertCorrectProgressiveBalances,
-        };
-
-        state = state.stateTransition(signedBlock, stateTransitionOpts, {});
+        state = state.stateTransition(
+          signedBlock,
+          {
+            // Should assume payload valid and blob data available for this test
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+            verifyStateRoot: false,
+            verifyProposer: verify,
+            verifySignatures: verify,
+            assertCorrectProgressiveBalances,
+          },
+          {}
+        );
       }
 
       return stateViewToBeaconState(fork, state);
