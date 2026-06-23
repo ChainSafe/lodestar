@@ -7,6 +7,7 @@ import {runFastConfirmationRules} from "./rules.ts";
 import {
   FastConfirmationContext,
   FastConfirmationResult,
+  FastConfirmationRunResult,
   IFastConfirmationRule,
   IFastConfirmationStore,
 } from "./types.ts";
@@ -61,7 +62,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       observedJustifiedEpoch: snapshot.observedJustified.epoch,
     });
 
-    const {confirmedRoot, didReset, reason} = withObservedDuration(
+    const {confirmedRoot, didReset, reason, didReorg, didRestart} = withObservedDuration(
       this.metrics?.fastConfirmation.stepsDuration.startTimer({step: FastConfirmationSteps.runRules}),
       () => runFastConfirmationRules(snapshot, ctx, this.store, cache, this.logger)
     );
@@ -91,7 +92,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     }
 
     this.store.confirmedRoot = confirmedRoot;
-    this.updateFastConfirmationMetrics(ctx, {confirmedRoot, didReset});
+    this.updateFastConfirmationMetrics(ctx, {confirmedRoot, didReset, didReorg, didRestart});
 
     return {confirmedRoot, didReset};
   }
@@ -144,15 +145,26 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     }
   }
 
-  private updateFastConfirmationMetrics(ctx: FastConfirmationContext, result: FastConfirmationResult): void {
+  private updateFastConfirmationMetrics(
+    ctx: FastConfirmationContext,
+    result: Pick<FastConfirmationRunResult, "confirmedRoot" | "didReset" | "didReorg" | "didRestart">
+  ): void {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
     if (confirmedBlock) {
       this.metrics.fastConfirmation.confirmedSlot.set(confirmedBlock.slot);
       this.metrics.fastConfirmation.confirmedEpoch.set(computeEpochAtSlot(confirmedBlock.slot));
+      this.metrics.fastConfirmation.slot.set(confirmedBlock.slot);
     }
     if (result.didReset) {
       this.metrics.fastConfirmation.resets.inc();
+      this.metrics.fastConfirmation.fallbacks.inc();
+    }
+    if (result.didReorg) {
+      this.metrics.fastConfirmation.reorgs.inc();
+    }
+    if (result.didRestart) {
+      this.metrics.fastConfirmation.restarts.inc();
     }
     this.metrics.fastConfirmation.votesTracked.set(ctx.getTrackedVotesCount());
   }

@@ -217,6 +217,8 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
+    expect(result.didReorg).toBe(false);
+    expect(result.didRestart).toBe(false);
   });
 
   it("runFastConfirmationRules advances to observed justified at epoch start", () => {
@@ -372,6 +374,10 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
+    // Confirmed block is no longer an ancestor of head, the later descendant rule overwrites
+    // `reason` but `didReorg` must still be reported from the reset that happened earlier
+    expect(result.didReorg).toBe(true);
+    expect(result.didRestart).toBe(false);
   });
 
   it("runFastConfirmationRules only resets an unsafe confirmed chain at epoch start", () => {

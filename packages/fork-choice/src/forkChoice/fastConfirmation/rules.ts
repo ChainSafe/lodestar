@@ -7,6 +7,7 @@ import {
   FastConfirmationDecision,
   FastConfirmationDecisionReason,
   FastConfirmationRule,
+  FastConfirmationRunResult,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
 } from "./types.ts";
@@ -110,15 +111,26 @@ export function runFastConfirmationRules(
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
   logger?: Logger
-): FastConfirmationDecision {
+): FastConfirmationRunResult {
   let decision: FastConfirmationDecision = {
     confirmedRoot: snapshot.confirmedRoot,
     didReset: false,
     reason: FastConfirmationDecisionReason.Unchanged,
   };
 
+  // Track every reason a rule decided on, the final `decision.reason` is overwritten by
+  // later rules (eg. a restart is followed by advancing to the latest confirmed descendant)
+  const reasons = new Set<FastConfirmationDecisionReason>();
   for (const rule of FAST_CONFIRMATION_RULES) {
     decision = rule(snapshot, ctx, store, cache, decision, logger);
+    reasons.add(decision.reason);
   }
-  return decision;
+
+  return {
+    confirmedRoot: decision.confirmedRoot,
+    didReset: decision.didReset,
+    reason: decision.reason,
+    didReorg: reasons.has(FastConfirmationDecisionReason.ResetNotAncestor),
+    didRestart: reasons.has(FastConfirmationDecisionReason.ObservedJustified),
+  };
 }

@@ -64,6 +64,13 @@ export type FastConfirmationDecision = {
   reason: FastConfirmationDecisionReason;
 };
 
+export type FastConfirmationRunResult = FastConfirmationDecision & {
+  /** Confirmed block became non-canonical (no longer an ancestor of head) */
+  didReorg: boolean;
+  /** Restarted confirmation from the observed unrealized justified checkpoint */
+  didRestart: boolean;
+};
+
 export type FastConfirmationRule = (
   snapshot: FastConfirmationSnapshot,
   ctx: FastConfirmationContext,
