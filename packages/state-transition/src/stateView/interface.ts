@@ -76,6 +76,7 @@ export interface IBeaconStateView {
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
   getBeaconCommitteeCountPerSlot(epoch: Epoch): number;
   // Decision roots
   previousDecisionRoot: RootHex;
@@ -303,6 +304,7 @@ export type IBeaconStateViewNative = Omit<
   | "stateTransition"
   | "processSlots"
   | "withParentPayloadApplied"
+  | "getBeaconCommittee"
   | "getIndicesInPayloadTimelinessCommittee"
   | "pendingDeposits"
   | "pendingPartialWithdrawals"
@@ -313,6 +315,7 @@ export type IBeaconStateViewNative = Omit<
   proposerLookahead: Uint32Array;
 
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): number[];
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
   stateTransition(signedBlockBytes: Uint8Array, options?: StateTransitionOpts): IBeaconStateViewNative;
   processSlots(
@@ -322,7 +325,6 @@ export type IBeaconStateViewNative = Omit<
   withParentPayloadApplied(
     ...args: Parameters<IBeaconStateViewLatestFork["withParentPayloadApplied"]>
   ): IBeaconStateViewNative;
-  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array | number[];
   getIndicesInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number[];
   getIndexInPayloadTimelinessCommittee?(validatorIndex: ValidatorIndex, slot: Slot): number;
 };
