@@ -62,7 +62,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
       observedJustifiedEpoch: snapshot.observedJustified.epoch,
     });
 
-    const {confirmedRoot, didReset, reason, didReorg, didRestart} = withObservedDuration(
+    const {confirmedRoot, didReset, reason, didReorg, didFallback, didRestart} = withObservedDuration(
       this.metrics?.fastConfirmation.stepsDuration.startTimer({step: FastConfirmationSteps.runRules}),
       () => runFastConfirmationRules(snapshot, ctx, this.store, cache, this.logger)
     );
@@ -92,7 +92,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     }
 
     this.store.confirmedRoot = confirmedRoot;
-    this.updateFastConfirmationMetrics(ctx, {confirmedRoot, didReset, didReorg, didRestart});
+    this.updateFastConfirmationMetrics(ctx, {confirmedRoot, didReset, didReorg, didFallback, didRestart});
 
     return {confirmedRoot, didReset};
   }
@@ -147,7 +147,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
 
   private updateFastConfirmationMetrics(
     ctx: FastConfirmationContext,
-    result: Pick<FastConfirmationRunResult, "confirmedRoot" | "didReset" | "didReorg" | "didRestart">
+    result: Pick<FastConfirmationRunResult, "confirmedRoot" | "didReset" | "didReorg" | "didFallback" | "didRestart">
   ): void {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
@@ -158,10 +158,12 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     }
     if (result.didReset) {
       this.metrics.fastConfirmation.resets.inc();
-      this.metrics.fastConfirmation.fallbacks.inc();
     }
     if (result.didReorg) {
       this.metrics.fastConfirmation.reorgs.inc();
+    }
+    if (result.didFallback) {
+      this.metrics.fastConfirmation.fallbacks.inc();
     }
     if (result.didRestart) {
       this.metrics.fastConfirmation.restarts.inc();

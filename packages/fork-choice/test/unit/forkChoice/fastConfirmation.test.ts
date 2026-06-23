@@ -218,6 +218,7 @@ describe("fast confirmation", () => {
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
     expect(result.didReorg).toBe(false);
+    expect(result.didFallback).toBe(true);
     expect(result.didRestart).toBe(false);
   });
 
@@ -255,6 +256,11 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(observed.blockRoot);
     expect(result.didReset).toBe(true);
+    expect(result.didReorg).toBe(false);
+    // Confirmation advanced forward to the observed justified checkpoint, which is a restart
+    // and not a fallback to finality even though a reset happened earlier in the pipeline
+    expect(result.didFallback).toBe(false);
+    expect(result.didRestart).toBe(true);
   });
 
   it("findLatestConfirmedDescendant falls back to loop 2 when previousSlotHead is on a sibling branch", () => {
@@ -377,6 +383,7 @@ describe("fast confirmation", () => {
     // Confirmed block is no longer an ancestor of head, the later descendant rule overwrites
     // `reason` but `didReorg` must still be reported from the reset that happened earlier
     expect(result.didReorg).toBe(true);
+    expect(result.didFallback).toBe(true);
     expect(result.didRestart).toBe(false);
   });
 

@@ -131,6 +131,9 @@ export function runFastConfirmationRules(
     didReset: decision.didReset,
     reason: decision.reason,
     didReorg: reasons.has(FastConfirmationDecisionReason.ResetNotAncestor),
+    // A fallback is a revert to finality: a reset whose final confirmed root is the finalized
+    // checkpoint. A later rule may advance the confirmed root forward, which is not a fallback.
+    didFallback: decision.didReset && decision.confirmedRoot === snapshot.finalizedRoot,
     didRestart: reasons.has(FastConfirmationDecisionReason.ObservedJustified),
   };
 }
