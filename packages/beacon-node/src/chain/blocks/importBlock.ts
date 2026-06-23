@@ -189,10 +189,12 @@ export async function importBlock(
         this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
         const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
-        const missedSlotVote = ssz.Root.equals(
-          rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
-          rootCache.getBlockRootAtSlot(attestation.data.slot)
-        );
+        const missedSlotVote =
+          attestation.data.slot > 0 &&
+          ssz.Root.equals(
+            rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
+            rootCache.getBlockRootAtSlot(attestation.data.slot)
+          );
         this.validatorMonitor?.registerAttestationInBlock(
           indexedAttestation,
           parentBlockSlot,
