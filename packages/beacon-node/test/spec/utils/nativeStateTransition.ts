@@ -3,6 +3,19 @@ import {CachedBeaconStateAllForks, IBeaconStateViewNative, StateTransitionOpts} 
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, isBlindedBeaconBlock} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
 
+/**
+ * Runs multi-block spec fixtures through one native state instance.
+ *
+ * The public `stateTransition(CachedBeaconStateAllForks, block)` API must return
+ * a Lodestar cached state, so its native branch serializes TS state into native
+ * and reloads the TS caches after every block. Doing that per block during spec tests is costly.
+ *
+ * This runner creates the native view once, applies all blocks in
+ * native, and only converts back to a Lodestar cached state for the final
+ * spec-state comparison.
+ *
+ * This should only be used for tests.
+ */
 export class NativeStateTransitionRunner {
   private nativeView: IBeaconStateViewNative;
 
