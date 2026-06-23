@@ -43,7 +43,7 @@ export async function verifyBlocksStateTransitionOnly(
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
     const block = blocks[i].getBlock();
-    let preState = i === 0 ? preState0 : postStates[i - 1];
+    const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
     const blockFork = config.getForkSeq(block.message.slot);
 
@@ -54,20 +54,22 @@ export async function verifyBlocksStateTransitionOnly(
     // STFN - per_slot_processing() + per_block_processing()
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const stfOpts: StateTransitionOpts = {
-      // NOTE: Assume valid for now while sending payload to execution engine in parallel
-      // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailabilityStatus,
-      // false because it's verified below with better error typing
-      verifyStateRoot: false,
-      // if block is trusted don't verify proposer or op signature
-      verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
-      verifySignatures: !useBlsBatchVerify && !validSignatures,
-      dontTransferCache: false,
-    };
-
-    const postState = preState.stateTransition(block, stfOpts, {metrics, validatorMonitor});
+    const postState = preState.stateTransition(
+      block,
+      {
+        // NOTE: Assume valid for now while sending payload to execution engine in parallel
+        // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        dataAvailabilityStatus,
+        // false because it's verified below with better error typing
+        verifyStateRoot: false,
+        // if block is trusted don't verify proposer or op signature
+        verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
+        verifySignatures: !useBlsBatchVerify && !validSignatures,
+        dontTransferCache: false,
+      },
+      {metrics, validatorMonitor}
+    );
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
