@@ -20,7 +20,11 @@ import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
-import {getPayloadAttributesForSSE, prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
+import {
+  getPayloadAttributesForSSE,
+  prepareExecutionPayload,
+  resolvePayloadAttributesInput,
+} from "./produceBlock/produceBlockBody.js";
 import {RegenCaller} from "./regen/index.js";
 
 // TODO GLOAS: re-evaluate this timing
@@ -207,7 +211,13 @@ export class PrepareNextSlotScheduler {
             parentBlockHash,
             safeBlockHash,
             finalizedBlockHash,
-            stateAfterParentPayload,
+            prepareSlot,
+            resolvePayloadAttributesInput(
+              this.config,
+              fork as ForkPostBellatrix,
+              stateAfterParentPayload,
+              parentBlockHash
+            ),
             feeRecipient
           );
           this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
@@ -236,11 +246,19 @@ export class PrepareNextSlotScheduler {
           this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
         ) {
           const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
-            prepareState: stateAfterParentPayload,
             prepareSlot,
             parentBlockRoot: fromHex(updatedHead.blockRoot),
             parentBlockHash,
             feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
+            proposerIndex: stateAfterParentPayload.getBeaconProposer(prepareSlot),
+            parentBlockNumberPreGloas:
+              ForkSeq[fork] >= ForkSeq.gloas ? undefined : stateAfterParentPayload.payloadBlockNumber,
+            ...resolvePayloadAttributesInput(
+              this.config,
+              fork as ForkPostBellatrix,
+              stateAfterParentPayload,
+              parentBlockHash
+            ),
           });
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }

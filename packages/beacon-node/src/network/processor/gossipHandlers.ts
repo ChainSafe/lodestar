@@ -1087,7 +1087,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       // unlike BlockInput, we send the envelope into UnknownBlockInput sync
       // inside the sync it'll reconcile into PayloadEnvelopeInput and share the same cache with gossip
-      const res = await chain.beaconEngine.validateGossipExecutionPayloadEnvelope(serializedData, signedEnvelope);
+      const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+      // The facade owns the DA cache; look up the bid scalars here and pass them to the engine. If the
+      // input is missing we can't validate the envelope (no bid), so return early without the engine.
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
+        return ignore(ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING, {blockRoot: blockRootHex});
+      }
+      const res = await chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
+        serializedData,
+        signedEnvelope,
+        payloadInput.proposerIndex,
+        payloadInput.getBuilderIndex(),
+        payloadInput.getBlockHashHex(),
+        payloadInput.getBid().executionRequestsRoot
+      );
       if (res.status !== GossipValidationStatus.Accept) {
         const {beaconBlockRoot} = signedEnvelope.message;
         const envelopeSlot = signedEnvelope.message.payload.slotNumber;
@@ -1119,14 +1134,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
       chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.gossip, delaySec, signedEnvelope);
-
-      const blockRootHex = toRootHex(envelope.beaconBlockRoot);
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-
-      if (!payloadInput) {
-        // This shouldn't happen because beacon block should have been imported and thus payload input should have been created.
-        return ignore(ExecutionPayloadEnvelopeErrorCode.PAYLOAD_ENVELOPE_INPUT_MISSING, {blockRoot: blockRootHex});
-      }
 
       chain.serializedCache.set(signedEnvelope, serializedData);
 

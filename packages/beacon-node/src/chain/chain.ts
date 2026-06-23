@@ -94,7 +94,7 @@ import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
-import {BlockAttributes, produceBlockBody, produceCommonBlockBody} from "./produceBlock/produceBlockBody.js";
+import {BlockAttributes, PreparedBlockScalars, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {
@@ -432,10 +432,6 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    // Facade-owned (DA assembly) but shared with the engine for gossip validation. Injected here (not via
-    // the engine constructor) because it depends on the engine's own forkChoice.
-    // TODO - beacon engine: remove this once ownership is settled in a later phase.
-    this.beaconEngine.seenPayloadEnvelopeInputCache = this.seenPayloadEnvelopeInputCache;
     // Inject lightClientServer post-construction (created after engine, depends on nothing from engine)
     // TODO - beacon engine
     this.beaconEngine.lightClientServer = this.lightClientServer;
@@ -911,16 +907,12 @@ export class BeaconChain implements IBeaconChain {
     blockSlot: Slot,
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
+    // Facade owns the DA cache; check it before the engine's DB read.
     const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope();
     }
-
-    return (
-      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
-      null
-    );
+    return this.beaconEngine.getExecutionPayloadEnvelope(blockSlot, blockRootHex);
   }
 
   async getParentExecutionRequests(
@@ -1019,21 +1011,14 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
-    const {slot, parentBlock} = blockAttributes;
-    const state = await this.regen.getBlockSlotState(
-      parentBlock,
-      slot,
-      {dontTransferCache: true},
-      RegenCaller.produceBlock
-    );
-
-    // TODO: To avoid breaking changes for metric define this attribute
-    const blockType = BlockType.Full;
-
-    return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
+    return this.beaconEngine.produceCommonBlockBody(blockAttributes);
   }
 
-  produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
+  produceBlock(
+    blockAttributes: BlockAttributes & {
+      commonBlockBodyPromise: Promise<CommonBlockBody>;
+    } & PreparedBlockScalars
+  ): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -1042,7 +1027,11 @@ export class BeaconChain implements IBeaconChain {
     return this.produceBlockWrapper<BlockType.Full>(BlockType.Full, blockAttributes);
   }
 
-  produceBlindedBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
+  produceBlindedBlock(
+    blockAttributes: BlockAttributes & {
+      commonBlockBodyPromise: Promise<CommonBlockBody>;
+    } & PreparedBlockScalars
+  ): Promise<{
     block: BlindedBeaconBlock;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
@@ -1060,26 +1049,30 @@ export class BeaconChain implements IBeaconChain {
       commonBlockBodyPromise,
       parentBlock,
       builderBid,
-    }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
+      // All scalars are precomputed once by produceBlockBase (both V3 and V4) and threaded through, so
+      // produceBlockBody no longer needs a BeaconState here.
+      proposerIndex,
+      proposerPubKey,
+      safeBlockHash,
+      finalizedBlockHash,
+      timestamp,
+      prevRandao,
+      parentBlockHash,
+      parentGasLimit,
+      isBuildingOnFull,
+      parentExecutionRequests,
+      payloadAttestations,
+      withdrawals,
+    }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>} & PreparedBlockScalars
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
-    const state = await this.regen.getBlockSlotState(
-      parentBlock,
-      slot,
-      {dontTransferCache: true},
-      RegenCaller.produceBlock
-    );
-    const proposerIndex = state.getBeaconProposer(slot);
-    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
-
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
       blockType,
-      state,
       {
         randaoReveal,
         graffiti,
@@ -1087,6 +1080,16 @@ export class BeaconChain implements IBeaconChain {
         feeRecipient,
         parentBlock,
         proposerIndex,
+        safeBlockHash,
+        finalizedBlockHash,
+        timestamp,
+        prevRandao,
+        parentBlockHash,
+        parentGasLimit,
+        isBuildingOnFull,
+        parentExecutionRequests,
+        payloadAttestations,
+        withdrawals,
         proposerPubKey,
         commonBlockBodyPromise,
         builderBid,
@@ -1114,6 +1117,13 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
+    // TODO - beacon engine: remove this
+    const state = await this.regen.getBlockSlotState(
+      parentBlock,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
     const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
@@ -1205,27 +1215,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getProposerHead(slot: Slot): ProtoBlock {
-    this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.getProposerHead});
-    const secFromSlot = this.clock.secFromSlot(slot);
-
-    try {
-      const {head, isHeadTimely, notReorgedReason} = this.beaconEngine.forkChoice.updateAndGetHead({
-        mode: UpdateHeadOpt.GetProposerHead,
-        secFromSlot,
-        slot,
-      });
-
-      if (isHeadTimely && notReorgedReason !== undefined) {
-        this.metrics?.forkChoice.notReorgedReason.inc({reason: notReorgedReason});
-      }
-      return head;
-    } catch (e) {
-      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetProposerHead});
-      throw e;
-    } finally {
-      timer?.();
-    }
+    return this.beaconEngine.getProposerHead(slot);
   }
 
   /**

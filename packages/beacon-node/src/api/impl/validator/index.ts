@@ -51,7 +51,6 @@ import {
 } from "@lodestar/types";
 import {
   TimeoutError,
-  defer,
   formatWeiToEth,
   fromHex,
   prettyWeiToEth,
@@ -65,7 +64,12 @@ import {BlockInputSource} from "../../../chain/blocks/blockInput/types.js";
 import {AttestationErrorCode, SyncCommitteeErrorCode} from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
-import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
+import {
+  BlockType,
+  type PreparedBlockScalars,
+  ProduceFullDeneb,
+  ProduceFullGloas,
+} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -73,7 +77,6 @@ import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
-import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
@@ -411,9 +414,11 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlock,
+      prepared,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
+      prepared: PreparedBlockScalars;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -448,6 +453,7 @@ export function getValidatorApi(
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
+        ...prepared,
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -480,9 +486,11 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
+      prepared,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
+      prepared: PreparedBlockScalars;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -498,6 +506,7 @@ export function getValidatorApi(
         graffiti,
         feeRecipient,
         commonBlockBodyPromise,
+        ...prepared,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
@@ -566,12 +575,6 @@ export function getValidatorApi(
     notWhileSyncing();
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-    const parentBlock = chain.getProposerHead(slot);
-    const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
-    const parentBlockRoot = fromHex(parentBlockRootHex);
-    notOnOutOfRangeData(parentBlockRoot);
-    metrics?.blockProductionSlotDelta.set(slot - parentSlot);
-
     const fork = config.getForkName(slot);
     // set some sensible opts
     // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
@@ -581,6 +584,22 @@ export function getValidatorApi(
     if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
       throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
     }
+
+    const graffitiBytes = toGraffitiBytes(
+      graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+    );
+    // Engine computes the shared head once (proposer head, forkChoice exec hashes, base-state scalars) and
+    // kicks off the deferred common-body packing. builderBid is gloas-only — discarded on the V3 path.
+    const {
+      parentBlock,
+      builderBid: _builderBid,
+      commonBlockBodyPromise,
+      ...prepared
+    } = await chain.beaconEngine.produceBlockBase({slot, randaoReveal, graffiti: graffitiBytes});
+    const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
+    const parentBlockRoot = fromHex(parentBlockRootHex);
+    notOnOutOfRangeData(parentBlockRoot);
+    metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
     const isBuilderEnabled =
       ForkSeq[fork] >= ForkSeq.bellatrix &&
@@ -603,10 +622,6 @@ export function getValidatorApi(
       );
     }
 
-    const graffitiBytes = toGraffitiBytes(
-      graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
-    );
-
     const loggerContext = {
       slot,
       parentSlot,
@@ -622,10 +637,6 @@ export function getValidatorApi(
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
 
-    // Defer common block body production to make sure we sent async builder and engine requests before
-    const deferredCommonBlockBody = defer<CommonBlockBody>();
-    const commonBlockBodyPromise = deferredCommonBlockBody.promise;
-
     // use abort controller to stop waiting for both block sources
     const controller = new AbortController();
 
@@ -637,6 +648,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlock,
+          prepared,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -646,6 +658,7 @@ export function getValidatorApi(
           strictFeeRecipientCheck,
           commonBlockBodyPromise,
           parentBlock,
+          prepared,
         }).then((engineBlock) => {
           // Once the engine returns a block, in the event of either:
           // - suspected builder censorship
@@ -675,30 +688,6 @@ export function getValidatorApi(
       resolveTimeoutMs: cutoffMs,
       raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
       signal: controller.signal,
-    });
-
-    // Ensure builder and engine HTTP requests are sent before starting common block body production
-    // by deferring the call to next event loop iteration, allowing pending I/O operations like
-    // HTTP requests to be processed first and sent out early in slot.
-    callInNextEventLoop(() => {
-      logger.verbose("Producing common block body", loggerContext);
-      const commonBlockBodyStartedAt = Date.now();
-
-      chain
-        .produceCommonBlockBody({
-          slot,
-          parentBlock,
-          randaoReveal,
-          graffiti: graffitiBytes,
-        })
-        .then((commonBlockBody) => {
-          deferredCommonBlockBody.resolve(commonBlockBody);
-          logger.verbose("Produced common block body", {
-            ...loggerContext,
-            durationMs: Date.now() - commonBlockBodyStartedAt,
-          });
-        })
-        .catch(deferredCommonBlockBody.reject);
     });
 
     const [builder, engine] = await blockProductionRacePromise;
@@ -907,12 +896,6 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const parentBlock = chain.getProposerHead(slot);
-      const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
-      const parentBlockRoot = fromHex(parentBlockRootHex);
-      notOnOutOfRangeData(parentBlockRoot);
-      metrics?.blockProductionSlotDelta.set(slot - parentSlot);
-
       const graffitiBytes = toGraffitiBytes(
         graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
       );
@@ -920,9 +903,17 @@ export function getValidatorApi(
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
-      const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
-      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+      // The engine computes the shared head once (proposer head, shouldBuildOnFull, best builder bid,
+      // forkChoice exec hashes, base-state scalars) and kicks off common-body packing.
+      const {parentBlock, builderBid, commonBlockBodyPromise, ...prepared} = await chain.beaconEngine.produceBlockBase({
+        slot,
+        randaoReveal,
+        graffiti: graffitiBytes,
+      });
+      const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
+      const parentBlockRoot = fromHex(parentBlockRootHex);
+      notOnOutOfRangeData(parentBlockRoot);
+      metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
       const logCtx = {
         slot,
@@ -939,13 +930,6 @@ export function getValidatorApi(
           : {}),
       };
 
-      const commonBlockBodyPromise = chain.produceCommonBlockBody({
-        slot,
-        parentBlock,
-        randaoReveal,
-        graffiti: graffitiBytes,
-      });
-
       const baseAttrs = {
         slot,
         parentBlock,
@@ -953,6 +937,7 @@ export function getValidatorApi(
         graffiti: graffitiBytes,
         feeRecipient,
         commonBlockBodyPromise,
+        ...prepared,
       };
 
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});

@@ -3,10 +3,14 @@ import {BlockExecutionStatus, IForkChoice, PayloadExecutionStatus, ProtoBlock} f
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
+  BLSPubkey,
+  BLSSignature,
+  Bytes32,
   Root,
   RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  Slot,
   SubnetID,
   ValidatorIndex,
   altair,
@@ -23,8 +27,10 @@ import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
+import {CommonBlockBody} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {BlockProcessOpts} from "../options.js";
+import {BlockAttributes, PayloadAttributesWithdrawals} from "../produceBlock/produceBlockBody.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {AggregateAndProofValidationResult} from "../validation/aggregateAndProof.js";
@@ -84,6 +90,38 @@ export type ImportBlockResult = {
 };
 
 /**
+ * Shared head of block production, computed once by `produceBlockBase` and reused across the
+ * self-build and builder-bid paths. Holds no `BeaconState` — only scalar fields the downstream flow
+ * needs plus the (still-pending) common block body.
+ */
+export type ProduceBlockBaseResult = {
+  parentBlock: ProtoBlock;
+  proposerIndex: ValidatorIndex;
+  proposerPubKey: BLSPubkey;
+  safeBlockHash: RootHex;
+  finalizedBlockHash: RootHex;
+  /** EL payload-attribute timestamp (computeTimeAtSlot) */
+  timestamp: number;
+  prevRandao: Bytes32;
+  /** self-build parent execution block hash (gloas: from the bid; bellatrix: from the header) */
+  parentBlockHash: Bytes32;
+  /** parent execution gas limit (gloas: from the bid; bellatrix: from the header) */
+  parentGasLimit: number;
+  /** gloas: forkChoice.shouldBuildOnFull(parentBlock, slot); false pre-gloas */
+  isBuildingOnFull: boolean;
+  /** gloas: best bid from the (engine-owned) executionPayloadBidPool; null otherwise */
+  builderBid: gloas.SignedExecutionPayloadBid | null;
+  /** gloas: parent execution requests applied to produce the common body (default = empty / build-on-empty) */
+  parentExecutionRequests: gloas.ExecutionRequests;
+  /** gloas: payload attestations for the parent block's payload (slot - 1); empty pre-gloas */
+  payloadAttestations: gloas.PayloadAttestation[];
+  /** payload-attribute withdrawals resolved from the parent-payload-applied state (post-capella) */
+  withdrawals?: PayloadAttributesWithdrawals;
+  /** common body produced from the parent-payload-applied state — its voluntaryExits are already valid */
+  commonBlockBodyPromise: Promise<CommonBlockBody>;
+};
+
+/**
  * The consensus engine seam. Starts minimal and transitional (JS-only); ownership of consensus
  * collaborators and flows migrates here across later phases. This interface is the contract shared
  * with the native engine (lodestar-z) — both the JS and native engines implement the same signatures.
@@ -94,6 +132,18 @@ export interface IBeaconEngine {
   // perform them still live facade-side. TODO - beacon engine: narrow to a read facet as those flows
   // (gossip → Phase 3, migrateFinalized/prune → Phase 5) move into the engine.
   readonly forkChoice: IForkChoice;
+
+  // Block production. `produceCommonBlockBody` builds the fork-agnostic body part (reused across the
+  // self-build / builder-bid paths). `produceBlockBase` computes the shared head once (proposer head,
+  // builder-bid lookup, forkChoice exec hashes, base-state scalars) so they are not recomputed per path.
+  // More of the production flow migrates here in later steps.
+  getProposerHead(slot: Slot): ProtoBlock;
+  getExecutionPayloadEnvelope(
+    blockSlot: Slot,
+    blockRootHex: string
+  ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
+  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
+  produceBlockBase(attrs: {slot: Slot; randaoReveal: BLSSignature; graffiti: Bytes32}): Promise<ProduceBlockBaseResult>;
 
   // Gossip validation flows. The first parameter is the message's SSZ bytes (unused by the JS engine,
   // required by the native engine's bytes-first contract), followed by the deserialized object. Each
@@ -158,12 +208,22 @@ export interface IBeaconEngine {
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<AggregateAndProofValidationResult>>;
+  // The bid scalars + proposerIndex are looked up facade-side from the `PayloadEnvelopeInput` (the engine
+  // no longer touches the DA seen cache) and passed in.
   validateGossipExecutionPayloadEnvelope(
     envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    proposerIndex: ValidatorIndex,
+    bidBuilderIndex: ValidatorIndex,
+    bidBlockHashHex: RootHex,
+    bidExecutionRequestsRoot: Root
   ): Promise<GossipValidationResult<void>>;
   validateApiExecutionPayloadEnvelope(
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    proposerIndex: ValidatorIndex,
+    bidBuilderIndex: ValidatorIndex,
+    bidBlockHashHex: RootHex,
+    bidExecutionRequestsRoot: Root
   ): Promise<GossipValidationResult<void>>;
   validateGossipExecutionPayloadBid(
     bidBytes: Uint8Array,

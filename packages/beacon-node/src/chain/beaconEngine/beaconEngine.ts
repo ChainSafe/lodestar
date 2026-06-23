@@ -14,6 +14,7 @@ import {
   PayloadExecutionStatus,
   ProtoBlock,
   UpdateHeadOpt,
+  getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
   ForkName,
@@ -23,6 +24,7 @@ import {
   GENESIS_SLOT,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   DataAvailabilityStatus,
@@ -36,16 +38,21 @@ import {
   computeTimeAtSlot,
   isStatePostAltair,
   isStatePostBellatrix,
+  isStatePostCapella,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
 import {
   Attestation,
+  BLSSignature,
   BeaconBlock,
+  Bytes32,
   Epoch,
   IndexedAttestation,
   Root,
   RootHex,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  Slot,
   SubnetID,
   ValidatorIndex,
   altair,
@@ -57,7 +64,9 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -74,6 +83,7 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from ".
 import {ChainEvent, ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
+import {CommonBlockBody, FindHeadFnName} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {
   AggregatedAttestationPool,
@@ -86,6 +96,12 @@ import {
   SyncContributionAndProofPool,
 } from "../opPools/index.js";
 import {BlockProcessOpts} from "../options.js";
+import {
+  BlockAttributes,
+  BlockProductionStep,
+  BlockType,
+  PayloadAttributesWithdrawals,
+} from "../produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "../regen/index.js";
 import {
   SeenAggregators,
@@ -95,7 +111,6 @@ import {
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
-  SeenPayloadEnvelopeInput,
   SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "../seenCache/index.js";
@@ -138,7 +153,7 @@ import {validateApiSyncCommittee, validateGossipSyncCommittee} from "../validati
 import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syncCommitteeContributionAndProof.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {GossipValidationResult, fromResult, runGossipValidation} from "./gossipValidationResult.js";
-import {BeaconEngineModules, IBeaconEngine, ImportBlockResult} from "./interface.js";
+import {BeaconEngineModules, IBeaconEngine, ImportBlockResult, ProduceBlockBaseResult} from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
 
 type VerifiedBlockBundle = {
@@ -195,12 +210,12 @@ export class BeaconEngine implements IBeaconEngine {
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenProposerPreferences = new SeenProposerPreferences();
 
-  // Facade-owned (DA assembly), shared with the engine. `seenBlockInputCache` is injected via the
-  // constructor; `seenPayloadEnvelopeInputCache` is assigned by `BeaconChain` post-construction because
-  // it depends on the engine's own `forkChoice`. TODO - beacon engine: revisit ownership in a later phase.
+  // TODO - beacon engine: how to remove this?
   readonly seenBlockInputCache: SeenBlockInput;
-  seenPayloadEnvelopeInputCache!: SeenPayloadEnvelopeInput;
   readonly validatorMonitor: ValidatorMonitor | null;
+  // Engine reads execution payload envelopes for block production (getParentExecutionRequests). Writes
+  // / archival / network handlers still use the shared `db` directly until the DB-ownership phase.
+  readonly db: IBeaconDb;
   lightClientServer: LightClientServer | undefined;
   private readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
   private readonly emitter: ChainEventEmitter;
@@ -225,6 +240,7 @@ export class BeaconEngine implements IBeaconEngine {
     this.config = config;
     this.opts = opts;
     this.logger = logger;
+    this.db = db;
     this.metrics = metrics;
     this.clock = clock;
     this.pubkeyCache = pubkeyCache;
@@ -361,6 +377,260 @@ export class BeaconEngine implements IBeaconEngine {
     return state.getShufflingAtEpoch(attEpoch);
   }
 
+  getProposerHead(slot: Slot): ProtoBlock {
+    this.metrics?.forkChoice.requests.inc();
+    const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.getProposerHead});
+    const secFromSlot = this.clock.secFromSlot(slot);
+
+    try {
+      const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
+        mode: UpdateHeadOpt.GetProposerHead,
+        secFromSlot,
+        slot,
+      });
+
+      if (isHeadTimely && notReorgedReason !== undefined) {
+        this.metrics?.forkChoice.notReorgedReason.inc({reason: notReorgedReason});
+      }
+      return head;
+    } catch (e) {
+      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetProposerHead});
+      throw e;
+    } finally {
+      timer?.();
+    }
+  }
+
+  /** DB read of an execution payload envelope. Callers that hold the DA cache check it first. */
+  async getExecutionPayloadEnvelope(
+    blockSlot: Slot,
+    blockRootHex: string
+  ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
+    return (
+      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
+      null
+    );
+  }
+
+  /**
+   * Parent execution requests for block production. DB-only: the facade-owned DA cache is not visible
+   * here, so callers that need cache-only (DB-write-pending) envelopes check the cache first
+   * (`chain.getParentExecutionRequests`). At `produceBlockBase` time the parent is FULL and its
+   * envelope's async DB write has normally completed.
+   */
+  async getParentExecutionRequests(
+    parentBlockSlot: Slot,
+    parentBlockRootHex: RootHex
+  ): Promise<gloas.ExecutionRequests> {
+    // at the fork boundary, parent is pre-gloas
+    if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
+      return ssz.gloas.ExecutionRequests.defaultValue();
+    }
+    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
+    if (envelope === null) {
+      throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
+    }
+    return envelope.message.executionRequests;
+  }
+
+  /**
+   * Compute the shared head of block production once: proposer head, builder-bid lookup, forkChoice
+   * exec hashes, and the base-state scalars the downstream flow needs. No `BeaconState` crosses — the
+   * fetched state is consumed here and the (cheap, cache-hit) re-regen happens per path downstream.
+   */
+  async produceBlockBase({
+    slot,
+    randaoReveal,
+    graffiti,
+  }: {
+    slot: Slot;
+    randaoReveal: BLSSignature;
+    graffiti: Bytes32;
+  }): Promise<ProduceBlockBaseResult> {
+    const parentBlock = this.getProposerHead(slot);
+    const fork = this.config.getForkName(slot);
+
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
+    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+
+    // gloas: decide build-on-full, look up the best builder bid, and collect the parent block's payload
+    // attestations (slot - 1) — all from engine-owned pools. Same args across both production paths.
+    let isBuildingOnFull = false;
+    let builderBid: gloas.SignedExecutionPayloadBid | null = null;
+    let payloadAttestations: gloas.PayloadAttestation[] = [];
+    if (isForkPostGloas(fork)) {
+      isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, slot);
+      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+      builderBid = this.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlock.blockRoot);
+      payloadAttestations = this.payloadAttestationPool.getPayloadAttestationsForBlock(parentBlock.blockRoot, slot - 1);
+    }
+
+    const state = await this.regen.getBlockSlotState(
+      parentBlock,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
+    const proposerIndex = state.getBeaconProposer(slot);
+    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+    const prevRandao = state.getRandaoMix(state.epoch);
+
+    let parentBlockHash: Bytes32;
+    // parent execution gas limit: gloas keeps it on the bid (UintBn64 → cast), pre-gloas on the header
+    let parentGasLimit: number;
+    if (isStatePostGloas(state)) {
+      parentBlockHash = isBuildingOnFull
+        ? state.latestExecutionPayloadBid.blockHash
+        : state.latestExecutionPayloadBid.parentBlockHash;
+      parentGasLimit = Number(state.latestExecutionPayloadBid.gasLimit);
+    } else if (isStatePostBellatrix(state)) {
+      parentBlockHash = state.latestExecutionPayloadHeader.blockHash;
+      parentGasLimit = state.latestExecutionPayloadHeader.gasLimit;
+    } else {
+      parentBlockHash = ZERO_HASH; // pre-bellatrix: unused
+      parentGasLimit = 0;
+    }
+
+    // Apply the parent execution payload ONCE here (gloas, building-on-full) so the common body and the
+    // payload-attribute withdrawals are produced from the exact state the block transitions through.
+    // `getParentExecutionRequests` is only called when `isBuildingOnFull` (parent is FULL in forkChoice →
+    // its envelope is available); on build-on-empty the base state is used. Both production paths
+    // (self-build / builder-bid) agree because the builder-bid lookup is gated by `isBuildingOnFull`.
+    let parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+    let stateForProduction: IBeaconStateView = state;
+    if (isBuildingOnFull && isStatePostGloas(state)) {
+      parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
+      stateForProduction = state.withParentPayloadApplied(parentExecutionRequests);
+    }
+
+    // Payload attributes, resolved once from the production state. `prevRandao` (above) is unaffected by
+    // the parent payload, so it is reused for both the EL request and the gloas self-bid. gloas
+    // withdrawals: building-on-full → applied-state `getExpectedWithdrawals`; build-on-empty →
+    // `payloadExpectedWithdrawals` (a batch already deducted from CL balances but never delivered on the
+    // EL, which the next payload must carry to keep CL/EL consistent).
+    const timestamp = computeTimeAtSlot(this.config, state.slot, state.genesisTime);
+    let withdrawals: PayloadAttributesWithdrawals | undefined;
+    if (isStatePostGloas(stateForProduction)) {
+      withdrawals = isBuildingOnFull
+        ? stateForProduction.getExpectedWithdrawals().expectedWithdrawals
+        : stateForProduction.payloadExpectedWithdrawals;
+    } else if (isStatePostCapella(stateForProduction)) {
+      withdrawals = stateForProduction.getExpectedWithdrawals().expectedWithdrawals;
+    }
+
+    // Build the common body from `stateForProduction` (its voluntaryExits / blsToExecutionChanges are
+    // already valid against the applied state — no per-path re-filter downstream). Deferred to the next
+    // event loop so the downstream EL request goes out first.
+    const commonBlockBodyPromise = new Promise<CommonBlockBody>((resolve, reject) => {
+      callInNextEventLoop(() => {
+        try {
+          resolve(
+            this.assembleCommonBlockBody(BlockType.Full, stateForProduction, {
+              slot,
+              parentBlock,
+              randaoReveal,
+              graffiti,
+            })
+          );
+        } catch (e) {
+          reject(e as Error);
+        }
+      });
+    });
+
+    return {
+      parentBlock,
+      proposerIndex,
+      proposerPubKey,
+      safeBlockHash,
+      finalizedBlockHash,
+      timestamp,
+      prevRandao,
+      parentBlockHash,
+      parentGasLimit,
+      isBuildingOnFull,
+      builderBid,
+      parentExecutionRequests,
+      payloadAttestations,
+      withdrawals,
+      commonBlockBodyPromise,
+    };
+  }
+
+  /**
+   * Produce the fork-agnostic part of a block body (attestations, slashings, exits, sync aggregate).
+   * Fetches the block-slot state internally; the result is reused across the self-build and builder-bid
+   * production paths.
+   */
+  async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
+    const {slot, parentBlock} = blockAttributes;
+    const state = await this.regen.getBlockSlotState(
+      parentBlock,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
+    return this.assembleCommonBlockBody(BlockType.Full, state, blockAttributes);
+  }
+
+  private assembleCommonBlockBody(
+    blockType: BlockType,
+    currentState: IBeaconStateView,
+    {randaoReveal, graffiti, slot, parentBlock}: BlockAttributes
+  ): CommonBlockBody {
+    const stepsMetrics =
+      blockType === BlockType.Full
+        ? this.metrics?.executionBlockProductionTimeSteps
+        : this.metrics?.builderBlockProductionTimeSteps;
+
+    const fork = this.config.getForkName(slot);
+
+    const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
+      this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
+
+    const endAttestations = stepsMetrics?.startTimer();
+    const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
+      fork,
+      this.forkChoice,
+      this.shufflingCache,
+      currentState
+    );
+    endAttestations?.({step: BlockProductionStep.attestations});
+
+    const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
+      randaoReveal,
+      graffiti,
+      // Eth1 data voting is no longer required since electra
+      eth1Data: currentState.eth1Data,
+      proposerSlashings,
+      attesterSlashings,
+      attestations,
+      // Since electra, deposits are processed by the execution layer,
+      // we no longer support handling deposits from earlier forks.
+      deposits: [],
+      voluntaryExits,
+    };
+
+    if (ForkSeq[fork] >= ForkSeq.capella) {
+      (blockBody as CommonBlockBody).blsToExecutionChanges = blsToExecutionChanges;
+    }
+
+    const endSyncAggregate = stepsMetrics?.startTimer();
+    if (ForkSeq[fork] >= ForkSeq.altair) {
+      const parentBlockRoot = fromHex(parentBlock.blockRoot);
+      const previousSlot = slot - 1;
+      const syncAggregate = this.syncContributionAndProofPool.getAggregate(previousSlot, parentBlockRoot);
+      this.metrics?.production.producedSyncAggregateParticipants.observe(
+        syncAggregate.syncCommitteeBits.getTrueBitIndexes().length
+      );
+      (blockBody as CommonBlockBody).syncAggregate = syncAggregate;
+    }
+    endSyncAggregate?.({step: BlockProductionStep.syncAggregate});
+
+    return blockBody as CommonBlockBody;
+  }
+
   // Gossip validation flows. Each method takes the message's SSZ bytes first (unused by this JS impl;
   // present for the native engine's bytes-first contract) and delegates to the validation logic in
   // `../validation/*` rebound onto the engine.
@@ -477,15 +747,41 @@ export class BeaconEngine implements IBeaconEngine {
 
   validateGossipExecutionPayloadEnvelope(
     _envelopeBytes: Uint8Array,
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    proposerIndex: ValidatorIndex,
+    bidBuilderIndex: ValidatorIndex,
+    bidBlockHashHex: RootHex,
+    bidExecutionRequestsRoot: Root
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateGossipExecutionPayloadEnvelope(this, executionPayloadEnvelope));
+    return runGossipValidation(() =>
+      validateGossipExecutionPayloadEnvelope(
+        this,
+        executionPayloadEnvelope,
+        proposerIndex,
+        bidBuilderIndex,
+        bidBlockHashHex,
+        bidExecutionRequestsRoot
+      )
+    );
   }
 
   validateApiExecutionPayloadEnvelope(
-    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope
+    executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    proposerIndex: ValidatorIndex,
+    bidBuilderIndex: ValidatorIndex,
+    bidBlockHashHex: RootHex,
+    bidExecutionRequestsRoot: Root
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateApiExecutionPayloadEnvelope(this, executionPayloadEnvelope));
+    return runGossipValidation(() =>
+      validateApiExecutionPayloadEnvelope(
+        this,
+        executionPayloadEnvelope,
+        proposerIndex,
+        bidBuilderIndex,
+        bidBlockHashHex,
+        bidExecutionRequestsRoot
+      )
+    );
   }
 
   validateGossipExecutionPayloadBid(

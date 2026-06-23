@@ -27,6 +27,7 @@ export type RegenModules = {
   forkChoice: IForkChoice;
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
+  // TODO - beacon engine: remove this, use db instead
   seenBlockInputCache: SeenBlockInput;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;

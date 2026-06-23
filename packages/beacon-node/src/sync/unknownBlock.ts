@@ -901,7 +901,11 @@ export class BlockInputSync {
         ssz.gloas.SignedExecutionPayloadEnvelope.serialize(pendingPayload.envelope);
       const validationResult = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
         envelopeBytes,
-        pendingPayload.envelope
+        pendingPayload.envelope,
+        payloadInput.proposerIndex,
+        payloadInput.getBuilderIndex(),
+        payloadInput.getBlockHashHex(),
+        payloadInput.getBid().executionRequestsRoot
       );
       if (validationResult.status !== GossipValidationStatus.Accept) {
         this.logger.debug(
@@ -1131,7 +1135,14 @@ export class BlockInputSync {
         if (!payloadInput.hasPayloadEnvelope()) {
           const envelopeBytes =
             this.chain.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
-          const res = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(envelopeBytes, envelope);
+          const res = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
+            envelopeBytes,
+            envelope,
+            payloadInput.proposerIndex,
+            payloadInput.getBuilderIndex(),
+            payloadInput.getBlockHashHex(),
+            payloadInput.getBid().executionRequestsRoot
+          );
           if (res.status !== GossipValidationStatus.Accept) {
             throw res.error ?? new Error(`Execution payload envelope validation failed: ${res.code}`);
           }

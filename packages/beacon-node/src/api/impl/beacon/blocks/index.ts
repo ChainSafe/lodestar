@@ -680,8 +680,18 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
 
-      const envelopeValidation =
-        await chain.beaconEngine.validateApiExecutionPayloadEnvelope(signedExecutionPayloadEnvelope);
+      // Facade owns the DA cache; look up the bid scalars and pass them to the engine.
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        throw new ApiError(404, `Execution payload envelope input not found for beacon block root ${blockRootHex}`);
+      }
+      const envelopeValidation = await chain.beaconEngine.validateApiExecutionPayloadEnvelope(
+        signedExecutionPayloadEnvelope,
+        payloadInput.proposerIndex,
+        payloadInput.getBuilderIndex(),
+        payloadInput.getBlockHashHex(),
+        payloadInput.getBid().executionRequestsRoot
+      );
       if (envelopeValidation.status !== GossipValidationStatus.Accept) {
         throw (
           envelopeValidation.error ??
@@ -726,14 +736,6 @@ export function getBeaconBlockApi({
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         await sleep(msToBlockSlot);
-      }
-
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-      if (!payloadInput) {
-        // The block is awaited above (queuing if the envelope arrived first), and both the API and
-        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
-        // should exist here.
-        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
       payloadInput.addPayloadEnvelope({
