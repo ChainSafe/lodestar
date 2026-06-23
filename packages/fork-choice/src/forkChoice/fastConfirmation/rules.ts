@@ -131,8 +131,7 @@ export function runFastConfirmationRules(
   // `ResetBehind` (it takes precedence), so keying off `ResetNotAncestor` alone would miss reorgs
   // that cross an epoch boundary.
   const initialConfirmedBlock = getBlock(ctx, cache, snapshot.confirmedRoot);
-  const didReorg =
-    initialConfirmedBlock !== null && !isAncestor(ctx, cache, snapshot.headRoot, snapshot.confirmedRoot);
+  const didReorg = initialConfirmedBlock !== null && !isAncestor(ctx, cache, snapshot.headRoot, snapshot.confirmedRoot);
 
   return {
     confirmedRoot: decision.confirmedRoot,
