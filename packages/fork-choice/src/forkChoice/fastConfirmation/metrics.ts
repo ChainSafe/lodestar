@@ -27,10 +27,6 @@ export function getFastConfirmationMetrics(register: MetricsRegisterExtra) {
         name: "lodestar_fast_confirmation_confirmed_epoch",
         help: "Current confirmed epoch from fast confirmation",
       }),
-      confirmedSlot: register.gauge({
-        name: "lodestar_fast_confirmation_confirmed_slot",
-        help: "Current confirmed slot from fast confirmation",
-      }),
       votesTracked: register.gauge({
         name: "lodestar_fast_confirmation_votes_tracked",
         help: "Number of checkpoint votes tracked by fast confirmation",

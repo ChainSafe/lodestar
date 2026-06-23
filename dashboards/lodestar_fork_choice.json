@@ -1540,7 +1540,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "lodestar_fast_confirmation_confirmed_slot",
+          "expr": "beacon_fast_confirmation_slot",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,

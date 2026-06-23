@@ -152,7 +152,6 @@ export class FastConfirmationRule implements IFastConfirmationRule {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
     if (confirmedBlock) {
-      this.metrics.fastConfirmation.confirmedSlot.set(confirmedBlock.slot);
       this.metrics.fastConfirmation.confirmedEpoch.set(computeEpochAtSlot(confirmedBlock.slot));
       this.metrics.fastConfirmation.slot.set(confirmedBlock.slot);
     }
