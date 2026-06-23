@@ -27,9 +27,9 @@ import {
   isBlindedBeaconBlock,
   phase0,
   rewards,
+  ssz,
 } from "@lodestar/types";
 import {Checkpoint, Fork} from "@lodestar/types/phase0";
-import {PendingDeposits, PendingPartialWithdrawals} from "../../../types/lib/electra/sszTypes.js";
 import {VoluntaryExitValidity} from "../block/processVoluntaryExit.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {EpochTransitionCacheOpts} from "../cache/epochTransitionCache.js";
@@ -816,7 +816,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   get pendingDeposits(): electra.PendingDeposits {
     if (this._pendingDeposits === null) {
       const pendingDepositsBytes = this.nativeView.pendingDeposits;
-      this._pendingDeposits = PendingDeposits.deserialize(pendingDepositsBytes);
+      this._pendingDeposits = ssz.electra.PendingDeposits.deserialize(pendingDepositsBytes);
     }
     return this._pendingDeposits;
   }
@@ -831,7 +831,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   get pendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
     if (this._pendingPartialWithdrawals === null) {
       const pendingPartialWithdrawalsBytes = this.nativeView.pendingPartialWithdrawals;
-      this._pendingPartialWithdrawals = PendingPartialWithdrawals.deserialize(pendingPartialWithdrawalsBytes);
+      this._pendingPartialWithdrawals =
+        ssz.electra.PendingPartialWithdrawals.deserialize(pendingPartialWithdrawalsBytes);
     }
     return this._pendingPartialWithdrawals;
   }
