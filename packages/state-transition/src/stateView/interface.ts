@@ -76,7 +76,6 @@ export interface IBeaconStateView {
 
   // Shuffling and committees
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling;
-  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array;
   getBeaconCommitteeCountPerSlot(epoch: Epoch): number;
   // Decision roots
   previousDecisionRoot: RootHex;
@@ -305,9 +304,6 @@ export type IBeaconStateViewNative = Omit<
   | "processSlots"
   | "withParentPayloadApplied"
   | "getIndicesInPayloadTimelinessCommittee"
-  | "getBeaconCommittee"
-  | "currentSyncCommittee"
-  | "nextSyncCommittee"
   | "pendingDeposits"
   | "pendingPartialWithdrawals"
   | "proposerLookahead"
@@ -317,8 +313,6 @@ export type IBeaconStateViewNative = Omit<
   proposerLookahead: Uint32Array;
 
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
-  currentSyncCommittee: altair.SyncCommittee;
-  nextSyncCommittee: altair.SyncCommittee;
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
   stateTransition(signedBlockBytes: Uint8Array, options?: StateTransitionOpts): IBeaconStateViewNative;
   processSlots(
