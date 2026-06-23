@@ -844,7 +844,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingConsolidations(): electra.PendingConsolidations {
     if (this._pendingConsolidations === null) {
-      this._pendingConsolidations = this.nativeView.pendingConsolidations;
+      const pendingConsolidationsBytes = this.nativeView.pendingConsolidations;
+      this._pendingConsolidations = ssz.electra.PendingConsolidations.deserialize(pendingConsolidationsBytes);
     }
     return this._pendingConsolidations;
   }

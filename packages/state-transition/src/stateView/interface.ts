@@ -308,10 +308,12 @@ export type IBeaconStateViewNative = Omit<
   | "getIndicesInPayloadTimelinessCommittee"
   | "pendingDeposits"
   | "pendingPartialWithdrawals"
+  | "pendingConsolidations"
   | "proposerLookahead"
 > & {
   pendingDeposits: Uint8Array;
   pendingPartialWithdrawals: Uint8Array;
+  pendingConsolidations: Uint8Array;
   proposerLookahead: Uint32Array;
 
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
