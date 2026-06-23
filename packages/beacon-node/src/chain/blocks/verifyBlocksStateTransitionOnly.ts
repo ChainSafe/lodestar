@@ -1,17 +1,16 @@
-import bindings from "@chainsafe/lodestar-z";
 import type {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
-  type IBeaconStateViewNative,
   NativeBeaconStateView,
   StateHashTreeRootSource,
   StateTransitionOpts,
+  createBeaconStateView,
+  createBeaconStateViewForHistoricalRegen,
   useNativeStateTransition,
 } from "@lodestar/state-transition";
-import type {SignedBeaconBlock} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
@@ -20,8 +19,6 @@ import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {IBlockInput} from "./blockInput/index.js";
 import {ImportBlockOpts} from "./types.js";
-
-type NativeBindingStateView = ReturnType<(typeof bindings.BeaconStateView)["createFromBytes"]>;
 
 /**
  * Verifies 1 or more blocks are fully valid running the full state transition; from a linear sequence of blocks.
@@ -45,8 +42,6 @@ export async function verifyBlocksStateTransitionOnly(
   const postStates: IBeaconStateView[] = [];
   const proposerBalanceDeltas: number[] = [];
   const recvToValLatency = Date.now() / 1000 - (opts.seenTimestampSec ?? Date.now() / 1000);
-  let seedValidatorsBytes: Uint8Array | null = null;
-  let nativeState: NativeBindingStateView | null = null;
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
@@ -71,23 +66,22 @@ export async function verifyBlocksStateTransitionOnly(
     };
 
     const useNativeForBlock = useNativeStateTransition && config.getForkSeq(block.message.slot) !== ForkSeq.gloas;
-    if (!useNativeForBlock && nativeState !== null) {
-      seedValidatorsBytes ??= preState0.serializeValidators();
-      preState = preState0.loadOtherState(nativeState.serialize(), seedValidatorsBytes);
-      nativeState = null;
+    if (useNativeForBlock && !(preState instanceof NativeBeaconStateView)) {
+      preState = createBeaconStateView({useNative: true, config, stateBytes: preState.serialize()});
       if (i > 0) {
         postStates[i - 1] = preState;
       }
     }
 
-    let postState: IBeaconStateView;
-    if (useNativeForBlock) {
-      const postNative = runNativeStateTransition(config, preState, block, stfOpts, nativeState);
-      nativeState = postNative;
-      postState = new NativeBeaconStateView(postNative as unknown as IBeaconStateViewNative);
-    } else {
-      postState = preState.stateTransition(block, stfOpts, {metrics, validatorMonitor});
+    // If we switch to gloas in the middle of blocks, we need to get back to TS
+    if (!useNativeForBlock && preState instanceof NativeBeaconStateView) {
+      preState = createBeaconStateViewForHistoricalRegen({useNative: false, config, stateBytes: preState.serialize()});
+      if (i > 0) {
+        postStates[i - 1] = preState;
+      }
     }
+
+    const postState = preState.stateTransition(block, stfOpts, {metrics, validatorMonitor});
 
     const hashTreeRootTimer = metrics?.stateHashTreeRootTime.startTimer({
       source: StateHashTreeRootSource.blockTransition,
@@ -137,20 +131,4 @@ export async function verifyBlocksStateTransitionOnly(
   }
 
   return {postStates, proposerBalanceDeltas, verifyStateTime};
-}
-
-function runNativeStateTransition(
-  config: BeaconConfig,
-  preState: IBeaconStateView,
-  block: SignedBeaconBlock,
-  stfOpts: StateTransitionOpts,
-  nativeState: NativeBindingStateView | null
-): NativeBindingStateView {
-  bindings.config.set(config, preState.genesisValidatorsRoot);
-  const blockBytes = config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block);
-  return bindings.stateTransition(
-    nativeState ?? bindings.BeaconStateView.createFromBytes(preState.serialize()),
-    blockBytes,
-    stfOpts
-  );
 }
