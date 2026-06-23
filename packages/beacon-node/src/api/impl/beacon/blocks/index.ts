@@ -680,7 +680,7 @@ export function getBeaconBlockApi({
           block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
         }
         if (block === null) {
-          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex} at slot ${slot}`);
+          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
         }
       }
       if (block.slot !== slot) {
