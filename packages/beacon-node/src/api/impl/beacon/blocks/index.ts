@@ -68,7 +68,7 @@ import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
-import {getBlockResponse, toBeaconHeaderResponse, waitForBlockImported} from "./utils.js";
+import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -672,18 +672,15 @@ export function getBeaconBlockApi({
       if (block === null) {
         // Only wait if the envelope is for the current slot
         if (chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
-          // Wait until the end of the slot for the block to arrive (via API or gossip)
-          const msToSlotEnd = Math.max(0, config.SLOT_DURATION_MS - chain.clock.msFromSlot(slot));
           chain.logger.debug("Execution payload envelope received before block, waiting for block to be imported", {
             blockRoot: blockRootHex,
             slot,
-            msToSlotEnd,
           });
-          await waitForBlockImported(chain, blockRootHex, msToSlotEnd);
+          await chain.waitForBlock(slot, blockRootHex);
           block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
         }
         if (block === null) {
-          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex} at slot ${slot}`);
         }
       }
       if (block.slot !== slot) {
