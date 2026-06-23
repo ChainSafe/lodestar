@@ -48,6 +48,8 @@ export type IChainOptions = BlockProcessOpts &
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
     nativeStateView?: boolean;
+    /** CHAOS (devnet test only): omit the parent slot's PTC attestations when building on the EMPTY parent variant */
+    chaosOmitPtcOnEmptyBuild?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -108,6 +110,8 @@ export const defaultChainOptions: IChainOptions = {
   fastConfirmation: false,
   // CHAOS (devnet test only): deathstar features default ON, disable with --chain.chaosAlwaysBuildOnEmpty=false
   chaosAlwaysBuildOnEmpty: true,
+  // CHAOS (devnet test only): withhold reorged slot's PTC attestations when building on empty, disable with --chain.chaosOmitPtcOnEmptyBuild=false
+  chaosOmitPtcOnEmptyBuild: true,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
