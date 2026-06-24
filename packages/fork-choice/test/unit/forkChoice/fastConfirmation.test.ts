@@ -251,8 +251,11 @@ describe("fast confirmation", () => {
     const snapshot = buildFastConfirmationSnapshot(ctx, store, cache);
     const result = runFastConfirmationRules(snapshot, ctx, store, cache);
 
+    // With the monotonicity guard the confirmed marker advances forward to the observed justified
+    // checkpoint without first resetting to finalized, so this is an advance (didReset = false), not a
+    // reset-then-readvance.
     expect(result.confirmedRoot).toBe(observed.blockRoot);
-    expect(result.didReset).toBe(true);
+    expect(result.didReset).toBe(false);
   });
 
   it("findLatestConfirmedDescendant falls back to loop 2 when previousSlotHead is on a sibling branch", () => {
@@ -374,7 +377,7 @@ describe("fast confirmation", () => {
     expect(result.didReset).toBe(true);
   });
 
-  it("runFastConfirmationRules only resets an unsafe confirmed chain at epoch start", () => {
+  it("runFastConfirmationRules keeps a still-canonical confirmed block at epoch start even when chain-safety fails (monotonicity guard)", () => {
     const confirmed = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT);
     const head = makeBlock(SLOTS_PER_EPOCH, confirmed.blockRoot);
     const nonAncestorObserved = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT, {blockRoot: rootFromNumber(4242)});
@@ -437,10 +440,13 @@ describe("fast confirmation", () => {
       createFastConfirmationCache()
     );
 
+    // Mid-epoch never runs the chain-safety check. At epoch start the check runs and fails, but the
+    // monotonicity guard keeps the confirmed block because it is still a canonical ancestor of head —
+    // it is not reset to finalized.
     expect(midEpochResult.confirmedRoot).toBe(confirmed.blockRoot);
     expect(midEpochResult.didReset).toBe(false);
-    expect(epochStartResult.confirmedRoot).toBe(ZERO_ROOT);
-    expect(epochStartResult.didReset).toBe(true);
+    expect(epochStartResult.confirmedRoot).toBe(confirmed.blockRoot);
+    expect(epochStartResult.didReset).toBe(false);
   });
 
   it("runFastConfirmationRules keeps the confirmed block when the next descendant is not one-confirmed", () => {

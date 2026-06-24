@@ -114,7 +114,7 @@ describe("fast confirmation rules", () => {
     expect(result.reason).toBe(FastConfirmationDecisionReason.ResetBehind);
   });
 
-  it("resetIfBehindOrNotAncestorOrUnsafe only enforces chain safety at epoch start", () => {
+  it("resetIfBehindOrNotAncestorOrUnsafe keeps a still-canonical confirmed block when chain-safety fails at epoch start (monotonicity guard)", () => {
     const confirmed = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT);
     const head = makeBlock(SLOTS_PER_EPOCH, confirmed.blockRoot);
     const nonAncestorObserved = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT, {blockRoot: rootFromNumber(999)});
@@ -182,8 +182,10 @@ describe("fast confirmation rules", () => {
     );
 
     expect(midEpochResult).toEqual({...BASE_DECISION, confirmedRoot: confirmed.blockRoot});
-    expect(epochStartResult.confirmedRoot).toBe(ZERO_ROOT);
-    expect(epochStartResult.didReset).toBe(true);
+    // Monotonicity guard: confirmed is still a canonical ancestor of head, so the failing chain-safety
+    // re-check at epoch start no longer resets it.
+    expect(epochStartResult.confirmedRoot).toBe(confirmed.blockRoot);
+    expect(epochStartResult.didReset).toBe(false);
   });
 
   it("advanceIfObservedJustified advances only when epoch-start preconditions hold", () => {
