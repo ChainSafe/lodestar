@@ -10,7 +10,7 @@ import {
   FastConfirmationSnapshot,
   IFastConfirmationStore,
 } from "./types.ts";
-import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.ts";
+import {findLatestConfirmedDescendant, getBlock, isAncestor} from "./utils.ts";
 
 export const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
@@ -24,14 +24,7 @@ export const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx,
   return decision;
 };
 
-export const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (
-  snapshot,
-  ctx,
-  store,
-  cache,
-  decision,
-  logger
-) => {
+export const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);
   if (!confirmedBlock) return decision;
   const confirmedEpoch = computeEpochAtSlot(confirmedBlock.slot);
@@ -52,19 +45,9 @@ export const resetIfBehindOrNotAncestorOrUnsafe: FastConfirmationRule = (
   // reverted, so it must not be released by the epoch-boundary chain-safety re-check. That re-check
   // re-derives is_one_confirmed from the live vote view, which can be transiently stale (e.g. the most
   // recent slot's attestations not yet processed at the boundary) and spuriously fail for a block that
-  // was validly confirmed and is still canonical. We still run the check so the condition is surfaced
-  // in logs, but it no longer drives a reset on its own; only an actual reorg (not an ancestor of head)
-  // or staleness (more than one epoch behind head) releases the confirmed marker.
-  if (
-    isStartSlotOfEpoch(snapshot.currentSlot) &&
-    !isConfirmedChainSafe(ctx, store, cache, decision.confirmedRoot, logger)
-  ) {
-    logger?.debug(
-      "Fast confirmation chain-safety re-check failed but confirmed block is still canonical; keeping confirmation (monotonicity guard)",
-      {confirmedRoot: decision.confirmedRoot}
-    );
-  }
-
+  // was validly confirmed and is still canonical. Only an actual reorg (not an ancestor of head) or
+  // staleness (more than one epoch behind head) releases the confirmed marker, so the expensive
+  // is_confirmed_chain_safe re-check is no longer run here (it would only drive a debug log).
   return decision;
 };
 
