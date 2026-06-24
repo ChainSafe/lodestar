@@ -147,7 +147,7 @@ export class FastConfirmationRule implements IFastConfirmationRule {
 
   private updateFastConfirmationMetrics(
     ctx: FastConfirmationContext,
-    result: Pick<FastConfirmationRunResult, "confirmedRoot" | "didReset" | "didReorg" | "didFallback" | "didRestart">
+    result: Omit<FastConfirmationRunResult, "reason">
   ): void {
     if (!this.metrics) return;
     const confirmedBlock = ctx.getBlock(result.confirmedRoot);
