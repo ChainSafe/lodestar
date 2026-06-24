@@ -1688,7 +1688,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "lodestar_fast_confirmation_resets_total",
+          "expr": "rate(lodestar_fast_confirmation_resets_total[$rate_interval])",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
