@@ -14,6 +14,8 @@ import {
   ExecutePayloadResponse,
   ExecutionEngineState,
   ExecutionPayloadStatus,
+  ForkchoiceUpdateError,
+  ForkchoiceUpdateErrorCode,
   IExecutionEngine,
   PayloadAttributes,
   PayloadId,
@@ -370,7 +372,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }) as Promise<EngineApiRpcReturnTypes[typeof method]>;
 
     const {
-      payloadStatus: {status, latestValidHash: _latestValidHash, validationError},
+      payloadStatus: {status, latestValidHash, validationError},
       payloadId,
     } = await request;
 
@@ -398,7 +400,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         return null;
 
       case ExecutionPayloadStatus.INVALID:
-        throw Error(
+        // Surface latestValidHash so the caller can invalidate the offending head and its
+        // ancestors back to (but not including) the LVH in the fork-choice tree, per Engine
+        // API spec. Without this, a CL whose fork-choice picks an invalid EL fork stays
+        // wedged: every slot re-fires the same FCU, EL keeps responding INVALID, and the
+        // tree never abandons the bad branch.
+        throw new ForkchoiceUpdateError(
+          {
+            code: ForkchoiceUpdateErrorCode.INVALID,
+            headBlockHash,
+            latestValidHash: latestValidHash ?? null,
+            validationError: validationError ?? null,
+          },
           `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
             validationError ?? ""
           }`

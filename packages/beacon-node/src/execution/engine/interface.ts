@@ -10,6 +10,7 @@ import {
 import {BlobsBundle, ExecutionPayload, ExecutionRequests, Root, RootHex, Wei, capella} from "@lodestar/types";
 import {BlobAndProof} from "@lodestar/types/deneb";
 import {BlobAndProofV2} from "@lodestar/types/fulu";
+import {LodestarError} from "@lodestar/utils";
 import {PayloadId, PayloadIdCache, WithdrawalV1} from "./payloadIdCache.js";
 import {ExecutionPayloadBody} from "./types.js";
 import {DATA} from "./utils.js";
@@ -78,6 +79,29 @@ export type ForkChoiceUpdateStatus =
   | ExecutionPayloadStatus.VALID
   | ExecutionPayloadStatus.INVALID
   | ExecutionPayloadStatus.SYNCING;
+
+/**
+ * Thrown by `notifyForkchoiceUpdate` when the EL responds with INVALID. Carries the
+ * `latestValidHash` and the `headBlockHash` we asked it to set, so the caller can
+ * invalidate the offending head + ancestors back to (but not including) the LVH in
+ * the fork-choice tree per the Engine API spec.
+ */
+export enum ForkchoiceUpdateErrorCode {
+  INVALID = "FORKCHOICE_UPDATE_ERROR_INVALID",
+}
+
+export type ForkchoiceUpdateErrorType = {
+  code: ForkchoiceUpdateErrorCode.INVALID;
+  headBlockHash: RootHex;
+  latestValidHash: RootHex | null;
+  validationError: string | null;
+};
+
+export class ForkchoiceUpdateError extends LodestarError<ForkchoiceUpdateErrorType> {}
+
+export function isForkchoiceUpdateInvalidError(e: unknown): e is ForkchoiceUpdateError {
+  return e instanceof ForkchoiceUpdateError && e.type.code === ForkchoiceUpdateErrorCode.INVALID;
+}
 
 export type PayloadAttributes = {
   timestamp: number;
