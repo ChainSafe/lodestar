@@ -1692,13 +1692,13 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Reset Total",
+          "legendFormat": "Resets",
           "range": true,
           "refId": "A",
           "useBackend": false
         }
       ],
-      "title": "Reset Total",
+      "title": "Resets",
       "type": "timeseries"
     },
     {
