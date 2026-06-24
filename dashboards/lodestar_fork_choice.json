@@ -1618,95 +1618,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 50
-      },
-      "id": 598,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "rate(lodestar_fast_confirmation_resets_total[$rate_interval])",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "Resets",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Resets",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Standard FCR counters: confirmed-block reorgs, fallbacks to finality, and restarts from the observed unrealized justified checkpoint",
+      "description": "Fast confirmation events: resets (any cause), reorgs (confirmed block became non-canonical), fallbacks to finality, and restarts from the observed unrealized justified checkpoint",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1751,8 +1663,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 55
+        "x": 12,
+        "y": 50
       },
       "id": 599,
       "options": {
@@ -1776,13 +1688,29 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
+          "expr": "rate(lodestar_fast_confirmation_resets_total[$rate_interval])",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "Resets",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
           "expr": "rate(beacon_fast_confirmation_reorgs_total[$rate_interval])",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
           "legendFormat": "Reorgs",
           "range": true,
-          "refId": "A",
+          "refId": "B",
           "useBackend": false
         },
         {
@@ -1798,7 +1726,7 @@
           "instant": false,
           "legendFormat": "Fallbacks",
           "range": true,
-          "refId": "B",
+          "refId": "C",
           "useBackend": false
         },
         {
@@ -1814,7 +1742,7 @@
           "instant": false,
           "legendFormat": "Restarts",
           "range": true,
-          "refId": "C",
+          "refId": "D",
           "useBackend": false
         }
       ],
