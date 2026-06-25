@@ -436,13 +436,20 @@ export function getEquivocationScore(
   endSlot: Slot
 ): number {
   if (startSlot > endSlot) return 0;
+
+  // Equivocators are extremely rare (none in normal operation). With none, the equivocation score is
+  // always 0, so return before building the slot-range participant set, which otherwise spans up to a
+  // full epoch of committees (~all active validators) and is rebuilt on every is_one_confirmed
+  // evaluation. This build dominates fast-confirmation cost, especially the epoch-boundary chain walk.
+  const equivocating = ctx.getEquivocatingIndices();
+  if (equivocating.size === 0) return 0;
+
   const balances = balanceSource.balances;
   const state = balanceSource.state;
   const stateEpoch = state ? computeEpochAtSlot(state.slot) : null;
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
   if (participants.size === 0) return 0;
 
-  const equivocating = ctx.getEquivocatingIndices();
   let score = 0;
   for (const i of participants) {
     if (!equivocating.has(i)) continue;

@@ -12,6 +12,7 @@ import {
   computeSafetyThreshold,
   findLatestConfirmedDescendant,
   getBlockSupportBetweenSlots,
+  getEquivocationScore,
   isConfirmedChainSafe,
   isOneConfirmed,
 } from "../../../src/forkChoice/fastConfirmation/utils.js";
@@ -158,6 +159,56 @@ describe("fast confirmation", () => {
     );
 
     expect(support).toBe(64);
+  });
+
+  it("getEquivocationScore returns 0 when there are no equivocators", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    const state = makeState(4, 32, [2 as Slot]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    // No equivocating indices, even though slot 2's committee has 4 participants -> score is 0.
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, new Map(), {epoch: 0, rootHex: ZERO_ROOT}, state);
+
+    const score = getEquivocationScore(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      {state, balances: state.effectiveBalanceIncrements},
+      2 as Slot,
+      2 as Slot
+    );
+
+    expect(score).toBe(0);
+  });
+
+  it("getEquivocationScore sums balances of equivocating validators in the slot range", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    const state = makeState(4, 32, [2 as Slot]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    // Validators 1 and 3 equivocate and are both in slot 2's committee, so each contributes its 32 balance.
+    const ctx = makeContext(
+      3 as Slot,
+      child.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state,
+      [1, 3]
+    );
+
+    const score = getEquivocationScore(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      {state, balances: state.effectiveBalanceIncrements},
+      2 as Slot,
+      2 as Slot
+    );
+
+    expect(score).toBe(64);
   });
 
   it("isConfirmedChainSafe fails when a block in the confirmed chain cannot be re-confirmed", () => {
