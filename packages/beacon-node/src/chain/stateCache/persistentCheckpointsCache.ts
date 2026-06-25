@@ -331,8 +331,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const key = toCacheKey(cpHex);
     const cacheItem = this.cache.get(key);
     this.metrics?.cpStateCache.adds.inc();
-    if (cacheItem !== undefined && isPersistedCacheItem(cacheItem)) {
-      const persistedKey = cacheItem.value;
+    // keep an existing persistedKey (persisted or reloaded-in-memory); dropping it orphans the on-disk file
+    const persistedKey = cacheItem && (isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey);
+    if (persistedKey !== undefined) {
       // was persisted to disk, set back to memory
       this.cache.set(key, {type: CacheItemType.inMemory, state, persistedKey});
       this.logger.verbose("Added checkpoint state to memory but a persisted key existed", {
