@@ -268,6 +268,9 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
+    expect(result.didReorg).toBe(false);
+    expect(result.didFallback).toBe(true);
+    expect(result.didRestart).toBe(false);
   });
 
   it("runFastConfirmationRules advances to observed justified at epoch start", () => {
@@ -304,6 +307,11 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(observed.blockRoot);
     expect(result.didReset).toBe(true);
+    expect(result.didReorg).toBe(false);
+    // Confirmation advanced forward to the observed justified checkpoint, which is a restart
+    // and not a fallback to finality even though a reset happened earlier in the pipeline
+    expect(result.didFallback).toBe(false);
+    expect(result.didRestart).toBe(true);
   });
 
   it("findLatestConfirmedDescendant falls back to loop 2 when previousSlotHead is on a sibling branch", () => {
@@ -423,6 +431,59 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
+    // Confirmed block is no longer an ancestor of head, the later descendant rule overwrites
+    // `reason` but `didReorg` must still be reported from the reset that happened earlier
+    expect(result.didReorg).toBe(true);
+    expect(result.didFallback).toBe(true);
+    expect(result.didRestart).toBe(false);
+  });
+
+  it("runFastConfirmationRules reports a reorg when the confirmed block is both epoch-behind and not an ancestor of head", () => {
+    const confirmed = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT);
+    const head = makeBlock(2 * SLOTS_PER_EPOCH, rootFromNumber(999));
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), confirmed, head];
+    const state = makeState(32, 32, [head.slot]);
+    const store = makeStore(
+      confirmed.blockRoot,
+      ZERO_ROOT,
+      ZERO_ROOT,
+      0,
+      0,
+      confirmed.blockRoot,
+      head.blockRoot,
+      state
+    );
+    const ctx = makeContext(
+      (2 * SLOTS_PER_EPOCH) as Slot,
+      head.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state
+    );
+    const snapshot = makeSnapshot(
+      (2 * SLOTS_PER_EPOCH) as Slot,
+      2,
+      head.blockRoot,
+      confirmed.blockRoot,
+      confirmed.slot,
+      0,
+      ZERO_ROOT,
+      ZERO_ROOT,
+      0,
+      ZERO_ROOT,
+      0
+    );
+
+    const result = runFastConfirmationRules(snapshot, ctx, store, createFastConfirmationCache());
+
+    expect(result.confirmedRoot).toBe(ZERO_ROOT);
+    expect(result.didReset).toBe(true);
+    // `resetIfBehindOrNotAncestorOrUnsafe` records `ResetBehind` (it takes precedence over
+    // `ResetNotAncestor`), but the reorg must still be detected from ancestry
+    expect(result.didReorg).toBe(true);
+    expect(result.didFallback).toBe(true);
+    expect(result.didRestart).toBe(false);
   });
 
   it("runFastConfirmationRules only resets an unsafe confirmed chain at epoch start", () => {
