@@ -5,7 +5,10 @@ import {DataAvailabilityStatus, IBeaconStateView, PubkeyCache} from "@lodestar/s
 import {
   BLSPubkey,
   BLSSignature,
+  BeaconBlock,
+  BlindedBeaconBlock,
   Bytes32,
+  Gwei,
   Root,
   RootHex,
   SignedAggregateAndProof,
@@ -144,6 +147,12 @@ export interface IBeaconEngine {
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlockBase(attrs: {slot: Slot; randaoReveal: BLSSignature; graffiti: Bytes32}): Promise<ProduceBlockBaseResult>;
+  // Compute the post-state root + proposer reward for a produced block.
+  computeNewStateRoot(
+    block: BeaconBlock | BlindedBeaconBlock,
+    blockBytes: Uint8Array,
+    blinded: boolean
+  ): Promise<{newStateRoot: Root; proposerReward: Gwei}>;
 
   // Gossip validation flows. The first parameter is the message's SSZ bytes (unused by the JS engine,
   // required by the native engine's bytes-first contract), followed by the deserialized object. Each

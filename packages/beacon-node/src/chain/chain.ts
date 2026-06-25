@@ -92,7 +92,6 @@ import {
 } from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
-import {computeNewStateRoot} from "./produceBlock/computeNewStateRoot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, PreparedBlockScalars, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
@@ -1010,10 +1009,6 @@ export class BeaconChain implements IBeaconChain {
     return sidecarsFinalized;
   }
 
-  async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
-    return this.beaconEngine.produceCommonBlockBody(blockAttributes);
-  }
-
   produceBlock(
     blockAttributes: BlockAttributes & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
@@ -1117,14 +1112,13 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    // TODO - beacon engine: remove this
-    const state = await this.regen.getBlockSlotState(
-      parentBlock,
-      slot,
-      {dontTransferCache: true},
-      RegenCaller.produceBlock
-    );
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    // Serialize the (zero-stateRoot) block for the bytes-first seam. The JS engine uses the POJO; the
+    // serialized bytes + `blinded` flag are for the future native engine.
+    const blinded = produceResult.type === BlockType.Blinded;
+    const blockBytes = blinded
+      ? this.config.getPostBellatrixForkTypes(slot).BlindedBeaconBlock.serialize(block as BlindedBeaconBlock)
+      : this.config.getForkTypes(slot).BeaconBlock.serialize(block as BeaconBlock);
+    const {newStateRoot, proposerReward} = await this.beaconEngine.computeNewStateRoot(block, blockBytes, blinded);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full

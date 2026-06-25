@@ -45,8 +45,10 @@ import {
   Attestation,
   BLSSignature,
   BeaconBlock,
+  BlindedBeaconBlock,
   Bytes32,
   Epoch,
+  Gwei,
   IndexedAttestation,
   Root,
   RootHex,
@@ -152,6 +154,7 @@ import {validateGossipProposerPreferences} from "../validation/proposerPreferenc
 import {validateApiSyncCommittee, validateGossipSyncCommittee} from "../validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syncCommitteeContributionAndProof.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
+import {computeNewStateRoot} from "./computeNewStateRoot.js";
 import {GossipValidationResult, fromResult, runGossipValidation} from "./gossipValidationResult.js";
 import {BeaconEngineModules, IBeaconEngine, ImportBlockResult, ProduceBlockBaseResult} from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
@@ -418,6 +421,8 @@ export class BeaconEngine implements IBeaconEngine {
    * here, so callers that need cache-only (DB-write-pending) envelopes check the cache first
    * (`chain.getParentExecutionRequests`). At `produceBlockBase` time the parent is FULL and its
    * envelope's async DB write has normally completed.
+   * TODO - beacon engine: here BeaconEngine owns the payloadEnvelope db because we need state transition for block production
+   * see if we have any down sides with this
    */
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
@@ -572,6 +577,31 @@ export class BeaconEngine implements IBeaconEngine {
       RegenCaller.produceBlock
     );
     return this.assembleCommonBlockBody(BlockType.Full, state, blockAttributes);
+  }
+
+  /**
+   * Compute the post-state root (and proposer reward) for a produced block. Resolves the parent
+   * `ProtoBlock` from `block.parentRoot` and regens the block-slot state internally (cache hit after
+   * `produceBlockBase`), so the facade passes no `BeaconState`. The JS engine uses the `block` POJO and
+   * ignores `_blockBytes` / `_blinded` (these feed the native engine's bytes-first deserialize).
+   */
+  async computeNewStateRoot(
+    block: BeaconBlock | BlindedBeaconBlock,
+    _blockBytes: Uint8Array,
+    _blinded: boolean
+  ): Promise<{newStateRoot: Root; proposerReward: Gwei}> {
+    const parentBlock = this.forkChoice.getBlockDefaultStatus(block.parentRoot);
+    if (parentBlock === null) {
+      throw Error(`Parent block not found for computeNewStateRoot root=${toRootHex(block.parentRoot)}`);
+    }
+    const state = await this.regen.getBlockSlotState(
+      parentBlock,
+      block.slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    return {newStateRoot, proposerReward};
   }
 
   private assembleCommonBlockBody(
