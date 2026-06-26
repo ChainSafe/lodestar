@@ -393,11 +393,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
           blobs,
           proofs,
         }),
-        executionRequests: serializeExecutionRequests(fork, {
-          deposits: ssz.electra.DepositRequests.defaultValue(),
-          withdrawals: ssz.electra.WithdrawalRequests.defaultValue(),
-          consolidations: ssz.electra.ConsolidationRequests.defaultValue(),
-        }),
+        executionRequests: serializeExecutionRequests(
+          fork,
+          ForkSeq[fork] >= ForkSeq.gloas
+            ? ssz.gloas.ExecutionRequests.defaultValue()
+            : ssz.electra.ExecutionRequests.defaultValue()
+        ),
       });
 
       // IF the payload is deemed VALID and the build process has begun
