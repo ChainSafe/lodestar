@@ -80,25 +80,21 @@ export const BuilderPendingPayment = new ContainerType(
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
 );
 
-// New in GLOAS:EIP8282
 export const BuilderDepositRequest = new ContainerType(
   {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    // gwei uintbn64 in spec; matches existing DepositRequest.amount convention
     amount: UintNum64,
     signature: BLSSignature,
   },
   {typeName: "BuilderDepositRequest", jsonCase: "eth2"}
 );
 
-// New in GLOAS:EIP8282
 export const BuilderDepositRequests = new ListCompositeType(
   BuilderDepositRequest,
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
 );
 
-// New in GLOAS:EIP8282
 export const BuilderExitRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
@@ -107,7 +103,6 @@ export const BuilderExitRequest = new ContainerType(
   {typeName: "BuilderExitRequest", jsonCase: "eth2"}
 );
 
-// New in GLOAS:EIP8282
 export const BuilderExitRequests = new ListCompositeType(BuilderExitRequest, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD);
 
 // New in GLOAS:EIP8282 — extends electra ExecutionRequests with builder deposits and exits
@@ -224,7 +219,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadEnvelope = new ContainerType(
   {
     payload: ExecutionPayload,
-    executionRequests: ExecutionRequests, // Modified in GLOAS:EIP8282
+    executionRequests: ExecutionRequests,
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
     parentBeaconBlockRoot: Root,
@@ -257,7 +252,7 @@ export const BeaconBlockBody = new ContainerType(
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadAttestations: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
-    parentExecutionRequests: ExecutionRequests, // New in GLOAS:EIP7732; modified in GLOAS:EIP8282
+    parentExecutionRequests: ExecutionRequests, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );

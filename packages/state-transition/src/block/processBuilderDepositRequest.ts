@@ -8,7 +8,7 @@ import {addBuilderToRegistry, findBuilderIndexByPubkey, isValidBuilderDepositSig
  * Process a builder deposit request from the execution layer: register a new builder
  * (proof-of-possession gated) or top up an existing builder's balance.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-process_builder_deposit_request
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-process_builder_deposit_request
  */
 export function processBuilderDepositRequest(
   state: CachedBeaconStateGloas,

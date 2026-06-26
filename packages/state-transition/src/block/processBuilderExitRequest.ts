@@ -15,7 +15,7 @@ import {
  * Drops the request silently if any precondition fails; the EL has already dequeued it
  * deterministically, so the fee is forfeited but `requests_hash` agreement is unaffected.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-process_builder_exit_request
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-process_builder_exit_request
  */
 export function processBuilderExitRequest(state: CachedBeaconStateGloas, request: gloas.BuilderExitRequest): void {
   const builderIndex = findBuilderIndexByPubkey(state, request.pubkey);

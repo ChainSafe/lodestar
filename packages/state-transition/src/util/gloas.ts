@@ -252,7 +252,7 @@ export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
  * Add a new builder to the builders registry. Reuses slots from exited and fully withdrawn
  * builders when available, otherwise appends.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-add_builder_to_registry
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-add_builder_to_registry
  */
 export function addBuilderToRegistry(
   state: CachedBeaconStateGloas,
@@ -296,7 +296,7 @@ export function addBuilderToRegistry(
  * The dedicated `DOMAIN_BUILDER_DEPOSIT` (vs the validator `DOMAIN_DEPOSIT`) prevents replay
  * of validator deposit signatures against the builder deposit contract and vice versa.
  *
- * Spec: https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/beacon-chain.md#new-is_valid_builder_deposit_signature
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#new-is_valid_builder_deposit_signature
  */
 export function isValidBuilderDepositSignature(
   config: BeaconConfig,
@@ -306,7 +306,6 @@ export function isValidBuilderDepositSignature(
   signature: Uint8Array
 ): boolean {
   const depositMessage = {pubkey, withdrawalCredentials, amount};
-  // fork-agnostic domain, matching validator deposit signing
   const domain = computeDomain(DOMAIN_BUILDER_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   try {

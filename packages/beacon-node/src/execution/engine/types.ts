@@ -212,8 +212,8 @@ export type WithdrawalRpc = {
  * - ssz'ed DepositRequests          (0x00)
  * - ssz'ed WithdrawalRequests       (0x01)
  * - ssz'ed ConsolidationRequests    (0x02)
- * - ssz'ed BuilderDepositRequests   (0x03, GLOAS:EIP-8282)
- * - ssz'ed BuilderExitRequests      (0x04, GLOAS:EIP-8282)
+ * - ssz'ed BuilderDepositRequests   (0x03)
+ * - ssz'ed BuilderExitRequests      (0x04)
  */
 export type ExecutionRequestsRpc = (
   | DepositRequestsRpc
@@ -564,7 +564,7 @@ function deserializeBuilderExitRequests(serialized: BuilderExitRequestsRpc): glo
  * https://github.com/ethereum/consensus-specs/blob/v1.5.0-alpha.8/specs/electra/beacon-chain.md#new-get_execution_requests_list
  *
  * Gloas extends the list with builder deposits (0x03) and builder exits (0x04) per
- * https://github.com/ethereum/consensus-specs/pull/5359 (EIP-8282).
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/beacon-chain.md#modified-get_execution_requests_list
  */
 export function serializeExecutionRequests(fork: ForkName, executionRequests: ExecutionRequests): ExecutionRequestsRpc {
   const {deposits, withdrawals, consolidations} = executionRequests;
@@ -582,41 +582,26 @@ export function serializeExecutionRequests(fork: ForkName, executionRequests: Ex
     result.push(serializeConsolidationRequests(consolidations));
   }
 
-  const gloasRequests = executionRequests as Partial<gloas.ExecutionRequests>;
+  if (ForkSeq[fork] >= ForkSeq.gloas) {
+    const {builderDeposits, builderExits} = executionRequests as gloas.ExecutionRequests;
 
-  // Builder requests (0x03/0x04) only exist post-gloas. Never emit them into a pre-gloas
-  // (newPayloadV4) request, symmetric with deserializeExecutionRequests rejecting them.
-  if (ForkSeq[fork] < ForkSeq.gloas) {
-    if (
-      (gloasRequests.builderDeposits !== undefined && gloasRequests.builderDeposits.length !== 0) ||
-      (gloasRequests.builderExits !== undefined && gloasRequests.builderExits.length !== 0)
-    ) {
-      throw Error(`Builder requests are not supported pre-gloas fork=${fork}`);
+    if (builderDeposits.length !== 0) {
+      result.push(serializeBuilderDepositRequests(builderDeposits));
     }
-    return result;
-  }
 
-  if (gloasRequests.builderDeposits !== undefined && gloasRequests.builderDeposits.length !== 0) {
-    result.push(serializeBuilderDepositRequests(gloasRequests.builderDeposits));
-  }
-
-  if (gloasRequests.builderExits !== undefined && gloasRequests.builderExits.length !== 0) {
-    result.push(serializeBuilderExitRequests(gloasRequests.builderExits));
+    if (builderExits.length !== 0) {
+      result.push(serializeBuilderExitRequests(builderExits));
+    }
   }
 
   return result;
 }
 
 export function deserializeExecutionRequests(fork: ForkName, serialized: ExecutionRequestsRpc): ExecutionRequests {
-  // Gloas-shaped result is a structural superset of electra/fulu — extra fields are dropped on
-  // assignment to fork-narrower types at the call site.
-  const result: gloas.ExecutionRequests = {
-    deposits: [],
-    withdrawals: [],
-    consolidations: [],
-    builderDeposits: [],
-    builderExits: [],
-  };
+  const result: ExecutionRequests =
+    ForkSeq[fork] >= ForkSeq.gloas
+      ? {deposits: [], withdrawals: [], consolidations: [], builderDeposits: [], builderExits: []}
+      : {deposits: [], withdrawals: [], consolidations: []};
 
   if (serialized.length === 0) {
     return result;
@@ -667,14 +652,14 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
         if (ForkSeq[fork] < ForkSeq.gloas) {
           throw Error(`Builder deposit request is not supported pre-gloas fork=${fork}`);
         }
-        result.builderDeposits = deserializeBuilderDepositRequests(requests);
+        (result as gloas.ExecutionRequests).builderDeposits = deserializeBuilderDepositRequests(requests);
         break;
       }
       case BUILDER_EXIT_REQUEST_TYPE: {
         if (ForkSeq[fork] < ForkSeq.gloas) {
           throw Error(`Builder exit request is not supported pre-gloas fork=${fork}`);
         }
-        result.builderExits = deserializeBuilderExitRequests(requests);
+        (result as gloas.ExecutionRequests).builderExits = deserializeBuilderExitRequests(requests);
         break;
       }
     }

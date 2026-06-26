@@ -91,16 +91,19 @@ describe("execution / engine / types", () => {
       expect(Number(serialized[1].substring(0, 2))).toBe(BUILDER_EXIT_REQUEST_TYPE);
     });
 
-    it("should throw if builder requests are present pre-gloas", () => {
+    it("should skip builder requests pre-gloas", () => {
       const executionRequests: gloas.ExecutionRequests = {
         deposits: [],
         withdrawals: [],
         consolidations: [],
         builderDeposits: [ssz.gloas.BuilderDepositRequest.defaultValue()],
-        builderExits: [],
+        builderExits: [ssz.gloas.BuilderExitRequest.defaultValue()],
       };
 
-      expect(() => serializeExecutionRequests(ForkName.electra, executionRequests)).toThrow();
+      // Builder requests (0x03/0x04) only exist post-gloas; pre-gloas they are not emitted
+      const serialized = serializeExecutionRequests(ForkName.electra, executionRequests);
+
+      expect(serialized.length).toBe(0);
     });
   });
 
@@ -187,6 +190,22 @@ describe("execution / engine / types", () => {
 
       // pre-gloas: builder request types must be rejected, not silently accepted
       expect(() => deserializeExecutionRequests(ForkName.electra, serialized)).toThrow();
+    });
+
+    it("should include empty builder fields when deserializing post-gloas without builder requests", () => {
+      // EL omits builder requests (no 0x03/0x04). Post-gloas result must still carry empty
+      // builderDeposits/builderExits so downstream gloas SSZ/hashTreeRoot never sees undefined.
+      const electraRequests: ExecutionRequests = {
+        deposits: [ssz.electra.DepositRequest.defaultValue()],
+        withdrawals: [ssz.electra.WithdrawalRequest.defaultValue()],
+        consolidations: [ssz.electra.ConsolidationRequest.defaultValue()],
+      };
+      const serialized = serializeExecutionRequests(ForkName.electra, electraRequests);
+
+      const deserialized = deserializeExecutionRequests(ForkName.gloas, serialized) as gloas.ExecutionRequests;
+      expect(deserialized.deposits).toEqual(electraRequests.deposits);
+      expect(deserialized.builderDeposits).toEqual([]);
+      expect(deserialized.builderExits).toEqual([]);
     });
   });
 });

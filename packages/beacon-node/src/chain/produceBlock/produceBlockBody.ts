@@ -375,8 +375,6 @@ export async function produceBlockBody<T extends BlockType>(
     // Store execution payload data required to construct execution payload envelope later
     const gloasResult = produceResult as ProduceFullGloas;
     gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
-    // EL response carries the gloas-extended ExecutionRequests (with builderDeposits/builderExits)
-    // when the fork is post-gloas; deserializer always produces the gloas shape.
     gloasResult.executionRequests = executionRequests as gloas.ExecutionRequests;
     gloasResult.blobsBundle = blobsBundle;
     gloasResult.cells = cells;

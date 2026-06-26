@@ -19,9 +19,6 @@ export enum VoluntaryExitValidity {
 /**
  * Process a VoluntaryExit operation. Initiates the exit of a validator.
  *
- * From Gloas, builder exits are handled by BuilderExitRequest on the EIP-7685 request bus
- * (EIP-8282); the voluntary-exit operation is validator-only at every fork.
- *
  * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
  */
 export function processVoluntaryExit(

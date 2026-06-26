@@ -10,8 +10,6 @@ export function processDepositRequest(
   const {pubkey, withdrawalCredentials, amount, signature} = depositRequest;
 
   if (fork === ForkSeq.electra && state.depositRequestsStartIndex === UNSET_DEPOSIT_REQUESTS_START_INDEX) {
-    // depositRequestsStartIndex is only set in Electra. From Fulu the eth1 bridge deposit
-    // mechanism was removed.
     state.depositRequestsStartIndex = depositRequest.index;
   }
 

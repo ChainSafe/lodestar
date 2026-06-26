@@ -67,12 +67,10 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
     processConsolidationRequest(state, consolidation);
   }
 
-  // [New in Gloas:EIP8282]
   for (const builderDeposit of requests.builderDeposits) {
     processBuilderDepositRequest(state, builderDeposit);
   }
 
-  // [New in Gloas:EIP8282]
   for (const builderExit of requests.builderExits) {
     processBuilderExitRequest(state, builderExit);
   }

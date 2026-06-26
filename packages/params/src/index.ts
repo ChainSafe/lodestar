@@ -148,7 +148,7 @@ export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
 export const BUILDER_WITHDRAWAL_PREFIX = 0x03;
 
-// Version for an execution payload builder
+// Builder version
 export const PAYLOAD_BUILDER_VERSION = 0;
 
 // Domain types
@@ -314,10 +314,6 @@ export const NEXT_SYNC_COMMITTEE_INDEX_ELECTRA = 23;
 export const DEPOSIT_REQUEST_TYPE = 0x00;
 export const WITHDRAWAL_REQUEST_TYPE = 0x01;
 export const CONSOLIDATION_REQUEST_TYPE = 0x02;
-// New in Gloas:EIP8282
-export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
-// New in Gloas:EIP8282
-export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
 
 export const BYTES_PER_CELL = FIELD_ELEMENTS_PER_CELL * BYTES_PER_FIELD_ELEMENT;
 
@@ -330,3 +326,5 @@ export const BUILDER_INDEX_FLAG = 2 ** 40;
 export const BUILDER_INDEX_SELF_BUILD = Infinity;
 export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
+export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
+export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
