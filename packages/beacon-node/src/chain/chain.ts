@@ -40,7 +40,6 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
-  electra,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -925,10 +924,10 @@ export class BeaconChain implements IBeaconChain {
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
-  ): Promise<electra.ExecutionRequests> {
+  ): Promise<gloas.ExecutionRequests> {
     // at the fork boundary, parent is pre-gloas
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
-      return ssz.electra.ExecutionRequests.defaultValue();
+      return ssz.gloas.ExecutionRequests.defaultValue();
     }
     const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
     if (envelope === null) {
