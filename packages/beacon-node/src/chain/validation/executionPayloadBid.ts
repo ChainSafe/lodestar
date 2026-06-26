@@ -1,4 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
+import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -136,6 +137,17 @@ async function validateExecutionPayloadBid(
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
       builderIndex: bid.builderIndex,
+    });
+  }
+
+  // [REJECT] The builder version is `PAYLOAD_BUILDER_VERSION` -- i.e.
+  // `state.builders[bid.builder_index].version == PAYLOAD_BUILDER_VERSION`.
+  if (builder.version !== PAYLOAD_BUILDER_VERSION) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION,
+      builderIndex: bid.builderIndex,
+      version: builder.version,
+      expectedVersion: PAYLOAD_BUILDER_VERSION,
     });
   }
 
