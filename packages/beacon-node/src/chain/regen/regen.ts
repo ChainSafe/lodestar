@@ -220,7 +220,6 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     }
 
     const stateTransitionTimer = this.modules.metrics?.regenGetState.stateTransition.startTimer({caller});
-
     for (const b of protoBlocksAsc) {
       const block = blocksByRoot.get(b.blockRoot);
       // just to make compiler happy, we checked in the above for loop already
