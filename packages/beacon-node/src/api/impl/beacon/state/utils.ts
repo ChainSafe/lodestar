@@ -40,6 +40,7 @@ export function resolveStateId(
   return blockSlot;
 }
 
+// TODO - beacon engine: move it over there. Do not support returning the whole IBeaconStateView.
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
   inStateId: routes.beacon.StateId

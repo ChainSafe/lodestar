@@ -28,6 +28,7 @@ export function getBeaconStateApi({
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean}> {
+    // TODO - beacon engine: this api will be dropped for BeaconEngine
     const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
 
     return {
@@ -253,7 +254,8 @@ export function getBeaconStateApi({
       }
 
       const decisionRoot = state.getShufflingDecisionRoot(epoch);
-      const shuffling = await chain.shufflingCache.get(epoch, decisionRoot);
+      // TODO - engine: should not access shufflingCache, directly. It belongs to BeaconEngine
+      const shuffling = await chain.beaconEngine.shufflingCache.get(epoch, decisionRoot);
       if (!shuffling) {
         throw new ApiError(
           500,

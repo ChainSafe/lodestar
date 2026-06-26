@@ -175,7 +175,12 @@ const fastConfirmationTest =
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
               const decisionRoot = headState.getShufflingDecisionRoot(attEpoch);
               chain.beaconEngine.forkChoice.onAttestation(
-                chain.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
+                chain.beaconEngine.shufflingCache.getIndexedAttestation(
+                  attEpoch,
+                  decisionRoot,
+                  ForkSeq[fork],
+                  attestation
+                ),
                 attDataRootHex
               );
             }

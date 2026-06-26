@@ -4,6 +4,7 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {createPubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
+import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
@@ -213,6 +214,21 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   // The gossip validators are now BeaconEngine methods that read engine collaborators. In this flat
   // mock the facade doubles as the engine, so `chain.beaconEngine.forkChoice === chain.forkChoice` etc.
   (chain as {beaconEngine: unknown}).beaconEngine = chain;
+  // Duty flows are real BeaconEngine methods; bind the real implementations (and the private helpers
+  // they call) so duty tests exercise real logic against the mock's collaborators.
+  for (const name of [
+    "getProposerDuties",
+    "getAttesterDuties",
+    "getSyncCommitteeDuties",
+    "getPtcDuties",
+    "getHeadStateAtEpoch",
+    "waitForCheckpointState",
+    "genesisBlockRoot",
+  ] as const) {
+    (chain as unknown as Record<string, unknown>)[name] = (
+      BeaconEngine.prototype as unknown as Record<string, unknown>
+    )[name];
+  }
   return chain;
 }
 

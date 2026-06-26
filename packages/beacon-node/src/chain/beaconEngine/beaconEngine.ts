@@ -24,6 +24,7 @@ import {
   GENESIS_SLOT,
   MAX_SEED_LOOKAHEAD,
   SLOTS_PER_EPOCH,
+  SLOTS_PER_HISTORICAL_ROOT,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
@@ -33,6 +34,7 @@ import {
   IBeaconStateView,
   PubkeyCache,
   RootCache,
+  calculateCommitteeAssignments,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
@@ -40,6 +42,7 @@ import {
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
+  proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -66,7 +69,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex, sleep, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
@@ -121,7 +124,7 @@ import {SeenAttestationDatas} from "../seenCache/seenAttestationData.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache, toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
-import {BlockStateCache, CheckpointStateCache} from "../stateCache/types.js";
+import {BlockStateCache, CheckpointHex, CheckpointStateCache} from "../stateCache/types.js";
 import {
   AggregateAndProofValidationResult,
   validateApiAggregateAndProof,
@@ -155,6 +158,7 @@ import {validateApiSyncCommittee, validateGossipSyncCommittee} from "../validati
 import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syncCommitteeContributionAndProof.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {computeNewStateRoot} from "./computeNewStateRoot.js";
+import {getPubkeysForIndices} from "./duties.js";
 import {GossipValidationResult, fromResult, runGossipValidation} from "./gossipValidationResult.js";
 import {BeaconEngineModules, IBeaconEngine, ImportBlockResult, ProduceBlockBaseResult} from "./interface.js";
 import {IBeaconEngineOptions} from "./options.js";
@@ -222,6 +226,8 @@ export class BeaconEngine implements IBeaconEngine {
   lightClientServer: LightClientServer | undefined;
   private readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
   private readonly emitter: ChainEventEmitter;
+  // Genesis block root is invariant; computed lazily from state for the genesis-shuffling duty fallback.
+  private cachedGenesisBlockRoot: Root | null = null;
 
   constructor(modules: BeaconEngineModules, anchorState: IBeaconStateView) {
     const {
@@ -602,6 +608,257 @@ export class BeaconEngine implements IBeaconEngine {
     );
     const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
     return {newStateRoot, proposerReward};
+  }
+
+  /**
+   * Proposer duties for `epoch`.
+   */
+  async getProposerDuties(
+    epoch: Epoch,
+    {currentEpoch, checkpointWaitTimeoutMs}: {currentEpoch: Epoch; checkpointWaitTimeoutMs?: number},
+    v2: boolean
+  ): Promise<{data: routes.validator.ProposerDuty[]; dependentRoot: Root; head: ProtoBlock}> {
+    const startSlot = computeStartSlotAtEpoch(epoch);
+    const head = this.forkChoice.getHead();
+
+    let state: IBeaconStateView | undefined;
+    if (checkpointWaitTimeoutMs !== undefined) {
+      const cpState = await this.waitForCheckpointState(
+        {rootHex: head.blockRoot, epoch: currentEpoch + 1},
+        checkpointWaitTimeoutMs
+      );
+      if (cpState) {
+        state = cpState;
+        this.metrics?.duties.requestNextEpochProposalDutiesHit.inc();
+      } else {
+        this.metrics?.duties.requestNextEpochProposalDutiesMiss.inc();
+      }
+    }
+    if (!state) {
+      if (epoch >= currentEpoch - 1) {
+        // TODO - beacon engine: not sure if we need to do this, just conform to the current unstable behavior for now
+        state = await this.getHeadStateAtEpoch(currentEpoch, RegenCaller.getDuties);
+      } else {
+        // TODO - beacon engine: currently unstable call getStateResponseWithRegen()
+        // the engine (Phase 5). Throw for now; serve it here once the engine owns the archive.
+        throw Error(`Proposer duties for past epoch ${epoch} not supported yet (engine has no archive access)`);
+      }
+    }
+
+    const stateEpoch = state.epoch;
+    let indexes: ValidatorIndex[];
+    switch (epoch) {
+      case stateEpoch:
+        indexes = state.currentProposers;
+        break;
+
+      case stateEpoch + 1:
+        // make sure shuffling is calculated and ready for the call to calculate nextProposers
+        await this.shufflingCache.get(stateEpoch + 1, state.nextDecisionRoot);
+        indexes = state.nextProposers;
+        break;
+
+      case stateEpoch - 1: {
+        const indexesPrevEpoch = state.previousProposers;
+        if (indexesPrevEpoch === null) {
+          // Should not happen as previous proposer duties should be initialized for head state
+          throw Error(`Proposer duties for previous epoch ${epoch} not yet initialized`);
+        }
+        indexes = indexesPrevEpoch;
+        break;
+      }
+
+      default:
+        throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
+    }
+
+    const pubkeys = getPubkeysForIndices(state, indexes);
+    const data: routes.validator.ProposerDuty[] = [];
+    for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+      data.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
+    }
+
+    // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
+    let dependentRoot = proposerShufflingDecisionRoot(
+      v2 ? this.config.getForkName(startSlot) : ForkName.phase0,
+      state,
+      epoch
+    );
+    const logCtx = {epoch, stateSlot: state.slot, stateEpoch, v2};
+    if (dependentRoot === null) {
+      // fallback to get_proposer_duties() v1, also in lodestar v1.43
+      this.logger.verbose("Proposer duties decision root not in state, falling back to state epoch", logCtx);
+      dependentRoot = proposerShufflingDecisionRoot(ForkName.phase0, state, stateEpoch);
+    }
+    if (dependentRoot === null) {
+      this.logger.verbose("Proposer duties decision root not in state, falling back to genesis block root", logCtx);
+      dependentRoot = this.genesisBlockRoot(state);
+    }
+    this.logger.verbose("Computed proposer duties decision root", {...logCtx, dependentRoot: toRootHex(dependentRoot)});
+
+    return {data, dependentRoot, head};
+  }
+
+  /** Attester duties for `validatorIndices` at `epoch`. State resolved at `currentEpoch` (passed-in clock). */
+  async getAttesterDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[],
+    currentEpoch: Epoch
+  ): Promise<{data: routes.validator.AttesterDuty[]; dependentRoot: Root; head: ProtoBlock}> {
+    const head = this.forkChoice.getHead();
+    const state = await this.getHeadStateAtEpoch(currentEpoch, RegenCaller.getDuties);
+
+    // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
+    const pubkeys = getPubkeysForIndices(state, indices);
+    const decisionRoot = state.getShufflingDecisionRoot(epoch);
+    const shuffling = await this.shufflingCache.get(epoch, decisionRoot);
+    if (!shuffling) {
+      throw Error(
+        `No shuffling found to calculate committee assignments for epoch: ${epoch} and decisionRoot: ${decisionRoot}`
+      );
+    }
+    const committeeAssignments = calculateCommitteeAssignments(shuffling, indices);
+    const data: routes.validator.AttesterDuty[] = [];
+    for (let i = 0, len = indices.length; i < len; i++) {
+      const validatorIndex = indices[i];
+      const duty = committeeAssignments.get(validatorIndex) as routes.validator.AttesterDuty | undefined;
+      if (duty) {
+        // Mutate existing object instead of re-creating another new object with spread operator
+        // Should be faster and require less memory
+        duty.pubkey = pubkeys[i];
+        data.push(duty);
+      }
+    }
+
+    const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || this.genesisBlockRoot(state);
+    return {data, dependentRoot, head};
+  }
+
+  /** Sync committee duties for `validatorIndices` at `epoch`. Synchronous — served from head state. */
+  getSyncCommitteeDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[]
+  ): {data: routes.validator.SyncDuty[]; head: ProtoBlock} {
+    const head = this.forkChoice.getHead();
+    const state = this.getHeadState();
+    if (!isStatePostAltair(state)) {
+      throw Error("Sync committee duties are not available before Altair");
+    }
+
+    // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
+    const pubkeys = getPubkeysForIndices(state, indices);
+    // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
+    const validatorSyncCommitteeIndexMap = state.getIndexedSyncCommitteeAtEpoch(epoch).validatorIndexMap;
+
+    const data: routes.validator.SyncDuty[] = [];
+    for (let i = 0, len = indices.length; i < len; i++) {
+      const validatorIndex = indices[i];
+      const validatorSyncCommitteeIndices = validatorSyncCommitteeIndexMap.get(validatorIndex);
+      if (validatorSyncCommitteeIndices) {
+        data.push({pubkey: pubkeys[i], validatorIndex, validatorSyncCommitteeIndices});
+      }
+    }
+
+    return {data, head};
+  }
+
+  /** gloas: PTC duties for `validatorIndices` at `epoch`. State resolved at `currentEpoch` (passed-in clock). */
+  async getPtcDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[],
+    currentEpoch: Epoch
+  ): Promise<{data: routes.validator.PtcDuty[]; dependentRoot: Root; head: ProtoBlock}> {
+    const startSlot = computeStartSlotAtEpoch(epoch);
+    const head = this.forkChoice.getHead();
+    const state = await this.getHeadStateAtEpoch(currentEpoch, RegenCaller.getDuties);
+    if (!isStatePostGloas(state)) {
+      throw Error("PTC duties are not available before Gloas");
+    }
+
+    const pubkeys = getPubkeysForIndices(state, indices);
+    const ptcs = state.getEpochPTCs(epoch);
+    const data: routes.validator.PtcDuty[] = [];
+    for (let i = 0, len = indices.length; i < len; i++) {
+      const validatorIndex = indices[i];
+      for (let j = 0; j < SLOTS_PER_EPOCH; j++) {
+        if (ptcs[j].indexOf(validatorIndex) !== -1) {
+          data.push({pubkey: pubkeys[i], validatorIndex, slot: j + startSlot});
+          break;
+        }
+      }
+    }
+
+    const dependentRoot = fromHex(state.getShufflingDecisionRoot(epoch)) || this.genesisBlockRoot(state);
+    return {data, dependentRoot, head};
+  }
+
+  /**
+   * Head state advanced to `epoch` (mirrors the former `chain.getHeadStateAtEpoch`; keeps `RegenCaller.getDuties`).
+   * No clock: the caller passes the target epoch.
+   */
+  private async getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<IBeaconStateView> {
+    // using getHeadState() means we'll use checkpointStateCache if it's available
+    const headState = this.getHeadState();
+    // head state is in the same epoch, or we pulled up head state already from past epoch
+    if (epoch <= computeEpochAtSlot(headState.slot)) {
+      // should go to this most of the time
+      return headState;
+    }
+    // only use regen queue if necessary, it'll cache in checkpointStateCache if regen gets through epoch transition
+    const head = this.forkChoice.getHead();
+    const startSlot = computeStartSlotAtEpoch(epoch);
+    return this.regen.getBlockSlotState(head, startSlot, {dontTransferCache: true}, regenCaller);
+  }
+
+  /**
+   * Wait briefly for the next-epoch checkpoint state to be computed by the prepare-next-slot scheduler so
+   * the upcoming epoch's proposer duties can be served slightly early. Regen-centric; clock-free — the
+   * `clock.waitForSlot` deadline is passed in as a relative `timeoutMs` (a plain timer, not a slot-clock).
+   */
+  private async waitForCheckpointState(cpHex: CheckpointHex, timeoutMs: number): Promise<IBeaconStateView | null> {
+    const cpState = this.regen.getCheckpointStateSync(cpHex);
+    if (cpState) {
+      return cpState;
+    }
+    const cp = {epoch: cpHex.epoch, root: fromHex(cpHex.rootHex)};
+    // if not, wait for ChainEvent.checkpoint event until the relative timeout elapses
+    let listener: ((eventCp: phase0.Checkpoint) => void) | null = null;
+    const foundCPState = await Promise.race([
+      new Promise((resolve) => {
+        listener = (eventCp) => {
+          resolve(ssz.phase0.Checkpoint.equals(eventCp, cp));
+        };
+        this.emitter.once(ChainEvent.checkpoint, listener);
+      }),
+      sleep(timeoutMs),
+    ]);
+
+    if (listener != null) {
+      this.emitter.off(ChainEvent.checkpoint, listener);
+    }
+
+    if (foundCPState === true) {
+      return this.regen.getCheckpointStateSync(cpHex);
+    }
+
+    return null;
+  }
+
+  /**
+   * Compute and cache the genesis block root from internal state (genesis-shuffling duty fallback).
+   * Drops the former DB-block read; near genesis the state-derived root is authoritative, and if it is
+   * ever unavailable returning ZERO_HASH at worst triggers a duties re-fetch.
+   */
+  private genesisBlockRoot(state: IBeaconStateView): Root {
+    if (!this.cachedGenesisBlockRoot) {
+      // Close to genesis the genesis block may not be available in the DB
+      if (state.slot === GENESIS_SLOT) {
+        this.cachedGenesisBlockRoot = state.computeAnchorCheckpoint().checkpoint.root;
+      } else if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
+        this.cachedGenesisBlockRoot = state.getBlockRootAtSlot(GENESIS_SLOT);
+      }
+    }
+    return this.cachedGenesisBlockRoot || ZERO_HASH;
   }
 
   private assembleCommonBlockBody(

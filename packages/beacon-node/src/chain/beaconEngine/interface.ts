@@ -1,3 +1,4 @@
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {BlockExecutionStatus, IForkChoice, PayloadExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
@@ -8,6 +9,7 @@ import {
   BeaconBlock,
   BlindedBeaconBlock,
   Bytes32,
+  Epoch,
   Gwei,
   Root,
   RootHex,
@@ -35,6 +37,7 @@ import {LightClientServer} from "../lightClient/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {BlockAttributes, PayloadAttributesWithdrawals} from "../produceBlock/produceBlockBody.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
+import {ShufflingCache} from "../shufflingCache.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
 import {AggregateAndProofValidationResult} from "../validation/aggregateAndProof.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
@@ -135,6 +138,9 @@ export interface IBeaconEngine {
   // perform them still live facade-side. TODO - beacon engine: narrow to a read facet as those flows
   // (gossip → Phase 3, migrateFinalized/prune → Phase 5) move into the engine.
   readonly forkChoice: IForkChoice;
+  // TODO - beacon engine: the engine owns the shuffling cache; exposed for the committees API
+  // (`getEpochCommittees`) until that read becomes an engine method.
+  readonly shufflingCache: ShufflingCache;
 
   // Block production. `produceCommonBlockBody` builds the fork-agnostic body part (reused across the
   // self-build / builder-bid paths). `produceBlockBase` computes the shared head once (proposer head,
@@ -153,6 +159,31 @@ export interface IBeaconEngine {
     blockBytes: Uint8Array,
     blinded: boolean
   ): Promise<{newStateRoot: Root; proposerReward: Gwei}>;
+
+  // Validator duties. The engine resolves state internally and returns fully-populated duties (with
+  // pubkeys) + dependentRoot; no `IBeaconStateView` crosses. Clock-derived values are passed in (the
+  // engine holds no clock): `currentEpoch` for head-state resolution, and `checkpointWaitTimeoutMs` (a
+  // relative deadline, set only near the boundary) for the proposer next-epoch checkpoint wait. The
+  // past-epoch proposer state crosses as `pastStateBytes` (facade-owned archive until the DB phase).
+  getProposerDuties(
+    epoch: Epoch,
+    timing: {currentEpoch: Epoch; checkpointWaitTimeoutMs?: number},
+    v2: boolean
+  ): Promise<{data: routes.validator.ProposerDuty[]; dependentRoot: Root; head: ProtoBlock}>;
+  getAttesterDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[],
+    currentEpoch: Epoch
+  ): Promise<{data: routes.validator.AttesterDuty[]; dependentRoot: Root; head: ProtoBlock}>;
+  getSyncCommitteeDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[]
+  ): {data: routes.validator.SyncDuty[]; head: ProtoBlock};
+  getPtcDuties(
+    epoch: Epoch,
+    indices: ValidatorIndex[],
+    currentEpoch: Epoch
+  ): Promise<{data: routes.validator.PtcDuty[]; dependentRoot: Root; head: ProtoBlock}>;
 
   // Gossip validation flows. The first parameter is the message's SSZ bytes (unused by the JS engine,
   // required by the native engine's bytes-first contract), followed by the deserialized object. Each

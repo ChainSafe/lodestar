@@ -112,7 +112,6 @@ import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
-import {ShufflingCache} from "./shufflingCache.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
 import {CPStateDatastore} from "./stateCache/datastore/types.js";
@@ -255,11 +254,6 @@ export class BeaconChain implements IBeaconChain {
   // TODO - beacon engine: remove this
   get checkpointBalancesCache(): CheckpointBalancesCache {
     return this.beaconEngine.checkpointBalancesCache;
-  }
-
-  // TODO - beacon engine: remove this
-  get shufflingCache(): ShufflingCache {
-    return this.beaconEngine.shufflingCache;
   }
 
   /**
@@ -1379,7 +1373,7 @@ export class BeaconChain implements IBeaconChain {
   private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: IBeaconStateView): void {
     // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
     callInNextEventLoop(() => {
-      this.shufflingCache.processState(state);
+      this.beaconEngine.shufflingCache.processState(state);
     });
   }
 
