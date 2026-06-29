@@ -59,6 +59,35 @@ import {
  * pass-through. Methods with arguments are pass-through too — caching them
  * would need a per-arg map and isn't worth it without a hot-path signal.
  */
+
+/**
+ * LRU cache that dedupes shuffling materialization across views.
+ *
+ * Each cached block-state is a separate `NativeBeaconStateView`, and `getXShuffling()`
+ * materializes the native `EpochShuffling` into a alrge JS object graph.
+ *
+ * With N states in the block-state cache we end up having up to 3N duplicate copies.
+ * In observed mainnet heap snapshots, each materialized shuffling was ~13MB.
+ *
+ * Use the same concept as shufflingCache.ts to cache a shuffling given (epoch, decisionRoot),
+ * avoiding storing that many copies.
+ */
+const SHARED_SHUFFLING_CACHE_MAX = 16;
+const sharedShufflingCache = new Map<string, EpochShuffling>();
+function getOrBuildSharedShuffling(epoch: Epoch, decisionRoot: RootHex, build: () => EpochShuffling): EpochShuffling {
+  const key = `${epoch}:${decisionRoot}`;
+  let shuffling = sharedShufflingCache.get(key);
+  if (shuffling === undefined) {
+    shuffling = build();
+    sharedShufflingCache.set(key, shuffling);
+    if (sharedShufflingCache.size > SHARED_SHUFFLING_CACHE_MAX) {
+      const oldest = sharedShufflingCache.keys().next().value;
+      if (oldest !== undefined) sharedShufflingCache.delete(oldest);
+    }
+  }
+  return shuffling;
+}
+
 export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // phase0
   private _forkName: ForkName | null = null;
@@ -359,21 +388,27 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   getPreviousShuffling(): EpochShuffling {
     if (this._getPreviousShuffling === null) {
-      this._getPreviousShuffling = this.binding.getPreviousShuffling();
+      this._getPreviousShuffling = getOrBuildSharedShuffling(this.epoch - 1, this.previousDecisionRoot, () =>
+        this.binding.getPreviousShuffling()
+      );
     }
     return this._getPreviousShuffling;
   }
 
   getCurrentShuffling(): EpochShuffling {
     if (this._getCurrentShuffling === null) {
-      this._getCurrentShuffling = this.binding.getCurrentShuffling();
+      this._getCurrentShuffling = getOrBuildSharedShuffling(this.epoch, this.currentDecisionRoot, () =>
+        this.binding.getCurrentShuffling()
+      );
     }
     return this._getCurrentShuffling;
   }
 
   getNextShuffling(): EpochShuffling {
     if (this._getNextShuffling === null) {
-      this._getNextShuffling = this.binding.getNextShuffling();
+      this._getNextShuffling = getOrBuildSharedShuffling(this.epoch + 1, this.nextDecisionRoot, () =>
+        this.binding.getNextShuffling()
+      );
     }
     return this._getNextShuffling;
   }
