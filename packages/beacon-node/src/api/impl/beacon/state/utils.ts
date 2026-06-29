@@ -1,5 +1,5 @@
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoiceRead} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
@@ -8,7 +8,7 @@ import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
 export function resolveStateId(
-  forkChoice: IForkChoice,
+  forkChoice: IForkChoiceRead,
   stateId: routes.beacon.StateId
 ): RootHex | Slot | CheckpointWithHex {
   if (stateId === "head") {
@@ -40,6 +40,7 @@ export function resolveStateId(
   return blockSlot;
 }
 
+// TODO - beacon engine: move it over there. Do not support returning the whole IBeaconStateView.
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
   inStateId: routes.beacon.StateId

@@ -34,13 +34,14 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {GossipValidationStatus} from "../../../../chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {ChainEvent} from "../../../../chain/emitter.js";
-import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
+import {BlockError, BlockErrorCode} from "../../../../chain/errors/index.js";
 import {
   BlockType,
   ProduceFullBellatrix,
@@ -48,9 +49,6 @@ import {
   ProduceFullFulu,
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
-import {validateGossipBlock} from "../../../../chain/validation/block.js";
-import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
-import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
@@ -201,31 +199,30 @@ export function getBeaconBlockApi({
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
-          try {
-            await validateGossipBlock(config, chain, signedBlock, fork);
-          } catch (error) {
-            if (error instanceof BlockGossipError) {
-              switch (error.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-                case BlockErrorCode.REPEAT_PROPOSAL:
-                  // The proposer already produced a block for this slot. For a solo setup this is a
-                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
-                  // expected on every block where another node published first.
-                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
-                  return;
-              }
+          // TODO - engine: get block bytes from upstream
+          const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock);
+          const res = await chain.beaconEngine.validateGossipBlock(blockBytes, signedBlock, fork);
+          if (res.status !== GossipValidationStatus.Accept) {
+            switch (res.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+                // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+                chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                return;
+              case BlockErrorCode.REPEAT_PROPOSAL:
+                // The proposer already produced a block for this slot. For a solo setup this is a
+                // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
+                // expected on every block where another node published first.
+                chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
+                return;
             }
 
-            chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
+            chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, res.error);
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
               "api_reject_gossip_failure"
             );
-            throw error;
+            throw res.error ?? new Error(`Gossip block validation failed during publishing: ${res.code}`);
           }
         }
         chain.logger.debug("Gossip checks validated while publishing the block", valLogMeta);
@@ -683,7 +680,24 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
 
-      await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+      // Facade owns the DA cache; look up the bid scalars and pass them to the engine.
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        throw new ApiError(404, `Execution payload envelope input not found for beacon block root ${blockRootHex}`);
+      }
+      const envelopeValidation = await chain.beaconEngine.validateApiExecutionPayloadEnvelope(
+        signedExecutionPayloadEnvelope,
+        payloadInput.proposerIndex,
+        payloadInput.getBuilderIndex(),
+        payloadInput.getBlockHashHex(),
+        payloadInput.getBid().executionRequestsRoot
+      );
+      if (envelopeValidation.status !== GossipValidationStatus.Accept) {
+        throw (
+          envelopeValidation.error ??
+          new ApiError(400, `Invalid execution payload envelope: ${envelopeValidation.code}`)
+        );
+      }
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
@@ -722,14 +736,6 @@ export function getBeaconBlockApi({
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         await sleep(msToBlockSlot);
-      }
-
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-      if (!payloadInput) {
-        // The block is awaited above (queuing if the envelope arrived first), and both the API and
-        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
-        // should exist here.
-        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
       payloadInput.addPayloadEnvelope({
@@ -833,7 +839,10 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+      const bidValidation = await chain.beaconEngine.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
+      if (bidValidation.status !== GossipValidationStatus.Accept) {
+        throw bidValidation.error ?? new ApiError(400, `Invalid execution payload bid: ${bidValidation.code}`);
+      }
 
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);

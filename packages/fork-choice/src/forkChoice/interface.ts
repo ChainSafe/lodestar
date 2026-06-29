@@ -80,8 +80,15 @@ export type ShouldOverrideForkChoiceUpdateResult =
   | {shouldOverrideFcu: true; parentBlock: ProtoBlock}
   | {shouldOverrideFcu: false; reason: NotReorgedReason};
 
-export interface IForkChoice {
-  irrecoverableError?: Error;
+/**
+ * Read-only facet of the fork choice. Consumers that only query the fork-choice DAG (head, blocks,
+ * checkpoints, ancestry, PTC votes, …) depend on this; the mutating methods live on `IForkChoice`.
+ * Part of the BeaconEngine seam — `chain.forkChoice` is typed as `IForkChoiceRead`; writes go
+ * through the engine.
+ * TODO - beacon engine: refine this. Cannot support iterate methods.
+ */
+export interface IForkChoiceRead {
+  readonly irrecoverableError?: Error;
 
   /**
    * Returns the ancestor node of `block_root` at the given `slot`. (Note: `slot` refers
@@ -109,11 +116,6 @@ export interface IForkChoice {
   getHead(): ProtoBlock;
   getConfirmedRoot(): RootHex;
   getConfirmedBlock(): ProtoBlock | null;
-  updateAndGetHead(mode: UpdateAndGetHeadOpt): {
-    head: ProtoBlock;
-    isHeadTimely?: boolean;
-    notReorgedReason?: NotReorgedReason;
-  };
   /**
    * This is called during block import when proposerBoostReorg is enabled
    * fcu call in `importBlock()` will be suppressed if this returns true. It is also
@@ -138,6 +140,131 @@ export interface IForkChoice {
   getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
   getProposerBoostRoot(): RootHex;
   getPreviousProposerBoostRoot(): RootHex;
+
+  /**
+   * Returns current time slot.
+   */
+  getTime(): Slot;
+  /**
+   * Returns `true` if the block is known **and** a descendant of the finalized root.
+   */
+  hasBlock(blockRoot: Root): boolean;
+  hasBlockHex(blockRoot: RootHex): boolean;
+  /**
+   * Same to hasBlock, but without checking if the block is a descendant of the finalized root.
+   */
+  hasBlockUnsafe(blockRoot: Root): boolean;
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean;
+  /**
+   * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
+   * without checking if the block is a descendant of the finalized root.
+   */
+  hasPayloadUnsafe(blockRoot: Root): boolean;
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
+  getSlotsPresent(windowStart: number): number;
+  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null;
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+
+  /**
+   * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
+   */
+  getBlock(blockRoot: Root, payloadStatus: PayloadStatus): ProtoBlock | null;
+  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null;
+  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
+  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
+  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
+  shouldExtendPayload(blockRoot: RootHex): boolean;
+  /** Spec: should_build_on_full(store, head) */
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
+  getFinalizedBlock(): ProtoBlock;
+  getJustifiedBlock(): ProtoBlock;
+  getFinalizedCheckpointSlot(): Slot;
+  /**
+   * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
+   *
+   * Always returns `false` if either input roots are unknown.
+   * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
+   */
+  isDescendant(
+    ancestorRoot: RootHex,
+    ancestorPayloadStatus: PayloadStatus,
+    descendantRoot: RootHex,
+    descendantPayloadStatus: PayloadStatus
+  ): boolean;
+  /**
+   * Iterates backwards through ancestor block summaries, starting from a block root
+   */
+  iterateAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
+  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
+  /**
+   * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
+   */
+  getAllNonAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
+  /**
+   * Returns both ancestor and non-ancestor blocks in a single traversal.
+   *
+   * `ancestors` is the raw walk and includes the previous finalized block as its last element —
+   * callers that don't want the boundary should slice it off themselves.
+   */
+  getAllAncestorAndNonAncestorBlocks(
+    blockRoot: RootHex,
+    payloadStatus: PayloadStatus
+  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
+  /**
+   * Same as `getAllAncestorAndNonAncestorBlocks` but resolves the default payload-status variant
+   * (FULL pre-Gloas, PENDING for Gloas) for the given root. Use when the caller holds a
+   * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
+   */
+  getAllAncestorAndNonAncestorBlocksDefaultStatus(blockRoot: RootHex): {
+    ancestors: ProtoBlock[];
+    nonAncestors: ProtoBlock[];
+  };
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
+  getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
+  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
+  /**
+   * Returns all ProtoBlock known to fork-choice. Must not mutated the returned array
+   */
+  forwarditerateAncestorBlocks(): ProtoBlock[];
+  /**
+   * Iterates forward descendants of blockRoot. Does not yield blockRoot itself
+   */
+  forwardIterateDescendants(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
+  /**
+   * Same as `forwardIterateDescendants` but resolves the default payload-status variant
+   * (FULL pre-Gloas, PENDING for Gloas) for the given root. Use when the caller holds a
+   * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
+   */
+  forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
+  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
+  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
+  /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
+  getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
+  /**
+   * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
+   */
+  getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
+}
+
+/**
+ * Full fork choice contract — the read facet plus the mutating methods. Writes are internal to the
+ * BeaconEngine; only the engine (and, transitionally, the flows not yet moved into it) hold this.
+ */
+export interface IForkChoice extends IForkChoiceRead {
+  irrecoverableError?: Error;
+
+  updateAndGetHead(mode: UpdateAndGetHeadOpt): {
+    head: ProtoBlock;
+    isHeadTimely?: boolean;
+    notReorgedReason?: NotReorgedReason;
+  };
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -230,125 +357,13 @@ export interface IForkChoice {
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
   updateTime(currentSlot: Slot): void;
-
-  /**
-   * Returns current time slot.
-   */
-  getTime(): Slot;
-  /**
-   * Returns `true` if the block is known **and** a descendant of the finalized root.
-   */
-  hasBlock(blockRoot: Root): boolean;
-  hasBlockHex(blockRoot: RootHex): boolean;
-  /**
-   * Same to hasBlock, but without checking if the block is a descendant of the finalized root.
-   */
-  hasBlockUnsafe(blockRoot: Root): boolean;
-  hasBlockHexUnsafe(blockRoot: RootHex): boolean;
-  /**
-   * Returns true if the FULL payload variant (execution payload envelope) exists for this block root,
-   * without checking if the block is a descendant of the finalized root.
-   */
-  hasPayloadUnsafe(blockRoot: Root): boolean;
-  hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
-  getSlotsPresent(windowStart: number): number;
-  getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
-  /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
-  getPTCVoteCounts(blockRootHex: RootHex): {
-    attesterCount: number;
-    payloadPresentCount: number;
-    dataAvailableCount: number;
-  } | null;
-  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null;
-  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
-
-  /**
-   * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
-   */
-  getBlock(blockRoot: Root, payloadStatus: PayloadStatus): ProtoBlock | null;
-  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null;
-  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
-  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
-  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
-  shouldExtendPayload(blockRoot: RootHex): boolean;
-  /** Spec: should_build_on_full(store, head) */
-  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
-  getFinalizedBlock(): ProtoBlock;
-  getJustifiedBlock(): ProtoBlock;
-  getFinalizedCheckpointSlot(): Slot;
-  /**
-   * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
-   *
-   * Always returns `false` if either input roots are unknown.
-   * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
-   */
-  isDescendant(
-    ancestorRoot: RootHex,
-    ancestorPayloadStatus: PayloadStatus,
-    descendantRoot: RootHex,
-    descendantPayloadStatus: PayloadStatus
-  ): boolean;
   /**
    * Prune items up to a finalized root.
    */
   prune(finalizedRoot: RootHex): ProtoBlock[];
   setPruneThreshold(threshold: number): void;
   /**
-   * Iterates backwards through ancestor block summaries, starting from a block root
-   */
-  iterateAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
-  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
-  /**
-   * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
-   */
-  getAllNonAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
-  /**
-   * Returns both ancestor and non-ancestor blocks in a single traversal.
-   *
-   * `ancestors` is the raw walk and includes the previous finalized block as its last element —
-   * callers that don't want the boundary should slice it off themselves.
-   */
-  getAllAncestorAndNonAncestorBlocks(
-    blockRoot: RootHex,
-    payloadStatus: PayloadStatus
-  ): {ancestors: ProtoBlock[]; nonAncestors: ProtoBlock[]};
-  /**
-   * Same as `getAllAncestorAndNonAncestorBlocks` but resolves the default payload-status variant
-   * (FULL pre-Gloas, PENDING for Gloas) for the given root. Use when the caller holds a
-   * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
-   */
-  getAllAncestorAndNonAncestorBlocksDefaultStatus(blockRoot: RootHex): {
-    ancestors: ProtoBlock[];
-    nonAncestors: ProtoBlock[];
-  };
-  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
-  getCanonicalBlockAtSlot(slot: Slot): ProtoBlock | null;
-  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
-  /**
-   * Returns all ProtoBlock known to fork-choice. Must not mutated the returned array
-   */
-  forwarditerateAncestorBlocks(): ProtoBlock[];
-  /**
-   * Iterates forward descendants of blockRoot. Does not yield blockRoot itself
-   */
-  forwardIterateDescendants(blockRoot: RootHex, payloadStatus: PayloadStatus): IterableIterator<ProtoBlock>;
-  /**
-   * Same as `forwardIterateDescendants` but resolves the default payload-status variant
-   * (FULL pre-Gloas, PENDING for Gloas) for the given root. Use when the caller holds a
-   * `CheckpointWithHex` / finalized root without a specific payload-status variant in mind.
-   */
-  forwardIterateDescendantsDefaultStatus(blockRoot: RootHex): IterableIterator<ProtoBlock>;
-  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
-  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
-  /** Returns the distance of common ancestor of nodes to the max of the newNode and the prevNode. */
-  getCommonAncestorDepth(prevBlock: ProtoBlock, newBlock: ProtoBlock): AncestorResult;
-  /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
   validateLatestHash(execResponse: LVHExecResponse): void;
-
-  /**
-   * A dependent root is the block root of the last block before the state transition that decided a specific shuffling
-   */
-  getDependentRoot(block: ProtoBlock, atEpochDiff: EpochDifference): RootHex;
 }

@@ -25,6 +25,7 @@ export {
   type CheckpointWithTotalBalance,
   EpochDifference,
   type IForkChoice,
+  type IForkChoiceRead,
   NotReorgedReason,
 } from "./forkChoice/interface.js";
 export * from "./forkChoice/safeBlocks.js";

@@ -1,9 +1,12 @@
 import {routes} from "@lodestar/api";
 import {ATTESTATION_SUBNET_COUNT} from "@lodestar/params";
-import {IBeaconStateView, computeSlotsSinceEpochStart} from "@lodestar/state-transition";
-import {BLSPubkey, CommitteeIndex, ProducedBlockSource, Slot, SubnetID, ValidatorIndex} from "@lodestar/types";
+import {computeSlotsSinceEpochStart} from "@lodestar/state-transition";
+import {CommitteeIndex, ProducedBlockSource, Slot, SubnetID} from "@lodestar/types";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
 import {BlockSelectionResult, BuilderBlockSelectionReason, EngineBlockSelectionReason} from "./index.js";
+
+// Pubkey precompute lives with the duty flows in the engine now; re-exported here for existing callers/tests.
+export {getPubkeysForIndices} from "../../../chain/beaconEngine/duties.js";
 
 export function computeSubnetForCommitteesAtSlot(
   slot: Slot,
@@ -13,33 +16,6 @@ export function computeSubnetForCommitteesAtSlot(
   const slotsSinceEpochStart = computeSlotsSinceEpochStart(slot);
   const committeesSinceEpochStart = committeesAtSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
-}
-
-/**
- * Precompute all pubkeys for given `validatorIndices`. Ensures that all `validatorIndices` are known
- * before doing other expensive logic.
- *
- * Uses special BranchNodeStruct state.validators data structure to optimize getting pubkeys.
- * Type-unsafe: assumes state.validators[i] is of BranchNodeStruct type.
- * Note: This is the fastest way of getting compressed pubkeys.
- *       See benchmark -> packages/beacon-node/test/perf/api/impl/validator/attester.test.ts
- */
-export function getPubkeysForIndices(state: IBeaconStateView, indexes: ValidatorIndex[]): BLSPubkey[] {
-  const validatorsLen = state.validatorCount; // Get once, it's expensive
-
-  const pubkeys: BLSPubkey[] = [];
-  for (let i = 0, len = indexes.length; i < len; i++) {
-    const index = indexes[i];
-    if (index >= validatorsLen) {
-      throw Error(`validatorIndex ${index} too high. Current validator count ${validatorsLen}`);
-    }
-
-    // NOTE: This could be optimized further by traversing the tree optimally with .getNodes()
-    const validator = state.getValidator(index);
-    pubkeys.push(validator.pubkey);
-  }
-
-  return pubkeys;
 }
 
 export function selectBlockProductionSource({

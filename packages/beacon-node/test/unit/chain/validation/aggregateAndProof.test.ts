@@ -3,6 +3,7 @@ import {BitArray, toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {phase0, ssz} from "@lodestar/types";
+import type {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
@@ -40,7 +41,7 @@ describe("chain / validation / aggregateAndProof", () => {
     const {chain, signedAggregateAndProof} = getValidData({});
 
     const fork = chain.config.getForkName(stateSlot);
-    await validateApiAggregateAndProof(fork, chain, signedAggregateAndProof);
+    await validateApiAggregateAndProof(fork, chain.beaconEngine as BeaconEngine, signedAggregateAndProof);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -186,7 +187,12 @@ describe("chain / validation / aggregateAndProof", () => {
     const fork = chain.config.getForkName(stateSlot);
     const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
     await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(fork, chain, signedAggregateAndProof, serializedData),
+      validateGossipAggregateAndProof(
+        fork,
+        chain.beaconEngine as BeaconEngine,
+        signedAggregateAndProof,
+        serializedData
+      ),
       errorCode
     );
   }

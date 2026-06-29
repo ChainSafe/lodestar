@@ -2,16 +2,13 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {afterAll, beforeAll, bench, describe} from "@chainsafe/benchmark";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {BeaconStateView, CachedBeaconStateElectra} from "@lodestar/state-transition";
+import {BeaconStateView, CachedBeaconStateElectra, computeTimeAtSlot} from "@lodestar/state-transition";
 import {generatePerfTestCachedStateElectra} from "@lodestar/state-transition/test-utils";
+import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {defaultOptions as defaultValidatorOptions} from "@lodestar/validator";
 import {BeaconChain} from "../../../../src/chain/index.js";
-import {
-  BlockType,
-  produceBlockBody,
-  produceCommonBlockBody,
-} from "../../../../src/chain/produceBlock/produceBlockBody.js";
+import {BlockType, produceBlockBody} from "../../../../src/chain/produceBlock/produceBlockBody.js";
 import {getExecutionEngineFromBackend} from "../../../../src/execution/engine/index.js";
 import {ExecutionEngineMockBackend} from "../../../../src/execution/engine/mock.js";
 import {ArchiveMode, BeaconDb} from "../../../../src/index.js";
@@ -93,14 +90,18 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
-      const commonBlockBodyPromise = produceCommonBlockBody.call(chain, BlockType.Full, state, {
+      const commonBlockBodyPromise = chain.beaconEngine.produceCommonBlockBody({
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
         parentBlock: head,
       });
 
-      await produceBlockBody.call(chain, BlockType.Full, state, {
+      // Scalars normally precomputed by produceBlockBase; mirror the genesis exec hash so the EL mock
+      // (headBlockHash/finalizedBlockHash ∈ validBlocks) accepts the forkchoice update.
+      const parentBlockHash = state.latestExecutionPayloadHeader.blockHash;
+      const parentHashHex = toRootHex(parentBlockHash);
+      await produceBlockBody.call(chain, BlockType.Full, {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
@@ -108,6 +109,16 @@ describe("produceBlockBody", () => {
         proposerIndex,
         proposerPubKey,
         commonBlockBodyPromise,
+        safeBlockHash: parentHashHex,
+        finalizedBlockHash: parentHashHex,
+        timestamp: computeTimeAtSlot(chain.config, slot + 1, state.genesisTime),
+        prevRandao: state.getRandaoMix(state.epoch),
+        parentBlockHash,
+        parentGasLimit: state.latestExecutionPayloadHeader.gasLimit,
+        isBuildingOnFull: false,
+        parentExecutionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
+        payloadAttestations: [],
+        withdrawals: state.getExpectedWithdrawals().expectedWithdrawals,
       });
     },
   });

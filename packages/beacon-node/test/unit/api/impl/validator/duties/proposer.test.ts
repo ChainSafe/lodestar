@@ -33,7 +33,7 @@ describe("get proposers api impl", () => {
 
     initializeState(currentSlot);
 
-    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(new BeaconStateView(cachedState));
+    modules.chain.getHeadState.mockReturnValue(new BeaconStateView(cachedState));
     modules.forkChoice.getHead.mockReturnValue(zeroProtoBlock);
     modules.forkChoice.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
     modules.db.block.get.mockResolvedValue({message: {stateRoot: Buffer.alloc(32)}} as any);
@@ -125,7 +125,8 @@ describe("get proposers api impl", () => {
   it("should get v1 proposers for next epoch from a mid-epoch head state", async () => {
     vi.advanceTimersByTime(15 * config.SLOT_DURATION_MS);
     initializeState(currentSlot + 15);
-    modules.chain.getHeadStateAtCurrentEpoch.mockResolvedValue(new BeaconStateView(cachedState));
+    // engine resolves duty state via getHeadStateAtEpoch -> getHeadState (sync)
+    modules.chain.getHeadState.mockReturnValue(new BeaconStateView(cachedState));
 
     const v1 = (await api.getProposerDuties({epoch: currentEpoch + 1})) as {meta: {dependentRoot: string}};
 
@@ -133,24 +134,14 @@ describe("get proposers api impl", () => {
     expect(v1.meta.dependentRoot).toBe(expected);
   });
 
-  it("should get proposers for historical epoch", async () => {
+  // TODO - beacon engine: historical proposer duties (epochs < currentEpoch - 1) are temporarily
+  // unsupported — the engine has no archive access until the states/archive DB moves into it (Phase 5).
+  // Restore serving + this assertion then.
+  it("should throw for historical epoch (no engine archive access yet)", async () => {
     const historicalEpoch = currentEpoch - 2;
     initializeState(currentSlot - 2 * SLOTS_PER_EPOCH + 1);
-    modules.chain.getStateBySlot.mockResolvedValue({
-      state: new BeaconStateView(cachedState),
-      executionOptimistic: false,
-      finalized: true,
-    });
 
-    const {data: result} = (await api.getProposerDutiesV2({epoch: historicalEpoch})) as {
-      data: routes.validator.ProposerDutyList;
-    };
-
-    expect(result.length).toBe(SLOTS_PER_EPOCH);
-    // Spy won't be called as `getProposerDuties` will create a new cached beacon state
-    expect(result.map((p) => p.slot)).toEqual(
-      Array.from({length: SLOTS_PER_EPOCH}, (_, i) => historicalEpoch * SLOTS_PER_EPOCH + i)
-    );
+    await expect(api.getProposerDutiesV2({epoch: historicalEpoch})).rejects.toThrow("not supported yet");
   });
 
   it("should raise error for more than one epoch in the future", async () => {

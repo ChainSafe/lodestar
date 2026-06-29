@@ -4,6 +4,7 @@ import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {createPubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
+import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
@@ -161,6 +162,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       shufflingCache: new ShufflingCache(),
       pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
+      produceBlockBase: vi.fn(),
       getProposerHead: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
@@ -204,11 +206,37 @@ export type MockedBeaconChainOptions = {
 export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): MockedBeaconChain {
   const {clock, genesisTime, config} = opts ?? {};
   // @ts-expect-error
-  return new BeaconChain({
+  const chain = new BeaconChain({
     clock: clock ?? "fake",
     genesisTime: genesisTime ?? 0,
     config: config ?? defaultConfig,
   }) as MockedBeaconChain;
+  // The gossip validators are now BeaconEngine methods that read engine collaborators. In this flat
+  // mock the facade doubles as the engine, so `chain.beaconEngine.forkChoice === chain.forkChoice` etc.
+  (chain as {beaconEngine: unknown}).beaconEngine = chain;
+  // Duty flows are real BeaconEngine methods; bind the real implementations (and the private helpers
+  // they call) so duty tests exercise real logic against the mock's collaborators.
+  // `prepareForNextSlot` is a real BeaconEngine method too; `recomputeForkChoiceHead` / `predictProposerHead`
+  // stay as mock fns above so tests can control head selection.
+  for (const name of [
+    "getProposerDuties",
+    "getAttesterDuties",
+    "getSyncCommitteeDuties",
+    "getPtcDuties",
+    "getHeadStateAtEpoch",
+    "waitForCheckpointState",
+    "genesisBlockRoot",
+    "prepareForNextSlot",
+    "computeStateHashTreeRoot",
+    "resolvePayloadAttributesInput",
+    "getPayloadAttributesForSSE",
+    "getProposerTargetGasLimit",
+  ] as const) {
+    (chain as unknown as Record<string, unknown>)[name] = (
+      BeaconEngine.prototype as unknown as Record<string, unknown>
+    )[name];
+  }
+  return chain;
 }
 
 export type MockedForkChoice = Mocked<ForkChoice>;

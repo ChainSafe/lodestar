@@ -1,7 +1,7 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {EpochShuffling, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {CheckpointWithHex, IForkChoiceRead, ProtoBlock} from "@lodestar/fork-choice";
+import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -31,6 +31,7 @@ import {CustodyConfig} from "../util/dataColumns.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
+import {IBeaconEngine} from "./beaconEngine/index.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
@@ -69,7 +70,6 @@ import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
 import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
-import {ShufflingCache} from "./shufflingCache.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 export {BlockType, type AssembledBlockType};
@@ -107,8 +107,9 @@ export interface IBeaconChain {
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
 
+  readonly beaconEngine: IBeaconEngine;
   readonly bls: IBlsVerifier;
-  readonly forkChoice: IForkChoice;
+  readonly forkChoice: IForkChoiceRead;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: IStateRegenerator;
@@ -148,7 +149,6 @@ export interface IBeaconChain {
 
   readonly blockProductionCache: Map<RootHex, ProduceResult>;
 
-  readonly shufflingCache: ShufflingCache;
   readonly blacklistedBlocks: Map<RootHex, Slot | null>;
   // Cache for serialized objects
   readonly serializedCache: SerializedCache;
@@ -173,6 +173,7 @@ export interface IBeaconChain {
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
+  // TODO - beacon engine: remove getHeadState*
   getHeadState(): IBeaconStateView;
   getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView>;
   getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<IBeaconStateView>;
@@ -237,7 +238,6 @@ export interface IBeaconChain {
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
   getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
 
-  produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
     block: BeaconBlock;
     executionPayloadValue: Wei;
@@ -284,12 +284,6 @@ export interface IBeaconChain {
   ): Promise<void>;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
-  regenStateForAttestationVerification(
-    attEpoch: Epoch,
-    shufflingDependentRoot: RootHex,
-    attHeadBlock: ProtoBlock,
-    regenCaller: RegenCaller
-  ): Promise<EpochShuffling>;
   updateBuilderStatus(clockSlot: Slot): void;
 
   regenCanAcceptWork(): boolean;

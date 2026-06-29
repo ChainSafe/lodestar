@@ -1,7 +1,7 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoiceRead, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
@@ -49,7 +49,7 @@ async function persistOrphanedBlock(
 export async function archiveBlocks(
   config: ChainForkConfig,
   db: IBeaconDb,
-  forkChoice: IForkChoice,
+  forkChoice: IForkChoiceRead,
   lightclientServer: LightClientServer | undefined,
   logger: Logger,
   finalizedCheckpoint: CheckpointWithHex,

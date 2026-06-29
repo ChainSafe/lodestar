@@ -3,6 +3,7 @@ import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
+import {accept} from "../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {GossipHandlerParamGeneric, GossipHandlers, GossipType} from "../../../src/network/gossip/index.js";
 import {Network} from "../../../src/network/index.js";
 import {connect, onPeerConnect} from "../../utils/network.js";
@@ -70,6 +71,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     const {netA, netB} = await mockModules({
       [GossipType.voluntary_exit]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
         onVoluntaryExit(gossipData.serializedData);
+        return accept(undefined);
       },
     });
 
@@ -109,6 +111,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
         gossipData,
       }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
         onBlsToExecutionChange(gossipData.serializedData);
+        return accept(undefined);
       },
     });
 
@@ -145,6 +148,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     const {netA, netB} = await mockModules({
       [GossipType.attester_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.attester_slashing>) => {
         onAttesterSlashingChange(gossipData.serializedData);
+        return accept(undefined);
       },
     });
 
@@ -179,6 +183,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
     const {netA, netB} = await mockModules({
       [GossipType.proposer_slashing]: async ({gossipData}: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
         onProposerSlashingChange(gossipData.serializedData);
+        return accept(undefined);
       },
     });
 
@@ -215,6 +220,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
         gossipData,
       }: GossipHandlerParamGeneric<GossipType.light_client_optimistic_update>) => {
         onLightClientOptimisticUpdate(gossipData.serializedData);
+        return accept(undefined);
       },
     });
 
@@ -254,6 +260,7 @@ function runTests({useWorker}: {useWorker: boolean}): void {
         gossipData,
       }: GossipHandlerParamGeneric<GossipType.light_client_finality_update>) => {
         onLightClientFinalityUpdate(gossipData.serializedData);
+        return accept(undefined);
       },
     });
 

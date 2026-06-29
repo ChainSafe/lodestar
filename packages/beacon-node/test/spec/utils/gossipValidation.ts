@@ -25,6 +25,10 @@ import {
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
+import {
+  GossipValidationResult,
+  GossipValidationStatus,
+} from "../../../src/chain/beaconEngine/gossipValidationResult.js";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
@@ -33,11 +37,8 @@ import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
 import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
-import {validateGossipBlock} from "../../../src/chain/validation/block.js";
 import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
 import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
-import {validateGossipSyncCommittee} from "../../../src/chain/validation/syncCommittee.js";
-import {validateSyncCommitteeGossipContributionAndProof} from "../../../src/chain/validation/syncCommitteeContributionAndProof.js";
 import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
@@ -316,7 +317,7 @@ function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, pare
     throw new Error(`Cannot invalidate ${blockRootHex}: block has no execution payload hash`);
   }
 
-  chain.forkChoice.validateLatestHash({
+  chain.beaconEngine.forkChoice.validateLatestHash({
     executionStatus: ExecutionStatus.Invalid,
     latestValidExecHash: parentBlock.executionPayloadBlockHash,
     invalidateFromParentBlockRoot: blockRootHex,
@@ -335,6 +336,16 @@ function isDescendantAtFinalizedCheckpoint(
   } catch {
     return false;
   }
+}
+
+/**
+ * Engine validate methods now return a GossipValidationResult instead of throwing. Re-throw the failure
+ * (as a GossipActionError keyed on status/code) so the surrounding throw-based test flow is preserved.
+ */
+function assertAccepted(res: GossipValidationResult<unknown>): void {
+  if (res.status === GossipValidationStatus.Accept) return;
+  const action = res.status === GossipValidationStatus.Reject ? GossipAction.REJECT : GossipAction.IGNORE;
+  throw res.error ?? new GossipActionError(action, {code: res.code});
 }
 
 function mapErrorToResult(e: unknown): "valid" | "ignore" | "reject" {
@@ -480,8 +491,8 @@ export async function runGossipValidationTest(
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
           clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
+          chain.beaconEngine.forkChoice.updateTime(slot);
+          chain.beaconEngine.forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -496,8 +507,8 @@ export async function runGossipValidationTest(
 
         if (blockEntry.payload_status === "INVALIDATED") {
           clock.setSlot(slot);
-          chain.forkChoice.updateTime(slot);
-          chain.forkChoice.onBlock(
+          chain.beaconEngine.forkChoice.updateTime(slot);
+          chain.beaconEngine.forkChoice.onBlock(
             signedBlock.message,
             postState,
             0,
@@ -512,7 +523,7 @@ export async function runGossipValidationTest(
         }
 
         clock.setSlot(slot);
-        chain.forkChoice.updateTime(slot);
+        chain.beaconEngine.forkChoice.updateTime(slot);
 
         const blockImport = BlockInputPreData.createFromBlock({
           forkName: fork,
@@ -610,7 +621,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipBlock(chain.config, chain, signedBlock, fork);
+      assertAccepted(await chain.beaconEngine.validateGossipBlock(bytes, signedBlock, fork));
       chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
       break;
     }
@@ -632,7 +643,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipAggregateAndProof(fork, chain, aggregate, bytes);
+      await validateGossipAggregateAndProof(fork, chain.beaconEngine, aggregate, bytes);
       break;
     }
 
@@ -665,7 +676,7 @@ async function validateMessageForTopic(
         subnet: Number(message.subnet_id ?? 0),
       };
 
-      const batchResult = await validateGossipAttestationsSameAttData(fork, chain, [gossipAttestation]);
+      const batchResult = await validateGossipAttestationsSameAttData(fork, chain.beaconEngine, [gossipAttestation]);
       const first = batchResult.results[0];
       if (first?.err) throw first.err;
       break;
@@ -684,7 +695,7 @@ async function validateMessageForTopic(
       await validateGossipAttesterSlashing(chain, slashing);
       // Mirror gossip handler: insert into opPool + fork choice
       chain.opPool.insertAttesterSlashing(fork, slashing);
-      chain.forkChoice.onAttesterSlashing(slashing);
+      chain.beaconEngine.forkChoice.onAttesterSlashing(slashing);
       break;
     }
 
@@ -700,7 +711,13 @@ async function validateMessageForTopic(
       const syncCommitteeMessage = rejectOnInvalidSerializedBytes(() =>
         ssz.altair.SyncCommitteeMessage.deserialize(bytes)
       );
-      await validateGossipSyncCommittee(chain, syncCommitteeMessage, Number(message.subnet_id ?? 0));
+      assertAccepted(
+        await chain.beaconEngine.validateGossipSyncCommittee(
+          bytes,
+          syncCommitteeMessage,
+          Number(message.subnet_id ?? 0)
+        )
+      );
       break;
     }
 
@@ -708,7 +725,9 @@ async function validateMessageForTopic(
       const signedContributionAndProof = rejectOnInvalidSerializedBytes(() =>
         ssz.altair.SignedContributionAndProof.deserialize(bytes)
       );
-      await validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof);
+      assertAccepted(
+        await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(bytes, signedContributionAndProof)
+      );
       break;
     }
 

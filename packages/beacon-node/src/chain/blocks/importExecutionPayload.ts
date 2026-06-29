@@ -233,7 +233,7 @@ export async function importExecutionPayload(
 
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
   const execStatus = toForkChoiceExecutionStatus(execResult.status);
-  this.forkChoice.onExecutionPayload(
+  this.beaconEngine.forkChoice.onExecutionPayload(
     blockRootHex,
     blockHashHex,
     envelope.payload.blockNumber,

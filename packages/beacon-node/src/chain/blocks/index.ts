@@ -1,3 +1,5 @@
+import {BlockExecutionStatus} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -10,7 +12,7 @@ import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
 import {importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
-import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
+import {ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "./verifyBlock.js";
 import {verifyBlocksSanityChecks} from "./verifyBlocksSanityChecks.js";
@@ -65,7 +67,7 @@ export async function processBlocks(
   }
 
   try {
-    const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, payloadEnvelopes, opts);
+    const {relevantBlocks, parentBlock} = verifyBlocksSanityChecks(this, blocks, payloadEnvelopes, opts);
 
     // No relevant blocks, skip verifyBlocksInEpoch()
     if (relevantBlocks.length === 0 || parentBlock === null) {
@@ -90,69 +92,69 @@ export async function processBlocks(
 
     // Fully verify a block to be imported immediately after. Does not produce any side-effects besides adding intermediate
     // states in the state cache through regen.
-    const {
-      postStates,
-      blockDAStatuses,
-      payloadDAStatuses,
-      proposerBalanceDeltas,
-      segmentExecStatus,
-      indexedAttestationsByBlock,
-    } = await verifyBlocksInEpoch.call(this, parentBlock, relevantBlocks, payloadEnvelopes, opts);
+    const {segmentExecStatus, blockDAStatuses, payloadDAStatuses} = await verifyBlocksInEpoch.call(
+      this,
+      parentBlock,
+      relevantBlocks,
+      payloadEnvelopes,
+      opts
+    );
 
-    // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
-    // and we need to further propagate
-    if (segmentExecStatus.execAborted !== null) {
-      if (segmentExecStatus.invalidSegmentLVH !== undefined) {
-        this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
-      }
-      throw segmentExecStatus.execAborted.execError;
-    }
-
-    const {executionStatuses} = segmentExecStatus;
-    const verifiedBlocksBySlot = new Map<Slot, FullyVerifiedBlock>();
-    for (let i = 0; i < relevantBlocks.length; i++) {
-      const block = relevantBlocks[i];
-      verifiedBlocksBySlot.set(block.getBlock().message.slot, {
-        blockInput: block,
-        postState: postStates[i],
-        parentBlockSlot: parentSlots[i],
-        executionStatus: executionStatuses[i],
-        // start supporting optimistic syncing/processing
-        dataAvailabilityStatus: blockDAStatuses[i],
-        proposerBalanceDelta: proposerBalanceDeltas[i],
-        indexedAttestations: indexedAttestationsByBlock[i],
-        // TODO: Make this param mandatory and capture in gossip
-        seenTimestampSec: opts.seenTimestampSec ?? Math.floor(Date.now() / 1000),
-      });
-    }
-
-    const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
-    if (payloadEnvelopes) {
-      for (const slot of payloadEnvelopes.keys()) slotSet.add(slot);
-    }
-    const slots = Array.from(slotSet).sort((a, b) => a - b);
-    for (const slot of slots) {
-      const fullyVerifiedBlock = verifiedBlocksBySlot.get(slot);
-      if (fullyVerifiedBlock !== undefined) {
-        // TODO: Consider batching importBlock too if it takes significant time
-        await importBlock.call(this, fullyVerifiedBlock, opts);
-      }
-
-      const payloadInput = payloadEnvelopes?.get(slot);
-      if (payloadInput?.hasPayloadEnvelope()) {
-        if (!payloadInput.isComplete()) {
-          // we validated DA before reaching this
-          throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
+    // verifyBlocksInEpoch cached the verified consensus bundles in the engine (by root). Ensure they
+    // are always evicted — on the execAborted throw below, on a mid-loop import error, and on success
+    // (importBlock deletes each as it consumes it, so the sweep is a no-op cleanup of any remainder).
+    const verifiedBlockRoots = relevantBlocks.map((b) => b.blockRootHex);
+    try {
+      // If segmentExecStatus has lvhForkchoice then, the entire segment should be invalid
+      // and we need to further propagate
+      if (segmentExecStatus.execAborted !== null) {
+        if (segmentExecStatus.invalidSegmentLVH !== undefined) {
+          this.beaconEngine.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
         }
-        // we already awaited DA in verifyBlocksInEpoch for this segment
-        const payloadDA = payloadDAStatuses.get(slot);
-        if (payloadDA === undefined) {
-          throw new Error(`Missing payload DA status for slot ${slot}`);
-        }
-        await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
+        throw segmentExecStatus.execAborted.execError;
       }
 
-      await nextEventLoop();
+      const {executionStatuses} = segmentExecStatus;
+      const blockInputsBySlot = new Map<
+        Slot,
+        {blockInput: IBlockInput; executionStatus: BlockExecutionStatus; blockDAStatus: DataAvailabilityStatus}
+      >();
+      for (let i = 0; i < relevantBlocks.length; i++) {
+        const block = relevantBlocks[i];
+        blockInputsBySlot.set(block.getBlock().message.slot, {
+          blockInput: block,
+          executionStatus: executionStatuses[i],
+          blockDAStatus: blockDAStatuses[i],
+        });
+      }
+
+      const slotSet = new Set<Slot>(blocks.map((b) => b.getBlock().message.slot));
+      if (payloadEnvelopes) {
+        for (const slot of payloadEnvelopes.keys()) slotSet.add(slot);
+      }
+      const slots = Array.from(slotSet).sort((a, b) => a - b);
+      for (const slot of slots) {
+        const entry = blockInputsBySlot.get(slot);
+        if (entry !== undefined) {
+          await importBlock.call(this, entry.blockInput, entry.executionStatus, entry.blockDAStatus, opts);
+        }
+
+        const payloadInput = payloadEnvelopes?.get(slot);
+        if (payloadInput?.hasPayloadEnvelope()) {
+          if (!payloadInput.isComplete()) {
+            throw new Error(`Payload envelope for slot ${slot} not complete after DA verification`);
+          }
+          const payloadDA = payloadDAStatuses.get(slot);
+          if (payloadDA === undefined) {
+            throw new Error(`Missing payload DA status for slot ${slot}`);
+          }
+          await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
+        }
+
+        await nextEventLoop();
+      }
+    } finally {
+      this.beaconEngine.discardVerifiedBlocks(verifiedBlockRoots);
     }
   } catch (e) {
     if (isErrorAborted(e) || isQueueErrorAborted(e) || isBlockErrorAborted(e)) {

@@ -3,8 +3,9 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {RootHex, Slot, gloas} from "@lodestar/types";
+import {RootHex, Slot, gloas, ssz} from "@lodestar/types";
 import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
+import {GossipValidationStatus} from "../chain/beaconEngine/gossipValidationResult.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
@@ -12,7 +13,6 @@ import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";
-import {validateGossipExecutionPayloadEnvelope} from "../chain/validation/executionPayloadEnvelope.js";
 import {Metrics} from "../metrics/index.js";
 import {INetwork, NetworkEvent, NetworkEventData, prettyPrintPeerIdStr} from "../network/index.js";
 import {PeerSyncMeta} from "../network/peers/peersData.js";
@@ -896,14 +896,22 @@ export class BlockInputSync {
     }
 
     if (!payloadInput.hasPayloadEnvelope()) {
-      const validationResult = await wrapError(
-        validateGossipExecutionPayloadEnvelope(this.chain, pendingPayload.envelope)
+      const envelopeBytes =
+        this.chain.serializedCache.get(pendingPayload.envelope) ??
+        ssz.gloas.SignedExecutionPayloadEnvelope.serialize(pendingPayload.envelope);
+      const validationResult = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
+        envelopeBytes,
+        pendingPayload.envelope,
+        payloadInput.proposerIndex,
+        payloadInput.getBuilderIndex(),
+        payloadInput.getBlockHashHex(),
+        payloadInput.getBid().executionRequestsRoot
       );
-      if (validationResult.err) {
+      if (validationResult.status !== GossipValidationStatus.Accept) {
         this.logger.debug(
           "Pending payload envelope failed validation after block import, refetching by root",
           {slot: pendingPayload.envelope.message.payload.slotNumber, root: rootHex},
-          validationResult.err
+          validationResult.error
         );
 
         const pendingPayloadByRoot: PendingPayloadRootHex = {
@@ -1125,7 +1133,19 @@ export class BlockInputSync {
         }
 
         if (!payloadInput.hasPayloadEnvelope()) {
-          await validateGossipExecutionPayloadEnvelope(this.chain, envelope);
+          const envelopeBytes =
+            this.chain.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+          const res = await this.chain.beaconEngine.validateGossipExecutionPayloadEnvelope(
+            envelopeBytes,
+            envelope,
+            payloadInput.proposerIndex,
+            payloadInput.getBuilderIndex(),
+            payloadInput.getBlockHashHex(),
+            payloadInput.getBid().executionRequestsRoot
+          );
+          if (res.status !== GossipValidationStatus.Accept) {
+            throw res.error ?? new Error(`Execution payload envelope validation failed: ${res.code}`);
+          }
         }
 
         let pendingPayload = this.toPendingPayloadInput(payloadInput, cacheItem, envelope);
