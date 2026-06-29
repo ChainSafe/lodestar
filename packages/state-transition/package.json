@@ -66,8 +66,8 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
-    "@chainsafe/lodestar-z": "github:chainsafe/lodestar-z#bing/stf",
     "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/persistent-merkle-tree": "^1.2.5",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.4.0",
