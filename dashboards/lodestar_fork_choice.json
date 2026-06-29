@@ -1216,7 +1216,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Fast Confirmation Duration",
+          "legendFormat": "Duration - {{instance}}",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1281,8 +1281,11 @@
       "id": 592,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -1306,7 +1309,7 @@
           "includeNullMetadata": true,
           "instant": false,
           "interval": "",
-          "legendFormat": "{{step}}",
+          "legendFormat": "{{step}} - {{instance}}",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1320,38 +1323,57 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "",
+      "description": "Current fork choice state per instance: finalized / justified / fast-confirmed epoch, fast-confirmed slot, and head slot. One row per instance.",
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "thresholds"
           },
-          "mappings": []
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": false,
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
-        "w": 2,
+        "h": 8,
+        "w": 12,
         "x": 0,
         "y": 50
       },
-      "id": 596,
+      "id": 600,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
           "fields": "",
-          "values": false
+          "reducer": [
+            "sum"
+          ],
+          "show": false
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Instance"
+          }
+        ]
       },
       "pluginVersion": "10.4.1",
       "targets": [
@@ -1360,258 +1382,100 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "beacon_finalized_epoch",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
+          "editorMode": "code",
+          "expr": "sum by (instance) (beacon_finalized_epoch)",
+          "format": "table",
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Finalized Epoch",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": []
+          "range": false,
+          "refId": "A"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 2,
-        "x": 2,
-        "y": 50
-      },
-      "id": 595,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "beacon_current_justified_epoch",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
+          "editorMode": "code",
+          "expr": "sum by (instance) (beacon_current_justified_epoch)",
+          "format": "table",
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Justified Epoch",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": []
+          "range": false,
+          "refId": "B"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 2,
-        "x": 4,
-        "y": 50
-      },
-      "id": 593,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "lodestar_fast_confirmation_confirmed_epoch",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
+          "editorMode": "code",
+          "expr": "sum by (instance) (lodestar_fast_confirmation_confirmed_epoch)",
+          "format": "table",
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Confirmed Epoch",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": []
+          "range": false,
+          "refId": "C"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 3,
-        "x": 6,
-        "y": 50
-      },
-      "id": 594,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "beacon_fast_confirmation_slot",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
+          "editorMode": "code",
+          "expr": "sum by (instance) (beacon_fast_confirmation_slot)",
+          "format": "table",
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Confirmed Slot",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": []
+          "range": false,
+          "refId": "D"
         },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 3,
-        "x": 9,
-        "y": 50
-      },
-      "id": 597,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "beacon_head_slot",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
+          "editorMode": "code",
+          "expr": "sum by (instance) (beacon_head_slot)",
+          "format": "table",
+          "instant": true,
           "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
+          "range": false,
+          "refId": "E"
         }
       ],
-      "title": "Head Slot",
-      "type": "stat"
+      "title": "Fork Choice State",
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "includeByName": {},
+            "indexByName": {
+              "Confirmed Epoch": 3,
+              "Confirmed Slot": 4,
+              "Finalized Epoch": 1,
+              "Head Slot": 5,
+              "Justified Epoch": 2,
+              "instance": 0
+            },
+            "renameByName": {
+              "Value #A": "Finalized Epoch",
+              "Value #B": "Justified Epoch",
+              "Value #C": "Confirmed Epoch",
+              "Value #D": "Confirmed Slot",
+              "Value #E": "Head Slot",
+              "instance": "Instance"
+            }
+          }
+        }
+      ],
+      "type": "table"
     },
     {
       "datasource": {
@@ -1669,8 +1533,11 @@
       "id": 599,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
@@ -1692,7 +1559,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Resets",
+          "legendFormat": "Resets - {{instance}}",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1708,7 +1575,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Reorgs",
+          "legendFormat": "Reorgs - {{instance}}",
           "range": true,
           "refId": "B",
           "useBackend": false
@@ -1724,7 +1591,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Fallbacks",
+          "legendFormat": "Fallbacks - {{instance}}",
           "range": true,
           "refId": "C",
           "useBackend": false
@@ -1740,7 +1607,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Restarts",
+          "legendFormat": "Restarts - {{instance}}",
           "range": true,
           "refId": "D",
           "useBackend": false
