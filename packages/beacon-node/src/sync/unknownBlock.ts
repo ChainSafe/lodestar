@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
-import {RootHex, gloas} from "@lodestar/types";
+import {RootHex, Slot, gloas} from "@lodestar/types";
 import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
@@ -215,10 +215,10 @@ export class BlockInputSync {
 
   private onUnknownEnvelopeBlockRoot = (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]): void => {
     try {
-      this.addByPayloadRootHex(data.rootHex, data.peer);
+      this.addByPayloadRootHex(data.rootHex, data.peer, data.slot);
       this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_DATA});
-      this.metrics?.blockInputSync.source.inc({source: data.source});
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
+      this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling unknownEnvelopeBlockRoot event", {}, e as Error);
     }
@@ -228,8 +228,8 @@ export class BlockInputSync {
     try {
       this.addByPayloadInput(data.payloadInput, data.peer);
       this.triggerUnknownBlockSearch();
-      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_DATA});
-      this.metrics?.blockInputSync.source.inc({source: data.source});
+      this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.INCOMPLETE_PAYLOAD_ENVELOPE});
+      this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
     } catch (e) {
       this.logger.debug("Error handling incompletePayloadEnvelope event", {}, e as Error);
     }
@@ -331,7 +331,10 @@ export class BlockInputSync {
       };
       this.pendingBlocks.set(blockInput.blockRootHex, pendingBlock);
 
-      this.logger.verbose("Added blockInput to BlockInputSync.pendingBlocks", pendingBlock.blockInput.getLogMeta());
+      this.logger.verbose("Added blockInput to BlockInputSync.pendingBlocks", {
+        ...pendingBlock.blockInput.getLogMeta(),
+        delaySec: this.chain.clock.secFromSlot(blockInput.slot),
+      });
     }
 
     if (peerIdStr) {
@@ -346,13 +349,14 @@ export class BlockInputSync {
     }
   };
 
-  private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): boolean => {
+  private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr, slot?: Slot): boolean => {
     let pendingPayload = this.pendingPayloads.get(rootHex);
     let added = false;
     if (!pendingPayload) {
       pendingPayload = {
         status: PendingPayloadInputStatus.pending,
         rootHex,
+        slot,
         peerIdStrings: new Set(),
         timeAddedSec: Date.now() / 1000,
       };
@@ -360,6 +364,8 @@ export class BlockInputSync {
       added = true;
 
       this.logger.verbose("Added new payload rootHex to BlockInputSync.pendingPayloads", {
+        slot: slot ?? "unknown",
+        delaySec: slot != null ? this.chain.clock.secFromSlot(slot) : "unknown",
         root: rootHex,
         peerIdStr: peerIdStr ?? "unknown peer",
       });
@@ -392,6 +398,13 @@ export class BlockInputSync {
     }
 
     this.pendingPayloads.set(payloadInput.blockRootHex, pendingPayload);
+
+    this.logger.verbose("Added payloadInput to BlockInputSync.pendingPayloads", {
+      slot: payloadInput.slot,
+      root: payloadInput.blockRootHex,
+      delaySec: this.chain.clock.secFromSlot(payloadInput.slot),
+    });
+
     const prunedItemCount = pruneSetToMax(this.pendingPayloads, this.maxPendingBlocks);
     if (prunedItemCount > 0) {
       this.logger.verbose(`Pruned ${prunedItemCount} items from BlockInputSync.pendingPayloads`);
@@ -654,10 +667,12 @@ export class BlockInputSync {
     }
 
     const rootHex = getBlockInputSyncCacheItemRootHex(block);
+    const blockSlot = getBlockInputSyncCacheItemSlot(block);
     const logCtx = {
-      slot: getBlockInputSyncCacheItemSlot(block),
+      slot: blockSlot,
       root: rootHex,
       pendingBlocks: this.pendingBlocks.size,
+      ...(typeof blockSlot === "number" && {delaySec: this.chain.clock.secFromSlot(blockSlot)}),
     };
 
     this.logger.verbose("BlockInputSync.downloadBlock()", logCtx);
@@ -679,6 +694,7 @@ export class BlockInputSync {
       const logCtx2 = {
         ...logCtx,
         slot: blockSlot,
+        delaySec,
         parentInForkChoice,
       };
       this.logger.verbose("Downloaded unknown block", logCtx2);
@@ -748,6 +764,12 @@ export class BlockInputSync {
     // this prevents unbundling attack
     // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
     const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.getBlock().message;
+    const logCtx = {
+      slot: blockSlot,
+      root: pendingBlock.blockInput.blockRootHex,
+      delaySec: this.chain.clock.secFromSlot(blockSlot),
+    };
+    this.logger.verbose("Processing downloaded block", logCtx);
     const fork = this.config.getForkName(blockSlot);
     const proposerBoostWindowMs = this.config.getAttestationDueMs(fork);
     if (
@@ -783,6 +805,7 @@ export class BlockInputSync {
     else this.metrics?.blockInputSync.processedBlocksSuccess.inc();
 
     if (!res.err) {
+      this.logger.verbose("Processed block from unknown sync", logCtx);
       // no need to update status to "processed", delete anyway
       this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
       // Re-enter the scheduler so descendants blocked on either parent blocks or parent payloads
@@ -850,22 +873,25 @@ export class BlockInputSync {
     }
 
     const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
-    if (!payloadInput) {
-      if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
-        // Column commitments live on the block body, so an envelope-only entry has to pull the block first.
-        if (!this.pendingBlocks.has(rootHex)) {
-          this.addByRootHex(rootHex);
-        }
-
-        const pendingBlock = this.pendingBlocks.get(rootHex);
-        if (pendingBlock && this.network.getConnectedPeers().length > 0) {
-          await this.downloadBlock(pendingBlock);
-        }
-      } else {
-        this.logger.debug("Missing PayloadEnvelopeInput for known block while reconciling payload envelope", {
-          root: rootHex,
-        });
+    if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+      // Block not in fork choice yet. payloadInput may be seeded from the block body during download, so a
+      // non-null payloadInput does not imply the block is imported; defer regardless and pull the block first.
+      // onBlockImported re-triggers the search to resume this envelope.
+      if (!this.pendingBlocks.has(rootHex)) {
+        this.addByRootHex(rootHex);
       }
+
+      const pendingBlock = this.pendingBlocks.get(rootHex);
+      if (pendingBlock && this.network.getConnectedPeers().length > 0) {
+        await this.downloadBlock(pendingBlock);
+      }
+      return;
+    }
+
+    if (!payloadInput) {
+      this.logger.debug("Missing PayloadEnvelopeInput for known block while reconciling payload envelope", {
+        root: rootHex,
+      });
       return;
     }
 
@@ -922,10 +948,12 @@ export class BlockInputSync {
       return;
     }
 
+    const payloadSlot = getPayloadSyncCacheItemSlot(payload);
     const logCtx = {
-      slot: getPayloadSyncCacheItemSlot(payload),
+      slot: payloadSlot,
       root: rootHex,
       pendingPayloads: this.pendingPayloads.size,
+      ...(typeof payloadSlot === "number" && {delaySec: this.chain.clock.secFromSlot(payloadSlot)}),
     };
 
     this.logger.verbose("BlockInputSync.downloadPayload()", logCtx);
@@ -953,7 +981,11 @@ export class BlockInputSync {
 
   private async processPayload(pendingPayload: PendingPayloadInput): Promise<void> {
     const rootHex = pendingPayload.payloadInput.blockRootHex;
-    const logCtx = {slot: pendingPayload.payloadInput.slot, root: rootHex};
+    const logCtx = {
+      slot: pendingPayload.payloadInput.slot,
+      root: rootHex,
+      delaySec: this.chain.clock.secFromSlot(pendingPayload.payloadInput.slot),
+    };
 
     if (pendingPayload.status !== PendingPayloadInputStatus.downloaded) {
       this.logger.debug("Skipping payload processing before payload input is downloaded", {
@@ -980,6 +1012,7 @@ export class BlockInputSync {
     }
 
     pendingPayload.status = PendingPayloadInputStatus.processing;
+    this.logger.debug("Processing downloaded payload", logCtx);
 
     const res = await wrapError(this.chain.processExecutionPayload(pendingPayload.payloadInput));
     if (!res.err) {
@@ -1073,17 +1106,22 @@ export class BlockInputSync {
         }
 
         payloadInput ??= this.chain.seenPayloadEnvelopeInputCache.get(rootHex);
-        if (!payloadInput) {
-          if (this.chain.forkChoice.hasBlockHex(rootHex)) {
-            throw new Error(`Missing PayloadEnvelopeInput for known block ${rootHex}`);
-          }
-          // Keep the validated envelope around, but wait for the block body before turning it into a full payload input.
+        if (!this.chain.forkChoice.hasBlockHex(rootHex)) {
+          // Block not in fork choice yet. Validating now would throw BLOCK_ROOT_UNKNOWN, so keep the downloaded
+          // envelope and wait for the block body; reconcilePayloadEnvelope validates once the block lands.
+          // payloadInput may be seeded from the block body during download, so a non-null payloadInput does not
+          // imply the block is imported.
           return {
             status: PendingPayloadInputStatus.waitingForBlock,
             envelope,
             timeAddedSec: cacheItem.timeAddedSec,
             peerIdStrings: cacheItem.peerIdStrings,
           };
+        }
+
+        if (!payloadInput) {
+          // Block is in fork choice but no PayloadEnvelopeInput exists, should have been created during block import.
+          throw new Error(`Missing PayloadEnvelopeInput for known block ${rootHex}`);
         }
 
         if (!payloadInput.hasPayloadEnvelope()) {
@@ -1117,6 +1155,7 @@ export class BlockInputSync {
           rootHex,
           peerId,
           peerClient,
+          ...(typeof slot === "number" && {delaySec: this.chain.clock.secFromSlot(slot)}),
           hasPayload: pendingPayload.payloadInput.hasPayloadEnvelope(),
           hasAllData: pendingPayload.payloadInput.hasAllData(),
         });
@@ -1288,7 +1327,7 @@ export class BlockInputSync {
           this.metrics?.blockInputSync.fetchBegin.observe(this.chain.clock.secFromSlot(slot, fetchStartSec));
         }
 
-        const logCtx = {slot, rootHex, peerId, peerClient};
+        const logCtx = {slot, rootHex, peerId, peerClient, delaySec: this.chain.clock.secFromSlot(slot)};
         this.logger.verbose("BlockInputSync.fetchBlockInput: successful download", logCtx);
         this.metrics?.blockInputSync.downloadByRoot.success.inc();
         const warnings = downloadResult.warnings;

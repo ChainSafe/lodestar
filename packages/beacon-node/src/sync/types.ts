@@ -19,7 +19,14 @@ export enum PendingBlockType {
    */
   INCOMPLETE_BLOCK_INPUT = "IncompleteBlockInput",
 
-  UNKNOWN_DATA = "unknown_data",
+  /**
+   * Payload analog of UNKNOWN_BLOCK_ROOT: we have a beacon block root but not its execution payload envelope.
+   */
+  UNKNOWN_PAYLOAD_BLOCK_ROOT = "unknown_payload_block_root",
+  /**
+   * Payload analog of INCOMPLETE_BLOCK_INPUT: we have a partial payload input that did not complete in time.
+   */
+  INCOMPLETE_PAYLOAD_ENVELOPE = "incomplete_payload_envelope",
 }
 
 export enum PendingBlockInputStatus {
@@ -70,6 +77,8 @@ export type PendingPayloadInput = {
 export type PendingPayloadRootHex = {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
+  // message slot hint, may be missing when resolving a parent payload
+  slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
@@ -125,5 +134,5 @@ export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot
     return payload.envelope.message.payload.slotNumber;
   }
 
-  return "unknown";
+  return payload.slot ?? "unknown";
 }

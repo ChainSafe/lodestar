@@ -20,7 +20,7 @@ import {testData as validatorTestData} from "./testData/validator.js";
 // Solutions: https://stackoverflow.com/questions/46745014/alternative-for-dirname-in-node-js-when-using-es6-modules
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const version = "v5.0.0-alpha.1";
+const version = "v5.0.0-alpha.2";
 const openApiFile: OpenApiFile = {
   url: `https://github.com/ethereum/beacon-APIs/releases/download/${version}/beacon-node-oapi.json`,
   filepath: path.join(__dirname, "../../../oapi-schemas/beacon-node-oapi.json"),
@@ -52,15 +52,12 @@ const testDatas = {
 };
 
 const ignoredOperations = [
-  /* missing route */
-  "getDepositSnapshot", // Won't fix for now, see https://github.com/ChainSafe/lodestar/issues/5697
-  "getNextWithdrawals", // https://github.com/ChainSafe/lodestar/issues/5696
+  // TODO GLOAS: not yet implemented
   "getExecutionPayloadBid",
-  "getSignedExecutionPayloadEnvelope",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
-  /* 
+  /*
    https://github.com/ChainSafe/lodestar/issues/6168
    /query/syncing_status - must be integer
    */
@@ -74,6 +71,11 @@ const ignoredTopics: string[] = [
   // TODO GLOAS: required by v5.0.0-alpha.1
   "payload_attestation_message",
   "execution_payload_bid",
+  // TODO: not yet implemented, added in v5.0.0-alpha.2
+  "head_v2",
+  // TODO: unskip once the spec release adds `current_slot` to the fast_confirmation event
+  // (tracked in https://github.com/ethereum/beacon-APIs/pull/598)
+  "fast_confirmation",
 ];
 
 // eventstream types are defined as comments in the description of "examples".

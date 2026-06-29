@@ -927,11 +927,9 @@ export function getValidatorApi(
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
       // the user control bid source preferences and value comparison. Also add external builder api
       // support when it is implemented.
-      const builderBid = chain.executionPayloadBidPool.getBestBid(
-        slot,
-        parentBlock.executionPayloadBlockHash,
-        parentBlockRootHex
-      );
+      const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
+      const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
+      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       const logCtx = {
         slot,
@@ -1112,23 +1110,34 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const block = chain.forkChoice.getCanonicalBlockClosestLteSlot(slot);
+      const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
-        throw new ApiError(404, `No canonical block found at or before slot=${slot}`);
+        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
+        throw new ApiError(404, `No canonical block found at slot=${slot}`);
       }
 
-      const blockIsForSlot = block.slot === slot;
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
       // Spec: set payload_present only if the envelope was seen before get_payload_due_ms()
       // into the slot. Use the envelope's own arrival time (getPayloadEnvelopeSource), not
       // the input's creation time.
       const payloadDueSec = config.getPayloadDueMs() / 1000;
-      const payloadPresent =
-        blockIsForSlot &&
-        payloadInput !== undefined &&
-        payloadInput.hasPayloadEnvelope() &&
-        chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec) < payloadDueSec;
-      const blobDataAvailable = blockIsForSlot && (payloadInput?.hasAllData() ?? false);
+      const payloadSeenSec =
+        payloadInput?.hasPayloadEnvelope() === true
+          ? chain.clock.secFromSlot(slot, payloadInput.getPayloadEnvelopeSource().seenTimestampSec)
+          : null;
+      const payloadPresent = payloadSeenSec !== null && payloadSeenSec < payloadDueSec;
+      const blobDataAvailable = payloadInput?.hasAllData() === true;
+
+      logger.debug("Produced payload attestation data", {
+        slot,
+        blockRoot: block.blockRoot,
+        blockSlot: block.slot,
+        payloadPresent,
+        blobDataAvailable,
+        hasPayloadInput: payloadInput !== undefined,
+        payloadSeenSec,
+        payloadDueSec,
+      });
 
       return {
         data: {
@@ -1198,7 +1207,10 @@ export function getValidatorApi(
       const isPostFulu = isForkPostFulu(config.getForkName(startSlot));
       const maxFutureEpoch = isPostFulu && nearNextEpoch && opts?.v2 ? nextEpoch + 1 : nextEpoch;
       if (currentEpoch >= 0 && epoch > maxFutureEpoch) {
-        throw new ApiError(400, `Requested epoch ${epoch} must not be more than one epoch in the future`);
+        throw new ApiError(
+          400,
+          `Requested epoch ${epoch} must not be more than ${maxFutureEpoch}, currentEpoch=${currentEpoch}, v2=${opts?.v2 ?? false}`
+        );
       }
 
       const head = chain.forkChoice.getHead();
@@ -1282,17 +1294,35 @@ export function getValidatorApi(
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
       }
 
-      // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
-      // It should be set to the latest block applied to `self` or the genesis block root.
-      const dependentRoot =
-        // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
-        proposerShufflingDecisionRoot(opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0, state, epoch) ||
-        (await getGenesisBlockRoot(state));
+      // In v2 the dependent root is different after fulu due to deterministic proposer lookahead
+      let dependentRoot = proposerShufflingDecisionRoot(
+        opts?.v2 ? config.getForkName(startSlot) : ForkName.phase0,
+        state,
+        epoch
+      );
+      const logCtx = {
+        epoch,
+        stateSlot: state.slot,
+        stateEpoch: state.epoch,
+        v2: opts?.v2 ?? false,
+      };
+      if (dependentRoot === null) {
+        // fallback to get_proposer_duties() v1, also in lodestar v1.43
+        logger.verbose("Proposer duties decision root not in state, falling back to state epoch", logCtx);
+        dependentRoot = proposerShufflingDecisionRoot(ForkName.phase0, state, state.epoch);
+      }
+      if (dependentRoot === null) {
+        logger.verbose("Proposer duties decision root not in state, falling back to genesis block root", logCtx);
+        dependentRoot = await getGenesisBlockRoot(state);
+      }
+
+      const dependentRootHex = toRootHex(dependentRoot);
+      logger.verbose("Computed proposer duties decision root", {...logCtx, dependentRoot: dependentRootHex});
 
       return {
         data: duties,
         meta: {
-          dependentRoot: toRootHex(dependentRoot),
+          dependentRoot: dependentRootHex,
           executionOptimistic: isOptimisticBlock(head),
         },
       };
@@ -1471,33 +1501,6 @@ export function getValidatorApi(
       };
     },
 
-    async getAggregatedAttestation({attestationDataRoot, slot}) {
-      notWhileSyncing();
-
-      await waitForSlot(slot); // Must never request for a future slot > currentSlot
-
-      const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, null);
-      const fork = chain.config.getForkName(slot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getAggregatedAttestationV2 to retrieve aggregated attestations for post-electra fork=${fork}`
-        );
-      }
-
-      if (!aggregate) {
-        throw new ApiError(404, `No aggregated attestation for slot=${slot}, dataRoot=${dataRootHex}`);
-      }
-
-      metrics?.production.producedAggregateParticipants.observe(aggregate.aggregationBits.getTrueBitIndexes().length);
-
-      return {
-        data: aggregate,
-      };
-    },
-
     async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
       notWhileSyncing();
 
@@ -1519,10 +1522,6 @@ export function getValidatorApi(
         data: aggregate,
         meta: {version: config.getForkName(slot)},
       };
-    },
-
-    async publishAggregateAndProofs({signedAggregateAndProofs}) {
-      await this.publishAggregateAndProofsV2({signedAggregateAndProofs});
     },
 
     async publishAggregateAndProofsV2({signedAggregateAndProofs}) {

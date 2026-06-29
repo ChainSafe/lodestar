@@ -30,7 +30,6 @@ export enum ArchiveStoreTask {
   PruneHistory = "prune_history",
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
-  RegenPruneOnFinalized = "regen_prune_on_finalized",
   ForkchoicePrune = "forkchoice_prune",
   UpdateBackfillRange = "update_backfill_range",
 }
@@ -228,10 +227,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
       timer?.({source: ArchiveStoreTask.MaybeArchiveState});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
-      timer?.({source: ArchiveStoreTask.RegenPruneOnFinalized});
 
       // tasks rely on extended fork choice
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();

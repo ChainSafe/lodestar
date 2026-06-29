@@ -11,6 +11,8 @@ import {
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
   BUILDER_REGISTRY_LIMIT,
   HISTORICAL_ROOTS_LIMIT,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
   MAX_BYTES_PER_TRANSACTION,
   MAX_PAYLOAD_ATTESTATIONS,
   MIN_SEED_LOOKAHEAD,
@@ -73,8 +75,46 @@ export const BuilderPendingPayment = new ContainerType(
   {
     weight: UintNum64,
     withdrawal: BuilderPendingWithdrawal,
+    proposerIndex: ValidatorIndex,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
+);
+
+export const BuilderDepositRequest = new ContainerType(
+  {
+    pubkey: BLSPubkey,
+    withdrawalCredentials: Bytes32,
+    amount: UintNum64,
+    signature: BLSSignature,
+  },
+  {typeName: "BuilderDepositRequest", jsonCase: "eth2"}
+);
+
+export const BuilderDepositRequests = new ListCompositeType(
+  BuilderDepositRequest,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
+);
+
+export const BuilderExitRequest = new ContainerType(
+  {
+    sourceAddress: ExecutionAddress,
+    pubkey: BLSPubkey,
+  },
+  {typeName: "BuilderExitRequest", jsonCase: "eth2"}
+);
+
+export const BuilderExitRequests = new ListCompositeType(BuilderExitRequest, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD);
+
+// New in GLOAS:EIP8282 — extends electra ExecutionRequests with builder deposits and exits
+export const ExecutionRequests = new ContainerType(
+  {
+    deposits: electraSsz.DepositRequests,
+    withdrawals: electraSsz.WithdrawalRequests,
+    consolidations: electraSsz.ConsolidationRequests,
+    builderDeposits: BuilderDepositRequests,
+    builderExits: BuilderExitRequests,
+  },
+  {typeName: "ExecutionRequests", jsonCase: "eth2"}
 );
 
 export const PayloadTimelinessCommittee = new VectorBasicType(ValidatorIndex, PTC_SIZE);
@@ -146,7 +186,7 @@ export const ExecutionPayloadBid = new ContainerType(
     blockHash: Bytes32,
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintBn64,
+    gasLimit: UintNum64,
     builderIndex: BuilderIndex,
     slot: Slot,
     value: UintNum64,
@@ -179,7 +219,7 @@ export const ExecutionPayload = new ContainerType(
 export const ExecutionPayloadEnvelope = new ContainerType(
   {
     payload: ExecutionPayload,
-    executionRequests: electraSsz.ExecutionRequests,
+    executionRequests: ExecutionRequests,
     builderIndex: BuilderIndex,
     beaconBlockRoot: Root,
     parentBeaconBlockRoot: Root,
@@ -212,7 +252,7 @@ export const BeaconBlockBody = new ContainerType(
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
     payloadAttestations: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
-    parentExecutionRequests: electraSsz.ExecutionRequests, // New in GLOAS:EIP7732
+    parentExecutionRequests: ExecutionRequests, // New in GLOAS:EIP7732
   },
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );

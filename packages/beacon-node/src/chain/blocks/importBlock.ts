@@ -22,7 +22,7 @@ import {
 } from "@lodestar/state-transition";
 import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -189,10 +189,12 @@ export async function importBlock(
         this.seenBlockAttesters.addIndices(blockEpoch, indexedAttestation.attestingIndices);
 
         const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
-        const missedSlotVote = ssz.Root.equals(
-          rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
-          rootCache.getBlockRootAtSlot(attestation.data.slot)
-        );
+        const missedSlotVote =
+          attestation.data.slot > GENESIS_SLOT &&
+          ssz.Root.equals(
+            rootCache.getBlockRootAtSlot(attestation.data.slot - 1),
+            rootCache.getBlockRootAtSlot(attestation.data.slot)
+          );
         this.validatorMonitor?.registerAttestationInBlock(
           indexedAttestation,
           parentBlockSlot,
@@ -263,6 +265,7 @@ export async function importBlock(
         if (ptcIndices.length > 0) {
           this.forkChoice.notifyPtcMessages(
             toRootHex(payloadAttestation.data.beaconBlockRoot),
+            payloadAttestation.data.slot,
             ptcIndices,
             payloadAttestation.data.payloadPresent,
             payloadAttestation.data.blobDataAvailable

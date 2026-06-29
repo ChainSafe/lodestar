@@ -1,10 +1,10 @@
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
-import {applyDepositForBuilder} from "../block/processDepositRequest.js";
+import {isValidDepositSignature} from "../block/processDeposit.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 
@@ -48,9 +48,9 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
-  stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
-  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
-    ssz.electra.ExecutionRequests.defaultValue()
+  stateGloasView.latestExecutionPayloadBid.gasLimit = stateFulu.latestExecutionPayloadHeader.gasLimit;
+  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
+    ssz.gloas.ExecutionRequests.defaultValue()
   );
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
@@ -90,7 +90,8 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  // Track pubkeys of new builders added when applying deposits
+  // Track pubkeys of new builders added when applying deposits. `state.builders` starts empty
+  // at the fork, so every builder pubkey here is one added in an earlier iteration.
   const builderPubkeys = new Set<string>();
 
   const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
@@ -109,40 +110,55 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
       continue;
     }
 
-    // `applyDepositForBuilder` can mutate the state and add a builder to the registry, so
-    // the set of builder pubkeys must be recomputed each iteration. `builderPubkeys` stands
-    // in for the spec's `[b.pubkey for b in state.builders]`: `state.builders` starts empty
-    // at the fork, so every builder is one added in a previous iteration of this loop.
-    if (!builderPubkeys.has(pubkeyHex)) {
-      // Deposits for non-builders stay in the pending queue. If there is a valid pending
-      // deposit for a new validator with this pubkey, keep this deposit in the pending
-      // queue to be applied to that validator later.
-      if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
-        pendingDeposits.push(deposit);
-        pendingDepositsLookup.add(deposit, pubkeyHex);
-        continue;
+    if (builderPubkeys.has(pubkeyHex)) {
+      // Top up an already-onboarded builder
+      // TODO GLOAS: linear search; consider builder pubkey cache when we drop the upgrade-time set
+      for (let j = 0; j < state.builders.length; j++) {
+        if (toPubkeyHex(state.builders.getReadonly(j).pubkey) === pubkeyHex) {
+          state.builders.get(j).balance += deposit.amount;
+          break;
+        }
       }
-      if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
-        pendingDeposits.push(deposit);
-        pendingDepositsLookup.add(deposit, pubkeyHex);
-        continue;
-      }
+      continue;
     }
 
-    const buildersLenBefore = state.builders.length;
-    // TODO GLOAS: handle 20k 1ETH deposits on time
-    // there is a note in the spec https://github.com/ethereum/consensus-specs/pull/5227
-    applyDepositForBuilder(
+    // Deposits for non-builders stay in the pending queue. If there is a valid pending
+    // deposit for a new validator with this pubkey, keep this deposit pending so the validator
+    // can pick it up later.
+    if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
+      continue;
+    }
+    if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
+      continue;
+    }
+
+    // Verify the deposit signature (proof of possession). If invalid the deposit is silently
+    // dropped — stake is forfeited, matching the validator deposit contract behavior.
+    if (
+      !isValidDepositSignature(
+        state.config,
+        deposit.pubkey,
+        deposit.withdrawalCredentials,
+        deposit.amount,
+        deposit.signature
+      )
+    ) {
+      continue;
+    }
+
+    addBuilderToRegistry(
       state,
       deposit.pubkey,
-      deposit.withdrawalCredentials,
+      PAYLOAD_BUILDER_VERSION,
+      deposit.withdrawalCredentials.subarray(12),
       deposit.amount,
-      deposit.signature,
       deposit.slot
     );
-    if (state.builders.length > buildersLenBefore) {
-      builderPubkeys.add(pubkeyHex);
-    }
+    builderPubkeys.add(pubkeyHex);
   }
 
   state.pendingDeposits = pendingDeposits;

@@ -21,6 +21,7 @@ export type ChainArgs = {
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
+  "chain.fastConfirmation"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
   emitPayloadAttributes?: boolean;
@@ -60,6 +61,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
+    fastConfirmation: args["chain.fastConfirmation"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     emitPayloadAttributes: args.emitPayloadAttributes,
@@ -210,6 +212,13 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
     defaultDescription: String(defaultOptions.chain.computeUnrealized),
+    group: "chain",
+  },
+
+  "chain.fastConfirmation": {
+    type: "boolean",
+    description: "Enable Fast Confirmation Rule for faster block confirmation (experimental)",
+    defaultDescription: String(defaultOptions.chain.fastConfirmation),
     group: "chain",
   },
 

@@ -501,23 +501,6 @@ export type Endpoints = {
 
   /**
    * Get aggregated attestation
-   * Aggregates all attestations matching given attestation data root and slot
-   * Returns an aggregated `Attestation` object with same `AttestationData` root.
-   */
-  getAggregatedAttestation: Endpoint<
-    "GET",
-    {
-      /** HashTreeRoot of AttestationData that validator want's aggregated */
-      attestationDataRoot: Root;
-      slot: Slot;
-    },
-    {query: {attestation_data_root: string; slot: number}},
-    phase0.Attestation,
-    EmptyMeta
-  >;
-
-  /**
-   * Get aggregated attestation
    * Aggregates all attestations matching given attestation data root, slot and committee index
    * Returns an aggregated `Attestation` object with same `AttestationData` root.
    */
@@ -532,18 +515,6 @@ export type Endpoints = {
     {query: {attestation_data_root: string; slot: number; committee_index: number}},
     Attestation,
     VersionMeta
-  >;
-
-  /**
-   * Publish multiple aggregate and proofs
-   * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-   */
-  publishAggregateAndProofs: Endpoint<
-    "POST",
-    {signedAggregateAndProofs: SignedAggregateAndProofListPhase0},
-    {body: unknown},
-    EmptyResponseData,
-    EmptyMeta
   >;
 
   /**
@@ -960,7 +931,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     getExecutionPayloadEnvelope: {
-      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}",
+      url: "/eth/v1/validator/execution_payload_envelopes/{slot}/{beacon_block_root}",
       method: "GET",
       req: {
         writeReq: ({slot, beaconBlockRoot}) => ({
@@ -1040,29 +1011,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: EmptyMetaCodec,
       },
     },
-    getAggregatedAttestation: {
-      url: "/eth/v1/validator/aggregate_attestation",
-      method: "GET",
-      req: {
-        writeReq: ({attestationDataRoot, slot}) => ({
-          query: {attestation_data_root: toRootHex(attestationDataRoot), slot},
-        }),
-        parseReq: ({query}) => ({
-          attestationDataRoot: fromHex(query.attestation_data_root),
-          slot: query.slot,
-        }),
-        schema: {
-          query: {
-            attestation_data_root: Schema.StringRequired,
-            slot: Schema.UintRequired,
-          },
-        },
-      },
-      resp: {
-        data: ssz.phase0.Attestation,
-        meta: EmptyMetaCodec,
-      },
-    },
     getAggregatedAttestationV2: {
       url: "/eth/v2/validator/aggregate_attestation",
       method: "GET",
@@ -1087,28 +1035,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: WithVersion((fork) => (isForkPostElectra(fork) ? ssz.electra.Attestation : ssz.phase0.Attestation)),
         meta: VersionCodec,
       },
-    },
-    publishAggregateAndProofs: {
-      url: "/eth/v1/validator/aggregate_and_proofs",
-      method: "POST",
-      req: {
-        writeReqJson: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListPhase0Type.toJson(signedAggregateAndProofs),
-        }),
-        parseReqJson: ({body}) => ({
-          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body),
-        }),
-        writeReqSsz: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs),
-        }),
-        parseReqSsz: ({body}) => ({
-          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body),
-        }),
-        schema: {
-          body: Schema.ObjectArray,
-        },
-      },
-      resp: EmptyResponseCodec,
     },
     publishAggregateAndProofsV2: {
       url: "/eth/v2/validator/aggregate_and_proofs",
