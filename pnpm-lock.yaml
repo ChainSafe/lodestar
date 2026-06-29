@@ -346,7 +346,7 @@ importers:
     devDependencies:
       '@chainsafe/lodestar-z':
         specifier: github:chainsafe/lodestar-z#bing/stf
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/1f2d8092b0c73a9f4f5d6cb39644e784dffb5e42
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4c99c953908a8fa3ae6f22b2fbdf28453bafdf94
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -740,7 +740,7 @@ importers:
         version: 2.2.0
       '@chainsafe/lodestar-z':
         specifier: github:chainsafe/lodestar-z#bing/stf
-        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/1f2d8092b0c73a9f4f5d6cb39644e784dffb5e42
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4c99c953908a8fa3ae6f22b2fbdf28453bafdf94
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.2.5
         version: 1.2.5
@@ -1284,8 +1284,8 @@ packages:
   '@chainsafe/lodestar-z@0.1.1':
     resolution: {integrity: sha512-ZEYDSJlTC40NlQAdCISw3U4rmZr1OcIdzviJXkWBaXY6lMryNdZpIyhmwDX5GTmTqWTiuuTSun+MSN3UJUxGNA==}
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/1f2d8092b0c73a9f4f5d6cb39644e784dffb5e42':
-    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/1f2d8092b0c73a9f4f5d6cb39644e784dffb5e42}
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4c99c953908a8fa3ae6f22b2fbdf28453bafdf94':
+    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4c99c953908a8fa3ae6f22b2fbdf28453bafdf94}
     version: 0.1.2-rc.9
 
   '@chainsafe/netmask@2.0.0':
@@ -6841,7 +6841,7 @@ snapshots:
       '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 0.1.1
       '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 0.1.1
 
-  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/1f2d8092b0c73a9f4f5d6cb39644e784dffb5e42':
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/4c99c953908a8fa3ae6f22b2fbdf28453bafdf94':
     dependencies:
       '@chainsafe/zapi': 2.0.0
 
