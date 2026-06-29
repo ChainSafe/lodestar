@@ -1363,10 +1363,10 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateApiSyncCommittee(
-    headState: IBeaconStateView,
+    _syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateApiSyncCommittee(this, headState, syncCommittee));
+    return runGossipValidation(() => validateApiSyncCommittee(this, syncCommittee));
   }
 
   validateSyncCommitteeGossipContributionAndProof(
@@ -1417,6 +1417,7 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateApiPayloadAttestationMessage(
+    _payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<PayloadAttestationValidationResult>> {
     return runGossipValidation(() => validateApiPayloadAttestationMessage(this, payloadAttestationMessage));
@@ -1451,6 +1452,7 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateApiAggregateAndProof(
+    _aggregateBytes: Uint8Array,
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<AggregateAndProofValidationResult>> {
@@ -1478,6 +1480,7 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateApiExecutionPayloadEnvelope(
+    _envelopeBytes: Uint8Array,
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     proposerIndex: ValidatorIndex,
     bidBuilderIndex: ValidatorIndex,
@@ -1504,6 +1507,7 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   validateApiExecutionPayloadBid(
+    _bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
     return runGossipValidation(() => validateApiExecutionPayloadBid(this, signedExecutionPayloadBid));

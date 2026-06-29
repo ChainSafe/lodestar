@@ -73,9 +73,10 @@ export async function validateGossipSyncCommittee(
 
 export async function validateApiSyncCommittee(
   engine: BeaconEngine,
-  headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
+  // Resolve head state internally — no IBeaconStateView crosses the engine seam.
+  const headState = engine.getHeadState();
   const prioritizeBls = true;
   return validateSyncCommitteeSigOnly(engine, headState, syncCommittee, prioritizeBls);
 }

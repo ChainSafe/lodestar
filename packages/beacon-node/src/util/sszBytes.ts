@@ -851,3 +851,84 @@ export function getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized(
 
   return Math.round(((end > blockBytes.byteLength ? blockBytes.byteLength : end) - start) / commitmentSize);
 }
+
+/** Read a 4-byte little-endian SSZ offset at `position`. */
+function readOffset(data: Uint8Array, position: number): number {
+  return (data[position] | (data[position + 1] << 8) | (data[position + 2] << 16) | (data[position + 3] << 24)) >>> 0;
+}
+
+/**
+ * Slice each element's raw bytes out of a serialized SSZ List of FIXED-size elements (e.g.
+ * SyncCommitteeMessage, SingleAttestation, PayloadAttestationMessage). A fixed-element list serializes as
+ * the elements concatenated, so element `i` is the `elementSize`-wide window at `i * elementSize`.
+ * Returned slices are zero-copy `.subarray()` views into `listBytes` — no allocation per element.
+ */
+export function getFixedListElementBytes(listBytes: Uint8Array, elementSize: number | null): Uint8Array[] {
+  // `elementSize` is typically `<Type>.fixedSize`, which is `number | null`; null means a variable-size
+  // element type (wrong slicer — use getVariableListElementBytes).
+  if (elementSize === null || elementSize <= 0) {
+    throw new Error(`Invalid SSZ fixed element size ${elementSize}`);
+  }
+  if (listBytes.length % elementSize !== 0) {
+    throw new Error(`Serialized list length ${listBytes.length} is not a multiple of element size ${elementSize}`);
+  }
+  const count = listBytes.length / elementSize;
+  const elements = new Array<Uint8Array>(count);
+  for (let i = 0; i < count; i++) {
+    elements[i] = listBytes.subarray(i * elementSize, (i + 1) * elementSize);
+  }
+  return elements;
+}
+
+/**
+ * Slice each element's raw bytes out of a serialized SSZ List of VARIABLE-size elements (e.g.
+ * SignedAggregateAndProof). Such a list begins with a 4-byte offset table (one entry per element); the
+ * first offset equals `4 * count`, element `i` spans `[offset[i], offset[i+1])`, and the last element
+ * ends at `listBytes.length`. Returned slices are zero-copy `.subarray()` views into `listBytes`.
+ */
+export function getVariableListElementBytes(listBytes: Uint8Array): Uint8Array[] {
+  if (listBytes.length === 0) {
+    return [];
+  }
+  if (listBytes.length < VARIABLE_FIELD_OFFSET) {
+    throw new Error(`Serialized variable list too short: ${listBytes.length}`);
+  }
+  const firstOffset = readOffset(listBytes, 0);
+  if (firstOffset % VARIABLE_FIELD_OFFSET !== 0 || firstOffset === 0 || firstOffset > listBytes.length) {
+    throw new Error(`Invalid first offset ${firstOffset} for serialized variable list of length ${listBytes.length}`);
+  }
+  const count = firstOffset / VARIABLE_FIELD_OFFSET;
+  const elements = new Array<Uint8Array>(count);
+  for (let i = 0; i < count; i++) {
+    const start = readOffset(listBytes, i * VARIABLE_FIELD_OFFSET);
+    const end = i === count - 1 ? listBytes.length : readOffset(listBytes, (i + 1) * VARIABLE_FIELD_OFFSET);
+    if (start > end || end > listBytes.length) {
+      throw new Error(
+        `Invalid element range [${start}, ${end}) for serialized variable list of length ${listBytes.length}`
+      );
+    }
+    elements[i] = listBytes.subarray(start, end);
+  }
+  return elements;
+}
+
+/**
+ * Slice the `signedBlock` field's bytes out of a serialized post-deneb (pre-gloas) `SignedBlockContents`
+ * request body. `SignedBlockContents = {signedBlock, kzgProofs, blobs}` is all variable-size, so the body
+ * opens with a 3-entry offset table and `signedBlock` (the first field) spans `[offset[0], offset[1])`.
+ * Lets the publish API reuse the request body as gossip block bytes without re-serializing. Zero-copy
+ * `.subarray()` view.
+ */
+export function getSignedBlockBytesFromSignedBlockContentsSerialized(contentsBytes: Uint8Array): Uint8Array {
+  if (contentsBytes.length < 2 * VARIABLE_FIELD_OFFSET) {
+    throw new Error(`Serialized SignedBlockContents too short: ${contentsBytes.length}`);
+  }
+  const start = readOffset(contentsBytes, 0);
+  const end = readOffset(contentsBytes, VARIABLE_FIELD_OFFSET);
+  if (start > end || end > contentsBytes.length) {
+    throw new Error(
+      `Invalid signedBlock range [${start}, ${end}) in serialized SignedBlockContents of length ${contentsBytes.length}`
+    );
+  }
+  return contentsBytes.subarray(start, end);
+}

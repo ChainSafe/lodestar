@@ -2,7 +2,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {BlockExecutionStatus, IForkChoice, PayloadExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostBellatrix} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, PubkeyCache} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BLSSignature,
@@ -229,8 +229,8 @@ export interface IBeaconEngine {
     currentEpoch: Epoch
   ): Promise<{data: routes.validator.PtcDuty[]; dependentRoot: Root; head: ProtoBlock}>;
 
-  // Gossip validation flows. The first parameter is the message's SSZ bytes (unused by the JS engine,
-  // required by the native engine's bytes-first contract), followed by the deserialized object. Each
+  // Gossip + API validation flows. The first parameter is the message's SSZ bytes (unused by the JS
+  // engine, required by the native engine's bytes-first contract), followed by the deserialized object. Each
   // returns a `GossipValidationResult` (no throw) so the native engine can return outcomes across FFI.
   validateGossipBlock(
     blockBytes: Uint8Array,
@@ -243,7 +243,7 @@ export interface IBeaconEngine {
     subnet: SubnetID
   ): Promise<GossipValidationResult<{indicesInSubcommittee: number[]}>>;
   validateApiSyncCommittee(
-    headState: IBeaconStateView,
+    syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
   ): Promise<GossipValidationResult<void>>;
   validateSyncCommitteeGossipContributionAndProof(
@@ -273,6 +273,7 @@ export interface IBeaconEngine {
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<PayloadAttestationValidationResult>>;
   validateApiPayloadAttestationMessage(
+    payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<PayloadAttestationValidationResult>>;
   validateGossipAttestationsSameAttData(
@@ -289,6 +290,7 @@ export interface IBeaconEngine {
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<AggregateAndProofValidationResult>>;
   validateApiAggregateAndProof(
+    aggregateBytes: Uint8Array,
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<AggregateAndProofValidationResult>>;
@@ -303,6 +305,7 @@ export interface IBeaconEngine {
     bidExecutionRequestsRoot: Root
   ): Promise<GossipValidationResult<void>>;
   validateApiExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
     executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
     proposerIndex: ValidatorIndex,
     bidBuilderIndex: ValidatorIndex,
@@ -314,6 +317,7 @@ export interface IBeaconEngine {
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
   validateApiExecutionPayloadBid(
+    bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
   validateGossipProposerPreferences(

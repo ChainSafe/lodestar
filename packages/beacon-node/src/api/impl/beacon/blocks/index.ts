@@ -31,6 +31,7 @@ import {
   fulu,
   gloas,
   isDenebBlockContents,
+  ssz,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
@@ -64,6 +65,7 @@ import {
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
+import {getSignedBlockBytesFromSignedBlockContentsSerialized} from "../../../../util/sszBytes.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
@@ -93,7 +95,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation},
-    _context,
+    context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -199,8 +201,15 @@ export function getBeaconBlockApi({
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
-          // TODO - engine: get block bytes from upstream
-          const blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock);
+          let blockBytes: Uint8Array;
+          if (context?.sszBytes) {
+            blockBytes =
+              isForkPostDeneb(fork) && !isForkPostGloas(fork)
+                ? getSignedBlockBytesFromSignedBlockContentsSerialized(context.sszBytes)
+                : context.sszBytes;
+          } else {
+            blockBytes = config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock);
+          }
           const res = await chain.beaconEngine.validateGossipBlock(blockBytes, signedBlock, fork);
           if (res.status !== GossipValidationStatus.Accept) {
             switch (res.code) {
@@ -648,7 +657,7 @@ export function getBeaconBlockApi({
     publishBlockV2,
     publishBlindedBlockV2,
 
-    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
+    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}, context) {
       const seenTimestampSec = Date.now() / 1000;
       const envelope = signedExecutionPayloadEnvelope.message;
       const slot = envelope.payload.slotNumber;
@@ -685,7 +694,11 @@ export function getBeaconBlockApi({
       if (!payloadInput) {
         throw new ApiError(404, `Execution payload envelope input not found for beacon block root ${blockRootHex}`);
       }
+      // SSZ request: the body IS the envelope. JSON request (no sszBytes): serialize once.
+      const envelopeBytes =
+        context?.sszBytes ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(signedExecutionPayloadEnvelope);
       const envelopeValidation = await chain.beaconEngine.validateApiExecutionPayloadEnvelope(
+        envelopeBytes,
         signedExecutionPayloadEnvelope,
         payloadInput.proposerIndex,
         payloadInput.getBuilderIndex(),
@@ -830,7 +843,7 @@ export function getBeaconBlockApi({
       });
     },
 
-    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+    async publishExecutionPayloadBid({signedExecutionPayloadBid}, context) {
       const bid = signedExecutionPayloadBid.message;
       const slot = bid.slot;
       const fork = config.getForkName(slot);
@@ -839,7 +852,12 @@ export function getBeaconBlockApi({
         throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
       }
 
-      const bidValidation = await chain.beaconEngine.validateApiExecutionPayloadBid(signedExecutionPayloadBid);
+      // SSZ request: the body IS the bid. JSON request (no sszBytes): serialize once.
+      const bidBytes = context?.sszBytes ?? ssz.gloas.SignedExecutionPayloadBid.serialize(signedExecutionPayloadBid);
+      const bidValidation = await chain.beaconEngine.validateApiExecutionPayloadBid(
+        bidBytes,
+        signedExecutionPayloadBid
+      );
       if (bidValidation.status !== GossipValidationStatus.Accept) {
         throw bidValidation.error ?? new ApiError(400, `Invalid execution payload bid: ${bidValidation.code}`);
       }

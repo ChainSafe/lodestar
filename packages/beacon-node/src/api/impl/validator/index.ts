@@ -39,6 +39,7 @@ import {
   getValidatorStatus,
   gloas,
   ssz,
+  sszTypesFor,
 } from "@lodestar/types";
 import {
   TimeoutError,
@@ -69,6 +70,7 @@ import {SyncState} from "../../../sync/index.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
+import {getFixedListElementBytes, getVariableListElementBytes} from "../../../util/sszBytes.js";
 import {ApiOptions} from "../../options.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
@@ -1259,12 +1261,18 @@ export function getValidatorApi(
       };
     },
 
-    async publishAggregateAndProofsV2({signedAggregateAndProofs}) {
+    async publishAggregateAndProofsV2({signedAggregateAndProofs}, context) {
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
       const fork = chain.config.getForkName(chain.clock.currentSlot);
+
+      // SSZ request: slice each aggregate out of the (variable-size element) list body. JSON request
+      // (no sszBytes): serialize once. Never re-serialize on the SSZ path.
+      const aggregateBytes = context?.sszBytes
+        ? getVariableListElementBytes(context.sszBytes)
+        : signedAggregateAndProofs.map((agg) => sszTypesFor(fork).SignedAggregateAndProof.serialize(agg));
 
       await Promise.all(
         signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
@@ -1274,7 +1282,8 @@ export function getValidatorApi(
           };
           try {
             // TODO: Validate in batch
-            const validateFn = () => chain.beaconEngine.validateApiAggregateAndProof(fork, signedAggregateAndProof);
+            const validateFn = () =>
+              chain.beaconEngine.validateApiAggregateAndProof(aggregateBytes[i], fork, signedAggregateAndProof);
             const {slot, beaconBlockRoot} = signedAggregateAndProof.message.aggregate.data;
             // when a validator is configured with multiple beacon node urls, this attestation may come from another beacon node
             // and the block hasn't been in our forkchoice since we haven't seen / processing that block
@@ -1323,10 +1332,16 @@ export function getValidatorApi(
      *
      * https://github.com/ethereum/beacon-APIs/pull/137
      */
-    async publishContributionAndProofs({contributionAndProofs}) {
+    async publishContributionAndProofs({contributionAndProofs}, context) {
       notWhileSyncing();
 
       const failures: FailureList = [];
+
+      // SSZ request: slice each entry out of the (fixed-size element) list body. JSON request
+      // (no sszBytes): serialize once.
+      const contributionBytes = context?.sszBytes
+        ? getFixedListElementBytes(context.sszBytes, ssz.altair.SignedContributionAndProof.fixedSize)
+        : contributionAndProofs.map((c) => ssz.altair.SignedContributionAndProof.serialize(c));
 
       await Promise.all(
         contributionAndProofs.map(async (contributionAndProof, i) => {
@@ -1336,10 +1351,8 @@ export function getValidatorApi(
           };
           try {
             // TODO: Validate in batch
-            // TODO - engine: get bytes from api
-            const contributionBytes = ssz.altair.SignedContributionAndProof.serialize(contributionAndProof);
             const res = await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(
-              contributionBytes,
+              contributionBytes[i],
               contributionAndProof,
               true // skip known participants check
             );

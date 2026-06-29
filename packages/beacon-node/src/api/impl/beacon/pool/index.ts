@@ -23,6 +23,7 @@ import {toElectraSingleAttestation} from "../../../../chain/validation/index.js"
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
+import {getFixedListElementBytes} from "../../../../util/sszBytes.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 
@@ -68,8 +69,14 @@ export function getBeaconPoolApi({
       return {data: chain.proposerPreferencesPool.getAll(slot), meta: {version: fork}};
     },
 
-    async submitSignedProposerPreferences({signedProposerPreferences}) {
+    async submitSignedProposerPreferences({signedProposerPreferences}, context) {
       const failures: FailureList = [];
+
+      // SSZ request: slice each entry out of the (fixed-size element) list body. JSON request
+      // (no sszBytes): serialize once.
+      const preferencesBytes = context?.sszBytes
+        ? getFixedListElementBytes(context.sszBytes, ssz.gloas.SignedProposerPreferences.fixedSize)
+        : signedProposerPreferences.map((s) => ssz.gloas.SignedProposerPreferences.serialize(s));
 
       await Promise.all(
         signedProposerPreferences.map(async (signed, i) => {
@@ -79,9 +86,7 @@ export function getBeaconPoolApi({
             dependentRoot: toRootHex(signed.message.dependentRoot),
           };
           try {
-            // TODO - beacon engine: get bytes from the api
-            const preferencesBytes = ssz.gloas.SignedProposerPreferences.serialize(signed);
-            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes, signed);
+            const res = await chain.beaconEngine.validateGossipProposerPreferences(preferencesBytes[i], signed);
             if (res.status !== GossipValidationStatus.Accept) {
               if (res.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
                 logger.debug("Ignoring known signed proposer preferences", logCtx);
@@ -267,8 +272,14 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPayloadAttestationMessages({payloadAttestationMessages}) {
+    async submitPayloadAttestationMessages({payloadAttestationMessages}, context) {
       const failures: FailureList = [];
+
+      // SSZ request: slice each message out of the (fixed-size element) list body. JSON request
+      // (no sszBytes): serialize once.
+      const messageBytes = context?.sszBytes
+        ? getFixedListElementBytes(context.sszBytes, ssz.gloas.PayloadAttestationMessage.fixedSize)
+        : payloadAttestationMessages.map((m) => ssz.gloas.PayloadAttestationMessage.serialize(m));
 
       await Promise.all(
         payloadAttestationMessages.map(async (payloadAttestationMessage, i) => {
@@ -278,7 +289,8 @@ export function getBeaconPoolApi({
             beaconBlockRoot: toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
           };
           try {
-            const validateFn = () => chain.beaconEngine.validateApiPayloadAttestationMessage(payloadAttestationMessage);
+            const validateFn = () =>
+              chain.beaconEngine.validateApiPayloadAttestationMessage(messageBytes[i], payloadAttestationMessage);
             const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
             const res = await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
             if (res.status !== GossipValidationStatus.Accept) {
@@ -338,7 +350,7 @@ export function getBeaconPoolApi({
      *
      * https://github.com/ethereum/beacon-APIs/pull/135
      */
-    async submitPoolSyncCommitteeSignatures({signatures}) {
+    async submitPoolSyncCommitteeSignatures({signatures}, context) {
       // Fetch states for all slots of the `signatures`
       const slots = new Set<Epoch>();
       for (const signature of signatures) {
@@ -350,6 +362,12 @@ export function getBeaconPoolApi({
       if (!isStatePostAltair(state)) {
         throw new ApiError(400, "Sync committee pool is not supported before Altair");
       }
+
+      // SSZ request: slice each message out of the (fixed-size element) list body. JSON request
+      // (no sszBytes): serialize once. Never re-serialize on the SSZ path.
+      const signatureBytes = context?.sszBytes
+        ? getFixedListElementBytes(context.sszBytes, ssz.altair.SyncCommitteeMessage.fixedSize)
+        : signatures.map((s) => ssz.altair.SyncCommitteeMessage.serialize(s));
 
       const failures: FailureList = [];
 
@@ -364,7 +382,7 @@ export function getBeaconPoolApi({
 
             // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
             // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
-            const res = await chain.beaconEngine.validateApiSyncCommittee(state, signature);
+            const res = await chain.beaconEngine.validateApiSyncCommittee(signatureBytes[i], signature);
             if (res.status !== GossipValidationStatus.Accept) {
               failures.push({index: i, message: res.error?.message ?? res.code});
               logger.verbose(
