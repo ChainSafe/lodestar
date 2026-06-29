@@ -3,8 +3,18 @@ import {multiaddr} from "@multiformats/multiaddr";
 import {describe, expect, it} from "vitest";
 import {SignableENR} from "@chainsafe/enr";
 import {config} from "@lodestar/config/default";
-import {PeerDiscovery} from "../../../../src/network/peers/discover.js";
-import {ScoreState} from "../../../../src/network/peers/score/interface.js";
+import type {LoggerNode} from "@lodestar/logger/node";
+import type {Discv5Worker} from "../../../../src/network/discv5/index.js";
+import type {LodestarDiscv5Opts} from "../../../../src/network/discv5/types.js";
+import type {Libp2p} from "../../../../src/network/interface.js";
+import type {NetworkConfig} from "../../../../src/network/networkConfig.js";
+import {
+  PeerDiscovery,
+  type PeerDiscoveryModules,
+  type PeerDiscoveryOpts,
+} from "../../../../src/network/peers/discover.js";
+import {type IPeerRpcScoreStore, ScoreState} from "../../../../src/network/peers/score/index.js";
+import type {IClock} from "../../../../src/util/clock.js";
 import {peerIdFromString} from "../../../../src/util/peerId.js";
 import {getMockedLogger} from "../../../mocks/loggerMock.js";
 import {getValidPeerId} from "../../../utils/peer.js";
@@ -40,17 +50,28 @@ describe("network / peers / discover", () => {
           connectionManager: {getConnectionsMap: () => ({map: new Map()}), getDialQueue: () => []},
         },
       },
-    } as any;
+    } as unknown as Libp2p;
 
-    const discv5 = {on: () => {}, off: () => {}} as any;
-    const peerRpcScores = {getScoreState: () => ScoreState.Healthy, isCoolingDown: () => false} as any;
-    const clock = {currentSlot: 0, genesisTime: 0} as any;
+    const modules: PeerDiscoveryModules = {
+      privateKey,
+      networkConfig: {config} as unknown as NetworkConfig,
+      libp2p,
+      clock: {currentSlot: 0, genesisTime: 0} as unknown as IClock,
+      peerRpcScores: {
+        getScoreState: () => ScoreState.Healthy,
+        isCoolingDown: () => false,
+      } as unknown as IPeerRpcScoreStore,
+      metrics: null,
+      logger: logger as unknown as LoggerNode,
+    };
+    const opts: PeerDiscoveryOpts = {
+      discv5FirstQueryDelayMs: 0,
+      discv5: {bootEnrs: [bootEnr]} as unknown as LodestarDiscv5Opts,
+      connectToDiscv5Bootnodes: true,
+    };
+    const discv5 = {on: () => {}, off: () => {}} as unknown as Discv5Worker;
 
-    new PeerDiscovery(
-      {libp2p, clock, peerRpcScores, metrics: null, logger, networkConfig: {config} as any},
-      {discv5FirstQueryDelayMs: 0, discv5: {bootEnrs: [bootEnr]} as any, connectToDiscv5Bootnodes: true},
-      discv5
-    );
+    new PeerDiscovery(modules, opts, discv5);
 
     // Allow the fire-and-forget onDiscoveredENR promise(s) to settle
     await new Promise((resolve) => setTimeout(resolve, 50));
