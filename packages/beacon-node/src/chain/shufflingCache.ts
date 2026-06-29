@@ -197,6 +197,8 @@ export class ShufflingCache {
   private getShufflingOrThrow(epoch: number, decisionRoot: string): EpochShuffling {
     const shuffling = this.getSync(epoch, decisionRoot);
     if (shuffling === null) {
+      const available = Array.from(this.itemsByDecisionRootByEpoch.get(epoch)?.keys() ?? []);
+      this.logger?.warn("NO_SHUFFLING_FOUND debug", {epoch, requested: decisionRoot, available: available.join(",")});
       throw new ShufflingCacheError({
         code: ShufflingCacheErrorCode.NO_SHUFFLING_FOUND,
         epoch,
