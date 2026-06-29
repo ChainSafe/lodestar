@@ -1,4 +1,4 @@
-import {PublicKey, Signature, fastAggregateVerify} from "@chainsafe/blst";
+import {PublicKey, Signature, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,

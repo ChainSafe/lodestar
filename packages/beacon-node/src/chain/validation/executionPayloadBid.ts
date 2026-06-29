@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
   computeEpochAtSlot,

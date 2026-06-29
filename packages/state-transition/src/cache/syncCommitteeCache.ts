@@ -1,6 +1,7 @@
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
+import {PubkeyCache} from "./pubkeyCache.js";
 
 type ValidatorSyncCommitteeIndexMap = Map<ValidatorIndex, number[]>;
 
@@ -38,7 +39,7 @@ export function getSyncCommitteeCache(validatorIndices: Uint32Array): SyncCommit
 
 export function computeSyncCommitteeCache(
   syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
-  pubkeyCache: {getIndex(pubkey: Uint8Array): number | null}
+  pubkeyCache: PubkeyCache
 ): SyncCommitteeCache {
   const validatorIndices = computeSyncCommitteeValidatorIndices(syncCommittee, pubkeyCache);
   const validatorIndexMap = computeValidatorSyncCommitteeIndexMap(validatorIndices);
@@ -78,7 +79,7 @@ export function computeValidatorSyncCommitteeIndexMap(
  */
 function computeSyncCommitteeValidatorIndices(
   syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
-  pubkeyCache: {getIndex(pubkey: Uint8Array): number | null}
+  pubkeyCache: PubkeyCache
 ): Uint32Array {
   const pubkeys = syncCommittee.pubkeys.getAllReadonly();
   const validatorIndices = new Uint32Array(pubkeys.length);

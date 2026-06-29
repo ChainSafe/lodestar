@@ -1,4 +1,4 @@
-import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
+import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/lodestar-z/blst";
 
 const MIN_SET_COUNT_TO_BATCH = 2;
 

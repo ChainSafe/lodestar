@@ -1,4 +1,5 @@
-import {PublicKey} from "@chainsafe/blst";
+import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ValidatorIndex, phase0} from "@lodestar/types";
 
@@ -19,6 +20,23 @@ export interface PubkeyCache {
   readonly size: number;
 }
 
+/**
+ * Extended pubkey cache backed by the native lodestar-z singleton.
+ * Adds persistence (load/save) and pre-allocation (ensureCapacity).
+ */
+export interface GlobalPubkeyCache extends PubkeyCache {
+  /** Load pubkey cache state from a file */
+  load(filepath: string): void;
+  /** Save pubkey cache state to a file */
+  save(filepath: string): void;
+  /** Pre-allocate internal storage for `capacity` validators */
+  ensureCapacity(capacity: number): void;
+}
+
+/**
+ * Standard JS-side pubkey cache for use in tests and non-production contexts.
+ * Wraps PubkeyIndexMap + PublicKey[] for bidirectional lookup.
+ */
 class StandardPubkeyCache implements PubkeyCache {
   private readonly pubkey2index: PubkeyIndexMap;
   private readonly index2pubkey: (PublicKey | undefined)[];
@@ -55,8 +73,19 @@ class StandardPubkeyCache implements PubkeyCache {
   }
 }
 
+/**
+ * Create a standalone pubkey cache (JS-side, for tests).
+ */
 export function createPubkeyCache(): PubkeyCache {
   return new StandardPubkeyCache();
+}
+
+/**
+ * Get the global native pubkey cache singleton backed by lodestar-z.
+ * This is the production pubkey cache — shared across the entire process (including workers).
+ */
+export function getPubkeyCache(): GlobalPubkeyCache {
+  return pubkeyCache;
 }
 
 /**

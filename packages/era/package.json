@@ -39,7 +39,7 @@
     "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
   },
   "dependencies": {
-    "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/lodestar-z": "catalog:",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/reqresp": "workspace:^",

@@ -77,7 +77,7 @@
   },
   "dependencies": {
     "@chainsafe/lodestar": "workspace:*",
-    "@chainsafe/lodestar-z": "^0.1.1"
+    "@chainsafe/lodestar-z": "catalog:"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",
