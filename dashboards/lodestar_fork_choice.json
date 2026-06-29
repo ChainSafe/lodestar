@@ -1383,7 +1383,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (beacon_finalized_epoch)",
+          "expr": "max by (instance) (beacon_finalized_epoch)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1396,7 +1396,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (beacon_current_justified_epoch)",
+          "expr": "max by (instance) (beacon_current_justified_epoch)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1409,7 +1409,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (lodestar_fast_confirmation_confirmed_epoch)",
+          "expr": "max by (instance) (lodestar_fast_confirmation_confirmed_epoch)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1422,7 +1422,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (beacon_fast_confirmation_slot)",
+          "expr": "max by (instance) (beacon_fast_confirmation_slot)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1435,7 +1435,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance) (beacon_head_slot)",
+          "expr": "max by (instance) (beacon_head_slot)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
