@@ -216,6 +216,8 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
   (chain as {beaconEngine: unknown}).beaconEngine = chain;
   // Duty flows are real BeaconEngine methods; bind the real implementations (and the private helpers
   // they call) so duty tests exercise real logic against the mock's collaborators.
+  // `prepareForNextSlot` is a real BeaconEngine method too; `recomputeForkChoiceHead` / `predictProposerHead`
+  // stay as mock fns above so tests can control head selection.
   for (const name of [
     "getProposerDuties",
     "getAttesterDuties",
@@ -224,6 +226,11 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "getHeadStateAtEpoch",
     "waitForCheckpointState",
     "genesisBlockRoot",
+    "prepareForNextSlot",
+    "computeStateHashTreeRoot",
+    "resolvePayloadAttributesInput",
+    "getPayloadAttributesForSSE",
+    "getProposerTargetGasLimit",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
       BeaconEngine.prototype as unknown as Record<string, unknown>

@@ -1,38 +1,20 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
-import {
-  IBeaconStateView,
-  IBeaconStateViewBellatrix,
-  StateHashTreeRootSource,
-  computeEpochAtSlot,
-  computeTimeAtSlot,
-  isStatePostBellatrix,
-  isStatePostGloas,
-} from "@lodestar/state-transition";
-import {Bytes32, Slot} from "@lodestar/types";
-import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
-import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
+import {ForkSeq} from "@lodestar/params";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Slot} from "@lodestar/types";
+import {Logger, isErrorAborted, sleep} from "@lodestar/utils";
+import {GENESIS_SLOT} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {Metrics} from "../metrics/index.js";
 import {ClockEvent} from "../util/clock.js";
 import {isQueueErrorAborted} from "../util/queue/index.js";
-import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {IBeaconChain} from "./interface.js";
-import {
-  getPayloadAttributesForSSE,
-  prepareExecutionPayload,
-  resolvePayloadAttributesInput,
-} from "./produceBlock/produceBlockBody.js";
-import {RegenCaller} from "./regen/index.js";
+import {prepareExecutionPayload} from "./produceBlock/produceBlockBody.js";
 
 // TODO GLOAS: re-evaluate this timing
 /* With 12s slot times, this scheduler will run 4s before the start of each slot (`12 - 0.6667 * 12 = 4`). */
 export const PREPARE_NEXT_SLOT_BPS = 6667;
-
-/* We don't want to do more epoch transition than this */
-const PREPARE_EPOCH_LIMIT = 1;
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -44,6 +26,9 @@ const PREPARE_EPOCH_LIMIT = 1;
  * + validators propose blocks on time
  * + For Bellatrix, to compute proposers of next epoch so that we can prepare new payloads
  *
+ * The consensus work is owned by `BeaconEngine.prepareForNextSlot`; this scheduler owns the clock
+ * listener, the sleep timing, and the facade side-effects the engine returns (EL advance-prep + builder
+ * status, DA seen-cache prune, SSE payloadAttributes emit).
  */
 export class PrepareNextSlotScheduler {
   constructor(
@@ -84,208 +69,63 @@ export class PrepareNextSlotScheduler {
       // or precompute epoch transition
       await sleep(this.config.getSlotComponentDurationMs(PREPARE_NEXT_SLOT_BPS), this.signal);
 
-      // calling updateHead() here before we produce a block to reduce reorg possibility
-      const headBlock = this.chain.recomputeForkChoiceHead(ForkchoiceCaller.prepareNextSlot);
-      const {slot: headSlot, blockRoot: headRoot} = headBlock;
-      // may be updated below if we predict a proposer-boost-reorg
-      let updatedHead = headBlock;
-
-      // PS: previously this was comparing slots, but that gave no leway on the skipped
-      // slots on epoch bounday. Making it more fluid.
-      if (prepareSlot - headSlot > PREPARE_EPOCH_LIMIT * SLOTS_PER_EPOCH) {
-        this.metrics?.precomputeNextEpochTransition.count.inc({result: "skip"}, 1);
-        this.logger.debug("Skipping PrepareNextSlotScheduler - head slot is too behind current slot", {
-          nextEpoch,
-          headSlot,
-          clockSlot,
-        });
-
+      const result = await this.chain.beaconEngine.prepareForNextSlot(clockSlot);
+      if (result === null) {
         return;
       }
 
-      this.logger.verbose("Running prepareForNextSlot", {
-        nextEpoch,
-        prepareSlot,
-        headSlot,
-        headRoot,
-        isEpochTransition,
-      });
-      const precomputeEpochTransitionTimer = isEpochTransition
-        ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
-        : null;
-      const start = Date.now();
-      // No need to wait for this or the clock drift
-      // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
-      // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
-      const prepareState = await this.chain.regen.getBlockSlotState(
-        headBlock,
-        prepareSlot,
-        // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
-        // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
-        // for other slots dontTransferCached=true because we don't run state transition on this state
-        {dontTransferCache: !isEpochTransition},
-        RegenCaller.precomputeEpoch
-      );
+      // Only when we are proposing the next slot: update builder status and fire the EL advance-prep.
+      if (result.elPrep) {
+        const {
+          fork,
+          proposerIndex,
+          feeRecipient,
+          parentBlockRoot,
+          parentBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
+          prepareSlot,
+          payloadAttributesInput,
+          targetGasLimit,
+        } = result.elPrep;
 
-      if (isForkPostBellatrix(fork)) {
-        const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
-        const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
-        let updatedPrepareState = prepareState;
-
-        if (feeRecipient) {
-          // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
-          const proposerHead = this.chain.predictProposerHead(clockSlot);
-          const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
-
-          // If we predict we can reorg, update prepareState with proposer head block
-          if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
-            this.logger.verbose("Weak head detected. May build on parent block instead", {
-              proposerHeadSlot,
-              proposerHeadRoot,
-              headSlot,
-              headRoot,
-            });
-            this.metrics?.weakHeadDetected.inc();
-            updatedPrepareState = await this.chain.regen.getBlockSlotState(
-              proposerHead,
-              prepareSlot,
-              // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
-              {dontTransferCache: !isEpochTransition},
-              RegenCaller.predictProposerHead
-            );
-            updatedHead = proposerHead;
-          }
-
-          // Update the builder status, if enabled shoot an api call to check status
-          this.chain.updateBuilderStatus(clockSlot);
-          if (this.chain.executionBuilder?.status === BuilderStatus.enabled) {
-            this.chain.executionBuilder.checkStatus().catch((e) => {
-              this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
-            });
-          }
-        }
-
-        if (!isStatePostBellatrix(updatedPrepareState)) {
-          throw new Error("Expected Bellatrix state for payload attributes");
-        }
-
-        let parentBlockHash: Bytes32;
-        // Apply parent payload once here as it's reused by EL prep and SSE emit below
-        let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
-        if (isStatePostGloas(updatedPrepareState)) {
-          // Spec: should_build_on_full(store, head) — see produceBlockBody.ts for context.
-          if (this.chain.forkChoice.shouldBuildOnFull(updatedHead, prepareSlot)) {
-            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
-            // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
-            if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
-              const parentExecutionRequests = await this.chain.getParentExecutionRequests(
-                updatedHead.slot,
-                updatedHead.blockRoot
-              );
-              stateAfterParentPayload = updatedPrepareState.withParentPayloadApplied(parentExecutionRequests);
-            }
-          } else {
-            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
-          }
-        } else {
-          parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
-        }
-
-        if (feeRecipient) {
-          const preparationTime =
-            computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
-          this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
-
-          const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
-          const finalizedBlockHash =
-            this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-
-          // awaiting here instead of throwing an async call because there is no other task
-          // left for scheduler and this gives nice semantics to catch and log errors in the
-          // try/catch wrapper here.
-          await prepareExecutionPayload(
-            this.chain,
-            this.logger,
-            fork as ForkPostBellatrix, // State is of execution type
-            fromHex(updatedHead.blockRoot),
-            parentBlockHash,
-            safeBlockHash,
-            finalizedBlockHash,
-            prepareSlot,
-            resolvePayloadAttributesInput(
-              this.config,
-              fork as ForkPostBellatrix,
-              stateAfterParentPayload,
-              parentBlockHash
-            ),
-            feeRecipient
-          );
-          this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
-            prepareSlot,
-            proposerIndex,
-            feeRecipient,
+        // Update the builder status, if enabled shoot an api call to check status
+        this.chain.updateBuilderStatus(clockSlot);
+        if (this.chain.executionBuilder?.status === BuilderStatus.enabled) {
+          this.chain.executionBuilder.checkStatus().catch((e) => {
+            this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
           });
         }
 
-        if (ForkSeq[fork] >= ForkSeq.gloas) {
-          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
-          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
-          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
-          const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
-          if (updatedHeadParent) {
-            this.chain.seenPayloadEnvelopeInputCache.pruneBelowParent(updatedHeadParent);
-          }
-        }
-
-        this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
-
-        // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
-        // every slot. Without the flag, only emit the event if we are proposing in the next slot.
-        if (
-          (feeRecipient || this.chain.opts.emitPayloadAttributes === true) &&
-          this.chain.emitter.listenerCount(routes.events.EventType.payloadAttributes)
-        ) {
-          const data = getPayloadAttributesForSSE(fork as ForkPostBellatrix, this.chain, {
-            prepareSlot,
-            parentBlockRoot: fromHex(updatedHead.blockRoot),
-            parentBlockHash,
-            feeRecipient: feeRecipient ?? "0x0000000000000000000000000000000000000000",
-            proposerIndex: stateAfterParentPayload.getBeaconProposer(prepareSlot),
-            parentBlockNumberPreGloas:
-              ForkSeq[fork] >= ForkSeq.gloas ? undefined : stateAfterParentPayload.payloadBlockNumber,
-            ...resolvePayloadAttributesInput(
-              this.config,
-              fork as ForkPostBellatrix,
-              stateAfterParentPayload,
-              parentBlockHash
-            ),
-          });
-          this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
-        }
-      } else {
-        this.computeStateHashTreeRoot(prepareState, isEpochTransition);
+        // awaiting here instead of throwing an async call because there is no other task
+        // left for scheduler and this gives nice semantics to catch and log errors in the
+        // try/catch wrapper here.
+        await prepareExecutionPayload(
+          this.chain,
+          this.logger,
+          fork,
+          parentBlockRoot,
+          parentBlockHash,
+          safeBlockHash,
+          finalizedBlockHash,
+          prepareSlot,
+          payloadAttributesInput,
+          feeRecipient,
+          targetGasLimit
+        );
+        this.logger.verbose("PrepareNextSlotScheduler prepared new payload", {
+          prepareSlot,
+          proposerIndex,
+          feeRecipient,
+        });
       }
 
-      // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
-      //  + when gossip block comes, we need to validate and run state transition
-      //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
-      if (isEpochTransition) {
-        this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.regen.updatePreComputedCheckpoint(headRoot, nextEpoch);
-        if (previousHits === 0) {
-          this.metrics?.precomputeNextEpochTransition.waste.inc();
-        }
-        this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
+      if (result.daPruneParent) {
+        this.chain.seenPayloadEnvelopeInputCache.pruneBelowParent(result.daPruneParent);
+      }
 
-        this.logger.verbose("Completed PrepareNextSlotScheduler epoch transition", {
-          nextEpoch,
-          headSlot,
-          prepareSlot,
-          previousHits,
-          durationMs: Date.now() - start,
-        });
-
-        precomputeEpochTransitionTimer?.();
+      if (result.sse) {
+        this.chain.emitter.emit(routes.events.EventType.payloadAttributes, result.sse);
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
@@ -294,14 +134,4 @@ export class PrepareNextSlotScheduler {
       }
     }
   };
-
-  computeStateHashTreeRoot(state: IBeaconStateView, isEpochTransition: boolean): void {
-    // cache HashObjects for faster hashTreeRoot() later, especially for computeNewStateRoot() if we need to produce a block at slot 0 of epoch
-    // see https://github.com/ChainSafe/lodestar/issues/6194
-    const hashTreeRootTimer = this.metrics?.stateHashTreeRootTime.startTimer({
-      source: isEpochTransition ? StateHashTreeRootSource.prepareNextEpoch : StateHashTreeRootSource.prepareNextSlot,
-    });
-    state.hashTreeRoot();
-    hashTreeRootTimer?.();
-  }
 }

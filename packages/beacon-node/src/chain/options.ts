@@ -25,7 +25,6 @@ export type IChainOptions = IBeaconEngineOptions &
     persistOrphanedBlocks?: boolean;
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
-    suggestedFeeRecipient: string;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
     /** Max number of produced blobs by local validators to cache */

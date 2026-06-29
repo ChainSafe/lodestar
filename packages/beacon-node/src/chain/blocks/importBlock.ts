@@ -87,6 +87,7 @@ export async function importBlock(
     try {
       const proposerIndex = r.proposerIndexNextSlot;
       if (proposerIndex !== null) {
+        // TODO - beacon engine: move this there
         const feeRecipient = this.beaconProposerCache.get(proposerIndex);
         if (feeRecipient && r.blockSummary !== null) {
           const result = this.forkChoice.shouldOverrideForkChoiceUpdate(

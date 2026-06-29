@@ -249,7 +249,9 @@ export class BeaconChain implements IBeaconChain {
   // Global state caches
   readonly pubkeyCache: PubkeyCache;
 
-  readonly beaconProposerCache: BeaconProposerCache;
+  get beaconProposerCache(): BeaconProposerCache {
+    return this.beaconEngine.beaconProposerCache;
+  }
 
   // TODO - beacon engine: remove this
   get checkpointBalancesCache(): CheckpointBalancesCache {
@@ -395,8 +397,6 @@ export class BeaconChain implements IBeaconChain {
     );
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
-
-    this.beaconProposerCache = new BeaconProposerCache(opts);
 
     this._earliestAvailableSlot = anchorState.slot;
 

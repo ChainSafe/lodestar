@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {BlockExecutionStatus, IForkChoice, PayloadExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix} from "@lodestar/params";
 import {DataAvailabilityStatus, IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -13,6 +13,7 @@ import {
   Gwei,
   Root,
   RootHex,
+  SSEPayloadAttributes,
   SignedAggregateAndProof,
   SignedBeaconBlock,
   Slot,
@@ -35,7 +36,11 @@ import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {CommonBlockBody} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {BlockProcessOpts} from "../options.js";
-import {BlockAttributes, PayloadAttributesWithdrawals} from "../produceBlock/produceBlockBody.js";
+import {
+  BlockAttributes,
+  PayloadAttributesInput,
+  PayloadAttributesWithdrawals,
+} from "../produceBlock/produceBlockBody.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
@@ -123,8 +128,42 @@ export type ProduceBlockBaseResult = {
   payloadAttestations: gloas.PayloadAttestation[];
   /** payload-attribute withdrawals resolved from the parent-payload-applied state (post-capella) */
   withdrawals?: PayloadAttributesWithdrawals;
+  /** gloas: proposer target gas limit, resolved engine-side so the facade self-build EL call passes it
+   * as plain data (mirrors the prepareForNextSlot path); undefined pre-gloas */
+  targetGasLimit?: number;
   /** common body produced from the parent-payload-applied state — its voluntaryExits are already valid */
   commonBlockBodyPromise: Promise<CommonBlockBody>;
+};
+
+/**
+ * Result of `prepareForNextSlot`. The engine does all consensus work internally (head recompute, regen,
+ * proposer-boost-reorg prediction, `hashTreeRoot`, epoch-transition precompute) and returns only the
+ * side-effects the facade must perform (EL advance-prep + builder, DA prune, SSE emit). `null` = nothing
+ * for the facade to do.
+ */
+export type PrepareNextSlotResult = {
+  /**
+   * Non-null ONLY when this node proposes the next slot (the `beaconProposerCache` fee-recipient
+   * resolves). When null the facade does NO builder status and NO EL `prepareExecutionPayload`.
+   */
+  elPrep: {
+    fork: ForkPostBellatrix;
+    proposerIndex: ValidatorIndex;
+    feeRecipient: string;
+    parentBlockRoot: Root;
+    parentBlockHash: Bytes32;
+    safeBlockHash: RootHex;
+    finalizedBlockHash: RootHex;
+    prepareSlot: Slot;
+    payloadAttributesInput: PayloadAttributesInput;
+    /** gloas: proposer target gas limit, resolved engine-side so the facade EL call never reaches back
+     * into engine internals (fork choice / proposer-preferences pool); undefined pre-gloas */
+    targetGasLimit?: number;
+  } | null;
+  /** gloas: parent ProtoBlock of the (possibly reorged) head; facade prunes the DA seen cache below it */
+  daPruneParent: ProtoBlock | null;
+  /** built only when (proposing || emitPayloadAttributes) AND the emitter has listeners; facade emits it */
+  sse: {data: SSEPayloadAttributes; version: ForkName} | null;
 };
 
 /**
@@ -159,6 +198,11 @@ export interface IBeaconEngine {
     blockBytes: Uint8Array,
     blinded: boolean
   ): Promise<{newStateRoot: Root; proposerReward: Gwei}>;
+
+  // Advance preparation for the next slot: recompute head, regen the prepare-state, predict a
+  // proposer-boost-reorg, precompute the epoch transition and cache `hashTreeRoot`. Returns the
+  // side-effects the facade performs (EL advance-prep + builder, DA prune, SSE emit); `null` = no-op.
+  prepareForNextSlot(clockSlot: Slot): Promise<PrepareNextSlotResult | null>;
 
   // Validator duties. The engine resolves state internally and returns fully-populated duties (with
   // pubkeys) + dependentRoot; no `IBeaconStateView` crosses. Clock-derived values are passed in (the

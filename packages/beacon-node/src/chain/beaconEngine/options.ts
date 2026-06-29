@@ -34,4 +34,8 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
     maxSkipSlots?: number;
     /** Min number of same-message signature sets to batch in gossip attestation validation */
     minSameMessageSignatureSetsToBatch: number;
+    /** Default fee recipient used by the engine-owned beaconProposerCache */
+    suggestedFeeRecipient: string;
+    /** Emit an SSE payloadAttributes event every slot (not only when proposing) */
+    emitPayloadAttributes?: boolean;
   };
