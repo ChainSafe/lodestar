@@ -7,6 +7,7 @@ import {
   FastConfirmationDecision,
   FastConfirmationDecisionReason,
   FastConfirmationRule,
+  FastConfirmationRunResult,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
 } from "./types.ts";
@@ -110,15 +111,36 @@ export function runFastConfirmationRules(
   store: IFastConfirmationStore,
   cache: FastConfirmationCache,
   logger?: Logger
-): FastConfirmationDecision {
+): FastConfirmationRunResult {
   let decision: FastConfirmationDecision = {
     confirmedRoot: snapshot.confirmedRoot,
     didReset: false,
     reason: FastConfirmationDecisionReason.Unchanged,
   };
 
+  // Track every reason a rule decided on, the final `decision.reason` is overwritten by
+  // later rules (eg. a restart is followed by advancing to the latest confirmed descendant)
+  const reasons = new Set<FastConfirmationDecisionReason>();
   for (const rule of FAST_CONFIRMATION_RULES) {
     decision = rule(snapshot, ctx, store, cache, decision, logger);
+    reasons.add(decision.reason);
   }
-  return decision;
+
+  // Detect a reorg directly from ancestry instead of the reset reason: when the confirmed block is
+  // both epoch-behind and not an ancestor of head, `resetIfBehindOrNotAncestorOrUnsafe` records
+  // `ResetBehind` (it takes precedence), so keying off `ResetNotAncestor` alone would miss reorgs
+  // that cross an epoch boundary.
+  const initialConfirmedBlock = getBlock(ctx, cache, snapshot.confirmedRoot);
+  const didReorg = initialConfirmedBlock !== null && !isAncestor(ctx, cache, snapshot.headRoot, snapshot.confirmedRoot);
+
+  return {
+    confirmedRoot: decision.confirmedRoot,
+    didReset: decision.didReset,
+    reason: decision.reason,
+    didReorg,
+    // A fallback is a revert to finality: a reset whose final confirmed root is the finalized
+    // checkpoint. A later rule may advance the confirmed root forward, which is not a fallback.
+    didFallback: decision.didReset && decision.confirmedRoot === snapshot.finalizedRoot,
+    didRestart: reasons.has(FastConfirmationDecisionReason.ObservedJustified),
+  };
 }
