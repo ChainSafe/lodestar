@@ -7,11 +7,13 @@ import {
 } from "../../../src/forkChoice/fastConfirmation/data.js";
 import {FastConfirmationRule} from "../../../src/forkChoice/fastConfirmation/fastConfirmationRule.js";
 import {runFastConfirmationRules} from "../../../src/forkChoice/fastConfirmation/rules.js";
+import {FastConfirmationDecisionReason} from "../../../src/forkChoice/fastConfirmation/types.js";
 import {
   adjustCommitteeWeightEstimateToEnsureSafety,
   computeSafetyThreshold,
   findLatestConfirmedDescendant,
   getBlockSupportBetweenSlots,
+  getEquivocationScore,
   isConfirmedChainSafe,
   isOneConfirmed,
 } from "../../../src/forkChoice/fastConfirmation/utils.js";
@@ -160,6 +162,56 @@ describe("fast confirmation", () => {
     expect(support).toBe(64);
   });
 
+  it("getEquivocationScore returns 0 when there are no equivocators", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    const state = makeState(4, 32, [2 as Slot]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    // No equivocating indices, even though slot 2's committee has 4 participants -> score is 0.
+    const ctx = makeContext(3 as Slot, child.blockRoot, blocks, new Map(), {epoch: 0, rootHex: ZERO_ROOT}, state);
+
+    const score = getEquivocationScore(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      {state, balances: state.effectiveBalanceIncrements},
+      2 as Slot,
+      2 as Slot
+    );
+
+    expect(score).toBe(0);
+  });
+
+  it("getEquivocationScore sums balances of equivocating validators in the slot range", () => {
+    const parent = makeBlock(1, ZERO_ROOT);
+    const child = makeBlock(2, parent.blockRoot);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), parent, child];
+    const state = makeState(4, 32, [2 as Slot]);
+    const store = makeStore(parent.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, parent.blockRoot, child.blockRoot, state);
+    // Validators 1 and 3 equivocate and are both in slot 2's committee, so each contributes its 32 balance.
+    const ctx = makeContext(
+      3 as Slot,
+      child.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state,
+      [1, 3]
+    );
+
+    const score = getEquivocationScore(
+      ctx,
+      store,
+      createFastConfirmationCache(),
+      {state, balances: state.effectiveBalanceIncrements},
+      2 as Slot,
+      2 as Slot
+    );
+
+    expect(score).toBe(64);
+  });
+
   it("isConfirmedChainSafe fails when a block in the confirmed chain cannot be re-confirmed", () => {
     const observed = makeBlock(SLOTS_PER_EPOCH - 2, ZERO_ROOT);
     const confirmed = makeBlock(SLOTS_PER_EPOCH - 1, observed.blockRoot);
@@ -217,6 +269,9 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
+    expect(result.didReorg).toBe(false);
+    expect(result.didFallback).toBe(true);
+    expect(result.didRestart).toBe(false);
   });
 
   it("runFastConfirmationRules advances to observed justified at epoch start", () => {
@@ -253,6 +308,11 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(observed.blockRoot);
     expect(result.didReset).toBe(true);
+    expect(result.didReorg).toBe(false);
+    // Confirmation advanced forward to the observed justified checkpoint, which is a restart
+    // and not a fallback to finality even though a reset happened earlier in the pipeline
+    expect(result.didFallback).toBe(false);
+    expect(result.didRestart).toBe(true);
   });
 
   it("findLatestConfirmedDescendant falls back to loop 2 when previousSlotHead is on a sibling branch", () => {
@@ -372,6 +432,59 @@ describe("fast confirmation", () => {
 
     expect(result.confirmedRoot).toBe(ZERO_ROOT);
     expect(result.didReset).toBe(true);
+    // Confirmed block is no longer an ancestor of head, the later descendant rule overwrites
+    // `reason` but `didReorg` must still be reported from the reset that happened earlier
+    expect(result.didReorg).toBe(true);
+    expect(result.didFallback).toBe(true);
+    expect(result.didRestart).toBe(false);
+  });
+
+  it("runFastConfirmationRules reports a reorg when the confirmed block is both epoch-behind and not an ancestor of head", () => {
+    const confirmed = makeBlock(SLOTS_PER_EPOCH - 1, ZERO_ROOT);
+    const head = makeBlock(2 * SLOTS_PER_EPOCH, rootFromNumber(999));
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), confirmed, head];
+    const state = makeState(32, 32, [head.slot]);
+    const store = makeStore(
+      confirmed.blockRoot,
+      ZERO_ROOT,
+      ZERO_ROOT,
+      0,
+      0,
+      confirmed.blockRoot,
+      head.blockRoot,
+      state
+    );
+    const ctx = makeContext(
+      (2 * SLOTS_PER_EPOCH) as Slot,
+      head.blockRoot,
+      blocks,
+      new Map(),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state
+    );
+    const snapshot = makeSnapshot(
+      (2 * SLOTS_PER_EPOCH) as Slot,
+      2,
+      head.blockRoot,
+      confirmed.blockRoot,
+      confirmed.slot,
+      0,
+      ZERO_ROOT,
+      ZERO_ROOT,
+      0,
+      ZERO_ROOT,
+      0
+    );
+
+    const result = runFastConfirmationRules(snapshot, ctx, store, createFastConfirmationCache());
+
+    expect(result.confirmedRoot).toBe(ZERO_ROOT);
+    expect(result.didReset).toBe(true);
+    // `resetIfBehindOrNotAncestorOrUnsafe` records `ResetBehind` (it takes precedence over
+    // `ResetNotAncestor`), but the reorg must still be detected from ancestry
+    expect(result.didReorg).toBe(true);
+    expect(result.didFallback).toBe(true);
+    expect(result.didRestart).toBe(false);
   });
 
   it("runFastConfirmationRules only resets an unsafe confirmed chain at epoch start", () => {
@@ -441,6 +554,9 @@ describe("fast confirmation", () => {
     expect(midEpochResult.didReset).toBe(false);
     expect(epochStartResult.confirmedRoot).toBe(ZERO_ROOT);
     expect(epochStartResult.didReset).toBe(true);
+    expect(epochStartResult.reason).toBe(FastConfirmationDecisionReason.ConfirmedDescendant);
+    // `reason` is the final advancement; `resetReason` surfaces the originating reset cause.
+    expect(epochStartResult.resetReason).toBe(FastConfirmationDecisionReason.ResetChainUnsafe);
   });
 
   it("runFastConfirmationRules keeps the confirmed block when the next descendant is not one-confirmed", () => {
