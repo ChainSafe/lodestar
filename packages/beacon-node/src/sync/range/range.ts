@@ -105,6 +105,11 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
+      metrics.syncRange.headSyncPeers.addCollect(() => {
+        for (const syncChain of this.chains.values()) {
+          syncChain.scrapeMetrics(metrics);
+        }
+      });
     }
   }
 
