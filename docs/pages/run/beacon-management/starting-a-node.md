@@ -16,7 +16,7 @@ Make sure Lodestar is installed in your local environment, following the chosen 
 
 For a complete list of beacon node CLI commands and options, see the [`beacon` CLI Command](../beacon-management/beacon-cli.md) section.
 
-To select a known testnet or mainnet, use the `--network` flag. The option `mainnet` is selected by default, and a list of available networks is listed with the `--help` flag. Setting the `--network` flag will conveniently configure the beacon node for the selected network. For power users, any configuration option should be able to be overridden.
+To select a known testnet or mainnet, use the `--network` flag. The option `mainnet` is selected by default, and a list of available networks is listed with the `--help` flag. Setting the `--network` flag will conveniently configure the beacon node for the selected network. For power users, any configuration option should be able to be overridden. You can also supply options through a [configuration file](./configuration-file.md) instead of passing them as command line flags.
 
 ## Configure the Lodestar JWT Authentication Token
 

@@ -24,6 +24,7 @@ const sidebars: SidebarsConfig = {
           label: "Beacon Node",
           items: [
             "run/beacon-management/starting-a-node",
+            "run/beacon-management/configuration-file",
             "run/beacon-management/beacon-cli",
             "run/beacon-management/data-retention",
             "run/beacon-management/fast-confirmation",
