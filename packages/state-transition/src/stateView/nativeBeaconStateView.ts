@@ -61,7 +61,7 @@ import {
  */
 
 /**
- * LRU cache that dedupes shuffling materialization across views.
+ * FIFO cache that dedupes shuffling materialization across views.
  *
  * Each cached block-state is a separate `NativeBeaconStateView`, and `getXShuffling()`
  * materializes the native `EpochShuffling` into a alrge JS object graph.
