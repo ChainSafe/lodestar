@@ -1,5 +1,6 @@
 import {ZERO_HASH_HEX} from "@lodestar/params";
 import {Root, RootHex} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {IForkChoice} from "./interface.js";
 
 /**
@@ -7,21 +8,28 @@ import {IForkChoice} from "./interface.js";
  * that is safe from re-orgs. Normally this block is pretty close to the head of canonical
  * chain which makes it valuable to expose a safe block to users.
  *
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0/fork_choice/safe-block.md#get_safe_beacon_block_root
+ * @deprecated The merged fast-confirmation spec only defines `get_safe_execution_block_hash`.
  */
 export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
+  const confirmedRoot = fc.getConfirmedRoot();
+  if (confirmedRoot && fc.hasBlockHex(confirmedRoot)) {
+    return fromHex(confirmedRoot);
+  }
   return fc.getJustifiedCheckpoint().root;
 }
 
 /**
  * Get execution payload hash for the safe block
- * This function assumes that safe block is post Bellatrix and function should not be called otherwise.
  *
- * As our existing usage is aligned with above condition so not adding fork-check inside this function
- *
- *
- * https://github.com/ethereum/consensus-specs/blob/v1.6.0/fork_choice/safe-block.md#get_safe_execution_block_hash
+ * https://github.com/ethereum/consensus-specs/blob/master/fork_choice/safe-block.md#get_safe_execution_block_hash
  */
 export function getSafeExecutionBlockHash(forkChoice: IForkChoice): RootHex {
-  return forkChoice.getJustifiedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+  const confirmedRoot = forkChoice.getConfirmedRoot();
+  if (confirmedRoot) {
+    const confirmedBlock = forkChoice.getBlockHexDefaultStatus(confirmedRoot);
+    if (confirmedBlock?.executionPayloadBlockHash) {
+      return confirmedBlock.executionPayloadBlockHash;
+    }
+  }
+  return ZERO_HASH_HEX;
 }

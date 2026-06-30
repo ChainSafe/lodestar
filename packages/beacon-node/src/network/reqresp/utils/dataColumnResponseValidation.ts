@@ -1,6 +1,5 @@
 import {LogData} from "@lodestar/logger";
 import {ForkSeq} from "@lodestar/params";
-import {RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
@@ -76,12 +75,22 @@ export async function handleColumnSidecarUnavailability({
 
 export function validateRequestedDataColumns(chain: IBeaconChain, requestedColumns: ColumnIndex[]): ColumnIndex[] {
   if (requestedColumns.length === 0) {
-    throw new ResponseError(RespStatus.INVALID_REQUEST, "dataColumnSidecar requested without column indices");
+    return [];
   }
 
-  const custodyColumns = chain.custodyConfig.custodyColumns;
-  const availableColumns = requestedColumns.filter((c) => custodyColumns.includes(c));
-  const missingColumns = requestedColumns.filter((c) => !custodyColumns.includes(c));
+  const {custodyColumns, custodyColumnsIndex} = chain.custodyConfig;
+  const availableColumns: ColumnIndex[] = [];
+  const missingColumns: ColumnIndex[] = [];
+  for (const c of requestedColumns) {
+    // `c` is peer-controlled and SSZ-deserialized as `uint64`, so it may exceed
+    // `NUMBER_OF_COLUMNS - 1`; `Uint8Array` returns `undefined` for OOB reads,
+    // and `undefined !== 0` would silently classify OOB indices as custodied.
+    if ((custodyColumnsIndex[c] ?? 0) !== 0) {
+      availableColumns.push(c);
+    } else {
+      missingColumns.push(c);
+    }
+  }
 
   if (missingColumns.length > 0) {
     chain.logger.verbose("Requested dataColumnSidecar for non-custody columns", {

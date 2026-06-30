@@ -73,6 +73,8 @@ const ignoredTopics: string[] = [
   "execution_payload_bid",
   // TODO: not yet implemented, added in v5.0.0-alpha.2
   "head_v2",
+  // TODO: unskip once the spec release adds `current_slot` to the fast_confirmation event
+  // (tracked in https://github.com/ethereum/beacon-APIs/pull/598)
   "fast_confirmation",
 ];
 

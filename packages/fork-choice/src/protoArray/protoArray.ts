@@ -719,6 +719,58 @@ export class ProtoArray {
   }
 
   /**
+   * Raw PTC vote tallies for a block root, for the debug fork choice endpoint.
+   * Returns `null` for pre-Gloas (or pruned) roots, which have no vote maps.
+   */
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null {
+    const attended = this.ptcAttested.get(blockRootHex);
+    const timelinessVotes = this.payloadTimelinessVotes.get(blockRootHex);
+    const daVotes = this.payloadDataAvailabilityVotes.get(blockRootHex);
+    // The three maps share a lifecycle (set together in onBlock, deleted together on prune)
+    if (attended === undefined || timelinessVotes === undefined || daVotes === undefined) {
+      return null;
+    }
+    return {
+      attesterCount: bitCount(attended.uint8Array),
+      payloadPresentCount: bitCount(timelinessVotes.uint8Array),
+      dataAvailableCount: bitCount(daVotes.uint8Array),
+    };
+  }
+
+  getPreviousProposerBoostRoot(): RootHex {
+    return this.previousProposerBoost?.root ?? HEX_ZERO_HASH;
+  }
+
+  /**
+   * Timeliness votes per PTC position, `null` where the member has not attested.
+   * Returns `null` if the block is unknown or not a Gloas block.
+   */
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.toAttendanceAwareVotes(this.payloadTimelinessVotes.get(blockRootHex), blockRootHex);
+  }
+
+  /**
+   * Data-availability votes per PTC position, `null` where the member has not attested.
+   * Returns `null` if the block is unknown or not a Gloas block.
+   */
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.toAttendanceAwareVotes(this.payloadDataAvailabilityVotes.get(blockRootHex), blockRootHex);
+  }
+
+  private toAttendanceAwareVotes(votes: BitArray | undefined, blockRootHex: RootHex): (boolean | null)[] | null {
+    const attended = this.ptcAttested.get(blockRootHex);
+    if (votes === undefined || attended === undefined) {
+      return null;
+    }
+
+    return Array.from({length: PTC_SIZE}, (_, i) => (attended.get(i) ? votes.get(i) : null));
+  }
+
+  /**
    * Spec: payload_timeliness(store, root, timely=True)
    */
   isPayloadTimely(blockRoot: RootHex): boolean {

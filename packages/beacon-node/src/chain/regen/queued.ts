@@ -143,11 +143,6 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.blockStateCache.prune(headStateRoot);
   }
 
-  pruneOnFinalized(finalizedEpoch: number): void {
-    this.checkpointStateCache.pruneFinalized(finalizedEpoch);
-    this.blockStateCache.deleteAllBeforeEpoch(finalizedEpoch);
-  }
-
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void {
     this.blockStateCache.add(postState);
     this.checkpointStateCache.processState(blockRootHex, postState).catch((e) => {

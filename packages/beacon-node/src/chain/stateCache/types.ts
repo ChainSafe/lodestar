@@ -30,7 +30,6 @@ export interface BlockStateCache {
   clear(): void;
   size: number;
   prune(headStateRootHex: RootHex): void;
-  deleteAllBeforeEpoch(finalizedEpoch: Epoch): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];
   /** Expose beacon states stored in cache. Use with caution */
   getStates(): IterableIterator<IBeaconStateView>;
@@ -67,7 +66,6 @@ export interface CheckpointStateCache {
   getOrReloadLatest(rootHex: RootHex, maxEpoch: Epoch): Promise<IBeaconStateView | null>;
   updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null;
   prune(finalizedEpoch: Epoch, justifiedEpoch: Epoch): void;
-  pruneFinalized(finalizedEpoch: Epoch): void;
   processState(blockRootHex: RootHex, state: IBeaconStateView): Promise<number>;
   clear(): void;
   dumpSummary(): routes.lodestar.StateCacheItem[];

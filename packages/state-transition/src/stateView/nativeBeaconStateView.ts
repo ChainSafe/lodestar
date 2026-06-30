@@ -7,6 +7,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -123,6 +124,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private readonly _getStateRootAtSlot = new Map<Slot, Root>();
   private readonly _getRandaoMix = new Map<Epoch, Bytes32>();
   private readonly _getShufflingAtEpoch = new Map<Epoch, EpochShuffling>();
+  private readonly _getBeaconCommittee = new Map<string, Uint32Array>();
+  private readonly _getBeaconCommitteeCountPerSlot = new Map<Epoch, number>();
   private readonly _getShufflingDecisionRoot = new Map<Epoch, RootHex>();
   private readonly _getBeaconProposer = new Map<Slot, ValidatorIndex>();
   // getBeaconProposerOrNull can return null, so use .has() to distinguish "not cached" from "cached null"
@@ -301,6 +304,25 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     if (cached === undefined) {
       cached = this.binding.getShufflingAtEpoch(epoch);
       this._getShufflingAtEpoch.set(epoch, cached);
+    }
+    return cached;
+  }
+
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
+    const key = `${slot}:${index}`;
+    let cached = this._getBeaconCommittee.get(key);
+    if (cached === undefined) {
+      cached = this.binding.getBeaconCommittee(slot, index);
+      this._getBeaconCommittee.set(key, cached);
+    }
+    return cached;
+  }
+
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
+    let cached = this._getBeaconCommitteeCountPerSlot.get(epoch);
+    if (cached === undefined) {
+      cached = this.binding.getBeaconCommitteeCountPerSlot(epoch);
+      this._getBeaconCommitteeCountPerSlot.set(epoch, cached);
     }
     return cached;
   }
@@ -883,7 +905,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this.binding.getIndicesInPayloadTimelinessCommittee(validatorIndex, slot);
   }
 
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
     const view = new NativeBeaconStateView(this.binding.withParentPayloadApplied(executionRequests));
     if (!isStatePostGloas(view)) {
       throw new Error("Expected gloas state from withParentPayloadApplied");
