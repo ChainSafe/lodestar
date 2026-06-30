@@ -1517,7 +1517,7 @@ export class ForkChoice implements IForkChoice {
     const blockDependentRoot = this.protoArray.getAncestorOrNull(blockParentRootHex, dependentSlot)?.blockRoot;
     // On lookup failure, we lean on the conservative side and withold the boost
     if (headDependentRoot === undefined || blockDependentRoot === undefined) {
-      return true;
+      return false;
     }
 
     return headDependentRoot === blockDependentRoot;
