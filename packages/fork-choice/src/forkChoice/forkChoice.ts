@@ -708,7 +708,6 @@ export class ForkChoice implements IForkChoice {
       this.proposerBoostRoot === null &&
       expectedProposerIndex !== null &&
       block.proposerIndex === expectedProposerIndex &&
-      // Spec: only boost when the block shares the canonical head's proposer-shuffling dependent root
       this.isProposerBoostSameDependentRoot(this.head.blockRoot, parentRootHex)
     ) {
       this.proposerBoostRoot = blockRootHex;
@@ -1504,13 +1503,11 @@ export class ForkChoice implements IForkChoice {
    * branch than the head.
    *
    * The block is not yet in the proto-array when this runs, so its dependent root is traced from
-   * its parent — equivalent because the dependent slot is always in an earlier epoch than the
-   * (timely, current-slot) block.
+   * its parent
    */
   private isProposerBoostSameDependentRoot(headRootHex: RootHex, blockParentRootHex: RootHex): boolean {
     const epoch = computeEpochAtSlot(this.fcStore.currentSlot);
-    // get_shuffling_dependent_root returns the genesis Root() for both head and block when
-    // epoch <= MIN_SEED_LOOKAHEAD, so the dependent roots trivially match.
+    // Genesis block parent
     if (epoch <= MIN_SEED_LOOKAHEAD) {
       return true;
     }
@@ -1518,8 +1515,7 @@ export class ForkChoice implements IForkChoice {
     const dependentSlot = computeStartSlotAtEpoch(epoch - MIN_SEED_LOOKAHEAD) - 1;
     const headDependentRoot = this.protoArray.getAncestorOrNull(headRootHex, dependentSlot)?.blockRoot;
     const blockDependentRoot = this.protoArray.getAncestorOrNull(blockParentRootHex, dependentSlot)?.blockRoot;
-    // On lookup failure (eg. ancestor pruned near non-finality) fall back to granting the boost,
-    // preserving the prior unconditional behavior rather than crashing block import.
+    // On lookup failure, we lean on the conservative side and withold the boost
     if (headDependentRoot === undefined || blockDependentRoot === undefined) {
       return true;
     }
