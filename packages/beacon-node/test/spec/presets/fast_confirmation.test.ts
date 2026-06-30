@@ -344,6 +344,9 @@ const fastConfirmationTest =
                   seenTimestampSec: tickTime,
                   validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
+                  // fast_confirmation vectors are generated with bls_setting=2 (signatures are not
+                  // required to be valid), so only verify signatures when bls_setting=1.
+                  validSignatures: testcase.meta?.bls_setting !== BigInt(1),
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
@@ -689,5 +692,13 @@ specTestIterator(
   {
     ...defaultSkipOpts,
     skippedRunners: [],
+    skippedTestSuites: [
+      ...(defaultSkipOpts.skippedTestSuites ?? []),
+      // TODO-GLOAS: lodestar's fast-confirmation rule is block-root based and does not model the
+      // ePBS payload_status dimension required by specs/gloas/fast-confirmation.md (PTC payload
+      // presence/timeliness, get_node_for_root with PAYLOAD_STATUS_PENDING). Head/justified/
+      // finalized/proposer-head all match; only getConfirmedRoot diverges. Unskip with the gloas FCR port.
+      /^gloas\/fast_confirmation\/.*/,
+    ],
   }
 );

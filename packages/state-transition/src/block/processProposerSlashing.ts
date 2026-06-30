@@ -32,6 +32,10 @@ export function processProposerSlashing(
   );
 
   if (fork >= ForkSeq.gloas) {
+    // Remove the BuilderPendingPayment corresponding to this proposal if it is still in the
+    // 2-epoch window. Only clear it when the slashed validator is the proposer associated with
+    // the payment; otherwise an unrelated same-slot equivocation could grief an honest proposer's
+    // payment.
     const slot = Number(proposerSlashing.signedHeader1.message.slot);
     const proposalEpoch = computeEpochAtSlot(slot);
     const currentEpoch = state.epochCtx.epoch;
@@ -45,10 +49,11 @@ export function processProposerSlashing(
           : undefined;
 
     if (paymentIndex !== undefined) {
-      (state as CachedBeaconStateGloas).builderPendingPayments.set(
-        paymentIndex,
-        ssz.gloas.BuilderPendingPayment.defaultViewDU()
-      );
+      const builderPendingPayments = (state as CachedBeaconStateGloas).builderPendingPayments;
+      const payment = builderPendingPayments.get(paymentIndex);
+      if (payment.proposerIndex === proposerSlashing.signedHeader1.message.proposerIndex) {
+        builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
+      }
     }
   }
 
