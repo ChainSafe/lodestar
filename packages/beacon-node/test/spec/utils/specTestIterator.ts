@@ -34,6 +34,7 @@ const coveredTestRunners = [
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",

@@ -8,6 +8,7 @@ import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-cho
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
+  EFFECTIVE_BALANCE_INCREMENT,
   ForkPostDeneb,
   ForkPostFulu,
   ForkPostGloas,
@@ -15,7 +16,6 @@ import {
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
-  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -23,6 +23,7 @@ import {
   BeaconStateView,
   DataAvailabilityStatus,
   IBeaconStateViewGloas,
+  computeEpochAtSlot,
   createCachedBeaconState,
   createPubkeyCache,
   createSingleSignatureSetFromComponents,
@@ -193,25 +194,43 @@ const forkChoiceTest =
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
 
+              // Spec `validate_on_attestation` requires `get_current_slot(store) >= attestation.data.slot + 1`
+              // (an attestation may only influence fork choice from the slot AFTER it was created). Lodestar
+              // enforces this 1-slot delay in the gossip/attestation-pool layer, not in `forkChoice.onAttestation`,
+              // so replicate the precondition here since the runner calls `onAttestation` directly.
+              const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
+              if (currentSlot < attestation.data.slot + 1) {
+                if (isValid) {
+                  throw Error(`Attestation not yet 1 slot old but marked valid at step ${i}`);
+                }
+                logger.debug(
+                  `Step ${i}/${stepsLen} skip attestation: not yet 1 slot old (spec on_attestation rejects)`,
+                  {
+                    attSlot: attestation.data.slot,
+                    currentSlot,
+                  }
+                );
+                continue;
+              }
+
               // `on_attestation` decodes aggregation_bits with the shuffling at the attestation's
               // target checkpoint, not the head state — resolve it via ShufflingCache + regen so
               // cross-epoch fork attestations (surfaced by the compliance suite) decode correctly.
+              // The resolution runs inside the try so that errors on `valid: false` steps (e.g.
+              // attesting to a future block) count as the expected rejection.
               const attHeadBlock = chain.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
-              if (attHeadBlock === null) {
-                logger.debug(`Step ${i}/${stepsLen} skip attestation: head block unknown`, {
-                  blockRoot: toHex(attestation.data.beaconBlockRoot),
-                });
-                continue;
+              if (attHeadBlock === null && isValid) {
+                throw Error(`Attestation beacon block root unknown to fork choice at step ${i}`);
               }
-              const attEpoch = Math.floor(attestation.data.slot / SLOTS_PER_EPOCH);
-              const shuffling = await getShufflingForAttestationVerification(
-                chain,
-                attEpoch,
-                attHeadBlock,
-                RegenCaller.validateGossipAttestation
-              );
-              const indexedAttestation = getIndexedAttestation(shuffling, ForkSeq[fork], attestation);
               try {
+                if (attHeadBlock === null) throw Error("Unknown attestation head block (expected rejection)");
+                const shuffling = await getShufflingForAttestationVerification(
+                  chain,
+                  computeEpochAtSlot(attestation.data.slot),
+                  attHeadBlock,
+                  RegenCaller.validateGossipAttestation
+                );
+                const indexedAttestation = getIndexedAttestation(shuffling, ForkSeq[fork], attestation);
                 chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
@@ -269,27 +288,31 @@ const forkChoiceTest =
                     );
                   }
 
-                  // Signature verification, matching the `validateGossipPayloadAttestationMessage` flow
-                  const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
-                  if (!validatorPubkey) {
-                    throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
+                  // Signature verification (matching `validateGossipPayloadAttestationMessage`) — skipped for
+                  // bls_setting !== 1: compliance fixtures use placeholder signatures (bls_setting: 2), so the
+                  // spec reference runner does not verify. Mirror the block-import accommodation (`validSignatures`).
+                  if (testcase.meta?.bls_setting === BigInt(1)) {
+                    const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
+                    if (!validatorPubkey) {
+                      throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
+                    }
+                    const signatureSet = createSingleSignatureSetFromComponents(
+                      validatorPubkey,
+                      getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
+                      payloadAttestationMessage.signature
+                    );
+                    let signatureValidity: boolean;
+                    try {
+                      signatureValidity = await chain.bls.verifySignatureSets([signatureSet], {
+                        verifyOnMainThread: true,
+                        batchable: true,
+                        priority: true,
+                      });
+                    } catch {
+                      signatureValidity = false;
+                    }
+                    if (!signatureValidity) throw Error("Invalid payload attestation signature");
                   }
-                  const signatureSet = createSingleSignatureSetFromComponents(
-                    validatorPubkey,
-                    getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
-                    payloadAttestationMessage.signature
-                  );
-                  let signatureValidity: boolean;
-                  try {
-                    signatureValidity = await chain.bls.verifySignatureSets([signatureSet], {
-                      verifyOnMainThread: true,
-                      batchable: true,
-                      priority: true,
-                    });
-                  } catch {
-                    signatureValidity = false;
-                  }
-                  if (!signatureValidity) throw Error("Invalid payload attestation signature");
 
                   chain.forkChoice.notifyPtcMessages(
                     blockRoot,
@@ -524,16 +547,20 @@ const forkChoiceTest =
                 );
                 verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope.message);
 
-                // Verify signature
-                const sigValid = await verifyExecutionPayloadEnvelopeSignature(
-                  beaconConfig,
-                  blockState as IBeaconStateViewGloas,
-                  pubkeyCache,
-                  envelope,
-                  blockState.latestBlockHeader.proposerIndex,
-                  chain.bls
-                );
-                if (!sigValid) throw Error("Invalid execution payload envelope signature");
+                // Verify signature — skipped for bls_setting !== 1: compliance fixtures use placeholder
+                // signatures (bls_setting: 2), so the spec reference runner does not verify. Mirror the
+                // block-import accommodation (`validSignatures` above).
+                if (testcase.meta?.bls_setting === BigInt(1)) {
+                  const sigValid = await verifyExecutionPayloadEnvelopeSignature(
+                    beaconConfig,
+                    blockState as IBeaconStateViewGloas,
+                    pubkeyCache,
+                    envelope,
+                    blockState.latestBlockHeader.proposerIndex,
+                    chain.bls
+                  );
+                  if (!sigValid) throw Error("Invalid execution payload envelope signature");
+                }
 
                 // Add predefined VALID status for the payload's block hash so the EL mock accepts it
                 executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
@@ -639,7 +666,28 @@ const forkChoiceTest =
                   .getViableHeads()
                   .map(({root, weight}) => ({root, weight}))
                   .sort((a, b) => a.root.localeCompare(b.root));
-                expect(actual).toEqualWithMessage(expected, `Invalid viable heads at step ${i}`);
+
+                // The set of viable heads is determined by justified/finalized epochs, not weight,
+                // so it must match exactly. Comparing the root sets (not a subset) also rejects a
+                // degenerate empty result.
+                expect(actual.map((h) => h.root)).toEqualWithMessage(
+                  expected.map((h) => h.root),
+                  `Invalid viable head roots at step ${i}`
+                );
+
+                // Weights are stored in EFFECTIVE_BALANCE_INCREMENT units, so the proposer-boost
+                // score is floored to whole ETH while the spec keeps Gwei precision. Attestation
+                // weight is exact, so the per-head divergence is only the boost quantization, bounded
+                // by (100 - gcd(PROPOSER_SCORE_BOOST, 100) + PROPOSER_SCORE_BOOST) / 100 = 1.2 ETH,
+                // independent of SLOTS_PER_EPOCH and total balance. Compare within that bound.
+                const tolerance = 1.2 * EFFECTIVE_BALANCE_INCREMENT;
+                for (const [k, {root, weight}] of actual.entries()) {
+                  const diff = Math.abs(weight - expected[k].weight);
+                  expect(
+                    diff,
+                    `Viable head ${root} weight off by ${diff} Gwei (> 1.2 ETH) at step ${i}`
+                  ).toBeLessThanOrEqual(tolerance);
+                }
               }
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
