@@ -106,6 +106,11 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
       metrics.syncRange.headSyncPeers.addCollect(() => {
+        // Gauges retain their last set value, so a removed chain would keep reporting stale
+        // per-column peer counts (finalizedSyncPeers especially, as it is rarely recreated once
+        // synced)
+        metrics.syncRange.headSyncPeers.reset();
+        metrics.syncRange.finalizedSyncPeers.reset();
         for (const syncChain of this.chains.values()) {
           syncChain.scrapeMetrics(metrics);
         }

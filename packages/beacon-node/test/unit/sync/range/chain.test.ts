@@ -153,8 +153,8 @@ describe("sync / range / chain", () => {
   }
 
   it("does not self-register a metrics collect fn per SyncChain (leak regression)", () => {
-    const headSyncPeers = {addCollect: vi.fn(), set: vi.fn()};
-    const finalizedSyncPeers = {addCollect: vi.fn(), set: vi.fn()};
+    const headSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};
+    const finalizedSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};
     const metrics = {syncRange: {headSyncPeers, finalizedSyncPeers}} as unknown as Metrics;
 
     const target: ChainTarget = {slot: computeStartSlotAtEpoch(16), root: ZERO_HASH};
