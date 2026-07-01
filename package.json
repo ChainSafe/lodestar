@@ -51,7 +51,6 @@
     "@lerna-lite/version": "^4.9.4",
     "@lodestar/params": "workspace:",
     "@types/node": "^24.10.1",
-    "@types/react": "^19.1.12",
     "@typescript/native-preview": "7.0.0-dev.20260303.1",
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
@@ -69,7 +68,6 @@
     "ts-node": "^11.0.0-beta.1",
     "typescript": "^6.0.1-rc",
     "vite": "^6.0.11",
-    "vite-plugin-dts": "^4.5.4",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-top-level-await": "^1.6.0",
     "vitest": "catalog:",
@@ -77,8 +75,7 @@
     "wait-port": "^1.1.0"
   },
   "dependencies": {
-    "@chainsafe/lodestar": "workspace:*",
-    "debug": "^4.4.3"
+    "@chainsafe/lodestar": "workspace:*"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",

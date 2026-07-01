@@ -162,13 +162,14 @@ export class SeenPayloadEnvelopeInput {
 
   pruneBelowParent(parentBlock: ProtoBlock): void {
     for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
-      // Only evict once the payload is FULL (imported) — the input is then done. Keep EMPTY/PENDING
-      // entries: on an EMPTY branch we may still need to download the FULL envelope (see #9475), and
-      // evicting here would make payload-by-root sync throw "Missing PayloadEnvelopeInput for known
-      // block". These are cheap (bid-only) and get cleaned up by pruneFinalized.
+      // Only evict once the payload is FULL (revealed/imported) — on an EMPTY/PENDING branch we may
+      // still need to download the FULL envelope (see #9475), and evicting would make payload-by-root
+      // sync throw "Missing PayloadEnvelopeInput for known block".
       if (block.slot < parentBlock.slot && block.payloadStatus === PayloadStatus.FULL) {
         const input = this.payloadInputs.get(block.blockRoot);
-        if (input) {
+        // ...and don't evict while columns are still being gathered: writeDataColumnsToDb awaits the
+        // same hasComputedAllData() before persisting. Such entries are pruned by a later call.
+        if (input?.hasComputedAllData()) {
           this.evictPayloadInput(input);
           this.logger?.verbose("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
             slot: block.slot,

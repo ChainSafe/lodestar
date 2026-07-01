@@ -35,8 +35,6 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The envelope's block root `envelope.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
-  // TODO GLOAS: Need to review this, we should queue the envelope for later
-  // processing if the block is not yet known, otherwise we would ignore it here
   const block = chain.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -108,7 +106,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [REJECT] `hash_tree_root(envelope.execution_requests) == bid.execution_requests_root`
-  const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+  const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
   if (!byteArrayEquals(requestsRoot, payloadInput.getBid().executionRequestsRoot)) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,

@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.9
+version: v1.7.0-alpha.11
 style: full
 
 specrefs:
@@ -286,7 +286,6 @@ exceptions:
     - get_committee_indices#electra
     - get_eth1_pending_deposit_count#electra
     - get_eth1_vote#electra
-    - get_execution_requests#electra
     - get_lc_execution_root#electra
     - get_pending_partial_withdrawals#electra
     - get_validators_sweep_withdrawals#electra
@@ -424,14 +423,12 @@ exceptions:
     # heze (not implemented)
     - compute_fork_version#heze
     - get_forkchoice_store#heze
-    - get_inclusion_list_bits#heze
     - get_inclusion_list_committee#heze
     - get_inclusion_list_committee_assignment#heze
     - get_inclusion_list_due_ms#heze
     - get_inclusion_list_signature#heze
     - get_inclusion_list_store#heze
     - get_inclusion_list_transactions#heze
-    - is_inclusion_list_bits_inclusive#heze
     - is_payload_inclusion_list_satisfied#heze
     - is_valid_inclusion_list_signature#heze
     - on_inclusion_list#heze
