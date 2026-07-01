@@ -1543,13 +1543,50 @@ export class ProtoArray {
 
   /** Weight is converted from increment units to Gwei. */
   getViableHeads(currentSlot: Slot): {root: RootHex; weight: number}[] {
-    const result: {root: RootHex; weight: number}[] = [];
+    // Mirror the spec's `get_filtered_block_tree`, which is rooted at the store's justified
+    // checkpoint: a viable head is a leaf (no viable descendant, i.e. `bestChild === undefined`)
+    // that descends from the justified checkpoint block AND is itself viable for head. Iterating
+    // all nodes without the justified-descendant filter would wrongly include FFG-viable leaves
+    // that hang off the finalized checkpoint on a branch not under the current justified checkpoint.
+    const justifiedStatus = this.getDefaultVariant(this.justifiedRoot);
+    const justifiedSlot =
+      justifiedStatus !== undefined ? this.getNode(this.justifiedRoot, justifiedStatus)?.slot : undefined;
+    // Gloas payload-status variants share a blockRoot and more than one can be a leaf (EMPTY and
+    // FULL are both parented under PENDING); the spec's filtered tree is keyed by block root, so
+    // emit each root at most once. Which variant's weight the spec expects is an open gloas
+    // divergence — deterministically keep the heaviest qualifying variant.
+    const weightByRoot = new Map<RootHex, number>();
     for (const node of this.nodes) {
-      if (node.bestChild === undefined && this.nodeIsViableForHead(node, currentSlot)) {
-        result.push({root: node.blockRoot, weight: node.weight * EFFECTIVE_BALANCE_INCREMENT});
+      if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {
+        continue;
+      }
+      if (this.justifiedEpoch !== GENESIS_EPOCH && !this.descendsFromJustified(node, justifiedSlot)) {
+        continue;
+      }
+      const prev = weightByRoot.get(node.blockRoot);
+      if (prev === undefined || node.weight > prev) {
+        weightByRoot.set(node.blockRoot, node.weight);
       }
     }
-    return result;
+    return Array.from(weightByRoot.entries()).map(([root, weight]) => ({
+      root,
+      weight: weight * EFFECTIVE_BALANCE_INCREMENT,
+    }));
+  }
+
+  /**
+   * True if `node` is the justified checkpoint block or one of its descendants.
+   * Parent slots are non-increasing, so the walk stops once it passes the justified block's slot.
+   */
+  private descendsFromJustified(node: ProtoNode, justifiedSlot: Slot | undefined): boolean {
+    let current: ProtoNode | undefined = node;
+    while (current !== undefined && (justifiedSlot === undefined || current.slot >= justifiedSlot)) {
+      if (current.blockRoot === this.justifiedRoot) {
+        return true;
+      }
+      current = current.parent !== undefined ? this.getNodeByIndex(current.parent) : undefined;
+    }
+    return false;
   }
 
   /**
