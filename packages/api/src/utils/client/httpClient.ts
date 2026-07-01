@@ -25,7 +25,7 @@ import {
 } from "./request.js";
 import {ApiResponse} from "./response.js";
 
-// TODO: Workaround for tsgo import-elision bug: ensure this is treated as a runtime value.
+// TODO: Workaround for tsc import-elision bug: ensure this is treated as a runtime value.
 // https://github.com/microsoft/typescript-go/issues/2212
 void HttpStatusCode;
 
