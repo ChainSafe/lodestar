@@ -84,7 +84,7 @@ describe("SeenPayloadEnvelopeInput", () => {
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
-      payloadStatus,
+      payloadStatus: PayloadStatus.FULL,
       parentBlockHash: null,
     };
   }
