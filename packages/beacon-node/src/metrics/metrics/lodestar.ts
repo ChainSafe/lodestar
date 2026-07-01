@@ -610,6 +610,11 @@ export function createLodestarMetrics(
         help: "The origination source of one of the BlockInputSync triggers",
         labelNames: ["source"],
       }),
+      payloadSource: register.counter<{source: BlockInputSource}>({
+        name: "lodestar_payload_input_sync_source_total",
+        help: "Count of payload (execution payload envelope) sync triggers, labeled by their source",
+        labelNames: ["source"],
+      }),
       pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
         help: "Current size of UnknownBlockSync pending blocks cache",
@@ -861,6 +866,12 @@ export function createLodestarMetrics(
         labelNames: ["numBlobs"],
       }),
 
+      skippedSlots: register.histogram({
+        name: "lodestar_gossip_block_skipped_slots",
+        help: "Number of skipped slots between a gossip block and its parent (blockSlot - parentSlot - 1)",
+        buckets: [0, 1, 2, 4, 8, 16, 32],
+      }),
+
       processBlockErrors: register.gauge<{error: BlockErrorCode | "NOT_BLOCK_ERROR"}>({
         name: "lodestar_gossip_block_process_block_errors",
         help: "Count of errors, by error type, while processing blocks",
@@ -987,10 +998,11 @@ export function createLodestarMetrics(
       }),
     },
     importPayload: {
-      bySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
-        name: "lodestar_import_payload_by_source_total",
-        help: "Total number of imported execution payload envelopes by source",
+      elapsedTimeTillImported: register.histogram<{source: PayloadEnvelopeInputSource}>({
+        name: "lodestar_import_payload_elapsed_time_till_imported_seconds",
+        help: "Time elapsed between slot time and the time execution payload envelope is imported (added to fork choice)",
         labelNames: ["source"],
+        buckets: [1, 2, 3, 6, 9, 12],
       }),
       columnsBySource: register.gauge<{source: PayloadEnvelopeInputSource}>({
         name: "lodestar_import_payload_columns_by_source_total",

@@ -3434,7 +3434,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time elapsed between block slot time and the time block received via gossip",
+      "description": "Time elapsed between block slot time and the time block/payload received via gossip",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3507,7 +3507,7 @@
           "exemplar": false,
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_received_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_received_count[$rate_interval])",
           "interval": "",
-          "legendFormat": "till received {{source}}",
+          "legendFormat": "block_received_{{source}}",
           "range": true,
           "refId": "A"
         },
@@ -3516,11 +3516,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_processed_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_processed_count[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "till processed",
+          "legendFormat": "block_processed",
+          "range": true,
           "refId": "B"
         },
         {
@@ -3528,12 +3530,40 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "rate(lodestar_gossip_block_elapsed_time_till_become_head_sum[$rate_interval])\n/\nrate(lodestar_gossip_block_elapsed_time_till_become_head_count[$rate_interval])",
           "hide": false,
           "interval": "",
-          "legendFormat": "till become head",
+          "legendFormat": "block_become_head",
+          "range": true,
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_sum[$rate_interval])\n/\nrate(lodestar_gossip_execution_payload_envelope_elapsed_time_till_received_count[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "payload_received",
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_import_payload_elapsed_time_till_imported_seconds_sum[$rate_interval])\n/\nrate(lodestar_import_payload_elapsed_time_till_imported_seconds_count[$rate_interval])",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "payload_imported_{{source}}",
+          "range": true,
+          "refId": "E"
         }
       ],
       "title": "Gossip Block Received Delay",
@@ -5702,7 +5732,6 @@
     },
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -5713,87 +5742,6 @@
       "panels": [],
       "title": "Gossip Execution Payload Envelope Validation",
       "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 237
-      },
-      "id": 631,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_gossip_execution_payload_envelope_process_payload_errors[$rate_interval]) * 12",
-          "legendFormat": "{{error}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Process Error",
-      "type": "timeseries"
     },
     {
       "datasource": {
@@ -5925,6 +5873,87 @@
         }
       ],
       "title": "Received Time",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 237
+      },
+      "id": 631,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_gossip_execution_payload_envelope_process_payload_errors[$rate_interval]) * 12",
+          "legendFormat": "{{error}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Process Error",
       "type": "timeseries"
     },
     {

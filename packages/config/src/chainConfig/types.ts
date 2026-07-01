@@ -72,6 +72,7 @@ export type ChainConfig = {
   SYNC_MESSAGE_DUE_BPS_GLOAS: number;
   CONTRIBUTION_DUE_BPS_GLOAS: number;
   PAYLOAD_ATTESTATION_DUE_BPS: number;
+  PAYLOAD_DUE_BPS: number;
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
@@ -131,6 +132,9 @@ export type ChainConfig = {
 
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
+
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -191,6 +195,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   SYNC_MESSAGE_DUE_BPS_GLOAS: "number",
   CONTRIBUTION_DUE_BPS_GLOAS: "number",
   PAYLOAD_ATTESTATION_DUE_BPS: "number",
+  PAYLOAD_DUE_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",
@@ -250,6 +255,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",
+
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: "number",
 };
 
 export type BlobScheduleEntry = {

@@ -4,6 +4,7 @@ import {
   ForkChoiceOpts,
   IForkChoiceStore,
   NotReorgedReason,
+  PayloadStatus,
   ProtoArray,
   ProtoBlock,
 } from "@lodestar/fork-choice";
@@ -112,6 +113,8 @@ export class ReorgedForkChoice extends ForkChoice {
   private getCommonAncestorBlock(): ProtoBlock | undefined {
     if (this.reorgedSlot === undefined || this.reorgDistance === undefined) return undefined;
     const commonAncestorSlot = this.reorgedSlot + 1 - this.reorgDistance;
-    return super.getAllNodes().find((n) => n.slot === commonAncestorSlot);
+    // return the FULL node, then the next proposer decides the real variant by "shouldBuildOnFull()"
+    // this is compatible to pre-gloas because it's always FULL there
+    return super.getAllNodes().find((n) => n.slot === commonAncestorSlot && n.payloadStatus === PayloadStatus.FULL);
   }
 }
