@@ -271,6 +271,8 @@ export function getTotalActiveBalance(
   balanceSource: FastConfirmationBalanceSource,
   cache: FastConfirmationCache
 ): number {
+  // Invariant per balance source within a run, but read many times per is_one_confirmed evaluation
+  // across the epoch-boundary chain walk; memoize so the full validator-set scan runs once per run.
   const key: TotalActiveBalanceCacheKey = balanceSource.state ?? balanceSource.balances;
   const cached = cache.totalActiveBalanceByKey.get(key);
   if (cached !== undefined) return cached;
