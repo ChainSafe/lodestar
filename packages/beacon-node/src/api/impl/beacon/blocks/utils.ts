@@ -56,6 +56,33 @@ export function resolveBlockId(forkChoice: IForkChoice, blockId: routes.beacon.B
   return blockSlot;
 }
 
+/**
+ * Count data columns that were published to zero peers AND were newly introduced to the network by us.
+ *
+ * When self-building post-gloas, the block is published first, then peers fetch the blobs from their EL
+ * and disseminate the columns via gossip before we publish the execution payload envelope. Those columns
+ * can therefore already be in our seen cache by the time we publish them, in which case our publish is a
+ * no-op duplicate that resolves to zero recipients — expected, not a propagation failure. Only columns we
+ * actually introduced to the network (not already present) should count towards the zero-peers warning.
+ *
+ * See https://github.com/ChainSafe/lodestar/issues/9527.
+ *
+ * @param sentPeersPerColumn number of peers each column was published to, aligned with `columnAlreadyPresent`
+ * @param columnAlreadyPresent whether each column was already in our seen cache before we published it
+ */
+export function countColumnsPublishedWithZeroPeers(
+  sentPeersPerColumn: number[],
+  columnAlreadyPresent: boolean[]
+): number {
+  let count = 0;
+  for (let i = 0; i < sentPeersPerColumn.length; i++) {
+    if (sentPeersPerColumn[i] === 0 && !columnAlreadyPresent[i]) {
+      count++;
+    }
+  }
+  return count;
+}
+
 export async function getBlockResponse(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId

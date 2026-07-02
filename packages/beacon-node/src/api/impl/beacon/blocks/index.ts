@@ -68,7 +68,7 @@ import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
-import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
+import {countColumnsPublishedWithZeroPeers, getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -739,16 +739,20 @@ export function getBeaconBlockApi({
         peerIdStr: undefined,
       });
 
-      if (dataColumnSidecars.length > 0) {
-        for (const columnSidecar of dataColumnSidecars) {
-          payloadInput.addColumn({
+      // Track which columns were already present in the shared payload input before we self-publish.
+      // addColumn() returns false when the column index is already cached, i.e. a peer gossiped the
+      // column to us first (block published first -> peers getBlobs from EL -> disseminate columns)
+      // before we published the envelope. Such columns are already on the network, so a subsequent
+      // 0-peers publish is an expected duplicate rather than a propagation failure (see #9527).
+      const columnAlreadyPresent = dataColumnSidecars.map(
+        (columnSidecar) =>
+          !payloadInput.addColumn({
             columnSidecar,
             source: PayloadEnvelopeInputSource.api,
             seenTimestampSec,
             peerIdStr: undefined,
-          });
-        }
-      }
+          })
+      );
 
       const valLogMeta = {
         slot,
@@ -787,15 +791,18 @@ export function getBeaconBlockApi({
 
       // Track metrics for data column publishing
       if (dataColumnSidecars.length > 0) {
-        let columnsPublishedWithZeroPeers = 0;
         // Skip first entry (envelope); the final entry is processExecutionPayload(), which returns void.
-        for (let i = 0; i < dataColumnSidecars.length; i++) {
-          const sentPeers = sentPeersArr[i + 1] as number;
+        const sentPeersPerColumn = dataColumnSidecars.map((_, i) => sentPeersArr[i + 1] as number);
+        for (const sentPeers of sentPeersPerColumn) {
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
-          if (sentPeers === 0) {
-            columnsPublishedWithZeroPeers++;
-          }
         }
+        // Columns already in our seen cache were gossiped to us first, so publishing them is a no-op
+        // duplicate with 0 recipients — expected, not a propagation failure. Only warn for columns we
+        // actually introduced to the network. See https://github.com/ChainSafe/lodestar/issues/9527.
+        const columnsPublishedWithZeroPeers = countColumnsPublishedWithZeroPeers(
+          sentPeersPerColumn,
+          columnAlreadyPresent
+        );
         if (columnsPublishedWithZeroPeers > 0) {
           chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
             slot,
