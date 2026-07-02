@@ -1,7 +1,7 @@
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {NetworkName, networkNames} from "../networks/index.js";
-import {readFile} from "../util/index.js";
+import {flattenObject, readFile} from "../util/index.js";
 import {IParamsArgs, paramsOptions} from "./paramsOptions.js";
 
 type GlobalSingleArgs = {
@@ -70,7 +70,7 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
 export const rcConfigOption: [string, string, (configPath: string) => Record<string, unknown>] = [
   "rcConfig",
   globalSingleOptions.rcConfig.description as string,
-  (configPath: string): Record<string, unknown> => readFile(configPath, ["json", "yml", "yaml"]),
+  (configPath: string): Record<string, unknown> => flattenObject(readFile(configPath, ["json", "yml", "yaml"])),
 ];
 
 export type GlobalArgs = GlobalSingleArgs & IParamsArgs;
