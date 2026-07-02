@@ -14,8 +14,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -819,11 +817,15 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   // State transition
 
   stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
     options: StateTransitionOpts,
     {metrics, validatorMonitor}: StateTransitionModules
   ): IBeaconStateView {
-    const newState = stateTransition(this.cachedState, signedBlock, options, {metrics, validatorMonitor});
+    const newState = stateTransition(this.cachedState, signedBlockBytes, isBlinded, options, {
+      metrics,
+      validatorMonitor,
+    });
     return new BeaconStateView(newState);
   }
 

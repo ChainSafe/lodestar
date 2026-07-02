@@ -14,6 +14,7 @@ import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
@@ -28,6 +29,7 @@ export type RegenModules = {
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;
   seenBlockInputCache: SeenBlockInput;
+  serializedCache: SerializedCache;
   config: ChainForkConfig;
   emitter: ChainEventEmitter;
   logger: Logger;
@@ -235,7 +237,9 @@ export class StateRegenerator implements IStateRegeneratorInternal {
         // We are only running the state transition to get a specific state's data.
         // stateTransition() does the clone() inside, transfer cache to make the regen faster
         state = state.stateTransition(
-          block,
+          this.modules.serializedCache.get(block) ??
+            this.modules.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+          false,
           {
             // Replay previously imported blocks, assume valid and available
             executionPayloadStatus: ExecutionPayloadStatus.valid,

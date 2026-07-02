@@ -13,8 +13,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -647,19 +645,20 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // State transition
 
   stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
     options: StateTransitionOpts,
-    modules: StateTransitionModules
+    _modules: StateTransitionModules
   ): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.stateTransition(signedBlock, options, modules));
+    return new NativeBeaconStateView(this.binding.stateTransition(signedBlockBytes, isBlinded, options));
   }
 
   processSlots(
     slot: Slot,
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
-    modules?: StateTransitionModules
+    _modules?: StateTransitionModules
   ): IBeaconStateView {
-    return new NativeBeaconStateView(this.binding.processSlots(slot, epochTransitionCacheOpts, modules));
+    return new NativeBeaconStateView(this.binding.processSlots(slot, epochTransitionCacheOpts));
   }
 
   // ─── altair ──────────────────────────────────────────────────────────────

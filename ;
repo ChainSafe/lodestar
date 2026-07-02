@@ -293,8 +293,7 @@ export type IBeaconStateViewLatestFork = Omit<
  *   `loadOtherState`, `withParentPayloadApplied`) return `IBeaconStateViewNative`
  *   so callers can re-wrap without an `as unknown` cast.
  *
- * Where possible, Param lists are reused via `Parameters<...>` to avoid duplicate signatures.
- * Other incompatible native methods omit JS-only modules.
+ *   Native methods omit incompatible JS-only modules.
  *
  * The TS-side `BeaconStateView` also structurally satisfies this contract since
  * `BitArray` exposes `uint8Array` and `bitLen`.

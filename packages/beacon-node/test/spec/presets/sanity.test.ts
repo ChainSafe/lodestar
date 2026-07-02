@@ -4,10 +4,10 @@ import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   processSlots,
-  stateTransition,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
@@ -60,21 +60,29 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
   return {
     testFunction: (testcase) => {
       const stateTB = testcase.pre;
-      let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
+      let wrappedState = new BeaconStateView(createCachedBeaconStateTest(stateTB, getConfig(fork)));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
-        wrappedState = stateTransition(wrappedState, signedBlock, {
-          // Assume valid and available for this test
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyStateRoot: verify,
-          verifyProposer: verify,
-          verifySignatures: verify,
-          assertCorrectProgressiveBalances,
-        });
+
+        wrappedState = wrappedState.stateTransition(
+          wrappedState.cachedState.config
+            .getForkTypes(signedBlock.message.slot)
+            .SignedBeaconBlock.serialize(signedBlock),
+          false,
+          {
+            // Assume valid and available for this test
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+            verifyStateRoot: verify,
+            verifyProposer: verify,
+            verifySignatures: verify,
+            assertCorrectProgressiveBalances,
+          },
+          {}
+        ) as BeaconStateView;
       }
-      return wrappedState;
+      return wrappedState.cachedState;
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,

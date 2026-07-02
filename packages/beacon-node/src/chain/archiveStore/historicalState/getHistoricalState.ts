@@ -54,7 +54,8 @@ export async function getHistoricalState(
   for await (const block of db.blockArchive.valuesStream({gt: state.slot, lte: slot})) {
     try {
       state = state.stateTransition(
-        block,
+        config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+        false,
         {
           verifyProposer: false,
           verifySignatures: false,

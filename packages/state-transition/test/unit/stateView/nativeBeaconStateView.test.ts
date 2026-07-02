@@ -1,6 +1,8 @@
-import {describe, expect, it} from "vitest";
+import {describe, expect, it, vi} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {IBeaconStateViewNative} from "../../../src/stateView/interface.js";
+import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.ts";
+import type {StateTransitionOpts} from "../../../src/stateTransition.js";
+import type {IBeaconStateView, IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
 
 describe("NativeBeaconStateView", () => {
@@ -81,5 +83,33 @@ describe("NativeBeaconStateView", () => {
     expect(view.validatorCount).toBe(17);
     expect(view.getBlockRootAtSlot(7)).toEqual(new Uint8Array([7]));
     expect(view.getBalance(2)).toBe(32_000_000_002);
+  });
+
+  it("forwards serialized block bytes and blinded flag to native stateTransition", () => {
+    type NativeStateTransitionBytes = (
+      blockBytes: Uint8Array,
+      isBlinded: boolean,
+      options: StateTransitionOpts
+    ) => IBeaconStateView;
+
+    const blockBytes = new Uint8Array([1, 2, 3]);
+    const options: StateTransitionOpts = {
+      verifyStateRoot: false,
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+    };
+    const postBinding = {} as IBeaconStateViewNative;
+    const binding = {
+      stateTransition: vi.fn(() => postBinding),
+    } as unknown as IBeaconStateViewNative;
+
+    const view = new NativeBeaconStateView(binding) as NativeBeaconStateView & {
+      stateTransition: NativeStateTransitionBytes;
+    };
+    const postState = view.stateTransition(blockBytes, true, options);
+
+    expect(binding.stateTransition).toHaveBeenCalledWith(blockBytes, true, options);
+    expect(postState).toBeInstanceOf(NativeBeaconStateView);
+    expect((postState as NativeBeaconStateView).binding).toBe(postBinding);
   });
 });

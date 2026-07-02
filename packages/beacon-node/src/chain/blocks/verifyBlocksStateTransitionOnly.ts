@@ -4,9 +4,11 @@ import {
   IBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
+import {sszTypesFor} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
@@ -28,6 +30,7 @@ export async function verifyBlocksStateTransitionOnly(
   logger: Logger,
   metrics: Metrics | null,
   validatorMonitor: ValidatorMonitor | null,
+  serializedCache: SerializedCache,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: IBeaconStateView[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
@@ -37,7 +40,8 @@ export async function verifyBlocksStateTransitionOnly(
 
   for (let i = 0; i < blocks.length; i++) {
     const {validProposerSignature, validSignatures} = opts;
-    const block = blocks[i].getBlock();
+    const blockInput = blocks[i];
+    const block = blockInput.getBlock();
     const preState = i === 0 ? preState0 : postStates[i - 1];
     const dataAvailabilityStatus = dataAvailabilityStatuses[i];
 
@@ -45,7 +49,11 @@ export async function verifyBlocksStateTransitionOnly(
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
     const postState = preState.stateTransition(
-      block,
+      // We should have the serialized block from gossip in the hot path.
+      // Otherwise, fall back to serializing from block for the less latency critical paths like
+      // syncing/download.
+      serializedCache.get(block) ?? sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(block),
+      false,
       {
         // NOTE: Assume valid for now while sending payload to execution engine in parallel
         // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid

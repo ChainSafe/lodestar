@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {Epoch, SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, ssz} from "@lodestar/types";
+import {Epoch, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
 import {processBlock} from "./block/index.js";
@@ -83,7 +83,8 @@ export enum StateHashTreeRootSource {
  */
 export function stateTransition(
   state: CachedBeaconStateAllForks,
-  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+  signedBlockBytes: Uint8Array,
+  isBlinded: boolean,
   options: StateTransitionOpts = {
     // Assume default to be valid and available
     executionPayloadStatus: ExecutionPayloadStatus.valid,
@@ -93,8 +94,11 @@ export function stateTransition(
 ): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options;
 
+  const blockSlot = readSignedBlockSlot(signedBlockBytes);
+  const signedBlock = isBlinded
+    ? state.config.getPostBellatrixForkTypes(blockSlot).SignedBlindedBeaconBlock.deserialize(signedBlockBytes)
+    : state.config.getForkTypes(blockSlot).SignedBeaconBlock.deserialize(signedBlockBytes);
   const block = signedBlock.message;
-  const blockSlot = block.slot;
 
   // .clone() before mutating state in state transition
   let postState = state.clone(options.dontTransferCache);
@@ -152,6 +156,20 @@ export function stateTransition(
   }
 
   return postState;
+}
+
+function readSignedBlockSlot(signedBlockBytes: Uint8Array): Slot {
+  if (signedBlockBytes.byteLength < 12) {
+    throw Error("Invalid signed block bytes: too short to read message offset and slot");
+  }
+
+  const view = new DataView(signedBlockBytes.buffer, signedBlockBytes.byteOffset, signedBlockBytes.byteLength);
+  const messageOffset = view.getUint32(0, true);
+  if (messageOffset + 8 > signedBlockBytes.byteLength) {
+    throw Error("Invalid signed block bytes: message offset out of range");
+  }
+
+  return Number(view.getBigUint64(messageOffset, true));
 }
 
 /**

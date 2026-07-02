@@ -3,9 +3,9 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  stateTransition,
 } from "@lodestar/state-transition";
 import {altair, bellatrix, ssz} from "@lodestar/types";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
@@ -18,24 +18,29 @@ import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      let state = createCachedBeaconStateTest(testcase.pre, getConfig(fork));
+      let state = new BeaconStateView(createCachedBeaconStateTest(testcase.pre, getConfig(fork)));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
-        state = stateTransition(state, signedBlock, {
-          // Should assume payload valid and blob data available for this test
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyStateRoot: false,
-          verifyProposer: verify,
-          verifySignatures: verify,
-          assertCorrectProgressiveBalances,
-        });
+        state = state.stateTransition(
+          state.cachedState.config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+          false,
+          {
+            // Should assume payload valid and blob data available for this test
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+            verifyStateRoot: false,
+            verifyProposer: verify,
+            verifySignatures: verify,
+            assertCorrectProgressiveBalances,
+          },
+          {}
+        ) as BeaconStateView;
       }
 
-      state.commit();
-      return state;
+      state.cachedState.commit();
+      return state.cachedState;
     },
     options: {
       inputTypes: inputTypeSszTreeViewDU,

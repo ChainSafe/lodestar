@@ -4,9 +4,9 @@ import {config} from "@lodestar/config/default";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {
   BeaconStateAllForks,
+  BeaconStateView,
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
-  stateTransition,
 } from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
@@ -51,20 +51,26 @@ const transition =
         const forkEpoch = bnToNum(meta.fork_epoch);
         const testConfig = createChainForkConfig(getTransitionConfig(forkNext, forkEpoch));
 
-        let state = createCachedBeaconStateTest(testcase.pre, testConfig);
+        let state = new BeaconStateView(createCachedBeaconStateTest(testcase.pre, testConfig));
         for (let i = 0; i < meta.blocks_count; i++) {
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
-          state = stateTransition(state, signedBlock, {
-            // Assume valid and available for this test
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyStateRoot: true,
-            verifyProposer: false,
-            verifySignatures: false,
-            assertCorrectProgressiveBalances,
-          });
+
+          state = state.stateTransition(
+            testConfig.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+            false,
+            {
+              // Assume valid and available for this test
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyStateRoot: true,
+              verifyProposer: false,
+              verifySignatures: false,
+              assertCorrectProgressiveBalances,
+            },
+            {}
+          ) as BeaconStateView;
         }
-        return state;
+        return state.cachedState;
       },
       options: {
         inputTypes: inputTypeSszTreeViewDU,

@@ -8,7 +8,7 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@lodestar/params";
-import {DataAvailabilityStatus, ExecutionPayloadStatus, stateTransition} from "../../../src/index.js";
+import {BeaconStateView, DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../../src/testUtils/util.js";
 import {StateBlock} from "../types.js";
 import {BlockOpts, getBlockPhase0} from "./util.js";
@@ -108,15 +108,20 @@ describe("phase0 processBlock", () => {
       },
       beforeEach: ({state, block}) => ({state: state.clone(), block}),
       fn: ({state, block}) => {
-        stateTransition(state, block, {
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyProposer: false,
-          verifySignatures: false,
-          verifyStateRoot: false,
-        });
+        const postState = new BeaconStateView(state).stateTransition(
+          state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+          false,
+          {
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+            verifyProposer: false,
+            verifySignatures: false,
+            verifyStateRoot: false,
+          },
+          {}
+        );
         // set verifyStateRoot = false, and get the root here because the block root is wrong
-        state.hashTreeRoot();
+        postState.hashTreeRoot();
       },
     });
   }
