@@ -1,3 +1,11 @@
+/**
+ * Helper file that spawns worker(s) to act on the global native pubkey cache.
+ *
+ * Because the global native pubkey cache supports multithreaded access, we need
+ * to spawn worker threads that test that it works as intended.
+ *
+ * See pubkeyCache.test.ts for usage.
+ */
 import worker from "node:worker_threads";
 import {getPubkeyCache, syncPubkeys, interopSecretKey} from "@lodestar/state-transition";
 
