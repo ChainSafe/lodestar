@@ -60,7 +60,9 @@ network: hoodi
 rest:
   address: 0.0.0.0
   port: 9596
-\`\`\``,
+\`\`\`
+
+Note: an option that is both a value/flag and a prefix (e.g. \`network\` with \`network.maxPeers\`, or the \`metrics\`/\`builder\` enable flags with their \`.port\` settings) can't carry both forms under one nested key — set those with dotted keys, e.g. \`metrics: true\` alongside \`metrics.port: 8008\`.`,
       command: "beacon --rcConfig beacon.config.yaml",
     },
   },
