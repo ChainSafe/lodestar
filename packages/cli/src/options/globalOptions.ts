@@ -51,6 +51,18 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
   rcConfig: {
     description: "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
     type: "string",
+    example: {
+      description: `Supply CLI options from a file. Options can be written as nested maps or dotted keys:
+
+\`\`\`yaml
+# beacon.config.yaml
+network: hoodi
+rest:
+  address: 0.0.0.0
+  port: 9596
+\`\`\``,
+      command: "beacon --rcConfig beacon.config.yaml",
+    },
   },
 
   supernode: {
