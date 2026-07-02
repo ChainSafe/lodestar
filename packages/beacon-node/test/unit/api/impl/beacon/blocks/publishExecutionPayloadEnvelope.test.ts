@@ -82,7 +82,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
   it("happy path: unknown envelope is added and published (200)", async () => {
     vi.mocked(validateApiExecutionPayloadEnvelope).mockResolvedValue(undefined);
     const input = makeInput({hasEnvelope: false});
-    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache).get.mockReturnValue(input as any);
 
     await expect(
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
@@ -96,7 +96,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
   it("VC retry: envelope already in cache → 200, not added again", async () => {
     throwAlreadyKnown();
     const input = makeInput({hasEnvelope: true}); // same block hash as incoming
-    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache).get.mockReturnValue(input as any);
 
     await expect(
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
@@ -114,7 +114,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
 
   it("gossip-first: already known, cache pruned → 200 (null-safe lookup)", async () => {
     throwAlreadyKnown();
-    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(undefined); // pruned
+    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache).get.mockReturnValue(undefined); // pruned
 
     await expect(
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
@@ -133,7 +133,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     throwAlreadyKnown();
     const stored = buildEnvelope(blockRoot, Buffer.alloc(32, 0xff));
     const input = makeInput({hasEnvelope: true, storedEnvelope: stored});
-    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache).get.mockReturnValue(input as any);
 
     await expect(
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
@@ -156,7 +156,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
   it("race path: envelope set between validation and the guard → not added twice, still published", async () => {
     vi.mocked(validateApiExecutionPayloadEnvelope).mockResolvedValue(undefined);
     const input = makeInput({hasEnvelope: true});
-    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache).get.mockReturnValue(input as any);
 
     await expect(
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
@@ -174,7 +174,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       })
     );
     const input = makeInput({hasEnvelope: false});
-    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache).get.mockReturnValue(input as any);
 
     await expect(
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
@@ -188,7 +188,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
   it("propagates a non-envelope validation error (plain Error)", async () => {
     vi.mocked(validateApiExecutionPayloadEnvelope).mockRejectedValue(new Error("boom"));
     const input = makeInput({hasEnvelope: false});
-    modules.chain.seenPayloadEnvelopeInputCache.get.mockReturnValue(input as any);
+    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache).get.mockReturnValue(input as any);
 
     await expect(
       api.publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope: signedEnvelope})
