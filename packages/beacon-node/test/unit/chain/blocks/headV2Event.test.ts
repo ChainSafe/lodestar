@@ -27,8 +27,8 @@ function protoBlock(blockRoot: string, slot: number, payloadStatus: PayloadStatu
     unrealizedFinalizedRoot: blockRoot,
     timeliness: false,
     executionPayloadBlockHash: null,
-    executionStatus: ExecutionStatus.Valid,
-    dataAvailabilityStatus: DataAvailabilityStatus.Available,
+    executionStatus: ExecutionStatus.PreMerge,
+    dataAvailabilityStatus: DataAvailabilityStatus.PreData,
     payloadStatus,
     parentBlockHash: null,
   };
@@ -40,7 +40,6 @@ describe("head_v2 event emission", () => {
 
   beforeEach(() => {
     chain = getMockedBeaconChain();
-    chain.headV2PayloadStatusCache = new Map();
     chain.forkChoice.getDependentRoot.mockReturnValue("0x1234");
   });
 
