@@ -7,6 +7,7 @@ import {
 } from "../../../src/forkChoice/fastConfirmation/data.js";
 import {FastConfirmationRule} from "../../../src/forkChoice/fastConfirmation/fastConfirmationRule.js";
 import {runFastConfirmationRules} from "../../../src/forkChoice/fastConfirmation/rules.js";
+import {FastConfirmationDecisionReason} from "../../../src/forkChoice/fastConfirmation/types.js";
 import {
   adjustCommitteeWeightEstimateToEnsureSafety,
   computeSafetyThreshold,
@@ -553,6 +554,9 @@ describe("fast confirmation", () => {
     expect(midEpochResult.didReset).toBe(false);
     expect(epochStartResult.confirmedRoot).toBe(ZERO_ROOT);
     expect(epochStartResult.didReset).toBe(true);
+    expect(epochStartResult.reason).toBe(FastConfirmationDecisionReason.ConfirmedDescendant);
+    // `reason` is the final advancement; `resetReason` surfaces the originating reset cause.
+    expect(epochStartResult.resetReason).toBe(FastConfirmationDecisionReason.ResetChainUnsafe);
   });
 
   it("runFastConfirmationRules keeps the confirmed block when the next descendant is not one-confirmed", () => {
