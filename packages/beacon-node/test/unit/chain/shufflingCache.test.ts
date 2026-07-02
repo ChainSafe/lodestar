@@ -1,4 +1,5 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import {beforeEach, describe, expect, it, vi} from "vitest";
+import {BeaconStateView} from "@lodestar/state-transition";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 
@@ -21,6 +22,45 @@ describe("ShufflingCache", () => {
 
   it("should get shuffling from cache", async () => {
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
+  });
+
+  it("should report whether a shuffling is already cached", () => {
+    expect(shufflingCache.has(currentEpoch, currentDecisionRoot)).toBe(true);
+
+    const previousEpoch = state.epochCtx.epoch - 1;
+    const previousDecisionRoot = state.epochCtx.previousDecisionRoot;
+    expect(shufflingCache.has(previousEpoch, previousDecisionRoot)).toBe(false);
+
+    shufflingCache.insertPromise(previousEpoch, previousDecisionRoot);
+    expect(shufflingCache.has(previousEpoch, previousDecisionRoot)).toBe(false);
+  });
+
+  it("processState should not materialize already cached shufflings", () => {
+    const stateView = new BeaconStateView(state);
+    shufflingCache = new ShufflingCache(null, null, {maxShufflingCacheEpochs: 4}, [
+      {
+        shuffling: state.epochCtx.previousShuffling,
+        decisionRoot: state.epochCtx.previousDecisionRoot,
+      },
+      {
+        shuffling: state.epochCtx.currentShuffling,
+        decisionRoot: state.epochCtx.currentDecisionRoot,
+      },
+      {
+        shuffling: state.epochCtx.nextShuffling,
+        decisionRoot: state.epochCtx.nextDecisionRoot,
+      },
+    ]);
+
+    const previousSpy = vi.spyOn(stateView, "getPreviousShuffling");
+    const currentSpy = vi.spyOn(stateView, "getCurrentShuffling");
+    const nextSpy = vi.spyOn(stateView, "getNextShuffling");
+
+    shufflingCache.processState(stateView);
+
+    expect(previousSpy).not.toHaveBeenCalled();
+    expect(currentSpy).not.toHaveBeenCalled();
+    expect(nextSpy).not.toHaveBeenCalled();
   });
 
   it("should bound by maxSize(=1)", async () => {

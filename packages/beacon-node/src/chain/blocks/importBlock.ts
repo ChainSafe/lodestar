@@ -9,7 +9,14 @@ import {
   NotReorgedReason,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  GENESIS_EPOCH,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   RootCache,
@@ -471,8 +478,15 @@ export async function importBlock(
   // Cache shufflings when crossing an epoch boundary
   const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   if (parentEpoch < blockEpoch) {
-    this.shufflingCache.processState(postState);
-    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    const previousEpoch = blockEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : blockEpoch - 1;
+    if (
+      !this.shufflingCache.has(previousEpoch, postState.previousDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch, postState.currentDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch + 1, postState.nextDecisionRoot)
+    ) {
+      this.shufflingCache.processState(postState);
+      this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    }
   }
 
   if (blockSlot % SLOTS_PER_EPOCH === 0) {
