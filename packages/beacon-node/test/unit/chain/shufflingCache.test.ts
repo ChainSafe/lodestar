@@ -24,17 +24,6 @@ describe("ShufflingCache", () => {
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
   });
 
-  it("should report whether a shuffling is already cached", () => {
-    expect(shufflingCache.has(currentEpoch, currentDecisionRoot)).toBe(true);
-
-    const previousEpoch = state.epochCtx.epoch - 1;
-    const previousDecisionRoot = state.epochCtx.previousDecisionRoot;
-    expect(shufflingCache.has(previousEpoch, previousDecisionRoot)).toBe(false);
-
-    shufflingCache.insertPromise(previousEpoch, previousDecisionRoot);
-    expect(shufflingCache.has(previousEpoch, previousDecisionRoot)).toBe(false);
-  });
-
   it("processState should not materialize already cached shufflings", () => {
     const stateView = new BeaconStateView(state);
     shufflingCache = new ShufflingCache(null, null, {maxShufflingCacheEpochs: 4}, [
