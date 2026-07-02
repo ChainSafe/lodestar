@@ -8,7 +8,7 @@ import {RunnerType, TestRunner} from "./types.js";
 
 type NativePubkeyCache = typeof import("@chainsafe/lodestar-z/pubkeys").pubkeyCache;
 type NativeStateTransition = typeof import("@chainsafe/lodestar-z/state-transition") & {
-  deinitStateTransition: () => void;
+  deinitReusedEpochTransitionCache: () => void;
 };
 
 const ARTIFACT_FILENAMES = new Set([
@@ -68,7 +68,7 @@ async function resetNativeStateTransition(): Promise<void> {
     (stateTransition) => stateTransition as NativeStateTransition
   );
   const nativeStateTransition = await nativeStateTransitionPromise;
-  nativeStateTransition.deinitStateTransition();
+  nativeStateTransition.deinitReusedEpochTransitionCache();
 }
 
 // NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
