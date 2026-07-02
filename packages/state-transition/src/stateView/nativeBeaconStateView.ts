@@ -14,8 +14,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   SyncCommittee,
   ValidatorIndex,
@@ -24,7 +22,6 @@ import {
   electra,
   fulu,
   gloas,
-  isBlindedBeaconBlock,
   phase0,
   rewards,
   ssz,
@@ -168,7 +165,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   } | null = null;
 
   constructor(
-    readonly nativeView: IBeaconStateViewNative,
+    readonly binding: IBeaconStateViewNative,
     private readonly config: BeaconConfig
   ) {}
 
@@ -182,77 +179,77 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get forkName(): ForkName {
     if (this._forkName === null) {
-      this._forkName = this.nativeView.forkName;
+      this._forkName = this.binding.forkName;
     }
     return this._forkName;
   }
 
   get slot(): Slot {
     if (this._slot === null) {
-      this._slot = this.nativeView.slot;
+      this._slot = this.binding.slot;
     }
     return this._slot;
   }
 
   get fork(): Fork {
     if (this._fork === null) {
-      this._fork = this.nativeView.fork;
+      this._fork = this.binding.fork;
     }
     return this._fork;
   }
 
   get epoch(): Epoch {
     if (this._epoch === null) {
-      this._epoch = this.nativeView.epoch;
+      this._epoch = this.binding.epoch;
     }
     return this._epoch;
   }
 
   get genesisTime(): number {
     if (this._genesisTime === null) {
-      this._genesisTime = this.nativeView.genesisTime;
+      this._genesisTime = this.binding.genesisTime;
     }
     return this._genesisTime;
   }
 
   get genesisValidatorsRoot(): Root {
     if (this._genesisValidatorsRoot === null) {
-      this._genesisValidatorsRoot = this.nativeView.genesisValidatorsRoot;
+      this._genesisValidatorsRoot = this.binding.genesisValidatorsRoot;
     }
     return this._genesisValidatorsRoot;
   }
 
   get eth1Data(): phase0.Eth1Data {
     if (this._eth1Data === null) {
-      this._eth1Data = this.nativeView.eth1Data;
+      this._eth1Data = this.binding.eth1Data;
     }
     return this._eth1Data;
   }
 
   get latestBlockHeader(): phase0.BeaconBlockHeader {
     if (this._latestBlockHeader === null) {
-      this._latestBlockHeader = this.nativeView.latestBlockHeader;
+      this._latestBlockHeader = this.binding.latestBlockHeader;
     }
     return this._latestBlockHeader;
   }
 
   get previousJustifiedCheckpoint(): Checkpoint {
     if (this._previousJustifiedCheckpoint === null) {
-      this._previousJustifiedCheckpoint = this.nativeView.previousJustifiedCheckpoint;
+      this._previousJustifiedCheckpoint = this.binding.previousJustifiedCheckpoint;
     }
     return this._previousJustifiedCheckpoint;
   }
 
   get currentJustifiedCheckpoint(): Checkpoint {
     if (this._currentJustifiedCheckpoint === null) {
-      this._currentJustifiedCheckpoint = this.nativeView.currentJustifiedCheckpoint;
+      this._currentJustifiedCheckpoint = this.binding.currentJustifiedCheckpoint;
     }
     return this._currentJustifiedCheckpoint;
   }
 
   get finalizedCheckpoint(): Checkpoint {
     if (this._finalizedCheckpoint === null) {
-      this._finalizedCheckpoint = this.nativeView.finalizedCheckpoint;
+      this._finalizedCheckpoint = this.binding.finalizedCheckpoint;
     }
     return this._finalizedCheckpoint;
   }
@@ -260,7 +257,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getBlockRootAtSlot(slot: Slot): Root {
     let cached = this._getBlockRootAtSlot.get(slot);
     if (cached === undefined) {
-      cached = this.nativeView.getBlockRootAtSlot(slot);
+      cached = this.binding.getBlockRootAtSlot(slot);
       this._getBlockRootAtSlot.set(slot, cached);
     }
     return cached;
@@ -269,7 +266,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getBlockRootAtEpoch(epoch: Epoch): Root {
     let cached = this._getBlockRootAtEpoch.get(epoch);
     if (cached === undefined) {
-      cached = this.nativeView.getBlockRootAtEpoch(epoch);
+      cached = this.binding.getBlockRootAtEpoch(epoch);
       this._getBlockRootAtEpoch.set(epoch, cached);
     }
     return cached;
@@ -278,7 +275,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getStateRootAtSlot(slot: Slot): Root {
     let cached = this._getStateRootAtSlot.get(slot);
     if (cached === undefined) {
-      cached = this.nativeView.getStateRootAtSlot(slot);
+      cached = this.binding.getStateRootAtSlot(slot);
       this._getStateRootAtSlot.set(slot, cached);
     }
     return cached;
@@ -287,7 +284,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getRandaoMix(epoch: Epoch): Bytes32 {
     let cached = this._getRandaoMix.get(epoch);
     if (cached === undefined) {
-      cached = this.nativeView.getRandaoMix(epoch);
+      cached = this.binding.getRandaoMix(epoch);
       this._getRandaoMix.set(epoch, cached);
     }
     return cached;
@@ -298,7 +295,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     let cached = this._getShufflingAtEpoch.get(epoch);
     if (cached === undefined) {
-      cached = this.nativeView.getShufflingAtEpoch(epoch);
+      cached = this.binding.getShufflingAtEpoch(epoch);
       this._getShufflingAtEpoch.set(epoch, cached);
     }
     return cached;
@@ -308,7 +305,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     const key = `${slot}:${index}`;
     let cached = this._getBeaconCommittee.get(key);
     if (cached === undefined) {
-      const committee = this.nativeView.getBeaconCommittee(slot, index);
+      const committee = this.binding.getBeaconCommittee(slot, index);
       cached = committee instanceof Uint32Array ? committee : Uint32Array.from(committee);
       this._getBeaconCommittee.set(key, cached);
     }
@@ -318,7 +315,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
     let cached = this._getBeaconCommitteeCountPerSlot.get(epoch);
     if (cached === undefined) {
-      cached = this.nativeView.getBeaconCommitteeCountPerSlot(epoch);
+      cached = this.binding.getBeaconCommitteeCountPerSlot(epoch);
       this._getBeaconCommitteeCountPerSlot.set(epoch, cached);
     }
     return cached;
@@ -326,21 +323,21 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get previousDecisionRoot(): RootHex {
     if (this._previousDecisionRoot === null) {
-      this._previousDecisionRoot = this.nativeView.previousDecisionRoot;
+      this._previousDecisionRoot = this.binding.previousDecisionRoot;
     }
     return this._previousDecisionRoot;
   }
 
   get currentDecisionRoot(): RootHex {
     if (this._currentDecisionRoot === null) {
-      this._currentDecisionRoot = this.nativeView.currentDecisionRoot;
+      this._currentDecisionRoot = this.binding.currentDecisionRoot;
     }
     return this._currentDecisionRoot;
   }
 
   get nextDecisionRoot(): RootHex {
     if (this._nextDecisionRoot === null) {
-      this._nextDecisionRoot = this.nativeView.nextDecisionRoot;
+      this._nextDecisionRoot = this.binding.nextDecisionRoot;
     }
     return this._nextDecisionRoot;
   }
@@ -348,7 +345,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getShufflingDecisionRoot(epoch: Epoch): RootHex {
     let cached = this._getShufflingDecisionRoot.get(epoch);
     if (cached === undefined) {
-      cached = this.nativeView.getShufflingDecisionRoot(epoch);
+      cached = this.binding.getShufflingDecisionRoot(epoch);
       this._getShufflingDecisionRoot.set(epoch, cached);
     }
     return cached;
@@ -356,21 +353,21 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   getPreviousShuffling(): EpochShuffling {
     if (this._getPreviousShuffling === null) {
-      this._getPreviousShuffling = this.nativeView.getPreviousShuffling();
+      this._getPreviousShuffling = this.binding.getPreviousShuffling();
     }
     return this._getPreviousShuffling;
   }
 
   getCurrentShuffling(): EpochShuffling {
     if (this._getCurrentShuffling === null) {
-      this._getCurrentShuffling = this.nativeView.getCurrentShuffling();
+      this._getCurrentShuffling = this.binding.getCurrentShuffling();
     }
     return this._getCurrentShuffling;
   }
 
   getNextShuffling(): EpochShuffling {
     if (this._getNextShuffling === null) {
-      this._getNextShuffling = this.nativeView.getNextShuffling();
+      this._getNextShuffling = this.binding.getNextShuffling();
     }
     return this._getNextShuffling;
   }
@@ -379,21 +376,21 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get previousProposers(): ValidatorIndex[] | null {
     if (this._previousProposers === undefined) {
-      this._previousProposers = this.nativeView.previousProposers;
+      this._previousProposers = this.binding.previousProposers;
     }
     return this._previousProposers;
   }
 
   get currentProposers(): ValidatorIndex[] {
     if (this._currentProposers === null) {
-      this._currentProposers = this.nativeView.currentProposers;
+      this._currentProposers = this.binding.currentProposers;
     }
     return this._currentProposers;
   }
 
   get nextProposers(): ValidatorIndex[] {
     if (this._nextProposers === null) {
-      this._nextProposers = this.nativeView.nextProposers;
+      this._nextProposers = this.binding.nextProposers;
     }
     return this._nextProposers;
   }
@@ -401,7 +398,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getBeaconProposer(slot: Slot): ValidatorIndex {
     let cached = this._getBeaconProposer.get(slot);
     if (cached === undefined) {
-      cached = this.nativeView.getBeaconProposer(slot);
+      cached = this.binding.getBeaconProposer(slot);
       this._getBeaconProposer.set(slot, cached);
     }
     return cached;
@@ -409,7 +406,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
     if (!this._getBeaconProposerOrNull.has(slot)) {
-      this._getBeaconProposerOrNull.set(slot, this.nativeView.getBeaconProposerOrNull(slot));
+      this._getBeaconProposerOrNull.set(slot, this.binding.getBeaconProposerOrNull(slot));
     }
     // biome-ignore lint/style/noNonNullAssertion: has() check guarantees a value
     return this._getBeaconProposerOrNull.get(slot)!;
@@ -419,14 +416,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get effectiveBalanceIncrements(): EffectiveBalanceIncrements {
     if (this._effectiveBalanceIncrements === null) {
-      this._effectiveBalanceIncrements = this.nativeView.effectiveBalanceIncrements;
+      this._effectiveBalanceIncrements = this.binding.effectiveBalanceIncrements;
     }
     return this._effectiveBalanceIncrements;
   }
 
   getEffectiveBalanceIncrementsZeroInactive(): EffectiveBalanceIncrements {
     if (this._getEffectiveBalanceIncrementsZeroInactive === null) {
-      this._getEffectiveBalanceIncrementsZeroInactive = this.nativeView.getEffectiveBalanceIncrementsZeroInactive();
+      this._getEffectiveBalanceIncrementsZeroInactive = this.binding.getEffectiveBalanceIncrementsZeroInactive();
     }
     return this._getEffectiveBalanceIncrementsZeroInactive;
   }
@@ -434,7 +431,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getBalance(index: number): number {
     let cached = this._getBalance.get(index);
     if (cached === undefined) {
-      cached = this.nativeView.getBalance(index);
+      cached = this.binding.getBalance(index);
       this._getBalance.set(index, cached);
     }
     return cached;
@@ -443,40 +440,40 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getValidator(index: ValidatorIndex): phase0.Validator {
     let cached = this._getValidator.get(index);
     if (cached === undefined) {
-      cached = this.nativeView.getValidator(index);
+      cached = this.binding.getValidator(index);
       this._getValidator.set(index, cached);
     }
     return cached;
   }
 
   getValidatorsByStatus(statuses: Set<string>, currentEpoch: Epoch): phase0.Validator[] {
-    return this.nativeView.getValidatorsByStatus(statuses, currentEpoch);
+    return this.binding.getValidatorsByStatus(statuses, currentEpoch);
   }
 
   get validatorCount(): number {
     if (this._validatorCount === null) {
-      this._validatorCount = this.nativeView.validatorCount;
+      this._validatorCount = this.binding.validatorCount;
     }
     return this._validatorCount;
   }
 
   get activeValidatorCount(): number {
     if (this._activeValidatorCount === null) {
-      this._activeValidatorCount = this.nativeView.activeValidatorCount;
+      this._activeValidatorCount = this.binding.activeValidatorCount;
     }
     return this._activeValidatorCount;
   }
 
   getAllValidators(): phase0.Validator[] {
     if (this._getAllValidators === null) {
-      this._getAllValidators = this.nativeView.getAllValidators();
+      this._getAllValidators = this.binding.getAllValidators();
     }
     return this._getAllValidators;
   }
 
   getAllBalances(): number[] {
     if (this._getAllBalances === null) {
-      this._getAllBalances = this.nativeView.getAllBalances();
+      this._getAllBalances = this.binding.getAllBalances();
     }
     return this._getAllBalances;
   }
@@ -484,20 +481,20 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // API
 
   get proposerRewards(): RewardCache {
-    return this.nativeView.proposerRewards;
+    return this.binding.proposerRewards;
   }
 
   computeBlockRewards(block: BeaconBlock, proposerRewards?: RewardCache): Promise<rewards.BlockRewards> {
-    return this.nativeView.computeBlockRewards(block, proposerRewards);
+    return this.binding.computeBlockRewards(block, proposerRewards);
   }
 
   computeAttestationsRewards(validatorIds?: (ValidatorIndex | string)[]): Promise<rewards.AttestationsRewards> {
-    return this.nativeView.computeAttestationsRewards(validatorIds);
+    return this.binding.computeAttestationsRewards(validatorIds);
   }
 
   getLatestWeakSubjectivityCheckpointEpoch(): Epoch {
     if (this._getLatestWeakSubjectivityCheckpointEpoch === null) {
-      this._getLatestWeakSubjectivityCheckpointEpoch = this.nativeView.getLatestWeakSubjectivityCheckpointEpoch();
+      this._getLatestWeakSubjectivityCheckpointEpoch = this.binding.getLatestWeakSubjectivityCheckpointEpoch();
     }
     return this._getLatestWeakSubjectivityCheckpointEpoch;
   }
@@ -508,18 +505,18 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     signedVoluntaryExit: phase0.SignedVoluntaryExit,
     verifySignature: boolean
   ): VoluntaryExitValidity {
-    return this.nativeView.getVoluntaryExitValidity(signedVoluntaryExit, verifySignature);
+    return this.binding.getVoluntaryExitValidity(signedVoluntaryExit, verifySignature);
   }
 
   isValidVoluntaryExit(signedVoluntaryExit: phase0.SignedVoluntaryExit, verifySignature: boolean): boolean {
-    return this.nativeView.isValidVoluntaryExit(signedVoluntaryExit, verifySignature);
+    return this.binding.isValidVoluntaryExit(signedVoluntaryExit, verifySignature);
   }
 
   // Proofs
 
   getFinalizedRootProof(): Uint8Array[] {
     if (this._getFinalizedRootProof === null) {
-      this._getFinalizedRootProof = this.nativeView.getFinalizedRootProof();
+      this._getFinalizedRootProof = this.binding.getFinalizedRootProof();
     }
     return this._getFinalizedRootProof;
   }
@@ -527,14 +524,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getSingleProof(gindex: bigint): Uint8Array[] {
     let cached = this._getSingleProof.get(gindex);
     if (cached === undefined) {
-      cached = this.nativeView.getSingleProof(gindex);
+      cached = this.binding.getSingleProof(gindex);
       this._getSingleProof.set(gindex, cached);
     }
     return cached;
   }
 
   createMultiProof(descriptor: Uint8Array): CompactMultiProof {
-    return this.nativeView.createMultiProof(descriptor);
+    return this.binding.createMultiProof(descriptor);
   }
 
   // Fork choice
@@ -544,14 +541,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     finalizedCheckpoint: phase0.Checkpoint;
   } {
     if (this._computeUnrealizedCheckpoints === null) {
-      this._computeUnrealizedCheckpoints = this.nativeView.computeUnrealizedCheckpoints();
+      this._computeUnrealizedCheckpoints = this.binding.computeUnrealizedCheckpoints();
     }
     return this._computeUnrealizedCheckpoints;
   }
 
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
     if (this._computeAnchorCheckpoint === null) {
-      this._computeAnchorCheckpoint = this.nativeView.computeAnchorCheckpoint();
+      this._computeAnchorCheckpoint = this.binding.computeAnchorCheckpoint();
     }
     return this._computeAnchorCheckpoint;
   }
@@ -559,23 +556,23 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   // Backward compatibility
 
   get clonedCount(): number {
-    return this.nativeView.clonedCount;
+    return this.binding.clonedCount;
   }
 
   get clonedCountWithTransferCache(): number {
-    return this.nativeView.clonedCountWithTransferCache;
+    return this.binding.clonedCountWithTransferCache;
   }
 
   get createdWithTransferCache(): boolean {
     if (this._createdWithTransferCache === null) {
-      this._createdWithTransferCache = this.nativeView.createdWithTransferCache;
+      this._createdWithTransferCache = this.binding.createdWithTransferCache;
     }
     return this._createdWithTransferCache;
   }
 
   isStateValidatorsNodesPopulated(): boolean {
     if (this._isStateValidatorsNodesPopulated === null) {
-      this._isStateValidatorsNodesPopulated = this.nativeView.isStateValidatorsNodesPopulated();
+      this._isStateValidatorsNodesPopulated = this.binding.isStateValidatorsNodesPopulated();
     }
     return this._isStateValidatorsNodesPopulated;
   }
@@ -587,78 +584,66 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     seedValidatorsBytes?: Uint8Array,
     opts?: {preloadValidatorsAndBalances?: boolean}
   ): IBeaconStateView {
-    return new NativeBeaconStateView(
-      this.nativeView.loadOtherState(stateBytes, seedValidatorsBytes, opts),
-      this.config
-    );
+    return new NativeBeaconStateView(this.binding.loadOtherState(stateBytes, seedValidatorsBytes, opts), this.config);
   }
 
   toValue(): BeaconState {
     if (this._toValue === null) {
-      this._toValue = this.nativeView.toValue();
+      this._toValue = this.binding.toValue();
     }
     return this._toValue;
   }
 
   serialize(): Uint8Array {
     if (this._serialize === null) {
-      this._serialize = this.nativeView.serialize();
+      this._serialize = this.binding.serialize();
     }
     return this._serialize;
   }
 
   serializedSize(): number {
     if (this._serializedSize === null) {
-      this._serializedSize = this.nativeView.serializedSize();
+      this._serializedSize = this.binding.serializedSize();
     }
     return this._serializedSize;
   }
 
   serializeToBytes(output: ByteViews, offset: number): number {
-    return this.nativeView.serializeToBytes(output, offset);
+    return this.binding.serializeToBytes(output, offset);
   }
 
   serializeValidators(): Uint8Array {
     if (this._serializeValidators === null) {
-      this._serializeValidators = this.nativeView.serializeValidators();
+      this._serializeValidators = this.binding.serializeValidators();
     }
     return this._serializeValidators;
   }
 
   serializedValidatorsSize(): number {
     if (this._serializedValidatorsSize === null) {
-      this._serializedValidatorsSize = this.nativeView.serializedValidatorsSize();
+      this._serializedValidatorsSize = this.binding.serializedValidatorsSize();
     }
     return this._serializedValidatorsSize;
   }
 
   serializeValidatorsToBytes(output: ByteViews, offset: number): number {
-    return this.nativeView.serializeValidatorsToBytes(output, offset);
+    return this.binding.serializeValidatorsToBytes(output, offset);
   }
 
   hashTreeRoot(): Uint8Array {
     if (this._hashTreeRoot === null) {
-      this._hashTreeRoot = this.nativeView.hashTreeRoot();
+      this._hashTreeRoot = this.binding.hashTreeRoot();
     }
     return this._hashTreeRoot;
   }
 
-  // State transition
-
   stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
     options: StateTransitionOpts,
     _modules: StateTransitionModules
   ): IBeaconStateView {
-    const blockSlot = signedBlock.message.slot;
-
-    const blockBytes = isBlindedBeaconBlock(signedBlock.message)
-      ? this.config
-          .getPostBellatrixForkTypes(blockSlot)
-          .SignedBlindedBeaconBlock.serialize(signedBlock as SignedBlindedBeaconBlock)
-      : this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock as SignedBeaconBlock);
-
-    return new NativeBeaconStateView(this.nativeView.stateTransition(blockBytes, options), this.config);
+    return new NativeBeaconStateView(this.binding.stateTransition(signedBlockBytes, isBlinded, options), this.config);
   }
 
   processSlots(
@@ -666,21 +651,21 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean},
     _modules?: StateTransitionModules
   ): IBeaconStateView {
-    return new NativeBeaconStateView(this.nativeView.processSlots(slot, epochTransitionCacheOpts), this.config);
+    return new NativeBeaconStateView(this.binding.processSlots(slot, epochTransitionCacheOpts), this.config);
   }
 
   // ─── altair ──────────────────────────────────────────────────────────────
 
   get previousEpochParticipation(): Uint8Array {
     if (this._previousEpochParticipation === null) {
-      this._previousEpochParticipation = this.nativeView.previousEpochParticipation;
+      this._previousEpochParticipation = this.binding.previousEpochParticipation;
     }
     return this._previousEpochParticipation;
   }
 
   get currentEpochParticipation(): Uint8Array {
     if (this._currentEpochParticipation === null) {
-      this._currentEpochParticipation = this.nativeView.currentEpochParticipation;
+      this._currentEpochParticipation = this.binding.currentEpochParticipation;
     }
     return this._currentEpochParticipation;
   }
@@ -695,28 +680,28 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get currentSyncCommittee(): altair.SyncCommittee {
     if (this._currentSyncCommittee === null) {
-      this._currentSyncCommittee = this.nativeView.currentSyncCommittee;
+      this._currentSyncCommittee = this.binding.currentSyncCommittee;
     }
     return this._currentSyncCommittee;
   }
 
   get nextSyncCommittee(): altair.SyncCommittee {
     if (this._nextSyncCommittee === null) {
-      this._nextSyncCommittee = this.nativeView.nextSyncCommittee;
+      this._nextSyncCommittee = this.binding.nextSyncCommittee;
     }
     return this._nextSyncCommittee;
   }
 
   get currentSyncCommitteeIndexed(): SyncCommitteeCache {
     if (this._currentSyncCommitteeIndexed === null) {
-      this._currentSyncCommitteeIndexed = this.nativeView.currentSyncCommitteeIndexed;
+      this._currentSyncCommitteeIndexed = this.binding.currentSyncCommitteeIndexed;
     }
     return this._currentSyncCommitteeIndexed;
   }
 
   get syncProposerReward(): number {
     if (this._syncProposerReward === null) {
-      this._syncProposerReward = this.nativeView.syncProposerReward;
+      this._syncProposerReward = this.binding.syncProposerReward;
     }
     return this._syncProposerReward;
   }
@@ -724,7 +709,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {
     let cached = this._getIndexedSyncCommitteeAtEpoch.get(epoch);
     if (cached === undefined) {
-      cached = this.nativeView.getIndexedSyncCommitteeAtEpoch(epoch);
+      cached = this.binding.getIndexedSyncCommitteeAtEpoch(epoch);
       this._getIndexedSyncCommitteeAtEpoch.set(epoch, cached);
     }
     return cached;
@@ -733,7 +718,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   getIndexedSyncCommittee(slot: Slot): SyncCommitteeCache {
     let cached = this._getIndexedSyncCommittee.get(slot);
     if (cached === undefined) {
-      cached = this.nativeView.getIndexedSyncCommittee(slot);
+      cached = this.binding.getIndexedSyncCommittee(slot);
       this._getIndexedSyncCommittee.set(slot, cached);
     }
     return cached;
@@ -743,12 +728,12 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     block: BeaconBlock,
     validatorIds: (ValidatorIndex | string)[]
   ): Promise<rewards.SyncCommitteeRewards> {
-    return this.nativeView.computeSyncCommitteeRewards(block, validatorIds);
+    return this.binding.computeSyncCommitteeRewards(block, validatorIds);
   }
 
   getSyncCommitteesWitness(): SyncCommitteeWitness {
     if (this._getSyncCommitteesWitness === null) {
-      this._getSyncCommitteesWitness = this.nativeView.getSyncCommitteesWitness();
+      this._getSyncCommitteesWitness = this.binding.getSyncCommitteesWitness();
     }
     return this._getSyncCommitteesWitness;
   }
@@ -757,41 +742,41 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get latestExecutionPayloadHeader(): ExecutionPayloadHeader {
     if (this._latestExecutionPayloadHeader === null) {
-      this._latestExecutionPayloadHeader = this.nativeView.latestExecutionPayloadHeader;
+      this._latestExecutionPayloadHeader = this.binding.latestExecutionPayloadHeader;
     }
     return this._latestExecutionPayloadHeader;
   }
 
   get payloadBlockNumber(): number {
     if (this._payloadBlockNumber === null) {
-      this._payloadBlockNumber = this.nativeView.payloadBlockNumber;
+      this._payloadBlockNumber = this.binding.payloadBlockNumber;
     }
     return this._payloadBlockNumber;
   }
 
   get isExecutionStateType(): boolean {
     if (this._isExecutionStateType === null) {
-      this._isExecutionStateType = this.nativeView.isExecutionStateType;
+      this._isExecutionStateType = this.binding.isExecutionStateType;
     }
     return this._isExecutionStateType;
   }
 
   get isMergeTransitionComplete(): boolean {
     if (this._isMergeTransitionComplete === null) {
-      this._isMergeTransitionComplete = this.nativeView.isMergeTransitionComplete;
+      this._isMergeTransitionComplete = this.binding.isMergeTransitionComplete;
     }
     return this._isMergeTransitionComplete;
   }
 
   isExecutionEnabled(block: BeaconBlock | BlindedBeaconBlock): boolean {
-    return this.nativeView.isExecutionEnabled(block);
+    return this.binding.isExecutionEnabled(block);
   }
 
   // ─── capella ─────────────────────────────────────────────────────────────
 
   get historicalSummaries(): capella.HistoricalSummaries {
     if (this._historicalSummaries === null) {
-      this._historicalSummaries = this.nativeView.historicalSummaries;
+      this._historicalSummaries = this.binding.historicalSummaries;
     }
     return this._historicalSummaries;
   }
@@ -804,7 +789,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     processedValidatorSweepCount: number;
   } {
     if (this._getExpectedWithdrawals === null) {
-      this._getExpectedWithdrawals = this.nativeView.getExpectedWithdrawals();
+      this._getExpectedWithdrawals = this.binding.getExpectedWithdrawals();
     }
     return this._getExpectedWithdrawals;
   }
@@ -813,7 +798,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingDeposits(): electra.PendingDeposits {
     if (this._pendingDeposits === null) {
-      const pendingDepositsBytes = this.nativeView.pendingDeposits;
+      const pendingDepositsBytes = this.binding.pendingDeposits;
       this._pendingDeposits = ssz.electra.PendingDeposits.deserialize(pendingDepositsBytes);
     }
     return this._pendingDeposits;
@@ -821,14 +806,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingDepositsCount(): number {
     if (this._pendingDepositsCount === null) {
-      this._pendingDepositsCount = this.nativeView.pendingDepositsCount;
+      this._pendingDepositsCount = this.binding.pendingDepositsCount;
     }
     return this._pendingDepositsCount;
   }
 
   get pendingPartialWithdrawals(): electra.PendingPartialWithdrawals {
     if (this._pendingPartialWithdrawals === null) {
-      const pendingPartialWithdrawalsBytes = this.nativeView.pendingPartialWithdrawals;
+      const pendingPartialWithdrawalsBytes = this.binding.pendingPartialWithdrawals;
       this._pendingPartialWithdrawals =
         ssz.electra.PendingPartialWithdrawals.deserialize(pendingPartialWithdrawalsBytes);
     }
@@ -837,14 +822,14 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingPartialWithdrawalsCount(): number {
     if (this._pendingPartialWithdrawalsCount === null) {
-      this._pendingPartialWithdrawalsCount = this.nativeView.pendingPartialWithdrawalsCount;
+      this._pendingPartialWithdrawalsCount = this.binding.pendingPartialWithdrawalsCount;
     }
     return this._pendingPartialWithdrawalsCount;
   }
 
   get pendingConsolidations(): electra.PendingConsolidations {
     if (this._pendingConsolidations === null) {
-      const pendingConsolidationsBytes = this.nativeView.pendingConsolidations;
+      const pendingConsolidationsBytes = this.binding.pendingConsolidations;
       this._pendingConsolidations = ssz.electra.PendingConsolidations.deserialize(pendingConsolidationsBytes);
     }
     return this._pendingConsolidations;
@@ -852,7 +837,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get pendingConsolidationsCount(): number {
     if (this._pendingConsolidationsCount === null) {
-      this._pendingConsolidationsCount = this.nativeView.pendingConsolidationsCount;
+      this._pendingConsolidationsCount = this.binding.pendingConsolidationsCount;
     }
     return this._pendingConsolidationsCount;
   }
@@ -861,7 +846,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
 
   get proposerLookahead(): fulu.ProposerLookahead {
     if (this._proposerLookahead === null) {
-      this._proposerLookahead = Array.from(this.nativeView.proposerLookahead);
+      this._proposerLookahead = Array.from(this.binding.proposerLookahead);
     }
     return this._proposerLookahead;
   }
