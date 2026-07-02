@@ -66,4 +66,23 @@ describe("util / flattenObject", () => {
   it("drops empty nested maps and keeps sibling keys", () => {
     expect(flattenObject({rest: {}, network: "hoodi"})).toEqual({network: "hoodi"});
   });
+
+  it("returns an empty object for non-plain input instead of throwing", () => {
+    // e.g. an empty or scalar rc config file makes readFile return undefined / a primitive
+    expect(flattenObject(undefined as unknown as Record<string, unknown>)).toEqual({});
+    expect(flattenObject(null as unknown as Record<string, unknown>)).toEqual({});
+    expect(flattenObject("network: hoodi" as unknown as Record<string, unknown>)).toEqual({});
+    expect(flattenObject(42 as unknown as Record<string, unknown>)).toEqual({});
+  });
+
+  it("skips the __proto__ key and does not pollute Object.prototype", () => {
+    const malicious = JSON.parse('{"__proto__": {"polluted": true}, "network": "hoodi"}');
+    expect(flattenObject(malicious)).toEqual({network: "hoodi"});
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it("keeps non-plain object values (e.g. Date) as leaves instead of dropping them", () => {
+    const genesisTime = new Date("2024-01-01T00:00:00Z");
+    expect(flattenObject({chain: {genesisTime}})).toEqual({"chain.genesisTime": genesisTime});
+  });
 });

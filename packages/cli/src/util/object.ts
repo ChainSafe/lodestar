@@ -1,4 +1,4 @@
-import {RecursivePartial} from "@lodestar/utils";
+import {RecursivePartial, isPlainObject} from "@lodestar/utils";
 
 /**
  * Removes (mutates) all properties with a value === undefined, recursively
@@ -27,10 +27,22 @@ export function removeUndefinedRecursive<T extends {[key: string]: any}>(obj: T)
  * last in the file wins.
  */
 export function flattenObject(obj: Record<string, unknown>, parentKey?: string): Record<string, unknown> {
+  // Guard non-plain input: an empty or scalar rc config file makes `readFile` return `undefined`
+  // or a primitive, which would otherwise throw on `Object.entries`. `isPlainObject` also rejects
+  // arrays and class instances (Date, Buffer, typed arrays); those are handled as leaf values below.
+  if (!isPlainObject(obj)) {
+    return {};
+  }
   const flattened: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
+    // Skip prototype-polluting keys as defense-in-depth (config files can be semi-trusted).
+    if (key === "__proto__") {
+      continue;
+    }
     const prefixedKey = parentKey ? `${parentKey}.${key}` : key;
-    if (value != null && typeof value === "object" && !Array.isArray(value)) {
+    // Only recurse into plain objects; arrays and class instances (e.g. Date) are kept as leaf
+    // values — recursing into them would silently drop or mis-flatten them.
+    if (isPlainObject(value)) {
       Object.assign(flattened, flattenObject(value as Record<string, unknown>, prefixedKey));
     } else {
       flattened[prefixedKey] = value;
