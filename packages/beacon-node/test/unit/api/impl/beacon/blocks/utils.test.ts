@@ -7,16 +7,22 @@ describe("api - beacon - blocks - countColumnsPublishedWithZeroPeers", () => {
     expect(countColumnsPublishedWithZeroPeers([0, 0, 0], [false, false, false])).toBe(3);
   });
 
-  it("ignores zero-peer columns that were already in the seen cache (benign duplicates)", () => {
+  it("ignores zero-peer columns that a peer already gossiped to us (benign duplicates)", () => {
     // the buildoor case: peers gossiped every column to us first, so all publishes are duplicates
     expect(countColumnsPublishedWithZeroPeers([0, 0, 0], [true, true, true])).toBe(0);
   });
 
+  it("still counts a zero-peer column cached via a non-gossip path (engine/getBlobs, req/resp, recovery)", () => {
+    // Such columns are not necessarily on the network, so the caller passes them as `false` (not
+    // gossiped) and their 0-peer publish is a real propagation failure that must warn (see #9580 review).
+    expect(countColumnsPublishedWithZeroPeers([0, 0], [false, false])).toBe(2);
+  });
+
   it("only counts newly introduced zero-peer columns in a mixed batch", () => {
-    // index 0: newly introduced, zero peers -> counted
-    // index 1: already present, zero peers -> benign duplicate, not counted
-    // index 2: newly introduced, reached peers -> not counted
-    // index 3: already present, reached peers -> not counted
+    // index 0: not gossiped to us, zero peers -> counted
+    // index 1: already gossiped to us, zero peers -> benign duplicate, not counted
+    // index 2: not gossiped to us, reached peers -> not counted
+    // index 3: already gossiped to us, reached peers -> not counted
     expect(countColumnsPublishedWithZeroPeers([0, 0, 5, 5], [false, true, false, true])).toBe(1);
   });
 

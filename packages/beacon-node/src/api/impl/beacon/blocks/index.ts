@@ -739,20 +739,23 @@ export function getBeaconBlockApi({
         peerIdStr: undefined,
       });
 
-      // Track which columns were already present in the shared payload input before we self-publish.
-      // addColumn() returns false when the column index is already cached, i.e. a peer gossiped the
-      // column to us first (block published first -> peers getBlobs from EL -> disseminate columns)
-      // before we published the envelope. Such columns are already on the network, so a subsequent
-      // 0-peers publish is an expected duplicate rather than a propagation failure (see #9527).
-      const columnAlreadyPresent = dataColumnSidecars.map(
-        (columnSidecar) =>
-          !payloadInput.addColumn({
-            columnSidecar,
-            source: PayloadEnvelopeInputSource.api,
-            seenTimestampSec,
-            peerIdStr: undefined,
-          })
-      );
+      // Track which columns a peer had already gossiped to us before we self-publish. A gossip-sourced
+      // column is actively propagating on the network (block published first -> peers getBlobs from EL
+      // -> disseminate columns) before we publish the envelope, so a subsequent 0-peers publish is an
+      // expected duplicate rather than a propagation failure (see #9527). We check the column's *source*
+      // rather than mere presence: columns cached from non-gossip paths (engine/getBlobs, req/resp,
+      // recovery) are not necessarily on the network, so a 0-peers publish of those is a real
+      // propagation failure and must still warn.
+      const columnAlreadyGossiped = dataColumnSidecars.map((columnSidecar) => {
+        const alreadyGossiped = payloadInput.getColumnSource(columnSidecar.index) === PayloadEnvelopeInputSource.gossip;
+        payloadInput.addColumn({
+          columnSidecar,
+          source: PayloadEnvelopeInputSource.api,
+          seenTimestampSec,
+          peerIdStr: undefined,
+        });
+        return alreadyGossiped;
+      });
 
       const valLogMeta = {
         slot,
@@ -796,12 +799,12 @@ export function getBeaconBlockApi({
         for (const sentPeers of sentPeersPerColumn) {
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
         }
-        // Columns already in our seen cache were gossiped to us first, so publishing them is a no-op
+        // Columns a peer already gossiped to us are actively propagating, so publishing them is a no-op
         // duplicate with 0 recipients — expected, not a propagation failure. Only warn for columns we
         // actually introduced to the network. See https://github.com/ChainSafe/lodestar/issues/9527.
         const columnsPublishedWithZeroPeers = countColumnsPublishedWithZeroPeers(
           sentPeersPerColumn,
-          columnAlreadyPresent
+          columnAlreadyGossiped
         );
         if (columnsPublishedWithZeroPeers > 0) {
           chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
