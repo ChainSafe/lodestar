@@ -60,7 +60,8 @@ const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (f
         const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
 
         state = state.stateTransition(
-          signedBlock,
+          ssz[fork].SignedBeaconBlock.serialize(signedBlock),
+          false,
           {
             // Assume valid and available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,

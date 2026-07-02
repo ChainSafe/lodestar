@@ -23,7 +23,8 @@ const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => 
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
         state = state.stateTransition(
-          signedBlock,
+          ssz[fork].SignedBeaconBlock.serialize(signedBlock),
+          false,
           {
             // Should assume payload valid and blob data available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,

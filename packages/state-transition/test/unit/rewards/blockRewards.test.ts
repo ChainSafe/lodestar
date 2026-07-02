@@ -66,7 +66,7 @@ describe("chain / rewards / blockRewards", () => {
       id: "Attester slashing only",
       opts: {
         proposerSlashingLen: 0,
-        attesterSlashingLen: 5,
+        attesterSlashingLen: 2,
         attestationLen: 0,
         depositsLen: 0,
         voluntaryExitLen: 0,
@@ -113,13 +113,18 @@ describe("chain / rewards / blockRewards", () => {
         expect(attesterSlashings).toBe(0);
       }
 
-      const postState = stateTransition(state as CachedBeaconStateAllForks, block, {
-        executionPayloadStatus: ExecutionPayloadStatus.valid,
-        dataAvailabilityStatus: DataAvailabilityStatus.Available,
-        verifyProposer: false,
-        verifySignatures: false,
-        verifyStateRoot: false,
-      });
+      const postState = stateTransition(
+        state as CachedBeaconStateAllForks,
+        state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+        false,
+        {
+          executionPayloadStatus: ExecutionPayloadStatus.valid,
+          dataAvailabilityStatus: DataAvailabilityStatus.Available,
+          verifyProposer: false,
+          verifySignatures: false,
+          verifyStateRoot: false,
+        }
+      );
 
       // Cross check with rewardCache
       const rewardCache = postState.proposerRewards;
@@ -141,13 +146,18 @@ describe("chain / rewards / blockRewards", () => {
     preState.hashTreeRoot();
     cachedStateAltairPopulateCaches(preState);
 
-    const postState = stateTransition(preState as CachedBeaconStateAllForks, block, {
-      executionPayloadStatus: ExecutionPayloadStatus.valid,
-      dataAvailabilityStatus: DataAvailabilityStatus.Available,
-      verifyProposer: false,
-      verifySignatures: false,
-      verifyStateRoot: false,
-    });
+    const postState = stateTransition(
+      preState as CachedBeaconStateAllForks,
+      config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+      false,
+      {
+        executionPayloadStatus: ExecutionPayloadStatus.valid,
+        dataAvailabilityStatus: DataAvailabilityStatus.Available,
+        verifyProposer: false,
+        verifySignatures: false,
+        verifyStateRoot: false,
+      }
+    );
 
     // Set postState's reward cache
     const rewardCache = postState.proposerRewards; // Grab original reward cache before overwritten

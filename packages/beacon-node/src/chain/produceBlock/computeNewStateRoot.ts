@@ -1,11 +1,19 @@
+import {BeaconConfig} from "@lodestar/config";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
   IBeaconStateView,
   StateHashTreeRootSource,
 } from "@lodestar/state-transition";
-import {BeaconBlock, BlindedBeaconBlock, Gwei, Root} from "@lodestar/types";
-import {ZERO_HASH} from "../../constants/index.js";
+import {
+  BeaconBlock,
+  BlindedBeaconBlock,
+  Gwei,
+  Root,
+  SignedBeaconBlock,
+  SignedBlindedBeaconBlock,
+  isBlindedBeaconBlock,
+} from "@lodestar/types";
 import {Metrics} from "../../metrics/index.js";
 
 /**
@@ -14,15 +22,23 @@ import {Metrics} from "../../metrics/index.js";
  * epoch transition which happen at slot % 32 === 0)
  */
 export function computeNewStateRoot(
+  config: BeaconConfig,
   metrics: Metrics | null,
   state: IBeaconStateView,
   block: BeaconBlock | BlindedBeaconBlock
 ): {newStateRoot: Root; proposerReward: Gwei; postState: IBeaconStateView} {
-  // Set signature to zero to re-use stateTransition() function which requires the SignedBeaconBlock type
-  const blockEmptySig = {message: block, signature: ZERO_HASH};
+  // Set signature to zero to re-use stateTransition() while signature verification is disabled.
+  const blockEmptySig = {message: block, signature: new Uint8Array(96)};
+  const isBlinded = isBlindedBeaconBlock(block);
+  const blockBytes = isBlinded
+    ? config
+        .getPostBellatrixForkTypes(block.slot)
+        .SignedBlindedBeaconBlock.serialize(blockEmptySig as SignedBlindedBeaconBlock)
+    : config.getForkTypes(block.slot).SignedBeaconBlock.serialize(blockEmptySig as SignedBeaconBlock);
 
   const postState = state.stateTransition(
-    blockEmptySig,
+    blockBytes,
+    isBlinded,
     {
       // ExecutionPayloadStatus.valid: Assume payload valid, it has been produced by a trusted EL
       executionPayloadStatus: ExecutionPayloadStatus.valid,
