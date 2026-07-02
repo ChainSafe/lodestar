@@ -1,7 +1,7 @@
 import path from "node:path";
 import {ChainForkConfig} from "@lodestar/config";
 import {KeyValue} from "@lodestar/db";
-import {CheckpointWithHex, IForkChoiceRead, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
@@ -10,6 +10,7 @@ import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex} from "../../../util/sszBytes.js";
+import {FinalizedBlockSnapshot, FinalizedProtoSummary} from "../../beaconEngine/interface.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
 // Process in chunks to avoid OOM
@@ -38,37 +39,25 @@ async function persistOrphanedBlock(
 }
 
 /**
- * Archives finalized blocks from active bucket to archive bucket.
+ * Engine-owned block persistence for a finalized checkpoint: migrate canonical blocks hot→cold and
+ * delete (optionally persist) non-canonical blocks. Blocks are engine-owned; the DA sidecars tied to
+ * these blocks are cleaned facade-side (`migrateFinalizedDA`) from the returned snapshot.
  *
- * Only archive blocks on the same chain to the finalized checkpoint.
- * Each run should move all finalized blocks to blockArhive db to make it consistent
- * to stateArchive, so that the node always work well when we restart.
- * Note that the finalized block still stay in forkchoice to check finalize checkpoint of next onBlock calls,
- * the next run should not reprocess finalzied block of this run.
+ * Only archive blocks on the same chain to the finalized checkpoint. Each run should move all finalized
+ * blocks to blockArchive db to keep it consistent with stateArchive, so the node always works well on
+ * restart. The finalized block stays in fork choice to check the finalized checkpoint of the next onBlock
+ * calls; the next run should not reprocess a finalized block of this run.
  */
-export async function archiveBlocks(
-  config: ChainForkConfig,
+export async function migrateFinalizedBlocks(
   db: IBeaconDb,
-  forkChoice: IForkChoiceRead,
-  lightclientServer: LightClientServer | undefined,
   logger: Logger,
+  finalizedCanonicalBlocks: ProtoBlock[],
+  finalizedNonCanonicalBlocks: ProtoBlock[],
   finalizedCheckpoint: CheckpointWithHex,
   currentEpoch: Epoch,
-  archiveDataEpochs?: number,
   persistOrphanedBlocks?: boolean,
   persistOrphanedBlocksDir?: string
 ): Promise<void> {
-  // Use fork choice to determine the blocks to archive and delete.
-  // `ancestors` is the canonical walk back from the finalized root, including the previous finalized
-  // block as its last element.
-  const {ancestors: finalizedCanonicalBlocks, nonAncestors: finalizedNonCanonicalBlocks} =
-    forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(finalizedCheckpoint.rootHex);
-
-  // NOTE: The finalized block will be exactly the first block of `epoch` or previous
-  const finalizedPostDeneb = finalizedCheckpoint.epoch >= config.DENEB_FORK_EPOCH;
-  const finalizedPostFulu = finalizedCheckpoint.epoch >= config.FULU_FORK_EPOCH;
-  const finalizedPostGloas = finalizedCheckpoint.epoch >= config.GLOAS_FORK_EPOCH;
-
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
     root: fromHex(block.blockRoot),
@@ -86,7 +75,69 @@ export async function archiveBlocks(
       migratedEntries: migratedSlots.length,
       slotRange: prettyPrintIndices(migratedSlots),
     });
+  }
 
+  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
+  if (nonCanonicalBlockRoots.length > 0) {
+    if (persistOrphanedBlocks) {
+      // Persist orphaned blocks to disk before deleting them from hot db
+      await Promise.all(
+        nonCanonicalBlockRoots.map(async (root, index) => {
+          const block = finalizedNonCanonicalBlocks[index];
+          const blockBytes = await db.block.getBinary(root);
+          const blockLogCtx = {slot: block.slot, root: block.blockRoot};
+          if (blockBytes) {
+            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
+              persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
+            });
+            logger.verbose("Persisted orphaned block", {...logCtx, ...blockLogCtx});
+          } else {
+            logger.warn("Tried to persist orphaned block but no block found", {...logCtx, ...blockLogCtx});
+          }
+        })
+      );
+    }
+
+    const nonCanonicalSlots = finalizedNonCanonicalBlocks.map((summary) => summary.slot).sort((a, b) => a - b);
+    await db.block.batchDelete(nonCanonicalBlockRoots);
+    logger.verbose("Deleted non canonical blocks from hot DB", {
+      ...logCtx,
+      count: nonCanonicalBlockRoots.length,
+      slotRange: prettyPrintIndices(nonCanonicalSlots),
+    });
+  }
+}
+
+/**
+ * Facade-owned DA + light-client cleanup for a finalized checkpoint. Everything it needs comes from the
+ * engine's returned `snapshot` (canonical/non-canonical block summaries) — it never reads fork choice,
+ * which the engine already pruned against. Blocks + states are engine-owned (see `migrateFinalizedBlocks`);
+ * here we migrate/prune the blob/data-column/payload-envelope sidecars and prune light-client data.
+ */
+export async function migrateFinalizedDA(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  lightclientServer: LightClientServer | undefined,
+  logger: Logger,
+  snapshot: FinalizedBlockSnapshot,
+  finalizedEpoch: Epoch,
+  currentEpoch: Epoch,
+  archiveDataEpochs?: number
+): Promise<void> {
+  const {canonical: finalizedCanonicalBlocks, nonCanonical: finalizedNonCanonicalBlocks} = snapshot;
+
+  const finalizedPostDeneb = finalizedEpoch >= config.DENEB_FORK_EPOCH;
+  const finalizedPostFulu = finalizedEpoch >= config.FULU_FORK_EPOCH;
+  const finalizedPostGloas = finalizedEpoch >= config.GLOAS_FORK_EPOCH;
+
+  const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
+    slot: block.slot,
+    root: fromHex(block.blockRoot),
+  }));
+
+  const logCtx = {currentEpoch, finalizedEpoch};
+
+  if (finalizedCanonicalBlockRoots.length > 0) {
     if (finalizedPostDeneb) {
       const migratedEntries = await migrateBlobSidecarsFromHotToColdDb(
         config,
@@ -113,6 +164,8 @@ export async function archiveBlocks(
       });
     }
 
+    // TODO - beacon engine: move payload db to BeaconEngine (execution payload envelopes are
+    // consensus data consumed by block production / prepareNextSlot / STF, not DA like blobs/columns).
     if (finalizedPostGloas) {
       const migratedSlots = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
         config,
@@ -128,39 +181,14 @@ export async function archiveBlocks(
     }
   }
 
-  // deleteNonCanonicalBlocks
-  // loop through forkchoice single time
-
   const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
   if (nonCanonicalBlockRoots.length > 0) {
-    if (persistOrphanedBlocks) {
-      // Persist orphaned blocks to disk before deleting them from hot db
-      await Promise.all(
-        nonCanonicalBlockRoots.map(async (root, index) => {
-          const block = finalizedNonCanonicalBlocks[index];
-          const blockBytes = await db.block.getBinary(root);
-          const blockLogCtx = {slot: block.slot, root: block.blockRoot};
-          if (blockBytes) {
-            await persistOrphanedBlock(block.slot, block.blockRoot, blockBytes, {
-              persistOrphanedBlocksDir: persistOrphanedBlocksDir ?? "orphaned_blocks",
-            });
-            logger.verbose("Persisted orphaned block", {...logCtx, ...blockLogCtx});
-          } else {
-            logger.warn("Tried to persist orphaned block but no block found", {...logCtx, ...blockLogCtx});
-          }
-        })
-      );
-    }
-
     const nonCanonicalSlots = finalizedNonCanonicalBlocks.map((summary) => summary.slot).sort((a, b) => a - b);
     const nonCanonicalLogCtx = {
       ...logCtx,
       count: nonCanonicalBlockRoots.length,
       slotRange: prettyPrintIndices(nonCanonicalSlots),
     };
-
-    await db.block.batchDelete(nonCanonicalBlockRoots);
-    logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);
 
     if (finalizedPostDeneb) {
       await db.blobSidecars.batchDelete(nonCanonicalBlockRoots);
@@ -249,7 +277,7 @@ export async function archiveBlocks(
     await lightclientServer.pruneNonCheckpointData(nonCheckpointBlockRoots);
   }
 
-  logger.verbose("Archiving of finalized blocks complete", {
+  logger.verbose("Archiving of finalized block DA complete", {
     ...logCtx,
     totalArchived: finalizedCanonicalBlocks.length,
   });
@@ -376,7 +404,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
-  canonicalBlocks: ProtoBlock[],
+  canonicalBlocks: FinalizedProtoSummary[],
   currentEpoch: Epoch
 ): Promise<Slot[]> {
   const columnBlocks = canonicalBlocks.filter(
@@ -449,7 +477,7 @@ async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
   db: IBeaconDb,
   logger: Logger,
-  canonicalBlocks: ProtoBlock[]
+  canonicalBlocks: FinalizedProtoSummary[]
 ): Promise<Slot[]> {
   const payloadBlocks = canonicalBlocks.filter(
     (block) => config.getForkSeq(block.slot) < ForkSeq.gloas || block.payloadStatus === PayloadStatus.FULL

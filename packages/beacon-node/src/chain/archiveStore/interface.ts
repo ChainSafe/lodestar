@@ -9,6 +9,16 @@ export enum ArchiveMode {
   // Differential = "diff",
 }
 
+/** `processFinalizedCheckpoint.durationByTask` label — some tasks now run inside `engine.migrateFinalized`. */
+export enum ArchiveStoreTask {
+  ArchiveBlocks = "archive_blocks",
+  PruneHistory = "prune_history",
+  OnFinalizedCheckpoint = "on_finalized_checkpoint",
+  MaybeArchiveState = "maybe_archive_state",
+  ForkchoicePrune = "forkchoice_prune",
+  UpdateBackfillRange = "update_backfill_range",
+}
+
 export interface StatesArchiveOpts {
   /**
    * Minimum number of epochs between archived states

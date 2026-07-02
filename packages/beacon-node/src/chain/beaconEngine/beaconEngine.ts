@@ -82,6 +82,9 @@ import {IClock} from "../../util/clock.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {ArchiveMode, ArchiveStoreTask, StateArchiveStrategy} from "../archiveStore/interface.js";
+import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
+import {migrateFinalizedBlocks} from "../archiveStore/utils/archiveBlocks.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../blocks/blockInput/blockInput.js";
@@ -171,8 +174,10 @@ import {getPubkeysForIndices} from "./duties.js";
 import {GossipValidationResult, fromResult, runGossipValidation} from "./gossipValidationResult.js";
 import {
   BeaconEngineModules,
+  FinalizedProtoSummary,
   IBeaconEngine,
   ImportBlockResult,
+  MigrateFinalizedResult,
   PrepareNextSlotResult,
   ProduceBlockBaseResult,
 } from "./interface.js";
@@ -242,6 +247,9 @@ export class BeaconEngine implements IBeaconEngine {
   // Engine reads execution payload envelopes for block production (getParentExecutionRequests). Writes
   // / archival / network handlers still use the shared `db` directly until the DB-ownership phase.
   readonly db: IBeaconDb;
+  // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
+  // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
+  private readonly stateArchiveStrategy: StateArchiveStrategy;
   lightClientServer: LightClientServer | undefined;
   private readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
   private readonly emitter: ChainEventEmitter;
@@ -356,6 +364,13 @@ export class BeaconEngine implements IBeaconEngine {
       emitter,
       signal,
     });
+
+    // Engine owns the states DB, so it owns the state-archive strategy (finalized + temp + shutdown).
+    if (opts.archiveMode === ArchiveMode.Frequency) {
+      this.stateArchiveStrategy = new FrequencyStateArchiveStrategy(this.regen, db, logger, opts, bufferPool);
+    } else {
+      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
+    }
   }
 
   getHeadState(): IBeaconStateView {
@@ -1975,6 +1990,7 @@ export class BeaconEngine implements IBeaconEngine {
       currFinalizedEpoch,
       oldHeadBlockRoot,
       newHeadBlockRoot: newHead.blockRoot,
+      newHead,
       attestations: attestationsResult,
       blockMeta: {
         slot: blockSlot,
@@ -2045,6 +2061,61 @@ export class BeaconEngine implements IBeaconEngine {
     for (const r of blockRootHexes) {
       this.verifiedBlocks.delete(r);
     }
+  }
+
+  // --- DB ownership (blocks + states) ---
+
+  async migrateFinalized(finalized: CheckpointWithHex): Promise<MigrateFinalizedResult> {
+    // Snapshot from the engine's own fork choice: canonical ancestors (newest→oldest, last = previous
+    // finalized boundary) + non-canonical (orphaned) blocks. The facade cleans DA/light-client from this.
+    const {ancestors, nonAncestors} = this.forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(
+      finalized.rootHex
+    );
+    const snapshot = {
+      canonical: ancestors.map(toFinalizedProtoSummary),
+      nonCanonical: nonAncestors.map(toFinalizedProtoSummary),
+    };
+
+    // 1. Migrate canonical blocks hot→cold + delete non-canonical blocks (blocks are engine-owned).
+    let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
+    await migrateFinalizedBlocks(
+      this.db,
+      this.logger,
+      ancestors,
+      nonAncestors,
+      finalized,
+      this.clock.currentEpoch,
+      this.opts.persistOrphanedBlocks,
+      this.opts.persistOrphanedBlocksDir
+    );
+    timer?.({source: ArchiveStoreTask.ArchiveBlocks});
+
+    // 2. Archive the finalized state (states are engine-owned). MUST run after block migration so a
+    //    restart never sees an archived state whose canonical blocks are still only in hot db.
+    timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
+    await this.stateArchiveStrategy.maybeArchiveState(finalized, this.metrics);
+    timer?.({source: ArchiveStoreTask.MaybeArchiveState});
+
+    // 3. Prune fork choice (in-memory) after the DB writes committed.
+    timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
+    const prunedBlocks = this.forkChoice.prune(finalized.rootHex);
+    timer?.({source: ArchiveStoreTask.ForkchoicePrune});
+
+    return {snapshot, prunedBlocks};
+  }
+
+  async persistFinalizedStateToDisk(): Promise<void> {
+    return this.stateArchiveStrategy.archiveState(this.forkChoice.getFinalizedCheckpoint());
+  }
+
+  async archiveStateOnCheckpoint(): Promise<void> {
+    const headStateRoot = this.forkChoice.getHead().stateRoot;
+    this.regen.pruneOnCheckpoint(
+      this.forkChoice.getFinalizedCheckpoint().epoch,
+      this.forkChoice.getJustifiedCheckpoint().epoch,
+      headStateRoot
+    );
+    await this.stateArchiveStrategy.onCheckpoint(headStateRoot, this.metrics);
   }
 
   // TODO - beacon engine: scalar state reads (getBeaconProposer, getValidator, getBalance,
@@ -2139,4 +2210,9 @@ export class BeaconEngine implements IBeaconEngine {
     // If there's no state available in the same branch of checkpoint use blockState regardless of its epoch
     return {state: blockState, stateId: "block_state_any_epoch", shouldWarn: true};
   }
+}
+
+/** Reduce a ProtoBlock to the plain scalars the facade needs for DA/light-client cleanup. */
+function toFinalizedProtoSummary(block: ProtoBlock): FinalizedProtoSummary {
+  return {slot: block.slot, blockRoot: block.blockRoot, payloadStatus: block.payloadStatus};
 }

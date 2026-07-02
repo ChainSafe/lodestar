@@ -166,6 +166,10 @@ export class BeaconChain implements IBeaconChain {
   get forkChoice(): IForkChoiceRead {
     return this.beaconEngine.forkChoice;
   }
+  // Cached head ProtoBlock, updated from importBlock's result. Lets the facade serve getStatus and
+  // detect finalized/justified transitions (it carries finalized*/justified* checkpoints) without the
+  // engine emitting into the JS emitter (FFI-honest). Not the source of truth for all head reads yet.
+  private headProtoBlock: ProtoBlock;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   // TODO - beacon engine: remove this
@@ -395,6 +399,8 @@ export class BeaconChain implements IBeaconChain {
       },
       anchorState
     );
+    // Seed the facade head cache from the engine's initial head (one-time read); refreshed on each import.
+    this.headProtoBlock = this.beaconEngine.forkChoice.getHead();
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
@@ -1150,8 +1156,9 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getStatus(): Status {
-    const head = this.forkChoice.getHead();
-    const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+    // Read the cached head instead of the engine — its finalized* fields ARE the head state's
+    // finalized checkpoint (exactly what Status wants), so no separate getFinalizedCheckpoint() call.
+    const head = this.headProtoBlock;
     const boundary = this.config.getForkBoundaryAtEpoch(this.clock.currentEpoch);
     return {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
@@ -1160,8 +1167,8 @@ export class BeaconChain implements IBeaconChain {
       // - epoch of fork boundary is used to get blob parameters of current Blob Parameter Only (BPO) fork
       forkDigest: this.config.forkBoundary2ForkDigest(boundary),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
-      finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
-      finalizedEpoch: finalizedCheckpoint.epoch,
+      finalizedRoot: head.finalizedEpoch === GENESIS_EPOCH ? ZERO_HASH : fromHex(head.finalizedRoot),
+      finalizedEpoch: head.finalizedEpoch,
       // TODO: PERFORMANCE: Memoize to prevent re-computing every time
       headRoot: fromHex(head.blockRoot),
       headSlot: head.slot,
@@ -1169,12 +1176,42 @@ export class BeaconChain implements IBeaconChain {
     };
   }
 
+  /**
+   * Single choke point for refreshing the cached head: pass the new canonical head here from ANY flow
+   * that updates it (importBlock, recomputeForkChoiceHead, getProposerHead, predictProposerHead). It
+   * emits fork-choice justified/finalized transitions facade-side — the engine no longer emits these
+   * (a native engine can't emit into the JS emitter); they are derived from the head ProtoBlock's
+   * justified and finalized checkpoints. Head-derived: a checkpoint that advances only via an
+   * epoch-boundary tick is emitted on the next head update.
+   */
+  updateHeadAndEmitCheckpointEvents(newHead: ProtoBlock): void {
+    const prevHead = this.headProtoBlock;
+    this.headProtoBlock = newHead;
+
+    if (newHead.justifiedEpoch !== prevHead.justifiedEpoch || newHead.justifiedRoot !== prevHead.justifiedRoot) {
+      this.emitter.emit(
+        ChainEvent.forkChoiceJustified,
+        protoCheckpointToWithHex(newHead.justifiedEpoch, newHead.justifiedRoot)
+      );
+    }
+    if (newHead.finalizedEpoch !== prevHead.finalizedEpoch || newHead.finalizedRoot !== prevHead.finalizedRoot) {
+      this.emitter.emit(
+        ChainEvent.forkChoiceFinalized,
+        protoCheckpointToWithHex(newHead.finalizedEpoch, newHead.finalizedRoot)
+      );
+    }
+  }
+
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
     this.metrics?.forkChoice.requests.inc();
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.beaconEngine.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+      // GetCanonicalHead runs updateHead(); the returned head IS the new canonical head — cache it
+      // (and emit any justified/finalized transition it carries) via the single choke point.
+      const head = this.beaconEngine.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+      this.updateHeadAndEmitCheckpointEvents(head);
+      return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
@@ -1189,11 +1226,15 @@ export class BeaconChain implements IBeaconChain {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
-      return this.beaconEngine.forkChoice.updateAndGetHead({
+      const predictedHead = this.beaconEngine.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetPredictedProposerHead,
         secFromSlot,
         slot,
       }).head;
+      // The returned value is a proposer-boost-reorg prediction, NOT the canonical head — sync the
+      // cache to the canonical head (getHead()) through the choke point (may emit justified/finalized).
+      this.updateHeadAndEmitCheckpointEvents(this.beaconEngine.forkChoice.getHead());
+      return predictedHead;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
       throw e;
@@ -1203,7 +1244,12 @@ export class BeaconChain implements IBeaconChain {
   }
 
   getProposerHead(slot: Slot): ProtoBlock {
-    return this.beaconEngine.getProposerHead(slot);
+    // engine.getProposerHead runs updateHead() (GetProposerHead) then returns the proposer head, which
+    // may be the parent for a reorg. Sync the cache to the canonical head (not the returned value)
+    // through the choke point so any justified/finalized transition is emitted.
+    const proposerHead = this.beaconEngine.getProposerHead(slot);
+    this.updateHeadAndEmitCheckpointEvents(this.beaconEngine.forkChoice.getHead());
+    return proposerHead;
   }
 
   /**
@@ -1556,4 +1602,9 @@ export class BeaconChain implements IBeaconChain {
 
     return preState.computeSyncCommitteeRewards(block, validatorIds ?? []);
   }
+}
+
+/** Build a CheckpointWithHex from a ProtoBlock's `{epoch, rootHex}` checkpoint fields (no re-hashing). */
+function protoCheckpointToWithHex(epoch: Epoch, rootHex: RootHex): CheckpointWithHex {
+  return {epoch, root: fromHex(rootHex), rootHex};
 }

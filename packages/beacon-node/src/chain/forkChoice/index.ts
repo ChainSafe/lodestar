@@ -24,7 +24,7 @@ import {Slot, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../../constants/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {ChainEvent, ChainEventEmitter} from "../emitter.js";
+import {ChainEventEmitter} from "../emitter.js";
 
 export type ForkChoiceOpts = RawForkChoiceOpts & {
   // for testing only
@@ -120,8 +120,8 @@ export function initializeForkChoiceFromFinalizedState(
       justifiedBalancesGetter,
       stateGetter,
       {
-        onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
-        onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+        // justified/finalized are emitted facade-side from the head ProtoBlock (FFI-honest — a native
+        // engine can't emit into the JS emitter). Only fast-confirmation stays wired here for now.
         onFastConfirmation: ({block, slot, currentSlot}) =>
           emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
       }
@@ -215,8 +215,9 @@ export function initializeForkChoiceFromUnfinalizedState(
     justifiedBalancesGetter,
     stateGetter,
     {
-      onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
-      onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
+      // justified/finalized are emitted facade-side from the head ProtoBlock (FFI-honest — a native
+      // engine can't emit into the JS emitter). Only fast-confirmation stays wired here for now.
+      // TODO - beacon engine: remove this
       onFastConfirmation: ({block, slot, currentSlot}) =>
         emitter.emit(routes.events.EventType.fastConfirmation, {block, slot, currentSlot}),
     }

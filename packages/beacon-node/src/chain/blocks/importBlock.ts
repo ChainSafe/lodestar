@@ -78,6 +78,10 @@ export async function importBlock(
     this.logger.verbose("Chain reorg", r.reorg);
   }
 
+  // Refresh the facade head cache and emit forkChoiceJustified/forkChoiceFinalized from the new head.
+  // The engine no longer emits these (FFI-honest); they are derived facade-side from the head ProtoBlock.
+  this.updateHeadAndEmitCheckpointEvents(r.newHead);
+
   // 6. Queue notifyForkchoiceUpdate to engine api
   let shouldOverrideFcu = false;
 

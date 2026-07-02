@@ -1,3 +1,4 @@
+import {StatesArchiveOpts} from "../archiveStore/interface.js";
 import {BlsMultiThreadWorkerPoolOptions} from "../bls/index.js";
 import {ForkChoiceOpts} from "../forkChoice/index.js";
 import {ShufflingCacheOpts} from "../shufflingCache.js";
@@ -28,6 +29,7 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
   FIFOBlockStateCacheOpts &
   PersistentCheckpointStateCacheOpts &
   ForkChoiceOpts &
+  StatesArchiveOpts &
   BlsMultiThreadWorkerPoolOptions & {
     blsVerifyAllMainThread?: boolean;
     /** Gossip block/blob/data-column validation observes (no longer gates) skipped slots */
@@ -38,4 +40,7 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
     suggestedFeeRecipient: string;
     /** Emit an SSE payloadAttributes event every slot (not only when proposing) */
     emitPayloadAttributes?: boolean;
+    /** Persist orphaned (non-canonical finalized) blocks to disk before deleting them on finalization */
+    persistOrphanedBlocks?: boolean;
+    persistOrphanedBlocksDir?: string;
   };

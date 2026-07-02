@@ -1,6 +1,13 @@
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {BlockExecutionStatus, IForkChoice, PayloadExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
+import {
+  BlockExecutionStatus,
+  CheckpointWithHex,
+  IForkChoice,
+  PayloadExecutionStatus,
+  PayloadStatus,
+  ProtoBlock,
+} from "@lodestar/fork-choice";
 import {ForkName, ForkPostBellatrix} from "@lodestar/params";
 import {DataAvailabilityStatus, PubkeyCache} from "@lodestar/state-transition";
 import {
@@ -84,6 +91,12 @@ export type ImportBlockResult = {
   } | null;
   reorg: ReorgEventData | null;
   blockSummary: ProtoBlock | null;
+  /**
+   * Head ProtoBlock after this import (result of updateAndGetHead). The facade caches it and derives
+   * the finalized/justified transition (its `finalized*`/`justified*` fields) + `getStatus` from it,
+   * instead of the engine emitting `forkChoiceFinalized`/`forkChoiceJustified` (FFI-honest).
+   */
+  newHead: ProtoBlock;
   proposerIndexNextSlot: number | null;
   isExecutionState: boolean;
   prevFinalizedEpoch: number;
@@ -164,6 +177,36 @@ export type PrepareNextSlotResult = {
   daPruneParent: ProtoBlock | null;
   /** built only when (proposing || emitPayloadAttributes) AND the emitter has listeners; facade emits it */
   sse: {data: SSEPayloadAttributes; version: ForkName} | null;
+};
+
+/**
+ * Plain-scalar summary of a finalized proto-block returned from `migrateFinalized`. No `BeaconState`
+ * and no live `ProtoBlock` handle crosses the seam — only the fields the facade needs to migrate/prune
+ * the DA + light-client artifacts it still owns.
+ */
+export type FinalizedProtoSummary = {
+  slot: Slot;
+  /** hex, as ProtoBlock carries it; the facade does `fromHex()` where it needs bytes */
+  blockRoot: RootHex;
+  /** gloas FULL-gate for column/payload-envelope migration (`getForkSeq(slot) < gloas || FULL`) */
+  payloadStatus: PayloadStatus;
+};
+
+/**
+ * Canonical/non-canonical block snapshot for a finalized checkpoint, computed by the engine from its
+ * own fork choice. The facade drives all DA/light-client cleanup from this (never re-reading fork choice).
+ */
+export type FinalizedBlockSnapshot = {
+  /** canonical ancestors of the finalized root, newest→oldest; last = previous-finalized boundary block */
+  canonical: FinalizedProtoSummary[];
+  /** non-canonical (orphaned) blocks pruned by this finalization */
+  nonCanonical: FinalizedProtoSummary[];
+};
+
+export type MigrateFinalizedResult = {
+  snapshot: FinalizedBlockSnapshot;
+  /** fork-choice prune result; facade only reads `.length` for its log */
+  prunedBlocks: ProtoBlock[];
 };
 
 /**
@@ -340,4 +383,23 @@ export interface IBeaconEngine {
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult>;
   discardVerifiedBlocks(blockRootHexes: RootHex[]): void;
+
+  // --- DB ownership (blocks + states) ---
+
+  /**
+   * Process a newly finalized checkpoint: migrate canonical blocks hot→cold, archive the finalized
+   * state, prune fork choice — all engine-owned persistence, consolidated into one method. Returns the
+   * canonical/non-canonical block snapshot the facade uses to clean the DA + light-client artifacts it
+   * owns. State bytes never cross; archival is internal.
+   */
+  migrateFinalized(finalized: CheckpointWithHex): Promise<MigrateFinalizedResult>;
+
+  /** Persist the latest finalized state to the (engine-owned) archive DB — used on graceful shutdown. */
+  persistFinalizedStateToDisk(): Promise<void>;
+
+  /**
+   * On a new checkpoint: prune regen caches and archive a temp checkpoint state (engine-owned states DB).
+   * The facade keeps only the event listener + error handling.
+   */
+  archiveStateOnCheckpoint(): Promise<void>;
 }

@@ -10,9 +10,8 @@ import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
 import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
-import {ArchiveMode, ArchiveStoreOpts, StateArchiveStrategy} from "./interface.js";
-import {FrequencyStateArchiveStrategy} from "./strategies/frequencyStateArchiveStrategy.js";
-import {archiveBlocks} from "./utils/archiveBlocks.js";
+import {ArchiveStoreOpts, ArchiveStoreTask} from "./interface.js";
+import {migrateFinalizedDA} from "./utils/archiveBlocks.js";
 import {pruneHistory} from "./utils/pruneHistory.js";
 import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
@@ -25,25 +24,14 @@ type ArchiveStoreModules = {
 
 type ArchiveStoreInitOpts = ArchiveStoreOpts & {dbName: string; anchorState: {finalizedCheckpoint: Checkpoint}};
 
-export enum ArchiveStoreTask {
-  ArchiveBlocks = "archive_blocks",
-  PruneHistory = "prune_history",
-  OnFinalizedCheckpoint = "on_finalized_checkpoint",
-  MaybeArchiveState = "maybe_archive_state",
-  ForkchoicePrune = "forkchoice_prune",
-  UpdateBackfillRange = "update_backfill_range",
-}
-
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
  */
 export class ArchiveStore {
-  private archiveMode: ArchiveMode;
   private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private archiveDataEpochs?: number;
-  private readonly statesArchiverStrategy: StateArchiveStrategy;
   private readonly chain: IBeaconChain;
   private readonly db: IBeaconDb;
   private readonly logger: LoggerNode;
@@ -60,7 +48,6 @@ export class ArchiveStore {
     this.metrics = modules.metrics;
     this.opts = opts;
     this.signal = signal;
-    this.archiveMode = opts.archiveMode;
     this.archiveDataEpochs = opts.archiveDataEpochs;
 
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -68,17 +55,8 @@ export class ArchiveStore {
       signal,
     });
 
-    if (opts.archiveMode === ArchiveMode.Frequency) {
-      this.statesArchiverStrategy = new FrequencyStateArchiveStrategy(
-        this.chain.regen,
-        this.db,
-        this.logger,
-        opts,
-        this.chain.bufferPool
-      );
-    } else {
-      throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
-    }
+    // State archival (finalized + temp + shutdown) is engine-owned; the ArchiveStore keeps only the
+    // event wiring and the DA/light-client cleanup driven by migrateFinalized's snapshot.
 
     if (!opts.disableArchiveOnCheckpoint) {
       this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
@@ -159,7 +137,7 @@ export class ArchiveStore {
    * Archive latest finalized state
    * */
   async persistToDisk(): Promise<void> {
-    return this.statesArchiverStrategy.archiveState(this.chain.forkChoice.getFinalizedCheckpoint());
+    return this.chain.beaconEngine.persistFinalizedStateToDisk();
   }
 
   //-------------------------------------------------------------------------
@@ -174,15 +152,9 @@ export class ArchiveStore {
   };
 
   private onCheckpoint = (): void => {
-    const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    this.chain.regen.pruneOnCheckpoint(
-      this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-      this.chain.forkChoice.getJustifiedCheckpoint().epoch,
-      headStateRoot
-    );
-
-    this.statesArchiverStrategy.onCheckpoint(headStateRoot, this.metrics).catch((err) => {
-      this.logger.error("Error during state archive", {archiveMode: this.archiveMode}, err);
+    // Engine prunes regen caches and archives a temp checkpoint state (states DB is engine-owned).
+    this.chain.beaconEngine.archiveStateOnCheckpoint().catch((err) => {
+      this.logger.error("Error during state archive", {}, err);
     });
   };
 
@@ -191,23 +163,12 @@ export class ArchiveStore {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch, rootHex: finalized.rootHex});
 
-      let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await archiveBlocks(
-        this.chain.config,
-        this.db,
-        this.chain.forkChoice,
-        this.chain.lightClientServer,
-        this.logger,
-        finalized,
-        this.chain.clock.currentEpoch,
-        this.archiveDataEpochs,
-        this.chain.opts.persistOrphanedBlocks,
-        this.chain.opts.persistOrphanedBlocksDir
-      );
-      timer?.({source: ArchiveStoreTask.ArchiveBlocks});
+      // Engine-owned persistence, consolidated into one method: canonical blocks hot→cold, finalized
+      // state archive, fork-choice prune. Returns the snapshot the facade uses for DA/light-client cleanup.
+      const {snapshot, prunedBlocks} = await this.chain.beaconEngine.migrateFinalized(finalized);
 
       if (this.opts.pruneHistory) {
-        timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
+        const timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
         await pruneHistory(
           this.chain.config,
           this.db,
@@ -219,19 +180,19 @@ export class ArchiveStore {
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await this.statesArchiverStrategy.onFinalizedCheckpoint(finalized, this.metrics);
-      timer?.({source: ArchiveStoreTask.OnFinalizedCheckpoint});
-
-      // should be after ArchiveBlocksTask to handle restart cleanly
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
-      timer?.({source: ArchiveStoreTask.MaybeArchiveState});
-
-      // tasks rely on extended fork choice
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      const prunedBlocks = this.chain.beaconEngine.forkChoice.prune(finalized.rootHex);
-      timer?.({source: ArchiveStoreTask.ForkchoicePrune});
+      // Facade cleans the DA / light-client artifacts it still owns, driven by the snapshot.
+      let timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
+      await migrateFinalizedDA(
+        this.chain.config,
+        this.db,
+        this.chain.lightClientServer,
+        this.logger,
+        snapshot,
+        finalizedEpoch,
+        this.chain.clock.currentEpoch,
+        this.archiveDataEpochs
+      );
+      timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await updateBackfillRange({chain: this.chain, db: this.db, logger: this.logger}, finalized);

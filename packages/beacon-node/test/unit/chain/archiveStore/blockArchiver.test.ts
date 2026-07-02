@@ -1,16 +1,60 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {createChainForkConfig} from "@lodestar/config";
+import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {PayloadStatus} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoiceRead, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
-import {archiveBlocks} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {Logger} from "@lodestar/utils";
+import {migrateFinalizedBlocks, migrateFinalizedDA} from "../../../../src/chain/archiveStore/utils/archiveBlocks.js";
+import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
+import {IBeaconDb} from "../../../../src/db/index.js";
 import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeaconChain.js";
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
+
+/**
+ * Test shim composing engine block-migration + facade DA cleanup exactly as
+ * `ArchiveStore.processFinalizedCheckpoint` does, so the assertions below stay unchanged.
+ */
+async function archiveBlocks(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  forkChoice: IForkChoiceRead,
+  lightclientServer: LightClientServer | undefined,
+  logger: Logger,
+  finalized: CheckpointWithHex,
+  currentEpoch: number,
+  archiveDataEpochs?: number,
+  persistOrphanedBlocks?: boolean,
+  persistOrphanedBlocksDir?: string
+): Promise<void> {
+  const {ancestors, nonAncestors} = forkChoice.getAllAncestorAndNonAncestorBlocksDefaultStatus(finalized.rootHex);
+  await migrateFinalizedBlocks(
+    db,
+    logger,
+    ancestors,
+    nonAncestors,
+    finalized,
+    currentEpoch,
+    persistOrphanedBlocks,
+    persistOrphanedBlocksDir
+  );
+  const toSummary = (b: ProtoBlock) => ({slot: b.slot, blockRoot: b.blockRoot, payloadStatus: b.payloadStatus});
+  const snapshot = {canonical: ancestors.map(toSummary), nonCanonical: nonAncestors.map(toSummary)};
+  await migrateFinalizedDA(
+    config,
+    db,
+    lightclientServer,
+    logger,
+    snapshot,
+    finalized.epoch,
+    currentEpoch,
+    archiveDataEpochs
+  );
+}
 
 function toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
   return {

@@ -82,8 +82,10 @@ export class ForkChoiceStore implements IForkChoiceStore {
     justifiedBalancesGetter: JustifiedBalancesGetter,
     stateGetter: ForkChoiceStateGetter,
     private readonly events?: {
-      onJustified: (cp: CheckpointWithHex) => void;
-      onFinalized: (cp: CheckpointWithHex) => void;
+      // Optional: a native engine can't emit JS events, so justified/finalized transitions are
+      // detected facade-side (from the head ProtoBlock) rather than pushed from here.
+      onJustified?: (cp: CheckpointWithHex) => void;
+      onFinalized?: (cp: CheckpointWithHex) => void;
       onFastConfirmation?: (data: {block: RootHex; slot: Slot; currentSlot: Slot}) => void;
     }
   ) {
@@ -122,7 +124,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
   }
   set justified(justified: CheckpointWithBalance) {
     this._justified = {...justified, totalBalance: computeTotalBalance(justified.balances)};
-    this.events?.onJustified(justified.checkpoint);
+    this.events?.onJustified?.(justified.checkpoint);
   }
 
   get finalizedCheckpoint(): CheckpointWithHex {
@@ -131,7 +133,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
   set finalizedCheckpoint(checkpoint: CheckpointWithHex) {
     const cp = toCheckpointWithHex(checkpoint);
     this._finalizedCheckpoint = cp;
-    this.events?.onFinalized(cp);
+    this.events?.onFinalized?.(cp);
   }
 
   /**

@@ -22,8 +22,6 @@ export type IChainOptions = IBeaconEngineOptions &
     persistProducedBlocks?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir?: string;
-    persistOrphanedBlocks?: boolean;
-    persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
