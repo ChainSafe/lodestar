@@ -1,5 +1,6 @@
 import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
+import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
 import type {StateTransitionOpts} from "../../../src/stateTransition.js";
 import type {IBeaconStateView, IBeaconStateViewNative} from "../../../src/stateView/interface.js";
 import {NativeBeaconStateView} from "../../../src/stateView/nativeBeaconStateView.js";
@@ -75,7 +76,11 @@ describe("NativeBeaconStateView", () => {
     ) => IBeaconStateView;
 
     const blockBytes = new Uint8Array([1, 2, 3]);
-    const options = {verifyStateRoot: false};
+    const options: StateTransitionOpts = {
+      executionPayloadStatus: ExecutionPayloadStatus.valid,
+      dataAvailabilityStatus: DataAvailabilityStatus.Available,
+      verifyStateRoot: false,
+    };
     const postBinding = {} as IBeaconStateViewNative;
     const binding = {
       stateTransition: vi.fn(() => postBinding),

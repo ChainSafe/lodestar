@@ -1,8 +1,9 @@
 import path from "node:path";
+import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {bnToNum} from "@lodestar/utils";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
@@ -54,13 +55,14 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
 const sanityBlocks: TestRunnerFn<SanityBlocksTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      let state = createBeaconStateViewForTest(fork, testcase.pre);
+      const config = getConfig(fork);
+      let state = createBeaconStateViewForTest(fork, testcase.pre, config);
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
-        const signedBlock = testcase[`blocks_${i}`] as deneb.SignedBeaconBlock;
+        const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
         state = state.stateTransition(
-          ssz[fork].SignedBeaconBlock.serialize(signedBlock),
+          config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
           false,
           {
             // Assume valid and available for this test
