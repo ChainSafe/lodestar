@@ -167,13 +167,21 @@ export class WorkerNetworkCore implements INetworkCore {
     this.modules.logger.debug("closing network core running in network worker");
     await this.getApi().close();
     this.modules.logger.debug("terminating network worker");
-    await terminateWorkerThread({
+    const terminated = await terminateWorkerThread({
       worker: this.getApi(),
       retryCount: NETWORK_WORKER_EXIT_RETRY_COUNT,
       retryMs: NETWORK_WORKER_EXIT_TIMEOUT_MS,
       logger: this.modules.logger,
     });
-    this.modules.logger.debug("terminated network worker");
+    if (terminated) {
+      this.modules.logger.debug("terminated network worker");
+    } else {
+      // A forced terminate() can not preempt a worker blocked in a native call, so the worker may
+      // still be running. Unref it so it can not keep the main process alive, otherwise graceful
+      // shutdown would hang until the process is force-killed (see #5775, #6053).
+      (this.modules.worker as unknown as workerThreads.Worker).unref();
+      this.modules.logger.warn("Network worker did not terminate in time, unref-ed it to allow process exit");
+    }
   }
 
   async test(): Promise<void> {
