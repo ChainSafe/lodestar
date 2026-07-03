@@ -33,25 +33,24 @@ describe("util / workerEvents / terminateWorkerThread", () => {
     vi.useRealTimers();
   });
 
-  it("resolves when the worker terminates and emits a termination event", async () => {
+  it("returns true when the worker terminates and emits a termination event", async () => {
     mockEvents([{type: "termination"}]);
     vi.mocked(Thread.terminate).mockResolvedValue(undefined as never);
 
-    await expect(terminateWorkerThread({worker, retryMs, retryCount})).resolves.toBeUndefined();
+    await expect(terminateWorkerThread({worker, retryMs, retryCount})).resolves.toBe(true);
     expect(Thread.terminate).toHaveBeenCalledTimes(1);
   });
 
-  it("throws bounded instead of hanging when Thread.terminate() never resolves", async () => {
+  it("returns false in bounded time when Thread.terminate() never resolves (does not hang)", async () => {
     // Simulate a worker stuck in a blocking native call: terminate() never resolves and no
     // termination event is ever emitted. The old implementation awaited terminate() outside the
-    // race and would hang forever; the fix must fall through to the throw within the retry budget.
+    // race and would hang forever; the fix falls through within the retry budget and returns false
+    // (rather than throwing, which would abort the rest of graceful shutdown).
     mockEvents([]);
     vi.mocked(Thread.terminate).mockReturnValue(new Promise<void>(() => {}) as never);
 
     const start = Date.now();
-    await expect(terminateWorkerThread({worker, retryMs, retryCount})).rejects.toThrow(
-      `Worker thread failed to terminate in ${retryCount * retryMs}ms.`
-    );
+    await expect(terminateWorkerThread({worker, retryMs, retryCount})).resolves.toBe(false);
     // Must have retried the terminate call each iteration and stayed bounded (allow generous slack).
     expect(Thread.terminate).toHaveBeenCalledTimes(retryCount);
     expect(Date.now() - start).toBeLessThan(retryMs * retryCount * 20);

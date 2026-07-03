@@ -111,6 +111,14 @@ export function wireEventsOnMainThread<EventData>(
   }
 }
 
+/**
+ * Terminate a worker thread, bounded to `retryCount * retryMs`.
+ *
+ * @returns `true` if the worker terminated in time. Returns `false` if it could not be terminated
+ * (it may be blocked in a native call that a forced `terminate()` can not preempt); in that case the
+ * worker is still running and the caller must ensure it can not keep the process alive (e.g. by
+ * `unref`-ing it). See #5775, #6053.
+ */
 export async function terminateWorkerThread({
   worker,
   retryMs,
@@ -121,7 +129,7 @@ export async function terminateWorkerThread({
   retryMs: number;
   retryCount: number;
   logger?: Logger;
-}): Promise<void> {
+}): Promise<boolean> {
   const terminated = new Promise((resolve) => {
     Thread.events(worker).subscribe((event) => {
       if (event.type === "termination") {
@@ -142,10 +150,11 @@ export async function terminateWorkerThread({
       sleep(retryMs).then(() => false),
     ]);
 
-    if (result) return;
+    if (result) return true;
 
     logger?.warn("Worker thread failed to terminate, retrying...");
   }
 
-  throw new Error(`Worker thread failed to terminate in ${retryCount * retryMs}ms.`);
+  logger?.error(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
+  return false;
 }
