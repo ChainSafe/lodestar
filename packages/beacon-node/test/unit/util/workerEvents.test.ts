@@ -27,6 +27,7 @@ describe("util / workerEvents / terminateWorkerThread", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
@@ -49,10 +50,13 @@ describe("util / workerEvents / terminateWorkerThread", () => {
     mockEvents([]);
     vi.mocked(Thread.terminate).mockReturnValue(new Promise<void>(() => {}) as never);
 
-    const start = Date.now();
-    await expect(terminateWorkerThread({worker, retryMs, retryCount})).resolves.toBe(false);
-    // Must have retried the terminate call each iteration and stayed bounded (allow generous slack).
+    const promise = terminateWorkerThread({worker, retryMs, retryCount});
+    // Drive the per-retry `sleep(retryMs)` timeouts deterministically instead of waiting real time,
+    // so the bound is enforced by controlled timer advancement rather than a wall-clock assertion.
+    await vi.advanceTimersByTimeAsync(retryMs * retryCount);
+
+    await expect(promise).resolves.toBe(false);
+    // Must have retried the terminate call each iteration (bounded to retryCount attempts).
     expect(Thread.terminate).toHaveBeenCalledTimes(retryCount);
-    expect(Date.now() - start).toBeLessThan(retryMs * retryCount * 20);
   });
 });
