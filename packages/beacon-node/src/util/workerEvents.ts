@@ -131,8 +131,16 @@ export async function terminateWorkerThread({
   });
 
   for (let i = 0; i < retryCount; i++) {
-    await Thread.terminate(worker);
-    const result = await Promise.race([terminated, sleep(retryMs).then(() => false)]);
+    // `Thread.terminate()` resolves to `Worker.terminate()`, which cannot preempt a worker that is
+    // stuck inside a synchronous native (napi) call (V8 can only tear down the isolate at a JS
+    // safepoint). If that happens the terminate call itself never resolves, so it must be raced
+    // against the timeout too - otherwise the intended `retryCount * retryMs` budget is unreachable
+    // and shutdown hangs indefinitely instead of failing bounded. See #5775 / the network-worker
+    // shutdown hang.
+    const result = await Promise.race([
+      Thread.terminate(worker).then(() => terminated),
+      sleep(retryMs).then(() => false),
+    ]);
 
     if (result) return;
 
