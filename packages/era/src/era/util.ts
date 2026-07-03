@@ -14,7 +14,7 @@ export interface EraFileName {
   configName: string;
   /** Number of the first era stored in file, 5-digit zero-padded (00000, 00001, etc.) */
   eraNumber: number;
-  /** First 4 bytes of last historical root, lower-case hex-encoded (8 chars) */
+  /** First 4 bytes of last era root, lower-case hex-encoded (8 chars) */
   shortEraRoot: string;
 }
 
