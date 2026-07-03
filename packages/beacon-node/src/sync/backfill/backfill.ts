@@ -7,7 +7,7 @@ import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants/index.js";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconChainDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {INetwork, NetworkEvent, NetworkEventData, PeerAction} from "../../network/index.js";
 import {ItTrigger} from "../../util/itTrigger.js";
@@ -24,7 +24,7 @@ const DB_READ_BREATHER_TIMEOUT = 1000;
 
 export type BackfillSyncModules = {
   chain: IBeaconChain;
-  db: IBeaconDb;
+  db: IBeaconChainDb;
   network: INetwork;
   config: BeaconConfig;
   logger: Logger;
@@ -105,7 +105,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
-  private readonly db: IBeaconDb;
+  private readonly db: IBeaconChainDb;
   private readonly config: BeaconConfig;
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
@@ -229,7 +229,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     opts: BackfillSyncOpts,
     modules: BackfillSyncModules
   ): Promise<T> {
-    const {config, anchorState, db, wsCheckpoint, logger} = modules;
+    const {config, anchorState, chain, db, wsCheckpoint, logger} = modules;
 
     const {checkpoint: anchorCp} = anchorState.computeAnchorCheckpoint();
     const anchorSlot = anchorState.latestBlockHeader.slot;
@@ -259,7 +259,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       ? {root: wsCheckpoint.root, slot: wsCheckpoint.epoch * SLOTS_PER_EPOCH}
       : null;
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
-    const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
+    const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, chain, anchorSlot, logger);
 
     return new BackfillSync(opts, {
       syncAnchor,
@@ -360,14 +360,14 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           //    a validated connected segment having the slots of previous wsCheckpoint
           //    or finalized as keys
           if (this.syncAnchor.lastBackSyncedBlock.slot !== GENESIS_SLOT) {
-            await this.db.blockArchive.put(
+            await this.putArchiveBlock(
               this.syncAnchor.lastBackSyncedBlock.slot,
               this.syncAnchor.lastBackSyncedBlock.block
             );
           }
           this.prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
             this.config,
-            this.db,
+            this.chain,
             this.syncAnchor.lastBackSyncedBlock.slot,
             this.logger
           );
@@ -381,7 +381,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               )}`
             );
           }
-          await this.db.blockArchive.put(GENESIS_SLOT, this.syncAnchor.lastBackSyncedBlock.block);
+          await this.putArchiveBlock(GENESIS_SLOT, this.syncAnchor.lastBackSyncedBlock.block);
         }
 
         if (this.wsCheckpointHeader && !this.wsValidated) {
@@ -512,7 +512,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       // Checkpoint root should be in db now , in case there are string of orphaned/missed
       // slots before/leading up to checkpoint, the block just backsynced before the
       // wsCheckpointHeader.slot will have the checkpoint root
-      const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpointHeader.root);
+      const wsDbCheckpointBlock =
+        (await this.chain.getBlockByRoot(toRootHex(this.wsCheckpointHeader.root)))?.block ?? null;
       if (
         !wsDbCheckpointBlock ||
         // The only validation we can do here is that wsDbCheckpointBlock is found at/before
@@ -560,7 +561,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
       if (jumpBackTo < lastBackSyncedSlot) {
         validSequence = true;
-        const anchorBlock = await this.db.blockArchive.get(jumpBackTo);
+        const anchorBlock = (await this.chain.getCanonicalBlockAtSlot(jumpBackTo))?.block ?? null;
         if (!anchorBlock) {
           validSequence = false;
           this.logger.warn(
@@ -575,7 +576,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
           // Everything saved in db between a backfilled range is a connected sequence
           // we only need to check if prevFinalizedCheckpointBlock is in db
-          const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
+          const prevBackfillCpBlock =
+            (await this.chain.getBlockByRoot(toRootHex(this.prevFinalizedCheckpointBlock.root)))?.block ?? null;
           if (
             prevBackfillCpBlock != null &&
             this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
@@ -620,7 +622,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             // finalized or wsCheckpoint behind the new lastBackSyncedBlock
             this.prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
               this.config,
-              this.db,
+              this.chain,
               jumpBackTo,
               this.logger
             );
@@ -661,7 +663,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       anchorBlockRoot = this.syncAnchor.anchorBlockRoot;
       expectedSlot = this.syncAnchor.anchorSlot;
     }
-    let anchorBlock = await this.db.blockArchive.getByRoot(anchorBlockRoot);
+    let anchorBlock = (await this.chain.getBlockByRoot(toRootHex(anchorBlockRoot)))?.block ?? null;
     if (!anchorBlock) return false;
 
     if (expectedSlot !== null && anchorBlock.message.slot !== expectedSlot)
@@ -679,7 +681,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     while (
       backCount !== this.opts.backfillBatchSize &&
       // biome-ignore lint/suspicious/noAssignInExpressions: May be refactored later
-      (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
+      (parentBlock = (await this.chain.getBlockByRoot(toRootHex(anchorBlock.message.parentRoot)))?.block ?? null)
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock
       if (anchorBlock.message.slot < this.prevFinalizedCheckpointBlock.slot) {
@@ -712,7 +714,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           // Extract new prevFinalizedCheckpointBlock below anchorBlock
           this.prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
             this.config,
-            this.db,
+            this.chain,
             anchorBlock.message.slot,
             this.logger
           );
@@ -742,6 +744,16 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     return true;
   }
 
+  /** Persist a finalized block to the engine-owned cold archive (bytes-first, indexed by root/parent). */
+  private async putArchiveBlock(slot: Slot, block: SignedBeaconBlock): Promise<void> {
+    await this.chain.beaconEngine.persistArchiveBlock(
+      slot,
+      this.chain.serializedCache.get(block) ?? this.config.getForkTypes(slot).SignedBeaconBlock.serialize(block),
+      this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message),
+      block.message.parentRoot
+    );
+  }
+
   private async syncBlockByRoot(peer: PeerIdStr, anchorBlockRoot: Root): Promise<void> {
     const res = await this.network.sendBeaconBlocksByRoot(peer, [anchorBlockRoot]);
     if (res.length < 1) throw new Error("InvalidBlockSyncedFromPeer");
@@ -755,12 +767,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // we will need to go make checks on the top of sync loop before writing as it might
     // override prevFinalizedCheckpointBlock
     if (this.prevFinalizedCheckpointBlock.slot < anchorBlock.message.slot) {
-      const serialized = this.chain.serializedCache.get(anchorBlock);
-      if (serialized) {
-        await this.db.blockArchive.putBinary(anchorBlock.message.slot, serialized);
-      } else {
-        await this.db.blockArchive.put(anchorBlock.message.slot, anchorBlock);
-      }
+      await this.putArchiveBlock(anchorBlock.message.slot, anchorBlock);
     }
 
     this.syncAnchor = {
@@ -831,30 +838,19 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           ? verifiedBlocks
           : verifiedBlocks.slice(0, verifiedBlocks.length - 1);
 
-      const binaryPuts = [];
-      const nonBinaryPuts = [];
-
-      for (const block of blocksToPut) {
-        const serialized = this.chain.serializedCache.get(block);
-        const item = {
-          key: block.message.slot,
-          slot: block.message.slot,
-          blockRoot: this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+      // Block archive is engine-owned; persist bytes-first (serialize on a serializedCache miss).
+      const entries = blocksToPut.map((block) => {
+        const slot = block.message.slot;
+        return {
+          slot,
+          bytes:
+            this.chain.serializedCache.get(block) ?? this.config.getForkTypes(slot).SignedBeaconBlock.serialize(block),
+          blockRoot: this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message),
           parentRoot: block.message.parentRoot,
         };
-
-        if (serialized) {
-          binaryPuts.push({...item, value: serialized});
-        } else {
-          nonBinaryPuts.push({...item, value: block});
-        }
-      }
-
-      if (binaryPuts.length > 0) {
-        await this.db.blockArchive.batchPutBinary(binaryPuts);
-      }
-      if (nonBinaryPuts.length > 0) {
-        await this.db.blockArchive.batchPut(nonBinaryPuts);
+      });
+      if (entries.length > 0) {
+        await this.chain.beaconEngine.batchPersistArchiveBlocks(entries);
       }
 
       this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.rangesync}, verifiedBlocks.length);
@@ -878,25 +874,22 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
 async function extractPreviousFinOrWsCheckpoint(
   config: ChainForkConfig,
-  db: IBeaconDb,
+  chain: IBeaconChain,
   belowSlot: Slot,
   logger?: Logger
 ): Promise<BackfillBlockHeader> {
   // Anything below genesis block is just zero hash
   if (belowSlot <= GENESIS_SLOT) return {root: ZERO_HASH, slot: belowSlot - 1};
 
-  // To extract the next prevFinalizedCheckpointBlock, we just need to look back in DB
-  // Any saved previous finalized or ws checkpoint, will also have a corresponding block
+  // To extract the next prevFinalizedCheckpointBlock, we just need to look back in the engine-owned
+  // block archive. Any saved previous finalized or ws checkpoint will also have a corresponding block
   // saved in DB, as we make sure of that
   //   1. When we archive new finalized state and blocks
   //   2. When we backfill from a wsCheckpoint
-  const nextPrevFinOrWsBlock = (
-    await db.blockArchive.values({
-      lt: belowSlot,
-      reverse: true,
-      limit: 1,
-    })
-  )[0];
+  const before = await chain.beaconEngine.getSerializedArchiveBlockBefore(belowSlot);
+  const nextPrevFinOrWsBlock = before
+    ? config.getForkTypes(before.slot).SignedBeaconBlock.deserialize(before.bytes)
+    : undefined;
 
   let prevFinalizedCheckpointBlock: BackfillBlockHeader;
   if (nextPrevFinOrWsBlock != null) {

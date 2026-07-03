@@ -36,15 +36,20 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
     : undefined;
   const fnPromises: Promise<void>[] = [];
 
+  // Block DB is engine-owned; write through the engine (bytes-first). Serialize on a cache miss.
   const blockBytes = this.serializedCache.get(block);
   if (blockBytes) {
     // skip serializing data if we already have it
     this.metrics?.importBlock.persistBlockWithSerializedDataCount.inc();
-    fnPromises.push(this.db.block.putBinary(this.db.block.getId(block), blockBytes));
   } else {
     this.metrics?.importBlock.persistBlockNoSerializedDataCount.inc();
-    fnPromises.push(this.db.block.add(block));
   }
+  fnPromises.push(
+    this.beaconEngine.persistBlock(
+      blockRoot,
+      blockBytes ?? this.config.getForkTypes(slot).SignedBeaconBlock.serialize(block)
+    )
+  );
 
   this.logger.debug("Persist block to hot DB", {slot, root: blockRootHex, inputType: blockInput.type, numBlobs});
 

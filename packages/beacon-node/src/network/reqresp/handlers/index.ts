@@ -1,7 +1,7 @@
 import {ProtocolHandler} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {
   BeaconBlocksByRootRequestType,
   BlobSidecarsByRootRequestType,
@@ -33,7 +33,7 @@ function notImplemented(method: ReqRespMethod): ProtocolHandler {
  * The ReqRespHandler module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
  */
-export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconChain}): GetReqRespHandlerFn {
+export function getReqRespHandlers({db, chain}: {db: IBeaconChainDb; chain: IBeaconChain}): GetReqRespHandlerFn {
   const handlers: Record<ReqRespMethod, ProtocolHandler> = {
     [ReqRespMethod.Status]: notImplemented(ReqRespMethod.Status),
     [ReqRespMethod.Goodbye]: notImplemented(ReqRespMethod.Goodbye),
@@ -41,7 +41,7 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.Metadata]: notImplemented(ReqRespMethod.Metadata),
     [ReqRespMethod.BeaconBlocksByRange]: (req, peerId, peerClient) => {
       const body = ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data);
-      return onBeaconBlocksByRange(body, chain, db, peerId, peerClient);
+      return onBeaconBlocksByRange(body, chain, peerId, peerClient);
     },
     [ReqRespMethod.BeaconBlocksByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
@@ -67,12 +67,12 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     },
     [ReqRespMethod.DataColumnSidecarsByRoot]: (req, peerId, peerClient) => {
       const body = DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data);
-      return onDataColumnSidecarsByRoot(body, chain, db, peerId, peerClient);
+      return onDataColumnSidecarsByRoot(body, chain, peerId, peerClient);
     },
 
     [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (req, peerId, peerClient) => {
       const body = ExecutionPayloadEnvelopesByRootRequestType(chain.config).deserialize(req.data);
-      return onExecutionPayloadEnvelopesByRoot(body, chain, db, peerId, peerClient);
+      return onExecutionPayloadEnvelopesByRoot(body, chain, peerId, peerClient);
     },
     [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: (req, peerId, peerClient) => {
       const body = ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest.deserialize(req.data);

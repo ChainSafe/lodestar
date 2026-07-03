@@ -48,7 +48,7 @@ import {
 import {Logger, fromHex, gweiToWei, isErrorAborted, pruneSetToMax, sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
-import {IBeaconDb} from "../db/index.js";
+import {IBeaconChainDb, IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -62,7 +62,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
+import {BlockRootSlot} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconEngine} from "./beaconEngine/index.js";
@@ -280,7 +280,9 @@ export class BeaconChain implements IBeaconChain {
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
-  protected readonly db: IBeaconDb;
+  // Facade owns DA + light-client + backfill stores only; block/state/envelope/op-pool repos are
+  // engine-owned (reached via `beaconEngine`). Bootstrap passes the full `IBeaconDb`, narrowed here.
+  protected readonly db: IBeaconChainDb;
   // this is only available if nHistoricalStates is enabled
   private readonly cpStateDatastore?: CPStateDatastore;
   private abortController = new AbortController();
@@ -354,7 +356,8 @@ export class BeaconChain implements IBeaconChain {
 
     this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
-    this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(this.db);
+    // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
+    this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
 
     const nodeId = computeNodeIdFromPrivateKey(privateKey);
     const initialCustodyGroupCount = opts.initialCustodyGroupCount ?? config.CUSTODY_REQUIREMENT;
@@ -567,13 +570,13 @@ export class BeaconChain implements IBeaconChain {
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   async loadFromDisk(): Promise<void> {
     await this.regen.init();
-    await this.opPool.fromPersisted(this.db);
+    await this.beaconEngine.loadOpPoolFromDisk();
   }
 
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
     await this.archiveStore.persistToDisk();
-    await this.opPool.toPersisted(this.db);
+    await this.beaconEngine.persistOpPoolToDisk();
   }
 
   // TODO - beacon engine: remove this
@@ -691,7 +694,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // this is mostly useful for a node with `--chain.archiveStateEpochFrequency 1`
-    const data = await this.db.stateArchive.getBinaryByRoot(fromHex(stateRoot));
+    const data = await this.beaconEngine.getSerializedStateByRoot(fromHex(stateRoot));
     return data && {state: data, executionOptimistic: false, finalized: true};
   }
 
@@ -760,88 +763,114 @@ export class BeaconChain implements IBeaconChain {
       if (block) {
         // Block found in fork-choice.
         // It may be in the block input cache, awaiting full DA reconstruction, check there first
-        // Otherwise (most likely), check the hot db
+        // Otherwise (most likely), the engine reads the hot db (falling back to cold on an archive race)
         const blockInput = this.seenBlockInputCache.get(block.blockRoot);
         if (blockInput?.hasBlock()) {
           return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
         }
-        const data = await this.db.block.get(fromHex(block.blockRoot));
-        if (data) {
-          return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
+        const res = await this.beaconEngine.getSerializedBlockByRoot(fromHex(block.blockRoot));
+        if (res) {
+          return {
+            block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.bytes),
+            executionOptimistic: isOptimisticBlock(block),
+            finalized: res.finalized,
+          };
         }
       }
       // A non-finalized slot expected to be found in the hot db, could be archived during
-      // this function runtime, so if not found in the hot db, fallback to the cold db
-      // TODO: Add a lock to the archiver to have determinstic behaviour on where are blocks
+      // this function runtime, so if not found, fallback to the cold db (by slot)
     }
 
-    const data = await this.db.blockArchive.get(slot);
-    return data && {block: data, executionOptimistic: false, finalized: true};
+    const bytes = await this.beaconEngine.getSerializedFinalizedBlockBySlot(slot);
+    return (
+      bytes && {
+        block: this.config.getForkTypes(slot).SignedBeaconBlock.deserialize(bytes),
+        executionOptimistic: false,
+        finalized: true,
+      }
+    );
   }
 
   async getBlockByRoot(
     root: string
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const block = this.forkChoice.getBlockHexDefaultStatus(root);
-    if (block) {
+    const protoBlock = this.forkChoice.getBlockHexDefaultStatus(root);
+    if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
-      // Otherwise (most likely), check the hot db
-      const blockInput = this.seenBlockInputCache.get(block.blockRoot);
+      // Otherwise (most likely), the engine reads the hot db (falling back to cold on an archive race)
+      const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
       if (blockInput?.hasBlock()) {
-        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(block), finalized: false};
+        return {block: blockInput.getBlock(), executionOptimistic: isOptimisticBlock(protoBlock), finalized: false};
       }
-      const data = await this.db.block.get(fromHex(root));
-      if (data) {
-        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false};
-      }
-      // If block is not found in hot db, try cold db since there could be an archive cycle happening
-      // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
-    const data = await this.db.blockArchive.getByRoot(fromHex(root));
-    return data && {block: data, executionOptimistic: false, finalized: true};
+    // Engine reads hot→cold and reports which; deserialize facade-side (no object crosses the seam)
+    const res = await this.beaconEngine.getSerializedBlockByRoot(fromHex(root));
+    return (
+      res && {
+        block: this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.bytes),
+        executionOptimistic: protoBlock != null && isOptimisticBlock(protoBlock),
+        finalized: res.finalized,
+      }
+    );
   }
 
   async getSerializedBlockByRoot(
-    root: string
+    root: Uint8Array
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
-    const block = this.forkChoice.getBlockHexDefaultStatus(root);
-    if (block) {
+    // TODO - beacon engine: make a separate call, need to be lightweight
+    const protoBlock = this.forkChoice.getBlockHexDefaultStatus(toRootHex(root));
+    if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
-      // Otherwise (most likely), check the hot db
-      const blockInput = this.seenBlockInputCache.get(block.blockRoot);
+      // Otherwise (most likely), the engine reads the hot db (falling back to cold on an archive race)
+      const blockInput = this.seenBlockInputCache.get(protoBlock.blockRoot);
       if (blockInput?.hasBlock()) {
         const signedBlock = blockInput.getBlock();
-        const serialized = this.serializedCache.get(signedBlock);
-        if (serialized) {
-          return {
-            block: serialized,
-            executionOptimistic: isOptimisticBlock(block),
-            finalized: false,
-            slot: blockInput.slot,
-          };
-        }
         return {
-          block: sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(signedBlock),
-          executionOptimistic: isOptimisticBlock(block),
+          block:
+            this.serializedCache.get(signedBlock) ??
+            sszTypesFor(blockInput.forkName).SignedBeaconBlock.serialize(signedBlock),
+          executionOptimistic: isOptimisticBlock(protoBlock),
           finalized: false,
           slot: blockInput.slot,
         };
       }
-      const data = await this.db.block.getBinary(fromHex(root));
-      if (data) {
-        const slot = getSlotFromSignedBeaconBlockSerialized(data);
-        if (slot === null) throw new Error(`Invalid block data stored in DB for root: ${root}`);
-        return {block: data, executionOptimistic: isOptimisticBlock(block), finalized: false, slot};
-      }
-      // If block is not found in hot db, try cold db since there could be an archive cycle happening
-      // TODO: Add a lock to the archiver to have deterministic behavior on where are blocks
     }
 
-    const data = await this.db.blockArchive.getBinaryEntryByRoot(fromHex(root));
-    return data && {block: data.value, executionOptimistic: false, finalized: true, slot: data.key};
+    const res = await this.beaconEngine.getSerializedBlockByRoot(root);
+    return (
+      res && {
+        block: res.bytes,
+        executionOptimistic: protoBlock != null && isOptimisticBlock(protoBlock),
+        finalized: res.finalized,
+        slot: res.slot,
+      }
+    );
+  }
+
+  /** Engine passthrough: serialized finalized block by slot (cold archive). */
+  getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null> {
+    return this.beaconEngine.getSerializedFinalizedBlockBySlot(slot);
+  }
+
+  /** Engine passthrough: thin BeaconBlocksByRange serving refs (fork choice read engine-side). */
+  getCanonicalBlockRootSlotsByRange(
+    startSlot: Slot,
+    endSlot: Slot
+  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
+    return this.beaconEngine.getCanonicalBlockRootSlotsByRange(startSlot, endSlot);
+  }
+
+  /** Engine passthrough: finalized block slot by root (cold archive index). */
+  getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null> {
+    return this.beaconEngine.getFinalizedBlockSlotByRoot(root);
+  }
+
+  /** Engine passthrough: serialized finalized block by parent root (cold archive index). */
+  getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
+    return this.beaconEngine.getSerializedFinalizedBlockByParentRoot(parentRoot);
   }
 
   async getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null> {

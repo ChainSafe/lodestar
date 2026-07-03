@@ -1,6 +1,6 @@
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {Logger} from "@lodestar/logger";
-import {IBeaconDb} from "../../../db/interface.js";
+import {IBeaconChainDb} from "../../../db/interface.js";
 import {IBeaconChain} from "../../interface.js";
 
 /**
@@ -14,7 +14,7 @@ import {IBeaconChain} from "../../interface.js";
  * slot.
  */
 export async function updateBackfillRange(
-  {chain, db, logger}: {chain: IBeaconChain; db: IBeaconDb; logger: Logger},
+  {chain, db, logger}: {chain: IBeaconChain; db: IBeaconChainDb; logger: Logger},
   finalized: CheckpointWithHex
 ): Promise<void> {
   try {

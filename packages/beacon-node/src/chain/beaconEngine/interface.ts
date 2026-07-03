@@ -32,7 +32,7 @@ import {
   gloas,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {IClock} from "../../util/clock.js";
@@ -72,7 +72,7 @@ export type BeaconEngineModules = {
   // TODO - beacon engine: emitter is facade infra; forkChoice/regen should not depend on it inside the engine.
   emitter: ChainEventEmitter;
   signal: AbortSignal;
-  db: IBeaconDb;
+  db: IBeaconEngineDb;
   validatorMonitor: ValidatorMonitor | null;
   seenBlockInputCache: SeenBlockInput;
   isAnchorStateFinalized: boolean;
@@ -240,6 +240,31 @@ export interface IBeaconEngine {
   persistExecutionPayloadEnvelope(blockRoot: Uint8Array, serializedBytes: Uint8Array): Promise<void>;
   // Thin serving refs for ExecutionPayloadEnvelopesByRange — fork choice read engine-side, no ProtoBlock crosses.
   getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
+
+  // Block + state DB (engine-owned). Bytes-only — no `SignedBeaconBlock`/`BeaconState` crosses the seam.
+  getSerializedBlockByRoot(root: Uint8Array): Promise<{bytes: Uint8Array; slot: Slot; finalized: boolean} | null>;
+  getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null>;
+  getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null>;
+  getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
+  // Thin serving refs for BeaconBlocksByRange (all canonical blocks; inclusive finalized boundary).
+  getCanonicalBlockRootSlotsByRange(
+    startSlot: Slot,
+    endSlot: Slot
+  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
+  persistBlock(root: Uint8Array, serializedBytes: Uint8Array): Promise<void>;
+  getSerializedStateByRoot(stateRoot: Uint8Array): Promise<Uint8Array | null>;
+  // Cold block-archive writes + reverse-lookup (backfill).
+  persistArchiveBlock(
+    slot: Slot,
+    serializedBytes: Uint8Array,
+    blockRoot: Uint8Array,
+    parentRoot: Uint8Array
+  ): Promise<void>;
+  batchPersistArchiveBlocks(
+    entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
+  ): Promise<void>;
+  getSerializedArchiveBlockBefore(slot: Slot): Promise<{slot: Slot; bytes: Uint8Array} | null>;
+
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlockBase(attrs: {slot: Slot; randaoReveal: BLSSignature; graffiti: Bytes32}): Promise<ProduceBlockBaseResult>;
   // Compute the post-state root + proposer reward for a produced block.
@@ -409,4 +434,11 @@ export interface IBeaconEngine {
    * The facade keeps only the event listener + error handling.
    */
   archiveStateOnCheckpoint(): Promise<void>;
+
+  /** Prune finalized blocks + states below the retention window (engine-owned block/state DB). */
+  pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<void>;
+
+  /** Load / persist the (engine-owned) op pool from/to its DB repos. Facade lifecycle delegates here. */
+  loadOpPoolFromDisk(): Promise<void>;
+  persistOpPoolToDisk(): Promise<void>;
 }

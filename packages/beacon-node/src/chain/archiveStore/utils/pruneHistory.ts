@@ -2,12 +2,12 @@ import {ChainConfig} from "@lodestar/config";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/interface.js";
+import {IBeaconEngineDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/index.js";
 
 export async function pruneHistory(
   config: ChainConfig,
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   logger: Logger,
   metrics: Metrics | null | undefined,
   finalizedEpoch: Epoch,

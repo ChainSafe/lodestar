@@ -7,7 +7,7 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, fulu} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
 import {
   handleColumnSidecarUnavailability,
@@ -17,7 +17,7 @@ import {
 export async function* onDataColumnSidecarsByRange(
   request: fulu.DataColumnSidecarsByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -87,7 +87,6 @@ export async function* onDataColumnSidecarsByRange(
       if (unavailableColumnIndices.length) {
         await handleColumnSidecarUnavailability({
           chain,
-          db,
           metrics: chain.metrics,
           unavailableColumnIndices,
           slot,
@@ -148,7 +147,6 @@ export async function* onDataColumnSidecarsByRange(
         if (unavailableColumnIndices.length) {
           await handleColumnSidecarUnavailability({
             chain,
-            db,
             metrics: chain.metrics,
             unavailableColumnIndices,
             blockRoot: fromHex(block.blockRoot),

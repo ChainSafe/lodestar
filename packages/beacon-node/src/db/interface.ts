@@ -24,32 +24,39 @@ import {
 /**
  * The DB service manages the data layer of the beacon chain
  * The exposed methods do not refer to the underlying data engine,
- * but instead expose relevant beacon chain objects
+ * but instead expose relevant beacon chain objects.
+ *
+ * Ownership is split by owner (BeaconEngine seam): `IBeaconEngineDb` holds the consensus stores the
+ * engine owns (blocks, states, checkpoint states, payload envelopes, op-pool persistence); `IBeaconChainDb`
+ * holds the DA + light-client + backfill stores the facade owns. `IBeaconDb` is their composition, held
+ * only by the bootstrap (CLI / `BeaconNode`).
  */
-export interface IBeaconDb {
+export interface IBeaconEngineDb {
   // unfinalized blocks
   block: BlockRepository;
   // finalized blocks
   blockArchive: BlockArchiveRepository;
-
-  blobSidecars: BlobSidecarsRepository;
-  blobSidecarsArchive: BlobSidecarsArchiveRepository;
-  dataColumnSidecar: DataColumnSidecarRepository;
-  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
-
-  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
-  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
 
   // finalized states
   stateArchive: StateArchiveRepository;
   // checkpoint states
   checkpointState: CheckpointStateRepository;
 
-  // op pool
+  executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
+  executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
+
+  // op pool persistence (the OpPool is engine-owned)
   voluntaryExit: VoluntaryExitRepository;
   proposerSlashing: ProposerSlashingRepository;
   attesterSlashing: AttesterSlashingRepository;
   blsToExecutionChange: BLSToExecutionChangeRepository;
+}
+
+export interface IBeaconChainDb {
+  blobSidecars: BlobSidecarsRepository;
+  blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  dataColumnSidecar: DataColumnSidecarRepository;
+  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   // lightclient
   bestLightClientUpdate: BestLightClientUpdateRepository;
@@ -58,7 +65,9 @@ export interface IBeaconDb {
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   backfilledRanges: BackfilledRanges;
+}
 
+export interface IBeaconDb extends IBeaconChainDb, IBeaconEngineDb {
   pruneHotDb(): Promise<void>;
 
   deleteDeprecatedEth1Data(): Promise<void>;

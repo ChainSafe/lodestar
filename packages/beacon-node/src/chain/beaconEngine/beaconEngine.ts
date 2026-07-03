@@ -77,19 +77,20 @@ import {
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
-import {BlockRootSlot} from "../../util/sszBytes.js";
+import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
 import {ArchiveMode, ArchiveStoreTask, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {
   migrateFinalizedBlocks,
   migrateFinalizedExecutionPayloadEnvelopes,
 } from "../archiveStore/utils/archiveBlocks.js";
+import {pruneHistory} from "../archiveStore/utils/pruneHistory.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../blocks/blockInput/blockInput.js";
@@ -251,7 +252,7 @@ export class BeaconEngine implements IBeaconEngine {
   readonly validatorMonitor: ValidatorMonitor | null;
   // Engine reads execution payload envelopes for block production (getParentExecutionRequests). Writes
   // / archival / network handlers still use the shared `db` directly until the DB-ownership phase.
-  readonly db: IBeaconDb;
+  readonly db: IBeaconEngineDb;
   // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
   // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
   private readonly stateArchiveStrategy: StateArchiveStrategy;
@@ -508,6 +509,109 @@ export class BeaconEngine implements IBeaconEngine {
       }
     }
     return {finalizedSlot, nonFinalized};
+  }
+
+  // --- Block DB (engine-owned). Bytes-only; no SignedBeaconBlock crosses the seam. ---
+
+  /** Serialized block by root: hot then cold. `finalized` reflects a cold-db (archive) hit. */
+  async getSerializedBlockByRoot(
+    root: Uint8Array
+  ): Promise<{bytes: Uint8Array; slot: Slot; finalized: boolean} | null> {
+    const hot = await this.db.block.getBinary(root);
+    if (hot) {
+      const slot = getSlotFromSignedBeaconBlockSerialized(hot);
+      if (slot === null) throw Error(`Invalid block data stored in DB for root: ${toRootHex(root)}`);
+      return {bytes: hot, slot, finalized: false};
+    }
+    const cold = await this.db.blockArchive.getBinaryEntryByRoot(root);
+    return cold && {bytes: cold.value, slot: cold.key, finalized: true};
+  }
+
+  /** Serialized finalized block by slot (cold archive). */
+  async getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null> {
+    return (await this.db.blockArchive.getBinary(slot)) ?? null;
+  }
+
+  /** Finalized block slot by root (cold archive index). */
+  async getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null> {
+    return this.db.blockArchive.getSlotByRoot(root);
+  }
+
+  /** Serialized finalized block by parent root (cold archive index). */
+  async getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null> {
+    const slot = await this.db.blockArchive.getSlotByParentRoot(parentRoot);
+    return slot !== null ? ((await this.db.blockArchive.getBinary(slot)) ?? null) : null;
+  }
+
+  /**
+   * Thin serve refs for BeaconBlocksByRange: fork-choice reads stay inside the engine; only slot + raw
+   * root cross. Returns the archive boundary (`finalizedSlot`, inclusive — blocks incl. the finalized
+   * block migrate at finalization) and every canonical block in `(finalizedSlot, endSlot)` (no filter).
+   */
+  getCanonicalBlockRootSlotsByRange(
+    startSlot: Slot,
+    endSlot: Slot
+  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
+    const finalizedSlot = this.forkChoice.getFinalizedCheckpointSlot();
+    const archiveMaxSlot = finalizedSlot;
+    const nonFinalized: BlockRootSlot[] = [];
+    if (endSlot > archiveMaxSlot) {
+      const head = this.forkChoice.getHead();
+      // newest→oldest; iterate ascending
+      const headChain = this.forkChoice.getAllAncestorBlocks(head.blockRoot, head.payloadStatus);
+      for (let i = headChain.length - 1; i >= 0; i--) {
+        const block = headChain[i];
+        if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
+          nonFinalized.push({slot: block.slot, root: fromHex(block.blockRoot)});
+        } else if (block.slot >= endSlot) {
+          break;
+        }
+      }
+    }
+    return {finalizedSlot, nonFinalized};
+  }
+
+  /** Persist a hot block, bytes-first (key = block root). */
+  async persistBlock(root: Uint8Array, serializedBytes: Uint8Array): Promise<void> {
+    await this.db.block.putBinary(root, serializedBytes);
+  }
+
+  // --- Cold block archive writes/reverse-lookup (backfill; engine-owned). Bytes-first + root/parent indexes. ---
+
+  async persistArchiveBlock(
+    slot: Slot,
+    serializedBytes: Uint8Array,
+    blockRoot: Uint8Array,
+    parentRoot: Uint8Array
+  ): Promise<void> {
+    await this.db.blockArchive.batchPutBinary([{key: slot, value: serializedBytes, slot, blockRoot, parentRoot}]);
+  }
+
+  async batchPersistArchiveBlocks(
+    entries: {slot: Slot; bytes: Uint8Array; blockRoot: Uint8Array; parentRoot: Uint8Array}[]
+  ): Promise<void> {
+    await this.db.blockArchive.batchPutBinary(
+      entries.map((e) => ({
+        key: e.slot,
+        value: e.bytes,
+        slot: e.slot,
+        blockRoot: e.blockRoot,
+        parentRoot: e.parentRoot,
+      }))
+    );
+  }
+
+  /** Nearest archived block strictly below `slot` (reverse range, limit 1) — serialized. */
+  async getSerializedArchiveBlockBefore(slot: Slot): Promise<{slot: Slot; bytes: Uint8Array} | null> {
+    for await (const {key, value} of this.db.blockArchive.binaryEntriesStream({lt: slot, reverse: true, limit: 1})) {
+      return {slot: this.db.blockArchive.decodeKey(key), bytes: value};
+    }
+    return null;
+  }
+
+  /** Serialized state by state root (cold archive). */
+  async getSerializedStateByRoot(stateRoot: Uint8Array): Promise<Uint8Array | null> {
+    return (await this.db.stateArchive.getBinaryByRoot(stateRoot)) ?? null;
   }
 
   /**
@@ -2179,6 +2283,21 @@ export class BeaconEngine implements IBeaconEngine {
       headStateRoot
     );
     await this.stateArchiveStrategy.onCheckpoint(headStateRoot, this.metrics);
+  }
+
+  /** Prune finalized blocks + states below the retention window (engine-owned block/state DB). */
+  async pruneHistory(finalizedEpoch: Epoch, currentEpoch: Epoch): Promise<void> {
+    await pruneHistory(this.config, this.db, this.logger, this.metrics, finalizedEpoch, currentEpoch);
+  }
+
+  /** Populate the (engine-owned) op pool from its persisted DB repos. Call once on startup. */
+  async loadOpPoolFromDisk(): Promise<void> {
+    await this.opPool.fromPersisted(this.db);
+  }
+
+  /** Persist the (engine-owned) op pool to its DB repos. Call before stopping. */
+  async persistOpPoolToDisk(): Promise<void> {
+    await this.opPool.toPersisted(this.db);
   }
 
   // TODO - beacon engine: scalar state reads (getBeaconProposer, getValidator, getBalance,

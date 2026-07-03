@@ -4,7 +4,7 @@ import {ForkName, GENESIS_EPOCH, GENESIS_SLOT, isForkPostDeneb} from "@lodestar/
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {fulu} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {getParentRootFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 import {prettyPrintPeerId} from "../../util.js";
@@ -28,7 +28,7 @@ export async function* onBeaconBlocksByHead(
   const minimumRequestSlot = computeStartSlotAtEpoch(minimumRequestEpoch);
 
   for (let blocksSent = 0; blocksSent < count; blocksSent++) {
-    const blockBytes = await chain.getSerializedBlockByRoot(blockRootHex);
+    const blockBytes = await chain.getSerializedBlockByRoot(fromHex(blockRootHex));
     if (!blockBytes) {
       if (blocksSent === 0) {
         throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, `Unknown block root ${requestedRootHex}`);

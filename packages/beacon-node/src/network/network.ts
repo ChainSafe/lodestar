@@ -33,7 +33,7 @@ import {prettyPrintIndices, sleep} from "@lodestar/utils";
 import {BlockInputSource} from "../chain/blocks/blockInput/types.js";
 import {ChainEvent, IBeaconChain} from "../chain/index.js";
 import {computeSubnetForDataColumnSidecar} from "../chain/validation/dataColumnSidecar.js";
-import {IBeaconDb} from "../db/interface.js";
+import {IBeaconChainDb} from "../db/interface.js";
 import {Metrics, RegistryMetricCreator} from "../metrics/index.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
@@ -87,7 +87,7 @@ export type NetworkInitModules = {
   logger: LoggerNode;
   metrics: Metrics | null;
   chain: IBeaconChain;
-  db: IBeaconDb;
+  db: IBeaconChainDb;
   getReqRespHandler: GetReqRespHandlerFn;
   // Optionally pass custom GossipHandlers, for testing
   gossipHandlers?: GossipHandlers;

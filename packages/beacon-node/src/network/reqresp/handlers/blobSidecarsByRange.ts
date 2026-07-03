@@ -5,13 +5,13 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, deneb} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconChainDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
 
 export async function* onBlobSidecarsByRange(
   request: deneb.BlobSidecarsByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb
+  db: IBeaconChainDb
 ): AsyncIterable<ResponseOutgoing> {
   // Non-finalized range of blobs
   const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);

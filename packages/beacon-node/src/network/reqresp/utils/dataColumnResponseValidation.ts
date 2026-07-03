@@ -3,13 +3,11 @@ import {ForkSeq} from "@lodestar/params";
 import {ColumnIndex, Slot} from "@lodestar/types";
 import {prettyBytes, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/interface.js";
-import {IBeaconDb} from "../../../db/interface.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {getBlobKzgCommitmentsCountFromSignedBeaconBlockSerialized} from "../../../util/sszBytes.js";
 
 export async function handleColumnSidecarUnavailability({
   chain,
-  db,
   metrics,
   unavailableColumnIndices,
   requestedColumns,
@@ -18,7 +16,6 @@ export async function handleColumnSidecarUnavailability({
   blockRoot,
 }: {
   chain: IBeaconChain;
-  db: IBeaconDb;
   metrics: Metrics | null;
   slot: Slot;
   blockRoot?: Uint8Array;
@@ -46,7 +43,10 @@ export async function handleColumnSidecarUnavailability({
     if (!envelopeBytes) return;
   }
 
-  const blockBytes = blockRoot ? await db.block.getBinary(blockRoot) : await db.blockArchive.getBinary(slot);
+  // Block DB is engine-owned; read hot-by-root or finalized-by-slot via the engine.
+  const blockBytes = blockRoot
+    ? ((await chain.getSerializedBlockByRoot(blockRoot))?.block ?? null)
+    : await chain.getSerializedFinalizedBlockBySlot(slot);
   if (!blockBytes) {
     chain.logger.verbose(
       `Expected ${blockRoot ? "unfinalized" : "finalized"} block not found while handling unavailable dataColumnSidecar`,

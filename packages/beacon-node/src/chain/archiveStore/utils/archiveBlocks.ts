@@ -6,7 +6,7 @@ import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
 import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconChainDb, IBeaconEngineDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
 import {BlockRootHex, BlockRootSlot} from "../../../util/sszBytes.js";
@@ -47,7 +47,7 @@ async function persistOrphanedBlock(
  * calls; the next run should not reprocess a finalized block of this run.
  */
 export async function migrateFinalizedBlocks(
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   logger: Logger,
   finalizedCanonicalBlocks: ProtoBlock[],
   finalizedNonCanonicalBlocks: ProtoBlock[],
@@ -113,7 +113,7 @@ export async function migrateFinalizedBlocks(
  */
 export async function migrateFinalizedExecutionPayloadEnvelopes(
   config: ChainForkConfig,
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   logger: Logger,
   snapshot: FinalizedBlockSnapshot,
   finalizedEpoch: Epoch,
@@ -159,7 +159,7 @@ export async function migrateFinalizedExecutionPayloadEnvelopes(
  */
 export async function migrateFinalizedDA(
   config: ChainForkConfig,
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   lightclientServer: LightClientServer | undefined,
   logger: Logger,
   snapshot: FinalizedBlockSnapshot,
@@ -304,7 +304,11 @@ export async function migrateFinalizedDA(
   });
 }
 
-async function migrateBlocksFromHotToColdDb(db: IBeaconDb, logger: Logger, blocks: BlockRootSlot[]): Promise<Slot[]> {
+async function migrateBlocksFromHotToColdDb(
+  db: IBeaconEngineDb,
+  logger: Logger,
+  blocks: BlockRootSlot[]
+): Promise<Slot[]> {
   // The input includes the previous finalized block as the last ancestor; its SignedBeaconBlock
   // was archived on a previous run and is no longer in hot db. `getBinary` returning null for any
   // block in the batch is therefore treated as "already migrated, skip" rather than an error.
@@ -357,7 +361,7 @@ async function migrateBlocksFromHotToColdDb(db: IBeaconDb, logger: Logger, block
  */
 async function migrateBlobSidecarsFromHotToColdDb(
   config: ChainForkConfig,
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   logger: Logger,
   blocks: BlockRootSlot[],
   currentEpoch: Epoch
@@ -423,7 +427,7 @@ async function migrateBlobSidecarsFromHotToColdDb(
  */
 async function migrateDataColumnSidecarsFromHotToColdDb(
   config: ChainForkConfig,
-  db: IBeaconDb,
+  db: IBeaconChainDb,
   logger: Logger,
   canonicalBlocks: FinalizedProtoSummary[],
   currentEpoch: Epoch
@@ -496,7 +500,7 @@ async function migrateDataColumnSidecarsFromHotToColdDb(
  */
 async function migrateExecutionPayloadEnvelopesFromHotToColdDb(
   config: ChainForkConfig,
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   logger: Logger,
   canonicalBlocks: FinalizedProtoSummary[]
 ): Promise<Slot[]> {

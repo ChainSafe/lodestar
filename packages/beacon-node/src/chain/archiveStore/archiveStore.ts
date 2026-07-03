@@ -2,7 +2,7 @@ import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconChainDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
@@ -12,12 +12,11 @@ import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
 import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
 import {ArchiveStoreOpts, ArchiveStoreTask} from "./interface.js";
 import {migrateFinalizedDA} from "./utils/archiveBlocks.js";
-import {pruneHistory} from "./utils/pruneHistory.js";
 import {updateBackfillRange} from "./utils/updateBackfillRange.js";
 
 type ArchiveStoreModules = {
   chain: IBeaconChain;
-  db: IBeaconDb;
+  db: IBeaconChainDb;
   logger: LoggerNode;
   metrics: Metrics | null;
 };
@@ -33,7 +32,7 @@ export class ArchiveStore {
 
   private archiveDataEpochs?: number;
   private readonly chain: IBeaconChain;
-  private readonly db: IBeaconDb;
+  private readonly db: IBeaconChainDb;
   private readonly logger: LoggerNode;
   private readonly metrics: Metrics | null;
   private readonly opts: ArchiveStoreInitOpts;
@@ -77,12 +76,9 @@ export class ArchiveStore {
     if (this.opts.pruneHistory) {
       // prune ALL stale data before starting
       this.logger.info("Pruning historical data");
+      // Block + state DB is engine-owned; prune through the engine.
       await callFnWhenAwait(
-        pruneHistory(
-          this.chain.config,
-          this.db,
-          this.logger,
-          this.metrics,
+        this.chain.beaconEngine.pruneHistory(
           this.opts.anchorState.finalizedCheckpoint.epoch,
           this.chain.clock.currentEpoch
         ),
@@ -169,14 +165,8 @@ export class ArchiveStore {
 
       if (this.opts.pruneHistory) {
         const timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-        await pruneHistory(
-          this.chain.config,
-          this.db,
-          this.logger,
-          this.metrics,
-          finalizedEpoch,
-          this.chain.clock.currentEpoch
-        );
+        // Block + state DB is engine-owned; prune through the engine.
+        await this.chain.beaconEngine.pruneHistory(finalizedEpoch, this.chain.clock.currentEpoch);
         timer?.({source: ArchiveStoreTask.PruneHistory});
       }
 

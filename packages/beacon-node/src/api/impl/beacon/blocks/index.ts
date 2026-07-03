@@ -65,7 +65,10 @@ import {
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
-import {getSignedBlockBytesFromSignedBlockContentsSerialized} from "../../../../util/sszBytes.js";
+import {
+  getSignedBlockBytesFromSignedBlockContentsSerialized,
+  getSlotFromSignedBeaconBlockSerialized,
+} from "../../../../util/sszBytes.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
@@ -88,11 +91,7 @@ export function getBeaconBlockApi({
   config,
   metrics,
   network,
-  db,
-}: Pick<
-  ApiModules,
-  "chain" | "config" | "metrics" | "network" | "db"
->): ApplicationMethods<routes.beacon.block.Endpoints> {
+}: Pick<ApiModules, "chain" | "config" | "metrics" | "network">): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation},
     context,
@@ -487,8 +486,14 @@ export function getBeaconBlockApi({
 
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (parentRoot) {
-        const finalizedBlock = await db.blockArchive.getByParentRoot(fromHex(parentRoot));
-        if (finalizedBlock) {
+        // Block DB is engine-owned; read finalized block bytes via the engine and deserialize here.
+        const finalizedBlockBytes = await chain.getSerializedFinalizedBlockByParentRoot(fromHex(parentRoot));
+        if (finalizedBlockBytes) {
+          const blockSlot = getSlotFromSignedBeaconBlockSerialized(finalizedBlockBytes);
+          if (blockSlot === null) {
+            throw Error(`Invalid block bytes from archive for parentRoot=${parentRoot}`);
+          }
+          const finalizedBlock = config.getForkTypes(blockSlot).SignedBeaconBlock.deserialize(finalizedBlockBytes);
           result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
         }
         const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);

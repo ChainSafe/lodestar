@@ -12,11 +12,12 @@ describe("api - beacon - getBlockHeaders", () => {
   let api: ReturnType<typeof getBeaconBlockApi>;
   const parentRoot = toHexString(Buffer.alloc(32, 1));
 
+  // Serialized default block the engine passthrough returns (api deserializes it).
+  const finalizedBlockBytes = ssz.phase0.SignedBeaconBlock.serialize(ssz.phase0.SignedBeaconBlock.defaultValue());
+
   beforeEach(() => {
     modules = getApiTestModules();
     api = getBeaconBlockApi(modules);
-
-    vi.spyOn(modules.db.blockArchive, "getByParentRoot");
   });
 
   afterEach(() => {
@@ -83,7 +84,7 @@ describe("api - beacon - getBlockHeaders", () => {
   });
 
   it.skip("parent root filter - both finalized and non finalized results", async () => {
-    modules.db.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
+    modules.chain.getSerializedFinalizedBlockByParentRoot.mockResolvedValue(finalizedBlockBytes);
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([
       generateProtoBlock({slot: 2}),
       generateProtoBlock({slot: 1}),
@@ -111,7 +112,7 @@ describe("api - beacon - getBlockHeaders", () => {
   });
 
   it("parent root - no finalized block", async () => {
-    modules.db.blockArchive.getByParentRoot.mockResolvedValue(null);
+    modules.chain.getSerializedFinalizedBlockByParentRoot.mockResolvedValue(null);
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([generateProtoBlock({slot: 1})]);
     when(modules.forkChoice.getCanonicalBlockAtSlot).calledWith(1).thenReturn(generateProtoBlock());
     modules.chain.getBlockByRoot.mockResolvedValue({
@@ -125,14 +126,14 @@ describe("api - beacon - getBlockHeaders", () => {
   });
 
   it("parent root - no non finalized blocks", async () => {
-    modules.db.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
+    modules.chain.getSerializedFinalizedBlockByParentRoot.mockResolvedValue(finalizedBlockBytes);
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([]);
     const {data: blockHeaders} = await api.getBlockHeaders({parentRoot});
     expect(blockHeaders.length).toBe(1);
   });
 
   it("parent root + slot filter", async () => {
-    modules.db.blockArchive.getByParentRoot.mockResolvedValue(ssz.phase0.SignedBeaconBlock.defaultValue());
+    modules.chain.getSerializedFinalizedBlockByParentRoot.mockResolvedValue(finalizedBlockBytes);
     modules.forkChoice.getBlockSummariesByParentRoot.mockReturnValue([
       generateProtoBlock({slot: 2}),
       generateProtoBlock({slot: 1}),

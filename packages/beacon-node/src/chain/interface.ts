@@ -213,10 +213,10 @@ export interface IBeaconChain {
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
   /**
-   * Get local block by root, does not fetch from the network
+   * Get local serialized block by root (bytes-first), does not fetch from the network
    */
   getSerializedBlockByRoot(
-    root: RootHex
+    root: Uint8Array
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null>;
   /**
    * Get local block by root, does not fetch from the network
@@ -224,6 +224,14 @@ export interface IBeaconChain {
   getBlockByRoot(
     root: RootHex
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null>;
+  // Engine passthroughs (block DB is engine-owned) — used by p2p handlers / reqresp utils / api.
+  getSerializedFinalizedBlockBySlot(slot: Slot): Promise<Uint8Array | null>;
+  getCanonicalBlockRootSlotsByRange(
+    startSlot: Slot,
+    endSlot: Slot
+  ): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
+  getFinalizedBlockSlotByRoot(root: Uint8Array): Promise<Slot | null>;
+  getSerializedFinalizedBlockByParentRoot(parentRoot: Uint8Array): Promise<Uint8Array | null>;
   getBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<deneb.BlobSidecars | null>;
   getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
   getDataColumnSidecars(blockSlot: Slot, blockRootHex: string): Promise<DataColumnSidecar[]>;

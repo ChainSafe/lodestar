@@ -26,7 +26,7 @@ import {
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {SignedBLSToExecutionChangeVersioned} from "../../util/types.js";
 import {BlockType} from "../interface.js";
@@ -39,6 +39,7 @@ type AttesterSlashingCached = {
   intersectingIndices: number[];
 };
 
+// TODO - beacon engine: This is owned by BeaconEngine, make sure this is populated by BeaconEngine during gossip validation
 export class OpPool {
   /** Map of uniqueId(AttesterSlashing) -> AttesterSlashing */
   private readonly attesterSlashings = new Map<HexRoot, AttesterSlashingCached>();
@@ -68,7 +69,7 @@ export class OpPool {
     return this.blsToExecutionChanges.size;
   }
 
-  async fromPersisted(db: IBeaconDb): Promise<void> {
+  async fromPersisted(db: IBeaconEngineDb): Promise<void> {
     const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] = await Promise.all([
       db.attesterSlashing.entries(),
       db.proposerSlashing.values(),
@@ -90,7 +91,7 @@ export class OpPool {
     }
   }
 
-  async toPersisted(db: IBeaconDb): Promise<void> {
+  async toPersisted(db: IBeaconEngineDb): Promise<void> {
     await Promise.all([
       persistDiff(
         db.attesterSlashing,

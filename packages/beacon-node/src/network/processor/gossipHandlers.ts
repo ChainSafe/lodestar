@@ -923,6 +923,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       try {
         chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+        // TODO - beacon engine
         chain.beaconEngine.forkChoice.onAttesterSlashing(attesterSlashing);
       } catch (e) {
         logger.error("Error adding attesterSlashing to pool", {}, e as Error);

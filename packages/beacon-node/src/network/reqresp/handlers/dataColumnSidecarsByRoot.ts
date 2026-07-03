@@ -4,7 +4,6 @@ import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
 import {DataColumnSidecarsByRootRequest} from "../../../util/types.js";
 import {prettyPrintPeerId} from "../../util.js";
 import {
@@ -15,7 +14,6 @@ import {
 export async function* onDataColumnSidecarsByRoot(
   requestBody: DataColumnSidecarsByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -36,7 +34,7 @@ export async function* onDataColumnSidecarsByRoot(
     const blockRootHex = toRootHex(blockRoot);
     const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
-    const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(blockRoot);
+    const slot = block ? block.slot : await chain.getFinalizedBlockSlotByRoot(blockRoot);
 
     if (slot === null) {
       // We haven't seen the block
@@ -83,7 +81,6 @@ export async function* onDataColumnSidecarsByRoot(
     if (unavailableColumnIndices.length) {
       await handleColumnSidecarUnavailability({
         chain,
-        db,
         metrics: chain.metrics,
         slot,
         blockRoot,

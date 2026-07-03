@@ -5,29 +5,16 @@ import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {deneb, phase0} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
-
-// TODO: Unit test
 
 export async function* onBeaconBlocksByRange(
   request: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
   const {startSlot, count} = validateBeaconBlocksByRangeRequest(chain.config, request);
   const endSlot = startSlot + count;
-
-  const finalized = db.blockArchive;
-  // in the case of initializing from a non-finalized state, we don't have the finalized block so this api does not work
-  // chain.forkChoice.getFinalizeBlock().slot
-  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
-  // Blocks are migrated to blockArchive at finalization (including the finalized block itself),
-  // so the archive loop serves up to AND INCLUDING finalizedSlot and the headChain loop
-  // starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
-  const archiveMaxSlot = finalizedSlot;
 
   // endSlot is exclusive, so highest served slot is endSlot - 1.
   // Throw only when the entire requested range is below earliestAvailableSlot.
@@ -45,59 +32,41 @@ export async function* onBeaconBlocksByRange(
     );
   }
 
-  // Finalized range of blocks
+  // Fork choice is read inside the engine; only thin refs cross (slot + raw root), no ProtoBlock.
+  // Blocks incl. the finalized block are migrated to the archive at finalization, so the archive loop
+  // serves up to AND INCLUDING finalizedSlot and the non-finalized refs start above it.
+  const {finalizedSlot, nonFinalized} = chain.getCanonicalBlockRootSlotsByRange(startSlot, endSlot);
+  const archiveMaxSlot = finalizedSlot;
+
+  // Finalized range: point-read the cold archive per slot; skipped slots return null.
   if (startSlot <= archiveMaxSlot) {
-    // Chain of blobs won't change
-    for await (const {key, value} of finalized.binaryEntriesStream({
-      gte: startSlot,
-      lt: Math.min(endSlot, archiveMaxSlot + 1),
-    })) {
+    const lt = Math.min(endSlot, archiveMaxSlot + 1);
+    for (let slot = startSlot; slot < lt; slot++) {
+      const blockBytes = await chain.getSerializedFinalizedBlockBySlot(slot);
+      if (!blockBytes) continue;
       yield {
-        data: value,
-        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(finalized.decodeKey(key))),
+        data: blockBytes,
+        boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
       };
     }
   }
 
-  // Non-finalized range of blocks
-  if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
-    const headRoot = headBlock.blockRoot;
-    // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
-    // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
-
-    // Iterate head chain with ascending block numbers
-    for (let i = headChain.length - 1; i >= 0; i--) {
-      const block = headChain[i];
-
-      // Must include only blocks in the range requested, and skip anything the archive loop
-      // above already served via the block.slot > archiveMaxSlot filter.
-      if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
-        // Note: Here the forkChoice head may change due to a re-org, so the headChain reflects the canonical chain
-        // at the time of the start of the request. Spec is clear the chain of blobs must be consistent, but on
-        // re-org there's no need to abort the request
-        // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
-
-        const blockBytes = await chain.getSerializedBlockByRoot(block.blockRoot);
-        if (!blockBytes) {
-          throw new ResponseError(
-            RespStatus.SERVER_ERROR,
-            `No block for root ${block.blockRoot} slot ${block.slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
-          );
-        }
-
-        yield {
-          data: blockBytes.block,
-          boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(block.slot)),
-        };
-      }
-
-      // If block is after endSlot, stop iterating
-      else if (block.slot >= endSlot) {
-        break;
-      }
+  // Non-finalized range: point-read each canonical block by root (hot→cold via the engine).
+  // Note: the fork-choice head may change due to a re-org, so `nonFinalized` reflects the canonical chain
+  // at the time the refs were taken. Spec requires the chain of blocks be consistent, but on re-org there's
+  // no need to abort the request.
+  for (const {slot, root} of nonFinalized) {
+    const res = await chain.getSerializedBlockByRoot(root);
+    if (!res) {
+      throw new ResponseError(
+        RespStatus.SERVER_ERROR,
+        `No block for slot ${slot}, startSlot=${startSlot} endSlot=${endSlot} finalizedSlot=${finalizedSlot}`
+      );
     }
+    yield {
+      data: res.block,
+      boundary: chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(slot)),
+    };
   }
 }
 

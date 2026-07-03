@@ -48,7 +48,7 @@ import {
 } from "@lodestar/types";
 import {Logger, MapDef, byteArrayEquals, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../../constants/index.js";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconChainDb} from "../../db/index.js";
 import {NUM_WITNESS, NUM_WITNESS_ELECTRA} from "../../db/repositories/lightclientSyncCommitteeWitness.js";
 import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
@@ -82,7 +82,7 @@ export type SyncAttestedData = {
 type LightClientServerModules = {
   config: ChainForkConfig;
   clock: IClock;
-  db: IBeaconDb;
+  db: IBeaconChainDb;
   metrics: Metrics | null;
   emitter: ChainEventEmitter;
   logger: Logger;
@@ -193,7 +193,7 @@ const MAX_PREV_HEAD_DATA = 32;
  * Storing 4 witness per epoch costs `6848 * 4 * 32 = 876544 ~ 0.9 MB/m`.
  */
 export class LightClientServer {
-  private readonly db: IBeaconDb;
+  private readonly db: IBeaconChainDb;
   private readonly config: ChainForkConfig;
   private readonly metrics: Metrics | null;
   private readonly emitter: ChainEventEmitter;

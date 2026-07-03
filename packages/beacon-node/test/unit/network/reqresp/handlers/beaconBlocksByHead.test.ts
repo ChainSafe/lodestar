@@ -189,8 +189,8 @@ function createChain(blocks: TestBlock[], currentEpoch = 0, testConfig = config)
   return {
     config: testConfig,
     clock: {currentEpoch, currentSlot: computeStartSlotAtEpoch(currentEpoch)},
-    getSerializedBlockByRoot: vi.fn(async (rootHex: string) => {
-      const block = blocksByRoot.get(rootHex);
+    getSerializedBlockByRoot: vi.fn(async (root: Uint8Array) => {
+      const block = blocksByRoot.get(toRootHex(root));
       return block ? {block: block.bytes, executionOptimistic: false, finalized: false, slot: block.slot} : null;
     }),
     logger: {verbose: vi.fn()},

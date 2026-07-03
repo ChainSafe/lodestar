@@ -11,7 +11,7 @@ import {
 } from "@lodestar/state-transition";
 import {BeaconBlock, RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
 import {Logger, fromHex, toRootHex} from "@lodestar/utils";
-import {IBeaconDb} from "../../db/index.js";
+import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
@@ -23,7 +23,7 @@ import {RegenError, RegenErrorCode} from "./errors.js";
 import {IStateRegeneratorInternal, RegenCaller, StateRegenerationOpts} from "./interface.js";
 
 export type RegenModules = {
-  db: IBeaconDb;
+  db: IBeaconEngineDb;
   forkChoice: IForkChoice;
   blockStateCache: BlockStateCache;
   checkpointStateCache: CheckpointStateCache;

@@ -3,14 +3,12 @@ import {ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
-import {IBeaconDb} from "../../../db/index.js";
 import {ExecutionPayloadEnvelopesByRootRequest} from "../../../util/types.js";
 import {prettyPrintPeerId} from "../../util.js";
 
 export async function* onExecutionPayloadEnvelopesByRoot(
   requestBody: ExecutionPayloadEnvelopesByRootRequest,
   chain: IBeaconChain,
-  db: IBeaconDb,
   peerId: PeerId,
   peerClient: string
 ): AsyncIterable<ResponseOutgoing> {
@@ -21,7 +19,7 @@ export async function* onExecutionPayloadEnvelopesByRoot(
     const rootHex = toRootHex(root);
     const block = chain.forkChoice.getBlockHexDefaultStatus(rootHex);
     // If the block is not in fork choice, it may be finalized. Attempt to find its slot in block archive
-    const slot = block ? block.slot : await db.blockArchive.getSlotByRoot(root);
+    const slot = block ? block.slot : await chain.getFinalizedBlockSlotByRoot(root);
 
     if (slot === null) {
       chain.logger.debug(

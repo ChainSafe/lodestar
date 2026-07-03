@@ -3,7 +3,7 @@ import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconEngineDb} from "../../../db/index.js";
 import {Metrics} from "../../../metrics/metrics.js";
 import {AllocSource, BufferPool} from "../../../util/bufferPool.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
@@ -34,7 +34,7 @@ export enum FrequencyStateArchiveStep {
 export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   constructor(
     private readonly regen: IStateRegenerator,
-    private readonly db: IBeaconDb,
+    private readonly db: IBeaconEngineDb,
     private readonly logger: Logger,
     private readonly opts: StatesArchiveOpts,
     private readonly bufferPool?: BufferPool | null

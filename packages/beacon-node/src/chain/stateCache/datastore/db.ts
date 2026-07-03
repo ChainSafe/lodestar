@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, phase0, ssz} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/interface.js";
+import {IBeaconEngineDb} from "../../../db/interface.js";
 import {
   getLastProcessedSlotFromBeaconStateSerialized,
   getSlotFromBeaconStateSerialized,
@@ -12,7 +12,7 @@ import {CPStateDatastore, DatastoreKey} from "./types.js";
  * Implementation of CPStateDatastore using db.
  */
 export class DbCPStateDatastore implements CPStateDatastore {
-  constructor(private readonly db: IBeaconDb) {}
+  constructor(private readonly db: IBeaconEngineDb) {}
 
   async write(cpKey: phase0.Checkpoint, stateBytes: Uint8Array): Promise<DatastoreKey> {
     const serializedCheckpoint = checkpointToDatastoreKey(cpKey);

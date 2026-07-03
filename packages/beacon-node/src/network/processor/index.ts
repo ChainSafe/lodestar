@@ -7,7 +7,7 @@ import {BlockInputSource} from "../../chain/blocks/blockInput/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {GossipErrorCode} from "../../chain/errors/gossipValidation.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {IBeaconDb} from "../../db/interface.js";
+import {IBeaconChainDb} from "../../db/interface.js";
 import {Metrics} from "../../metrics/metrics.js";
 import {ClockEvent} from "../../util/clock.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
@@ -41,7 +41,7 @@ export * from "./types.js";
 export type NetworkProcessorModules = ValidatorFnsModules &
   ValidatorFnModules & {
     chain: IBeaconChain;
-    db: IBeaconDb;
+    db: IBeaconChainDb;
     events: NetworkEventBus;
     logger: Logger;
     metrics: Metrics | null;

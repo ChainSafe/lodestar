@@ -6,7 +6,7 @@ import {
   createBeaconStateViewForHistoricalRegen,
 } from "@lodestar/state-transition";
 import {byteArrayEquals} from "@lodestar/utils";
-import {IBeaconDb} from "../../../db/index.js";
+import {IBeaconEngineDb} from "../../../db/index.js";
 import {HistoricalStateRegenMetrics} from "./metrics.js";
 import {RegenErrorType} from "./types.js";
 
@@ -16,7 +16,7 @@ import {RegenErrorType} from "./types.js";
 export async function getNearestState(
   slot: number,
   config: BeaconConfig,
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   nativeStateView: boolean
 ): Promise<IBeaconStateView> {
   const stateBytesArr = await db.stateArchive.binaries({limit: 1, lte: slot, reverse: true});
@@ -36,7 +36,7 @@ export async function getNearestState(
 export async function getHistoricalState(
   slot: number,
   config: BeaconConfig,
-  db: IBeaconDb,
+  db: IBeaconEngineDb,
   nativeStateView: boolean,
   metrics?: HistoricalStateRegenMetrics
 ): Promise<Uint8Array> {
