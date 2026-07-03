@@ -9,7 +9,7 @@ import {Logger, fromAsync, fromHex, prettyPrintIndices, toRootHex} from "@lodest
 import {IBeaconDb} from "../../../db/index.js";
 import {BlockArchiveBatchPutBinaryItem} from "../../../db/repositories/index.js";
 import {ensureDir, writeIfNotExist} from "../../../util/file.js";
-import {BlockRootHex} from "../../../util/sszBytes.js";
+import {BlockRootHex, BlockRootSlot} from "../../../util/sszBytes.js";
 import {FinalizedBlockSnapshot, FinalizedProtoSummary} from "../../beaconEngine/interface.js";
 import {LightClientServer} from "../../lightClient/index.js";
 
@@ -18,8 +18,6 @@ import {LightClientServer} from "../../lightClient/index.js";
 // TODO: Review after merge since the size of blocks will increase significantly
 const BLOCK_BATCH_SIZE = 256;
 const BLOB_SIDECAR_BATCH_SIZE = 32;
-
-type BlockRootSlot = {slot: Slot; root: Uint8Array};
 
 /**
  * Persist orphaned block to disk
@@ -109,10 +107,55 @@ export async function migrateFinalizedBlocks(
 }
 
 /**
+ * Engine-owned migration of finalized execution payload envelopes (gloas): canonical blocks hot→cold and
+ * non-canonical delete. Envelopes are consensus data owned by BeaconEngine (not DA like blobs/columns),
+ * so this runs inside `engine.migrateFinalized`, driven by the same `snapshot` as `migrateFinalizedBlocks`.
+ */
+export async function migrateFinalizedExecutionPayloadEnvelopes(
+  config: ChainForkConfig,
+  db: IBeaconDb,
+  logger: Logger,
+  snapshot: FinalizedBlockSnapshot,
+  finalizedEpoch: Epoch,
+  currentEpoch: Epoch
+): Promise<void> {
+  if (finalizedEpoch < config.GLOAS_FORK_EPOCH) return;
+
+  const {canonical: finalizedCanonicalBlocks, nonCanonical: finalizedNonCanonicalBlocks} = snapshot;
+  const logCtx = {currentEpoch, finalizedEpoch};
+
+  if (finalizedCanonicalBlocks.length > 0) {
+    const migratedSlots = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
+      config,
+      db,
+      logger,
+      finalizedCanonicalBlocks
+    );
+    logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
+      ...logCtx,
+      migratedEntries: migratedSlots.length,
+      slotRange: prettyPrintIndices(migratedSlots),
+    });
+  }
+
+  const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
+  if (nonCanonicalBlockRoots.length > 0) {
+    await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
+    const nonCanonicalSlots = finalizedNonCanonicalBlocks.map((summary) => summary.slot).sort((a, b) => a - b);
+    logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", {
+      ...logCtx,
+      count: nonCanonicalBlockRoots.length,
+      slotRange: prettyPrintIndices(nonCanonicalSlots),
+    });
+  }
+}
+
+/**
  * Facade-owned DA + light-client cleanup for a finalized checkpoint. Everything it needs comes from the
  * engine's returned `snapshot` (canonical/non-canonical block summaries) — it never reads fork choice,
- * which the engine already pruned against. Blocks + states are engine-owned (see `migrateFinalizedBlocks`);
- * here we migrate/prune the blob/data-column/payload-envelope sidecars and prune light-client data.
+ * which the engine already pruned against. Blocks + states + payload envelopes are engine-owned (see
+ * `migrateFinalizedBlocks` / `migrateFinalizedExecutionPayloadEnvelopes`); here we migrate/prune the
+ * blob + data-column sidecars and prune light-client data.
  */
 export async function migrateFinalizedDA(
   config: ChainForkConfig,
@@ -128,7 +171,6 @@ export async function migrateFinalizedDA(
 
   const finalizedPostDeneb = finalizedEpoch >= config.DENEB_FORK_EPOCH;
   const finalizedPostFulu = finalizedEpoch >= config.FULU_FORK_EPOCH;
-  const finalizedPostGloas = finalizedEpoch >= config.GLOAS_FORK_EPOCH;
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -163,22 +205,6 @@ export async function migrateFinalizedDA(
         slotRange: prettyPrintIndices(migratedSlots),
       });
     }
-
-    // TODO - beacon engine: move payload db to BeaconEngine (execution payload envelopes are
-    // consensus data consumed by block production / prepareNextSlot / STF, not DA like blobs/columns).
-    if (finalizedPostGloas) {
-      const migratedSlots = await migrateExecutionPayloadEnvelopesFromHotToColdDb(
-        config,
-        db,
-        logger,
-        finalizedCanonicalBlocks
-      );
-      logger.verbose("Migrated executionPayloadEnvelopes from hot DB to cold DB", {
-        ...logCtx,
-        migratedEntries: migratedSlots.length,
-        slotRange: prettyPrintIndices(migratedSlots),
-      });
-    }
   }
 
   const nonCanonicalBlockRoots = finalizedNonCanonicalBlocks.map((summary) => fromHex(summary.blockRoot));
@@ -198,11 +224,6 @@ export async function migrateFinalizedDA(
     if (finalizedPostFulu) {
       await db.dataColumnSidecar.deleteMany(nonCanonicalBlockRoots);
       logger.verbose("Deleted non canonical dataColumnSidecars from hot DB", nonCanonicalLogCtx);
-    }
-
-    if (finalizedPostGloas) {
-      await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
-      logger.verbose("Deleted non canonical executionPayloadEnvelopes from hot DB", nonCanonicalLogCtx);
     }
   }
 

@@ -62,7 +62,7 @@ import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
-import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
+import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconEngine} from "./beaconEngine/index.js";
@@ -884,22 +884,24 @@ export class BeaconChain implements IBeaconChain {
     return null;
   }
 
-  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
-    const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null> {
+    // Facade owns the DA cache (keyed by hex); check it before the engine's DB read.
+    const payloadInput = this.seenPayloadEnvelopeInputCache.get(toRootHex(blockRoot));
     if (payloadInput?.hasPayloadEnvelope()) {
       const envelope = payloadInput.getPayloadEnvelope();
-      const serialized = this.serializedCache.get(envelope);
-      if (serialized) {
-        return serialized;
-      }
-      return ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
+      return this.serializedCache.get(envelope) ?? ssz.gloas.SignedExecutionPayloadEnvelope.serialize(envelope);
     }
+    return this.beaconEngine.getSerializedExecutionPayloadEnvelope(blockSlot, blockRoot);
+  }
 
-    return (
-      (await this.db.executionPayloadEnvelope.getBinary(fromHex(blockRootHex))) ??
-      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
-      null
-    );
+  /** Engine passthrough: serialized finalized (cold-archive) envelope by slot. */
+  getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null> {
+    return this.beaconEngine.getSerializedFinalizedExecutionPayloadEnvelope(slot);
+  }
+
+  /** Engine passthrough: thin ByRange serving refs (fork choice read engine-side). */
+  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
+    return this.beaconEngine.getFullBlockRootSlotsByRange(startSlot, endSlot);
   }
 
   async getExecutionPayloadEnvelope(
@@ -911,7 +913,7 @@ export class BeaconChain implements IBeaconChain {
     if (payloadInput?.hasPayloadEnvelope()) {
       return payloadInput.getPayloadEnvelope();
     }
-    return this.beaconEngine.getExecutionPayloadEnvelope(blockSlot, blockRootHex);
+    return this.beaconEngine.getExecutionPayloadEnvelope(blockSlot, fromHex(blockRootHex));
   }
 
   async getParentExecutionRequests(

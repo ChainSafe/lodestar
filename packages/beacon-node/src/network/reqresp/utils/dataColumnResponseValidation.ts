@@ -41,7 +41,8 @@ export async function handleColumnSidecarUnavailability({
   // Post-gloas, columns exist only for FULL blocks; a finalized block is FULL if its envelope was
   // archived. Bid blobsCount is unreliable here since an EMPTY block's bid may still commit to blobs
   if (blockRoot === undefined && chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
-    const envelopeBytes = await db.executionPayloadEnvelopeArchive.getBinary(slot);
+    // Envelope DB is engine-owned; read the finalized (cold-archive) envelope via the engine.
+    const envelopeBytes = await chain.getSerializedFinalizedExecutionPayloadEnvelope(slot);
     if (!envelopeBytes) return;
   }
 

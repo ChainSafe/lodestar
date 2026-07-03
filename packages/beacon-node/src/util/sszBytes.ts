@@ -13,6 +13,8 @@ import {
 import {BLSSignature, CommitteeIndex, RootHex, Slot, ValidatorIndex, ssz} from "@lodestar/types";
 
 export type BlockRootHex = RootHex;
+/** A block's slot + its raw (bytes) root. Shared by the archive migration + envelope serving paths. */
+export type BlockRootSlot = {slot: Slot; root: Uint8Array};
 // pre-electra, AttestationData is used to cache attestations
 export type AttDataBase64 = string;
 // electra, CommitteeBits

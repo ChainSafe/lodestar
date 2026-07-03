@@ -12,6 +12,7 @@ import {
   ForkChoiceStateGetter,
   IForkChoice,
   PayloadExecutionStatus,
+  PayloadStatus,
   ProtoBlock,
   UpdateHeadOpt,
   getSafeExecutionBlockHash,
@@ -82,9 +83,13 @@ import {IClock} from "../../util/clock.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
+import {BlockRootSlot} from "../../util/sszBytes.js";
 import {ArchiveMode, ArchiveStoreTask, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
-import {migrateFinalizedBlocks} from "../archiveStore/utils/archiveBlocks.js";
+import {
+  migrateFinalizedBlocks,
+  migrateFinalizedExecutionPayloadEnvelopes,
+} from "../archiveStore/utils/archiveBlocks.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
 import {BeaconProposerCache} from "../beaconProposerCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../blocks/blockInput/blockInput.js";
@@ -448,13 +453,61 @@ export class BeaconEngine implements IBeaconEngine {
   /** DB read of an execution payload envelope. Callers that hold the DA cache check it first. */
   async getExecutionPayloadEnvelope(
     blockSlot: Slot,
-    blockRootHex: string
+    blockRoot: Uint8Array
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null> {
     return (
-      (await this.db.executionPayloadEnvelope.get(fromHex(blockRootHex))) ??
+      (await this.db.executionPayloadEnvelope.get(blockRoot)) ??
       (await this.db.executionPayloadEnvelopeArchive.get(blockSlot)) ??
       null
     );
+  }
+
+  /** Serialized DB read of an execution payload envelope (byte sibling of getExecutionPayloadEnvelope). */
+  async getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null> {
+    return (
+      (await this.db.executionPayloadEnvelope.getBinary(blockRoot)) ??
+      (await this.db.executionPayloadEnvelopeArchive.getBinary(blockSlot)) ??
+      null
+    );
+  }
+
+  /** Serialized read of a finalized (cold-archive, keyed by slot) execution payload envelope. */
+  async getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null> {
+    return (await this.db.executionPayloadEnvelopeArchive.getBinary(slot)) ?? null;
+  }
+
+  /** Persist a hot execution payload envelope, bytes-first (key = beaconBlockRoot). */
+  async persistExecutionPayloadEnvelope(blockRoot: Uint8Array, serializedBytes: Uint8Array): Promise<void> {
+    await this.db.executionPayloadEnvelope.putBinary(blockRoot, serializedBytes);
+  }
+
+  /**
+   * Thin serving refs for ExecutionPayloadEnvelopesByRange: fork-choice reads + FULL filter stay inside
+   * the engine; only slot + raw root cross. Returns the archive boundary (`finalizedSlot`) and the
+   * canonical FULL blocks in `(finalizedSlot - 1, endSlot)`.
+   */
+  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]} {
+    // The finalized block's envelope stays in hot db until the next finalization run → archive tops out at finalizedSlot - 1
+    const finalizedSlot = this.forkChoice.getFinalizedBlock().slot;
+    const archiveMaxSlot = finalizedSlot - 1;
+    const nonFinalized: BlockRootSlot[] = [];
+    if (endSlot > archiveMaxSlot) {
+      const head = this.forkChoice.getHead();
+      // newest→oldest; iterate ascending
+      const headChain = this.forkChoice.getAllAncestorBlocks(head.blockRoot, head.payloadStatus);
+      for (let i = headChain.length - 1; i >= 0; i--) {
+        const block = headChain[i];
+        if (block.slot > archiveMaxSlot && block.slot >= startSlot && block.slot < endSlot) {
+          // Only FULL blocks have an envelope; skip EMPTY/PENDING
+          if (block.payloadStatus === PayloadStatus.FULL) {
+            nonFinalized.push({slot: block.slot, root: fromHex(block.blockRoot)});
+          }
+        } else if (block.slot >= endSlot) {
+          break;
+        }
+      }
+    }
+    return {finalizedSlot, nonFinalized};
   }
 
   /**
@@ -473,7 +526,7 @@ export class BeaconEngine implements IBeaconEngine {
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
       return ssz.gloas.ExecutionRequests.defaultValue();
     }
-    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
+    const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, fromHex(parentBlockRootHex));
     if (envelope === null) {
       throw Error(`Parent execution payload envelope not found slot=${parentBlockSlot}, root=${parentBlockRootHex}`);
     }
@@ -2087,6 +2140,16 @@ export class BeaconEngine implements IBeaconEngine {
       this.clock.currentEpoch,
       this.opts.persistOrphanedBlocks,
       this.opts.persistOrphanedBlocksDir
+    );
+    // Migrate canonical payload envelopes hot→cold + delete non-canonical (envelopes are engine-owned,
+    // consensus data — not DA). Tied to canonical blocks, so run right after block migration.
+    await migrateFinalizedExecutionPayloadEnvelopes(
+      this.config,
+      this.db,
+      this.logger,
+      snapshot,
+      finalized.epoch,
+      this.clock.currentEpoch
     );
     timer?.({source: ArchiveStoreTask.ArchiveBlocks});
 

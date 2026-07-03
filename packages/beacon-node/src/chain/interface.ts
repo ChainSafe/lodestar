@@ -29,6 +29,7 @@ import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {SerializedCache} from "../util/serializedCache.js";
+import {BlockRootSlot} from "../util/sszBytes.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
@@ -231,7 +232,9 @@ export interface IBeaconChain {
     blockRootHex: string,
     indices: number[]
   ): Promise<(Uint8Array | undefined)[]>;
-  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null>;
+  getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null>;
+  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
     blockRootHex: string

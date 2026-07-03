@@ -36,6 +36,7 @@ import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {BufferPool} from "../../util/bufferPool.js";
 import {IClock} from "../../util/clock.js";
+import {BlockRootSlot} from "../../util/sszBytes.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
@@ -229,10 +230,16 @@ export interface IBeaconEngine {
   // builder-bid lookup, forkChoice exec hashes, base-state scalars) so they are not recomputed per path.
   // More of the production flow migrates here in later steps.
   getProposerHead(slot: Slot): ProtoBlock;
+  // Execution payload envelope DB (engine-owned). Roots cross as raw bytes (FFI-honest).
   getExecutionPayloadEnvelope(
     blockSlot: Slot,
-    blockRootHex: string
+    blockRoot: Uint8Array
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
+  getSerializedExecutionPayloadEnvelope(blockSlot: Slot, blockRoot: Uint8Array): Promise<Uint8Array | null>;
+  getSerializedFinalizedExecutionPayloadEnvelope(slot: Slot): Promise<Uint8Array | null>;
+  persistExecutionPayloadEnvelope(blockRoot: Uint8Array, serializedBytes: Uint8Array): Promise<void>;
+  // Thin serving refs for ExecutionPayloadEnvelopesByRange — fork choice read engine-side, no ProtoBlock crosses.
+  getFullBlockRootSlotsByRange(startSlot: Slot, endSlot: Slot): {finalizedSlot: Slot; nonFinalized: BlockRootSlot[]};
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlockBase(attrs: {slot: Slot; randaoReveal: BLSSignature; graffiti: Bytes32}): Promise<ProduceBlockBaseResult>;
   // Compute the post-state root + proposer reward for a produced block.
