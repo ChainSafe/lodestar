@@ -49,13 +49,11 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
   },
 
   rcConfig: {
-    description: "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
+    description:
+      "RC file to supplement command line args, accepted formats: .yml, .yaml, .json. Options can be written as nested maps or dotted keys.",
     type: "string",
     example: {
-      description: `Supply CLI options from a file. Options can be written as nested maps or dotted keys:
-
-\`\`\`yaml
-# beacon.config.yaml
+      description: `\`\`\`yaml
 network: hoodi
 rest:
   address: 0.0.0.0
@@ -63,10 +61,7 @@ rest:
 metrics:
   enabled: true
   port: 8008
-\`\`\`
-
-For an on/off flag such as \`--metrics\`, use \`enabled\` under the nested map (\`metrics.enabled\`) or the dotted \`metrics\` key.`,
-      command: "beacon --rcConfig beacon.config.yaml",
+\`\`\``,
     },
   },
 
