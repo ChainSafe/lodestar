@@ -62,7 +62,13 @@ rest:
   port: 9596
 \`\`\`
 
-Note: an option that is both a value/flag and a prefix (e.g. \`network\` with \`network.maxPeers\`, or the \`metrics\`/\`builder\` enable flags with their \`.port\` settings) can't carry both forms under one nested key — set those with dotted keys, e.g. \`metrics: true\` alongside \`metrics.port: 8008\`.`,
+A few options are both a value/flag and a prefix for other options — e.g. \`metrics\` is an on/off flag but also has sub-options like \`metrics.port\`. YAML can't give one key both a value and nested children, so configure these with dotted keys instead of nesting:
+
+\`\`\`yaml
+# enable metrics AND set its port
+metrics: true
+metrics.port: 8008
+\`\`\``,
       command: "beacon --rcConfig beacon.config.yaml",
     },
   },
