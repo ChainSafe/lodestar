@@ -278,9 +278,9 @@ export const EXECUTION_BLOCK_HASH_INDEX_DENEB = 300;
  * types.ssz.gloas.BeaconBlockBody.getPathInfo(['signedExecutionPayloadBid', 'message', 'parentBlockHash']).gindex
  * ```
  */
-export const EXECUTION_BLOCK_HASH_GINDEX_GLOAS = 11424;
-export const EXECUTION_BLOCK_HASH_DEPTH_GLOAS = 13;
-export const EXECUTION_BLOCK_HASH_INDEX_GLOAS = 3232;
+export const EXECUTION_BLOCK_HASH_GINDEX_GLOAS = 2856;
+export const EXECUTION_BLOCK_HASH_DEPTH_GLOAS = 11;
+export const EXECUTION_BLOCK_HASH_INDEX_GLOAS = 808;
 
 /**
  * ```ts

@@ -15,12 +15,38 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.ExecutionPayload).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.ExecutionRequests).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.BeaconState).toBeInstanceOf(ProgressiveContainerType);
+    expect(ssz.gloas.ExecutionPayloadBid).toBeInstanceOf(ProgressiveContainerType);
+    expect(ssz.gloas.ExecutionPayloadEnvelope).toBeInstanceOf(ProgressiveContainerType);
+    expect(ssz.gloas.PayloadAttestation).toBeInstanceOf(ProgressiveContainerType);
+    expect(ssz.gloas.IndexedPayloadAttestation).toBeInstanceOf(ProgressiveContainerType);
 
     expect(ssz.gloas.AttestingIndices).toBeInstanceOf(ProgressiveListBasicType);
     expect(ssz.gloas.Transactions).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.Withdrawals).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BlobKzgCommitments).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.DataColumn).toBeInstanceOf(ProgressiveListCompositeType);
+    expect(ssz.gloas.BuilderDepositRequests).toBeInstanceOf(ProgressiveListCompositeType);
+    expect(ssz.gloas.BuilderExitRequests).toBeInstanceOf(ProgressiveListCompositeType);
+  });
+
+  it("round-trips default Gloas top-level containers through progressive serialization", () => {
+    // Guards against progressive-container offset mismatches on deserialization
+    // (e.g. the "First offset must equal to fixedEnd" genesis-load failure).
+    // Typed per-container via a generic helper so serialize/deserialize bind to the same
+    // value type; a heterogeneous array would collapse to a union and fail type-checking.
+    function assertRoundTrips<V>(type: {
+      defaultValue(): V;
+      serialize(value: V): Uint8Array;
+      deserialize(data: Uint8Array): V;
+    }): void {
+      const value = type.defaultValue();
+      expect(type.deserialize(type.serialize(value))).toEqual(value);
+    }
+
+    assertRoundTrips(ssz.gloas.BeaconState);
+    assertRoundTrips(ssz.gloas.SignedBeaconBlock);
+    assertRoundTrips(ssz.gloas.SignedExecutionPayloadEnvelope);
+    assertRoundTrips(ssz.gloas.SignedExecutionPayloadBid);
   });
 
   it("keeps byte-list values while using progressive merkleization", () => {

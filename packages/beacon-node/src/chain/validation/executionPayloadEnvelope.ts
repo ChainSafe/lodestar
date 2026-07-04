@@ -1,5 +1,13 @@
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
+  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_WITHDRAWALS_PER_PAYLOAD,
+  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+} from "@lodestar/params";
+import {
   computeStartSlotAtEpoch,
   getExecutionPayloadEnvelopeSignatureSet,
   isStatePostGloas,
@@ -112,6 +120,37 @@ async function validateExecutionPayloadEnvelope(
       code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_ROOT_MISMATCH,
       envelopeRequestsRoot: toRootHex(requestsRoot),
       bidRequestsRoot: toRootHex(payloadInput.getBid().executionRequestsRoot),
+    });
+  }
+
+  // [REJECT] The counts of `execution_requests` are within their respective limits.
+  // New in Gloas:EIP7688 — progressive lists are unbounded at the type level, so bounds
+  // are enforced here in gossip validation.
+  const {executionRequests} = envelope;
+  const requestCountLimits: [string, number, number][] = [
+    ["deposits", executionRequests.deposits.length, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD],
+    ["withdrawals", executionRequests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
+    ["consolidations", executionRequests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD],
+    ["builderDeposits", executionRequests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD],
+    ["builderExits", executionRequests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD],
+  ];
+  for (const [name, count, limit] of requestCountLimits) {
+    if (count > limit) {
+      throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+        code: ExecutionPayloadEnvelopeErrorCode.EXECUTION_REQUESTS_COUNT_EXCEEDED,
+        name,
+        count,
+        limit,
+      });
+    }
+  }
+
+  // [REJECT] The number of withdrawals is within the limit.
+  if (payload.withdrawals.length > MAX_WITHDRAWALS_PER_PAYLOAD) {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
+      code: ExecutionPayloadEnvelopeErrorCode.WITHDRAWALS_COUNT_EXCEEDED,
+      count: payload.withdrawals.length,
+      limit: MAX_WITHDRAWALS_PER_PAYLOAD,
     });
   }
 
