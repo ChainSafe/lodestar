@@ -1,7 +1,7 @@
 import {ACTIVE_PRESET} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {NetworkName, networkNames} from "../networks/index.js";
-import {flattenObject, readFile} from "../util/index.js";
+import {flattenObject, readFile, translateEnabledKeys} from "../util/index.js";
 import {IParamsArgs, paramsOptions} from "./paramsOptions.js";
 
 type GlobalSingleArgs = {
@@ -60,15 +60,12 @@ network: hoodi
 rest:
   address: 0.0.0.0
   port: 9596
+metrics:
+  enabled: true
+  port: 8008
 \`\`\`
 
-A few options are both a value/flag and a prefix for other options — e.g. \`metrics\` is an on/off flag but also has sub-options like \`metrics.port\`. YAML can't give one key both a value and nested children, so configure these with dotted keys instead of nesting:
-
-\`\`\`yaml
-# enable metrics AND set its port
-metrics: true
-metrics.port: 8008
-\`\`\``,
+For an on/off flag such as \`--metrics\`, use \`enabled\` under the nested map (\`metrics.enabled\`) or the dotted \`metrics\` key.`,
       command: "beacon --rcConfig beacon.config.yaml",
     },
   },
@@ -90,7 +87,8 @@ metrics.port: 8008
 export const rcConfigOption: [string, string, (configPath: string) => Record<string, unknown>] = [
   "rcConfig",
   globalSingleOptions.rcConfig.description as string,
-  (configPath: string): Record<string, unknown> => flattenObject(readFile(configPath, ["json", "yml", "yaml"])),
+  (configPath: string): Record<string, unknown> =>
+    translateEnabledKeys(flattenObject(readFile(configPath, ["json", "yml", "yaml"]))),
 ];
 
 export type GlobalArgs = GlobalSingleArgs & IParamsArgs;

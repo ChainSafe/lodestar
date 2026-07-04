@@ -50,3 +50,37 @@ export function flattenObject(obj: Record<string, unknown>, parentKey?: string):
   }
   return flattened;
 }
+
+/**
+ * Rewrites `{prefix}.enabled` keys to the bare `{prefix}` flag.
+ *
+ * Some options are exposed as an on/off boolean flag (`--metrics`, `--rest`, `--builder`) whose
+ * internal config shape nests the toggle under `.enabled` (e.g. `{metrics: {enabled, port}}`). This
+ * lets an rc config file be written in the natural nested form:
+ *
+ * ```yaml
+ * metrics:
+ *   enabled: true
+ *   port: 8008
+ * ```
+ *
+ * which {@link flattenObject} turns into `{"metrics.enabled": true, "metrics.port": 8008}`. The CLI
+ * registers the toggle as the bare `metrics` flag (there is no `metrics.enabled` option), so rewrite
+ * `{prefix}.enabled` -> `{prefix}` to match a registered option. No CLI option is registered with an
+ * `.enabled` suffix, so this is unambiguous. If the bare `{prefix}` key is already set (e.g. mixed
+ * dotted and nested forms), the `.enabled` key is left untouched so the conflict surfaces as an
+ * "unknown argument" error rather than being silently overridden.
+ */
+export function translateEnabledKeys(flattened: Record<string, unknown>): Record<string, unknown> {
+  const suffix = ".enabled";
+  const translated: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(flattened)) {
+    const prefix = key.endsWith(suffix) ? key.slice(0, -suffix.length) : "";
+    if (prefix && !(prefix in flattened)) {
+      translated[prefix] = value;
+    } else {
+      translated[key] = value;
+    }
+  }
+  return translated;
+}

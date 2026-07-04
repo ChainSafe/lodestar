@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {flattenObject} from "../../../src/util/object.js";
+import {flattenObject, translateEnabledKeys} from "../../../src/util/object.js";
 
 describe("util / flattenObject", () => {
   it("flattens nested maps into dot-notation keys", () => {
@@ -84,5 +84,53 @@ describe("util / flattenObject", () => {
   it("keeps non-plain object values (e.g. Date) as leaves instead of dropping them", () => {
     const genesisTime = new Date("2024-01-01T00:00:00Z");
     expect(flattenObject({chain: {genesisTime}})).toEqual({"chain.genesisTime": genesisTime});
+  });
+});
+
+describe("util / translateEnabledKeys", () => {
+  it("rewrites `{prefix}.enabled` to the bare `{prefix}` flag", () => {
+    expect(translateEnabledKeys({"metrics.enabled": true, "metrics.port": 8008})).toEqual({
+      metrics: true,
+      "metrics.port": 8008,
+    });
+  });
+
+  it("translates the nested form produced by flattenObject (metrics: {enabled, port})", () => {
+    expect(translateEnabledKeys(flattenObject({metrics: {enabled: true, port: 8008}}))).toEqual({
+      metrics: true,
+      "metrics.port": 8008,
+    });
+  });
+
+  it("handles multiple prefixes independently", () => {
+    expect(
+      translateEnabledKeys({"metrics.enabled": true, "builder.enabled": false, "builder.url": "http://localhost"})
+    ).toEqual({
+      metrics: true,
+      builder: false,
+      "builder.url": "http://localhost",
+    });
+  });
+
+  it("leaves `{prefix}.enabled` untouched when the bare `{prefix}` is already set (conflict surfaces later)", () => {
+    expect(translateEnabledKeys({metrics: false, "metrics.enabled": true})).toEqual({
+      metrics: false,
+      "metrics.enabled": true,
+    });
+  });
+
+  it("is a no-op when there are no `.enabled` keys", () => {
+    expect(translateEnabledKeys({"rest.port": 9596, network: "hoodi"})).toEqual({
+      "rest.port": 9596,
+      network: "hoodi",
+    });
+  });
+
+  it("does not translate a top-level key literally named `enabled`", () => {
+    expect(translateEnabledKeys({enabled: true})).toEqual({enabled: true});
+  });
+
+  it("strips `.enabled` from a deeply-prefixed key", () => {
+    expect(translateEnabledKeys({"a.b.enabled": true})).toEqual({"a.b": true});
   });
 });
