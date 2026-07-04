@@ -77,9 +77,12 @@ export const defaultSkipOpts: SkipOpts = {
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO-GLOAS: re-enable after Gloas light client is implemented
-    /^gloas\/light_client\/.*/,
-    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
+    /^gloas\/light_client\/sync\/.*/,
+    // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
+    // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
+    // handling is not yet implemented in Lodestar.
+    /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
