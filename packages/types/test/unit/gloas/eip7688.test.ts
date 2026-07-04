@@ -32,10 +32,21 @@ describe("Gloas EIP-7688 SSZ types", () => {
   it("round-trips default Gloas top-level containers through progressive serialization", () => {
     // Guards against progressive-container offset mismatches on deserialization
     // (e.g. the "First offset must equal to fixedEnd" genesis-load failure).
-    for (const type of [ssz.gloas.BeaconState, ssz.gloas.SignedBeaconBlock, ssz.gloas.SignedExecutionPayloadEnvelope]) {
-      const serialized = type.serialize(type.defaultValue());
-      expect(type.deserialize(serialized)).toEqual(type.defaultValue());
+    // Typed per-container via a generic helper so serialize/deserialize bind to the same
+    // value type; a heterogeneous array would collapse to a union and fail type-checking.
+    function assertRoundTrips<V>(type: {
+      defaultValue(): V;
+      serialize(value: V): Uint8Array;
+      deserialize(data: Uint8Array): V;
+    }): void {
+      const value = type.defaultValue();
+      expect(type.deserialize(type.serialize(value))).toEqual(value);
     }
+
+    assertRoundTrips(ssz.gloas.BeaconState);
+    assertRoundTrips(ssz.gloas.SignedBeaconBlock);
+    assertRoundTrips(ssz.gloas.SignedExecutionPayloadEnvelope);
+    assertRoundTrips(ssz.gloas.SignedExecutionPayloadBid);
   });
 
   it("keeps byte-list values while using progressive merkleization", () => {
