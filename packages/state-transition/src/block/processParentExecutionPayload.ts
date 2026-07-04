@@ -1,5 +1,7 @@
 import {
   ForkPostGloas,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
   MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
@@ -10,7 +12,8 @@ import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
-import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
+import {processBuilderDepositRequest} from "./processBuilderDepositRequest.js";
+import {processBuilderExitRequest} from "./processBuilderExitRequest.js";
 import {processConsolidationRequest} from "./processConsolidationRequest.js";
 import {processDepositRequest} from "./processDepositRequest.js";
 import {processWithdrawalRequest} from "./processWithdrawalRequest.js";
@@ -33,7 +36,6 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
   }
 
   // Parent was FULL -- verify the bid commitment and apply the payload
-  assertExecutionRequestsWithinLimits(requests);
   const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(requests);
   if (!byteArrayEquals(requestsRoot, parentBid.executionRequestsRoot)) {
     throw new Error(
@@ -64,11 +66,8 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
 
   // Process execution requests from parent's payload. The execution
   // requests are processed at state.slot (child's slot), not the parent's slot.
-  if (requests.deposits.length > 0) {
-    const pendingDepositsLookup = PendingDepositsLookup.build(state);
-    for (const deposit of requests.deposits) {
-      processDepositRequest(fork, state, deposit, pendingDepositsLookup);
-    }
+  for (const deposit of requests.deposits) {
+    processDepositRequest(fork, state, deposit);
   }
 
   for (const withdrawal of requests.withdrawals) {
@@ -77,6 +76,14 @@ export function applyParentExecutionPayload(state: CachedBeaconStateGloas, reque
 
   for (const consolidation of requests.consolidations) {
     processConsolidationRequest(state, consolidation);
+  }
+
+  for (const builderDeposit of requests.builderDeposits) {
+    processBuilderDepositRequest(state, builderDeposit);
+  }
+
+  for (const builderExit of requests.builderExits) {
+    processBuilderExitRequest(state, builderExit);
   }
 
   // Settle the builder payment
@@ -124,6 +131,10 @@ function assertExecutionRequestsWithinLimits(requests: gloas.ExecutionRequests):
   assertMaxLength("deposits", requests.deposits.length, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD);
   assertMaxLength("withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
   assertMaxLength("consolidations", requests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD);
+  // New in GLOAS:EIP8282
+  assertMaxLength("builderDeposits", requests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD);
+  // New in GLOAS:EIP8282
+  assertMaxLength("builderExits", requests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD);
 }
 
 function assertMaxLength(name: string, length: number, limit: number): void {
@@ -133,7 +144,13 @@ function assertMaxLength(name: string, length: number, limit: number): void {
 }
 
 function assertEmptyExecutionRequests(requests: gloas.ExecutionRequests): void {
-  if (requests.deposits.length !== 0 || requests.withdrawals.length !== 0 || requests.consolidations.length !== 0) {
+  if (
+    requests.deposits.length !== 0 ||
+    requests.withdrawals.length !== 0 ||
+    requests.consolidations.length !== 0 ||
+    requests.builderDeposits.length !== 0 ||
+    requests.builderExits.length !== 0
+  ) {
     throw new Error("Parent execution requests must be empty when parent block is EMPTY");
   }
 }

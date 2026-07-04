@@ -334,7 +334,7 @@ function assertPanels(panels) {
           target.expr = target.expr.replace(/job="beacon"/g, 'job=~"$beacon_job|beacon"');
           target.expr = target.expr.replace(/job="validator"/g, 'job=~"$validator_job|validator"');
 
-          // Ban use of delta and increase functions.
+          // Ban use of the delta function.
           // Mixed use of delta / increase and rate make dashboards more difficult to reason about.
           // - delta shows the value difference based on the selected time interval, which is variable
           //   so if time interval is X or 2*X the displayed values double.
@@ -345,9 +345,11 @@ function assertPanels(panels) {
           if (target.expr.includes("delta(")) {
             throw Error(`promql function 'delta' is not allowed, use 'rate' instead: ${target.expr}`);
           }
-          if (target.expr.includes("increase(")) {
-            throw Error(`promql function 'increase' is not allowed, use 'rate' instead: ${target.expr}`);
-          }
+          // increase() is allowed for rare-event counters (eg. fast confirmation reorgs/fallbacks/restarts)
+          // where a per-window event count reads clearer than the near-zero per-second value rate would show.
+          // if (target.expr.includes("increase(")) {
+          //   throw Error(`promql function 'increase' is not allowed, use 'rate' instead: ${target.expr}`);
+          // }
         }
       }
     }

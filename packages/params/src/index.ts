@@ -117,6 +117,8 @@ export const {
 
   PTC_SIZE,
   MAX_PAYLOAD_ATTESTATIONS,
+  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
+  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
   BUILDER_REGISTRY_LIMIT,
   BUILDER_PENDING_WITHDRAWALS_LIMIT,
   MAX_BUILDERS_PER_WITHDRAWALS_SWEEP,
@@ -152,6 +154,9 @@ export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
 export const BUILDER_WITHDRAWAL_PREFIX = 0x03;
 
+// Builder version
+export const PAYLOAD_BUILDER_VERSION = 0;
+
 // Domain types
 
 export const DOMAIN_BEACON_PROPOSER = Uint8Array.from([0, 0, 0, 0]);
@@ -168,6 +173,7 @@ export const DOMAIN_BLS_TO_EXECUTION_CHANGE = Uint8Array.from([10, 0, 0, 0]);
 export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
+export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
 
 // Application specific domains
 
@@ -362,3 +368,5 @@ export const BUILDER_INDEX_FLAG = 2 ** 40;
 export const BUILDER_INDEX_SELF_BUILD = Infinity;
 export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
+export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
+export const BUILDER_EXIT_REQUEST_TYPE = 0x04;

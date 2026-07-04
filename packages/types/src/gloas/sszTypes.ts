@@ -145,13 +145,41 @@ export const ConsolidationRequests = new ProgressiveListCompositeType(Consolidat
   typeName: "ConsolidationRequests",
 });
 
+// New in GLOAS:EIP8282
+export const BuilderDepositRequest = new ContainerType(
+  {
+    pubkey: BLSPubkey,
+    withdrawalCredentials: Bytes32,
+    amount: UintNum64,
+    signature: BLSSignature,
+  },
+  {typeName: "BuilderDepositRequest", jsonCase: "eth2"}
+);
+export const BuilderDepositRequests = new ProgressiveListCompositeType(BuilderDepositRequest, {
+  typeName: "BuilderDepositRequests",
+});
+
+// New in GLOAS:EIP8282
+export const BuilderExitRequest = new ContainerType(
+  {
+    sourceAddress: ExecutionAddress,
+    pubkey: BLSPubkey,
+  },
+  {typeName: "BuilderExitRequest", jsonCase: "eth2"}
+);
+export const BuilderExitRequests = new ProgressiveListCompositeType(BuilderExitRequest, {
+  typeName: "BuilderExitRequests",
+});
+
 export const ExecutionRequests = new ProgressiveContainerType(
   {
     deposits: DepositRequests,
     withdrawals: WithdrawalRequests,
     consolidations: ConsolidationRequests,
+    builderDeposits: BuilderDepositRequests, // New in GLOAS:EIP8282
+    builderExits: BuilderExitRequests, // New in GLOAS:EIP8282
   },
-  activeFields(3),
+  activeFields(5),
   {typeName: "ExecutionRequests", jsonCase: "eth2"}
 );
 
@@ -211,6 +239,7 @@ export const BuilderPendingPayment = new ContainerType(
   {
     weight: UintNum64,
     withdrawal: BuilderPendingWithdrawal,
+    proposerIndex: ValidatorIndex,
   },
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
 );
@@ -293,7 +322,7 @@ export const ExecutionPayloadBid = new ContainerType(
     blockHash: Bytes32,
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintBn64,
+    gasLimit: UintNum64,
     builderIndex: BuilderIndex,
     slot: Slot,
     value: UintNum64,

@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -25,7 +25,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {Logger, MapDef, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, MapDef, fromHex, toRootHex, withObservedDuration} from "@lodestar/utils";
 import {ForkChoiceMetrics} from "../metrics.js";
 import {computeDeltas} from "../protoArray/computeDeltas.js";
 import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
@@ -45,6 +45,12 @@ import {
 import {ProtoArray} from "../protoArray/protoArray.js";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidAttestationCode, InvalidBlockCode} from "./errors.js";
 import {
+  type FastConfirmationContext,
+  FastConfirmationRule,
+  FastConfirmationSteps,
+  type IFastConfirmationRule,
+} from "./fastConfirmation/fastConfirmationRule.ts";
+import {
   AncestorResult,
   AncestorStatus,
   EpochDifference,
@@ -58,6 +64,7 @@ export type ForkChoiceOpts = {
   proposerBoost?: boolean;
   proposerBoostReorg?: boolean;
   computeUnrealized?: boolean;
+  fastConfirmation?: boolean;
 };
 
 export enum UpdateHeadOpt {
@@ -142,6 +149,9 @@ export class ForkChoice implements IForkChoice {
   private justifiedProposerBoostScore: number | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
+  /** Optional fast confirmation rule implementation */
+  private readonly fastConfirmationRule?: IFastConfirmationRule;
+  private readonly fastConfirmationContext?: FastConfirmationContext;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -166,6 +176,11 @@ export class ForkChoice implements IForkChoice {
 
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
+
+    if (this.opts?.fastConfirmation) {
+      this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
+      this.fastConfirmationContext = this.createFastConfirmationContext();
+    }
 
     metrics?.forkChoice.votes.addCollect(() => {
       metrics.forkChoice.votes.set(this.voteNextSlots.length);
@@ -205,6 +220,14 @@ export class ForkChoice implements IForkChoice {
    */
   getHead(): ProtoBlock {
     return this.head;
+  }
+
+  getConfirmedRoot(): RootHex {
+    return this.fastConfirmationRule?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
+  }
+
+  getConfirmedBlock(): ProtoBlock | null {
+    return this.getBlockHexDefaultStatus(this.getConfirmedRoot());
   }
 
   /**
@@ -310,6 +333,10 @@ export class ForkChoice implements IForkChoice {
     return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
 
+  getPreviousProposerBoostRoot(): RootHex {
+    return this.protoArray.getPreviousProposerBoostRoot();
+  }
+
   /**
    * Decides whether to extend an available payload from the previous slot,
    * corresponding to the beacon block `blockRoot`.
@@ -319,8 +346,8 @@ export class ForkChoice implements IForkChoice {
   }
 
   /** Spec: should_build_on_full(store, head) */
-  shouldBuildOnFull(head: ProtoBlock): boolean {
-    return this.protoArray.shouldBuildOnFull(head);
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
+    return this.protoArray.shouldBuildOnFull(head, slot);
   }
 
   /**
@@ -601,7 +628,11 @@ export class ForkChoice implements IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    // The expected proposer index on the canonical chain we are following.
+    // Calculated by our head state. We use it as part of the proposer
+    // boost decision making. No boost will be set if this is null.
+    expectedProposerIndex: ValidatorIndex | null
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
@@ -667,28 +698,26 @@ export class ForkChoice implements IForkChoice {
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(blockRoot);
 
-    // Assign proposer score boost if the block is timely
-    // before attesting interval = before 1st interval
+    // Decide whether this block should receive proposer boost, and whether the block is timely.
+    // The store field `this.proposerBoostRoot` and `updateCheckpoints()` are mutated only after
+    // `protoArray.onBlock()` succeeds
     const isTimely = this.isBlockTimely(block, blockDelaySec);
-    if (
-      this.opts?.proposerBoost &&
+    const isProposerBoostBlock =
+      this.opts?.proposerBoost === true &&
       isTimely &&
       // only boost the first block we see
-      this.proposerBoostRoot === null
-    ) {
-      this.proposerBoostRoot = blockRootHex;
-    }
+      this.proposerBoostRoot === null &&
+      expectedProposerIndex !== null &&
+      block.proposerIndex === expectedProposerIndex &&
+      this.isProposerBoostSameDependentRoot(this.head.blockRoot, parentRootHex);
+    // Candidate boost root used for protoArray.onBlock's best-child weighting. Committed to the
+    // store only after the insertion succeeds.
+    const proposerBoostRoot = isProposerBoostBlock ? blockRootHex : this.proposerBoostRoot;
 
     const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
 
     const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
-
-    // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
-    // the justified checkpoint changes
-    this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
-    );
 
     const blockEpoch = computeEpochAtSlot(slot);
 
@@ -731,19 +760,6 @@ export class ForkChoice implements IForkChoice {
     } else {
       unrealizedJustifiedCheckpoint = justifiedCheckpoint;
       unrealizedFinalizedCheckpoint = finalizedCheckpoint;
-    }
-
-    // Un-realized checkpoints
-    // Update best known unrealized justified & finalized checkpoints
-    this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
-    );
-
-    // If block is from past epochs, try to update store's justified & finalized checkpoints right away
-    if (blockEpoch < computeEpochAtSlot(currentSlot)) {
-      this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
-      );
     }
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
@@ -816,7 +832,29 @@ export class ForkChoice implements IForkChoice {
       parentBlockHash: parentHashHex,
     };
 
-    this.protoArray.onBlock(protoBlock, currentSlot, this.proposerBoostRoot);
+    this.protoArray.onBlock(protoBlock, currentSlot, proposerBoostRoot);
+
+    if (isProposerBoostBlock) {
+      this.proposerBoostRoot = blockRootHex;
+    }
+
+    // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on
+    // demand only if the justified checkpoint changes.
+    this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
+    );
+
+    // Un-realized checkpoints. Update best known unrealized justified & finalized checkpoints
+    this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+    );
+
+    // If block is from past epochs, try to update store's justified & finalized checkpoints right away
+    if (blockEpoch < computeEpochAtSlot(currentSlot)) {
+      this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+      );
+    }
 
     return protoBlock;
   }
@@ -941,11 +979,12 @@ export class ForkChoice implements IForkChoice {
    */
   notifyPtcMessages(
     blockRoot: RootHex,
+    slot: Slot,
     ptcIndices: number[],
     payloadPresent: boolean,
     blobDataAvailable: boolean
   ): void {
-    this.protoArray.notifyPtcMessages(blockRoot, ptcIndices, payloadPresent, blobDataAvailable);
+    this.protoArray.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
   }
 
   /**
@@ -987,12 +1026,12 @@ export class ForkChoice implements IForkChoice {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       this.onTick(previousSlot + 1);
+      this.queuedAttestationsPreviousSlot = 0;
+      // Process any attestations that might now be eligible before running FCR for this slot.
+      this.processAttestationQueue();
+      this.runFastConfirmation();
+      this.validatedAttestationDatas = new Set();
     }
-
-    this.queuedAttestationsPreviousSlot = 0;
-    // Process any attestations that might now be eligible.
-    this.processAttestationQueue();
-    this.validatedAttestationDatas = new Set();
   }
 
   getTime(): Slot {
@@ -1059,6 +1098,30 @@ export class ForkChoice implements IForkChoice {
     const votes = this.protoArray.getPTCVotes(blockRootHex);
     if (votes === null) return null;
     return votes.toBoolArray().map((v) => v ?? null);
+  }
+
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null {
+    return this.protoArray.getPTCVoteCounts(blockRootHex);
+  }
+
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.protoArray.getPayloadTimelinessVotes(blockRootHex);
+  }
+
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null {
+    return this.protoArray.getPayloadDataAvailabilityVotes(blockRootHex);
+  }
+
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedJustified.checkpoint;
+  }
+
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex {
+    return this.fcStore.unrealizedFinalizedCheckpoint;
   }
 
   /**
@@ -1434,6 +1497,34 @@ export class ForkChoice implements IForkChoice {
     }
 
     throw Error(`Not found dependent root for block slot ${block.slot}, epoch difference ${epochDifference}`);
+  }
+
+  /**
+   * Spec: phase0/fork-choice.md#update_proposer_boost_root (`is_same_dependent_root` condition,
+   * consensus-specs #5306). Proposer boost is only granted when the imported block shares the same
+   * proposer-shuffling dependent root for the current epoch as the canonical head computed before
+   * the block was imported. This withholds the boost from a block built on a different shuffling
+   * branch than the head.
+   *
+   * The block is not yet in the proto-array when this runs, so its dependent root is traced from
+   * its parent
+   */
+  private isProposerBoostSameDependentRoot(headRootHex: RootHex, blockParentRootHex: RootHex): boolean {
+    const epoch = computeEpochAtSlot(this.fcStore.currentSlot);
+    // Genesis block parent
+    if (epoch <= MIN_SEED_LOOKAHEAD) {
+      return true;
+    }
+
+    const dependentSlot = computeStartSlotAtEpoch(epoch - MIN_SEED_LOOKAHEAD) - 1;
+    const headDependentRoot = this.protoArray.getAncestorOrNull(headRootHex, dependentSlot)?.blockRoot;
+    const blockDependentRoot = this.protoArray.getAncestorOrNull(blockParentRootHex, dependentSlot)?.blockRoot;
+    // On lookup failure, we lean on the conservative side and withold the boost
+    if (headDependentRoot === undefined || blockDependentRoot === undefined) {
+      return false;
+    }
+
+    return headDependentRoot === blockDependentRoot;
   }
 
   /**
@@ -1885,6 +1976,88 @@ export class ForkChoice implements IForkChoice {
     prelimProposerHead = parentBlock;
 
     return {prelimProposerHead};
+  }
+
+  private runFastConfirmation(): void {
+    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
+      if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
+
+      try {
+        withObservedDuration(
+          this.metrics?.fastConfirmation.stepsDuration.startTimer({
+            step: FastConfirmationSteps.updateHead,
+          }),
+          () => this.updateHead()
+        );
+
+        const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
+        this.fcStore.confirmedRoot = result.confirmedRoot;
+
+        const confirmedBlock = this.getBlockHexDefaultStatus(result.confirmedRoot);
+        if (confirmedBlock === null) {
+          throw new Error(`Fast confirmation produced root not in protoArray: ${result.confirmedRoot}`);
+        }
+        this.fcStore.notifyFastConfirmation?.({
+          block: result.confirmedRoot,
+          slot: confirmedBlock.slot,
+          currentSlot: this.fcStore.currentSlot,
+        });
+      } catch (err) {
+        this.logger?.debug(
+          "Fast confirmation failed",
+          {slot: this.fcStore.currentSlot, head: this.head.blockRoot, confirmedRoot: this.fcStore.confirmedRoot},
+          err as Error
+        );
+      }
+    });
+  }
+
+  private createFastConfirmationContext(): FastConfirmationContext {
+    const confirmationByzantineThreshold = this.config.CONFIRMATION_BYZANTINE_THRESHOLD;
+    if (!confirmationByzantineThreshold) {
+      throw new Error("CONFIRMATION_BYZANTINE_THRESHOLD must be set to use fast confirmation");
+    }
+
+    return {
+      config: {
+        CONFIRMATION_BYZANTINE_THRESHOLD: confirmationByzantineThreshold,
+        PROPOSER_SCORE_BOOST: this.config.PROPOSER_SCORE_BOOST,
+      },
+      getCurrentSlot: () => this.fcStore.currentSlot,
+      getHead: () => this.head,
+      getBlock: (root: RootHex) => this.getBlockHexDefaultStatus(root),
+      getAncestor: (root: RootHex, slot: Slot) => this.getAncestor(root, slot).blockRoot,
+      isDescendant: (ancestor: RootHex, descendant: RootHex) => {
+        const ancestorStatus = this.protoArray.getDefaultVariant(ancestor);
+        const descendantStatus = this.protoArray.getDefaultVariant(descendant);
+        if (ancestorStatus === undefined || descendantStatus === undefined) return false;
+        return this.isDescendant(ancestor, ancestorStatus, descendant, descendantStatus);
+      },
+      getLatestMessage: (validatorIndex: ValidatorIndex) => {
+        const nextIndex = this.voteNextIndices[validatorIndex];
+        if (nextIndex === undefined || nextIndex === NULL_VOTE_INDEX) {
+          return null;
+        }
+        const node = this.protoArray.nodes[nextIndex];
+        if (!node) return null;
+        return {root: node.blockRoot, epoch: computeEpochAtSlot(this.voteNextSlots[validatorIndex])};
+      },
+      getUnrealizedJustified: () => ({
+        checkpoint: this.fcStore.unrealizedJustified.checkpoint,
+        balances: this.fcStore.unrealizedJustified.balances,
+      }),
+      getFinalizedCheckpoint: () => this.fcStore.finalizedCheckpoint,
+      getEquivocatingIndices: () => this.fcStore.equivocatingIndices,
+      getTrackedVotesCount: () => {
+        let count = 0;
+        for (let i = 0; i < this.voteNextIndices.length; i++) {
+          if (this.voteNextIndices[i] !== NULL_VOTE_INDEX) {
+            count++;
+          }
+        }
+        return count;
+      },
+    };
   }
 }
 

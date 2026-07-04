@@ -324,6 +324,8 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     PAYLOAD_DUE_BPS: gloasForkRelevant,
     PTC_SIZE: gloasForkRelevant,
     MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
+    MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
+    MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
     BUILDER_REGISTRY_LIMIT: gloasForkRelevant,
     BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
@@ -334,6 +336,10 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
     MAX_SIGNED_BEACON_BLOCK_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
+
+    // FastConfirmationRule
+    CONFIRMATION_BYZANTINE_THRESHOLD: false,
+
     CHURN_LIMIT_QUOTIENT_GLOAS: gloasForkRelevant,
     CONSOLIDATION_CHURN_LIMIT_QUOTIENT: gloasForkRelevant,
     MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS: gloasForkRelevant,

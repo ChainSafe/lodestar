@@ -43,6 +43,7 @@
     "@biomejs/biome": "^2.2.0",
     "@chainsafe/benchmark": "^2.0.2",
     "@chainsafe/biomejs-config": "^1.0.0",
+    "@chainsafe/caxa": "3.0.6",
     "@chainsafe/ssz": "^1.6.0",
     "@lerna-lite/cli": "^4.9.4",
     "@lerna-lite/exec": "^4.9.4",
@@ -51,7 +52,6 @@
     "@lerna-lite/version": "^4.9.4",
     "@lodestar/params": "workspace:",
     "@types/node": "^24.10.1",
-    "@types/react": "^19.1.12",
     "@typescript/native-preview": "7.0.0-dev.20260303.1",
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
@@ -62,14 +62,13 @@
     "inquirer": "^9.1.5",
     "libp2p": "3.1.6",
     "node-gyp": "^9.4.0",
-    "playwright": "^1.56.1",
+    "playwright": "^1.60.0",
     "prettier": "^3.2.5",
     "pretty-format": "^29.7.0",
     "semver": "^7.7.3",
     "ts-node": "^11.0.0-beta.1",
     "typescript": "^6.0.1-rc",
     "vite": "^6.0.11",
-    "vite-plugin-dts": "^4.5.4",
     "vite-plugin-node-polyfills": "^0.24.0",
     "vite-plugin-top-level-await": "^1.6.0",
     "vitest": "catalog:",
@@ -77,8 +76,7 @@
     "wait-port": "^1.1.0"
   },
   "dependencies": {
-    "@chainsafe/lodestar": "workspace:*",
-    "debug": "^4.4.3"
+    "@chainsafe/lodestar": "workspace:*"
   },
   "resolutions": {
     "dns-over-http-resolver": "^2.1.1",

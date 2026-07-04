@@ -8,7 +8,7 @@ import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getMockedClock} from "../../../mocks/clock.js";
-import {config, generateBlock} from "../../../utils/blocksAndData.js";
+import {config, generateBlock, generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";
 
 describe("SeenPayloadEnvelopeInput", () => {
   let cache: SeenPayloadEnvelopeInput;
@@ -50,6 +50,21 @@ describe("SeenPayloadEnvelopeInput", () => {
     return rootHex;
   }
 
+  // Block with blob commitments + non-empty sampledColumns and no columns added, so the input
+  // reports hasComputedAllData() === false.
+  function addPayloadInputNotComputed(slot: number): string {
+    const {block, rootHex} = generateBlockWithColumnSidecars({forkName: ForkName.gloas, slot});
+    cache.add({
+      blockRootHex: rootHex,
+      block,
+      forkName: ForkName.gloas,
+      sampledColumns: [0, 1],
+      custodyColumns: [0, 1],
+      timeCreatedSec: Date.now() / 1000,
+    });
+    return rootHex;
+  }
+
   function protoBlock(blockRoot: RootHex, slot: number): ProtoBlock {
     return {
       slot,
@@ -84,6 +99,31 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     expect(cache.get(oldRootHex)).toBeUndefined();
     expect(cache.get(newRootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent keeps ancestor payload inputs whose payload is not yet FULL", () => {
+    const oldRootHex = addPayloadInput(1);
+    const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
+    const emptyAncestor: ProtoBlock = {...protoBlock(oldRootHex, 1), payloadStatus: PayloadStatus.EMPTY};
+
+    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, emptyAncestor]);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(cache.get(oldRootHex)).toBeDefined();
+  });
+
+  it("pruneBelowParent keeps ancestor payload inputs that have not computed all data", () => {
+    const oldRootHex = addPayloadInputNotComputed(1);
+    const newRootHex = addPayloadInput(2);
+    // precondition: the ancestor input is still gathering columns
+    expect(cache.get(oldRootHex)?.hasComputedAllData()).toBe(false);
+
+    const parentBlock = protoBlock(newRootHex, 2);
+    vi.mocked(forkChoice.getAllAncestorBlocks).mockReturnValue([parentBlock, protoBlock(oldRootHex, 1)]);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(cache.get(oldRootHex)).toBeDefined();
   });
 
   it("pruneBelowParent keeps payload inputs at the parent slot", () => {

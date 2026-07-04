@@ -170,7 +170,7 @@ export class PrepareNextSlotScheduler {
         let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
         if (isStatePostGloas(updatedPrepareState)) {
           // Spec: should_build_on_full(store, head) — see produceBlockBody.ts for context.
-          if (this.chain.forkChoice.shouldBuildOnFull(updatedHead)) {
+          if (this.chain.forkChoice.shouldBuildOnFull(updatedHead, prepareSlot)) {
             parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
             // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
             if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
@@ -215,16 +215,6 @@ export class PrepareNextSlotScheduler {
             proposerIndex,
             feeRecipient,
           });
-        }
-
-        if (ForkSeq[fork] >= ForkSeq.gloas) {
-          // Cutoff = slot of the parent of the block we'll actually build on (post-reorg).
-          // Steady state: cache holds just 2 entries — head (parent for next-slot production)
-          // and head.parent (proposer-boost-reorg fallback). Anything older is evicted.
-          const updatedHeadParent = this.chain.forkChoice.getBlockHexDefaultStatus(updatedHead.parentRoot);
-          if (updatedHeadParent) {
-            this.chain.seenPayloadEnvelopeInputCache.pruneBelowParent(updatedHeadParent);
-          }
         }
 
         this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);

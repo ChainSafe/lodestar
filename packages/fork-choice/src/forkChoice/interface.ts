@@ -1,5 +1,14 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
+import {
+  AttesterSlashing,
+  BeaconBlock,
+  Epoch,
+  IndexedAttestation,
+  Root,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+} from "@lodestar/types";
 import {
   BlockExecutionStatus,
   LVHExecResponse,
@@ -98,6 +107,8 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
+  getConfirmedRoot(): RootHex;
+  getConfirmedBlock(): ProtoBlock | null;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
@@ -123,6 +134,10 @@ export interface IForkChoice {
   getAllNodes(): ProtoNode[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
+  getProposerBoostRoot(): RootHex;
+  getPreviousProposerBoostRoot(): RootHex;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -145,7 +160,8 @@ export interface IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus
+    dataAvailabilityStatus: DataAvailabilityStatus,
+    expectedProposerIndex: ValidatorIndex | null
   ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
@@ -184,6 +200,7 @@ export interface IForkChoice {
    */
   notifyPtcMessages(
     blockRoot: RootHex,
+    slot: Slot,
     ptcIndices: number[],
     payloadPresent: boolean,
     blobDataAvailable: boolean
@@ -236,6 +253,15 @@ export interface IForkChoice {
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null;
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
@@ -246,7 +272,7 @@ export interface IForkChoice {
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
   /** Spec: should_build_on_full(store, head) */
-  shouldBuildOnFull(head: ProtoBlock): boolean;
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;

@@ -8,6 +8,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -452,6 +453,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.epochCtx.getShufflingAtEpoch(epoch);
   }
 
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
+    return this.cachedState.epochCtx.getBeaconCommittee(slot, index);
+  }
+
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
+    return this.cachedState.epochCtx.getCommitteeCountPerSlot(epoch);
+  }
+
   get previousDecisionRoot(): RootHex {
     return this.cachedState.epochCtx.previousDecisionRoot;
   }
@@ -496,6 +505,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getBeaconProposer(slot: number): ValidatorIndex {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
+  }
+
+  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
+    try {
+      return this.cachedState.epochCtx.getBeaconProposer(slot);
+    } catch {
+      return null;
+    }
   }
 
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {

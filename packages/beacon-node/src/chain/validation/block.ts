@@ -15,12 +15,17 @@ import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js
 import {IBeaconChain} from "../interface.js";
 import {RegenCaller} from "../regen/index.js";
 
+export type GossipBlockValidationResult = {
+  /** Number of skipped slots between the block and its parent (blockSlot - parentSlot - 1) */
+  skippedSlots: number;
+};
+
 export async function validateGossipBlock(
   config: ChainForkConfig,
   chain: IBeaconChain,
   signedBlock: SignedBeaconBlock,
   fork: ForkName
-): Promise<void> {
+): Promise<GossipBlockValidationResult> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
   const blockEpoch = computeEpochAtSlot(blockSlot);
@@ -109,21 +114,6 @@ export async function validateGossipBlock(
     }
   }
 
-  // [IGNORE] The attestation head block is too far behind the attestation slot, causing many skip slots.
-  // This is deemed a DoS risk because we need to get the proposerShuffling. To get the shuffling we have
-  // to do a bunch of epoch transitions, the longer the distance between the parent and block,
-  // the more we have to do. epochTransitions are expensive ~750ms, so we must limit how many a
-  // single bad block can trigger
-  // Note: Ensure this check is done before calling chain.regen.getBlockSlotStat as this is the function that does various epoch transitions.
-  // Note: This validation check is not part of the spec.
-  if (chain.opts.maxSkipSlots != null && parentBlock.slot + chain.opts.maxSkipSlots < blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.TOO_MANY_SKIPPED_SLOTS,
-      parentSlot: parentBlock.slot,
-      blockSlot,
-    });
-  }
-
   // [REJECT] The block is from a higher slot than its parent.
   if (parentBlock.slot >= blockSlot) {
     throw new BlockGossipError(GossipAction.REJECT, {
@@ -132,6 +122,10 @@ export async function validateGossipBlock(
       slot: blockSlot,
     });
   }
+
+  // Number of skipped slots between block and parent (non-spec). Previously this gated blocks via
+  // maxSkipSlots; now the caller only observes it so legitimate post-skip blocks are no longer ignored.
+  const skippedSlots = blockSlot - parentBlock.slot - 1;
 
   // [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
   if (isForkPostDeneb(fork) && !isForkPostGloas(fork)) {
@@ -247,4 +241,6 @@ export async function validateGossipBlock(
   }
 
   chain.seenBlockProposers.add(blockSlot, proposerIndex);
+
+  return {skippedSlots};
 }

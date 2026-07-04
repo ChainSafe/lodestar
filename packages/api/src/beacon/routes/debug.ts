@@ -1,4 +1,4 @@
-import {ContainerType, Type, ValueOf} from "@chainsafe/ssz";
+import {ContainerType, OptionalType, Type, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostFulu} from "@lodestar/params";
 import {ArrayOf, BeaconState, DataColumnSidecars, StringType, ssz, sszTypesFor} from "@lodestar/types";
@@ -78,12 +78,62 @@ const ForkChoiceResponseType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+const ForkChoiceNodeV2ExtraDataType = new ContainerType(
+  {
+    executionOptimistic: ssz.Boolean,
+    timestamp: ssz.UintNum64,
+    target: stringType,
+    justifiedEpoch: ssz.Epoch,
+    finalizedEpoch: ssz.Epoch,
+    unrealizedJustifiedEpoch: ssz.Epoch,
+    unrealizedFinalizedEpoch: ssz.Epoch,
+    payloadAttesterCount: new OptionalType(ssz.UintNum64),
+    payloadAvailabilityYesCount: new OptionalType(ssz.UintNum64),
+    payloadDataAvailabilityYesCount: new OptionalType(ssz.UintNum64),
+    gasLimit: new OptionalType(ssz.UintNum64),
+  },
+  {jsonCase: "eth2"}
+);
+const ForkChoiceNodeV2Type = new ContainerType(
+  {
+    payloadStatus: new StringType<"pending" | "empty" | "full">(),
+    slot: ssz.Slot,
+    blockRoot: stringType,
+    parentRoot: stringType,
+    weight: ssz.UintNum64,
+    validity: new StringType<"valid" | "invalid" | "optimistic">(),
+    executionBlockHash: stringType,
+    extraData: ForkChoiceNodeV2ExtraDataType,
+  },
+  {jsonCase: "eth2"}
+);
+const ForkChoiceExtraDataType = new ContainerType(
+  {
+    unrealizedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    unrealizedFinalizedCheckpoint: ssz.phase0.Checkpoint,
+    proposerBoostRoot: stringType,
+    previousProposerBoostRoot: stringType,
+    headRoot: stringType,
+  },
+  {jsonCase: "eth2"}
+);
+const ForkChoiceResponseV2Type = new ContainerType(
+  {
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    forkChoiceNodes: ArrayOf(ForkChoiceNodeV2Type),
+    extraData: ForkChoiceExtraDataType,
+  },
+  {jsonCase: "eth2"}
+);
+
 const ProtoNodeListType = ArrayOf(ProtoNodeType);
 const DebugChainHeadListType = ArrayOf(DebugChainHeadType);
 
 type ProtoNodeList = ValueOf<typeof ProtoNodeListType>;
 type DebugChainHeadList = ValueOf<typeof DebugChainHeadListType>;
 type ForkChoiceResponse = ValueOf<typeof ForkChoiceResponseType>;
+type ForkChoiceResponseV2 = ValueOf<typeof ForkChoiceResponseV2Type>;
 
 export type Endpoints = {
   /**
@@ -107,6 +157,18 @@ export type Endpoints = {
     EmptyArgs,
     EmptyRequest,
     ForkChoiceResponse,
+    EmptyMeta
+  >;
+
+  /**
+   * Retrieves all current fork choice context (v2: per (root, payload_status) with PTC vote tallies)
+   */
+  getDebugForkChoiceV2: Endpoint<
+    // ⏎
+    "GET",
+    EmptyArgs,
+    EmptyRequest,
+    ForkChoiceResponseV2,
     EmptyMeta
   >;
 
@@ -181,6 +243,24 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
           }),
           fromResponse: (resp) => ({
             data: resp as ForkChoiceResponse,
+          }),
+        },
+      },
+    },
+    getDebugForkChoiceV2: {
+      url: "/eth/v2/debug/fork_choice",
+      method: "GET",
+      req: EmptyRequestCodec,
+      resp: {
+        data: ForkChoiceResponseV2Type,
+        meta: EmptyMetaCodec,
+        onlySupport: WireFormat.json,
+        transform: {
+          toResponse: (data) => ({
+            ...(data as ForkChoiceResponseV2),
+          }),
+          fromResponse: (resp) => ({
+            data: resp as ForkChoiceResponseV2,
           }),
         },
       },

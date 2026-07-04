@@ -142,7 +142,12 @@ export class PeerDiscovery {
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
     // Transport tags vary by library: @libp2p/tcp uses '@libp2p/tcp', @chainsafe/libp2p-quic uses 'quic'
-    // Normalize to simple 'tcp' / 'quic' strings for matching
+    // Normalize to simple 'tcp' / 'quic' strings for matching.
+    // Must be initialized before the discovery listeners are registered and the bootENRs are processed
+    // below, since handleDiscoveredPeer() reads this.transports. Previously this was assigned at the end
+    // of the constructor, so when network.connectToDiscv5Bootnodes is enabled every bootENR was processed
+    // while this.transports was still undefined, throwing "Cannot read properties of undefined (reading
+    // 'includes')" and preventing the node from dialing its bootnodes on startup.
     this.transports = libp2p.services.components.transportManager
       .getTransports()
       .map((t) => t[Symbol.toStringTag])
