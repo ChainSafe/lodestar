@@ -502,14 +502,23 @@ export class SyncChain {
     // if last processed epoch is n, we don't want to request batches with epoch > n + MAX_LOOK_AHEAD_EPOCHS
     // we should have enough batches to process in the buffer: n + 1, ..., n + MAX_LOOK_AHEAD_EPOCHS
     // let's focus on redownloading these batches first because it may have to reach different peers to get enough sampled columns
+    //
+    // Only pending (not-yet-validated) batches count toward the look-ahead window. AwaitingValidation
+    // batches (e.g. already-processed empty/skip-slot batches) cannot advance lastEpochWithProcessBlocks
+    // on their own, so counting them would let a run of empty epochs longer than MAX_LOOK_AHEAD_EPOCHS
+    // fill the window and stall sync. Mirrors the BATCH_BUFFER_SIZE carve-out above.
+    const pendingBatches = batches.filter((batch) => batch.state.status !== BatchStatus.AwaitingValidation);
     if (
-      batches.length > 0 &&
-      Math.max(...batches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
+      pendingBatches.length > 0 &&
+      Math.max(...pendingBatches.map((b) => b.startEpoch)) >= this.lastEpochWithProcessBlocks + MAX_LOOK_AHEAD_EPOCHS
     ) {
       return null;
     }
 
-    // This line decides the starting epoch of the next batch. MUST ensure no duplicate batch for the same startEpoch
+    // This line decides the starting epoch of the next batch. MUST ensure no duplicate batch for the same startEpoch.
+    // Note: intentionally considers ALL batches (including AwaitingValidation), unlike the pending-only
+    // look-ahead check above — the next epoch must follow the last batch we hold to avoid gaps/duplicates,
+    // regardless of validation state.
     const startEpoch = toBeDownloadedStartEpoch(batches, this.lastEpochWithProcessBlocks);
 
     // Don't request batches beyond the target head slot. The to-be-downloaded batch must be strictly after target.slot

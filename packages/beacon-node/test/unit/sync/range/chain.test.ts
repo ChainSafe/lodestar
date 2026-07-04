@@ -31,13 +31,22 @@ describe("sync / range / chain", () => {
       targetEpoch: 16,
     },
     {
-      // due to BATCH_BUFFER_SIZE and MAX_LOOK_AHEAD_EPOCHS, lodestar cannot deal with unlimited skipped slots
-      // having a test with 2 epochs of skipped slots is enough to test the logic
-      // this hasn't happened in any networks as of Aug 2025
+      // A run of skipped slots that fits within the MAX_LOOK_AHEAD_EPOCHS window. The longer-run case
+      // (a run of empty epochs exceeding the look-ahead window, which previously deadlocked) is
+      // covered by "Simulate sync with 3 epochs of skipped slots" below.
       id: "Simulate sync with 2 epochs of skipped slots",
       startEpoch: 0,
       targetEpoch: 16,
       skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 4 * SLOTS_PER_EPOCH)),
+    },
+    {
+      // Regression: a run of empty epochs longer than MAX_LOOK_AHEAD_EPOCHS must not deadlock the
+      // chain. Empty batches sit in AwaitingValidation and never advance lastEpochWithProcessBlocks,
+      // so the look-ahead window must not count them or no further batches are ever downloaded.
+      id: "Simulate sync with 3 epochs of skipped slots",
+      startEpoch: 0,
+      targetEpoch: 16,
+      skippedSlots: new Set(linspace(3 * SLOTS_PER_EPOCH, 6 * SLOTS_PER_EPOCH)),
     },
     // As of https://github.com/ChainSafe/lodestar/pull/8150, we abort the batch after a single processing error
     // {
