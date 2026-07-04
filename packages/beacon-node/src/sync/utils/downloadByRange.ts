@@ -514,44 +514,21 @@ export async function validateResponses({
     return {result: {responses: validatedResponses, payloadEnvelopes: null}, warnings};
   }
 
-  if (!dataRequest) {
-    // Only envelope and/or parent-by-root validation needed
-    if (parentPayloadCommitments !== undefined) {
-      const parentValidated = await validateParentPayloadColumns(
-        parentPayloadCommitments,
-        columnSidecars ?? [],
-        peerDasMetrics
-      );
-      if (parentValidated) {
-        validatedResponses.validatedColumnSidecars = [parentValidated];
-      }
-    }
-    const validatedPayloadEnvelopes = validateEnvelopesByRangeResponse(
-      validatedResponses.validatedBlocks ?? [],
-      batchBlocks,
-      payloadEnvelopes ?? [],
-      parentPayloadCommitments
-    );
-    return {result: {responses: validatedResponses, payloadEnvelopes: validatedPayloadEnvelopes}, warnings};
-  }
+  // Resolve the in-range blocks the data sidecars are validated against. Empty when there is no data
+  // request (envelopes-only / parent-payload-only) or when the data request's slot range contains no
+  // blocks (an empty epoch — valid during poor chain liveness; the empty batch is confirmed at the
+  // chain level once a later batch imports a block, so a peer cannot stall sync by falsely claiming an
+  // epoch is empty). getBlocksForDataValidation treats `undefined` and `[]` the same, so pass directly.
+  const blocksForDataValidation = dataRequest
+    ? getBlocksForDataValidation(dataRequest, batchBlocks, validatedResponses.validatedBlocks)
+    : [];
 
-  const blocksForDataValidation = getBlocksForDataValidation(
-    dataRequest,
-    batchBlocks,
-    validatedResponses.validatedBlocks?.length ? validatedResponses.validatedBlocks : undefined
-  );
-
-  if (!blocksForDataValidation.length) {
-    throw new DownloadByRangeError(
-      {
-        code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-        ...requestsLogMeta({blobsRequest, columnsRequest}),
-      },
-      "No blocks in data request slot range to validate data response against"
-    );
-  }
-
-  if (blobsRequest) {
+  // When the range has no blocks we neither validate nor reject the sidecars a peer returned. We can't
+  // confirm the range is genuinely empty at this layer (the empty blocks response is itself unverified
+  // until a later batch extends the chain), so there is no peer we could safely penalize — orphan
+  // sidecars are dropped. The per-request validators below only run when there are blocks to validate
+  // against.
+  if (blobsRequest && blocksForDataValidation.length > 0) {
     if (!blobSidecars) {
       throw new DownloadByRangeError(
         {
@@ -568,7 +545,7 @@ export async function validateResponses({
     );
   }
 
-  if (columnsRequest) {
+  if (columnsRequest && blocksForDataValidation.length > 0) {
     if (!columnSidecars) {
       throw new DownloadByRangeError(
         {
@@ -664,26 +641,23 @@ export function validateBlockByRangeResponse(
 ): WarnResult<ValidatedBlock[], DownloadByRangeError> {
   const {startSlot, count} = blocksRequest;
 
-  // An error was thrown here by @twoeths in #8150 but it breaks for epochs with 0 blocks during chain
-  // liveness issues. See comment https://github.com/ChainSafe/lodestar/issues/8147#issuecomment-3246434697
-  // There are instances where clients return no blocks though.  Need to monitor this via the warns to see
-  // if what the correct behavior should be
+  // A peer returning zero blocks for an epoch is the correct response when every slot in the epoch
+  // was skipped (an "empty epoch"), which happens during periods of poor chain liveness. Return the
+  // empty result with a warning — rather than throwing — so the SyncChain can process through the
+  // empty epoch. Throwing here previously killed the chain after MAX_BATCH_DOWNLOAD_ATTEMPTS
+  // (https://github.com/ChainSafe/lodestar/issues/8147). The empty batch is held in
+  // AwaitingValidation and only confirmed once a later batch imports a block, so a peer cannot stall
+  // sync by falsely claiming an epoch is empty.
   if (!blocks.length) {
-    throw new DownloadByRangeError({
-      code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-      ...requestsLogMeta({blocksRequest}),
-    });
-    // TODO: this was causing deadlock again. need to come back and fix this so that its possible to process through
-    //       an empty epoch for periods with poor liveness
-    // return {
-    //   result: [],
-    //   warnings: [
-    //     new DownloadByRangeError({
-    //       code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
-    //       ...requestsLogMeta({blocksRequest}),
-    //     }),
-    //   ],
-    // };
+    return {
+      result: [],
+      warnings: [
+        new DownloadByRangeError({
+          code: DownloadByRangeErrorCode.MISSING_BLOCKS_RESPONSE,
+          ...requestsLogMeta({blocksRequest}),
+        }),
+      ],
+    };
   }
 
   if (blocks.length > count) {
