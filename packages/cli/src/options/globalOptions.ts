@@ -56,9 +56,7 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
 
 \`\`\`yaml
 network: hoodi
-rest:
-  address: 0.0.0.0
-  port: 9596
+logLevel: debug
 metrics:
   enabled: true
   port: 8008
