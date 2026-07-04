@@ -1112,8 +1112,8 @@ export function getValidatorApi(
 
       const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
-        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
-        throw new ApiError(404, `No canonical block found at slot=${slot}`);
+        // No canonical block is seen at slot. Return 204 so vc can skip casting payload attestation.
+        return {data: undefined, meta: {version: fork}, status: 204};
       }
 
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);

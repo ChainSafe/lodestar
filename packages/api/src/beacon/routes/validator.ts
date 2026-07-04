@@ -483,7 +483,7 @@ export type Endpoints = {
       slot: Slot;
     },
     {params: {slot: Slot}},
-    gloas.PayloadAttestationData,
+    gloas.PayloadAttestationData | undefined,
     VersionMeta
   >;
 
@@ -982,7 +982,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: ssz.gloas.PayloadAttestationData,
+        // `undefined` when there is no canonical block at the slot
+        data: WithVersion<gloas.PayloadAttestationData | undefined, VersionMeta>(
+          () => ssz.gloas.PayloadAttestationData
+        ),
         meta: VersionCodec,
       },
     },
