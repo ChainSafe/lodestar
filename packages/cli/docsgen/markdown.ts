@@ -23,17 +23,15 @@ function sanitizeDescription(description: string): string {
   });
 }
 
-function renderExampleBody(example: Partial<Omit<CliExample, "title">>, lodestarCommand?: string): string {
-  const cliExample: string[] = [];
+function renderExampleBody(example: CliExample, lodestarCommand?: string): string {
+  const cliExample = [
+    `\`\`\`sh
+${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
+\`\`\``,
+  ];
 
   if (example.description) {
-    cliExample.push(sanitizeDescription(example.description));
-  }
-
-  if (example.command) {
-    cliExample.push(`\`\`\`sh
-${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
-\`\`\``);
+    cliExample.unshift(sanitizeDescription(example.description));
   }
 
   return cliExample.join(DEFAULT_SEPARATOR);
