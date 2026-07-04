@@ -15,12 +15,29 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.ExecutionPayload).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.ExecutionRequests).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.BeaconState).toBeInstanceOf(ProgressiveContainerType);
+    // Added in consensus-specs #4630 (EIP-7688 alpha.12 update)
+    expect(ssz.gloas.ExecutionPayloadBid).toBeInstanceOf(ProgressiveContainerType);
+    expect(ssz.gloas.ExecutionPayloadEnvelope).toBeInstanceOf(ProgressiveContainerType);
+    expect(ssz.gloas.PayloadAttestation).toBeInstanceOf(ProgressiveContainerType);
+    expect(ssz.gloas.IndexedPayloadAttestation).toBeInstanceOf(ProgressiveContainerType);
 
     expect(ssz.gloas.AttestingIndices).toBeInstanceOf(ProgressiveListBasicType);
     expect(ssz.gloas.Transactions).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.Withdrawals).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BlobKzgCommitments).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.DataColumn).toBeInstanceOf(ProgressiveListCompositeType);
+    // EIP-8282 builder execution requests, progressive per #4630
+    expect(ssz.gloas.BuilderDepositRequests).toBeInstanceOf(ProgressiveListCompositeType);
+    expect(ssz.gloas.BuilderExitRequests).toBeInstanceOf(ProgressiveListCompositeType);
+  });
+
+  it("round-trips default Gloas top-level containers through progressive serialization", () => {
+    // Guards against progressive-container offset mismatches on deserialization
+    // (e.g. the "First offset must equal to fixedEnd" genesis-load failure).
+    for (const type of [ssz.gloas.BeaconState, ssz.gloas.SignedBeaconBlock, ssz.gloas.SignedExecutionPayloadEnvelope]) {
+      const serialized = type.serialize(type.defaultValue());
+      expect(type.deserialize(serialized)).toEqual(type.defaultValue());
+    }
   });
 
   it("keeps byte-list values while using progressive merkleization", () => {
