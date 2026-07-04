@@ -265,12 +265,14 @@ export const PayloadAttestationData = new ContainerType(
   {typeName: "PayloadAttestationData", jsonCase: "eth2"}
 );
 
-export const PayloadAttestation = new ContainerType(
+// Modified in GLOAS:EIP7688
+export const PayloadAttestation = new ProgressiveContainerType(
   {
     aggregationBits: new BitVectorType(PTC_SIZE),
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
+  activeFields(3),
   {typeName: "PayloadAttestation", jsonCase: "eth2"}
 );
 
@@ -287,12 +289,14 @@ export const PayloadAttestationMessage = new ContainerType(
   {typeName: "PayloadAttestationMessage", jsonCase: "eth2"}
 );
 
-export const IndexedPayloadAttestation = new ContainerType(
+// Modified in GLOAS:EIP7688
+export const IndexedPayloadAttestation = new ProgressiveContainerType(
   {
     attestingIndices: new ListBasicType(ValidatorIndex, PTC_SIZE),
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
+  activeFields(3),
   {typeName: "IndexedPayloadAttestation", jsonCase: "eth2"}
 );
 
@@ -315,7 +319,8 @@ export const SignedProposerPreferences = new ContainerType(
   {typeName: "SignedProposerPreferences", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadBid = new ContainerType(
+// Modified in GLOAS:EIP7688
+export const ExecutionPayloadBid = new ProgressiveContainerType(
   {
     parentBlockHash: Bytes32,
     parentBlockRoot: Root,
@@ -330,6 +335,7 @@ export const ExecutionPayloadBid = new ContainerType(
     blobKzgCommitments: BlobKzgCommitments,
     executionRequestsRoot: Root,
   },
+  activeFields(12),
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 
@@ -355,7 +361,8 @@ export const ExecutionPayload = new ProgressiveContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadEnvelope = new ContainerType(
+// Modified in GLOAS:EIP7688
+export const ExecutionPayloadEnvelope = new ProgressiveContainerType(
   {
     payload: ExecutionPayload,
     executionRequests: ExecutionRequests,
@@ -363,6 +370,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     beaconBlockRoot: Root,
     parentBeaconBlockRoot: Root,
   },
+  activeFields(5),
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
