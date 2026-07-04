@@ -139,7 +139,9 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
   }
 
   if (option.example) {
-    commandOption.push(`example: ${renderExampleBody(option.example)}`);
+    // Render option examples as a standalone block (no "example:" label). rcConfig — the only
+    // option with an example — is a config-file snippet where the inline label just adds noise.
+    commandOption.push(renderExampleBody(option.example));
   }
 
   return commandOption.join(DEFAULT_SEPARATOR).concat(LINE_BREAK);
