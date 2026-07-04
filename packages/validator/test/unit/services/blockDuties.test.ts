@@ -317,6 +317,54 @@ describe("BlockDutiesService", () => {
     expect(api.validator.getProposerDuties).toHaveBeenCalledTimes(1);
   });
 
+  it("Final pre-Gloas epoch re-polls next-epoch duties each slot", async () => {
+    // Gloas activates at epoch 1, so epoch 0 is the final pre-Gloas epoch and epoch 1 is Gloas.
+    const forkBoundaryConfig = getConfig(ForkName.gloas, 1);
+    const epoch1Duties: routes.validator.ProposerDutyList = [{slot: 32, validatorIndex: 0, pubkey: pubkeys[0]}];
+    const depRootEpoch1 = ZERO_HASH_HEX;
+    const depRootEpoch1Reorg = toHex(Buffer.alloc(32, 7));
+
+    let epoch1DepRoot = depRootEpoch1;
+    api.validator.getProposerDuties.mockResolvedValue(
+      mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
+    );
+    // Epoch 1 is Gloas so it is fetched via v2.
+    api.validator.getProposerDutiesV2.mockImplementation(async ({epoch}) =>
+      mockApiResponse({
+        data: epoch === 1 ? epoch1Duties : [],
+        meta: {dependentRoot: epoch === 1 ? epoch1DepRoot : ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+
+    const clock = new ClockMock();
+    const dutiesService = new BlockDutiesService(
+      forkBoundaryConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+
+    // Epoch tick pre-fetches the upcoming Gloas epoch once.
+    await clock.tickEpochFns(0, controller.signal);
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(1);
+    expect(api.validator.getProposerDutiesV2.mock.calls[0][0]).toEqual({epoch: 1});
+
+    // Simulate the next-epoch proposer dep_root shifting (e.g. a reorg) mid-epoch. `onNewHead`
+    // can't detect it pre-Gloas since the v1 head event doesn't carry the next-epoch dep_root.
+    epoch1DepRoot = depRootEpoch1Reorg;
+
+    // Mid-epoch slot tick re-polls the Gloas epoch and picks up the shifted dep_root.
+    await clock.tickSlotFns(15, controller.signal);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
+    expect(api.validator.getProposerDutiesV2.mock.calls[1][0]).toEqual({epoch: 1});
+    expect(dutiesService["proposers"].get(1)?.dependentRoot).toEqual(depRootEpoch1Reorg);
+  });
+
   it("Post-Gloas last slot of epoch does NOT schedule a boundary fetch", async () => {
     api.validator.getProposerDutiesV2.mockResolvedValue(
       mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})

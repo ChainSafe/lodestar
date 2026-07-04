@@ -161,7 +161,9 @@ export class BlockDutiesService {
   /**
    * Slot-tick handler. Notifies block production for cached proposers in this slot, and on
    * the last slot of a pre-Gloas epoch schedules the boundary fetch for `nextEpoch` duties.
-   * Reorg detection is handled by `onNewHead`, so this task does not re-poll on every slot.
+   * Reorg detection is otherwise handled by `onNewHead`; the exception is the final pre-Gloas
+   * epoch, where `onNewHead` can't refresh the next-epoch dep_root (not exposed by the v1 head
+   * event), so we re-poll the next epoch each slot to keep pre-fork proposer preferences fresh.
    */
   private runEverySlotTask = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     try {
@@ -172,13 +174,25 @@ export class BlockDutiesService {
       this.notifyProposersForSlot(slot);
 
       const nextEpoch = computeEpochAtSlot(slot) + 1;
-      const isLastSlotOfEpoch = computeStartSlotAtEpoch(nextEpoch) === slot + 1;
+      const nextEpochStartSlot = computeStartSlotAtEpoch(nextEpoch);
+      const isLastSlotOfEpoch = nextEpochStartSlot === slot + 1;
       if (isLastSlotOfEpoch && !isForkPostGloas(this.config.getForkName(slot + 1))) {
         // Pre-Gloas the VC uses v1 and does not pre-fetch the next epoch on the epoch tick, so
         // fetch it ~1s before the boundary instead. Pre-Fulu this is required (0-epoch lookahead);
         // for Fulu the lookahead exists but the v2 path is deferred to Gloas (see top of file).
         this.pollBeaconProposersBeforeBoundary(slot, nextEpoch, signal).catch((e) => {
           this.logger.error("Error on pollBeaconProposersBeforeBoundary", {nextEpoch}, e);
+        });
+      } else if (
+        !isForkPostGloas(this.config.getForkName(slot)) &&
+        isForkPostGloas(this.config.getForkName(nextEpochStartSlot))
+      ) {
+        // Final pre-Gloas epoch: `onNewHead` can't reorg-refresh the next (Gloas) epoch's duties
+        // here since the v1 head event doesn't carry their dep_root, yet validators submit proposer
+        // preferences for the first Gloas slots before the fork. Re-poll each slot so a dep_root
+        // shift is picked up and those preferences resubmit under the current root.
+        this.pollBeaconProposers(nextEpoch).catch((e) => {
+          this.logger.error("Error polling next-epoch proposers before Gloas fork", {nextEpoch}, e);
         });
       }
     } catch (e) {
