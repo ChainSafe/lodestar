@@ -142,6 +142,7 @@ export function cacheByRangeResponses({
     const blockRootHex = toRootHex(blockRoot);
 
     const existing = updatedBatchBlocks.get(block.message.slot);
+    let blockInput: IBlockInput;
     if (existing) {
       // In practice this code block shouldn't be reached because we shouldn't be refetching a block we already have, see Batch#getRequests.
       // Will throw if root hex does not match (meaning we are following the wrong chain)
@@ -155,8 +156,9 @@ export function cacheByRangeResponses({
         },
         {throwOnDuplicateAdd: false}
       );
+      blockInput = existing;
     } else {
-      const blockInput = cache.getByBlock({
+      blockInput = cache.getByBlock({
         block,
         blockRootHex,
         source,
@@ -164,6 +166,21 @@ export function cacheByRangeResponses({
         seenTimestampSec,
       });
       updatedBatchBlocks.set(blockInput.slot, blockInput);
+    }
+
+    // Seed seenPayloadEnvelopeInputCache the instant we have the block, before the blob loop (or any
+    // later step) can throw and abort the batch — otherwise a gloas block would sit in
+    // seenBlockInputCache but unseeded here, and payload-by-root sync would later throw "Missing
+    // PayloadEnvelopeInput for known block" (see issue #9306). add() is idempotent.
+    if (isForkPostGloas(blockInput.forkName)) {
+      seenPayloadEnvelopeInputCache.add({
+        blockRootHex: blockInput.blockRootHex,
+        block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
+        forkName: blockInput.forkName,
+        sampledColumns: custodyConfig.sampledColumns,
+        custodyColumns: custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
     }
   }
 
@@ -205,22 +222,6 @@ export function cacheByRangeResponses({
     }
   }
 
-  // Seed seenPayloadEnvelopeInputCache for every gloas block in the batch, regardless of whether
-  // the peer returned its envelope. Without this, a block returned without its envelope would be
-  // imported with no cache entry, and later payload-by-root sync would throw
-  // "Missing PayloadEnvelopeInput for known block" (see issue #9306).
-  for (const blockInput of updatedBatchBlocks.values()) {
-    if (!blockInput.hasBlock() || !isForkPostGloas(blockInput.forkName)) continue;
-    seenPayloadEnvelopeInputCache.add({
-      blockRootHex: blockInput.blockRootHex,
-      block: blockInput.getBlock() as SignedBeaconBlock<ForkPostGloas>,
-      forkName: blockInput.forkName,
-      sampledColumns: custodyConfig.sampledColumns,
-      custodyColumns: custodyConfig.custodyColumns,
-      timeCreatedSec: seenTimestampSec,
-    });
-  }
-
   let payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null =
     existingPayloadEnvelopes !== null ? new Map(existingPayloadEnvelopes) : null;
   if (downloadedPayloadEnvelopes !== null) {
@@ -229,8 +230,8 @@ export function cacheByRangeResponses({
       const envelopeBlockRootHex = toRootHex(envelope.message.beaconBlockRoot);
       const payloadInput = seenPayloadEnvelopeInputCache.get(envelopeBlockRootHex);
       if (payloadInput === undefined) {
-        // Unreachable given the loop above seeded an entry for every gloas block in the batch.
-        // for the parent block, it's populated at BeaconChain init
+        // Unreachable given the validatedBlocks loop above seeded an entry for every gloas block in
+        // the batch. for the parent block, it's populated at BeaconChain init
         throw new Error(`Missing PayloadEnvelopeInput for block ${envelopeBlockRootHex}`);
       }
 
