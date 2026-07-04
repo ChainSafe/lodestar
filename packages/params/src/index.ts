@@ -278,7 +278,6 @@ export const EXECUTION_BLOCK_HASH_INDEX_DENEB = 300;
  * types.ssz.gloas.BeaconBlockBody.getPathInfo(['signedExecutionPayloadBid', 'message', 'parentBlockHash']).gindex
  * ```
  */
-// Modified in GLOAS:EIP7688 — ExecutionPayloadBid is now a ProgressiveContainer
 export const EXECUTION_BLOCK_HASH_GINDEX_GLOAS = 2856;
 export const EXECUTION_BLOCK_HASH_DEPTH_GLOAS = 11;
 export const EXECUTION_BLOCK_HASH_INDEX_GLOAS = 808;

@@ -15,7 +15,6 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.ExecutionPayload).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.ExecutionRequests).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.BeaconState).toBeInstanceOf(ProgressiveContainerType);
-    // Added in consensus-specs #4630 (EIP-7688 alpha.12 update)
     expect(ssz.gloas.ExecutionPayloadBid).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.ExecutionPayloadEnvelope).toBeInstanceOf(ProgressiveContainerType);
     expect(ssz.gloas.PayloadAttestation).toBeInstanceOf(ProgressiveContainerType);
@@ -26,7 +25,6 @@ describe("Gloas EIP-7688 SSZ types", () => {
     expect(ssz.gloas.Withdrawals).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BlobKzgCommitments).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.DataColumn).toBeInstanceOf(ProgressiveListCompositeType);
-    // EIP-8282 builder execution requests, progressive per #4630
     expect(ssz.gloas.BuilderDepositRequests).toBeInstanceOf(ProgressiveListCompositeType);
     expect(ssz.gloas.BuilderExitRequests).toBeInstanceOf(ProgressiveListCompositeType);
   });

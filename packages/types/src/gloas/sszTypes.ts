@@ -265,7 +265,6 @@ export const PayloadAttestationData = new ContainerType(
   {typeName: "PayloadAttestationData", jsonCase: "eth2"}
 );
 
-// Modified in GLOAS:EIP7688
 export const PayloadAttestation = new ProgressiveContainerType(
   {
     aggregationBits: new BitVectorType(PTC_SIZE),
@@ -289,7 +288,6 @@ export const PayloadAttestationMessage = new ContainerType(
   {typeName: "PayloadAttestationMessage", jsonCase: "eth2"}
 );
 
-// Modified in GLOAS:EIP7688
 export const IndexedPayloadAttestation = new ProgressiveContainerType(
   {
     attestingIndices: new ListBasicType(ValidatorIndex, PTC_SIZE),
@@ -319,7 +317,6 @@ export const SignedProposerPreferences = new ContainerType(
   {typeName: "SignedProposerPreferences", jsonCase: "eth2"}
 );
 
-// Modified in GLOAS:EIP7688
 export const ExecutionPayloadBid = new ProgressiveContainerType(
   {
     parentBlockHash: Bytes32,
@@ -361,7 +358,6 @@ export const ExecutionPayload = new ProgressiveContainerType(
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-// Modified in GLOAS:EIP7688
 export const ExecutionPayloadEnvelope = new ProgressiveContainerType(
   {
     payload: ExecutionPayload,
