@@ -47,6 +47,7 @@ export class ProposerPreferencesService {
     _metrics: Metrics | null
   ) {
     clock.runEverySlot(this.runProposerPreferencesTask);
+    clock.runEveryEpoch(this.pruneSubmitted);
   }
 
   private runProposerPreferencesTask = async (slot: Slot): Promise<void> => {
@@ -58,11 +59,6 @@ export class ProposerPreferencesService {
     }
 
     const currentEpoch = computeEpochAtSlot(slot);
-
-    // Only currentEpoch and currentEpoch + 1 are ever processed, so drop the epoch that just fell
-    // behind. A no-op except on the first slot of a new epoch (epochs advance one at a time).
-    this.submitted.delete(currentEpoch - 1);
-
     const batch: gloas.SignedProposerPreferences[] = [];
     // Track which `(submission, slot)` pairs are pending an API submission so we can mark
     // them only after the network call succeeds. Marking before would silently drop a
@@ -131,6 +127,15 @@ export class ProposerPreferencesService {
       this.logger.debug("Submitted signed proposer preferences", {count: batch.length});
     } catch (e) {
       this.logger.error("Error submitting signed proposer preferences", {count: batch.length}, e as Error);
+    }
+  };
+
+  /** Drop tracking for past epochs; only currentEpoch and currentEpoch + 1 are ever processed. */
+  private pruneSubmitted = async (epoch: Epoch): Promise<void> => {
+    for (const trackedEpoch of this.submitted.keys()) {
+      if (trackedEpoch < epoch) {
+        this.submitted.delete(trackedEpoch);
+      }
     }
   };
 }
