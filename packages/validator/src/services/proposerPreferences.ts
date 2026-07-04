@@ -58,6 +58,11 @@ export class ProposerPreferencesService {
     }
 
     const currentEpoch = computeEpochAtSlot(slot);
+
+    // Only currentEpoch and currentEpoch + 1 are ever processed, so drop the epoch that just fell
+    // behind. A no-op except on the first slot of a new epoch (epochs advance one at a time).
+    this.submitted.delete(currentEpoch - 1);
+
     const batch: gloas.SignedProposerPreferences[] = [];
     // Track which `(submission, slot)` pairs are pending an API submission so we can mark
     // them only after the network call succeeds. Marking before would silently drop a
