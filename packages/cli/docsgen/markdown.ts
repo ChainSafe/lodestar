@@ -23,17 +23,15 @@ function sanitizeDescription(description: string): string {
   });
 }
 
-function renderExampleBody(example: Partial<Omit<CliExample, "title">>, lodestarCommand?: string): string {
-  const cliExample: string[] = [];
+function renderExampleBody(example: CliExample, lodestarCommand?: string): string {
+  const cliExample = [
+    `\`\`\`sh
+${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
+\`\`\``,
+  ];
 
   if (example.description) {
-    cliExample.push(sanitizeDescription(example.description));
-  }
-
-  if (example.command) {
-    cliExample.push(`\`\`\`sh
-${lodestarCommand ? `${lodestarCommand} ` : ""}${example.command}
-\`\`\``);
+    cliExample.unshift(sanitizeDescription(example.description));
   }
 
   return cliExample.join(DEFAULT_SEPARATOR);
@@ -141,10 +139,7 @@ function renderOption(optionName: string, option: CliOptionDefinition): string |
   }
 
   if (option.example) {
-    // Command examples get an "example:" label; config-only snippets render as a standalone block
-    commandOption.push(
-      option.example.command ? `example: ${renderExampleBody(option.example)}` : renderExampleBody(option.example)
-    );
+    commandOption.push(`example: ${renderExampleBody(option.example)}`);
   }
 
   return commandOption.join(DEFAULT_SEPARATOR).concat(LINE_BREAK);

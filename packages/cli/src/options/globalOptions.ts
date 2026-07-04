@@ -52,7 +52,9 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     description: "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
     type: "string",
     example: {
-      description: `\`\`\`yaml
+      description: `Options can be written as nested maps or dotted keys:
+
+\`\`\`yaml
 network: hoodi
 rest:
   address: 0.0.0.0
@@ -61,6 +63,7 @@ metrics:
   enabled: true
   port: 8008
 \`\`\``,
+      command: "beacon --rcConfig beacon.config.yaml",
     },
   },
 
