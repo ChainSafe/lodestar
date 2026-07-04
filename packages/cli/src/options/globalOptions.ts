@@ -63,7 +63,6 @@ metrics:
   enabled: true
   port: 8008
 \`\`\``,
-      command: "beacon --rcConfig beacon-config.yaml",
     },
   },
 
