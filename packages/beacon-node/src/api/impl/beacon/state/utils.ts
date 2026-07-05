@@ -111,7 +111,7 @@ export function getStateBuilderIndex(
   if (typeof id === "number") {
     const builderIndex = id;
     // builder is invalid or added later than given stateId
-    if (!Number.isSafeInteger(builderIndex)) {
+    if (!Number.isSafeInteger(builderIndex) || builderIndex < 0) {
       return {valid: false, code: 400, reason: "Invalid builder index"};
     }
     if (builderIndex >= state.getBuildersLength()) {
@@ -175,7 +175,7 @@ export function getStateValidatorIndex(
   if (typeof id === "number") {
     const validatorIndex = id;
     // validator is invalid or added later than given stateId
-    if (!Number.isSafeInteger(validatorIndex)) {
+    if (!Number.isSafeInteger(validatorIndex) || validatorIndex < 0) {
       return {valid: false, code: 400, reason: "Invalid validator index"};
     }
     if (validatorIndex >= state.validatorCount) {
