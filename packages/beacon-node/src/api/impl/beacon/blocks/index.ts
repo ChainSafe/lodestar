@@ -85,19 +85,20 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
 
 function assertDataColumnsWithinAvailableWindow(chain: ApiModules["chain"], slot: number, blockRootHex: string): void {
-  const earliestDataColumnSlot = Math.max(
-    chain.earliestAvailableSlot,
-    computeDataColumnSidecarsAvailabilityStartSlot(
-      chain.config,
-      chain.clock.currentEpoch,
-      chain.archiveStore.archiveDataEpochs
-    )
+  // Guard only against the data column retention window. `chain.earliestAvailableSlot` is the anchor
+  // state slot (on restart the latest finalized slot), which is more recent than the columns we still
+  // retain — using it as a floor would hide retained columns and limit serving for no reason. Once
+  // backfill tracks true availability we can revisit incorporating it here.
+  const earliestAvailableDataColumnSlot = computeDataColumnSidecarsAvailabilityStartSlot(
+    chain.config,
+    chain.clock.currentEpoch,
+    chain.archiveStore.archiveDataEpochs
   );
 
-  if (slot < earliestDataColumnSlot) {
+  if (slot < earliestAvailableDataColumnSlot) {
     throw new ApiError(
       404,
-      `Data column sidecars are not available for slot=${slot}, root=${blockRootHex}, earliestAvailableSlot=${earliestDataColumnSlot}`
+      `Data column sidecars are not available for slot=${slot}, root=${blockRootHex}, earliestAvailableSlot=${earliestAvailableDataColumnSlot}`
     );
   }
 }

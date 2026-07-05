@@ -46,10 +46,6 @@ describe("api - beacon - blob sidecars", () => {
         value: {targetCustodyGroupCount: NUMBER_OF_COLUMNS / 2},
         configurable: true,
       },
-      earliestAvailableSlot: {
-        value: block.message.slot - 1,
-        configurable: true,
-      },
       archiveStore: {
         value: {archiveDataEpochs: undefined},
         configurable: true,
@@ -95,5 +91,34 @@ describe("api - beacon - blob sidecars", () => {
       message: expect.stringContaining("Data column sidecars are not available"),
     });
     expect(getDataColumnSidecars).not.toHaveBeenCalled();
+  });
+
+  it("serves data columns within the retention window even when earliestAvailableSlot is more recent", async () => {
+    // Regression for the over-restriction: the guard keys off the data column retention window, NOT
+    // chain.earliestAvailableSlot (the anchor-state slot, which after a restart is more recent than
+    // the columns we still retain). A within-window block must reach getDataColumnSidecars.
+    // currentEpoch - MIN_EPOCHS == FULU, so the retention window starts at FULU and this fulu block is within it.
+    const currentEpoch = config.FULU_FORK_EPOCH + config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS;
+    const blockSlot = computeStartSlotAtEpoch(config.FULU_FORK_EPOCH);
+    const {block} = generateBlockWithColumnSidecars({forkName: ForkName.fulu, slot: blockSlot});
+    const getDataColumnSidecars = vi.fn().mockResolvedValue([]);
+
+    modules.chain.getCanonicalBlockAtSlot.mockResolvedValue({block, executionOptimistic: false, finalized: false});
+    Object.defineProperties(modules.chain, {
+      custodyConfig: {value: {targetCustodyGroupCount: NUMBER_OF_COLUMNS / 2}, configurable: true},
+      // Anchor slot more recent than the retained block — must NOT restrict serving.
+      earliestAvailableSlot: {value: computeStartSlotAtEpoch(config.FULU_FORK_EPOCH + 1), configurable: true},
+      archiveStore: {value: {archiveDataEpochs: undefined}, configurable: true},
+      getDataColumnSidecars: {value: getDataColumnSidecars, configurable: true},
+    });
+    Object.defineProperty(modules.chain.clock, "currentEpoch", {value: currentEpoch, configurable: true});
+
+    // Guard passes (within window); falls through to the "not found in db" 404, so getDataColumnSidecars
+    // is called — with the old `Math.max(earliestAvailableSlot, ...)` this slot would have been blocked.
+    await expect(api.getBlobSidecars({blockId: String(blockSlot)})).rejects.toMatchObject({
+      statusCode: 404,
+      message: expect.stringContaining("dataColumnSidecars not found in db"),
+    });
+    expect(getDataColumnSidecars).toHaveBeenCalled();
   });
 });
