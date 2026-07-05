@@ -3,6 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {
   ArrayOf,
+  BuilderStatus,
   CommitteeIndex,
   Epoch,
   RootHex,
@@ -38,7 +39,7 @@ export type StateArgs = {
 
 export type ValidatorId = string | number;
 
-export type {ValidatorStatus};
+export type {BuilderStatus, ValidatorStatus};
 
 export const RandaoResponseType = new ContainerType({
   randao: ssz.Root,
@@ -56,6 +57,11 @@ export const ValidatorResponseType = new ContainerType({
   balance: ssz.UintNum64,
   status: new StringType<ValidatorStatus>(),
   validator: ssz.phase0.Validator,
+});
+export const BuilderResponseType = new ContainerType({
+  index: ssz.BuilderIndex,
+  status: new StringType<BuilderStatus>(),
+  builder: ssz.gloas.Builder,
 });
 export const ValidatorIdentityType = new ContainerType(
   {
@@ -84,6 +90,7 @@ export const EpochSyncCommitteeResponseType = new ContainerType(
   {jsonCase: "eth2"}
 );
 export const ValidatorResponseListType = ArrayOf(ValidatorResponseType);
+export const BuilderResponseListType = ArrayOf(BuilderResponseType);
 export const ValidatorIdentitiesType = ArrayOf(ValidatorIdentityType);
 export const EpochCommitteeResponseListType = ArrayOf(EpochCommitteeResponseType);
 export const ValidatorBalanceListType = ArrayOf(ValidatorBalanceType);
@@ -91,11 +98,13 @@ export const ValidatorBalanceListType = ArrayOf(ValidatorBalanceType);
 export type RandaoResponse = ValueOf<typeof RandaoResponseType>;
 export type FinalityCheckpoints = ValueOf<typeof FinalityCheckpointsType>;
 export type ValidatorResponse = ValueOf<typeof ValidatorResponseType>;
+export type BuilderResponse = ValueOf<typeof BuilderResponseType>;
 export type EpochCommitteeResponse = ValueOf<typeof EpochCommitteeResponseType>;
 export type ValidatorBalance = ValueOf<typeof ValidatorBalanceType>;
 export type EpochSyncCommitteeResponse = ValueOf<typeof EpochSyncCommitteeResponseType>;
 
 export type ValidatorResponseList = ValueOf<typeof ValidatorResponseListType>;
+export type BuilderResponseList = ValueOf<typeof BuilderResponseListType>;
 export type ValidatorIdentities = ValueOf<typeof ValidatorIdentitiesType>;
 export type EpochCommitteeResponseList = ValueOf<typeof EpochCommitteeResponseListType>;
 export type ValidatorBalanceList = ValueOf<typeof ValidatorBalanceListType>;
@@ -201,6 +210,30 @@ export type Endpoints = {
     },
     {params: {state_id: string}; body: {ids?: string[]; statuses?: ValidatorStatus[]}},
     ValidatorResponseList,
+    ExecutionOptimisticAndFinalizedMeta
+  >;
+
+  /**
+   * Get builders from state
+   *
+   * Returns filterable list of builders with their status and index.
+   *
+   * Information will be returned for all indices or public keys that match known builders. If an index or public key does not
+   * match any known builder, no information will be returned but this will not cause an error. There are no guarantees for the
+   * returned data in terms of ordering; both the index and public key are returned for each builder, and can be used to confirm
+   * for which inputs a response has been returned.
+   *
+   * Returns 400 if the requested state is prior to Gloas.
+   */
+  getStateBuilders: Endpoint<
+    "POST",
+    StateArgs & {
+      /** Either hex encoded public key (any bytes48 with 0x prefix) or builder index */
+      builderIds?: ValidatorId[];
+      statuses?: BuilderStatus[];
+    },
+    {params: {state_id: string}; body: {ids?: string[]; statuses?: BuilderStatus[]}},
+    BuilderResponseList,
     ExecutionOptimisticAndFinalizedMeta
   >;
 
@@ -486,6 +519,33 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       resp: {
         onlySupport: WireFormat.json,
         data: ValidatorResponseListType,
+        meta: ExecutionOptimisticAndFinalizedCodec,
+      },
+    },
+    getStateBuilders: {
+      url: "/eth/v1/beacon/states/{state_id}/builders",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({stateId, builderIds, statuses}) => ({
+          params: {state_id: stateId.toString()},
+          body: {
+            ids: toValidatorIdsStr(builderIds),
+            statuses,
+          },
+        }),
+        parseReqJson: ({params, body = {}}) => ({
+          stateId: params.state_id,
+          builderIds: fromValidatorIdsStr(body.ids),
+          statuses: body.statuses ?? undefined,
+        }),
+        schema: {
+          params: {state_id: Schema.StringRequired},
+          body: Schema.Object,
+        },
+      }),
+      resp: {
+        onlySupport: WireFormat.json,
+        data: BuilderResponseListType,
         meta: ExecutionOptimisticAndFinalizedCodec,
       },
     },

@@ -15,6 +15,8 @@ export type {BlockHeaderResponse, BlockId} from "./block.js";
 export {BroadcastValidation} from "./block.js";
 // TODO: Review if re-exporting all these types is necessary
 export type {
+  BuilderResponse,
+  BuilderStatus,
   EpochCommitteeResponse,
   EpochSyncCommitteeResponse,
   FinalityCheckpoints,
