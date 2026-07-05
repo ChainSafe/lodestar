@@ -1,7 +1,6 @@
 import {ContainerType, ListCompositeType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
-  ForkName,
   ForkPostDeneb,
   ForkPostGloas,
   ForkPreBellatrix,
@@ -280,16 +279,6 @@ const blockIdOnlyReq: RequestCodec<Endpoint<"GET", {blockId: BlockId}, {params: 
   schema: {params: {block_id: Schema.StringRequired}},
 };
 
-function getEnvelopeFork(
-  config: ChainForkConfig,
-  signedEnvelope: gloas.SignedExecutionPayloadEnvelopeContents | gloas.SignedExecutionPayloadEnvelope
-): ForkName {
-  const signedExecutionPayloadEnvelope = isSignedExecutionPayloadEnvelopeContents(signedEnvelope)
-    ? signedEnvelope.signedExecutionPayloadEnvelope
-    : signedEnvelope;
-  return config.getForkName(signedExecutionPayloadEnvelope.message.payload.slotNumber);
-}
-
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
   return {
     getBlockV2: {
@@ -479,7 +468,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       req: {
         writeReqJson: ({signedEnvelope, broadcastValidation}) => {
           const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelope);
-          const fork = getEnvelopeFork(config, signedEnvelope);
+          const fork = config.getForkName(
+            (blobDataIncluded ? signedEnvelope.signedExecutionPayloadEnvelope : signedEnvelope).message.payload
+              .slotNumber
+          );
           return {
             body: blobDataIncluded
               ? getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelopeContents.toJson(signedEnvelope)
@@ -503,7 +495,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         writeReqSsz: ({signedEnvelope, broadcastValidation}) => {
           const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelope);
-          const fork = getEnvelopeFork(config, signedEnvelope);
+          const fork = config.getForkName(
+            (blobDataIncluded ? signedEnvelope.signedExecutionPayloadEnvelope : signedEnvelope).message.payload
+              .slotNumber
+          );
           return {
             body: blobDataIncluded
               ? getPostGloasForkTypes(fork).SignedExecutionPayloadEnvelopeContents.serialize(signedEnvelope)
