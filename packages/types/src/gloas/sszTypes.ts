@@ -372,7 +372,7 @@ export const SSEPayloadAttributes = new ContainerType(
   {
     proposerIndex: UintNum64,
     proposalSlot: Slot,
-    // parentBlockNumber: UintNum64, // Removed in GLOAS
+    // parentBlockNumber: UintNum64, // Removed in GLOAS:EIP7732
     parentBlockRoot: Root,
     parentBlockHash: Root,
     payloadAttributes: PayloadAttributes,
