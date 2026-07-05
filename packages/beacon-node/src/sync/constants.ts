@@ -73,3 +73,25 @@ export const MAX_CONCURRENT_REQUESTS = 2;
  * so having this constant too big is a waste of resources and peers may rate limit us.
  */
 export const MAX_LOOK_AHEAD_EPOCHS = 2;
+
+/**
+ * Ceiling, in epochs of non-finality, on how far a TargetSync backward `by_head` walk will descend
+ * before giving up.
+ *
+ * The walk's PRIMARY depth bound is our finalized checkpoint: it descends in slot order and stops as
+ * soon as it reaches a slot at or below our finalized slot (`FAILURE_BEFORE_FINALIZED`), since a
+ * target that only links to us below finality is on a fork we would never adopt. So the natural depth
+ * is `target_slot − finalized_slot` — the non-finality window — and under healthy finality that is a
+ * couple of epochs and this ceiling never binds.
+ *
+ * This constant is the SECONDARY backstop: a sustained inactivity leak can push the finalized
+ * checkpoint arbitrarily far below the head, and a node that far behind should restart from a recent
+ * checkpoint (checkpoint sync) rather than backward-walk an unbounded header chain. It is set
+ * generously (far above any healthy non-finality) so it never bounds a legitimate near-head walk —
+ * exceeding it means the gap is too large for backward sync, not that a normal walk was truncated.
+ *
+ * Converted to slots (× SLOTS_PER_EPOCH) at the walk. INTENTIONALLY decoupled from
+ * STORE_MEMORY_THRESHOLD: the per-target store spills older blocks to disk as the walk grows, so the
+ * walk budget need not fit in memory.
+ */
+export const MAX_TARGET_SYNC_NON_FINALITY_EPOCHS = 256;

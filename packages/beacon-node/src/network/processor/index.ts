@@ -282,7 +282,9 @@ export class NetworkProcessor {
     }
     // Search for the unknown block
     this.unknownBlocksBySlot.getOrDefault(slot).add(root);
-    this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, peer, source});
+    // `slot` is the referencing message's slot (>= the block's own slot), so consumers can
+    // cheaply drop roots that are provably at/below their finalized floor before fetching.
+    this.chain.emitter.emit(ChainEvent.unknownBlockRoot, {rootHex: root, slot, peer, source});
   }
 
   /**

@@ -146,7 +146,7 @@ export const ExecutionPayloadBid = new ContainerType(
     blockHash: Bytes32,
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintNum64,
+    gasLimit: UintBn64,
     builderIndex: BuilderIndex,
     slot: Slot,
     value: UintNum64,

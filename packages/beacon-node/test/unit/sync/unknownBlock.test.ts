@@ -510,6 +510,7 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       } else {
         emitter.emit(ChainEvent.unknownBlockRoot, {
           rootHex: blockRootHexC,
+          slot: blockC.message.slot,
           peer,
           source: BlockInputSource.gossip,
         });

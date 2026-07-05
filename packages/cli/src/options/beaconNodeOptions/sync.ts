@@ -3,6 +3,7 @@ import {CliCommandOptions} from "@lodestar/utils";
 
 export type SyncArgs = {
   "sync.isSingleNode"?: boolean;
+  "sync.targetSync"?: boolean;
   "sync.disableProcessAsChainSegment"?: boolean;
   "sync.disableRangeSync"?: boolean;
   "sync.backfillBatchSize"?: number;
@@ -12,6 +13,7 @@ export type SyncArgs = {
 export function parseArgs(args: SyncArgs): IBeaconNodeOptions["sync"] {
   return {
     isSingleNode: args["sync.isSingleNode"],
+    targetSync: args["sync.targetSync"],
     disableProcessAsChainSegment: args["sync.disableProcessAsChainSegment"],
     backfillBatchSize: args["sync.backfillBatchSize"] ?? defaultOptions.sync.backfillBatchSize,
     disableRangeSync: args["sync.disableRangeSync"],
@@ -27,6 +29,14 @@ export const options: CliCommandOptions<SyncArgs> = {
       "Allow node to consider itself synced without being connected to a peer. \
 Use only for local networks with a single node, can be dangerous in regular networks.",
     defaultDescription: String(defaultOptions.sync.isSingleNode),
+    group: "sync",
+  },
+
+  "sync.targetSync": {
+    hidden: true,
+    type: "boolean",
+    description: "Enable experimental TargetSync (fulu+ unified backward-walk sync)",
+    defaultDescription: String(defaultOptions.sync.targetSync),
     group: "sync",
   },
 

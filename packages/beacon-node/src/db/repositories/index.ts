@@ -16,4 +16,5 @@ export {SyncCommitteeRepository} from "./lightclientSyncCommittee.js";
 export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness.js";
 export {ProposerSlashingRepository} from "./proposerSlashing.js";
 export {StateArchiveRepository} from "./stateArchive.js";
+export {TargetSyncBlockRepository} from "./targetSyncBlock.js";
 export {VoluntaryExitRepository} from "./voluntaryExit.js";

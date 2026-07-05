@@ -5,17 +5,20 @@ import {BlobIndex, ColumnIndex, ssz} from "@lodestar/types";
 import {BlobMeta} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BlobSidecarValidationError} from "../../../../src/chain/errors/blobSidecarError.js";
 import {DataColumnSidecarValidationError} from "../../../../src/chain/errors/dataColumnSidecarError.js";
+import {IBeaconChain} from "../../../../src/chain/interface.js";
 import {INetwork} from "../../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../../src/network/peers/peersData.js";
+import * as envelopeAdmission from "../../../../src/sync/target/envelopeAdmission.js";
+import {fetchAndValidateExecutionPayloadEnvelopeByRoot} from "../../../../src/sync/target/fetchEnvelopeByRoot.js";
 import {PendingBlockInputStatus} from "../../../../src/sync/types.js";
 import {
   DownloadByRootError,
+  DownloadByRootErrorCode,
   fetchAndValidateBlobs,
   fetchAndValidateBlock,
   fetchAndValidateColumns,
   fetchBlobsByRoot,
   fetchByRoot,
-  fetchColumnsByRoot,
 } from "../../../../src/sync/utils/downloadByRoot.js";
 import {ROOT_SIZE} from "../../../../src/util/sszBytes.js";
 import {
@@ -320,6 +323,56 @@ describe("downloadByRoot.ts", () => {
         })
       ).rejects.toThrow(DataColumnSidecarValidationError);
     });
+
+    it("validates gloas column sidecars via the gloas validator (not the fulu validator)", async () => {
+      const gloasBlockWithColumns: BlockWithColumnsTestSet<ForkName.gloas> = generateBlockWithColumnSidecars({
+        forkName: ForkName.gloas,
+      });
+      network = {
+        sendDataColumnSidecarsByRoot: vi.fn(() => gloasBlockWithColumns.columnSidecars),
+      } as unknown as INetwork;
+
+      const result = await fetchAndValidateColumns({
+        config,
+        chain: null,
+        network,
+        peerMeta,
+        forkName: ForkName.gloas,
+        block: gloasBlockWithColumns.block,
+        blockRoot: gloasBlockWithColumns.blockRoot,
+        missing: gloasBlockWithColumns.columnSidecars.map((c) => c.index),
+      });
+
+      expect(result.warnings).toBeNull();
+      expect(result.result).toEqual(gloasBlockWithColumns.columnSidecars);
+    });
+
+    it("rejects a gloas column sidecar whose kzg proofs are corrupted (gloas validator is not a no-op)", async () => {
+      const gloasBlockWithColumns: BlockWithColumnsTestSet<ForkName.gloas> = generateBlockWithColumnSidecars({
+        forkName: ForkName.gloas,
+      });
+      // Corrupt the first column's kzgProofs with random bytes — count stays the same so only the
+      // KZG batch verification check (asyncVerifyCellKzgProofBatch) can reject it.
+      const corruptedSidecars = gloasBlockWithColumns.columnSidecars.map((c, i) =>
+        i === 0 ? {...c, kzgProofs: c.kzgProofs.map(() => randomBytes(48))} : c
+      );
+      network = {
+        sendDataColumnSidecarsByRoot: vi.fn(() => corruptedSidecars),
+      } as unknown as INetwork;
+
+      await expect(
+        fetchAndValidateColumns({
+          config,
+          chain: null,
+          network,
+          peerMeta,
+          forkName: ForkName.gloas,
+          block: gloasBlockWithColumns.block,
+          blockRoot: gloasBlockWithColumns.blockRoot,
+          missing: gloasBlockWithColumns.columnSidecars.map((c) => c.index),
+        })
+      ).rejects.toBeInstanceOf(DataColumnSidecarValidationError);
+    });
   });
 
   describe("fetchByRoot", () => {
@@ -357,29 +410,147 @@ describe("downloadByRoot.ts", () => {
     });
   });
 
-  describe("fetchColumnsByRoot", () => {
-    let fuluBlockWithColumns: BlockWithColumnsTestSet<ForkName.fulu>;
-    beforeAll(() => {
-      fuluBlockWithColumns = generateBlockWithColumnSidecars({forkName: ForkName.fulu});
+  describe("fetchAndValidateExecutionPayloadEnvelopeByRoot", () => {
+    const sampledColumns = Array.from({length: 8}, (_, i) => i);
+    const custodyColumns = Array.from({length: 4}, (_, i) => i);
+    const seenTimestampSec = 1_700_000_000;
+
+    let gloasBlock: ReturnType<typeof generateBlock<ForkName.gloas>>;
+
+    beforeEach(() => {
+      gloasBlock = generateBlock({forkName: ForkName.gloas});
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function buildChainMock(): IBeaconChain {
+      const payloadInput = {} as ReturnType<NonNullable<IBeaconChain["seenPayloadEnvelopeInputCache"]>["add"]>;
+      return {
+        config,
+        pubkeyCache: {},
+        bls: {},
+        getHeadState: vi.fn(() => ({})),
+        custodyConfig: {sampledColumns, custodyColumns},
+        seenPayloadEnvelopeInputCache: {
+          get: vi.fn(() => payloadInput),
+          add: vi.fn(() => payloadInput),
+        },
+      } as unknown as IBeaconChain;
+    }
+
+    it("envelope returned and admitted → result ADMITTED, no warnings, admitEnvelopeByRoot called once", async () => {
+      const admitSpy = vi.spyOn(envelopeAdmission, "admitEnvelopeByRoot").mockResolvedValueOnce("ADMITTED");
+
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = gloasBlock.blockRoot;
+
       network = {
-        sendDataColumnSidecarsByRoot: vi.fn(() => fuluBlockWithColumns.columnSidecars),
+        sendExecutionPayloadEnvelopesByRoot: vi.fn(() => Promise.resolve([envelope])),
       } as unknown as INetwork;
-    });
-    afterAll(() => {
-      vi.resetAllMocks();
-    });
-    it("should fetch missing columnSidecars ByRoot from network", async () => {
-      const blockRoot = fuluBlockWithColumns.blockRoot;
-      const missing = fuluBlockWithColumns.columnSidecars.map((c) => c.index);
-      const response = await fetchColumnsByRoot({
+
+      const chain = buildChainMock();
+
+      const response = await fetchAndValidateExecutionPayloadEnvelopeByRoot({
+        config,
+        chain,
         network,
-        peerMeta,
-        blockRoot,
-        missing,
+        peerIdStr,
+        blockRoot: gloasBlock.blockRoot,
+        blockRootHex: gloasBlock.rootHex,
+        block: gloasBlock.block,
+        seenTimestampSec,
       });
-      expect(response).toEqual(fuluBlockWithColumns.columnSidecars);
-      expect(network.sendDataColumnSidecarsByRoot).toHaveBeenCalledOnce();
-      expect(network.sendDataColumnSidecarsByRoot).toHaveBeenCalledWith(peerIdStr, [{blockRoot, columns: missing}]);
+
+      expect(response.result).toBe("ADMITTED");
+      expect(response.warnings).toBeNull();
+      expect(admitSpy).toHaveBeenCalledOnce();
+    });
+
+    it("envelope beaconBlockRoot mismatch → REJECTED, admitEnvelopeByRoot NOT called", async () => {
+      const admitSpy = vi.spyOn(envelopeAdmission, "admitEnvelopeByRoot");
+
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      // Served an envelope for a different block (builder equivocation).
+      envelope.message.beaconBlockRoot = new Uint8Array(32).fill(0xff);
+
+      network = {
+        sendExecutionPayloadEnvelopesByRoot: vi.fn(() => Promise.resolve([envelope])),
+      } as unknown as INetwork;
+
+      const chain = buildChainMock();
+
+      const response = await fetchAndValidateExecutionPayloadEnvelopeByRoot({
+        config,
+        chain,
+        network,
+        peerIdStr,
+        blockRoot: gloasBlock.blockRoot,
+        blockRootHex: gloasBlock.rootHex,
+        block: gloasBlock.block,
+        seenTimestampSec,
+      });
+
+      expect(response.result).toBe("REJECTED");
+      expect(response.warnings?.[0]).toBeInstanceOf(DownloadByRootError);
+      expect(admitSpy).not.toHaveBeenCalled();
+    });
+
+    it("empty network response → warning with MISSING_ENVELOPE_RESPONSE, no throw", async () => {
+      const admitSpy = vi.spyOn(envelopeAdmission, "admitEnvelopeByRoot");
+
+      network = {
+        sendExecutionPayloadEnvelopesByRoot: vi.fn(() => Promise.resolve([])),
+      } as unknown as INetwork;
+
+      const chain = buildChainMock();
+
+      const response = await fetchAndValidateExecutionPayloadEnvelopeByRoot({
+        config,
+        chain,
+        network,
+        peerIdStr,
+        blockRoot: gloasBlock.blockRoot,
+        blockRootHex: gloasBlock.rootHex,
+        block: gloasBlock.block,
+        seenTimestampSec,
+      });
+
+      expect(response.result).toBe("PEER_MISS");
+      expect(response.warnings).not.toBeNull();
+      expect(response.warnings?.[0]).toBeInstanceOf(DownloadByRootError);
+      expect(response.warnings?.[0]?.type.code).toBe(DownloadByRootErrorCode.MISSING_ENVELOPE_RESPONSE);
+      expect(admitSpy).not.toHaveBeenCalled();
+    });
+
+    it("admission REJECTED → peer-fault warning with ENVELOPE_REJECTED code, result REJECTED", async () => {
+      vi.spyOn(envelopeAdmission, "admitEnvelopeByRoot").mockResolvedValueOnce("REJECTED");
+
+      const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      envelope.message.beaconBlockRoot = gloasBlock.blockRoot;
+
+      network = {
+        sendExecutionPayloadEnvelopesByRoot: vi.fn(() => Promise.resolve([envelope])),
+      } as unknown as INetwork;
+
+      const chain = buildChainMock();
+
+      const response = await fetchAndValidateExecutionPayloadEnvelopeByRoot({
+        config,
+        chain,
+        network,
+        peerIdStr,
+        blockRoot: gloasBlock.blockRoot,
+        blockRootHex: gloasBlock.rootHex,
+        block: gloasBlock.block,
+        seenTimestampSec,
+      });
+
+      expect(response.result).toBe("REJECTED");
+      expect(response.warnings).not.toBeNull();
+      expect(response.warnings?.[0]).toBeInstanceOf(DownloadByRootError);
+      expect(response.warnings?.[0]?.type.code).toBe(DownloadByRootErrorCode.ENVELOPE_REJECTED);
     });
   });
 });

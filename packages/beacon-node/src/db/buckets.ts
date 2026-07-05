@@ -72,6 +72,9 @@ export enum Bucket {
 
   gloas_executionPayloadEnvelope = 59, // GLOAS BeaconBlockRoot -> SignedExecutionPayloadEnvelope
   gloas_executionPayloadEnvelopeArchive = 60, // GLOAS Slot -> SignedExecutionPayloadEnvelope
+
+  // TargetSync — ephemeral per-target block cache; owned solely by ChainBlockStore
+  gloasTargetSyncBlock = 61, // targetRoot ++ blockRoot -> SignedBeaconBlock (bytes)
 }
 
 export function getBucketNameByValue<T extends Bucket>(enumValue: T): keyof typeof Bucket {

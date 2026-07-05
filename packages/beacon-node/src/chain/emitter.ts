@@ -87,7 +87,7 @@ type ApiEvents = {[K in routes.events.EventType]: (data: routes.events.EventData
 
 export type ChainEventData = {
   [ChainEvent.blockUnknownParent]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
-  [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  [ChainEvent.unknownBlockRoot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompleteBlockInput]: {blockInput: IBlockInput; peer: PeerIdStr; source: BlockInputSource};
   [ChainEvent.incompletePayloadEnvelope]: {
     payloadInput: PayloadEnvelopeInput;

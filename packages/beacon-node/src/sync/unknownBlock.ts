@@ -41,6 +41,7 @@ import {
   isPendingPayloadInput,
 } from "./types.js";
 import {DownloadByRootError, downloadByRoot} from "./utils/downloadByRoot.js";
+import {classifyMissingDependency} from "./utils/missingDependency.js";
 import {getAllDescendantBlocks, getUnknownAndAncestorBlocks} from "./utils/pendingBlocksTree.js";
 import {getRateLimitedUntilMs} from "./utils/rateLimit.js";
 
@@ -240,7 +241,7 @@ export class BlockInputSync {
    */
   private onUnknownParent = (data: ChainEventData[ChainEvent.blockUnknownParent]): void => {
     try {
-      const missingDependency = this.getMissingBlockDependency(data.blockInput);
+      const missingDependency = classifyMissingDependency({config: this.config, chain: this.chain}, data.blockInput);
       if (missingDependency.kind === "invalidParentPayload") {
         this.addByBlockInput(data.blockInput, data.peer);
 
@@ -428,53 +429,11 @@ export class BlockInputSync {
     this.scheduleRateLimitBackoffRetry();
   };
 
-  /**
-   * Post-gloas, a locally complete block can still be blocked on its parent's execution payload lineage.
-   * Distinguish which dependency is missing so the scheduler can enqueue the right follow-up work.
-   */
-  private getMissingBlockDependency(
-    blockInput: IBlockInput
-  ):
-    | {kind: "ready"}
-    | {kind: "block" | "parentBlock" | "parentPayload"; rootHex: RootHex}
-    | {kind: "invalidParentPayload"; parentRootHex: RootHex; parentBlockHashHex: RootHex} {
-    const parentRootHex = blockInput.parentRootHex;
-    if (!this.chain.forkChoice.hasBlockHex(parentRootHex)) {
-      return {kind: "parentBlock", rootHex: parentRootHex};
-    }
-
-    if (!blockInput.hasBlock()) {
-      return {kind: "block", rootHex: blockInput.blockRootHex};
-    }
-
-    if (this.config.getForkSeq(blockInput.slot) < ForkSeq.gloas) {
-      return {kind: "ready"};
-    }
-
-    const block = blockInput.getBlock() as gloas.SignedBeaconBlock;
-    const parentBlockHashHex = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-    if (this.chain.forkChoice.getBlockHexAndBlockHash(parentRootHex, parentBlockHashHex) !== null) {
-      return {kind: "ready"};
-    }
-
-    if (this.chain.forkChoice.hasPayloadHexUnsafe(parentRootHex)) {
-      return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
-    }
-
-    const parentPayloadInput = this.chain.seenPayloadEnvelopeInputCache.get(parentRootHex);
-    if (parentPayloadInput) {
-      if (parentPayloadInput.getBlockHashHex() === parentBlockHashHex) {
-        return {kind: "parentPayload", rootHex: parentRootHex};
-      }
-
-      return {kind: "invalidParentPayload", parentRootHex, parentBlockHashHex};
-    }
-
-    return {kind: "parentPayload", rootHex: parentRootHex};
-  }
-
   private advancePendingBlock(pendingBlock: PendingBlockInput): AdvancePendingBlockResult {
-    const missingDependency = this.getMissingBlockDependency(pendingBlock.blockInput);
+    const missingDependency = classifyMissingDependency(
+      {config: this.config, chain: this.chain},
+      pendingBlock.blockInput
+    );
 
     switch (missingDependency.kind) {
       case "ready":
@@ -732,7 +691,12 @@ export class BlockInputSync {
         });
         this.removeAndDownScoreAllDescendants(block);
       } else {
-        this.onUnknownBlockRoot({rootHex: pending.blockInput.parentRootHex, source: BlockInputSource.byRoot});
+        this.onUnknownBlockRoot({
+          rootHex: pending.blockInput.parentRootHex,
+          // Referencing-message semantic: the child's slot upper-bounds the parent's.
+          slot: pending.blockInput.slot,
+          source: BlockInputSource.byRoot,
+        });
       }
     } else {
       if (res.err instanceof UnknownBlockRateLimitedError) {

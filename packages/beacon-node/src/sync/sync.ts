@@ -1,4 +1,4 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../chain/index.js";
@@ -12,6 +12,8 @@ import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
 import {IBeaconSync, SyncChainDebugState, SyncModules, SyncState, SyncingStatus, syncStateMetric} from "./interface.js";
 import {SyncOptions} from "./options.js";
 import {RangeSync, RangeSyncEvent, RangeSyncStatus} from "./range/range.js";
+import {wipeTargetSyncSpillOnBoot} from "./target/spillStore.js";
+import {TargetSync} from "./target/targetSync.js";
 import {BlockInputSync} from "./unknownBlock.js";
 import {PeerSyncType, getPeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
 
@@ -22,23 +24,120 @@ export class BeaconSync implements IBeaconSync {
   private readonly metrics: Metrics | null;
   private readonly opts: SyncOptions;
 
-  private readonly rangeSync: RangeSync;
-  private readonly unknownBlockSync: BlockInputSync;
+  // Exactly one sync engine is active: either the legacy RangeSync + BlockInputSync
+  // pair (the default / pre-fulu path), XOR the fulu+ TargetSync (behind `opts.targetSync`).
+  // The unused fields stay `undefined`; every use is guarded so the off path runs the
+  // identical code as before this gate was introduced.
+  private readonly rangeSync?: RangeSync;
+  private readonly unknownBlockSync?: BlockInputSync;
+  private readonly targetSync?: TargetSync;
+
+  /**
+   * The active engine's contribution to {@link state}, chosen once at construction.
+   * Avoids re-proving the rangeSync/targetSync XOR at every `state` read.
+   */
+  private readonly deriveState: () => SyncState;
 
   /** For metrics only */
   private readonly peerSyncType = new Map<string, PeerSyncType>();
   private readonly slotImportTolerance: Slot;
 
+  /**
+   * Resolves once the unconditional boot wipe of the TargetSync spill bucket completes [A1]
+   * (row count = crash detector). TargetSync gates its first walk on this.
+   */
+  readonly targetSyncSpillWiped: Promise<number>;
+
   constructor(opts: SyncOptions, modules: SyncModules) {
-    const {config, chain, metrics, network, logger} = modules;
+    const {config, chain, db, metrics, network, logger} = modules;
     this.opts = opts;
     this.network = network;
     this.chain = chain;
     this.metrics = metrics;
     this.logger = logger;
-    this.rangeSync = new RangeSync(modules, opts);
-    this.unknownBlockSync = new BlockInputSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = opts.slotImportTolerance ?? SLOTS_PER_EPOCH;
+
+    // [A1] Boot hygiene for the TargetSync spill bucket, UNCONDITIONAL on the flag and on the
+    // fork: the bucket is scratch (rows are meaningless across restarts — fork choice is rebuilt
+    // from the anchor every boot) and its in-process deletion paths do not survive SIGKILL. A
+    // crash with the flag on followed by a flag-off restart must still wipe, so the wipe cannot
+    // live inside the engine branch below. Cheap when empty (one empty range scan). Never rejects.
+    this.targetSyncSpillWiped = wipeTargetSyncSpillOnBoot(db.targetSyncBlocks, logger, metrics?.targetSync ?? null);
+
+    // TargetSync only applies from fulu onwards and only when explicitly enabled.
+    // When off OR pre-fulu, fall through to the legacy RangeSync + BlockInputSync path,
+    // which must behave byte-for-byte as before. Sampled once at construction: a node booted
+    // pre-fulu with the flag set keeps RangeSync across the fork boundary.
+    const useTargetSync =
+      (opts.targetSync ?? false) && chain.config.getForkSeq(chain.clock.currentSlot) >= ForkSeq.fulu;
+
+    if (useTargetSync) {
+      this.logger.debug("TargetSync enabled.");
+      const targetSync = new TargetSync({
+        config,
+        chain,
+        network,
+        logger,
+        metrics,
+        targetSyncBlocks: db.targetSyncBlocks,
+        // [A1] Walks wait for the unconditional boot wipe.
+        spillWiped: this.targetSyncSpillWiped,
+        // Completion re-derives SyncState immediately (gossip subscribe must not wait a tick).
+        onCompleted: () => this.updateSyncState(),
+      });
+      this.targetSync = targetSync;
+      targetSync.start();
+      // Active targets → SyncingFinalized/SyncingHead by kind. Zero targets with ADVANCED
+      // peers present is a transient between targets — report SyncingHead, never Stalled
+      // (ruling 6: Stalled hard-fails ~16 validator endpoints). Stalled only when we are
+      // behind AND no peer claims to be ahead of us.
+      this.deriveState = (): SyncState => {
+        if (targetSync.activeChainCount > 0) {
+          return targetSync.isSyncingFinalized ? SyncState.SyncingFinalized : SyncState.SyncingHead;
+        }
+        for (const type of this.peerSyncType.values()) {
+          if (type === PeerSyncType.Advanced) return SyncState.SyncingHead;
+        }
+        return SyncState.Stalled;
+      };
+
+      // Drive updateSyncState once per epoch so gossip is toggled on/off as the
+      // TargetSync-derived SyncState changes. The RangeSync path wires this same epoch
+      // trigger (plus RangeSync.completedChain + addPeer); on the TargetSync path the
+      // per-epoch tick is the engine-agnostic driver that re-evaluates `state`.
+      this.chain.clock.on(ClockEvent.epoch, this.onClockEpoch);
+
+      // Also re-evaluate on peer connect: a node Synced at startup (the common checkpoint-sync /
+      // restart case) must subscribe to gossip core topics promptly rather than wait up to a full
+      // epoch for the first ClockEvent. addPeer's `rangeSync?.addPeer` no-ops here via optional
+      // chaining, and close() already removes this handler.
+      this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
+      // Matching disconnect wire so peerSyncType (and its lodestar_sync_range_sync_peers gauge) is
+      // pruned rather than leaking one entry per peer ever connected. removePeer's `rangeSync?` call
+      // no-ops here, and close() already offs it.
+      this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
+
+      if (metrics) {
+        metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
+      }
+      return;
+    }
+
+    const rangeSync = new RangeSync(modules, opts);
+    this.rangeSync = rangeSync;
+    this.unknownBlockSync = new BlockInputSync(config, network, chain, logger, metrics, opts);
+    this.deriveState = (): SyncState => {
+      switch (rangeSync.state.status) {
+        case RangeSyncStatus.Finalized:
+          return SyncState.SyncingFinalized;
+        case RangeSyncStatus.Head:
+          return SyncState.SyncingHead;
+        case RangeSyncStatus.Idle:
+          return SyncState.Stalled;
+        default:
+          throw new Error("Unreachable code");
+      }
+    };
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     if (!opts.disableRangeSync) {
@@ -81,8 +180,9 @@ export class BeaconSync implements IBeaconSync {
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.clock.off(ClockEvent.epoch, this.onClockEpoch);
-    this.rangeSync.close();
-    this.unknownBlockSync.close();
+    this.targetSync?.stop();
+    this.rangeSync?.close();
+    this.unknownBlockSync?.close();
   }
 
   getSyncStatus(): SyncingStatus {
@@ -156,22 +256,14 @@ export class BeaconSync implements IBeaconSync {
       return SyncState.Synced;
     }
 
-    const rangeSyncState = this.rangeSync.state;
-    switch (rangeSyncState.status) {
-      case RangeSyncStatus.Finalized:
-        return SyncState.SyncingFinalized;
-      case RangeSyncStatus.Head:
-        return SyncState.SyncingHead;
-      case RangeSyncStatus.Idle:
-        return SyncState.Stalled;
-      default:
-        throw new Error("Unreachable code");
-    }
+    // Not synced — defer to the active engine's derivation (chosen once at construction).
+    return this.deriveState();
   }
 
   /** Full debug state for lodestar API */
   getSyncChainsDebugState(): SyncChainDebugState[] {
-    return this.rangeSync.getSyncChainsDebugState();
+    // TargetSync exposes no RangeSync-style debug chains yet.
+    return this.rangeSync?.getSyncChainsDebugState() ?? this.targetSync?.getSyncChainsDebugState() ?? [];
   }
 
   /**
@@ -205,7 +297,8 @@ export class BeaconSync implements IBeaconSync {
     this.peerSyncType.set(data.peer, syncType);
 
     if (syncType === PeerSyncType.Advanced) {
-      this.rangeSync.addPeer(data.peer, localStatus, data.status);
+      // Only wired in the RangeSync (off / pre-fulu) path, where rangeSync is defined.
+      this.rangeSync?.addPeer(data.peer, localStatus, data.status);
     }
 
     this.updateSyncState();
@@ -215,7 +308,8 @@ export class BeaconSync implements IBeaconSync {
    * Must be called by libp2p when a peer is removed from the peer manager
    */
   private removePeer = (data: NetworkEventData[NetworkEvent.peerDisconnected]): void => {
-    this.rangeSync.removePeer(data.peer);
+    // Only wired in the RangeSync (off / pre-fulu) path, where rangeSync is defined.
+    this.rangeSync?.removePeer(data.peer);
 
     this.peerSyncType.delete(data.peer.toString());
   };
@@ -241,7 +335,8 @@ export class BeaconSync implements IBeaconSync {
       }
 
       // also start searching for unknown blocks
-      if (!this.unknownBlockSync.isSubscribedToNetwork()) {
+      // Only wired in the RangeSync (off / pre-fulu) path, where unknownBlockSync is defined.
+      if (this.unknownBlockSync && !this.unknownBlockSync.isSubscribedToNetwork()) {
         this.unknownBlockSync.subscribeToNetwork();
         this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "subscribed"});
       }
@@ -265,7 +360,8 @@ export class BeaconSync implements IBeaconSync {
         }
 
         // also stop searching for unknown blocks
-        if (this.unknownBlockSync.isSubscribedToNetwork()) {
+        // Only wired in the RangeSync (off / pre-fulu) path, where unknownBlockSync is defined.
+        if (this.unknownBlockSync?.isSubscribedToNetwork()) {
           this.unknownBlockSync.unsubscribeFromNetwork();
           this.metrics?.blockInputSync.switchNetworkSubscriptions.inc({action: "unsubscribed"});
         }
@@ -284,6 +380,12 @@ export class BeaconSync implements IBeaconSync {
   private scrapeMetrics(metrics: Metrics): void {
     // Compute current sync state
     metrics.syncStatus.set(syncStateMetric[this.state]);
+
+    // TargetSync path: emit registry progress. The derived state is already exported via
+    // `lodestar_sync_status` above. Guarded so the RangeSync path sets nothing new here.
+    if (this.targetSync !== undefined) {
+      metrics.targetSync.activeChains.set(this.targetSync.activeChainCount);
+    }
 
     // Count peers by syncType
     const peerCountByType: Record<PeerSyncType, number> = {

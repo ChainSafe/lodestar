@@ -221,6 +221,7 @@ describe("sync / unknown block sync thru gloas", () => {
         case ChainEvent.unknownBlockRoot:
           bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
             rootHex: headRootHex,
+            slot: headSlot,
             peer: sourcePeerId,
             source: BlockInputSource.gossip,
           });
@@ -244,6 +245,7 @@ describe("sync / unknown block sync thru gloas", () => {
           // get the chain started with an unknownBlockRoot
           bn2.chain.emitter.emit(ChainEvent.unknownBlockRoot, {
             rootHex: headRootHex,
+            slot: headSlot,
             peer: sourcePeerId,
             source: BlockInputSource.gossip,
           });

@@ -21,6 +21,7 @@ import {
   StateArchiveRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
+  TargetSyncBlockRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
 
@@ -57,6 +58,8 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
+  targetSyncBlocks: TargetSyncBlockRepository;
+
   constructor(
     config: ChainForkConfig,
     protected readonly db: Db
@@ -87,6 +90,8 @@ export class BeaconDb implements IBeaconDb {
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(config, db);
 
     this.backfilledRanges = new BackfilledRanges(config, db);
+
+    this.targetSyncBlocks = new TargetSyncBlockRepository(config, db);
   }
 
   close(): Promise<void> {

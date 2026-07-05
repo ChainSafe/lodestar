@@ -12,7 +12,6 @@ export enum ExecutionPayloadBidErrorCode {
   UNKNOWN_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_PARENT_BLOCK_HASH",
   INVALID_SLOT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SLOT",
   NOT_LATER_THAN_PARENT = "EXECUTION_PAYLOAD_BID_ERROR_NOT_LATER_THAN_PARENT",
-  INVALID_PREV_RANDAO = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_PREV_RANDAO",
   INVALID_SIGNATURE = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SIGNATURE",
   NO_MATCHING_PROPOSER_PREFERENCES = "EXECUTION_PAYLOAD_BID_ERROR_NO_MATCHING_PROPOSER_PREFERENCES",
   PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH = "EXECUTION_PAYLOAD_BID_ERROR_PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH",
@@ -44,12 +43,6 @@ export type ExecutionPayloadBidErrorType =
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: BuilderIndex; slot: Slot}
   | {code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
-  | {
-      code: ExecutionPayloadBidErrorCode.INVALID_PREV_RANDAO;
-      builderIndex: BuilderIndex;
-      bidPrevRandao: string;
-      expectedPrevRandao: string;
-    }
   | {code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE; builderIndex: BuilderIndex; slot: Slot}
   | {
       code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES;

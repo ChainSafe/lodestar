@@ -175,7 +175,7 @@ async function validateExecutionPayloadBid(
   // [IGNORE] `is_gas_limit_target_compatible(parent_gas_limit, bid.gas_limit, target_gas_limit)`,
   // where `parent_gas_limit` is the `gas_limit` of the parent execution payload and
   // `target_gas_limit` is `proposer_preferences.target_gas_limit`.
-  const bidGasLimit = bid.gasLimit;
+  const bidGasLimit = Number(bid.gasLimit);
   const parentGasLimit = parentPayloadVariant.executionPayloadGasLimit;
   const targetGasLimit = proposerPreferences.message.targetGasLimit;
   if (!isGasLimitTargetCompatible(parentGasLimit, bidGasLimit, targetGasLimit)) {
@@ -229,18 +229,6 @@ async function validateExecutionPayloadBid(
       code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
       bidValue: bid.value,
       builderBalance: builder.balance,
-    });
-  }
-
-  // [REJECT] `bid.prev_randao` is the correct RANDAO mix -- i.e. validate that
-  // `bid.prev_randao == get_randao_mix(parent_state, get_current_epoch(parent_state))`.
-  const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));
-  if (!byteArrayEquals(bid.prevRandao, randaoMix)) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
-      code: ExecutionPayloadBidErrorCode.INVALID_PREV_RANDAO,
-      builderIndex: bid.builderIndex,
-      bidPrevRandao: toHex(bid.prevRandao),
-      expectedPrevRandao: toHex(randaoMix),
     });
   }
 

@@ -18,6 +18,7 @@ import {
   StateArchiveRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
+  TargetSyncBlockRepository,
   VoluntaryExitRepository,
 } from "./repositories/index.js";
 
@@ -58,6 +59,9 @@ export interface IBeaconDb {
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   backfilledRanges: BackfilledRanges;
+
+  /** Per-target ephemeral block spill store for TargetSync. */
+  targetSyncBlocks: TargetSyncBlockRepository;
 
   pruneHotDb(): Promise<void>;
 

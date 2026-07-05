@@ -344,7 +344,7 @@ export async function produceBlockBody<T extends BlockType>(
       blockHash: executionPayload.blockHash,
       prevRandao: currentState.getRandaoMix(currentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
-      gasLimit: executionPayload.gasLimit,
+      gasLimit: BigInt(executionPayload.gasLimit),
       builderIndex: BUILDER_INDEX_SELF_BUILD,
       slot: blockSlot,
       value: 0,

@@ -532,7 +532,7 @@ export function createLodestarMetrics(
 
     syncStatus: register.gauge({
       name: "lodestar_sync_status",
-      help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
+      help: "Sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
     syncPeersBySyncType: register.gauge<{syncType: PeerSyncType}>({
       name: "lodestar_sync_range_sync_peers",
@@ -704,6 +704,51 @@ export function createLodestarMetrics(
           help: "Total active requests in UnknownBlockSync peer balancer",
         }),
       },
+    },
+
+    // TargetSync (fulu+ sync engine, behind the `targetSync` flag)
+    targetSync: {
+      activeChains: register.gauge({
+        name: "lodestar_target_sync_active_chains",
+        help: "Count of active target chains in the TargetSync registry",
+      }),
+      dataFillUnexpectedErrorTotal: register.counter({
+        name: "lodestar_target_sync_data_fill_unexpected_error_total",
+        help: "Count of unexpected (non fetch/validation) errors deferred during TargetSync data fill",
+      }),
+      bootWipeRowsTotal: register.counter({
+        name: "lodestar_target_sync_boot_wipe_rows_total",
+        help: "Rows removed from the TargetSync spill bucket at boot (non-zero = previous process crashed mid-sync)",
+      }),
+      spillBytes: register.gauge({
+        name: "lodestar_target_sync_spill_bytes",
+        help: "Bytes currently spilled to disk across all TargetSync targets",
+      }),
+      targetsByState: register.gauge<{state: string}>({
+        name: "lodestar_target_sync_targets",
+        help: "Live TargetSync targets by FSM state",
+        labelNames: ["state"],
+      }),
+      targetsTerminalTotal: register.gauge<{result: string}>({
+        name: "lodestar_target_sync_targets_terminal_total",
+        help: "TargetSync targets that reached each terminal outcome",
+        labelNames: ["result"],
+      }),
+      walkHopsTotal: register.counter<{outcome: string}>({
+        name: "lodestar_target_sync_walk_hops_total",
+        help: "Backward-walk hops by outcome",
+        labelNames: ["outcome"],
+      }),
+      importStepsTotal: register.counter<{step: string}>({
+        name: "lodestar_target_sync_import_steps_total",
+        help: "Import steps by result",
+        labelNames: ["step"],
+      }),
+      fillTasks: register.gauge<{state: string}>({
+        name: "lodestar_target_sync_fill_tasks",
+        help: "FillPool tasks by state (active/queued/waiting)",
+        labelNames: ["state"],
+      }),
     },
 
     // Gossip sync committee

@@ -1,4 +1,4 @@
-import {BeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {ISignatureSet, getBlockProposerSignatureSet} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";
@@ -13,7 +13,7 @@ export type BackfillBlockHeader = {
 export type BackfillBlock = BackfillBlockHeader & {block: SignedBeaconBlock};
 
 export function verifyBlockSequence(
-  config: BeaconConfig,
+  config: ChainForkConfig,
   blocks: SignedBeaconBlock[],
   anchorRoot: Root
 ): {

@@ -212,10 +212,9 @@ export class BlockProposingService {
     const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
 
     const {broadcastValidation} = this.opts;
-
-    // Publish the block first so it propagates as soon as possible. This reduces the chance other nodes
-    // see the payload envelope before the block over gossip and have to queue it. There's also plenty of
-    // time left in the slot to propagate the payload, so publishing it in parallel is unnecessary.
+    // TODO GLOAS: we should be able to publish block and execution payload in parallel
+    // however for devnet-0 it's unclear if all clients have implemented queuing of the
+    // execution payload on gossip and might ignore it if the receive it before the block
     (
       await this.api.beacon
         .publishBlockV2({

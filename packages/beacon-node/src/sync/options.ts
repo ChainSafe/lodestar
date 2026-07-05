@@ -6,6 +6,8 @@ export type SyncOptions = {
    * Use only for local networks with a single node, can be dangerous in regular networks.
    */
   isSingleNode?: boolean;
+  /** Enable experimental TargetSync (fulu+ unified backward-walk sync). Off by default. */
+  targetSync?: boolean;
   /**
    * For RangeSync disable processing batches of blocks at once.
    * Should only be used for debugging or testing.
@@ -38,6 +40,7 @@ export type SyncOptions = {
 
 export const defaultSyncOptions: SyncOptions = {
   isSingleNode: false,
+  targetSync: false,
   disableProcessAsChainSegment: false,
   /** By default skip the backfill sync */
   backfillBatchSize: 0,

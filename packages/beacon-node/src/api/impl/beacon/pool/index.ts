@@ -9,7 +9,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
-import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
@@ -40,6 +40,25 @@ export function getBeaconPoolApi({
   network,
 }: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ApplicationMethods<routes.beacon.pool.Endpoints> {
   return {
+    async getPoolAttestations({slot, committeeIndex}) {
+      // Already filtered by slot
+      let attestations: Attestation[] = chain.aggregatedAttestationPool.getAll(slot);
+      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getPoolAttestationsV2 to retrieve pool attestations for post-electra fork=${fork}`
+        );
+      }
+
+      if (committeeIndex !== undefined) {
+        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
+      }
+
+      return {data: attestations};
+    },
+
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
@@ -115,6 +134,19 @@ export function getBeaconPoolApi({
       }
     },
 
+    async getPoolAttesterSlashings() {
+      const fork = chain.config.getForkName(chain.clock.currentSlot);
+
+      if (isForkPostElectra(fork)) {
+        throw new ApiError(
+          400,
+          `Use getPoolAttesterSlashingsV2 to retrieve pool attester slashings for post-electra fork=${fork}`
+        );
+      }
+
+      return {data: chain.opPool.getAllAttesterSlashings()};
+    },
+
     async getPoolAttesterSlashingsV2() {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
       return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: fork}};
@@ -130,6 +162,10 @@ export function getBeaconPoolApi({
 
     async getPoolBLSToExecutionChanges() {
       return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
+    },
+
+    async submitPoolAttestations({signedAttestations}) {
+      await this.submitPoolAttestationsV2({signedAttestations});
     },
 
     async submitPoolAttestationsV2({signedAttestations}) {
@@ -209,6 +245,10 @@ export function getBeaconPoolApi({
       if (failures.length > 0) {
         throw new IndexedError("Error processing attestations", failures);
       }
+    },
+
+    async submitPoolAttesterSlashings({attesterSlashing}) {
+      await this.submitPoolAttesterSlashingsV2({attesterSlashing});
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
