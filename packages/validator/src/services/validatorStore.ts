@@ -143,8 +143,6 @@ export const defaultOptions = {
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
   // should request fetching the locally produced block in blinded format
   blindedLocal: false,
-  // request full block contents from produceBlockV4 when self-building (stateless flow)
-  includePayload: true,
 };
 
 export const MAX_BUILDER_BOOST_FACTOR = 2n ** 64n - 1n;

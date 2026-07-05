@@ -66,7 +66,7 @@ export type ValidatorOptions = {
   distributed?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
-  includePayload?: boolean;
+  statelessBlockProduction?: boolean;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -257,7 +257,8 @@ export class Validator {
       {
         broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
         blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
-        includePayload: opts.includePayload ?? defaultOptions.includePayload,
+        // Default to stateless flow if multiple beacon nodes are configured to allow failover
+        statelessBlockProduction: opts.statelessBlockProduction ?? api.httpClient.urlsInits.length > 1,
       }
     );
 

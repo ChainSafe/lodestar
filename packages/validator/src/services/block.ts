@@ -39,7 +39,7 @@ type DebugLogCtx = {debugLogCtx: Record<string, string | boolean | undefined>};
 type BlockProposalOpts = {
   broadcastValidation: routes.beacon.BroadcastValidation;
   blindedLocal: boolean;
-  includePayload: boolean;
+  statelessBlockProduction: boolean;
 };
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -174,8 +174,8 @@ export class BlockProposingService {
    * 3. If self-building, sign and publish the execution payload envelope
    *    - Stateless (default): envelope and blobs are available from step 1, publish
    *      `SignedExecutionPayloadEnvelopeContents` which works via any beacon node
-   *    - Stateful (`includePayload=false`): fetch the envelope from the same beacon node
-   *      that produced the block, which attaches cached blobs and KZG proofs on publish
+   *    - Stateful (`statelessBlockProduction=false`): fetch the envelope from the same beacon
+   *      node that produced the block, which attaches cached blobs and KZG proofs on publish
    */
   private async createAndPublishBlockGloas(pubkey: BLSPubkey, slot: Slot): Promise<void> {
     const pubkeyHex = toPubkeyHex(pubkey);
@@ -185,9 +185,9 @@ export class BlockProposingService {
     const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
     const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
     const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
-    const {broadcastValidation, includePayload} = this.opts;
+    const {broadcastValidation, statelessBlockProduction} = this.opts;
 
-    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, includePayload});
+    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, statelessBlockProduction});
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
     // Step 1: Produce beacon block with execution payload bid
@@ -197,7 +197,7 @@ export class BlockProposingService {
         randaoReveal,
         graffiti,
         feeRecipient,
-        includePayload,
+        includePayload: statelessBlockProduction,
       })
       .catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
