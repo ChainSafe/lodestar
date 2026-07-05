@@ -50,6 +50,7 @@ Golang
 Gossipsub
 Grafana
 Grandine
+Gwei
 HTTPS
 HackMD
 Hashicorp
@@ -169,6 +170,7 @@ flamegraphs
 floodsub
 fsSL
 getNetworkIdentity
+gloas
 gnosis
 gpg
 heapdump
@@ -242,6 +244,7 @@ tcp
 testnet
 testnets
 todo
+trustless
 typesafe
 udp
 unpkg
