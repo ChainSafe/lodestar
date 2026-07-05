@@ -91,13 +91,17 @@ export class BuilderPreferencesService {
         if (builders.length === 0) continue;
 
         try {
+          // Collect submissions per duty and only add them to the batch if signing
+          // succeeded for all builders, else the duty is retried on the next tick
+          const dutySubmissions: routes.validator.BuilderPreferencesSubmissionList = [];
           for (const {url, maxExecutionPayment} of builders) {
             const auth = await this.validatorStore.getRequestAuth(duty.pubkey, url, duty.slot, slot);
-            submissions.push({
+            dutySubmissions.push({
               validatorPubkey: duty.pubkey,
               request: {preferences: {maxExecutionPayment}, auth},
             });
           }
+          submissions.push(...dutySubmissions);
           pending.push({submission, slot: duty.slot});
         } catch (e) {
           this.logger.error(
