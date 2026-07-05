@@ -45,6 +45,7 @@ Flamegraphs
 GPG
 Geth
 Github
+Gloas
 Goerli
 Golang
 Gossipsub
