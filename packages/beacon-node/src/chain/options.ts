@@ -48,6 +48,10 @@ export type IChainOptions = BlockProcessOpts &
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
     nativeStateView?: boolean;
+    /** Bid circuit breaker fault inspection window in slots */
+    faultInspectionWindow?: number;
+    /** Allowed unrevealed payloads within the fault inspection window */
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {

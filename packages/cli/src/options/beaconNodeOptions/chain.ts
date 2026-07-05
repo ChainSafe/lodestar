@@ -36,6 +36,8 @@ export type ChainArgs = {
   "chain.maxBlockStates"?: number;
   "chain.maxCPStateEpochsInMemory"?: number;
   "chain.maxCPStateEpochsOnDisk"?: number;
+  "circuitBreaker.faultInspectionWindow"?: number;
+  "circuitBreaker.allowedFaults"?: number;
 
   "chain.pruneHistory"?: boolean;
 };
@@ -78,6 +80,8 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
+    faultInspectionWindow: args["circuitBreaker.faultInspectionWindow"],
+    allowedFaults: args["circuitBreaker.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
   };
 }
@@ -323,6 +327,20 @@ Will double processing times. Use only for debugging purposes.",
     type: "number",
     default: defaultOptions.chain.maxCPStateEpochsOnDisk,
     group: "chain",
+  },
+
+  "circuitBreaker.faultInspectionWindow": {
+    type: "number",
+    description:
+      "Window in slots to inspect unrevealed payloads for enabling/disabling the bid circuit breaker (post-gloas)",
+    group: "circuitBreaker",
+  },
+
+  "circuitBreaker.allowedFaults": {
+    type: "number",
+    description:
+      "Number of unrevealed payloads allowed in the `faultInspectionWindow` for the bid circuit breaker (post-gloas)",
+    group: "circuitBreaker",
   },
 
   "chain.pruneHistory": {

@@ -1,7 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix} from "@lodestar/params";
+import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
 import {
   IBeaconStateView,
   IBeaconStateViewBellatrix,
@@ -152,12 +152,16 @@ export class PrepareNextSlotScheduler {
             updatedHead = proposerHead;
           }
 
-          // Update the builder status, if enabled shoot an api call to check status
-          this.chain.updateBuilderStatus(clockSlot);
-          if (this.chain.executionBuilder?.status === BuilderStatus.enabled) {
-            this.chain.executionBuilder.checkStatus().catch((e) => {
-              this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
-            });
+          if (isForkPostGloas(fork)) {
+            this.chain.bidCircuitBreaker.update(clockSlot);
+          } else {
+            // Update the builder status, if enabled shoot an api call to check status
+            this.chain.updateBuilderStatus(clockSlot);
+            if (this.chain.executionBuilder?.status === BuilderStatus.enabled) {
+              this.chain.executionBuilder.checkStatus().catch((e) => {
+                this.logger.error("Builder disabled as the check status api failed", {prepareSlot}, e as Error);
+              });
+            }
           }
         }
 

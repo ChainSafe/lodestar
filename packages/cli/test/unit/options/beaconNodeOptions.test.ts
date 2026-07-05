@@ -41,6 +41,8 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxCPStateEpochsInMemory": 100,
       "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.archiveMode": ArchiveMode.Frequency,
+      "circuitBreaker.faultInspectionWindow": 64,
+      "circuitBreaker.allowedFaults": 16,
       emitPayloadAttributes: false,
 
       "execution.urls": ["http://localhost:8551"],
@@ -143,6 +145,8 @@ describe("options / beaconNodeOptions", () => {
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
+        faultInspectionWindow: 64,
+        allowedFaults: 16,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],
