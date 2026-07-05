@@ -785,6 +785,23 @@ export function getBeaconBlockApi({
       let kzgProofs: deneb.KZGProofs | undefined;
 
       if (submittedContents !== null) {
+        // Validate submitted blob data against bid commitments before computing data column sidecars
+        const expectedBlobCount = chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.getVersionedHashes().length;
+        if (expectedBlobCount !== undefined) {
+          if (submittedContents.blobs.length !== expectedBlobCount) {
+            throw new ApiError(
+              400,
+              `Submitted blob count does not match bid commitments submitted=${submittedContents.blobs.length} expected=${expectedBlobCount}`
+            );
+          }
+          const expectedProofCount = expectedBlobCount * NUMBER_OF_COLUMNS;
+          if (submittedContents.kzgProofs.length !== expectedProofCount) {
+            throw new ApiError(
+              400,
+              `Submitted KZG proof count does not match bid commitments submitted=${submittedContents.kzgProofs.length} expected=${expectedProofCount}`
+            );
+          }
+        }
         if (submittedContents.blobs.length > 0) {
           // If the block was produced by this node, we will already have computed cells
           cells = cachedGloasResult?.cells ?? submittedContents.blobs.map((blob) => kzg.computeCells(blob));
