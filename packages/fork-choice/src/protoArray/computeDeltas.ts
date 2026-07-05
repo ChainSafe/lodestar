@@ -67,6 +67,26 @@ export function computeDeltas(
     currentIndex = voteCurrentIndices[vIndex];
     nextIndex = voteNextIndices[vIndex];
 
+    // Handle equivocating (attester-slashed) validators before the no-live-vote check so the sorted
+    // cursor always advances; a jammed cursor would skip the discount for higher-index equivocators.
+    if (vIndex === equivocatingValidatorIndex) {
+      // this function could be called multiple times but we only want to process slashing validator for 1 time
+      if (currentIndex !== NULL_VOTE_INDEX) {
+        if (currentIndex >= numProtoNodes) {
+          throw new ProtoArrayError({
+            code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
+            index: currentIndex,
+          });
+        }
+        oldBalance = oldBalances[vIndex] ?? 0;
+        deltas[currentIndex] -= oldBalance;
+      }
+      voteCurrentIndices[vIndex] = NULL_VOTE_INDEX;
+      equivocatingIndex++;
+      equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
+      continue;
+    }
+
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
     if (currentIndex === NULL_VOTE_INDEX && nextIndex === NULL_VOTE_INDEX) {
@@ -84,23 +104,6 @@ export function computeDeltas(
     // state to a new state with a higher epoch that is on a different fork because that fork may have
     // on-boarded fewer validators than the prior fork.
     newBalance = newBalances === oldBalances ? oldBalance : (newBalances[vIndex] ?? 0);
-
-    if (vIndex === equivocatingValidatorIndex) {
-      // this function could be called multiple times but we only want to process slashing validator for 1 time
-      if (currentIndex !== NULL_VOTE_INDEX) {
-        if (currentIndex >= numProtoNodes) {
-          throw new ProtoArrayError({
-            code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
-            index: currentIndex,
-          });
-        }
-        deltas[currentIndex] -= oldBalance;
-      }
-      voteCurrentIndices[vIndex] = NULL_VOTE_INDEX;
-      equivocatingIndex++;
-      equivocatingValidatorIndex = equivocatingArray[equivocatingIndex];
-      continue;
-    }
 
     if (oldBalance === 0 && newBalance === 0) {
       newInactiveValidators++;
