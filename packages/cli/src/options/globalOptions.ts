@@ -52,14 +52,14 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
     description: "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
     type: "string",
     example: {
-      description: `Options can be written as nested maps or dotted keys:
+      description: `Options can be written as nested maps or dotted keys
 
 \`\`\`yaml
 network: hoodi
 logLevel: debug
-metrics:
+metrics: # nested map
   enabled: true
-  port: 8008
+metrics.port: 8008 # dotted key
 \`\`\``,
     },
   },
