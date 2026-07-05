@@ -57,9 +57,9 @@ const globalSingleOptions: CliCommandOptions<GlobalSingleArgs> = {
 \`\`\`yaml
 network: hoodi
 logLevel: debug
-metrics: # nested map
+metrics:
   enabled: true
-metrics.port: 8008 # dotted key
+  port: 8008
 \`\`\``,
     },
   },
