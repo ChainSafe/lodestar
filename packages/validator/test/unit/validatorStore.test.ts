@@ -4,7 +4,9 @@ import {SecretKey} from "@chainsafe/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
-import {bellatrix} from "@lodestar/types";
+import {DOMAIN_REQUEST_AUTH} from "@lodestar/params";
+import {ZERO_HASH, computeDomain, computeSigningRoot} from "@lodestar/state-transition";
+import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
@@ -26,6 +28,11 @@ describe("ValidatorStore", () => {
           builder: {
             gasLimit: 45000000,
             selection: routes.validator.BuilderSelection.ExecutionOnly,
+            maxExecutionPayment: BigInt(1),
+            builders: {
+              "https://builder.example.com": {maxExecutionPayment: BigInt(100)},
+              "https://other-builder.example.com": {},
+            },
           },
         },
       },
@@ -35,6 +42,10 @@ describe("ValidatorStore", () => {
         feeRecipient: "0xcccccccccccccccccccccccccccccccccccccccc",
         builder: {
           gasLimit: 35000000,
+          maxExecutionPayment: BigInt(5),
+          builders: {
+            "https://default-builder.example.com": {},
+          },
         },
       },
     };
@@ -88,6 +99,50 @@ describe("ValidatorStore", () => {
       expect(JSON.stringify(val2)).toEqual(JSON.stringify(valReg));
       expect(validatorStore.signValidatorRegistration).toHaveBeenCalledOnce();
     }
+  });
+
+  it("Should resolve registered builders with per-builder preferences", () => {
+    // per-builder value wins, missing value falls back to the per-key maxExecutionPayment
+    expect(validatorStore.getRegisteredBuilders(toHexString(pubkeys[0]))).toEqual([
+      {url: "https://builder.example.com", maxExecutionPayment: BigInt(100)},
+      {url: "https://other-builder.example.com", maxExecutionPayment: BigInt(1)},
+    ]);
+
+    // default values
+    expect(validatorStore.getRegisteredBuilders(toHexString(pubkeys[1]))).toEqual([
+      {url: "https://default-builder.example.com", maxExecutionPayment: BigInt(5)},
+    ]);
+  });
+
+  it("Should sign request auth with fork-independent domain", async () => {
+    const builderUrl = "https://builder.example.com";
+    const proposalSlot = 10;
+
+    const signedRequestAuth = await validatorStore.signRequestAuth(pubkeys[0], builderUrl, proposalSlot);
+
+    expect(Buffer.from(signedRequestAuth.message.data).toString("utf8")).toBe(builderUrl);
+    expect(signedRequestAuth.message.slot).toBe(proposalSlot);
+
+    const domain = computeDomain(DOMAIN_REQUEST_AUTH, chainConfig.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.gloas.RequestAuthV1, signedRequestAuth.message, domain);
+    expect(toHexString(signedRequestAuth.signature)).toBe(toHexString(secretKeys[0].sign(signingRoot).toBytes()));
+  });
+
+  it("Should cache request auths and prune auths for past proposal slots", async () => {
+    const builderUrl = "https://builder.example.com";
+    vi.spyOn(validatorStore, "signRequestAuth");
+
+    const auth1 = await validatorStore.getRequestAuth(pubkeys[0], builderUrl, 10, 5);
+    const auth2 = await validatorStore.getRequestAuth(pubkeys[0], builderUrl, 10, 5);
+    expect(auth2).toBe(auth1);
+    expect(validatorStore.signRequestAuth).toHaveBeenCalledOnce();
+
+    // Signing for a later proposal slot prunes the auth for the now-past slot 10
+    await validatorStore.getRequestAuth(pubkeys[0], builderUrl, 20, 15);
+    expect(validatorStore.signRequestAuth).toHaveBeenCalledTimes(2);
+
+    await validatorStore.getRequestAuth(pubkeys[0], builderUrl, 10, 15);
+    expect(validatorStore.signRequestAuth).toHaveBeenCalledTimes(3);
   });
 });
 

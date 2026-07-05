@@ -1905,6 +1905,35 @@ export function createLodestarMetrics(
       }),
     },
 
+    gloasBuilder: {
+      bidRequests: register.counter({
+        name: "lodestar_gloas_builder_bid_requests_total",
+        help: "Total count of execution payload bid requests sent to external builders",
+      }),
+      bidRequestErrors: register.counter({
+        name: "lodestar_gloas_builder_bid_request_errors_total",
+        help: "Total count of failed execution payload bid requests to external builders",
+      }),
+      bidsReceived: register.counter({
+        name: "lodestar_gloas_builder_bids_received_total",
+        help: "Total count of execution payload bids received from external builders",
+      }),
+      bidsDiscarded: register.counter({
+        name: "lodestar_gloas_builder_bids_discarded_total",
+        help: "Total count of execution payload bids from external builders discarded due to failed validation",
+      }),
+      blockSubmissions: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_gloas_builder_block_submissions_total",
+        help: "Total count of signed beacon blocks submitted to external builders",
+        labelNames: ["status"],
+      }),
+      preferencesForwarded: register.counter<{status: "success" | "error"}>({
+        name: "lodestar_gloas_builder_preferences_forwarded_total",
+        help: "Total count of builder preferences forwarded to external builders",
+        labelNames: ["status"],
+      }),
+    },
+
     db: {
       dbReadReq: register.gauge<{bucket: string}>({
         name: "lodestar_db_read_req_total",

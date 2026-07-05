@@ -48,6 +48,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     builder?: boolean;
     "builder.selection"?: string;
     "builder.boostFactor"?: string;
+    "builder.urls"?: string[];
+    "builder.maxExecutionPayment"?: string;
 
     /** @deprecated */
     useProduceBlockV3?: boolean;
@@ -271,6 +273,22 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
     defaultDescription: `${defaultOptions.builderBoostFactor}`,
+    group: "builder",
+  },
+
+  "builder.urls": {
+    description: "URL(s) of external builders to request execution payload bids from. Only used post gloas.",
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] => urls.flatMap((url) => url.split(",")),
+    group: "builder",
+  },
+
+  "builder.maxExecutionPayment": {
+    type: "string",
+    description:
+      "Maximum execution layer payment (in Gwei) the proposer will accept from a builder. A value of 0 means only trustless payments via the builder's staked collateral are accepted. Only used post gloas.",
+    defaultDescription: `${defaultOptions.maxExecutionPayment}`,
     group: "builder",
   },
 

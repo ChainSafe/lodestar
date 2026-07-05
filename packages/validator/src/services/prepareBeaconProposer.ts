@@ -77,6 +77,10 @@ export function pollBuilderValidatorRegistration(
 
     // Before bellatrix we don't need to update this data on bn/builder
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
+
+    // Validator registrations are deprecated post-gloas, fee recipient and gas limit are
+    // communicated via the proposer_preferences gossip topic instead
+    if (epoch >= config.GLOAS_FORK_EPOCH) return;
     const slot = epoch * SLOTS_PER_EPOCH;
 
     // registerValidator is not as time sensitive as attesting.

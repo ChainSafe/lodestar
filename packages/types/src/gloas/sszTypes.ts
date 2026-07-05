@@ -14,6 +14,7 @@ import {
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
   MAX_BYTES_PER_TRANSACTION,
+  MAX_DATA_SIZE,
   MAX_PAYLOAD_ATTESTATIONS,
   MIN_SEED_LOOKAHEAD,
   NUMBER_OF_COLUMNS,
@@ -203,6 +204,39 @@ export const SignedExecutionPayloadBid = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
+);
+
+// Builder API types (builder-specs)
+
+export const RequestAuthV1 = new ContainerType(
+  {
+    data: new ByteListType(MAX_DATA_SIZE),
+    slot: Slot,
+  },
+  {typeName: "RequestAuthV1", jsonCase: "eth2"}
+);
+
+export const SignedRequestAuthV1 = new ContainerType(
+  {
+    message: RequestAuthV1,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedRequestAuthV1", jsonCase: "eth2"}
+);
+
+export const BuilderPreferencesV1 = new ContainerType(
+  {
+    maxExecutionPayment: Gwei,
+  },
+  {typeName: "BuilderPreferencesV1", jsonCase: "eth2"}
+);
+
+export const BuilderPreferencesRequestV1 = new ContainerType(
+  {
+    preferences: BuilderPreferencesV1,
+    auth: SignedRequestAuthV1,
+  },
+  {typeName: "BuilderPreferencesRequestV1", jsonCase: "eth2"}
 );
 
 export const BlockAccessList = new ByteListType(MAX_BYTES_PER_TRANSACTION);

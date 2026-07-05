@@ -228,6 +228,16 @@ export const LivenessResponseDataType = new ContainerType(
   {jsonCase: "eth2"}
 );
 
+export const BuilderPreferencesSubmissionType = new ContainerType(
+  {
+    /** The BLS public key of the validator expressing these preferences */
+    validatorPubkey: ssz.BLSPubkey,
+    /** Preferences and auth to be submitted to the builder identified by `request.auth.message.data` */
+    request: ssz.gloas.BuilderPreferencesRequestV1,
+  },
+  {jsonCase: "eth2"}
+);
+
 export const ValidatorIndicesType = ArrayOf(ssz.ValidatorIndex);
 export const AttesterDutyListType = ArrayOf(AttesterDutyType);
 export const ProposerDutyListType = ArrayOf(ProposerDutyType);
@@ -246,6 +256,7 @@ export const SignedValidatorRegistrationV1ListType = ArrayOf(
   ssz.bellatrix.SignedValidatorRegistrationV1,
   VALIDATOR_REGISTRY_LIMIT
 );
+export const BuilderPreferencesSubmissionListType = ArrayOf(BuilderPreferencesSubmissionType, VALIDATOR_REGISTRY_LIMIT);
 
 export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
 export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
@@ -273,6 +284,8 @@ export type SyncCommitteeSelectionList = ValueOf<typeof SyncCommitteeSelectionLi
 export type LivenessResponseData = ValueOf<typeof LivenessResponseDataType>;
 export type LivenessResponseDataList = ValueOf<typeof LivenessResponseDataListType>;
 export type SignedValidatorRegistrationV1List = ValueOf<typeof SignedValidatorRegistrationV1ListType>;
+export type BuilderPreferencesSubmission = ValueOf<typeof BuilderPreferencesSubmissionType>;
+export type BuilderPreferencesSubmissionList = ValueOf<typeof BuilderPreferencesSubmissionListType>;
 
 export type Endpoints = {
   /**
@@ -642,6 +655,23 @@ export type Endpoints = {
   registerValidator: Endpoint<
     "POST",
     {registrations: SignedValidatorRegistrationV1List},
+    {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Submit per-builder preferences to be forwarded to external builders
+   *
+   * The beacon node forwards each request to the builder identified by `request.auth.message.data`
+   * and caches the auth to authenticate bid requests at proposal time.
+   *
+   * Note: this is a Lodestar-specific (non-standardized) endpoint,
+   * see https://github.com/ethereum/beacon-APIs/issues/600
+   */
+  submitBuilderPreferences: Endpoint<
+    "POST",
+    {submissions: BuilderPreferencesSubmissionList},
     {body: unknown},
     EmptyResponseData,
     EmptyMeta
@@ -1201,6 +1231,23 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqJson: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.fromJson(body)}),
         writeReqSsz: ({registrations}) => ({body: SignedValidatorRegistrationV1ListType.serialize(registrations)}),
         parseReqSsz: ({body}) => ({registrations: SignedValidatorRegistrationV1ListType.deserialize(body)}),
+        schema: {
+          body: Schema.ObjectArray,
+        },
+      },
+      resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
+      },
+    },
+    submitBuilderPreferences: {
+      url: "/eth/v1/validator/builder_preferences",
+      method: "POST",
+      req: {
+        writeReqJson: ({submissions}) => ({body: BuilderPreferencesSubmissionListType.toJson(submissions)}),
+        parseReqJson: ({body}) => ({submissions: BuilderPreferencesSubmissionListType.fromJson(body)}),
+        writeReqSsz: ({submissions}) => ({body: BuilderPreferencesSubmissionListType.serialize(submissions)}),
+        parseReqSsz: ({body}) => ({submissions: BuilderPreferencesSubmissionListType.deserialize(body)}),
         schema: {
           body: Schema.ObjectArray,
         },

@@ -14,7 +14,7 @@ import {BeaconRestApiServer, getApi} from "../api/index.js";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain/index.js";
 import {ValidatorMonitor, createValidatorMonitor} from "../chain/validatorMonitor.js";
 import {IBeaconDb} from "../db/index.js";
-import {initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
+import {GloasExecutionBuilder, initializeExecutionBuilder, initializeExecutionEngine} from "../execution/index.js";
 import {HttpMetricsServer, Metrics, createMetrics, getHttpMetricsServer} from "../metrics/index.js";
 import {MonitoringService} from "../monitoring/index.js";
 import {Network, getReqRespHandlers} from "../network/index.js";
@@ -258,6 +258,12 @@ export class BeaconNode {
       executionBuilder: opts.executionBuilder.enabled
         ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
         : undefined,
+      gloasExecutionBuilder: new GloasExecutionBuilder(
+        {timeout: opts.executionBuilder.timeout, userAgent: opts.executionBuilder.userAgent},
+        config,
+        metrics,
+        logger
+      ),
     });
 
     // Load persisted data from disk to in-memory caches

@@ -5,6 +5,7 @@ import {ExecutionBuilderHttp, ExecutionBuilderHttpOpts, defaultExecutionBuilderH
 import {IExecutionBuilder} from "./interface.js";
 
 export {ExecutionBuilderHttp, defaultExecutionBuilderHttpOpts};
+export * from "./gloas.js";
 
 export type ExecutionBuilderOpts = {mode?: "http"} & ExecutionBuilderHttpOpts;
 export const defaultExecutionBuilderOpts: ExecutionBuilderOpts = defaultExecutionBuilderHttpOpts;

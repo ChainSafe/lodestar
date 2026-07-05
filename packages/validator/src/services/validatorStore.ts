@@ -12,10 +12,12 @@ import {
   DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
+  DOMAIN_REQUEST_AUTH,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   ForkSeq,
+  MAX_DATA_SIZE,
 } from "@lodestar/params";
 import {
   ZERO_HASH,
@@ -75,6 +77,12 @@ export type SignerRemote = {
   pubkey: PubkeyHex;
 };
 
+/** Per-builder preferences for external builders (gloas builder api) */
+export type BuilderPreferences = {
+  /** Max execution layer payment (in Gwei) the proposer will accept from this builder */
+  maxExecutionPayment?: bigint;
+};
+
 type DefaultProposerConfig = {
   graffiti?: string;
   strictFeeRecipientCheck: boolean;
@@ -83,6 +91,8 @@ type DefaultProposerConfig = {
     gasLimit: number;
     selection: routes.validator.BuilderSelection;
     boostFactor: bigint;
+    maxExecutionPayment: bigint;
+    builders: Record<string, BuilderPreferences>;
   };
 };
 
@@ -94,6 +104,9 @@ export type ProposerConfig = {
     gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
     boostFactor?: bigint;
+    maxExecutionPayment?: bigint;
+    /** External builders to request bids from, keyed by builder url (gloas builder api) */
+    builders?: Record<string, BuilderPreferences>;
   };
 };
 
@@ -131,6 +144,8 @@ export type Signer = SignerLocal | SignerRemote;
 type ValidatorData = ProposerConfig & {
   signer: Signer;
   builderData?: BuilderData;
+  /** Pre-signed request auths for upcoming proposal slots, keyed by `${proposalSlot}-${builderUrl}` */
+  requestAuths?: Map<string, gloas.SignedRequestAuthV1>;
 };
 
 export const defaultOptions = {
@@ -139,6 +154,8 @@ export const defaultOptions = {
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
   builderBoostFactor: BigInt(100),
+  // Do not accept execution payments by default, all payments must use the trustless on-chain mechanism
+  maxExecutionPayment: BigInt(0),
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
   // should request fetching the locally produced block in blinded format
@@ -184,6 +201,8 @@ export class ValidatorStore {
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
         selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
         boostFactor: builderBoostFactor,
+        maxExecutionPayment: defaultConfig.builder?.maxExecutionPayment ?? defaultOptions.maxExecutionPayment,
+        builders: defaultConfig.builder?.builders ?? {},
       },
     };
 
@@ -854,6 +873,82 @@ export class ValidatorStore {
       this.validators.set(pubkeyHex, validatorData);
     }
     return validatorRegistration;
+  }
+
+  /** External builders to request bids from with resolved per-builder preferences (gloas builder api) */
+  getRegisteredBuilders(pubkeyHex: PubkeyHex): {url: string; maxExecutionPayment: bigint}[] {
+    const validatorBuilder = this.validators.get(pubkeyHex)?.builder;
+    const builders = validatorBuilder?.builders ?? this.defaultProposerConfig.builder.builders;
+    const defaultMaxExecutionPayment =
+      validatorBuilder?.maxExecutionPayment ?? this.defaultProposerConfig.builder.maxExecutionPayment;
+
+    return Object.entries(builders).map(([url, preferences]) => ({
+      url,
+      maxExecutionPayment: preferences.maxExecutionPayment ?? defaultMaxExecutionPayment,
+    }));
+  }
+
+  async signRequestAuth(
+    pubkeyMaybeHex: BLSPubkeyMaybeHex,
+    builderUrl: string,
+    proposalSlot: Slot
+  ): Promise<gloas.SignedRequestAuthV1> {
+    const data = Buffer.from(builderUrl, "utf8");
+    if (data.length > MAX_DATA_SIZE) {
+      throw Error(`Builder url exceeds MAX_DATA_SIZE=${MAX_DATA_SIZE} bytes: ${builderUrl}`);
+    }
+
+    const message: gloas.RequestAuthV1 = {data, slot: proposalSlot};
+
+    const signingSlot = proposalSlot;
+    const domain = computeDomain(DOMAIN_REQUEST_AUTH, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.gloas.RequestAuthV1, message, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.REQUEST_AUTH,
+      data: message,
+    };
+
+    return {
+      message,
+      signature: await this.getSignature(pubkeyMaybeHex, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  /**
+   * Return a pre-signed request auth for the builder and proposal slot, or sign and cache a new one.
+   * Signing happens off the block proposal hot path, cached auths can be used just-in-time when
+   * requesting bids at proposal time.
+   */
+  async getRequestAuth(
+    pubkeyMaybeHex: BLSPubkeyMaybeHex,
+    builderUrl: string,
+    proposalSlot: Slot,
+    currentSlot: Slot
+  ): Promise<gloas.SignedRequestAuthV1> {
+    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);
+    const authKey = `${proposalSlot}-${builderUrl}`;
+    const validatorData = this.validators.get(pubkeyHex);
+    const cached = validatorData?.requestAuths?.get(authKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const signedRequestAuth = await this.signRequestAuth(pubkeyMaybeHex, builderUrl, proposalSlot);
+
+    if (validatorData !== undefined) {
+      const requestAuths = validatorData.requestAuths ?? new Map<string, gloas.SignedRequestAuthV1>();
+      // Prune auths for proposal slots that are already in the past
+      for (const key of requestAuths.keys()) {
+        if (Number(key.slice(0, key.indexOf("-"))) < currentSlot) {
+          requestAuths.delete(key);
+        }
+      }
+      requestAuths.set(authKey, signedRequestAuth);
+      validatorData.requestAuths = requestAuths;
+    }
+
+    return signedRequestAuth;
   }
 
   private async getSignature(

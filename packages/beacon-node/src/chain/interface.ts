@@ -23,7 +23,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {GloasExecutionBuilder, IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
@@ -96,6 +96,7 @@ export interface IBeaconChain {
   readonly earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
+  readonly gloasExecutionBuilder: GloasExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;

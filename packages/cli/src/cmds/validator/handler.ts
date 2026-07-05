@@ -28,7 +28,12 @@ import {
   parseLoggerArgs,
   parseProposerConfig,
 } from "../../util/index.js";
-import {parseBuilderBoostFactor, parseBuilderSelection} from "../../util/proposerConfig.js";
+import {
+  parseBuilderBoostFactor,
+  parseBuilderSelection,
+  parseBuilderUrls,
+  parseMaxExecutionPayment,
+} from "../../util/proposerConfig.js";
 import {getVersionData} from "../../util/version.js";
 import {KeymanagerApi} from "./keymanager/impl.js";
 import {IPersistedKeysBackend} from "./keymanager/interface.js";
@@ -249,6 +254,8 @@ function getProposerConfigFromArgs(
         args["builder.selection"] ?? (args.builder ? defaultOptions.builderAliasSelection : undefined)
       ),
       boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
+      maxExecutionPayment: parseMaxExecutionPayment(args["builder.maxExecutionPayment"]),
+      builders: parseBuilderUrls(args["builder.urls"]),
     },
   };
 

@@ -17,6 +17,8 @@ type ProposerConfigFileSection = {
     gas_limit?: number;
     selection?: routes.validator.BuilderSelection;
     boost_factor?: bigint;
+    max_execution_payment?: string;
+    builders?: {[url: string]: {max_execution_payment?: string} | null};
   };
 };
 
@@ -54,7 +56,7 @@ function parseProposerConfigSection(
   overrideConfig?: ProposerConfig
 ): ProposerConfig {
   const {graffiti, strict_fee_recipient_check, fee_recipient, builder} = proposerFileSection;
-  const {gas_limit, selection: builderSelection, boost_factor} = builder || {};
+  const {gas_limit, selection: builderSelection, boost_factor, max_execution_payment, builders} = builder || {};
 
   if (graffiti !== undefined && typeof graffiti !== "string") {
     throw Error("graffiti is not 'string");
@@ -92,9 +94,25 @@ function parseProposerConfigSection(
             gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
             selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
             boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
+            maxExecutionPayment:
+              overrideConfig?.builder?.maxExecutionPayment ?? parseMaxExecutionPayment(max_execution_payment),
+            builders: overrideConfig?.builder?.builders ?? parseBuilders(builders),
           }
         : undefined,
   };
+}
+
+function parseBuilders(builders?: {
+  [url: string]: {max_execution_payment?: string} | null;
+}): Record<string, {maxExecutionPayment?: bigint}> | undefined {
+  if (builders === undefined) return undefined;
+
+  const parsed: Record<string, {maxExecutionPayment?: bigint}> = {};
+  for (const [url, preferences] of Object.entries(builders)) {
+    parseBuilderUrl(url);
+    parsed[url] = {maxExecutionPayment: parseMaxExecutionPayment(preferences?.max_execution_payment)};
+  }
+  return parsed;
 }
 
 export function readProposerConfigDir(filepath: string, filename: string): ProposerConfigFileSection {
@@ -133,4 +151,33 @@ export function parseBuilderBoostFactor(boostFactor?: string): bigint | undefine
   }
 
   return BigInt(boostFactor);
+}
+
+export function parseMaxExecutionPayment(maxExecutionPayment?: string): bigint | undefined {
+  if (maxExecutionPayment === undefined) return;
+
+  if (!/^\d+$/.test(maxExecutionPayment)) {
+    throw Error("Invalid input for max execution payment, must be a valid number in Gwei without decimals");
+  }
+
+  return BigInt(maxExecutionPayment);
+}
+
+export function parseBuilderUrls(urls?: string[]): Record<string, {maxExecutionPayment?: bigint}> | undefined {
+  if (urls === undefined) return undefined;
+
+  const builders: Record<string, {maxExecutionPayment?: bigint}> = {};
+  for (const url of urls) {
+    builders[parseBuilderUrl(url)] = {};
+  }
+  return builders;
+}
+
+function parseBuilderUrl(url: string): string {
+  try {
+    new URL(url);
+  } catch {
+    throw Error(`Invalid builder url: ${url}`);
+  }
+  return url;
 }

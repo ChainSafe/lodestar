@@ -50,6 +50,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {
+  GWEI_TO_WEI,
   TimeoutError,
   defer,
   formatWeiToEth,
@@ -57,6 +58,7 @@ import {
   prettyWeiToEth,
   resolveOrRacePromises,
   toHex,
+  toPrintableUrl,
   toRootHex,
 } from "@lodestar/utils";
 import {MAX_BUILDER_BOOST_FACTOR} from "@lodestar/validator";
@@ -73,6 +75,7 @@ import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
+import {validateBuilderApiExecutionPayloadBid} from "../../../chain/validation/executionPayloadBid.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
@@ -88,7 +91,12 @@ import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
+import {
+  computeSubnetForCommitteesAtSlot,
+  effectiveBidValueGwei,
+  getPubkeysForIndices,
+  selectBlockProductionSource,
+} from "./utils.js";
 
 /**
  * If the node is within this many epochs from the head, we declare it to be synced regardless of
@@ -904,7 +912,7 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient}) {
+    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, builderSelection, builderBoostFactor}) {
       const fork = config.getForkName(slot);
 
       if (!isForkPostGloas(fork)) {
@@ -924,27 +932,19 @@ export function getValidatorApi(
         graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
       );
 
-      // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
-      // the user control bid source preferences and value comparison. Also add external builder api
-      // support when it is implemented.
+      builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
+      builderBoostFactor = builderBoostFactor ?? BigInt(100);
+      if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+        throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+      }
+
+      // External bids from the p2p network and the builder api are treated uniformly as the
+      // builder source, builderSelection and builderBoostFactor apply vs the local self-build
+      const isBuilderEnabled = builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
+      const isEngineEnabled = builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
+
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-
-      const logCtx = {
-        slot,
-        parentSlot,
-        parentBlockRoot: parentBlockRootHex,
-        parentBlockHash: parentBlock.executionPayloadBlockHash,
-        fork,
-        ...(builderBid !== null
-          ? {
-              bidValue: builderBid.message.value,
-              builderIndex: builderBid.message.builderIndex,
-              bidBlockHash: toRootHex(builderBid.message.blockHash),
-            }
-          : {}),
-      };
 
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
         slot,
@@ -962,43 +962,149 @@ export function getValidatorApi(
         commonBlockBodyPromise,
       };
 
-      metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
-      if (builderBid !== null) {
-        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
-      }
-
       const timed = <T>(source: ProducedBlockSource, fn: () => Promise<T>): Promise<T> => {
         const t = metrics?.blockProductionTime.startTimer();
         return fn().finally(() => t?.({source}));
       };
 
-      // Always build local block. If builder bid available, also build with it in parallel and prefer it.
+      // Start local block production immediately, external bids are fetched in parallel
+      let enginePromise: ReturnType<typeof chain.produceBlock> | null = null;
+      if (isEngineEnabled) {
+        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
+        enginePromise = timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs));
+        // Rejections are handled after the external bid fetch via Promise.allSettled
+        enginePromise.catch(() => {});
+      }
+
+      let bestBid: {
+        signedBid: gloas.SignedExecutionPayloadBid;
+        effectiveValueGwei: bigint;
+        builderUrl?: string;
+      } | null = null;
+
+      if (isBuilderEnabled) {
+        const p2pBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+        if (p2pBid !== null) {
+          bestBid = {signedBid: p2pBid, effectiveValueGwei: BigInt(p2pBid.message.value)};
+        }
+
+        if (bidParentBlockHash !== null) {
+          const state = await chain.regen.getBlockSlotState(
+            parentBlock,
+            slot,
+            {dontTransferCache: true},
+            RegenCaller.produceBlock
+          );
+          const proposerIndex = state.getBeaconProposer(slot);
+          const proposerPubkey = chain.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+
+          if (chain.gloasExecutionBuilder.hasRegisteredBuilders(slot, proposerPubkey)) {
+            const expectedFeeRecipient = feeRecipient ?? chain.beaconProposerCache.getOrDefault(proposerIndex);
+            const builderApiBids = await chain.gloasExecutionBuilder.getExecutionPayloadBids(
+              slot,
+              fromHex(bidParentBlockHash),
+              parentBlockRoot,
+              proposerPubkey
+            );
+
+            for (const {url, maxExecutionPayment, signedBid} of builderApiBids) {
+              try {
+                await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
+                  slot,
+                  state,
+                  parentBlock,
+                  parentBlockHashHex: bidParentBlockHash,
+                  expectedFeeRecipient,
+                  maxExecutionPayment,
+                });
+              } catch (e) {
+                metrics?.gloasBuilder.bidsDiscarded.inc();
+                logger.warn(
+                  "Discarded builder api bid",
+                  {slot, builder: toPrintableUrl(url), builderIndex: signedBid.message.builderIndex},
+                  e as Error
+                );
+                continue;
+              }
+
+              const effectiveValueGwei = effectiveBidValueGwei(signedBid.message, maxExecutionPayment);
+              if (bestBid === null || effectiveValueGwei > bestBid.effectiveValueGwei) {
+                bestBid = {signedBid, effectiveValueGwei, builderUrl: url};
+              }
+            }
+          }
+        }
+      }
+
+      const logCtx = {
+        slot,
+        parentSlot,
+        parentBlockRoot: parentBlockRootHex,
+        parentBlockHash: parentBlock.executionPayloadBlockHash,
+        fork,
+        ...(bestBid !== null
+          ? {
+              bidSource: bestBid.builderUrl !== undefined ? toPrintableUrl(bestBid.builderUrl) : "p2p",
+              bidValue: bestBid.signedBid.message.value,
+              bidExecutionPayment: bestBid.signedBid.message.executionPayment,
+              builderIndex: bestBid.signedBid.message.builderIndex,
+              bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
+            }
+          : {}),
+      };
+
+      let bidPromise: ReturnType<typeof chain.produceBlock> | null = null;
+      if (bestBid !== null) {
+        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
+        const builderBid = bestBid.signedBid;
+        bidPromise = timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}));
+      }
+
       const [engineResult, bidResult] = await Promise.allSettled([
-        timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs)),
-        builderBid !== null
-          ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}))
-          : Promise.reject(),
+        enginePromise ?? Promise.reject(Error("Engine disabled via builderSelection")),
+        bidPromise ?? Promise.reject(Error("No external bid available")),
       ]);
 
       let bestResult: typeof engineResult | null = null;
       let source: ProducedBlockSource = ProducedBlockSource.engine;
-      if (builderBid !== null && bidResult.status === "fulfilled") {
+      if (bestBid !== null && bidResult.status === "fulfilled" && engineResult.status === "fulfilled") {
+        ({source} = selectBlockProductionSource({
+          builderSelection,
+          builderBoostFactor,
+          engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
+          builderExecutionPayloadValue: bestBid.effectiveValueGwei * GWEI_TO_WEI,
+        }));
+        bestResult = source === ProducedBlockSource.builder ? bidResult : engineResult;
+        logger.info(`Selected ${source === ProducedBlockSource.builder ? "builder bid" : "local"} block`, logCtx);
+      } else if (bidResult.status === "fulfilled") {
         source = ProducedBlockSource.builder;
         bestResult = bidResult;
-        logger.info("Selected builder bid block", logCtx);
+        if (isEngineEnabled) {
+          logger.warn("Local block production failed, using builder bid block", logCtx);
+        } else {
+          logger.info("Selected builder bid block", logCtx);
+        }
       } else if (engineResult.status === "fulfilled") {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
-        if (builderBid !== null) {
+        if (bestBid !== null) {
           logger.warn("Builder bid block production failed, using local block", logCtx);
         }
       }
 
       if (bestResult === null || bestResult.status !== "fulfilled") {
         const engineReason = engineResult.status === "rejected" ? engineResult.reason : undefined;
-        const bidReason = builderBid !== null && bidResult.status === "rejected" ? bidResult.reason : undefined;
+        const bidReason = bidResult.status === "rejected" ? bidResult.reason : undefined;
         logger.error("Block production failed", {...logCtx, engineReason, bidReason});
         throw Error(`Block production failed: engine=${engineReason ?? "n/a"} builder=${bidReason ?? "n/a"}`);
+      }
+
+      // Route the signed block back to the winning builder at publish time
+      if (source === ProducedBlockSource.builder && bestBid?.builderUrl !== undefined) {
+        chain.gloasExecutionBuilder.recordBidSource(slot, {
+          url: bestBid.builderUrl,
+          bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
+        });
       }
 
       const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
@@ -1763,6 +1869,29 @@ export function getValidatorApi(
         epoch: currentEpoch,
         count: filteredRegistrations.length,
       });
+    },
+
+    async submitBuilderPreferences({submissions}) {
+      const failures: FailureList = [];
+
+      await Promise.all(
+        submissions.map(async ({validatorPubkey, request}, i) => {
+          const slot = request.auth.message.slot;
+          try {
+            if (!isForkPostGloas(config.getForkName(slot))) {
+              throw Error(`Builder preferences not supported for pre-gloas slot=${slot}`);
+            }
+            await chain.gloasExecutionBuilder.submitBuilderPreferences(validatorPubkey, request);
+          } catch (e) {
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitBuilderPreferences [${i}]`, {slot}, e as Error);
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing builder preferences", failures);
+      }
     },
 
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {

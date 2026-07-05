@@ -33,7 +33,7 @@ import {
   isDenebBlockContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {fromHex, sleep, toHex, toPrintableUrl, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -95,7 +95,7 @@ export function getBeaconBlockApi({
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
   const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation},
-    _context,
+    context,
     opts: PublishBlockOpts = {}
   ) => {
     const seenTimestampSec = Date.now() / 1000;
@@ -313,6 +313,17 @@ export function getBeaconBlockApi({
     metrics?.gossipBlock.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
     chain.validatorMonitor?.registerBeaconBlock(OpSource.api, delaySec, signedBlock.message);
 
+    // If the included bid was sourced from the builder api, the signed block must be routed
+    // back to the winning builder which then broadcasts the execution payload envelope
+    const bidSource = isForkPostGloas(fork) ? chain.gloasExecutionBuilder.getBidSource(slot) : undefined;
+    const winningBuilder =
+      bidSource !== undefined &&
+      toRootHex(
+        (signedBlock as SignedBeaconBlock<ForkPostGloas>).message.body.signedExecutionPayloadBid.message.blockHash
+      ) === bidSource.bidBlockHash
+        ? bidSource
+        : undefined;
+
     chain.logger.info("Publishing block", valLogMeta);
     const publishPromises = [
       // Send the block, regardless of whether or not it is valid. The API
@@ -325,6 +336,31 @@ export function getBeaconBlockApi({
       //        import latency and hopefully bandwidth
       //
       () => network.publishBeaconBlock(signedBlock),
+      // Submission failures are not fatal to block publishing, builders can also see the block on gossip
+      ...(winningBuilder !== undefined
+        ? [
+            () =>
+              chain.gloasExecutionBuilder
+                .submitSignedBeaconBlock(winningBuilder.url, {
+                  data: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                  bytes: context?.sszBytes,
+                })
+                .then(() => {
+                  chain.logger.info("Submitted signed block to builder", {
+                    slot,
+                    blockRoot,
+                    builder: toPrintableUrl(winningBuilder.url),
+                  });
+                })
+                .catch((e) => {
+                  chain.logger.error(
+                    "Failed to submit signed block to builder",
+                    {slot, blockRoot, builder: toPrintableUrl(winningBuilder.url)},
+                    e as Error
+                  );
+                }),
+          ]
+        : []),
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
       ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
       () =>

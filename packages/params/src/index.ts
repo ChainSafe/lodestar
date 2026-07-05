@@ -179,6 +179,7 @@ export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
  */
 export const DOMAIN_APPLICATION_MASK = Uint8Array.from([0, 0, 0, 1]);
 export const DOMAIN_APPLICATION_BUILDER = Uint8Array.from([0, 0, 0, 1]);
+export const DOMAIN_REQUEST_AUTH = Uint8Array.from([11, 0, 0, 1]);
 
 // Participation flag indices
 
@@ -328,3 +329,7 @@ export const BUILDER_PAYMENT_THRESHOLD_NUMERATOR = 6;
 export const BUILDER_PAYMENT_THRESHOLD_DENOMINATOR = 10;
 export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
 export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
+
+// Gloas builder specs
+export const MAX_DATA_SIZE = 4096;
+export const MAX_EXECUTION_PAYMENT = 2n ** 64n - 1n;

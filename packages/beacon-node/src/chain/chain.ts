@@ -53,7 +53,7 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
 import {BuilderStatus} from "../execution/builder/http.js";
-import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
+import {GloasExecutionBuilder, IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {BufferPool} from "../util/bufferPool.js";
@@ -152,6 +152,7 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
+  readonly gloasExecutionBuilder: GloasExecutionBuilder;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -260,6 +261,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       executionEngine,
       executionBuilder,
+      gloasExecutionBuilder,
     }: {
       privateKey: PrivateKey;
       config: BeaconConfig;
@@ -277,6 +279,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized: boolean;
       executionEngine: IExecutionEngine;
       executionBuilder?: IExecutionBuilder;
+      gloasExecutionBuilder?: GloasExecutionBuilder;
     }
   ) {
     this.opts = opts;
@@ -291,6 +294,7 @@ export class BeaconChain implements IBeaconChain {
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.executionEngine = executionEngine;
     this.executionBuilder = executionBuilder;
+    this.gloasExecutionBuilder = gloasExecutionBuilder ?? new GloasExecutionBuilder({}, config, metrics, logger);
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
@@ -1472,6 +1476,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenSyncCommitteeMessages.prune(slot);
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
+    this.gloasExecutionBuilder.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.seenProposerPreferences.prune(slot);
     this.proposerPreferencesPool.prune(slot);

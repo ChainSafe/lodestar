@@ -26,6 +26,11 @@ const testValue = {
         gasLimit: 35000000,
         selection: routes.validator.BuilderSelection.BuilderAlways,
         boostFactor: 18446744073709551616n,
+        maxExecutionPayment: 1000000000n,
+        builders: {
+          "https://builder.example.com": {maxExecutionPayment: 2000000000n},
+          "https://other-builder.example.com": {maxExecutionPayment: undefined},
+        },
       },
     },
   },
@@ -37,6 +42,10 @@ const testValue = {
       gasLimit: 60000000,
       selection: routes.validator.BuilderSelection.MaxProfit,
       boostFactor: BigInt(50),
+      maxExecutionPayment: BigInt(0),
+      builders: {
+        "https://default-builder.example.com": {maxExecutionPayment: undefined},
+      },
     },
   },
 };

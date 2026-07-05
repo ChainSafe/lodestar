@@ -1,6 +1,8 @@
 import {PublicKey} from "@chainsafe/blst";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
+  IBeaconStateView,
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
   getExecutionPayloadBidSigningRoot,
@@ -8,8 +10,8 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, gloas} from "@lodestar/types";
-import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
+import {byteArrayEquals, fromHex, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -20,6 +22,120 @@ export async function validateApiExecutionPayloadBid(
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
   return validateExecutionPayloadBid(chain, signedExecutionPayloadBid);
+}
+
+export type BuilderApiBidContext = {
+  slot: Slot;
+  /** Pre-state of the proposal, must be advanced to `slot` on the parent block's branch */
+  state: IBeaconStateView;
+  parentBlock: ProtoBlock;
+  parentBlockHashHex: RootHex;
+  expectedFeeRecipient: string;
+  maxExecutionPayment: bigint;
+};
+
+/**
+ * Validate a bid received from an external builder via `getExecutionPayloadBid` against the
+ * proposal context, mirrors `validate_bid` from the builder specs. Ensures a chosen bid never
+ * invalidates the proposer's own block. Throws if the bid must be discarded.
+ */
+export async function validateBuilderApiExecutionPayloadBid(
+  chain: IBeaconChain,
+  signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid,
+  {slot, state, parentBlock, parentBlockHashHex, expectedFeeRecipient, maxExecutionPayment}: BuilderApiBidContext
+): Promise<void> {
+  const bid = signedExecutionPayloadBid.message;
+
+  if (!isStatePostGloas(state)) {
+    throw Error(`Expected gloas+ state for builder api bid validation, got fork=${state.forkName}`);
+  }
+
+  if (bid.slot !== slot) {
+    throw Error(`Bid slot=${bid.slot} does not match proposal slot=${slot}`);
+  }
+
+  const bidParentBlockRootHex = toRootHex(bid.parentBlockRoot);
+  if (bidParentBlockRootHex !== parentBlock.blockRoot) {
+    throw Error(`Bid parentBlockRoot=${bidParentBlockRootHex} does not match expected=${parentBlock.blockRoot}`);
+  }
+
+  const bidParentBlockHashHex = toRootHex(bid.parentBlockHash);
+  if (bidParentBlockHashHex !== parentBlockHashHex) {
+    throw Error(`Bid parentBlockHash=${bidParentBlockHashHex} does not match expected=${parentBlockHashHex}`);
+  }
+
+  if (BigInt(bid.executionPayment) > maxExecutionPayment) {
+    throw Error(`Bid executionPayment=${bid.executionPayment} exceeds maxExecutionPayment=${maxExecutionPayment}`);
+  }
+
+  if (!byteArrayEquals(bid.feeRecipient, fromHex(expectedFeeRecipient))) {
+    throw Error(`Bid feeRecipient=${toHex(bid.feeRecipient)} does not match expected=${expectedFeeRecipient}`);
+  }
+
+  let builder: gloas.Builder;
+  try {
+    builder = state.getBuilder(bid.builderIndex);
+  } catch {
+    throw Error(`Bid builderIndex=${bid.builderIndex} is unknown`);
+  }
+  if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
+    throw Error(`Bid builderIndex=${bid.builderIndex} is not an active builder`);
+  }
+  if (builder.version !== PAYLOAD_BUILDER_VERSION) {
+    throw Error(`Bid builderIndex=${bid.builderIndex} has invalid version=${builder.version}`);
+  }
+
+  // Gas limit target compatibility is a proposer preference, only enforced if the
+  // target gas limit is known from a gossiped `SignedProposerPreferences`
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlock.blockRoot, parentBlockHashHex);
+  const dependentRootHex = (() => {
+    try {
+      return getShufflingDependentRoot(
+        chain.forkChoice,
+        computeEpochAtSlot(bid.slot),
+        computeEpochAtSlot(parentBlock.slot),
+        parentBlock
+      );
+    } catch {
+      return null;
+    }
+  })();
+  const proposerPreferences =
+    dependentRootHex !== null ? chain.proposerPreferencesPool.get(bid.slot, dependentRootHex) : null;
+  if (proposerPreferences !== null && parentPayloadVariant?.executionPayloadBlockHash != null) {
+    const parentGasLimit = parentPayloadVariant.executionPayloadGasLimit;
+    const targetGasLimit = proposerPreferences.message.targetGasLimit;
+    if (!isGasLimitTargetCompatible(parentGasLimit, bid.gasLimit, targetGasLimit)) {
+      throw Error(
+        `Bid gasLimit=${bid.gasLimit} not compatible with parentGasLimit=${parentGasLimit} targetGasLimit=${targetGasLimit}`
+      );
+    }
+  }
+
+  const blobKzgCommitmentsLen = bid.blobKzgCommitments.length;
+  const maxBlobsPerBlock = chain.config.getMaxBlobsPerBlock(computeEpochAtSlot(bid.slot));
+  if (blobKzgCommitmentsLen > maxBlobsPerBlock) {
+    throw Error(`Bid blobKzgCommitments=${blobKzgCommitmentsLen} exceeds limit=${maxBlobsPerBlock}`);
+  }
+
+  if (bid.value > 0 && !state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
+    throw Error(`Bid value=${bid.value} cannot be covered by builderIndex=${bid.builderIndex}`);
+  }
+
+  const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));
+  if (!byteArrayEquals(bid.prevRandao, randaoMix)) {
+    throw Error(`Bid prevRandao=${toHex(bid.prevRandao)} does not match expected=${toHex(randaoMix)}`);
+  }
+
+  const signatureSet = createSingleSignatureSetFromComponents(
+    PublicKey.fromBytes(builder.pubkey),
+    getExecutionPayloadBidSigningRoot(chain.config, state.slot, bid),
+    signedExecutionPayloadBid.signature
+  );
+
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+    throw Error(`Bid signature is invalid for builderIndex=${bid.builderIndex}`);
+  }
 }
 
 export async function validateGossipExecutionPayloadBid(

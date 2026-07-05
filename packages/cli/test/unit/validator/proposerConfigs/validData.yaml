@@ -11,6 +11,11 @@ proposer_config:
       gas_limit: "35000000"
       selection: "builderalways"
       boost_factor: "18446744073709551616"
+      max_execution_payment: "1000000000"
+      builders:
+        "https://builder.example.com":
+          max_execution_payment: "2000000000"
+        "https://other-builder.example.com":
 default_config:
   graffiti: "default graffiti"
   strict_fee_recipient_check: "true"
@@ -19,3 +24,6 @@ default_config:
     gas_limit: "60000000"
     selection: "maxprofit"
     boost_factor: "50"
+    max_execution_payment: "0"
+    builders:
+      "https://default-builder.example.com": {}
