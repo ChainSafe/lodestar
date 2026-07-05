@@ -11,6 +11,7 @@ export type BidCircuitBreakerOpts = {
 
 export type BidCircuitBreakerModules = {
   forkChoice: IForkChoice;
+  anchorSlot: Slot;
   logger: Logger;
   metrics: Metrics | null;
 };
@@ -49,9 +50,11 @@ export class BidCircuitBreaker {
     }
     this.lastUpdatedSlot = clockSlot;
 
-    // Exclude clockSlot itself, its payload reveal may still be in flight
+    // Exclude slots at or before the anchor, fork choice is seeded with PENDING-only nodes
+    // at startup which would otherwise be counted as unrevealed payloads. Also exclude
+    // clockSlot itself, its payload reveal may still be in flight
     const {blocksPresent, payloadsRevealed} = this.modules.forkChoice.getPayloadRevealCounts(
-      Math.max(clockSlot - this.faultInspectionWindow, 0),
+      Math.max(clockSlot - this.faultInspectionWindow, this.modules.anchorSlot + 1),
       clockSlot - 1
     );
     const faults = blocksPresent - payloadsRevealed;

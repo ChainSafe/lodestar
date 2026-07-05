@@ -8,10 +8,13 @@ describe("BidCircuitBreaker", () => {
   const allowedFaults = 8;
   const logger = testLogger("bidCircuitBreaker");
 
-  function setup(stats: {blocksPresent: number; payloadsRevealed: number}) {
+  function setup(stats: {blocksPresent: number; payloadsRevealed: number}, anchorSlot = 0) {
     const getPayloadRevealCounts = vi.fn().mockReturnValue(stats);
     const forkChoice = {getPayloadRevealCounts} as unknown as IForkChoice;
-    const breaker = new BidCircuitBreaker({faultInspectionWindow, allowedFaults}, {forkChoice, logger, metrics: null});
+    const breaker = new BidCircuitBreaker(
+      {faultInspectionWindow, allowedFaults},
+      {forkChoice, anchorSlot, logger, metrics: null}
+    );
     return {breaker, getPayloadRevealCounts};
   }
 
@@ -36,6 +39,12 @@ describe("BidCircuitBreaker", () => {
     const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 32, payloadsRevealed: 32});
     breaker.isActive(100);
     expect(getPayloadRevealCounts).toHaveBeenCalledWith(100 - faultInspectionWindow, 99);
+  });
+
+  it("inspects the window excluding slots at or before the anchor", () => {
+    const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 0, payloadsRevealed: 0}, 90);
+    breaker.isActive(100);
+    expect(getPayloadRevealCounts).toHaveBeenCalledWith(91, 99);
   });
 
   it("only updates once per slot", () => {
