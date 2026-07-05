@@ -1007,29 +1007,35 @@ export function getValidatorApi(
               proposerPubkey
             );
 
-            for (const {url, maxExecutionPayment, signedBid} of builderApiBids) {
-              try {
-                await validateBuilderApiExecutionPayloadBid(chain, signedBid, {
-                  slot,
-                  state,
-                  parentBlock,
-                  parentBlockHashHex: bidParentBlockHash,
-                  expectedFeeRecipient,
-                  maxExecutionPayment,
-                });
-              } catch (e) {
-                metrics?.gloasBuilder.bidsDiscarded.inc();
-                logger.warn(
-                  "Discarded builder api bid",
-                  {slot, builder: toPrintableUrl(url), builderIndex: signedBid.message.builderIndex},
-                  e as Error
-                );
-                continue;
-              }
+            const validatedBids = await Promise.all(
+              builderApiBids.map(async (bid) => {
+                try {
+                  await validateBuilderApiExecutionPayloadBid(chain, bid.signedBid, {
+                    slot,
+                    state,
+                    parentBlock,
+                    parentBlockHashHex: bidParentBlockHash,
+                    expectedFeeRecipient,
+                    maxExecutionPayment: bid.maxExecutionPayment,
+                  });
+                  return bid;
+                } catch (e) {
+                  metrics?.gloasBuilder.bidsDiscarded.inc();
+                  logger.warn(
+                    "Discarded builder api bid",
+                    {slot, builder: toPrintableUrl(bid.url), builderIndex: bid.signedBid.message.builderIndex},
+                    e as Error
+                  );
+                  return null;
+                }
+              })
+            );
 
-              const effectiveValueGwei = effectiveBidValueGwei(signedBid.message, maxExecutionPayment);
+            for (const bid of validatedBids) {
+              if (bid === null) continue;
+              const effectiveValueGwei = effectiveBidValueGwei(bid.signedBid.message, bid.maxExecutionPayment);
               if (bestBid === null || effectiveValueGwei > bestBid.effectiveValueGwei) {
-                bestBid = {signedBid, effectiveValueGwei, builderUrl: url};
+                bestBid = {signedBid: bid.signedBid, effectiveValueGwei, builderUrl: bid.url};
               }
             }
           }
