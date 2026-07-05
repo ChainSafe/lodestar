@@ -71,6 +71,7 @@ describe("BlockDutiesService", () => {
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: false,
+      includePayload: true,
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -153,6 +154,7 @@ describe("BlockDutiesService", () => {
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: true,
+      includePayload: true,
     });
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();

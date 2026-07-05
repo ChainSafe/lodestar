@@ -89,12 +89,14 @@ export const testData: GenericServerTestCases<Endpoints> = {
       feeRecipient,
       builderSelection: BuilderSelection.ExecutionAlways,
       strictFeeRecipientCheck: true,
+      includePayload: true,
     },
     res: {
-      data: ssz.gloas.BeaconBlock.defaultValue(),
+      data: ssz.gloas.BlockContents.defaultValue(),
       meta: {
         version: ForkName.gloas,
         consensusBlockValue: ssz.Wei.defaultValue(),
+        executionPayloadIncluded: true,
       },
     },
   },

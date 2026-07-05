@@ -66,6 +66,7 @@ export type ValidatorOptions = {
   distributed?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
+  includePayload?: boolean;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -256,6 +257,7 @@ export class Validator {
       {
         broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
         blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
+        includePayload: opts.includePayload ?? defaultOptions.includePayload,
       }
     );
 

@@ -5,6 +5,7 @@ import {
   ForkPostElectra,
   ForkPostGloas,
 } from "@lodestar/params";
+import {SignedExecutionPayloadEnvelope, SignedExecutionPayloadEnvelopeContents} from "../gloas/types.js";
 import {
   Attestation,
   BeaconBlock,
@@ -110,4 +111,10 @@ export function isGloasBeaconBlock(block: BeaconBlock): block is BeaconBlock<For
 
 export function isGloasDataColumnSidecar(sidecar: DataColumnSidecar): sidecar is DataColumnSidecar<ForkPostGloas> {
   return (sidecar as DataColumnSidecar<ForkPostGloas>).beaconBlockRoot !== undefined;
+}
+
+export function isSignedExecutionPayloadEnvelopeContents(
+  signedEnvelope: SignedExecutionPayloadEnvelopeContents | SignedExecutionPayloadEnvelope
+): signedEnvelope is SignedExecutionPayloadEnvelopeContents {
+  return (signedEnvelope as SignedExecutionPayloadEnvelopeContents).signedExecutionPayloadEnvelope !== undefined;
 }

@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {BUILDER_INDEX_SELF_BUILD, isForkPostGloas} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -39,6 +39,7 @@ type DebugLogCtx = {debugLogCtx: Record<string, string | boolean | undefined>};
 type BlockProposalOpts = {
   broadcastValidation: routes.beacon.BroadcastValidation;
   blindedLocal: boolean;
+  includePayload: boolean;
 };
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -166,11 +167,15 @@ export class BlockProposingService {
   }
 
   /**
-   * Gloas stateful block production flow:
-   * 1. Produce beacon block with execution payload bid
+   * Gloas block production flow:
+   * 1. Produce beacon block with execution payload bid, by default with full block contents
+   *    (execution payload envelope, KZG proofs and blobs) if self-building (stateless flow)
    * 2. Sign and publish the beacon block
-   * 3. Get the execution payload envelope
-   * 4. Sign and publish the envelope
+   * 3. If self-building, sign and publish the execution payload envelope
+   *    - Stateless (default): envelope and blobs are available from step 1, publish
+   *      `SignedExecutionPayloadEnvelopeContents` which works via any beacon node
+   *    - Stateful (`includePayload=false`): fetch the envelope from the same beacon node
+   *      that produced the block, which attaches cached blobs and KZG proofs on publish
    */
   private async createAndPublishBlockGloas(pubkey: BLSPubkey, slot: Slot): Promise<void> {
     const pubkeyHex = toPubkeyHex(pubkey);
@@ -180,8 +185,9 @@ export class BlockProposingService {
     const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
     const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
     const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+    const {broadcastValidation, includePayload} = this.opts;
 
-    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient});
+    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, includePayload});
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
     // Step 1: Produce beacon block with execution payload bid
@@ -191,27 +197,31 @@ export class BlockProposingService {
         randaoReveal,
         graffiti,
         feeRecipient,
+        includePayload,
       })
       .catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
       });
-    const block = blockRes.value();
+    const blockOrContents = blockRes.value();
     const blockMeta = blockRes.meta();
+    const {executionPayloadIncluded} = blockMeta;
+    const block = executionPayloadIncluded
+      ? (blockOrContents as BlockContents<ForkPostGloas>).block
+      : (blockOrContents as BeaconBlock<ForkPostGloas>);
     const beaconBlockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(beaconBlockRoot);
 
     this.logger.debug("Produced block", {
       ...debugLogCtx,
       consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+      executionPayloadIncluded,
       blockRoot: blockRootHex,
     });
     this.metrics?.blocksProduced.inc();
 
     // Step 2: Sign and publish the beacon block
     const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
-
-    const {broadcastValidation} = this.opts;
 
     // Publish the block first so it propagates as soon as possible. This reduces the chance other nodes
     // see the payload envelope before the block over gossip and have to queue it. There's also plenty of
@@ -234,33 +244,59 @@ export class BlockProposingService {
 
     if (isSelfBuild) {
       // Self-build: proposer is responsible for building and publishing the execution payload envelope
-      // Step 3: Get the execution payload envelope
-      const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
-        slot,
-        beaconBlockRoot,
-      });
-      const envelope = envelopeRes.value();
+      if (executionPayloadIncluded) {
+        // Stateless flow: envelope and blobs are already available from block production
+        const {executionPayloadEnvelope, kzgProofs, blobs} = blockOrContents as BlockContents<ForkPostGloas>;
 
-      this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
+        // Step 3: Sign and publish the envelope with blobs and KZG proofs
+        const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
+          pubkey,
+          executionPayloadEnvelope,
+          slot,
+          this.logger
+        );
 
-      // Step 4: Sign and publish the envelope
-      const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
-        pubkey,
-        envelope,
-        slot,
-        this.logger
-      );
+        (
+          await this.api.beacon
+            .publishExecutionPayloadEnvelope({
+              signedEnvelope: {signedExecutionPayloadEnvelope: signedEnvelope, kzgProofs, blobs},
+              broadcastValidation,
+            })
+            .catch((e: Error) => {
+              this.metrics?.blockProposingErrors.inc({error: "publish"});
+              throw extendError(e, "Failed to publish execution payload envelope");
+            })
+        ).assertOk();
+      } else {
+        // Stateful flow: fetch the envelope from the same beacon node that produced the block
+        const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
+          slot,
+          beaconBlockRoot,
+        });
+        const envelope = envelopeRes.value();
 
-      (
-        await this.api.beacon
-          .publishExecutionPayloadEnvelope({
-            signedExecutionPayloadEnvelope: signedEnvelope,
-          })
-          .catch((e: Error) => {
-            this.metrics?.blockProposingErrors.inc({error: "publish"});
-            throw extendError(e, "Failed to publish execution payload envelope");
-          })
-      ).assertOk();
+        this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
+
+        // Step 3: Sign and publish the envelope, beacon node attaches blobs and KZG proofs from its cache
+        const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
+          pubkey,
+          envelope,
+          slot,
+          this.logger
+        );
+
+        (
+          await this.api.beacon
+            .publishExecutionPayloadEnvelope({
+              signedEnvelope,
+              broadcastValidation,
+            })
+            .catch((e: Error) => {
+              this.metrics?.blockProposingErrors.inc({error: "publish"});
+              throw extendError(e, "Failed to publish execution payload envelope");
+            })
+        ).assertOk();
+      }
 
       this.logger.info("Published block and execution payload envelope", {
         ...logCtx,

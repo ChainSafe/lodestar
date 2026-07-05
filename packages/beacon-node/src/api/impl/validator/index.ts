@@ -904,7 +904,7 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient}) {
+    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload}) {
       const fork = config.getForkName(slot);
 
       if (!isForkPostGloas(fork)) {
@@ -1019,9 +1019,41 @@ export function getValidatorApi(
         void chain.persistBlock(block, "produced_engine_block");
       }
 
+      // Include the payload for self-builds unless explicitly disabled (stateless flow, default)
+      const isSelfBuild = source === ProducedBlockSource.engine;
+      if (isSelfBuild && includePayload !== false) {
+        const produceResult = chain.blockProductionCache.get(blockRoot);
+        if (
+          produceResult === undefined ||
+          !isForkPostGloas(produceResult.fork) ||
+          produceResult.type !== BlockType.Full
+        ) {
+          throw Error(`Missing cached block production result for produced block root=${blockRoot}`);
+        }
+        const {executionPayload, executionRequests, blobsBundle, parentBlockRoot} = produceResult as ProduceFullGloas;
+
+        const blockContents: gloas.BlockContents = {
+          block: block as gloas.BeaconBlock,
+          executionPayloadEnvelope: {
+            payload: executionPayload,
+            executionRequests,
+            builderIndex: BUILDER_INDEX_SELF_BUILD,
+            beaconBlockRoot: fromHex(blockRoot),
+            parentBeaconBlockRoot: parentBlockRoot,
+          },
+          kzgProofs: blobsBundle.proofs,
+          blobs: blobsBundle.blobs,
+        };
+
+        return {
+          data: blockContents,
+          meta: {version: fork, consensusBlockValue, executionPayloadIncluded: true},
+        };
+      }
+
       return {
         data: block as gloas.BeaconBlock,
-        meta: {version: fork, consensusBlockValue},
+        meta: {version: fork, consensusBlockValue, executionPayloadIncluded: false},
       };
     },
 
@@ -1789,6 +1821,13 @@ export function getValidatorApi(
       }
 
       const {executionPayload, executionRequests, parentBlockRoot} = produceResult as ProduceFullGloas;
+
+      if (executionPayload.slotNumber !== slot) {
+        throw new ApiError(
+          404,
+          `Cached execution payload is for slot=${executionPayload.slotNumber}, requested slot=${slot}`
+        );
+      }
 
       const envelope: gloas.ExecutionPayloadEnvelope = {
         payload: executionPayload,
