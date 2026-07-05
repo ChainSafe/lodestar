@@ -68,7 +68,7 @@ import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
-import {countColumnsPublishedWithZeroPeers, getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
+import {getBlockResponse, toBeaconHeaderResponse} from "./utils.js";
 
 type PublishBlockOpts = ImportBlockOpts;
 
@@ -345,7 +345,9 @@ export function getBeaconBlockApi({
             throw e;
           }),
     ];
-    const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
+    const sentPeersArr = await promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
+      publishPromises
+    );
 
     if (isForkPostGloas(fork)) {
       // After gloas, data columns are not published with the block but when publishing the execution payload envelope
@@ -356,10 +358,13 @@ export function getBeaconBlockApi({
       // + 1 because we publish to beacon_block first
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         // + 1 because we publish to beacon_block first
-        const sentPeers = sentPeersArr[i + 1] as number;
-        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar() api
+        const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
+        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar()
         metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
-        if (sentPeers === 0) {
+        // A duplicate publish (alreadyPublished=true) means the column is already propagating on the network —
+        // expected in self-build flows where peers gossip columns back to us before we publish the envelope.
+        // Only warn when we genuinely failed to reach any peer. See https://github.com/ChainSafe/lodestar/issues/9527.
+        if (sentPeers === 0 && !alreadyPublished) {
           columnsPublishedWithZeroPeers++;
         }
       }
@@ -739,23 +744,16 @@ export function getBeaconBlockApi({
         peerIdStr: undefined,
       });
 
-      // Track which columns a peer had already gossiped to us before we self-publish. A gossip-sourced
-      // column is actively propagating on the network (block published first -> peers getBlobs from EL
-      // -> disseminate columns) before we publish the envelope, so a subsequent 0-peers publish is an
-      // expected duplicate rather than a propagation failure (see #9527). We check the column's *source*
-      // rather than mere presence: columns cached from non-gossip paths (engine/getBlobs, req/resp,
-      // recovery) are not necessarily on the network, so a 0-peers publish of those is a real
-      // propagation failure and must still warn.
-      const columnAlreadyGossiped = dataColumnSidecars.map((columnSidecar) => {
-        const alreadyGossiped = payloadInput.getColumnSource(columnSidecar.index) === PayloadEnvelopeInputSource.gossip;
-        payloadInput.addColumn({
-          columnSidecar,
-          source: PayloadEnvelopeInputSource.api,
-          seenTimestampSec,
-          peerIdStr: undefined,
-        });
-        return alreadyGossiped;
-      });
+      if (dataColumnSidecars.length > 0) {
+        for (const columnSidecar of dataColumnSidecars) {
+          payloadInput.addColumn({
+            columnSidecar,
+            source: PayloadEnvelopeInputSource.api,
+            seenTimestampSec,
+            peerIdStr: undefined,
+          });
+        }
+      }
 
       const valLogMeta = {
         slot,
@@ -781,7 +779,9 @@ export function getBeaconBlockApi({
         () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
-      const publishPromise = promiseAllMaybeAsync<number | void>(publishPromises);
+      const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
+        publishPromises
+      );
 
       chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
         slot,
@@ -794,18 +794,17 @@ export function getBeaconBlockApi({
 
       // Track metrics for data column publishing
       if (dataColumnSidecars.length > 0) {
+        let columnsPublishedWithZeroPeers = 0;
         // Skip first entry (envelope); the final entry is processExecutionPayload(), which returns void.
-        const sentPeersPerColumn = dataColumnSidecars.map((_, i) => sentPeersArr[i + 1] as number);
-        for (const sentPeers of sentPeersPerColumn) {
+        for (let i = 0; i < dataColumnSidecars.length; i++) {
+          const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
+          // A duplicate publish means the column is already propagating — expected in self-build flows.
+          // Only warn when we genuinely failed to reach any peer. See https://github.com/ChainSafe/lodestar/issues/9527.
+          if (sentPeers === 0 && !alreadyPublished) {
+            columnsPublishedWithZeroPeers++;
+          }
         }
-        // Columns a peer already gossiped to us are actively propagating, so publishing them is a no-op
-        // duplicate with 0 recipients — expected, not a propagation failure. Only warn for columns we
-        // actually introduced to the network. See https://github.com/ChainSafe/lodestar/issues/9527.
-        const columnsPublishedWithZeroPeers = countColumnsPublishedWithZeroPeers(
-          sentPeersPerColumn,
-          columnAlreadyGossiped
-        );
         if (columnsPublishedWithZeroPeers > 0) {
           chain.logger.warn("Published data columns to 0 peers, increased risk of reorg", {
             slot,
