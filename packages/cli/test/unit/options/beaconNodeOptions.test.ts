@@ -42,7 +42,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.archiveMode": ArchiveMode.Frequency,
       emitPayloadAttributes: false,
-      graffitiAppend: false,
+      "chain.graffitiAppend": false,
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
