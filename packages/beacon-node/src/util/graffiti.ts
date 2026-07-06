@@ -40,7 +40,7 @@ export function getDefaultGraffiti(
 
 function appendLongestFittingSuffix(userGraffiti: string, suffixes: string[]): string {
   const userGraffitiBytes = Buffer.byteLength(userGraffiti, "utf8");
-  if (userGraffitiBytes > GRAFFITI_SIZE) {
+  if (userGraffitiBytes >= GRAFFITI_SIZE) {
     return userGraffiti;
   }
 
