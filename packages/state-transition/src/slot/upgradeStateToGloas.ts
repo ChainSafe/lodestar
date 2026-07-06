@@ -8,13 +8,28 @@ import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential
 import {isValidatorKnown} from "../util/index.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 
+// TODO GLOAS: temporary profiling instrumentation. Enable with LOG_GLOAS_UPGRADE_TIMING=true.
+// Remove before merging.
+function timingEnabled(): boolean {
+  return process.env.LOG_GLOAS_UPGRADE_TIMING === "true";
+}
+function logStep(label: string, start: number): number {
+  if (!timingEnabled()) return start;
+  const end = performance.now();
+  // biome-ignore lint/suspicious/noConsole: temporary profiling instrumentation
+  console.log(`[upgradeStateToGloas] ${label}: ${(end - start).toFixed(1)}ms`);
+  return end;
+}
+
 /**
  * Upgrade a state from Fulu to Gloas.
  */
 export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBeaconStateGloas {
   const {config} = stateFulu;
 
+  let t = timingEnabled() ? performance.now() : 0;
   ssz.fulu.BeaconState.commitViewDU(stateFulu);
+  t = logStep("commitViewDU(fulu)", t);
   const stateGloasCloned = stateFulu;
 
   const stateGloasView = ssz.gloas.BeaconState.defaultViewDU();
@@ -34,8 +49,11 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.eth1Data = stateGloasCloned.eth1Data;
   stateGloasView.eth1DataVotes = stateGloasCloned.eth1DataVotes;
   stateGloasView.eth1DepositIndex = stateGloasCloned.eth1DepositIndex;
+  t = logStep("copy fixed fields", t);
   stateGloasView.validators = ssz.gloas.Validators.toViewDU(stateGloasCloned.validators.getAllReadonlyValues());
+  t = logStep("validators toViewDU", t);
   stateGloasView.balances = ssz.gloas.Balances.toViewDU(stateGloasCloned.balances.getAll());
+  t = logStep("balances toViewDU", t);
   stateGloasView.randaoMixes = stateGloasCloned.randaoMixes;
   stateGloasView.slashings = stateGloasCloned.slashings;
   stateGloasView.previousEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
@@ -44,11 +62,13 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.currentEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
     stateGloasCloned.currentEpochParticipation.getAll()
   );
+  t = logStep("participation toViewDU", t);
   stateGloasView.justificationBits = stateGloasCloned.justificationBits;
   stateGloasView.previousJustifiedCheckpoint = stateGloasCloned.previousJustifiedCheckpoint;
   stateGloasView.currentJustifiedCheckpoint = stateGloasCloned.currentJustifiedCheckpoint;
   stateGloasView.finalizedCheckpoint = stateGloasCloned.finalizedCheckpoint;
   stateGloasView.inactivityScores = ssz.gloas.InactivityScores.toViewDU(stateGloasCloned.inactivityScores.getAll());
+  t = logStep("inactivityScores toViewDU", t);
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
@@ -74,6 +94,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.pendingConsolidations = ssz.gloas.PendingConsolidations.toViewDU(
     stateGloasCloned.pendingConsolidations.getAllReadonlyValues()
   );
+  t = logStep("pending deposits/withdrawals/consolidations toViewDU", t);
   stateGloasView.proposerLookahead = stateGloasCloned.proposerLookahead;
   stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
 
@@ -81,16 +102,21 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
     stateGloasView.executionPayloadAvailability.set(i, true);
   }
   stateGloasView.latestBlockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  t = logStep("ptcWindow + executionPayloadAvailability", t);
 
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
+  t = logStep("getCachedBeaconState", t);
 
   // Process pending builder deposits at the fork boundary
   onboardBuildersFromPendingDeposits(stateGloas);
+  t = logStep("onboardBuildersFromPendingDeposits", t);
 
   stateGloas.commit();
+  t = logStep("commit", t);
   // Clear cache to ensure the cache of fulu fields is not used by new gloas fields
   // biome-ignore lint/complexity/useLiteralKeys: It is a protected attribute
   stateGloas["clearCache"]();
+  logStep("clearCache", t);
 
   return stateGloas;
 }
