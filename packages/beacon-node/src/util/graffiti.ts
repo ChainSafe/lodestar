@@ -86,12 +86,18 @@ export function appendClientInfoToGraffiti(
   executionClientVersion: ClientVersion | null | undefined,
   opts: {private?: boolean} = {}
 ): string {
+  // Graffiti supplied via the beacon API is decoded from a fixed 32-byte field (see
+  // fromGraffitiHex) and arrives right-padded with NUL bytes. Strip them, otherwise the
+  // padding fills the whole 32 bytes, availableBytes is 0 and no client info is ever
+  // appended. Mirrors the padding removal already done in fromGraffitiBytes.
+  const graffiti = userGraffiti.replaceAll("\u0000", "");
+
   if (opts.private) {
-    return truncateUtf8ToBytes(userGraffiti, GRAFFITI_SIZE);
+    return truncateUtf8ToBytes(graffiti, GRAFFITI_SIZE);
   }
 
   const fullClientInfo = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
-  if (userGraffiti.length === 0) {
+  if (graffiti.length === 0) {
     return fullClientInfo;
   }
 
@@ -104,7 +110,7 @@ export function appendClientInfoToGraffiti(
         ]
       : [` ${fullClientInfo}`, ` ${consensusClientVersion.code}`];
 
-  return appendLongestFittingSuffix(userGraffiti, suffixes);
+  return appendLongestFittingSuffix(graffiti, suffixes);
 }
 
 export function getBlockGraffiti(
