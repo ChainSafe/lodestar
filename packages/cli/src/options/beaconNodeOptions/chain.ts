@@ -2,8 +2,6 @@ import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} f
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 
-const defaultGraffitiAppend = true;
-
 export type ChainArgs = {
   suggestedFeeRecipient: string;
   graffitiAppend?: boolean;
@@ -108,10 +106,8 @@ export const options: CliCommandOptions<ChainArgs> = {
 
   graffitiAppend: {
     type: "boolean",
-    description:
-      "Append CL/EL client info to validator-supplied graffiti when space allows. " +
-      "Use --no-graffitiAppend to preserve user graffiti unchanged.",
-    default: defaultGraffitiAppend,
+    description: "Append CL/EL client info to validator-supplied graffiti when space allows.",
+    default: true,
     group: "chain",
   },
 
