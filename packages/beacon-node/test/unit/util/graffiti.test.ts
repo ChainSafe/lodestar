@@ -164,6 +164,21 @@ describe("Graffiti helper", () => {
       );
     });
 
+    it("should return empty default graffiti in private mode when no user graffiti is provided", () => {
+      expect(
+        getBlockGraffiti(undefined, consensusClientVersion, executionClientVersion, {
+          private: true,
+          graffitiAppend: true,
+        })
+      ).toBe("");
+    });
+
+    it("should append client info by default when append option is omitted", () => {
+      expect(getBlockGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {})).toBe(
+        "my graffiti BU9b0eLS80c2"
+      );
+    });
+
     it("should preserve user graffiti when append is disabled", () => {
       expect(
         getBlockGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {graffitiAppend: false})
@@ -177,6 +192,17 @@ describe("Graffiti helper", () => {
           graffitiAppend: true,
         })
       ).toBe("my graffiti");
+    });
+
+    it("should preserve NUL-padded graffiti when private mode is enabled", () => {
+      const nul = String.fromCharCode(0);
+      const paddedGraffiti = "my graffiti" + nul.repeat(GRAFFITI_SIZE - "my graffiti".length);
+      expect(
+        getBlockGraffiti(paddedGraffiti, consensusClientVersion, executionClientVersion, {
+          private: true,
+          graffitiAppend: true,
+        })
+      ).toBe(paddedGraffiti);
     });
 
     it("should preserve NUL-padded graffiti when append is disabled", () => {
