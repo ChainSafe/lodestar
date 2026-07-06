@@ -171,7 +171,6 @@ fsSL
 getNetworkIdentity
 gnosis
 gpg
-graffitiAppend
 heapdump
 heaptrack
 holesky
