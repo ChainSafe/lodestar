@@ -6,6 +6,8 @@ This is an alpha feature. The feature and its format are subject to change.
 
 With Lodestar's validator client, you can assign specific metadata for each proposer/public key using a proposer configuration file written in YAML file. This will allow you to set specific graffiti, fee recipients and builder settings per validator key.
 
+When graffiti is supplied by the validator client, the connected Lodestar beacon node appends CL/EL client information to the graffiti by default when there is enough space left. Run the beacon node with [`--graffitiAppend false`](../beacon-management/beacon-cli.md#--graffitiappend) to disable this misbehavior. (@matthewkeil fix this)
+
 ### Example proposer_config.yaml
 
 ```yaml
