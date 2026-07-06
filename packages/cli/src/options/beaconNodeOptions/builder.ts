@@ -51,13 +51,15 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
 
   "builder.faultInspectionWindow": {
     type: "number",
-    description: "Window to inspect missed slots for enabling/disabling builder circuit breaker",
+    description:
+      "Window to inspect missed slots (pre-gloas) or unrevealed payloads (post-gloas) for enabling/disabling builder circuit breaker",
     group: "builder",
   },
 
   "builder.allowedFaults": {
     type: "number",
-    description: "Number of missed slots allowed in the `faultInspectionWindow` for builder circuit",
+    description:
+      "Number of missed slots (pre-gloas) or unrevealed payloads (post-gloas) allowed in the `faultInspectionWindow` for builder circuit",
     group: "builder",
   },
 };
