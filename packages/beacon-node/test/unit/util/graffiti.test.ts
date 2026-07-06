@@ -6,7 +6,6 @@ import {
   getBlockGraffiti,
   getDefaultGraffiti,
   toGraffitiBytes,
-  truncateUtf8ToBytes,
 } from "../../../src/util/graffiti.js";
 
 describe("Graffiti helper", () => {
@@ -60,18 +59,6 @@ describe("Graffiti helper", () => {
     });
   });
 
-  describe("truncateUtf8ToBytes", () => {
-    it("should truncate ASCII strings", () => {
-      expect(truncateUtf8ToBytes("hello", 3)).toBe("hel");
-    });
-
-    it("should not split multi-byte characters", () => {
-      expect(truncateUtf8ToBytes("\u00e9", 1)).toBe("");
-      expect(truncateUtf8ToBytes("a\u00e9", 2)).toBe("a");
-      expect(truncateUtf8ToBytes("\u{1f600}", 3)).toBe("");
-    });
-  });
-
   describe("appendClientInfoToGraffiti", () => {
     const executionClientVersion = {code: ClientCode.BU, name: "Besu", version: "24.1.1", commit: "9b0e38fa"};
     const consensusClientVersion = {
@@ -99,12 +86,26 @@ describe("Graffiti helper", () => {
       );
     });
 
+    it("should preserve user graffiti exactly when appending a suffix", () => {
+      for (const userGraffiti of ["my graffiti", "\u{1f600}".repeat(4), "a".repeat(29)]) {
+        const result = appendClientInfoToGraffiti(userGraffiti, consensusClientVersion, executionClientVersion);
+        expect(result.slice(0, userGraffiti.length)).toBe(userGraffiti);
+        expect(result.length).toBeGreaterThan(userGraffiti.length);
+      }
+    });
+
     it("should leave user graffiti unchanged when no suffix fits", () => {
       expect(appendClientInfoToGraffiti("a".repeat(30), consensusClientVersion, executionClientVersion)).toBe(
         "a".repeat(30)
       );
       expect(appendClientInfoToGraffiti("a".repeat(32), consensusClientVersion, executionClientVersion)).toBe(
         "a".repeat(32)
+      );
+      expect(appendClientInfoToGraffiti("a".repeat(40), consensusClientVersion, executionClientVersion)).toBe(
+        "a".repeat(40)
+      );
+      expect(appendClientInfoToGraffiti("\u{1f600}".repeat(9), consensusClientVersion, executionClientVersion)).toBe(
+        "\u{1f600}".repeat(9)
       );
     });
 
@@ -116,6 +117,9 @@ describe("Graffiti helper", () => {
       expect(
         appendClientInfoToGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {private: true})
       ).toBe("my graffiti");
+      expect(
+        appendClientInfoToGraffiti("a".repeat(40), consensusClientVersion, executionClientVersion, {private: true})
+      ).toBe("a".repeat(40));
     });
 
     it("should strip trailing NUL padding before appending client info", () => {
@@ -141,7 +145,7 @@ describe("Graffiti helper", () => {
       const graffiti = "hello" + nul + "world" + nul.repeat(GRAFFITI_SIZE - 11);
       const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, executionClientVersion);
       // The mid-string NUL must be preserved; only trailing NULs are stripped
-      expect(result.startsWith("hello" + nul + "world")).toBe(true);
+      expect(result).toBe("hello" + nul + "world BU9b0eLS80c2");
     });
   });
 
@@ -164,6 +168,23 @@ describe("Graffiti helper", () => {
       expect(
         getBlockGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {graffitiAppend: false})
       ).toBe("my graffiti");
+    });
+
+    it("should preserve user graffiti when private mode is enabled", () => {
+      expect(
+        getBlockGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {
+          private: true,
+          graffitiAppend: true,
+        })
+      ).toBe("my graffiti");
+    });
+
+    it("should preserve NUL-padded graffiti when append is disabled", () => {
+      const nul = String.fromCharCode(0);
+      const paddedGraffiti = "my graffiti" + nul.repeat(GRAFFITI_SIZE - "my graffiti".length);
+      expect(
+        getBlockGraffiti(paddedGraffiti, consensusClientVersion, executionClientVersion, {graffitiAppend: false})
+      ).toBe(paddedGraffiti);
     });
 
     it("should append client info to NUL-padded graffiti as received from the beacon API", () => {

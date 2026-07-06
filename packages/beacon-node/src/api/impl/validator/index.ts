@@ -612,7 +612,7 @@ export function getValidatorApi(
 
     const graffitiBytes = toGraffitiBytes(
       getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
-        ...opts,
+        private: opts.private,
         graffitiAppend: chain.opts.graffitiAppend,
       })
     );
@@ -925,7 +925,7 @@ export function getValidatorApi(
 
       const graffitiBytes = toGraffitiBytes(
         getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
-          ...opts,
+          private: opts.private,
           graffitiAppend: chain.opts.graffitiAppend,
         })
       );

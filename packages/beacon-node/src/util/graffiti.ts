@@ -38,38 +38,21 @@ export function getDefaultGraffiti(
   return `${consensusClientVersion.code}${consensusClientVersion.commit.slice(0, 4)}`;
 }
 
-/**
- * Truncates a UTF-8 string without splitting multi-byte characters.
- */
-export function truncateUtf8ToBytes(str: string, maxBytes: number): string {
-  if (maxBytes <= 0) {
-    return "";
-  }
-
-  const bytes = Buffer.from(str, "utf8");
-  if (bytes.length <= maxBytes) {
-    return str;
-  }
-
-  let length = maxBytes;
-  while (length > 0 && (bytes[length] & 0xc0) === 0x80) {
-    length--;
-  }
-
-  return bytes.subarray(0, length).toString("utf8");
-}
-
 function appendLongestFittingSuffix(userGraffiti: string, suffixes: string[]): string {
-  const truncatedGraffiti = truncateUtf8ToBytes(userGraffiti, GRAFFITI_SIZE);
-  const availableBytes = GRAFFITI_SIZE - Buffer.byteLength(truncatedGraffiti, "utf8");
+  const userGraffitiBytes = Buffer.byteLength(userGraffiti, "utf8");
+  if (userGraffitiBytes > GRAFFITI_SIZE) {
+    return userGraffiti;
+  }
+
+  const availableBytes = GRAFFITI_SIZE - userGraffitiBytes;
 
   for (const suffix of suffixes) {
     if (Buffer.byteLength(suffix, "utf8") <= availableBytes) {
-      return `${truncatedGraffiti}${suffix}`;
+      return `${userGraffiti}${suffix}`;
     }
   }
 
-  return truncatedGraffiti;
+  return userGraffiti;
 }
 
 /**
@@ -86,16 +69,18 @@ export function appendClientInfoToGraffiti(
   executionClientVersion: ClientVersion | null | undefined,
   opts: {private?: boolean} = {}
 ): string {
+  if (opts.private) {
+    return userGraffiti;
+  }
+
   // Graffiti supplied via the beacon API is decoded from a fixed 32-byte field (see
   // fromGraffitiHex) and arrives right-padded with NUL bytes. Trim only trailing padding
   // NULs; a NUL that appears in the middle of the string is data, not padding.
   let end = userGraffiti.length;
-  while (end > 0 && userGraffiti.charCodeAt(end - 1) === 0) end--;
-  const graffiti = userGraffiti.slice(0, end);
-
-  if (opts.private) {
-    return truncateUtf8ToBytes(graffiti, GRAFFITI_SIZE);
+  while (end > 0 && userGraffiti.charCodeAt(end - 1) === 0) {
+    end--;
   }
+  const graffiti = userGraffiti.slice(0, end);
 
   const fullClientInfo = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
   if (graffiti.length === 0) {

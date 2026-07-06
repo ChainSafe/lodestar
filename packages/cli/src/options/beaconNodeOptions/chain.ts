@@ -41,11 +41,7 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-type ChainOptions = IBeaconNodeOptions["chain"] & {
-  graffitiAppend?: boolean;
-};
-
-export function parseArgs(args: ChainArgs): ChainOptions {
+export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
@@ -107,7 +103,7 @@ export const options: CliCommandOptions<ChainArgs> = {
   graffitiAppend: {
     type: "boolean",
     description: "Append CL/EL client info to graffiti supplied by validator when space allows",
-    default: true,
+    default: defaultOptions.chain.graffitiAppend,
     group: "chain",
   },
 
