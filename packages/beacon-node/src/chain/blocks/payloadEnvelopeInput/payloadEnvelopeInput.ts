@@ -9,7 +9,6 @@ import {
   ColumnWithSource,
   CreateFromBidProps,
   CreateFromBlockProps,
-  PayloadEnvelopeInputSource,
   SourceMeta,
 } from "./types.js";
 
@@ -277,11 +276,6 @@ export class PayloadEnvelopeInput {
 
   getColumn(index: ColumnIndex): gloas.DataColumnSidecar | undefined {
     return this.columnsCache.get(index)?.columnSidecar;
-  }
-
-  /** Source that first populated the cached column (gossip, engine/getBlobs, req/resp, recovery, ...), if present. */
-  getColumnSource(index: ColumnIndex): PayloadEnvelopeInputSource | undefined {
-    return this.columnsCache.get(index)?.source;
   }
 
   getAllColumns(): gloas.DataColumnSidecar[] {
