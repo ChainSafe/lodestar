@@ -1,6 +1,12 @@
 import {describe, expect, it} from "vitest";
 import {ClientCode} from "../../../src/execution/index.js";
-import {getDefaultGraffiti, toGraffitiBytes} from "../../../src/util/graffiti.js";
+import {
+  appendClientInfoToGraffiti,
+  getBlockGraffiti,
+  getDefaultGraffiti,
+  toGraffitiBytes,
+  truncateUtf8ToBytes,
+} from "../../../src/util/graffiti.js";
 
 describe("Graffiti helper", () => {
   describe("toGraffitiBuffer", () => {
@@ -50,6 +56,87 @@ describe("Graffiti helper", () => {
     it("should return combined version codes and commits if executionClientVersion is provided", () => {
       const result = getDefaultGraffiti(consensusClientVersion, executionClientVersion, {private: false});
       expect(result).toBe("BU9b0eLS80c2");
+    });
+  });
+
+  describe("truncateUtf8ToBytes", () => {
+    it("should truncate ASCII strings", () => {
+      expect(truncateUtf8ToBytes("hello", 3)).toBe("hel");
+    });
+
+    it("should not split multi-byte characters", () => {
+      expect(truncateUtf8ToBytes("\u00e9", 1)).toBe("");
+      expect(truncateUtf8ToBytes("a\u00e9", 2)).toBe("a");
+      expect(truncateUtf8ToBytes("\u{1f600}", 3)).toBe("");
+    });
+  });
+
+  describe("appendClientInfoToGraffiti", () => {
+    const executionClientVersion = {code: ClientCode.BU, name: "Besu", version: "24.1.1", commit: "9b0e38fa"};
+    const consensusClientVersion = {
+      code: ClientCode.LS,
+      name: "Lodestar",
+      version: "v0.36.0/80c248b",
+      commit: "80c248bb",
+    };
+
+    it("should append the full EL and CL watermark when it fits", () => {
+      expect(appendClientInfoToGraffiti("my graffiti", consensusClientVersion, executionClientVersion)).toBe(
+        "my graffiti BU9b0eLS80c2"
+      );
+    });
+
+    it("should append only EL and CL codes when the full watermark does not fit", () => {
+      expect(appendClientInfoToGraffiti("a".repeat(20), consensusClientVersion, executionClientVersion)).toBe(
+        `${"a".repeat(20)} BULS`
+      );
+    });
+
+    it("should append only the CL code when only 3 bytes are available", () => {
+      expect(appendClientInfoToGraffiti("a".repeat(29), consensusClientVersion, executionClientVersion)).toBe(
+        `${"a".repeat(29)} LS`
+      );
+    });
+
+    it("should leave user graffiti unchanged when no suffix fits", () => {
+      expect(appendClientInfoToGraffiti("a".repeat(30), consensusClientVersion, executionClientVersion)).toBe(
+        "a".repeat(30)
+      );
+      expect(appendClientInfoToGraffiti("a".repeat(32), consensusClientVersion, executionClientVersion)).toBe(
+        "a".repeat(32)
+      );
+    });
+
+    it("should append CL-only watermark when EL info is unavailable", () => {
+      expect(appendClientInfoToGraffiti("my graffiti", consensusClientVersion, undefined)).toBe("my graffiti LS80c2");
+    });
+
+    it("should respect private mode", () => {
+      expect(
+        appendClientInfoToGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {private: true})
+      ).toBe("my graffiti");
+    });
+  });
+
+  describe("getBlockGraffiti", () => {
+    const executionClientVersion = {code: ClientCode.BU, name: "Besu", version: "24.1.1", commit: "9b0e38fa"};
+    const consensusClientVersion = {
+      code: ClientCode.LS,
+      name: "Lodestar",
+      version: "v0.36.0/80c248b",
+      commit: "80c248bb",
+    };
+
+    it("should use the default watermark when no user graffiti is provided", () => {
+      expect(getBlockGraffiti(undefined, consensusClientVersion, executionClientVersion, {graffitiAppend: true})).toBe(
+        "BU9b0eLS80c2"
+      );
+    });
+
+    it("should preserve user graffiti when append is disabled", () => {
+      expect(
+        getBlockGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {graffitiAppend: false})
+      ).toBe("my graffiti");
     });
   });
 });

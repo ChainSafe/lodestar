@@ -35,6 +35,11 @@ export type IChainOptions = BlockProcessOpts &
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
+    /**
+     * Append CL/EL client info to validator supplied graffiti.
+     * Enabled by default; set to false to preserve user graffiti unchanged.
+     */
+    graffitiAppend?: boolean;
     maxSkipSlots?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
@@ -107,6 +112,7 @@ export const defaultChainOptions: IChainOptions = {
   computeUnrealized: true,
   fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  graffitiAppend: true,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,

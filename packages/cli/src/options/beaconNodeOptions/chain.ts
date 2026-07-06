@@ -2,8 +2,11 @@ import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} f
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
 
+const defaultGraffitiAppend = true;
+
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
   "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
@@ -40,9 +43,14 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
+type ChainOptions = IBeaconNodeOptions["chain"] & {
+  graffitiAppend?: boolean;
+};
+
+export function parseArgs(args: ChainArgs): ChainOptions {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
+    graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
     blacklistedBlocks: args["chain.blacklistedBlocks"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
@@ -95,6 +103,15 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
     description: "Flag to SSE emit execution `payloadAttributes` before every slot",
+    group: "chain",
+  },
+
+  graffitiAppend: {
+    type: "boolean",
+    description:
+      "Append CL/EL client info to validator-supplied graffiti when space allows. " +
+      "Use --no-graffitiAppend to preserve user graffiti unchanged.",
+    default: defaultGraffitiAppend,
     group: "chain",
   },
 
