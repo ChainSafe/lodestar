@@ -940,7 +940,7 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
-        ...(bidCircuitBreakerActive ? {bidCircuitBreakerActive} : {}),
+        bidCircuitBreakerActive,
         ...(builderBid !== null
           ? {
               bidValue: builderBid.message.value,
