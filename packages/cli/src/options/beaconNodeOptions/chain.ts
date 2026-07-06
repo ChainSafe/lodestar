@@ -102,7 +102,7 @@ export const options: CliCommandOptions<ChainArgs> = {
 
   graffitiAppend: {
     type: "boolean",
-    description: "Append CL/EL client info to graffiti supplied by validator when space allows",
+    description: "Append CL/EL client info to graffiti supplied by validator client when space allows",
     default: defaultOptions.chain.graffitiAppend,
     group: "chain",
   },
