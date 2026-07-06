@@ -49,7 +49,7 @@ describe("Graffiti helper", () => {
     });
 
     it("should return CL only info if EL client version is missing", () => {
-      const result = getDefaultGraffiti(consensusClientVersion, undefined, {private: false});
+      const result = getDefaultGraffiti(consensusClientVersion, null, {private: false});
       expect(result).toBe("LS80c2");
     });
 
@@ -110,7 +110,7 @@ describe("Graffiti helper", () => {
     });
 
     it("should append CL-only watermark when EL info is unavailable", () => {
-      expect(appendClientInfoToGraffiti("my graffiti", consensusClientVersion, undefined)).toBe("my graffiti LS80c2");
+      expect(appendClientInfoToGraffiti("my graffiti", consensusClientVersion, null)).toBe("my graffiti LS80c2");
     });
 
     it("should respect private mode", () => {
