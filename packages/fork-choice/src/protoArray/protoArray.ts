@@ -1548,9 +1548,8 @@ export class ProtoArray {
     // that descends from the justified checkpoint block AND is itself viable for head. Iterating
     // all nodes without the justified-descendant filter would wrongly include FFG-viable leaves
     // that hang off the finalized checkpoint on a branch not under the current justified checkpoint.
-    const justifiedStatus = this.getDefaultVariant(this.justifiedRoot);
-    const justifiedSlot =
-      justifiedStatus !== undefined ? this.getNode(this.justifiedRoot, justifiedStatus)?.slot : undefined;
+    const justifiedIndex = this.getDefaultNodeIndex(this.justifiedRoot);
+    const justifiedSlot = justifiedIndex !== undefined ? this.getNodeByIndex(justifiedIndex)?.slot : undefined;
     // Gloas payload-status variants share a blockRoot and more than one can be a leaf (EMPTY and
     // FULL are both parented under PENDING); the spec's filtered tree is keyed by block root, so
     // emit each root at most once. Which variant's weight the spec expects is an open gloas
