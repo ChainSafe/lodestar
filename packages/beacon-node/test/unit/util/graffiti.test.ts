@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {GRAFFITI_SIZE} from "../../../src/constants/index.js";
 import {ClientCode} from "../../../src/execution/index.js";
 import {
   appendClientInfoToGraffiti,
@@ -116,6 +117,32 @@ describe("Graffiti helper", () => {
         appendClientInfoToGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {private: true})
       ).toBe("my graffiti");
     });
+
+    it("should strip trailing NUL padding before appending client info", () => {
+      // Graffiti supplied via the beacon API is decoded from a fixed 32-byte field and is
+      // right-padded with NUL bytes. Without stripping, availableBytes would be 0.
+      const nul = String.fromCharCode(0);
+      const paddedGraffiti = "my graffiti" + nul.repeat(GRAFFITI_SIZE - "my graffiti".length);
+      expect(appendClientInfoToGraffiti(paddedGraffiti, consensusClientVersion, executionClientVersion)).toBe(
+        "my graffiti BU9b0eLS80c2"
+      );
+    });
+
+    it("should use the default watermark when graffiti is entirely NUL padding", () => {
+      const paddedGraffiti = String.fromCharCode(0).repeat(GRAFFITI_SIZE);
+      expect(appendClientInfoToGraffiti(paddedGraffiti, consensusClientVersion, executionClientVersion)).toBe(
+        "BU9b0eLS80c2"
+      );
+    });
+
+    it("should preserve mid-string NUL bytes and only trim trailing NUL padding", () => {
+      const nul = String.fromCharCode(0);
+      // Graffiti with a data NUL in the middle, followed by trailing padding
+      const graffiti = "hello" + nul + "world" + nul.repeat(GRAFFITI_SIZE - 11);
+      const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, executionClientVersion);
+      // The mid-string NUL must be preserved; only trailing NULs are stripped
+      expect(result.startsWith("hello" + nul + "world")).toBe(true);
+    });
   });
 
   describe("getBlockGraffiti", () => {
@@ -137,6 +164,14 @@ describe("Graffiti helper", () => {
       expect(
         getBlockGraffiti("my graffiti", consensusClientVersion, executionClientVersion, {graffitiAppend: false})
       ).toBe("my graffiti");
+    });
+
+    it("should append client info to NUL-padded graffiti as received from the beacon API", () => {
+      const nul = String.fromCharCode(0);
+      const paddedGraffiti = "my graffiti" + nul.repeat(GRAFFITI_SIZE - "my graffiti".length);
+      expect(
+        getBlockGraffiti(paddedGraffiti, consensusClientVersion, executionClientVersion, {graffitiAppend: true})
+      ).toBe("my graffiti BU9b0eLS80c2");
     });
   });
 });
