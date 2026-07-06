@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {bench, describe, setBenchOpts} from "@chainsafe/benchmark";
+import {setHasher} from "@chainsafe/persistent-merkle-tree";
+import {hasher as hashtreeHasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig, config as chainForkConfig} from "@lodestar/config/default";
 import {createPubkeyCache} from "../../../src/cache/pubkeyCache.js";
@@ -12,6 +14,10 @@ import {getStateSlotFromBytes, getStateTypeFromBytes} from "../../../src/util/ss
 // ESM: no __dirname by default. Default path = repo-root mainnet_state_14707840.ssz (5 levels up:
 // slot -> perf -> test -> state-transition -> packages -> repo root). Override via env var
 // so the path can be changed on the user's server.
+// Use the SIMD hashtree hasher, as production does (see packages/cli/src/applyPreset.ts). The pmt
+// default is the pure-JS noble hasher, which makes hashTreeRoot several times slower than reality.
+setHasher(hashtreeHasher);
+
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATE_SSZ_PATH = process.env.STATE_SSZ_PATH ?? path.join(dirname, "../../../../../mainnet_state_14707840.ssz");
 
