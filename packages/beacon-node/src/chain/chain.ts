@@ -431,7 +431,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.bidCircuitBreaker = new BidCircuitBreaker(
       {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
-      {forkChoice, anchorSlot: this.anchorStateLatestBlockSlot, logger, metrics}
+      {forkChoice, logger, metrics}
     );
 
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
