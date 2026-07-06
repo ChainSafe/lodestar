@@ -134,6 +134,15 @@ describe("Graffiti helper", () => {
         "BU9b0eLS80c2"
       );
     });
+
+    it("should preserve mid-string NUL bytes and only trim trailing NUL padding", () => {
+      const nul = String.fromCharCode(0);
+      // Graffiti with a data NUL in the middle, followed by trailing padding
+      const graffiti = "hello" + nul + "world" + nul.repeat(GRAFFITI_SIZE - 11);
+      const result = appendClientInfoToGraffiti(graffiti, consensusClientVersion, executionClientVersion);
+      // The mid-string NUL must be preserved; only trailing NULs are stripped
+      expect(result.startsWith("hello" + nul + "world")).toBe(true);
+    });
   });
 
   describe("getBlockGraffiti", () => {

@@ -87,10 +87,11 @@ export function appendClientInfoToGraffiti(
   opts: {private?: boolean} = {}
 ): string {
   // Graffiti supplied via the beacon API is decoded from a fixed 32-byte field (see
-  // fromGraffitiHex) and arrives right-padded with NUL bytes. Strip them, otherwise the
-  // padding fills the whole 32 bytes, availableBytes is 0 and no client info is ever
-  // appended. Mirrors the padding removal already done in fromGraffitiBytes.
-  const graffiti = userGraffiti.replaceAll("\u0000", "");
+  // fromGraffitiHex) and arrives right-padded with NUL bytes. Trim only trailing padding
+  // NULs; a NUL that appears in the middle of the string is data, not padding.
+  let end = userGraffiti.length;
+  while (end > 0 && userGraffiti.charCodeAt(end - 1) === 0) end--;
+  const graffiti = userGraffiti.slice(0, end);
 
   if (opts.private) {
     return truncateUtf8ToBytes(graffiti, GRAFFITI_SIZE);
