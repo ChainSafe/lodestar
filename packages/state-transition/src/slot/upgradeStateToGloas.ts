@@ -1,3 +1,9 @@
+import {BranchNode, LeafNode, Node} from "@chainsafe/persistent-merkle-tree";
+// TODO: @chainsafe/ssz should publish progressiveSubtreeFillToContents as a public export, then
+// drop this deep import. It is not re-exported from ssz's public entrypoint; resolvable because
+// ssz 1.6.0 has no package.json "exports" map. Fragile across ssz bumps.
+// biome-ignore lint/style/noRestrictedImports: no public export yet; see TODO above
+import {progressiveSubtreeFillToContents} from "@chainsafe/ssz/lib/type/progressive.js";
 import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
@@ -50,8 +56,8 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.eth1DataVotes = stateGloasCloned.eth1DataVotes;
   stateGloasView.eth1DepositIndex = stateGloasCloned.eth1DepositIndex;
   t = logStep("copy fixed fields", t);
-  stateGloasView.validators = ssz.gloas.Validators.toViewDU(stateGloasCloned.validators.getAllReadonlyValues());
-  t = logStep("validators toViewDU", t);
+  stateGloasView.validators = migrateCompositeListToGloas(stateGloasCloned.validators, ssz.gloas.Validators);
+  t = logStep("validators node reuse", t);
   stateGloasView.balances = ssz.gloas.Balances.toViewDU(stateGloasCloned.balances.getAll());
   t = logStep("balances toViewDU", t);
   stateGloasView.randaoMixes = stateGloasCloned.randaoMixes;
@@ -85,16 +91,19 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.earliestExitEpoch = stateGloasCloned.earliestExitEpoch;
   stateGloasView.consolidationBalanceToConsume = stateGloasCloned.consolidationBalanceToConsume;
   stateGloasView.earliestConsolidationEpoch = stateGloasCloned.earliestConsolidationEpoch;
-  stateGloasView.pendingDeposits = ssz.gloas.PendingDeposits.toViewDU(
-    stateGloasCloned.pendingDeposits.getAllReadonlyValues()
+  stateGloasView.pendingDeposits = migrateCompositeListToGloas(
+    stateGloasCloned.pendingDeposits,
+    ssz.gloas.PendingDeposits
   );
-  stateGloasView.pendingPartialWithdrawals = ssz.gloas.PendingPartialWithdrawals.toViewDU(
-    stateGloasCloned.pendingPartialWithdrawals.getAllReadonlyValues()
+  stateGloasView.pendingPartialWithdrawals = migrateCompositeListToGloas(
+    stateGloasCloned.pendingPartialWithdrawals,
+    ssz.gloas.PendingPartialWithdrawals
   );
-  stateGloasView.pendingConsolidations = ssz.gloas.PendingConsolidations.toViewDU(
-    stateGloasCloned.pendingConsolidations.getAllReadonlyValues()
+  stateGloasView.pendingConsolidations = migrateCompositeListToGloas(
+    stateGloasCloned.pendingConsolidations,
+    ssz.gloas.PendingConsolidations
   );
-  t = logStep("pending deposits/withdrawals/consolidations toViewDU", t);
+  t = logStep("pending deposits/withdrawals/consolidations node reuse", t);
   stateGloasView.proposerLookahead = stateGloasCloned.proposerLookahead;
   stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
 
@@ -119,6 +128,27 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   logStep("clearCache", t);
 
   return stateGloas;
+}
+
+/**
+ * Migrate a composite list from fulu to its gloas progressive-list equivalent by reusing the fulu
+ * list's cached element nodes.
+ *
+ * Works whenever the element type is identical across the fork (e.g. validators use ValidatorNodeStruct,
+ * the pending* queues use the same electra element types). Each element's cached subtree root is then
+ * valid under gloas, so only the progressive list superstructure is rebuilt and a subsequent
+ * hashTreeRoot() skips re-hashing every element — the dominant cost for large lists like validators.
+ * Much cheaper than `gloasType.toViewDU(fuluList.getAllReadonlyValues())`, which decodes every element
+ * to a value and forces a full re-hash.
+ */
+function migrateCompositeListToGloas<V>(
+  fuluList: {getAllReadonly(): {node: Node}[]},
+  gloasType: {getViewDU(node: Node): V}
+): V {
+  const elementNodes = fuluList.getAllReadonly().map((v) => v.node);
+  const chunksNode = progressiveSubtreeFillToContents(elementNodes);
+  const rootNode = new BranchNode(chunksNode, LeafNode.fromUint32(elementNodes.length));
+  return gloasType.getViewDU(rootNode);
 }
 
 /**
