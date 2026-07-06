@@ -32,10 +32,10 @@ import {SerializedCache} from "../util/serializedCache.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
-import {BidCircuitBreaker} from "./bidCircuitBreaker.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
+import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
@@ -97,7 +97,7 @@ export interface IBeaconChain {
   readonly earliestAvailableSlot: Slot;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
-  readonly bidCircuitBreaker: BidCircuitBreaker;
+  readonly builderCircuitBreaker: BuilderCircuitBreaker;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;

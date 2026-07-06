@@ -71,7 +71,7 @@ describe("api/validator - produceBlockV4", () => {
   });
 
   it("prefers builder bid block when a bid is available", async () => {
-    modules.chain.bidCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
 
     const {data: block, meta} = await api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient});
@@ -87,7 +87,7 @@ describe("api/validator - produceBlockV4", () => {
   });
 
   it("produces local block when no bid is available", async () => {
-    modules.chain.bidCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
 
     const {data: block} = await api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient});
@@ -96,13 +96,13 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
-  it("ignores builder bids when the bid circuit breaker is active", async () => {
-    modules.chain.bidCircuitBreaker.isActive.mockReturnValue(true);
+  it("ignores builder bids when the builder circuit breaker is active", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
 
     const {data: block} = await api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient});
 
-    expect(modules.chain.bidCircuitBreaker.isActive).toHaveBeenCalledWith(slot);
+    expect(modules.chain.builderCircuitBreaker.isActive).toHaveBeenCalledWith(slot);
     expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);

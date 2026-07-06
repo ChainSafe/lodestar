@@ -4,12 +4,12 @@ import {Logger} from "@lodestar/utils";
 import {getFaultInspectionParams} from "../execution/builder/http.js";
 import {Metrics} from "../metrics/index.js";
 
-export type BidCircuitBreakerOpts = {
+export type BuilderCircuitBreakerOpts = {
   faultInspectionWindow?: number;
   allowedFaults?: number;
 };
 
-export type BidCircuitBreakerModules = {
+export type BuilderCircuitBreakerModules = {
   forkChoice: IForkChoice;
   logger: Logger;
   metrics: Metrics | null;
@@ -21,7 +21,7 @@ export type BidCircuitBreakerModules = {
  * count blocks whose payload was never revealed and stop selecting builder bids while the
  * non-reveal rate in the fault inspection window is too high.
  */
-export class BidCircuitBreaker {
+export class BuilderCircuitBreaker {
   readonly faultInspectionWindow: number;
   readonly allowedFaults: number;
 
@@ -29,8 +29,8 @@ export class BidCircuitBreaker {
   private lastUpdatedSlot = -1;
 
   constructor(
-    opts: BidCircuitBreakerOpts,
-    private readonly modules: BidCircuitBreakerModules
+    opts: BuilderCircuitBreakerOpts,
+    private readonly modules: BuilderCircuitBreakerModules
   ) {
     const {faultInspectionWindow, allowedFaults} = getFaultInspectionParams(opts);
     this.faultInspectionWindow = faultInspectionWindow;
@@ -60,8 +60,8 @@ export class BidCircuitBreaker {
     // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
     this.active = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
 
-    this.modules.metrics?.bidCircuitBreaker.active.set(this.active ? 1 : 0);
-    this.modules.metrics?.bidCircuitBreaker.faults.set(faults);
+    this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);
+    this.modules.metrics?.builderCircuitBreaker.faults.set(faults);
 
     const logCtx = {
       blocksPresent,
@@ -71,11 +71,13 @@ export class BidCircuitBreaker {
     };
     if (this.active !== wasActive) {
       this.modules.logger.info(
-        this.active ? "Bid circuit breaker activated, ignoring builder bids" : "Bid circuit breaker deactivated",
+        this.active
+          ? "Builder circuit breaker activated, ignoring builder bids"
+          : "Builder circuit breaker deactivated",
         logCtx
       );
     } else {
-      this.modules.logger.verbose("Bid circuit breaker status", {active: this.active, ...logCtx});
+      this.modules.logger.verbose("Builder circuit breaker status", {active: this.active, ...logCtx});
     }
   }
 }

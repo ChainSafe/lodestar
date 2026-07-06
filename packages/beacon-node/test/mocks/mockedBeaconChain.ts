@@ -5,7 +5,7 @@ import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {createPubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
-import {BidCircuitBreaker} from "../../src/chain/bidCircuitBreaker.js";
+import {BuilderCircuitBreaker} from "../../src/chain/builderCircuitBreaker.js";
 import {BeaconChain} from "../../src/chain/chain.js";
 import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
@@ -25,7 +25,7 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   forkChoice: MockedForkChoice;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
-  bidCircuitBreaker: Mocked<BidCircuitBreaker>;
+  builderCircuitBreaker: Mocked<BuilderCircuitBreaker>;
   executionPayloadBidPool: Mocked<ExecutionPayloadBidPool>;
   opPool: Mocked<OpPool>;
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
@@ -149,7 +149,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         getClientVersion: vi.fn(),
       },
       executionBuilder: {},
-      bidCircuitBreaker: {
+      builderCircuitBreaker: {
         isActive: vi.fn(),
         update: vi.fn(),
       },

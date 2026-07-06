@@ -68,7 +68,6 @@ import {getSlotFromSignedBeaconBlockSerialized} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
 import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconProposerCache} from "./beaconProposerCache.js";
-import {BidCircuitBreaker} from "./bidCircuitBreaker.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -76,6 +75,7 @@ import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -153,7 +153,7 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
-  readonly bidCircuitBreaker: BidCircuitBreaker;
+  readonly builderCircuitBreaker: BuilderCircuitBreaker;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -429,7 +429,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.forkChoice = forkChoice;
 
-    this.bidCircuitBreaker = new BidCircuitBreaker(
+    this.builderCircuitBreaker = new BuilderCircuitBreaker(
       {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
       {forkChoice, logger, metrics}
     );

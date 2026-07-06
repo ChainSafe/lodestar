@@ -254,7 +254,7 @@ export interface IForkChoice {
   getSlotsPresent(windowStart: number): number;
   /**
    * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
-   * payload (FULL variant exists). Used by the bid circuit breaker.
+   * payload (FULL variant exists). Used by the builder circuit breaker.
    */
   getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number};
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;

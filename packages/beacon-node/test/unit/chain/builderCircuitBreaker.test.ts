@@ -1,17 +1,20 @@
 import {describe, expect, it, vi} from "vitest";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {BidCircuitBreaker} from "../../../src/chain/bidCircuitBreaker.js";
+import {BuilderCircuitBreaker} from "../../../src/chain/builderCircuitBreaker.js";
 
-describe("BidCircuitBreaker", () => {
+describe("BuilderCircuitBreaker", () => {
   const faultInspectionWindow = 32;
   const allowedFaults = 8;
-  const logger = testLogger("bidCircuitBreaker");
+  const logger = testLogger("builderCircuitBreaker");
 
   function setup(stats: {blocksPresent: number; payloadsRevealed: number}) {
     const getPayloadRevealCounts = vi.fn().mockReturnValue(stats);
     const forkChoice = {getPayloadRevealCounts} as unknown as IForkChoice;
-    const breaker = new BidCircuitBreaker({faultInspectionWindow, allowedFaults}, {forkChoice, logger, metrics: null});
+    const breaker = new BuilderCircuitBreaker(
+      {faultInspectionWindow, allowedFaults},
+      {forkChoice, logger, metrics: null}
+    );
     return {breaker, getPayloadRevealCounts};
   }
 

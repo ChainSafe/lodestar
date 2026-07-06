@@ -138,13 +138,13 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       help: "Count of cached produced results",
     }),
 
-    bidCircuitBreaker: {
+    builderCircuitBreaker: {
       active: register.gauge({
-        name: "beacon_bid_circuit_breaker_active",
-        help: "Whether the bid circuit breaker is active (1) causing builder bids to be ignored",
+        name: "beacon_builder_circuit_breaker_active",
+        help: "Whether the builder circuit breaker is active (1) causing builder bids to be ignored",
       }),
       faults: register.gauge({
-        name: "beacon_bid_circuit_breaker_faults",
+        name: "beacon_builder_circuit_breaker_faults",
         help: "Count of blocks with unrevealed payloads in the fault inspection window",
       }),
     },
