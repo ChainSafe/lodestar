@@ -475,7 +475,7 @@ export class ForkChoice implements IForkChoice {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
     });
-    const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : parentBlock.payloadStatus;
+    const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;
     const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentStrongVariant);
     // If parentNode is unavailable, give up reorg
     if (parentNode === undefined || parentNode.weight <= parentThreshold) {
@@ -1948,7 +1948,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if we are at an epoch boundary
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_epoch_boundary
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_not_epoch_boundary
     const isAtEpochBoundary = slot % SLOTS_PER_EPOCH === 0;
     if (isAtEpochBoundary) {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.AtEpochBoundary};
