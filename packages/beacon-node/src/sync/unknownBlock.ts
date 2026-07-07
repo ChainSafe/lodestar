@@ -8,8 +8,8 @@ import {Logger, fromHex, prettyPrintIndices, pruneSetToMax, sleep, toRootHex} fr
 import {GossipValidationStatus} from "../chain/beaconEngine/gossipValidationResult.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../chain/blocks/blockInput/types.js";
-import {PayloadError, PayloadErrorCode} from "../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadError, PayloadErrorCode} from "../chain/blocks/payloadError.js";
 import {BlockError, BlockErrorCode} from "../chain/errors/index.js";
 import {ChainEvent, ChainEventData, IBeaconChain} from "../chain/index.js";
 import {validateGloasBlockDataColumnSidecars} from "../chain/validation/dataColumnSidecar.js";

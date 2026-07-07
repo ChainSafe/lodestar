@@ -3,8 +3,8 @@ import {NotReorgedReason} from "@lodestar/fork-choice";
 import {ArchiveStoreTask} from "../../chain/archiveStore/interface.js";
 import {FrequencyStateArchiveStep} from "../../chain/archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {BlockInputSource} from "../../chain/blocks/blockInput/index.js";
-import {PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadErrorCode} from "../../chain/blocks/payloadError.js";
 import {JobQueueItemType} from "../../chain/bls/index.js";
 import {AttestationErrorCode, BlockErrorCode} from "../../chain/errors/index.js";
 import {

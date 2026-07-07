@@ -104,10 +104,15 @@ import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCac
 import {isBlockInputBlobs, isBlockInputColumns} from "../blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
+import {PayloadError, PayloadErrorCode} from "../blocks/payloadError.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../blocks/types.js";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint.js";
 import {verifyBlocksSignatures} from "../blocks/verifyBlocksSignatures.js";
 import {verifyBlocksStateTransitionOnly} from "../blocks/verifyBlocksStateTransitionOnly.js";
+import {
+  verifyExecutionPayloadEnvelope as verifyExecutionPayloadEnvelopeFields,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "../blocks/verifyExecutionPayloadEnvelope.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "../bls/index.js";
 import {ChainEvent, ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -2125,6 +2130,116 @@ export class BeaconEngine implements IBeaconEngine {
     } finally {
       this.verifiedBlocks.delete(blockRootHex);
     }
+  }
+
+  /**
+   * Verify a gloas execution payload envelope before importing it: resolve the block's state (regen),
+   * check the envelope fields against it, and verify the BLS signature (skipped when gossip/API already
+   * did — `opts.validSignature`). Consensus-only; the EL `notifyNewPayload` runs facade-side in parallel
+   * with this (mirrors the block pipeline's state/sig ∥ EL split). Throws `PayloadError` on failure.
+   *
+   * `_envelopeBytes` is the SSZ bytes of `signedEnvelope` — the JS engine works off the POJO and ignores
+   * it; the native engine deserializes from it (bytes-first FFI, `(bytes, pojo)` seam, like `verifyBlocks`).
+   */
+  async verifyExecutionPayloadEnvelope(
+    _envelopeBytes: Uint8Array,
+    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    proposerIndex: ValidatorIndex,
+    opts: {validSignature: boolean}
+  ): Promise<void> {
+    const envelope = signedEnvelope.message;
+    const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+
+    // Get the ProtoBlock for the block whose payload this envelope carries.
+    const protoBlock = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+    if (!protoBlock) {
+      throw new PayloadError({code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE, blockRootHex});
+    }
+
+    // Regenerate state for envelope verification.
+    const blockState = await this.regen
+      .getBlockSlotState(protoBlock, protoBlock.slot, {dontTransferCache: true}, RegenCaller.importExecutionPayload)
+      .catch(() =>
+        // only happen at the 1st batch of skipped slot checkpoint sync
+        this.regen.getClosestHeadState(protoBlock)
+      );
+
+    if (blockState == null) {
+      throw new PayloadError({code: PayloadErrorCode.MISS_BLOCK_STATE, blockRootHex: protoBlock.blockRoot});
+    }
+    if (!isStatePostGloas(blockState)) {
+      throw new PayloadError({
+        code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+        message: `Expected gloas+ state for payload import, got fork=${blockState.forkName}`,
+      });
+    }
+
+    // Verify envelope fields against state. When validSignature is true, gossip/API already verified
+    // both the signature and the executionRequestsRoot, so we skip those checks here.
+    try {
+      verifyExecutionPayloadEnvelopeFields(this.config, blockState, envelope, {
+        verifyExecutionRequestsRoot: !opts.validSignature,
+      });
+    } catch (e) {
+      throw new PayloadError(
+        {code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR, message: (e as Error).message},
+        `Envelope verification error: ${(e as Error).message}`
+      );
+    }
+
+    if (opts.validSignature !== true) {
+      const signatureValid = await verifyExecutionPayloadEnvelopeSignature(
+        this.config,
+        blockState,
+        this.pubkeyCache,
+        signedEnvelope,
+        proposerIndex,
+        this.bls
+      );
+      if (!signatureValid) {
+        throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
+      }
+    }
+  }
+
+  /**
+   * Import a verified execution payload envelope into fork choice (transitions the block's PENDING
+   * variant to FULL) and compute the post-import FCU decision. The facade fires the EL calls
+   * (`notifyNewPayload` before this, `notifyForkchoiceUpdate` from the returned `fcuUpdate`) and emits
+   * events. `execStatus` is the EL result mapped facade-side; `blockRoot` is bytes-first (native FFI).
+   */
+  importExecutionPayload(
+    blockRoot: Root,
+    blockHashHex: RootHex,
+    payloadBlockNumber: number,
+    payloadGasLimit: number,
+    execStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
+  ): {fcuUpdate: FcuUpdate | null; executionOptimistic: boolean} {
+    const blockRootHex = toRootHex(blockRoot);
+
+    this.forkChoice.onExecutionPayload(
+      blockRootHex,
+      blockHashHex,
+      payloadBlockNumber,
+      payloadGasLimit,
+      execStatus,
+      dataAvailabilityStatus
+    );
+
+    // Fire the FCU only when this payload's block is the canonical head.
+    const head = this.forkChoice.getHead();
+    let fcuUpdate: FcuUpdate | null = null;
+    if (blockRootHex === head.blockRoot) {
+      fcuUpdate = {
+        fork: this.config.getForkName(head.slot),
+        headBlockHash: blockHashHex,
+        safeBlockHash: getSafeExecutionBlockHash(this.forkChoice),
+        finalizedBlockHash: this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX,
+      };
+    }
+
+    return {fcuUpdate, executionOptimistic: execStatus === ExecutionStatus.Syncing};
   }
 
   private async _importBlock(

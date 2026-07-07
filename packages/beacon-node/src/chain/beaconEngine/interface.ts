@@ -519,6 +519,26 @@ export interface IBeaconEngine {
   ): Promise<ImportBlockResult>;
   discardVerifiedBlocks(blockRootHexes: RootHex[]): void;
 
+  // Execution payload envelope (gloas) import — consensus body of the facade `importExecutionPayload`.
+  // `verifyExecutionPayloadEnvelope` (regen state + fields + BLS sig, throws `PayloadError`) runs
+  // facade-parallel to the EL `notifyNewPayload`; `importExecutionPayload` does the fork-choice write +
+  // FCU decision. The facade fires the EL calls + emits events. Bytes-first (native FFI): `envelopeBytes`
+  // is the SSZ envelope (JS engine ignores it, uses the pojo); `blockRoot` is the SSZ root as raw bytes.
+  verifyExecutionPayloadEnvelope(
+    envelopeBytes: Uint8Array,
+    signedEnvelope: gloas.SignedExecutionPayloadEnvelope,
+    proposerIndex: ValidatorIndex,
+    opts: {validSignature: boolean}
+  ): Promise<void>;
+  importExecutionPayload(
+    blockRoot: Root,
+    blockHashHex: RootHex,
+    payloadBlockNumber: number,
+    payloadGasLimit: number,
+    execStatus: PayloadExecutionStatus,
+    dataAvailabilityStatus: DataAvailabilityStatus
+  ): {fcuUpdate: FcuUpdate | null; executionOptimistic: boolean};
+
   // --- DB ownership (blocks + states) ---
 
   /**

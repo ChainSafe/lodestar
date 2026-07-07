@@ -44,8 +44,8 @@ import {
   IBlockInput,
   isBlockInputColumns,
 } from "../../chain/blocks/blockInput/index.js";
-import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput, PayloadEnvelopeInputSource} from "../../chain/blocks/payloadEnvelopeInput/index.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/payloadError.js";
 import {BlobSidecarValidation} from "../../chain/blocks/types.js";
 import {ChainEvent} from "../../chain/emitter.js";
 import {
