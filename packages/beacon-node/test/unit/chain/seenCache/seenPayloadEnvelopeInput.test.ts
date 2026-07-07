@@ -153,4 +153,23 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(second).toBe(first);
     expect(cache.size()).toBe(1);
   });
+
+  it("prune removes a single entry by root and leaves others", () => {
+    const rootHex1 = addPayloadInput(1);
+    const rootHex2 = addPayloadInput(2);
+
+    cache.prune(rootHex1);
+
+    expect(cache.get(rootHex1)).toBeUndefined();
+    expect(cache.get(rootHex2)).toBeDefined();
+    expect(cache.size()).toBe(1);
+  });
+
+  it("prune is a no-op for an unknown root", () => {
+    const rootHex = addPayloadInput(1);
+
+    expect(() => cache.prune(`0x${"ab".repeat(32)}`)).not.toThrow();
+    expect(cache.get(rootHex)).toBeDefined();
+    expect(cache.size()).toBe(1);
+  });
 });
