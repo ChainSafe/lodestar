@@ -6,6 +6,7 @@ export type BuilderPendingWithdrawal = ValueOf<typeof ssz.BuilderPendingWithdraw
 export type BuilderPendingPayment = ValueOf<typeof ssz.BuilderPendingPayment>;
 export type BuilderDepositRequest = ValueOf<typeof ssz.BuilderDepositRequest>;
 export type BuilderDepositRequests = ValueOf<typeof ssz.BuilderDepositRequests>;
+export type DepositRequests = ValueOf<typeof ssz.DepositRequests>;
 export type BuilderExitRequest = ValueOf<typeof ssz.BuilderExitRequest>;
 export type BuilderExitRequests = ValueOf<typeof ssz.BuilderExitRequests>;
 export type ExecutionRequests = ValueOf<typeof ssz.ExecutionRequests>;

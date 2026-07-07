@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {MAX_DEPOSIT_REQUESTS_PER_PAYLOAD} from "@lodestar/params";
 import {ssz} from "../../../src/index.js";
 
 // Ensures the gloas-extended ExecutionRequests (and the ExecutionPayloadEnvelope that carries it)
@@ -59,6 +60,17 @@ describe("gloas ExecutionRequests JSON shape", () => {
     const back = ssz.gloas.ExecutionRequests.fromJson(json);
     expect(back).toEqual(value);
     expect(ssz.gloas.ExecutionRequests.hashTreeRoot(back)).toEqual(ssz.gloas.ExecutionRequests.hashTreeRoot(value));
+  });
+
+  it("ExecutionRequests accepts deposits beyond the Electra request limit", () => {
+    const value = ssz.gloas.ExecutionRequests.defaultValue();
+    value.deposits = Array.from({length: MAX_DEPOSIT_REQUESTS_PER_PAYLOAD + 1}, () =>
+      ssz.electra.DepositRequest.defaultValue()
+    );
+
+    const back = ssz.gloas.ExecutionRequests.deserialize(ssz.gloas.ExecutionRequests.serialize(value));
+
+    expect(back.deposits.length).toBe(MAX_DEPOSIT_REQUESTS_PER_PAYLOAD + 1);
   });
 
   it("ExecutionPayloadEnvelope round-trips through JSON with builder requests populated", () => {

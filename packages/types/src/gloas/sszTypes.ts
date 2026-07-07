@@ -50,6 +50,10 @@ const {
   EpochInf,
 } = primitiveSsz;
 
+// SSZ implementation bound for Gloas deposit requests; consensus-specs uses the
+// same value for max-size helpers after removing the CL-side request count limit.
+const GLOAS_DEPOSIT_REQUESTS_SSZ_LIMIT = 40_000;
+
 export const Builder = new ContainerType(
   {
     pubkey: BLSPubkey,
@@ -95,6 +99,8 @@ export const BuilderDepositRequests = new ListCompositeType(
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
 );
 
+export const DepositRequests = new ListCompositeType(electraSsz.DepositRequest, GLOAS_DEPOSIT_REQUESTS_SSZ_LIMIT);
+
 export const BuilderExitRequest = new ContainerType(
   {
     sourceAddress: ExecutionAddress,
@@ -108,7 +114,7 @@ export const BuilderExitRequests = new ListCompositeType(BuilderExitRequest, MAX
 // New in GLOAS:EIP8282 — extends electra ExecutionRequests with builder deposits and exits
 export const ExecutionRequests = new ContainerType(
   {
-    deposits: electraSsz.DepositRequests,
+    deposits: DepositRequests,
     withdrawals: electraSsz.WithdrawalRequests,
     consolidations: electraSsz.ConsolidationRequests,
     builderDeposits: BuilderDepositRequests,
