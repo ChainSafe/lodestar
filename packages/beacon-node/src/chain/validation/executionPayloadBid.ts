@@ -161,7 +161,6 @@ async function validateExecutionPayloadBid(
   }
 
   // [IGNORE] `bid.fee_recipient == proposer_preferences.fee_recipient`.
-  // Changed REJECT -> IGNORE in consensus-specs #5429.
   if (!byteArrayEquals(bid.feeRecipient, proposerPreferences.message.feeRecipient)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH,
