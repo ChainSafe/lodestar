@@ -10,6 +10,7 @@ import {
   ACTIVE_PRESET,
   ForkPostDeneb,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreDeneb,
   ForkPreFulu,
   ForkPreGloas,
@@ -41,6 +42,7 @@ import {bnToNum, fromHex, toHex} from "@lodestar/utils";
 import {
   BlockInputBlobs,
   BlockInputColumns,
+  BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.ts";
@@ -239,7 +241,30 @@ const fastConfirmationTest =
                 let blockImport;
                 const forkSeq = config.getForkSeq(slot);
 
-                if (forkSeq >= ForkSeq.fulu) {
+                if (forkSeq >= ForkSeq.gloas) {
+                  // Gloas blocks don't carry blobs/columns directly on the block body.
+                  // Blob KZG commitments are nested inside signedExecutionPayloadBid.
+                  // Use BlockInputNoData since DA is handled separately via execution payload envelopes.
+                  blockImport = BlockInputNoData.createFromBlock({
+                    forkName: fork,
+                    block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                    blockRootHex,
+                    source: BlockInputSource.gossip,
+                    seenTimestampSec: 0,
+                    daOutOfRange: false,
+                  });
+                  // importBlock requires a PayloadEnvelopeInput to exist for gloas blocks; in
+                  // production this is seeded by gossip / by-root / by-range / API producers.
+                  // Spec tests bypass those, so seed it here to mirror the gossip-handler path.
+                  chain.seenPayloadEnvelopeInputCache.add({
+                    blockRootHex,
+                    block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+                    forkName: fork,
+                    sampledColumns: chain.custodyConfig.sampledColumns,
+                    custodyColumns: chain.custodyConfig.custodyColumns,
+                    timeCreatedSec: tickTime,
+                  });
+                } else if (forkSeq >= ForkSeq.fulu) {
                   if (columns === undefined) {
                     columns = [];
                   }
@@ -344,6 +369,9 @@ const fastConfirmationTest =
                   seenTimestampSec: tickTime,
                   validBlobSidecars: BlobSidecarValidation.Full,
                   importAttestations: AttestationImportOpt.Force,
+                  // fast_confirmation vectors are generated with bls_setting=2 (signatures are not
+                  // required to be valid), so only verify signatures when bls_setting=1.
+                  validSignatures: testcase.meta?.bls_setting !== BigInt(1),
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {

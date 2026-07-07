@@ -72,7 +72,7 @@ export function verifyExecutionPayloadEnvelope(
   // Verify execution_requests_root matches bid commitment.
   // Can be skipped if already verified during gossip validation.
   if (verifyExecutionRequestsRoot) {
-    const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
     if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
       throw new Error(
         `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} bid=${toRootHex(bid.executionRequestsRoot)}`

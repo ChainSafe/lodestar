@@ -244,7 +244,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         if (executionRequests === undefined) {
           throw Error(`executionRequests required in notifyNewPayload for fork=${fork}`);
         }
-        const serializedExecutionRequests = serializeExecutionRequests(executionRequests);
+        const serializedExecutionRequests = serializeExecutionRequests(fork, executionRequests);
         engineRequest = {
           method: ForkSeq[fork] >= ForkSeq.gloas ? "engine_newPayloadV5" : "engine_newPayloadV4",
           params: [
