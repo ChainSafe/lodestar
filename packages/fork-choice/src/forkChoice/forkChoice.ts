@@ -901,14 +901,15 @@ export class ForkChoice implements IForkChoice {
 
     this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch, attDataRoot, forceImport);
 
-    // Pre-gloas: payload is always present
+    // Determine which variant the attestation supports
+    //
+    // Pre-gloas: payload is always present, vote goes to FULL.
     // Post-gloas:
-    // - always add weight to PENDING
-    // - if message.slot > block.slot, it also add weights to FULL or EMPTY
+    //   - block.slot < message.slot: EMPTY if data.index is 0 and FULL if data.index is 1.
+    //   - else: PENDING
+    //
+    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-get_supported_node
     let payloadStatus: PayloadStatus;
-
-    // We need to retrieve block to check if it's Gloas and to compare slot
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-is_supporting_vote
     const block = this.getBlockHexDefaultStatus(blockRootHex);
 
     if (block && isGloasBlock(block)) {
