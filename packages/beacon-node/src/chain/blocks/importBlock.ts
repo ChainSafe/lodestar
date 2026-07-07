@@ -1,14 +1,8 @@
 import {routes} from "@lodestar/api";
-import {
-  BlockExecutionStatus,
-  NotReorgedReason,
-  PayloadExecutionStatus,
-  getSafeExecutionBlockHash,
-} from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {BlockExecutionStatus, PayloadExecutionStatus} from "@lodestar/fork-choice";
+import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
 import {fromHex, isErrorAborted} from "@lodestar/utils";
-import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -77,80 +71,17 @@ export async function importBlock(
   // The engine no longer emits these (FFI-honest); they are derived facade-side from the head ProtoBlock.
   this.updateHeadAndEmitCheckpointEvents(r.newHead);
 
-  // 6. Queue notifyForkchoiceUpdate to engine api
-  let shouldOverrideFcu = false;
-
-  if (r.isExecutionState && r.blockMeta.slot >= this.forkChoice.getTime()) {
-    let notOverrideFcuReason = NotReorgedReason.Unknown;
-    const proposalSlot = r.blockMeta.slot + 1;
-    try {
-      const proposerIndex = r.proposerIndexNextSlot;
-      if (proposerIndex !== null) {
-        // TODO - beacon engine: move this there
-        const feeRecipient = this.beaconEngine.getProposerFeeRecipient(proposerIndex);
-        if (feeRecipient && r.blockSummary !== null) {
-          const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
-            r.blockSummary,
-            this.clock.secFromSlot(this.forkChoice.getTime()),
-            this.forkChoice.getTime()
-          );
-          shouldOverrideFcu = result.shouldOverrideFcu;
-          if (!result.shouldOverrideFcu) {
-            notOverrideFcuReason = result.reason;
-          }
-        } else {
-          notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
-        }
-      } else {
-        if (isStartSlotOfEpoch(proposalSlot)) {
-          notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
-        }
+  // 6. Fire notifyForkchoiceUpdate on the EL. The engine computed the override decision + all hashes
+  // internally (fork choice + proposer cache are engine-owned) and returned them as `r.fcuUpdate`;
+  // the facade only fires the EL call (executionEngine is facade-owned) or skips. `disableImportExecutionFcU`
+  // stays a facade-side gate.
+  if (!this.opts.disableImportExecutionFcU && r.fcuUpdate !== null) {
+    const {fork, headBlockHash, safeBlockHash, finalizedBlockHash} = r.fcuUpdate;
+    this.executionEngine.notifyForkchoiceUpdate(fork, headBlockHash, safeBlockHash, finalizedBlockHash).catch((e) => {
+      if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
+        this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
       }
-    } catch (e) {
-      if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
-      } else {
-        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
-      }
-    }
-
-    if (shouldOverrideFcu) {
-      this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
-        blockRoot: r.blockMeta.blockRootHex,
-        slot: r.blockMeta.slot,
-      });
-    } else {
-      this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
-      this.logger.verbose("Strong block detected. Not override fcu call", {
-        blockRoot: r.blockMeta.blockRootHex,
-        slot: r.blockMeta.slot,
-        reason: notOverrideFcuReason,
-      });
-    }
-  }
-
-  if (
-    !this.opts.disableImportExecutionFcU &&
-    (r.newHeadBlockRoot !== r.oldHeadBlockRoot || r.currFinalizedEpoch !== r.prevFinalizedEpoch) &&
-    !shouldOverrideFcu
-  ) {
-    const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
-    if (headBlockHash !== ZERO_HASH_HEX) {
-      this.executionEngine
-        .notifyForkchoiceUpdate(
-          this.config.getForkName(this.forkChoice.getHead().slot),
-          headBlockHash,
-          safeBlockHash,
-          finalizedBlockHash
-        )
-        .catch((e) => {
-          if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
-            this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-          }
-        });
-    }
+    });
   }
 
   const blockRootHex = r.blockMeta.blockRootHex;

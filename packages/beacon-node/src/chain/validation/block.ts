@@ -20,6 +20,7 @@ export type GossipBlockValidationResult = {
 };
 
 export async function validateGossipBlock(
+  // TODO - beacon engine: use "this"
   engine: BeaconEngine,
   signedBlock: SignedBeaconBlock,
   fork: ForkName

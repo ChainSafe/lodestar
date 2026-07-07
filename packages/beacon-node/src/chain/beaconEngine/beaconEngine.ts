@@ -11,6 +11,7 @@ import {
   ForkChoiceErrorCode,
   ForkChoiceStateGetter,
   IForkChoice,
+  NotReorgedReason,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -43,6 +44,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
+  isStartSlotOfEpoch,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -200,6 +202,7 @@ import {
 } from "./gossipValidationResult.js";
 import {
   BeaconEngineModules,
+  FcuUpdate,
   FinalizedProtoSummary,
   IBeaconEngine,
   ImportBlockResult,
@@ -2475,6 +2478,21 @@ export class BeaconEngine implements IBeaconEngine {
       }
     }
 
+    // 6. Compute the FCU-override decision + notifyForkchoiceUpdate args engine-side; the facade fires
+    // the EL call (executionEngine is facade-owned) or skips based on `fcuUpdate`.
+    const fcuUpdate = this.computeImportFcuUpdate({
+      isExecutionState,
+      blockSlot,
+      currentSlot,
+      blockRootHex,
+      blockSummary,
+      proposerIndexNextSlot,
+      newHeadBlockRoot: newHead.blockRoot,
+      oldHeadBlockRoot,
+      currFinalizedEpoch,
+      prevFinalizedEpoch,
+    });
+
     return {
       headChanged,
       head: headResult,
@@ -2486,6 +2504,7 @@ export class BeaconEngine implements IBeaconEngine {
       currFinalizedEpoch,
       oldHeadBlockRoot,
       newHeadBlockRoot: newHead.blockRoot,
+      fcuUpdate,
       newHead,
       blockMeta: {
         slot: blockSlot,
@@ -2495,6 +2514,106 @@ export class BeaconEngine implements IBeaconEngine {
         seenTimestampSec,
       },
     };
+  }
+
+  /**
+   * Decide whether to fire a forkchoice-update on the EL after importing a block, and if so return the
+   * notifyForkchoiceUpdate args. All fork-choice + proposer-cache reads are engine-internal; the facade
+   * only fires the EL call (or skips) from the returned data. Also emits the `notOverrideFcuReason`
+   * metric + weak/strong-block logs (engine owns metrics/logger). `disableImportExecutionFcU` stays a
+   * facade-side gate applied to the returned value.
+   *
+   * Returns `null` when there is nothing to fire: non-execution state, weak block (`shouldOverrideFcu`),
+   * no head/finalized change, or the head execution block hash is ZERO.
+   */
+  private computeImportFcuUpdate(args: {
+    isExecutionState: boolean;
+    blockSlot: Slot;
+    currentSlot: Slot;
+    blockRootHex: RootHex;
+    blockSummary: ProtoBlock | null;
+    proposerIndexNextSlot: number | null;
+    newHeadBlockRoot: string;
+    oldHeadBlockRoot: string;
+    currFinalizedEpoch: number;
+    prevFinalizedEpoch: number;
+  }): FcuUpdate | null {
+    const {
+      isExecutionState,
+      blockSlot,
+      currentSlot,
+      blockRootHex,
+      blockSummary,
+      proposerIndexNextSlot,
+      newHeadBlockRoot,
+      oldHeadBlockRoot,
+      currFinalizedEpoch,
+      prevFinalizedEpoch,
+    } = args;
+
+    let shouldOverrideFcu = false;
+
+    if (isExecutionState && blockSlot >= currentSlot) {
+      let notOverrideFcuReason = NotReorgedReason.Unknown;
+      const proposalSlot = blockSlot + 1;
+      try {
+        if (proposerIndexNextSlot !== null) {
+          const feeRecipient = this.getProposerFeeRecipient(proposerIndexNextSlot);
+          if (feeRecipient && blockSummary !== null) {
+            const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
+              blockSummary,
+              this.clock.secFromSlot(currentSlot),
+              currentSlot
+            );
+            shouldOverrideFcu = result.shouldOverrideFcu;
+            if (!result.shouldOverrideFcu) {
+              notOverrideFcuReason = result.reason;
+            }
+          } else {
+            notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
+          }
+        } else {
+          if (isStartSlotOfEpoch(proposalSlot)) {
+            notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+          }
+        }
+      } catch (e) {
+        if (isStartSlotOfEpoch(proposalSlot)) {
+          notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+        } else {
+          this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
+        }
+      }
+
+      if (shouldOverrideFcu) {
+        this.logger.verbose("Weak block detected. Skip fcu call in importBlock", {
+          blockRoot: blockRootHex,
+          slot: blockSlot,
+        });
+      } else {
+        this.metrics?.importBlock.notOverrideFcuReason.inc({reason: notOverrideFcuReason});
+        this.logger.verbose("Strong block detected. Not override fcu call", {
+          blockRoot: blockRootHex,
+          slot: blockSlot,
+          reason: notOverrideFcuReason,
+        });
+      }
+    }
+
+    if ((newHeadBlockRoot !== oldHeadBlockRoot || currFinalizedEpoch !== prevFinalizedEpoch) && !shouldOverrideFcu) {
+      const head = this.forkChoice.getHead();
+      const headBlockHash = head.executionPayloadBlockHash ?? ZERO_HASH_HEX;
+      if (headBlockHash !== ZERO_HASH_HEX) {
+        return {
+          fork: this.config.getForkName(head.slot),
+          headBlockHash,
+          safeBlockHash: getSafeExecutionBlockHash(this.forkChoice),
+          finalizedBlockHash: this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX,
+        };
+      }
+    }
+
+    return null;
   }
 
   private addAttestationPreElectra(

@@ -86,6 +86,18 @@ export type BeaconEngineModules = {
   lightClientServer?: LightClientServer;
 };
 
+/**
+ * FCU side-effect for the facade to fire after `importBlock` / `importExecutionPayload`. The engine
+ * computes the override decision + all hashes internally (reads its own fork choice + proposer cache);
+ * the facade only fires `executionEngine.notifyForkchoiceUpdate` (EL is facade-owned).
+ */
+export type FcuUpdate = {
+  fork: ForkName;
+  headBlockHash: RootHex;
+  safeBlockHash: RootHex;
+  finalizedBlockHash: RootHex;
+};
+
 export type ImportBlockResult = {
   headChanged: boolean;
   head: {
@@ -111,6 +123,8 @@ export type ImportBlockResult = {
   currFinalizedEpoch: number;
   oldHeadBlockRoot: string;
   newHeadBlockRoot: string;
+  /** Post-import FCU decision computed engine-side; facade fires `notifyForkchoiceUpdate` from it (or skips). */
+  fcuUpdate: FcuUpdate | null;
   blockMeta: {
     slot: number;
     blockRootHex: string;

@@ -888,6 +888,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
         try {
+          // TODO beacon-engine: move to validateGossipAggregateAndProof
           chain.beaconEngine.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {
           logger.debug(
@@ -1164,6 +1165,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (res.status !== GossipValidationStatus.Accept) return res;
       const {attDataRootHex, validatorCommitteeIndices} = res.value;
 
+      // TODO beacon engine: move to BeaconEngine, check other gossip handlers too
       try {
         const insertOutcome = chain.beaconEngine.addPayloadAttestation(
           payloadAttestationMessage,
