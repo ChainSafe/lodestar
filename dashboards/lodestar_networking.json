@@ -7002,15 +7002,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_prioritize_peers_seconds_bucket[$rate_interval])) by (le, instance))",
-          "legendFormat": "{{instance}} p95",
+          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_prioritize_peers_seconds_bucket[$rate_interval])) by (le))",
+          "legendFormat": "p95",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "prioritizePeers duration",
       "type": "timeseries",
-      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **p95 per instance**; legend table shows mean/max/last.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
+      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **fleet p95**; legend table shows mean/max/last.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
     },
     {
       "datasource": {
@@ -7091,15 +7091,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_score_update_seconds_bucket[$rate_interval])) by (le, instance))",
-          "legendFormat": "{{instance}} p95",
+          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_score_update_seconds_bucket[$rate_interval])) by (le))",
+          "legendFormat": "p95",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Peer score store update duration",
       "type": "timeseries",
-      "description": "Duration of the peer score store update (exponential decay + prune over every tracked peer) each heartbeat.\n\n**Metric:** `lodestar_peer_score_update_seconds`\n\n- Shows **p95 per instance**.\n- This loop iterates the whole score store, so divide by *score map size* (Map sizes panel) for time-per-peer — **not** by peers evaluated."
+      "description": "Duration of the peer score store update (exponential decay + prune over every tracked peer) each heartbeat.\n\n**Metric:** `lodestar_peer_score_update_seconds`\n\n- Shows **fleet p95**.\n- This loop iterates the whole score store, so divide by *score map size* (Map sizes panel) for time-per-peer — **not** by peers evaluated."
     },
     {
       "datasource": {
@@ -7180,8 +7180,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_peers_evaluated_count_bucket[$rate_interval])) by (le, instance))",
-          "legendFormat": "{{instance}} p95",
+          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_peers_evaluated_count_bucket[$rate_interval])) by (le))",
+          "legendFormat": "p95",
           "range": true,
           "refId": "A"
         }
