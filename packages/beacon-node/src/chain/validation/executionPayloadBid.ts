@@ -160,9 +160,10 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [REJECT] `bid.fee_recipient == proposer_preferences.fee_recipient`.
+  // [IGNORE] `bid.fee_recipient == proposer_preferences.fee_recipient`.
+  // Changed REJECT -> IGNORE in consensus-specs #5429.
   if (!byteArrayEquals(bid.feeRecipient, proposerPreferences.message.feeRecipient)) {
-    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_FEE_RECIPIENT_MISMATCH,
       builderIndex: bid.builderIndex,
       bidFeeRecipient: toHex(bid.feeRecipient),
