@@ -23,7 +23,7 @@ import {
   ExecutionOptimisticFinalizedAndVersionCodec,
   ExecutionOptimisticFinalizedAndVersionMeta,
 } from "../../../utils/metadata.js";
-import {fromValidatorIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
+import {fromBuilderIdsStr, fromValidatorIdsStr, toBuilderIdsStr, toValidatorIdsStr} from "../../../utils/serdes.js";
 import {WireFormat} from "../../../utils/wireFormat.js";
 import {RootResponse, RootResponseType} from "./block.js";
 
@@ -530,13 +530,13 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         writeReqJson: ({stateId, builderIds, statuses}) => ({
           params: {state_id: stateId.toString()},
           body: {
-            ids: toValidatorIdsStr(builderIds),
+            ids: toBuilderIdsStr(builderIds),
             statuses,
           },
         }),
         parseReqJson: ({params, body = {}}) => ({
           stateId: params.state_id,
-          builderIds: fromValidatorIdsStr(body.ids),
+          builderIds: fromBuilderIdsStr(body.ids),
           statuses: body.statuses ?? undefined,
         }),
         schema: {
