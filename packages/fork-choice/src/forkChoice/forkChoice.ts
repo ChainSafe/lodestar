@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -698,30 +698,26 @@ export class ForkChoice implements IForkChoice {
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toRootHex(blockRoot);
 
-    // Assign proposer score boost if the block is timely
-    // before attesting interval = before 1st interval
+    // Decide whether this block should receive proposer boost, and whether the block is timely.
+    // The store field `this.proposerBoostRoot` and `updateCheckpoints()` are mutated only after
+    // `protoArray.onBlock()` succeeds
     const isTimely = this.isBlockTimely(block, blockDelaySec);
-    if (
-      this.opts?.proposerBoost &&
+    const isProposerBoostBlock =
+      this.opts?.proposerBoost === true &&
       isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null &&
       expectedProposerIndex !== null &&
-      block.proposerIndex === expectedProposerIndex
-    ) {
-      this.proposerBoostRoot = blockRootHex;
-    }
+      block.proposerIndex === expectedProposerIndex &&
+      this.isProposerBoostSameDependentRoot(this.head.blockRoot, parentRootHex);
+    // Candidate boost root used for protoArray.onBlock's best-child weighting. Committed to the
+    // store only after the insertion succeeds.
+    const proposerBoostRoot = isProposerBoostBlock ? blockRootHex : this.proposerBoostRoot;
 
     const justifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
     const stateJustifiedEpoch = justifiedCheckpoint.epoch;
 
     const finalizedCheckpoint = toCheckpointWithHex(state.finalizedCheckpoint);
-
-    // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on demand only if
-    // the justified checkpoint changes
-    this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
-    );
 
     const blockEpoch = computeEpochAtSlot(slot);
 
@@ -764,19 +760,6 @@ export class ForkChoice implements IForkChoice {
     } else {
       unrealizedJustifiedCheckpoint = justifiedCheckpoint;
       unrealizedFinalizedCheckpoint = finalizedCheckpoint;
-    }
-
-    // Un-realized checkpoints
-    // Update best known unrealized justified & finalized checkpoints
-    this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
-    );
-
-    // If block is from past epochs, try to update store's justified & finalized checkpoints right away
-    if (blockEpoch < computeEpochAtSlot(currentSlot)) {
-      this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
-        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
-      );
     }
 
     const targetSlot = computeStartSlotAtEpoch(blockEpoch);
@@ -849,7 +832,29 @@ export class ForkChoice implements IForkChoice {
       parentBlockHash: parentHashHex,
     };
 
-    this.protoArray.onBlock(protoBlock, currentSlot, this.proposerBoostRoot);
+    this.protoArray.onBlock(protoBlock, currentSlot, proposerBoostRoot);
+
+    if (isProposerBoostBlock) {
+      this.proposerBoostRoot = blockRootHex;
+    }
+
+    // Justified balances for `justifiedCheckpoint` are new to the fork-choice. Compute them on
+    // demand only if the justified checkpoint changes.
+    this.updateCheckpoints(justifiedCheckpoint, finalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(justifiedCheckpoint, state)
+    );
+
+    // Un-realized checkpoints. Update best known unrealized justified & finalized checkpoints
+    this.updateUnrealizedCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+      this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+    );
+
+    // If block is from past epochs, try to update store's justified & finalized checkpoints right away
+    if (blockEpoch < computeEpochAtSlot(currentSlot)) {
+      this.updateCheckpoints(unrealizedJustifiedCheckpoint, unrealizedFinalizedCheckpoint, () =>
+        this.fcStore.justifiedBalancesGetter(unrealizedJustifiedCheckpoint, state)
+      );
+    }
 
     return protoBlock;
   }
@@ -1494,6 +1499,34 @@ export class ForkChoice implements IForkChoice {
     }
 
     throw Error(`Not found dependent root for block slot ${block.slot}, epoch difference ${epochDifference}`);
+  }
+
+  /**
+   * Spec: phase0/fork-choice.md#update_proposer_boost_root (`is_same_dependent_root` condition,
+   * consensus-specs #5306). Proposer boost is only granted when the imported block shares the same
+   * proposer-shuffling dependent root for the current epoch as the canonical head computed before
+   * the block was imported. This withholds the boost from a block built on a different shuffling
+   * branch than the head.
+   *
+   * The block is not yet in the proto-array when this runs, so its dependent root is traced from
+   * its parent
+   */
+  private isProposerBoostSameDependentRoot(headRootHex: RootHex, blockParentRootHex: RootHex): boolean {
+    const epoch = computeEpochAtSlot(this.fcStore.currentSlot);
+    // Genesis block parent
+    if (epoch <= MIN_SEED_LOOKAHEAD) {
+      return true;
+    }
+
+    const dependentSlot = computeStartSlotAtEpoch(epoch - MIN_SEED_LOOKAHEAD) - 1;
+    const headDependentRoot = this.protoArray.getAncestorOrNull(headRootHex, dependentSlot)?.blockRoot;
+    const blockDependentRoot = this.protoArray.getAncestorOrNull(blockParentRootHex, dependentSlot)?.blockRoot;
+    // On lookup failure, we lean on the conservative side and withold the boost
+    if (headDependentRoot === undefined || blockDependentRoot === undefined) {
+      return false;
+    }
+
+    return headDependentRoot === blockDependentRoot;
   }
 
   /**
