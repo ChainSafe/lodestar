@@ -904,10 +904,9 @@ export class ForkChoice implements IForkChoice {
     // Determine which variant the attestation supports
     //
     // Pre-gloas: payload is always present, vote goes to FULL.
-    // Post-gloas, message.slot <= block.slot: voter could not have seen the payload yet, vote goes
-    //   to PENDING (supports the beacon block root regardless of which payload variant reveals).
-    // Post-gloas, message.slot > block.slot: committee index encodes payload_present —
-    //   index 0 → EMPTY, index 1 → FULL.
+    // Post-gloas:
+    //   - block.slot < message.slot: EMPTY if data.index is 0 and FULL if data.index is 1.
+    //   - else: PENDING
     //
     // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-get_supported_node
     let payloadStatus: PayloadStatus;
