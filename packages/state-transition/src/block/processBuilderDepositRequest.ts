@@ -2,7 +2,13 @@ import {FAR_FUTURE_EPOCH} from "@lodestar/params";
 import {gloas} from "@lodestar/types";
 import {CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot} from "../util/epoch.js";
-import {addBuilderToRegistry, findBuilderIndexByPubkey, isValidBuilderDepositSignature} from "../util/gloas.js";
+import {
+  addBuilderToRegistry,
+  findBuilderIndexByPubkey,
+  getBuilderVersion,
+  isBuilderWithdrawalCredential,
+  isValidBuilderDepositSignature,
+} from "../util/gloas.js";
 
 /**
  * Process a builder deposit request from the execution layer: register a new builder
@@ -18,11 +24,15 @@ export function processBuilderDepositRequest(
   const builderIndex = findBuilderIndexByPubkey(state, pubkey);
 
   if (builderIndex === null) {
+    if (!isBuilderWithdrawalCredential(withdrawalCredentials)) {
+      return;
+    }
+
     if (isValidBuilderDepositSignature(state.config, pubkey, withdrawalCredentials, amount, signature)) {
       addBuilderToRegistry(
         state,
         pubkey,
-        withdrawalCredentials[0],
+        getBuilderVersion(withdrawalCredentials),
         withdrawalCredentials.subarray(12),
         amount,
         state.slot

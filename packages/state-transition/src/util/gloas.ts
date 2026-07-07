@@ -28,7 +28,11 @@ import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
-  return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
+  return (withdrawalCredentials[0] & 0xf0) === BUILDER_WITHDRAWAL_PREFIX;
+}
+
+export function getBuilderVersion(withdrawalCredentials: Uint8Array): number {
+  return withdrawalCredentials[0] & 0x0f;
 }
 
 export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): number {
