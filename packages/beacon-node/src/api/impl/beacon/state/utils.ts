@@ -92,7 +92,7 @@ type StateBuilderIndexResponse =
   | {valid: false; code: number; reason: string};
 
 export function getStateBuilderIndex(
-  id: routes.beacon.ValidatorId | BLSPubkey,
+  id: routes.beacon.BuilderId | BLSPubkey,
   state: IBeaconStateViewGloas
 ): StateBuilderIndexResponse {
   if (typeof id === "string") {
