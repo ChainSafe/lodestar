@@ -27,7 +27,7 @@ describe("validate gossip signedAggregateAndProof", () => {
       },
       fn: async () => {
         const fork = chain.config.getForkName(stateSlot);
-        await validateApiAggregateAndProof(fork, chain.beaconEngine as BeaconEngine, agg);
+        await validateApiAggregateAndProof.call(chain.beaconEngine as BeaconEngine, fork, agg);
       },
     });
 
@@ -39,7 +39,7 @@ describe("validate gossip signedAggregateAndProof", () => {
       },
       fn: async () => {
         const fork = chain.config.getForkName(stateSlot);
-        await validateGossipAggregateAndProof(fork, chain.beaconEngine as BeaconEngine, agg, serializedData);
+        await validateGossipAggregateAndProof.call(chain.beaconEngine as BeaconEngine, fork, agg, serializedData);
       },
     });
   }

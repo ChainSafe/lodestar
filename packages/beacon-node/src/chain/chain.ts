@@ -116,6 +116,11 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
+  // TODO - beacon engine: narrow this to `IBeaconEngine` so the facade can't reach engine-owned
+  // consensus state. Blocked on the facade's remaining concrete-only reads — `bls` (kept shared; add to
+  // IBeaconEngine as a carve-out), `regen` and `lightClientServer` — which must route through engine
+  // methods first (Part B / BLK-1 + BLK-3). Narrowing now would force `as BeaconEngine` casts here + in
+  // ~46 validation unit-test call sites.
   readonly beaconEngine: BeaconEngine;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;

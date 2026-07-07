@@ -639,7 +639,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipAggregateAndProof(fork, chain.beaconEngine, aggregate, bytes);
+      await validateGossipAggregateAndProof.call(chain.beaconEngine, fork, aggregate, bytes);
       break;
     }
 
@@ -672,7 +672,9 @@ async function validateMessageForTopic(
         subnet: Number(message.subnet_id ?? 0),
       };
 
-      const batchResult = await validateGossipAttestationsSameAttData(fork, chain.beaconEngine, [gossipAttestation]);
+      const batchResult = await validateGossipAttestationsSameAttData.call(chain.beaconEngine, fork, [
+        gossipAttestation,
+      ]);
       const first = batchResult.results[0];
       if (first?.err) throw first.err;
       break;

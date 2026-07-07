@@ -104,13 +104,13 @@ describe("validate bls to execution change", () => {
     opPool.hasSeenBlsToExecutionChange.mockReturnValue(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlsToExecutionChange(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
+      validateGossipBlsToExecutionChange.call(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.ALREADY_EXISTS
     );
   });
 
   it("should return valid blsToExecutionChange ", async () => {
-    await validateGossipBlsToExecutionChange(chainStub.beaconEngine, signedBlsToExecChange);
+    await validateGossipBlsToExecutionChange.call(chainStub.beaconEngine, signedBlsToExecChange);
   });
 
   it("should return invalid bls to execution Change - invalid validatorIndex", async () => {
@@ -124,7 +124,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBlsToExecutionChange(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
+      validateGossipBlsToExecutionChange.call(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });
@@ -139,7 +139,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBlsToExecutionChange(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
+      validateGossipBlsToExecutionChange.call(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });
@@ -155,7 +155,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBlsToExecutionChange(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
+      validateGossipBlsToExecutionChange.call(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });
@@ -171,7 +171,7 @@ describe("validate bls to execution change", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipBlsToExecutionChange(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
+      validateGossipBlsToExecutionChange.call(chainStub.beaconEngine, signedBlsToExecChangeInvalid),
       BlsToExecutionChangeErrorCode.INVALID
     );
   });

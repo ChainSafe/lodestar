@@ -14,7 +14,7 @@ import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee.js";
  * Spec v1.1.0-beta.2
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   signedContributionAndProof: altair.SignedContributionAndProof,
   skipValidationKnownParticipants = false
 ): Promise<{syncCommitteeParticipantIndices: ValidatorIndex[]}> {
@@ -22,8 +22,8 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   const {contribution, aggregatorIndex} = contributionAndProof;
   const {subcommitteeIndex, slot} = contribution;
 
-  const headState = engine.getHeadState();
-  validateGossipSyncCommitteeExceptSig(engine, headState, subcommitteeIndex, {
+  const headState = this.getHeadState();
+  validateGossipSyncCommitteeExceptSig.call(this, headState, subcommitteeIndex, {
     slot,
     validatorIndex: contributionAndProof.aggregatorIndex,
   });
@@ -38,7 +38,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // _[IGNORE]_ A valid sync committee contribution with equal `slot`, `beacon_block_root` and `subcommittee_index` whose
   // `aggregation_bits` is non-strict superset has _not_ already been seen.
-  if (!skipValidationKnownParticipants && engine.seenContributionAndProof.participantsKnown(contribution)) {
+  if (!skipValidationKnownParticipants && this.seenContributionAndProof.participantsKnown(contribution)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_PARTICIPANTS_ALREADY_KNOWN,
     });
@@ -46,7 +46,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
-  if (engine.seenContributionAndProof.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)) {
+  if (this.seenContributionAndProof.isAggregatorKnown(slot, subcommitteeIndex, aggregatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN,
     });
@@ -76,24 +76,24 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData
     // derived from the contribution by the validator with index contribution_and_proof.aggregator_index.
-    getSyncCommitteeSelectionProofSignatureSet(engine.config, headState, contributionAndProof),
+    getSyncCommitteeSelectionProofSignatureSet(this.config, headState, contributionAndProof),
 
     // [REJECT] The aggregator signature, signed_contribution_and_proof.signature, is valid.
-    getContributionAndProofSignatureSet(engine.config, headState, signedContributionAndProof),
+    getContributionAndProofSignatureSet(this.config, headState, signedContributionAndProof),
 
     // [REJECT] The aggregate signature is valid for the message beacon_block_root and aggregate pubkey derived from
     // the participation info in aggregation_bits for the subcommittee specified by the contribution.subcommittee_index.
-    getSyncCommitteeContributionSignatureSet(engine.config, headState, contribution, syncCommitteeParticipantIndices),
+    getSyncCommitteeContributionSignatureSet(this.config, headState, contribution, syncCommitteeParticipantIndices),
   ];
 
-  if (!(await engine.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+  if (!(await this.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });
   }
 
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
-  engine.seenContributionAndProof.add(contributionAndProof, syncCommitteeParticipantIndices.length);
+  this.seenContributionAndProof.add(contributionAndProof, syncCommitteeParticipantIndices.length);
 
   return {syncCommitteeParticipantIndices};
 }

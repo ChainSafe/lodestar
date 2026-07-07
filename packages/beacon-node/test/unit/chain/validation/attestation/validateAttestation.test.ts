@@ -48,7 +48,7 @@ describe("validateAttestation", () => {
     const {chain, attestation} = getValidData();
 
     const fork = chain.config.getForkName(stateSlot);
-    await validateApiAttestation(fork, chain.beaconEngine as BeaconEngine, {attestation, serializedData: null});
+    await validateApiAttestation.call(chain.beaconEngine as BeaconEngine, fork, {attestation, serializedData: null});
   });
 
   it("INVALID_SERIALIZED_BYTES_ERROR_CODE", async () => {
@@ -304,7 +304,7 @@ describe("validateAttestation", () => {
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
     await expectRejectedWithLodestarError(
-      validateApiAttestation(fork, chain.beaconEngine as BeaconEngine, attestationOrBytes),
+      validateApiAttestation.call(chain.beaconEngine as BeaconEngine, fork, attestationOrBytes),
       errorCode
     );
   }
@@ -315,7 +315,7 @@ describe("validateAttestation", () => {
     errorCode: string
   ): Promise<void> {
     const fork = chain.config.getForkName(stateSlot);
-    const {results} = await validateGossipAttestationsSameAttData(fork, chain.beaconEngine as BeaconEngine, [
+    const {results} = await validateGossipAttestationsSameAttData.call(chain.beaconEngine as BeaconEngine, fork, [
       attestationOrBytes,
     ]);
     expect(results.length).toEqual(1);

@@ -54,7 +54,11 @@ describe("validate gossip attestation", () => {
       id: `batch validate gossip attestation - vc ${vc} - chunk ${chunkSize}`,
       beforeEach: () => chain.seenAttesters["validatorIndexesByEpoch"].clear(),
       fn: async () => {
-        await validateGossipAttestationsSameAttData(fork, chain.beaconEngine as BeaconEngine, attestationOrBytesArr);
+        await validateGossipAttestationsSameAttData.call(
+          chain.beaconEngine as BeaconEngine,
+          fork,
+          attestationOrBytesArr
+        );
       },
       runsFactor: chunkSize,
     });

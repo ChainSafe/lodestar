@@ -13,15 +13,15 @@ import {RegenCaller} from "../regen/index.js";
 // The `bid*` / `proposerIndex` values are read facade-side from the `PayloadEnvelopeInput` (owned by
 // BeaconChain) and passed in as scalars — the engine no longer touches the DA seen cache.
 export async function validateApiExecutionPayloadEnvelope(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
   proposerIndex: ValidatorIndex,
   bidBuilderIndex: ValidatorIndex,
   bidBlockHashHex: RootHex,
   bidExecutionRequestsRoot: Root
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(
-    engine,
+  return validateExecutionPayloadEnvelope.call(
+    this,
     executionPayloadEnvelope,
     proposerIndex,
     bidBuilderIndex,
@@ -31,15 +31,15 @@ export async function validateApiExecutionPayloadEnvelope(
 }
 
 export async function validateGossipExecutionPayloadEnvelope(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
   proposerIndex: ValidatorIndex,
   bidBuilderIndex: ValidatorIndex,
   bidBlockHashHex: RootHex,
   bidExecutionRequestsRoot: Root
 ): Promise<void> {
-  return validateExecutionPayloadEnvelope(
-    engine,
+  return validateExecutionPayloadEnvelope.call(
+    this,
     executionPayloadEnvelope,
     proposerIndex,
     bidBuilderIndex,
@@ -49,7 +49,7 @@ export async function validateGossipExecutionPayloadEnvelope(
 }
 
 async function validateExecutionPayloadEnvelope(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   executionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope,
   proposerIndex: ValidatorIndex,
   bidBuilderIndex: ValidatorIndex,
@@ -63,7 +63,7 @@ async function validateExecutionPayloadEnvelope(
   // [IGNORE] The envelope's block root `envelope.beacon_block_root` has been seen (via
   // gossip or non-gossip sources) (a client MAY queue payload for processing once
   // the block is retrieved).
-  const block = engine.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
+  const block = this.forkChoice.getBlockDefaultStatus(envelope.beaconBlockRoot);
   if (block === null) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
       code: ExecutionPayloadEnvelopeErrorCode.BLOCK_ROOT_UNKNOWN,
@@ -73,9 +73,9 @@ async function validateExecutionPayloadEnvelope(
 
   // [IGNORE] The node has not seen another valid
   // `SignedExecutionPayloadEnvelope` for this block root from this builder.
-  const envelopeBlock = engine.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
+  const envelopeBlock = this.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL);
 
-  // const payloadInput = engine.seenPayloadEnvelopeInputCache.get(blockRootHex);
+  // const payloadInput = this.seenPayloadEnvelopeInputCache.get(blockRootHex);
   // if (envelopeBlock || payloadInput?.hasPayloadEnvelope()) {
   // TODO - beacon engine: unstable also check seenPayloadEnvelopeInputCache but we should not do it
   // see also https://github.com/ethereum/consensus-specs/pull/5355
@@ -88,7 +88,7 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // [IGNORE] The envelope is from a slot greater than or equal to the latest finalized slot -- i.e. validate that `payload.slotNumber >= compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)`
-  const finalizedCheckpoint = engine.forkChoice.getFinalizedCheckpoint();
+  const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (payload.slotNumber < finalizedSlot) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
@@ -140,15 +140,13 @@ async function validateExecutionPayloadEnvelope(
   }
 
   // Get the block state to verify the builder's signature.
-  const blockState = await engine.regen
-    .getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope)
-    .catch(() => {
-      throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
-        code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
-        blockRoot: blockRootHex,
-        slot: payload.slotNumber,
-      });
+  const blockState = await this.regen.getState(block.stateRoot, RegenCaller.validateGossipPayloadEnvelope).catch(() => {
+    throw new ExecutionPayloadEnvelopeError(GossipAction.IGNORE, {
+      code: ExecutionPayloadEnvelopeErrorCode.UNKNOWN_BLOCK_STATE,
+      blockRoot: blockRootHex,
+      slot: payload.slotNumber,
     });
+  });
   if (!isStatePostGloas(blockState)) {
     throw new Error(`Expected gloas+ state for execution payload envelope validation, got fork=${blockState.forkName}`);
   }
@@ -156,14 +154,14 @@ async function validateExecutionPayloadEnvelope(
   // [REJECT] `signed_execution_payload_envelope.signature` is valid as verified
   // by `verify_execution_payload_envelope_signature`.
   const signatureSet = getExecutionPayloadEnvelopeSignatureSet(
-    engine.config,
-    engine.pubkeyCache,
+    this.config,
+    this.pubkeyCache,
     blockState,
     executionPayloadEnvelope,
     proposerIndex
   );
 
-  if (!(await engine.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
+  if (!(await this.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
     throw new ExecutionPayloadEnvelopeError(GossipAction.REJECT, {
       code: ExecutionPayloadEnvelopeErrorCode.INVALID_SIGNATURE,
     });

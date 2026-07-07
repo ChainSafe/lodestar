@@ -12,15 +12,15 @@ type IndexInSubcommittee = number;
  * Spec v1.1.0-alpha.8
  */
 export async function validateGossipSyncCommittee(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: SubnetID
 ): Promise<{indicesInSubcommittee: IndexInSubcommittee[]}> {
   const {slot, validatorIndex, beaconBlockRoot} = syncCommittee;
   const messageRoot = toRootHex(beaconBlockRoot);
 
-  const headState = engine.getHeadState();
-  const indicesInSubcommittee = validateGossipSyncCommitteeExceptSig(engine, headState, subnet, syncCommittee);
+  const headState = this.getHeadState();
+  const indicesInSubcommittee = validateGossipSyncCommitteeExceptSig.call(this, headState, subnet, syncCommittee);
 
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
@@ -32,16 +32,16 @@ export async function validateGossipSyncCommittee(
 
   // [IGNORE] There has been no other valid sync committee signature for the declared slot for the validator referenced
   // by sync_committee_signature.validator_index.
-  const prevRoot = engine.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex);
+  const prevRoot = this.seenSyncCommitteeMessages.get(slot, subnet, validatorIndex);
   if (prevRoot) {
     let shouldIgnore = false;
     if (prevRoot === messageRoot) {
       shouldIgnore = true;
     } else {
-      const headRoot = engine.forkChoice.getHeadRoot();
-      engine.metrics?.gossipSyncCommittee.equivocationCount.inc();
+      const headRoot = this.forkChoice.getHeadRoot();
+      this.metrics?.gossipSyncCommittee.equivocationCount.inc();
       if (messageRoot === headRoot) {
-        engine.metrics?.gossipSyncCommittee.equivocationToHeadCount.inc();
+        this.metrics?.gossipSyncCommittee.equivocationToHeadCount.inc();
       } else {
         shouldIgnore = true;
       }
@@ -63,35 +63,35 @@ export async function validateGossipSyncCommittee(
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
   // [REJECT] The signature is valid for the message beacon_block_root for the validator referenced by validator_index.
-  await validateSyncCommitteeSigOnly(engine, headState, syncCommittee);
+  await validateSyncCommitteeSigOnly.call(this, headState, syncCommittee);
 
   // Register this valid item as seen
-  engine.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, messageRoot);
+  this.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex, messageRoot);
 
   return {indicesInSubcommittee};
 }
 
 export async function validateApiSyncCommittee(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   // Resolve head state internally — no IBeaconStateView crosses the engine seam.
-  const headState = engine.getHeadState();
+  const headState = this.getHeadState();
   const prioritizeBls = true;
-  return validateSyncCommitteeSigOnly(engine, headState, syncCommittee, prioritizeBls);
+  return validateSyncCommitteeSigOnly.call(this, headState, syncCommittee, prioritizeBls);
 }
 
 /**
  * Abstracted so it can be re-used in API validation.
  */
 async function validateSyncCommitteeSigOnly(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   headState: IBeaconStateView,
   syncCommittee: altair.SyncCommitteeMessage,
   prioritizeBls = false
 ): Promise<void> {
-  const signatureSet = getSyncCommitteeSignatureSet(engine.config, headState, syncCommittee);
-  if (!(await engine.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  const signatureSet = getSyncCommitteeSignatureSet(this.config, headState, syncCommittee);
+  if (!(await this.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });
@@ -102,7 +102,7 @@ async function validateSyncCommitteeSigOnly(
  * Spec v1.1.0-alpha.8
  */
 export function validateGossipSyncCommitteeExceptSig(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   headState: IBeaconStateView,
   subnet: SubnetID,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
@@ -110,10 +110,10 @@ export function validateGossipSyncCommitteeExceptSig(
   const {slot, validatorIndex} = data;
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
-  if (!engine.clock.isCurrentSlotGivenGossipDisparity(slot)) {
+  if (!this.clock.isCurrentSlotGivenGossipDisparity(slot)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT,
-      currentSlot: engine.clock.currentSlot,
+      currentSlot: this.clock.currentSlot,
       slot,
     });
   }

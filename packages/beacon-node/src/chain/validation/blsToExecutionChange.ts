@@ -4,30 +4,30 @@ import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {BlsToExecutionChangeError, BlsToExecutionChangeErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateApiBlsToExecutionChange(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   blsToExecutionChange: capella.SignedBLSToExecutionChange
 ): Promise<void> {
   const ignoreExists = true;
   const prioritizeBls = true;
-  return validateBlsToExecutionChange(engine, blsToExecutionChange, {ignoreExists, prioritizeBls});
+  return validateBlsToExecutionChange.call(this, blsToExecutionChange, {ignoreExists, prioritizeBls});
 }
 
 export async function validateGossipBlsToExecutionChange(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   blsToExecutionChange: capella.SignedBLSToExecutionChange
 ): Promise<void> {
-  return validateBlsToExecutionChange(engine, blsToExecutionChange);
+  return validateBlsToExecutionChange.call(this, blsToExecutionChange);
 }
 
 async function validateBlsToExecutionChange(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   blsToExecutionChange: capella.SignedBLSToExecutionChange,
   opts: {ignoreExists?: boolean; prioritizeBls?: boolean} = {ignoreExists: false, prioritizeBls: false}
 ): Promise<void> {
   const {ignoreExists, prioritizeBls} = opts;
   // [IGNORE] The blsToExecutionChange is the first valid blsToExecutionChange received for the validator with index
   // signedBLSToExecutionChange.message.validatorIndex.
-  if (!ignoreExists && engine.opPool.hasSeenBlsToExecutionChange(blsToExecutionChange.message.validatorIndex)) {
+  if (!ignoreExists && this.opPool.hasSeenBlsToExecutionChange(blsToExecutionChange.message.validatorIndex)) {
     throw new BlsToExecutionChangeError(GossipAction.IGNORE, {
       code: BlsToExecutionChangeErrorCode.ALREADY_EXISTS,
     });
@@ -36,8 +36,8 @@ async function validateBlsToExecutionChange(
   // validate bls to executionChange
   // NOTE: No need to advance head state since the signature's fork is handled with `broadcastedOnFork`,
   // and chanes relevant to `isValidBlsToExecutionChange()` happen only on processBlock(), not processEpoch()
-  const state = engine.getHeadState();
-  const {config} = engine;
+  const state = this.getHeadState();
+  const {config} = this;
   const addressChange = blsToExecutionChange.message;
   if (addressChange.validatorIndex >= state.validatorCount) {
     throw new BlsToExecutionChangeError(GossipAction.REJECT, {
@@ -55,7 +55,7 @@ async function validateBlsToExecutionChange(
   }
 
   const signatureSet = getBlsToExecutionChangeSignatureSet(config, blsToExecutionChange);
-  if (!(await engine.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
+  if (!(await this.bls.verifySignatureSets([signatureSet], {batchable: true, priority: prioritizeBls}))) {
     throw new BlsToExecutionChangeError(GossipAction.REJECT, {
       code: BlsToExecutionChangeErrorCode.INVALID_SIGNATURE,
     });

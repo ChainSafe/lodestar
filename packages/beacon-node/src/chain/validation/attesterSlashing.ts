@@ -9,22 +9,22 @@ import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {AttesterSlashingError, AttesterSlashingErrorCode, GossipAction} from "../errors/index.js";
 
 export async function validateApiAttesterSlashing(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   attesterSlashing: AttesterSlashing
 ): Promise<void> {
   const prioritizeBls = true;
-  return validateAttesterSlashing(engine, attesterSlashing, prioritizeBls);
+  return validateAttesterSlashing.call(this, attesterSlashing, prioritizeBls);
 }
 
 export async function validateGossipAttesterSlashing(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   attesterSlashing: AttesterSlashing
 ): Promise<void> {
-  return validateAttesterSlashing(engine, attesterSlashing);
+  return validateAttesterSlashing.call(this, attesterSlashing);
 }
 
 export async function validateAttesterSlashing(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   attesterSlashing: AttesterSlashing,
   prioritizeBls = false
 ): Promise<void> {
@@ -33,20 +33,20 @@ export async function validateAttesterSlashing(
   //   attester_slashed_indices = set(attestation_1.attesting_indices).intersection(attestation_2.attesting_indices
   // ), verify if any(attester_slashed_indices.difference(prior_seen_attester_slashed_indices))).
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
-  if (engine.opPool.hasSeenAttesterSlashing(intersectingIndices)) {
+  if (this.opPool.hasSeenAttesterSlashing(intersectingIndices)) {
     throw new AttesterSlashingError(GossipAction.IGNORE, {
       code: AttesterSlashingErrorCode.ALREADY_EXISTS,
     });
   }
 
-  const state = engine.getHeadState();
+  const state = this.getHeadState();
 
   // [REJECT] All of the conditions within process_attester_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
     assertValidAttesterSlashing(
-      engine.config,
-      engine.pubkeyCache,
+      this.config,
+      this.pubkeyCache,
       state.slot,
       state.validatorCount,
       attesterSlashing,
@@ -67,8 +67,8 @@ export async function validateAttesterSlashing(
     });
   }
 
-  const signatureSets = getAttesterSlashingSignatureSets(engine.config, state.slot, attesterSlashing);
-  if (!(await engine.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  const signatureSets = getAttesterSlashingSignatureSets(this.config, state.slot, attesterSlashing);
+  if (!(await this.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new AttesterSlashingError(GossipAction.REJECT, {
       code: AttesterSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),

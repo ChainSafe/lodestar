@@ -1616,7 +1616,7 @@ export class BeaconEngine implements IBeaconEngine {
     signedBlock: SignedBeaconBlock,
     fork: ForkName
   ): Promise<GossipValidationResult<GossipBlockValidationResult>> {
-    return runGossipValidation(() => validateGossipBlock(this, signedBlock, fork));
+    return runGossipValidation(() => validateGossipBlock.call(this, signedBlock, fork));
   }
 
   validateGossipSyncCommittee(
@@ -1624,14 +1624,14 @@ export class BeaconEngine implements IBeaconEngine {
     syncCommittee: altair.SyncCommitteeMessage,
     subnet: SubnetID
   ): Promise<GossipValidationResult<{indicesInSubcommittee: number[]}>> {
-    return runGossipValidation(() => validateGossipSyncCommittee(this, syncCommittee, subnet));
+    return runGossipValidation(() => validateGossipSyncCommittee.call(this, syncCommittee, subnet));
   }
 
   validateApiSyncCommittee(
     _syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateApiSyncCommittee(this, syncCommittee));
+    return runGossipValidation(() => validateApiSyncCommittee.call(this, syncCommittee));
   }
 
   validateSyncCommitteeGossipContributionAndProof(
@@ -1640,7 +1640,11 @@ export class BeaconEngine implements IBeaconEngine {
     skipValidationKnownParticipants = false
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>> {
     return runGossipValidation(() =>
-      validateSyncCommitteeGossipContributionAndProof(this, signedContributionAndProof, skipValidationKnownParticipants)
+      validateSyncCommitteeGossipContributionAndProof.call(
+        this,
+        signedContributionAndProof,
+        skipValidationKnownParticipants
+      )
     );
   }
 
@@ -1650,7 +1654,7 @@ export class BeaconEngine implements IBeaconEngine {
     blobSidecar: deneb.BlobSidecar,
     subnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateGossipBlobSidecar(this, fork, blobSidecar, subnet));
+    return runGossipValidation(() => validateGossipBlobSidecar.call(this, fork, blobSidecar, subnet));
   }
 
   validateGossipFuluDataColumnSidecar(
@@ -1659,7 +1663,7 @@ export class BeaconEngine implements IBeaconEngine {
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
     return runGossipValidation(() =>
-      validateGossipFuluDataColumnSidecar(this, dataColumnSidecar, gossipSubnet, this.metrics)
+      validateGossipFuluDataColumnSidecar.call(this, dataColumnSidecar, gossipSubnet, this.metrics)
     );
   }
 
@@ -1670,7 +1674,7 @@ export class BeaconEngine implements IBeaconEngine {
     gossipSubnet: SubnetID
   ): Promise<GossipValidationResult<void>> {
     return runGossipValidation(() =>
-      validateGossipGloasDataColumnSidecar(this, payloadInput, dataColumnSidecar, gossipSubnet, this.metrics)
+      validateGossipGloasDataColumnSidecar.call(this, payloadInput, dataColumnSidecar, gossipSubnet, this.metrics)
     );
   }
 
@@ -1678,14 +1682,14 @@ export class BeaconEngine implements IBeaconEngine {
     _payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<PayloadAttestationValidationResult>> {
-    return runGossipValidation(() => validateGossipPayloadAttestationMessage(this, payloadAttestationMessage));
+    return runGossipValidation(() => validateGossipPayloadAttestationMessage.call(this, payloadAttestationMessage));
   }
 
   validateApiPayloadAttestationMessage(
     _payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
   ): Promise<GossipValidationResult<PayloadAttestationValidationResult>> {
-    return runGossipValidation(() => validateApiPayloadAttestationMessage(this, payloadAttestationMessage));
+    return runGossipValidation(() => validateApiPayloadAttestationMessage.call(this, payloadAttestationMessage));
   }
 
   // The batch attestation validator already returns `Result<T>[]` (caught internally, never throws out);
@@ -1695,7 +1699,7 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     attestations: GossipAttestation[]
   ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}> {
-    const {results, batchableBls} = await validateGossipAttestationsSameAttData(fork, this, attestations);
+    const {results, batchableBls} = await validateGossipAttestationsSameAttData.call(this, fork, attestations);
     return {results: results.map(fromResult), batchableBls};
   }
 
@@ -1703,7 +1707,7 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     attestationOrBytes: ApiAttestation
   ): Promise<GossipValidationResult<AttestationValidationResult>> {
-    return runGossipValidation(() => validateApiAttestation(fork, this, attestationOrBytes));
+    return runGossipValidation(() => validateApiAttestation.call(this, fork, attestationOrBytes));
   }
 
   validateGossipAggregateAndProof(
@@ -1712,7 +1716,7 @@ export class BeaconEngine implements IBeaconEngine {
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<AggregateAndProofValidationResult>> {
     return runGossipValidation(() =>
-      validateGossipAggregateAndProof(fork, this, signedAggregateAndProof, aggregateBytes)
+      validateGossipAggregateAndProof.call(this, fork, signedAggregateAndProof, aggregateBytes)
     );
   }
 
@@ -1721,7 +1725,7 @@ export class BeaconEngine implements IBeaconEngine {
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
   ): Promise<GossipValidationResult<AggregateAndProofValidationResult>> {
-    return runGossipValidation(() => validateApiAggregateAndProof(fork, this, signedAggregateAndProof));
+    return runGossipValidation(() => validateApiAggregateAndProof.call(this, fork, signedAggregateAndProof));
   }
 
   validateGossipExecutionPayloadEnvelope(
@@ -1733,7 +1737,7 @@ export class BeaconEngine implements IBeaconEngine {
     bidExecutionRequestsRoot: Root
   ): Promise<GossipValidationResult<void>> {
     return runGossipValidation(() =>
-      validateGossipExecutionPayloadEnvelope(
+      validateGossipExecutionPayloadEnvelope.call(
         this,
         executionPayloadEnvelope,
         proposerIndex,
@@ -1753,7 +1757,7 @@ export class BeaconEngine implements IBeaconEngine {
     bidExecutionRequestsRoot: Root
   ): Promise<GossipValidationResult<void>> {
     return runGossipValidation(() =>
-      validateApiExecutionPayloadEnvelope(
+      validateApiExecutionPayloadEnvelope.call(
         this,
         executionPayloadEnvelope,
         proposerIndex,
@@ -1768,21 +1772,23 @@ export class BeaconEngine implements IBeaconEngine {
     _bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
-    return runGossipValidation(() => validateGossipExecutionPayloadBid(this, signedExecutionPayloadBid));
+    return runGossipValidation(() => validateGossipExecutionPayloadBid.call(this, signedExecutionPayloadBid));
   }
 
   validateApiExecutionPayloadBid(
     _bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
   ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>> {
-    return runGossipValidation(() => validateApiExecutionPayloadBid(this, signedExecutionPayloadBid));
+    return runGossipValidation(() => validateApiExecutionPayloadBid.call(this, signedExecutionPayloadBid));
   }
 
   async validateGossipProposerPreferences(
     _preferencesBytes: Uint8Array,
     signedProposerPreferences: gloas.SignedProposerPreferences
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipProposerPreferences(this, signedProposerPreferences));
+    const res = await runGossipValidation(() =>
+      validateGossipProposerPreferences.call(this, signedProposerPreferences)
+    );
     // Insert on Accept — the pool is engine-internal, so the facade (gossip handler / API) no longer adds.
     if (res.status === GossipValidationStatus.Accept) {
       this.proposerPreferencesPool.add(signedProposerPreferences);
@@ -1798,7 +1804,7 @@ export class BeaconEngine implements IBeaconEngine {
     attesterSlashing: AttesterSlashing,
     fork: ForkName
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipAttesterSlashing(this, attesterSlashing));
+    const res = await runGossipValidation(() => validateGossipAttesterSlashing.call(this, attesterSlashing));
     if (res.status === GossipValidationStatus.Accept) {
       // Contain insert failures — a pool error must not flip the gossip verdict (matches prior handler).
       try {
@@ -1812,14 +1818,14 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
-    await validateApiAttesterSlashing(this, attesterSlashing);
+    await validateApiAttesterSlashing.call(this, attesterSlashing);
     this.opPool.insertAttesterSlashing(fork, attesterSlashing);
   }
 
   async validateGossipProposerSlashing(
     proposerSlashing: phase0.ProposerSlashing
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipProposerSlashing(this, proposerSlashing));
+    const res = await runGossipValidation(() => validateGossipProposerSlashing.call(this, proposerSlashing));
     if (res.status === GossipValidationStatus.Accept) {
       try {
         this.opPool.insertProposerSlashing(proposerSlashing);
@@ -1831,12 +1837,12 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    await validateApiProposerSlashing(this, proposerSlashing);
+    await validateApiProposerSlashing.call(this, proposerSlashing);
     this.opPool.insertProposerSlashing(proposerSlashing);
   }
 
   async validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipVoluntaryExit(this, voluntaryExit));
+    const res = await runGossipValidation(() => validateGossipVoluntaryExit.call(this, voluntaryExit));
     if (res.status === GossipValidationStatus.Accept) {
       try {
         this.opPool.insertVoluntaryExit(voluntaryExit);
@@ -1848,14 +1854,14 @@ export class BeaconEngine implements IBeaconEngine {
   }
 
   async validateApiVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
-    await validateApiVoluntaryExit(this, voluntaryExit);
+    await validateApiVoluntaryExit.call(this, voluntaryExit);
     this.opPool.insertVoluntaryExit(voluntaryExit);
   }
 
   async validateGossipBlsToExecutionChange(
     blsToExecutionChange: capella.SignedBLSToExecutionChange
   ): Promise<GossipValidationResult<void>> {
-    const res = await runGossipValidation(() => validateGossipBlsToExecutionChange(this, blsToExecutionChange));
+    const res = await runGossipValidation(() => validateGossipBlsToExecutionChange.call(this, blsToExecutionChange));
     if (res.status === GossipValidationStatus.Accept) {
       try {
         this.opPool.insertBlsToExecutionChange(blsToExecutionChange);
@@ -1870,7 +1876,7 @@ export class BeaconEngine implements IBeaconEngine {
     blsToExecutionChange: capella.SignedBLSToExecutionChange,
     preCapella: boolean
   ): Promise<void> {
-    await validateApiBlsToExecutionChange(this, blsToExecutionChange);
+    await validateApiBlsToExecutionChange.call(this, blsToExecutionChange);
     this.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
   }
 

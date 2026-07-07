@@ -30,7 +30,7 @@ import {RegenCaller} from "../regen/interface.js";
 // SPEC FUNCTION
 // https://github.com/ethereum/consensus-specs/blob/v1.6.0-alpha.4/specs/fulu/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipFuluDataColumnSidecar(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   dataColumnSidecar: fulu.DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
@@ -39,10 +39,10 @@ export async function validateGossipFuluDataColumnSidecar(
   const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader));
 
   // 1) [REJECT] The sidecar is valid as verified by verify_data_column_sidecar
-  verifyFuluDataColumnSidecar(engine.config, dataColumnSidecar);
+  verifyFuluDataColumnSidecar(this.config, dataColumnSidecar);
 
   // 2) [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_data_column_sidecar(sidecar.index) == subnet_id
-  if (computeSubnetForDataColumnSidecar(engine.config, dataColumnSidecar) !== gossipSubnet) {
+  if (computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar) !== gossipSubnet) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_SUBNET,
       columnIndex: dataColumnSidecar.index,
@@ -53,7 +53,7 @@ export async function validateGossipFuluDataColumnSidecar(
   // 3) [IGNORE] The sidecar is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
   //             -- i.e. validate that sidecar.slot <= current_slot (a client MAY queue future blocks
   //             for processing at the appropriate slot).
-  const currentSlotWithGossipDisparity = engine.clock.currentSlotWithGossipDisparity;
+  const currentSlotWithGossipDisparity = this.clock.currentSlotWithGossipDisparity;
   if (currentSlotWithGossipDisparity < blockHeader.slot) {
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.FUTURE_SLOT,
@@ -64,7 +64,7 @@ export async function validateGossipFuluDataColumnSidecar(
 
   // 4) [IGNORE] The sidecar is from a slot greater than the latest finalized slot -- i.e. validate that
   //             sidecar.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-  const finalizedCheckpoint = engine.forkChoice.getFinalizedCheckpoint();
+  const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (blockHeader.slot <= finalizedSlot) {
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
@@ -77,7 +77,7 @@ export async function validateGossipFuluDataColumnSidecar(
   // 6) [IGNORE] The sidecar's block's parent (defined by block_header.parent_root) has been seen (via gossip
   //             or non-gossip sources)
   const parentRoot = toRootHex(blockHeader.parentRoot);
-  const parentBlock = engine.forkChoice.getBlockHexDefaultStatus(parentRoot);
+  const parentBlock = this.forkChoice.getBlockHexDefaultStatus(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
@@ -109,7 +109,7 @@ export async function validateGossipFuluDataColumnSidecar(
   // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
   // this is something we should change this in the future to make the code airtight to the spec.
   // 7) [REJECT] The sidecar's block's parent passes validation.
-  const blockState = await engine.regen
+  const blockState = await this.regen
     .getBlockSlotState(parentBlock, blockHeader.slot, {dontTransferCache: true}, RegenCaller.validateGossipDataColumn)
     .catch(() => {
       throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
@@ -137,15 +137,15 @@ export async function validateGossipFuluDataColumnSidecar(
 
   // 5) [REJECT] The proposer signature of sidecar.signed_block_header, is valid with respect to the block_header.proposer_index pubkey.
   const signature = dataColumnSidecar.signedBlockHeader.signature;
-  if (!engine.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
+  if (!this.seenBlockInputCache.isVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature)) {
     const signatureSet = getBlockHeaderProposerSignatureSetByParentStateSlot(
-      engine.config,
+      this.config,
       blockState.slot,
       dataColumnSidecar.signedBlockHeader
     );
 
     if (
-      !(await engine.bls.verifySignatureSets([signatureSet], {
+      !(await this.bls.verifySignatureSets([signatureSet], {
         // verify on main thread so that we only need to verify block proposer signature once per block
         verifyOnMainThread: true,
       }))
@@ -158,7 +158,7 @@ export async function validateGossipFuluDataColumnSidecar(
       });
     }
 
-    engine.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
+    this.seenBlockInputCache.markVerifiedProposerSignature(blockHeader.slot, blockRootHex, signature);
   }
 
   // 9) [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
@@ -209,14 +209,14 @@ export async function validateGossipFuluDataColumnSidecar(
 // SPEC FUNCTION
 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.3/specs/gloas/p2p-interface.md#data_column_sidecar_subnet_id
 export async function validateGossipGloasDataColumnSidecar(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   payloadInput: PayloadEnvelopeInput,
   dataColumnSidecar: gloas.DataColumnSidecar,
   gossipSubnet: SubnetID,
   metrics: Metrics | null
 ): Promise<void> {
   const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
-  const block = engine.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const block = this.forkChoice.getBlockHexDefaultStatus(blockRootHex);
 
   // [IGNORE] A valid block for the sidecar's `slot` has been seen.
   if (block === null) {
@@ -242,7 +242,7 @@ export async function validateGossipGloasDataColumnSidecar(
   verifyGloasDataColumnSidecar(dataColumnSidecar, kzgCommitments);
 
   // [REJECT] The sidecar must be on the correct subnet
-  if (computeSubnetForDataColumnSidecar(engine.config, dataColumnSidecar) !== gossipSubnet) {
+  if (computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar) !== gossipSubnet) {
     throw new DataColumnSidecarGossipError(GossipAction.REJECT, {
       code: DataColumnSidecarErrorCode.INVALID_SUBNET,
       columnIndex: dataColumnSidecar.index,

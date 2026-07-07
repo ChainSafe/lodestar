@@ -88,7 +88,7 @@ describe("validate voluntary exit", () => {
     opPool.hasSeenVoluntaryExit.mockReturnValue(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub.beaconEngine, signedVoluntaryExitInvalidSig),
+      validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExitInvalidSig),
       VoluntaryExitErrorCode.ALREADY_EXISTS
     );
   });
@@ -104,7 +104,7 @@ describe("validate voluntary exit", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub.beaconEngine, signedVoluntaryExitInvalid),
+      validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExitInvalid),
       VoluntaryExitErrorCode.EARLY_EPOCH
     );
   });
@@ -120,7 +120,7 @@ describe("validate voluntary exit", () => {
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub.beaconEngine, signedVoluntaryExit),
+      validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExit),
       VoluntaryExitErrorCode.INACTIVE
     );
   });
@@ -138,7 +138,7 @@ describe("validate voluntary exit", () => {
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub.beaconEngine, signedVoluntaryExit),
+      validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExit),
       VoluntaryExitErrorCode.ALREADY_EXITED
     );
   });
@@ -154,7 +154,7 @@ describe("validate voluntary exit", () => {
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub.beaconEngine, signedVoluntaryExit),
+      validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExit),
       VoluntaryExitErrorCode.SHORT_TIME_ACTIVE
     );
   });
@@ -170,12 +170,12 @@ describe("validate voluntary exit", () => {
     chainStub.bls.verifySignatureSets.mockResolvedValue(false);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub.beaconEngine, signedVoluntaryExitInvalidSig),
+      validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExitInvalidSig),
       VoluntaryExitErrorCode.INVALID_SIGNATURE
     );
   });
 
   it("should return valid Voluntary Exit", async () => {
-    await validateGossipVoluntaryExit(chainStub.beaconEngine, signedVoluntaryExit);
+    await validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExit);
   });
 });

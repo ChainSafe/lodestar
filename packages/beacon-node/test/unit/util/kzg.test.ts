@@ -66,7 +66,7 @@ describe("KZG", () => {
 
     for (const blobSidecar of blobSidecars) {
       try {
-        await validateGossipBlobSidecar(chain.beaconEngine, fork, blobSidecar, blobSidecar.index);
+        await validateGossipBlobSidecar.call(chain.beaconEngine, fork, blobSidecar, blobSidecar.index);
       } catch (_e) {
         // We expect some error from here
         // console.log(error);

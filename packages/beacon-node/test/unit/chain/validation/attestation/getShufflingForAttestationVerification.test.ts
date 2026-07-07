@@ -50,7 +50,7 @@ describe("getShufflingForAttestationVerification", () => {
       }
       return Promise.resolve(null);
     });
-    const resultShuffling = await getShufflingForAttestationVerification(
+    const resultShuffling = await getShufflingForAttestationVerification.call(
       chain.beaconEngine,
       attEpoch,
       attHeadBlock as ProtoBlock,
@@ -80,7 +80,7 @@ describe("getShufflingForAttestationVerification", () => {
       }
       return Promise.resolve(null);
     });
-    const resultShuffling = await getShufflingForAttestationVerification(
+    const resultShuffling = await getShufflingForAttestationVerification.call(
       chain.beaconEngine,
       attEpoch,
       attHeadBlock as ProtoBlock,
@@ -112,7 +112,7 @@ describe("getShufflingForAttestationVerification", () => {
       Promise.resolve(expectedShuffling)
     );
 
-    const resultShuffling = await getShufflingForAttestationVerification(
+    const resultShuffling = await getShufflingForAttestationVerification.call(
       chain.beaconEngine,
       attEpoch,
       attHeadBlock as ProtoBlock,
@@ -131,7 +131,7 @@ describe("getShufflingForAttestationVerification", () => {
       blockRoot,
     } as Partial<ProtoBlock>;
     try {
-      await getShufflingForAttestationVerification(
+      await getShufflingForAttestationVerification.call(
         chain.beaconEngine,
         attEpoch,
         attHeadBlock as ProtoBlock,

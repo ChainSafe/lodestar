@@ -41,7 +41,7 @@ describe("chain / validation / aggregateAndProof", () => {
     const {chain, signedAggregateAndProof} = getValidData({});
 
     const fork = chain.config.getForkName(stateSlot);
-    await validateApiAggregateAndProof(fork, chain.beaconEngine as BeaconEngine, signedAggregateAndProof);
+    await validateApiAggregateAndProof.call(chain.beaconEngine as BeaconEngine, fork, signedAggregateAndProof);
   });
 
   it("BAD_TARGET_EPOCH", async () => {
@@ -187,9 +187,9 @@ describe("chain / validation / aggregateAndProof", () => {
     const fork = chain.config.getForkName(stateSlot);
     const serializedData = ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof);
     await expectRejectedWithLodestarError(
-      validateGossipAggregateAndProof(
-        fork,
+      validateGossipAggregateAndProof.call(
         chain.beaconEngine as BeaconEngine,
+        fork,
         signedAggregateAndProof,
         serializedData
       ),

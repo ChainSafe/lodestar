@@ -124,7 +124,12 @@ describe("validateGossipAttestationsSameAttData", () => {
         callIndex++;
         return result;
       };
-      await validateGossipAttestationsSameAttData(ForkName.phase0, engine, new Array(5).fill({}), phase0ValidationFn);
+      await validateGossipAttestationsSameAttData.call(
+        engine,
+        ForkName.phase0,
+        new Array(5).fill({}),
+        phase0ValidationFn
+      );
       for (let validatorIndex = 0; validatorIndex < phase0Result.length; validatorIndex++) {
         if (seenAttesters.includes(validatorIndex)) {
           expect(engine.seenAttesters.isKnown(0, validatorIndex)).toBe(true);

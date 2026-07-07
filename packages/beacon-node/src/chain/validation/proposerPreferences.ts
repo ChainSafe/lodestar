@@ -14,7 +14,7 @@ import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} fr
  * https://github.com/ethereum/consensus-specs/blob/master/specs/gloas/p2p-interface.md#proposer_preferences
  */
 export async function validateGossipProposerPreferences(
-  engine: BeaconEngine,
+  this: BeaconEngine,
   signedProposerPreferences: gloas.SignedProposerPreferences
 ): Promise<void> {
   const preferences = signedProposerPreferences.message;
@@ -23,7 +23,7 @@ export async function validateGossipProposerPreferences(
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
   // [IGNORE] `preferences.proposal_slot` is in the current or next epoch.
-  const currentEpoch = engine.clock.currentEpoch;
+  const currentEpoch = this.clock.currentEpoch;
   if (proposalEpoch < currentEpoch || proposalEpoch > currentEpoch + 1) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH,
@@ -33,7 +33,7 @@ export async function validateGossipProposerPreferences(
   }
 
   // [IGNORE] `preferences.proposal_slot` has not already passed.
-  const currentSlot = engine.clock.currentSlot;
+  const currentSlot = this.clock.currentSlot;
   if (proposalSlot <= currentSlot) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED,
@@ -47,7 +47,7 @@ export async function validateGossipProposerPreferences(
   // the previous-root checkpoint state (populated by `processSlotsToNearestCheckpoint` for
   // any imported branch crossing into `proposalEpoch - 1`). The head-state path also handles
   // narrow timing windows where the checkpoint state isn't yet populated.
-  const headState = engine.getHeadState();
+  const headState = this.getHeadState();
   let proposers: ValidatorIndex[] | null = null;
   if (headState.epoch === proposalEpoch && headState.currentDecisionRoot === dependentRootHex) {
     proposers = headState.currentProposers;
@@ -55,7 +55,7 @@ export async function validateGossipProposerPreferences(
     proposers = headState.nextProposers;
   } else {
     // Sync lookup only to not trigger disk reload from gossip input.
-    const checkpointState = engine.regen.getCheckpointStateSync({epoch: proposalEpoch - 1, rootHex: dependentRootHex});
+    const checkpointState = this.regen.getCheckpointStateSync({epoch: proposalEpoch - 1, rootHex: dependentRootHex});
     if (checkpointState !== null) {
       // State is at `proposalEpoch - 1`, so proposers for `proposalSlot` (next epoch from
       // the state's perspective) live in `nextProposers`.
@@ -81,7 +81,7 @@ export async function validateGossipProposerPreferences(
   }
 
   // [IGNORE] First valid message for (dependent_root, proposal_slot, validator_index).
-  if (engine.seenProposerPreferences.isKnown(dependentRootHex, proposalSlot, validatorIndex)) {
+  if (this.seenProposerPreferences.isKnown(dependentRootHex, proposalSlot, validatorIndex)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
       proposalSlot,
@@ -92,12 +92,12 @@ export async function validateGossipProposerPreferences(
 
   // [REJECT] `signed_proposer_preferences.signature` is valid with respect to the validator's public key.
   const signatureSet = createSingleSignatureSetFromComponents(
-    engine.pubkeyCache.getOrThrow(validatorIndex),
-    getProposerPreferencesSigningRoot(engine.config, preferences),
+    this.pubkeyCache.getOrThrow(validatorIndex),
+    getProposerPreferencesSigningRoot(this.config, preferences),
     signedProposerPreferences.signature
   );
 
-  if (!(await engine.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+  if (!(await this.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_SIGNATURE,
       proposalSlot,
@@ -106,5 +106,5 @@ export async function validateGossipProposerPreferences(
   }
 
   // Valid
-  engine.seenProposerPreferences.add(dependentRootHex, proposalSlot, validatorIndex);
+  this.seenProposerPreferences.add(dependentRootHex, proposalSlot, validatorIndex);
 }
