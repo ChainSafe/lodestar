@@ -1941,6 +1941,11 @@ export class ProtoArray {
    * Returns `true` if the `descendantRoot` has an ancestor with `ancestorRoot`.
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot` === `descendantRoot` and payload statuses match.
+   *
+   * Gloas payload-status matching: a `PENDING` ancestor matches any payload variant
+   * (PENDING/EMPTY/FULL) of the same block, so this can also return `true` for the same
+   * root when statuses differ (e.g. ancestor `PENDING`, descendant `EMPTY`/`FULL`).
+   * `EMPTY` and `FULL` are mutually exclusive siblings and never match each other.
    */
   isDescendant(
     ancestorRoot: RootHex,
