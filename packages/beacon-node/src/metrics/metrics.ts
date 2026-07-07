@@ -64,7 +64,14 @@ export function createMetrics(
   };
 }
 
-const unregisteredMetrics = {
+/**
+ * Metric factories whose products are not attached to any registry.
+ *
+ * Used to keep TS metric objects functional while their Prometheus output is
+ * suppressed, e.g. when the native (Zig) implementation reports metrics with
+ * the same names.
+ */
+export const unregisteredMetrics = {
   gauge<Labels extends LabelsGeneric = NoLabels>(configuration: GaugeConfig<Labels>) {
     return new Gauge<LabelKeys<Labels>>({...configuration, registers: []});
   },

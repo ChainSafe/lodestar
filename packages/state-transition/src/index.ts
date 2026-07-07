@@ -39,7 +39,11 @@ export {type SyncCommitteeCache, SyncCommitteeCacheEmpty} from "./cache/syncComm
 export * from "./constants/index.js";
 export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
-export {initNativeStateTransitionMetrics, scrapeNativeStateTransitionMetrics} from "./nativeMetrics.js";
+export {
+  initNativeStateTransitionMetrics,
+  registerNativeLocalValidator,
+  scrapeNativeStateTransitionMetrics,
+} from "./nativeMetrics.js";
 export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";
 export * from "./stateTransition.js";

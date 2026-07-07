@@ -10,6 +10,7 @@ import {
   isStatePostAltair,
   parseAttesterFlags,
   parseParticipationFlags,
+  registerNativeLocalValidator,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -24,9 +25,19 @@ import {
   deneb,
   gloas,
 } from "@lodestar/types";
-import {LogData, LogHandler, LogLevel, Logger, MapDef, MapDefMax, prettyPrintIndices, toRootHex} from "@lodestar/utils";
+import {
+  LogData,
+  LogHandler,
+  LogLevel,
+  Logger,
+  MapDef,
+  MapDefMax,
+  MetricsRegister,
+  prettyPrintIndices,
+  toRootHex,
+} from "@lodestar/utils";
 import {GENESIS_SLOT} from "../constants/constants.js";
-import {RegistryMetricCreator} from "../metrics/index.js";
+import {RegistryMetricCreator, unregisteredMetrics} from "../metrics/index.js";
 
 /** The validator monitor collects per-epoch data about each monitored validator.
  * Historical data will be kept around for `HISTORIC_EPOCHS` before it is pruned.
@@ -111,6 +122,13 @@ export type ValidatorMonitor = {
 export type ValidatorMonitorOpts = {
   /** Log validator monitor events as info */
   validatorMonitorLogs?: boolean;
+  /**
+   * True when the native (Zig) state transition records the epoch-status metrics
+   * (prev epoch source/target/head attester hit/miss, inclusion distance, balance).
+   * Keeps the TS equivalents out of the metrics registry to avoid duplicate metric
+   * names, and forwards local validator registrations to the native monitor.
+   */
+  nativeStatusMetrics?: boolean;
 };
 
 export const defaultValidatorMonitorOpts: ValidatorMonitorOpts = {
@@ -317,12 +335,17 @@ export function createValidatorMonitor(
   }));
 
   let lastRegisteredStatusEpoch = -1;
+  // Prevents double-counting correct-head hit/miss if onceEveryEndOfEpoch() runs
+  // more than once for the same epoch
+  let lastCorrectHeadRegisteredEpoch = -1;
 
   // Track validator additions/removals per epoch for logging
   const addedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
   const removedValidatorsInEpoch: Set<ValidatorIndex> = new Set();
 
-  const validatorMonitorMetrics = metricsRegister ? createValidatorMonitorMetrics(metricsRegister) : null;
+  const validatorMonitorMetrics = metricsRegister
+    ? createValidatorMonitorMetrics(metricsRegister, opts.nativeStatusMetrics === true)
+    : null;
 
   const validatorMonitor: ValidatorMonitor = {
     registerLocalValidator(index) {
@@ -330,6 +353,9 @@ export function createValidatorMonitor(
       validators.getOrDefault(index).lastRegisteredTimeMs = Date.now();
       if (isNewValidator) {
         addedValidatorsInEpoch.add(index);
+        if (opts.nativeStatusMetrics) {
+          registerNativeLocalValidator(index);
+        }
       }
     },
 
@@ -386,15 +412,6 @@ export function createValidatorMonitor(
         }
 
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
-        const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
-        if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
-          if (attestationCorrectHead) {
-            validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
-          } else {
-            validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
-          }
-        }
-
         const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
         const inclusionDistance =
           attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
@@ -755,6 +772,22 @@ export function createValidatorMonitor(
 
       if (validators.size === 0) {
         return;
+      }
+
+      // Report whether each monitored validator's prev-epoch attestation voted the
+      // correct head.
+      if (prevEpoch > lastCorrectHeadRegisteredEpoch) {
+        lastCorrectHeadRegisteredEpoch = prevEpoch;
+        for (const validator of validators.values()) {
+          const attestationCorrectHead = validator.summaries.get(prevEpoch)?.attestationCorrectHead;
+          if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
+            if (attestationCorrectHead) {
+              validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
+            } else {
+              validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
+            }
+          }
+        }
       }
 
       const rootCache = new RootHexCache(headState);
@@ -1171,7 +1204,11 @@ export class RootHexCache {
   }
 }
 
-function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
+function createValidatorMonitorMetrics(register: RegistryMetricCreator, nativeStatusMetrics = false) {
+  // The epoch-status metrics below are recorded by the native (Zig) state transition
+  // when it is enabled (see `registerValidatorStatuses` in lodestar-z)
+  const statusRegister: MetricsRegister = nativeStatusMetrics ? unregisteredMetrics : register;
+
   return {
     validatorsConnected: register.gauge({
       name: "validator_monitor_validators",
@@ -1190,31 +1227,31 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
     }),
 
     // Validator Monitor Metrics (per-epoch summaries)
-    prevEpochOnChainBalance: register.gauge({
+    prevEpochOnChainBalance: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_balance",
       help: "Total balance of all monitored validators after an epoch",
     }),
-    prevEpochOnChainAttesterHit: register.gauge({
+    prevEpochOnChainAttesterHit: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
       help: "Incremented if validator's submitted attestation is included in some blocks",
     }),
-    prevEpochOnChainAttesterMiss: register.gauge({
+    prevEpochOnChainAttesterMiss: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
       help: "Incremented if validator's submitted attestation is not included in any blocks",
     }),
-    prevEpochOnChainSourceAttesterHit: register.gauge({
+    prevEpochOnChainSourceAttesterHit: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
     }),
-    prevEpochOnChainSourceAttesterMiss: register.gauge({
+    prevEpochOnChainSourceAttesterMiss: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
     }),
-    prevEpochOnChainHeadAttesterHit: register.gauge({
+    prevEpochOnChainHeadAttesterHit: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing",
     }),
-    prevEpochOnChainHeadAttesterMiss: register.gauge({
+    prevEpochOnChainHeadAttesterMiss: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
     }),
@@ -1226,15 +1263,15 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator) {
       name: "validator_monitor_prev_epoch_on_chain_attester_incorrect_head_total",
       help: "Total count of times a validator votes incorrect head",
     }),
-    prevEpochOnChainTargetAttesterHit: register.gauge({
+    prevEpochOnChainTargetAttesterHit: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
       help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
     }),
-    prevEpochOnChainTargetAttesterMiss: register.gauge({
+    prevEpochOnChainTargetAttesterMiss: statusRegister.gauge({
       name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
     }),
-    prevEpochOnChainInclusionDistance: register.histogram({
+    prevEpochOnChainInclusionDistance: statusRegister.histogram({
       name: "validator_monitor_prev_epoch_on_chain_inclusion_distance",
       help: "The attestation inclusion distance calculated during per epoch processing",
       // min inclusion distance is 1, usual values are 1,2,3 max is 32 (1 epoch)

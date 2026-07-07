@@ -209,7 +209,7 @@ export class BeaconNode {
             config,
             anchorState.genesisTime,
             logger.child({module: LoggerModule.vmon}),
-            opts.validatorMonitor
+            {...opts.validatorMonitor, nativeStatusMetrics: nativeStateTransitionMetricsEnabled}
           )
         : null;
 
