@@ -107,8 +107,10 @@ export function validateExecutionPayloadEnvelopesByRangeRequest(
   // The gloas req/resp spec uses MIN_EPOCHS_FOR_BLOCK_REQUESTS to define the minimum range peers MUST serve.
   // Archival nodes may still serve older retained payloads to allow genesis sync.
 
-  if (count > config.MAX_REQUEST_BLOCKS_DENEB) {
-    count = config.MAX_REQUEST_BLOCKS_DENEB;
+  // Spec: EnvelopesByRange response is bounded by MAX_REQUEST_PAYLOADS (consensus-specs #5383),
+  // distinct from the MAX_REQUEST_BLOCKS_DENEB cap used for block-by-range.
+  if (count > config.MAX_REQUEST_PAYLOADS) {
+    count = config.MAX_REQUEST_PAYLOADS;
   }
 
   return {startSlot, count};
