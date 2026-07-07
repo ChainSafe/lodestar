@@ -99,7 +99,7 @@ export function processWithdrawals(
     const stateGloas = state as CachedBeaconStateGloas;
 
     // Store expected withdrawals for verification
-    stateGloas.payloadExpectedWithdrawals = ssz.capella.Withdrawals.toViewDU(expectedWithdrawals);
+    stateGloas.payloadExpectedWithdrawals = ssz.gloas.Withdrawals.toViewDU(expectedWithdrawals);
 
     // Update builder pending withdrawals queue
     stateGloas.builderPendingWithdrawals = stateGloas.builderPendingWithdrawals.sliceFrom(
