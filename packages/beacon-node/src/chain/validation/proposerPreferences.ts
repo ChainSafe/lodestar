@@ -81,7 +81,7 @@ export async function validateGossipProposerPreferences(
   }
 
   // [IGNORE] First valid message for (dependent_root, proposal_slot, validator_index).
-  if (chain.seenProposerPreferences.isKnown(dependentRootHex, proposalSlot, validatorIndex)) {
+  if (chain.proposerPreferencesPool.get(proposalSlot, dependentRootHex)?.message.validatorIndex === validatorIndex) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
       proposalSlot,
@@ -104,7 +104,4 @@ export async function validateGossipProposerPreferences(
       validatorIndex,
     });
   }
-
-  // Valid
-  chain.seenProposerPreferences.add(dependentRootHex, proposalSlot, validatorIndex);
 }
