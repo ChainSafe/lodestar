@@ -29,8 +29,6 @@ import {
   ExecutionPayloadHeader,
   Root,
   RootHex,
-  SignedBeaconBlock,
-  SignedBlindedBeaconBlock,
   Slot,
   ValidatorIndex,
   altair,
@@ -160,7 +158,8 @@ export interface IBeaconStateView {
 
   // State transition
   stateTransition(
-    signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
     options: StateTransitionOpts,
     modules: StateTransitionModules
   ): IBeaconStateView;
@@ -319,7 +318,11 @@ export type IBeaconStateViewNative = Omit<
   executionPayloadAvailability: {uint8Array: Uint8Array; bitLen: number};
   getBeaconCommittee(slot: Slot, index: CommitteeIndex): number[];
   loadOtherState(...args: Parameters<IBeaconStateViewLatestFork["loadOtherState"]>): IBeaconStateViewNative;
-  stateTransition(signedBlockBytes: Uint8Array, options?: StateTransitionOpts): IBeaconStateViewNative;
+  stateTransition(
+    signedBlockBytes: Uint8Array,
+    isBlinded: boolean,
+    options?: StateTransitionOpts
+  ): IBeaconStateViewNative;
   processSlots(
     slot: Slot,
     epochTransitionCacheOpts?: EpochTransitionCacheOpts & {dontTransferCache?: boolean}

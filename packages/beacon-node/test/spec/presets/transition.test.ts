@@ -56,7 +56,8 @@ const transition =
           const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
           state = state.stateTransition(
-            signedBlock,
+            testConfig.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+            false,
             {
               // Assume valid and available for this test
               executionPayloadStatus: ExecutionPayloadStatus.valid,

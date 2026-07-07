@@ -108,13 +108,18 @@ describe("phase0 processBlock", () => {
       },
       beforeEach: ({state, block}) => ({state: state.clone(), block}),
       fn: ({state, block}) => {
-        stateTransition(state, block, {
-          executionPayloadStatus: ExecutionPayloadStatus.valid,
-          dataAvailabilityStatus: DataAvailabilityStatus.Available,
-          verifyProposer: false,
-          verifySignatures: false,
-          verifyStateRoot: false,
-        });
+        stateTransition(
+          state,
+          state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+          false,
+          {
+            executionPayloadStatus: ExecutionPayloadStatus.valid,
+            dataAvailabilityStatus: DataAvailabilityStatus.Available,
+            verifyProposer: false,
+            verifySignatures: false,
+            verifyStateRoot: false,
+          }
+        );
         // set verifyStateRoot = false, and get the root here because the block root is wrong
         state.hashTreeRoot();
       },

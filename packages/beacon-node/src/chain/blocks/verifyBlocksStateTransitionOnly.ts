@@ -10,6 +10,7 @@ import {
 import {ErrorAborted, Logger, byteArrayEquals} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
+import {SerializedCache} from "../../util/serializedCache.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
@@ -32,6 +33,7 @@ export async function verifyBlocksStateTransitionOnly(
   logger: Logger,
   metrics: Metrics | null,
   validatorMonitor: ValidatorMonitor | null,
+  serializedCache: SerializedCache,
   signal: AbortSignal,
   opts: BlockProcessOpts & ImportBlockOpts
 ): Promise<{postStates: IBeaconStateView[]; proposerBalanceDeltas: number[]; verifyStateTime: number}> {
@@ -54,7 +56,8 @@ export async function verifyBlocksStateTransitionOnly(
     // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
     const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
     const postState = preState.stateTransition(
-      block,
+      serializedCache.get(block) ?? config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+      false,
       {
         // NOTE: Assume valid for now while sending payload to execution engine in parallel
         // Latter verifyBlocksInEpoch() will make sure that payload is indeed valid

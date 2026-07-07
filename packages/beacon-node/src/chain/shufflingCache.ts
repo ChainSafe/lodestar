@@ -155,6 +155,11 @@ export class ShufflingCache {
     return null;
   }
 
+  /**
+   * Check if a shuffling is cached by (epoch, decisionRoot).
+   * For native bindings, this avoids having to memoize heavy epoch shufflings within
+   * `NativeBeaconStateView`.
+   */
   has(epoch: Epoch, decisionRoot: RootHex): boolean {
     const cacheItem = this.itemsByDecisionRootByEpoch.getOrDefault(epoch).get(decisionRoot);
     return cacheItem !== undefined && isShufflingCacheItem(cacheItem);

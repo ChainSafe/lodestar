@@ -2,7 +2,7 @@ import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
 import {BeaconStateAllForks, DataAvailabilityStatus, ExecutionPayloadStatus} from "@lodestar/state-transition";
-import {altair, bellatrix, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, altair, ssz} from "@lodestar/types";
 import {assertCorrectProgressiveBalances} from "../config.js";
 import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
@@ -17,13 +17,15 @@ import {RunnerType, TestRunnerFn, shouldVerify} from "../utils/types.js";
 const finality: TestRunnerFn<FinalityTestCase, BeaconStateAllForks> = (fork) => {
   return {
     testFunction: (testcase) => {
-      let state = createBeaconStateViewForTest(fork, testcase.pre, getConfig(fork));
+      const config = getConfig(fork);
+      let state = createBeaconStateViewForTest(fork, testcase.pre, config);
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
-        const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
+        const signedBlock = testcase[`blocks_${i}`] as SignedBeaconBlock;
 
         state = state.stateTransition(
-          signedBlock,
+          config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+          false,
           {
             // Should assume payload valid and blob data available for this test
             executionPayloadStatus: ExecutionPayloadStatus.valid,

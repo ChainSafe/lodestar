@@ -128,13 +128,18 @@ describe("altair processBlock", () => {
           return {state: stateCloned, block};
         },
         fn: ({state, block}) => {
-          const postState = stateTransition(state, block, {
-            executionPayloadStatus: ExecutionPayloadStatus.valid,
-            dataAvailabilityStatus: DataAvailabilityStatus.Available,
-            verifyProposer: false,
-            verifySignatures: false,
-            verifyStateRoot: false,
-          });
+          const postState = stateTransition(
+            state,
+            state.config.getForkTypes(block.message.slot).SignedBeaconBlock.serialize(block),
+            false,
+            {
+              executionPayloadStatus: ExecutionPayloadStatus.valid,
+              dataAvailabilityStatus: DataAvailabilityStatus.Available,
+              verifyProposer: false,
+              verifySignatures: false,
+              verifyStateRoot: false,
+            }
+          );
 
           // Not necessary to call commit here since it's called inside .stateTransition()
 

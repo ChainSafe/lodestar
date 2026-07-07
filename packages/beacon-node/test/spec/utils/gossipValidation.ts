@@ -5,7 +5,7 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import jsyaml from "js-yaml";
 import snappy from "snappy";
 import {expect} from "vitest";
-import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
+import {BeaconConfig, chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
@@ -292,10 +292,12 @@ function getDataAvailabilityStatusForFork(fork: ForkName): DataAvailabilityStatu
 function computePostState(
   parentState: IBeaconStateView,
   signedBlock: SignedBeaconBlock,
-  fork: ForkName
+  fork: ForkName,
+  beaconConfig: BeaconConfig
 ): IBeaconStateView {
   return parentState.stateTransition(
-    signedBlock,
+    beaconConfig.getForkTypes(signedBlock.message.slot).SignedBeaconBlock.serialize(signedBlock),
+    false,
     {
       verifyStateRoot: true,
       verifyProposer: true,
@@ -474,7 +476,7 @@ export async function runGossipValidationTest(
           continue;
         }
 
-        const postState = computePostState(parentState, signedBlock, fork);
+        const postState = computePostState(parentState, signedBlock, fork, beaconConfig);
         const expectedProposerIndex: number | null = chain.getHeadState().getBeaconProposerOrNull(slot);
 
         if (blockEntry.failed) {
