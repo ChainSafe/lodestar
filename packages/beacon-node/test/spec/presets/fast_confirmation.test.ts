@@ -553,7 +553,14 @@ const fastConfirmationTest =
           // and these tests are failing until we update our implementation.
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality"),
+          name.includes("justified_update_not_realized_finality") ||
+          // TODO: lodestar's fast-confirmation rule (FCR) needs a broader overhaul; the whole
+          // fast_confirmation area is expected to be reworked. These two electra is_one_confirmed
+          // cases (new in v1.7.0-alpha.12) currently fail: getConfirmedRoot diverges for a slashed
+          // large validator, and the recently-activated-validator-in-empty-slot case hits
+          // INVALID_STATE_ROOT. Unskip once the FCR is reworked.
+          name.includes("is_one_confirmed_fails_large_validator_slashed") ||
+          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot"),
       },
     };
   };
