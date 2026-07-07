@@ -7085,7 +7085,7 @@
 - name: is_parent_strong#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_parent_strong"
+      search: "const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;"
   spec: |
     <spec fn="is_parent_strong" fork="phase0" hash="a23d498f">
     def is_parent_strong(store: Store, root: Root) -> bool:
@@ -7100,7 +7100,7 @@
 - name: is_parent_strong#gloas
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_parent_strong"
+      search: "const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;"
   spec: |
     <spec fn="is_parent_strong" fork="gloas" hash="3177c56c">
     def is_parent_strong(store: Store, root: Root) -> bool:
