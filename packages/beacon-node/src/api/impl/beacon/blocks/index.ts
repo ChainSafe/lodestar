@@ -93,7 +93,7 @@ export function getBeaconBlockApi({
   ApiModules,
   "chain" | "config" | "metrics" | "network" | "db"
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
-  const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
+  const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation},
     _context,
     opts: PublishBlockOpts = {}
@@ -405,8 +405,8 @@ export function getBeaconBlockApi({
     }
   };
 
-  const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
-    {signedBlindedBlock},
+  const publishBlindedBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlockV2"] = async (
+    {signedBlindedBlock, broadcastValidation},
     context,
     opts: PublishBlockOpts = {}
   ) => {
@@ -436,7 +436,7 @@ export function getBeaconBlockApi({
       );
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, opts);
+      return publishBlockV2({signedBlockContents, broadcastValidation}, {...context, sszBytes: null}, opts);
     }
 
     const source = ProducedBlockSource.builder;
@@ -462,7 +462,11 @@ export function getBeaconBlockApi({
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+      return publishBlockV2(
+        {signedBlockContents, broadcastValidation},
+        {...context, sszBytes: null},
+        {...opts, ignoreIfKnown: true}
+      );
     }
   };
 
@@ -644,16 +648,8 @@ export function getBeaconBlockApi({
       };
     },
 
-    publishBlock,
-    publishBlindedBlock,
-
-    async publishBlindedBlockV2(args, context, opts) {
-      await publishBlindedBlock(args, context, opts);
-    },
-
-    async publishBlockV2(args, context, opts) {
-      await publishBlock(args, context, opts);
-    },
+    publishBlockV2,
+    publishBlindedBlockV2,
 
     async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
       const seenTimestampSec = Date.now() / 1000;
@@ -668,9 +664,20 @@ export function getBeaconBlockApi({
       }
 
       // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
-      const block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+      let block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
-        throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+        // Only wait if the envelope is for the current slot
+        if (chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
+          chain.logger.debug("Execution payload envelope received before block, waiting for block to be imported", {
+            blockRoot: blockRootHex,
+            slot,
+          });
+          await chain.waitForBlock(slot, blockRootHex);
+          block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+        }
+        if (block === null) {
+          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+        }
       }
       if (block.slot !== slot) {
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
@@ -717,10 +724,11 @@ export function getBeaconBlockApi({
         await sleep(msToBlockSlot);
       }
 
-      // TODO GLOAS: if block and payload are submitted in parallel, payloadInput may not yet exist.
-      // A queuing mechanism is needed to handle this case. See https://github.com/ChainSafe/lodestar/issues/8915
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
       if (!payloadInput) {
+        // The block is awaited above (queuing if the envelope arrived first), and both the API and
+        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
+        // should exist here.
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 

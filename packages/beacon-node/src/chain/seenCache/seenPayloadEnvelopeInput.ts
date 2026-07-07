@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
@@ -152,11 +152,24 @@ export class SeenPayloadEnvelopeInput {
     return this.payloadInputs.size;
   }
 
+  prune(blockRootHex: RootHex): void {
+    const input = this.payloadInputs.get(blockRootHex);
+    if (input) {
+      this.evictPayloadInput(input);
+      this.logger?.verbose("SeenPayloadEnvelopeInput.prune deleted", {slot: input.slot, root: blockRootHex});
+    }
+  }
+
   pruneBelowParent(parentBlock: ProtoBlock): void {
     for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
-      if (block.slot < parentBlock.slot) {
+      // Only evict once the payload is FULL (revealed/imported) — on an EMPTY/PENDING branch we may
+      // still need to download the FULL envelope (see #9475), and evicting would make payload-by-root
+      // sync throw "Missing PayloadEnvelopeInput for known block".
+      if (block.slot < parentBlock.slot && block.payloadStatus === PayloadStatus.FULL) {
         const input = this.payloadInputs.get(block.blockRoot);
-        if (input) {
+        // ...and don't evict while columns are still being gathered: writeDataColumnsToDb awaits the
+        // same hasComputedAllData() before persisting. Such entries are pruned by a later call.
+        if (input?.hasComputedAllData()) {
           this.evictPayloadInput(input);
           this.logger?.verbose("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
             slot: block.slot,

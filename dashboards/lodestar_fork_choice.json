@@ -1540,7 +1540,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "lodestar_fast_confirmation_confirmed_slot",
+          "expr": "beacon_fast_confirmation_slot",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -1618,7 +1618,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "",
+      "description": "Fast confirmation events: resets (any cause), reorgs (confirmed block became non-canonical), fallbacks to finality, and restarts from the observed unrealized justified checkpoint",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1661,12 +1661,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 5,
+        "h": 8,
         "w": 12,
         "x": 12,
         "y": 50
       },
-      "id": 598,
+      "id": 599,
       "options": {
         "legend": {
           "calcs": [],
@@ -1688,17 +1688,65 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "lodestar_fast_confirmation_resets_total",
+          "expr": "increase(lodestar_fast_confirmation_resets_total[$rate_interval])",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Reset Total",
+          "legendFormat": "Resets",
           "range": true,
           "refId": "A",
           "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "increase(beacon_fast_confirmation_reorgs_total[$rate_interval])",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "Reorgs",
+          "range": true,
+          "refId": "B",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "increase(beacon_fast_confirmation_fallbacks_total[$rate_interval])",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "Fallbacks",
+          "range": true,
+          "refId": "C",
+          "useBackend": false
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "increase(beacon_fast_confirmation_restarts_total[$rate_interval])",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "Restarts",
+          "range": true,
+          "refId": "D",
+          "useBackend": false
         }
       ],
-      "title": "Reset Total",
+      "title": "Fast Confirmation Events",
       "type": "timeseries"
     }
   ],

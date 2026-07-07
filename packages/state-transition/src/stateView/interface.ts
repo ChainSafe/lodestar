@@ -267,7 +267,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
    * operation selection (e.g. voluntary exits) see the same post-apply state that the block
    * processor will see at import.
    */
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas;
 }
 
 /** Heze+ state fields — use isStatePostHeze() guard */

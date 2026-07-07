@@ -39,6 +39,24 @@
     BLS_WITHDRAWAL_PREFIX: Bytes1 = '0x00'
     </spec>
 
+- name: BUILDER_DEPOSIT_REQUEST_TYPE#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_DEPOSIT_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="BUILDER_DEPOSIT_REQUEST_TYPE" fork="gloas" hash="08333b0e">
+    BUILDER_DEPOSIT_REQUEST_TYPE: Bytes1 = '0x03'
+    </spec>
+
+- name: BUILDER_EXIT_REQUEST_TYPE#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_EXIT_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="BUILDER_EXIT_REQUEST_TYPE" fork="gloas" hash="cf4cdfb6">
+    BUILDER_EXIT_REQUEST_TYPE: Bytes1 = '0x04'
+    </spec>
+
 - name: BUILDER_INDEX_FLAG#gloas
   sources:
     - file: packages/params/src/index.ts
@@ -204,6 +222,15 @@
     DOMAIN_BLS_TO_EXECUTION_CHANGE: DomainType = '0x0A000000'
     </spec>
 
+- name: DOMAIN_BUILDER_DEPOSIT#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_BUILDER_DEPOSIT =
+  spec: |
+    <spec constant_var="DOMAIN_BUILDER_DEPOSIT" fork="gloas" hash="e0a71135">
+    DOMAIN_BUILDER_DEPOSIT: DomainType = '0x0E000000'
+    </spec>
+
 - name: DOMAIN_CONTRIBUTION_AND_PROOF#altair
   sources:
     - file: packages/params/src/index.ts
@@ -227,8 +254,8 @@
     - file: packages/params/src/index.ts
       search: export const DOMAIN_INCLUSION_LIST_COMMITTEE =
   spec: |
-    <spec constant_var="DOMAIN_INCLUSION_LIST_COMMITTEE" fork="heze" hash="95ea05fa">
-    DOMAIN_INCLUSION_LIST_COMMITTEE: DomainType = '0x0E000000'
+    <spec constant_var="DOMAIN_INCLUSION_LIST_COMMITTEE" fork="heze" hash="01403930">
+    DOMAIN_INCLUSION_LIST_COMMITTEE: DomainType = '0x10000000'
     </spec>
 
 - name: DOMAIN_PROPOSER_PREFERENCES#gloas
@@ -454,6 +481,15 @@
   spec: |
     <spec constant_var="PARTICIPATION_FLAG_WEIGHTS" fork="altair" hash="0068cac2">
     PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
+    </spec>
+
+- name: PAYLOAD_BUILDER_VERSION#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const PAYLOAD_BUILDER_VERSION =
+  spec: |
+    <spec constant_var="PAYLOAD_BUILDER_VERSION" fork="gloas" hash="96275869">
+    PAYLOAD_BUILDER_VERSION: uint8 = 0
     </spec>
 
 - name: PAYLOAD_STATUS_EMPTY#gloas

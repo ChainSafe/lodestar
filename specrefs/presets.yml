@@ -268,6 +268,24 @@
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP = 16384
     </spec>
 
+- name: MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD#gloas
+  sources:
+    - file: packages/params/src/presets/mainnet.ts
+      search: "MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD:"
+  spec: |
+    <spec preset_var="MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD" fork="gloas" hash="81a08140">
+    MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: uint64 = 256
+    </spec>
+
+- name: MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD#gloas
+  sources:
+    - file: packages/params/src/presets/mainnet.ts
+      search: "MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD:"
+  spec: |
+    <spec preset_var="MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD" fork="gloas" hash="d461f12d">
+    MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: uint64 = 16
+    </spec>
+
 - name: MAX_BYTES_PER_TRANSACTION#bellatrix
   sources:
     - file: packages/params/src/presets/mainnet.ts

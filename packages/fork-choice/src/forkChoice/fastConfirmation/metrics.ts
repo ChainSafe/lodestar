@@ -27,17 +27,30 @@ export function getFastConfirmationMetrics(register: MetricsRegisterExtra) {
         name: "lodestar_fast_confirmation_confirmed_epoch",
         help: "Current confirmed epoch from fast confirmation",
       }),
-      confirmedSlot: register.gauge({
-        name: "lodestar_fast_confirmation_confirmed_slot",
-        help: "Current confirmed slot from fast confirmation",
-      }),
       votesTracked: register.gauge({
         name: "lodestar_fast_confirmation_votes_tracked",
         help: "Number of checkpoint votes tracked by fast confirmation",
       }),
-      resets: register.gauge({
+      resets: register.counter({
         name: "lodestar_fast_confirmation_resets_total",
-        help: "Count of fast confirmation resets due to reorgs",
+        help: "Total number of fast confirmation resets (any cause)",
+      }),
+      // Standardized Fast Confirmation metrics
+      slot: register.gauge({
+        name: "beacon_fast_confirmation_slot",
+        help: "Slot of the most recent confirmed block",
+      }),
+      reorgs: register.counter({
+        name: "beacon_fast_confirmation_reorgs_total",
+        help: "Total number of confirmed block reorganizations",
+      }),
+      fallbacks: register.counter({
+        name: "beacon_fast_confirmation_fallbacks_total",
+        help: "Total number of fallbacks to finality",
+      }),
+      restarts: register.counter({
+        name: "beacon_fast_confirmation_restarts_total",
+        help: "Total number of restarts from a safe unrealized justified block",
       }),
     },
   };

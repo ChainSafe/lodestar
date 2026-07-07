@@ -323,7 +323,7 @@ type TypesByFork = {
     AttesterSlashing: electra.AttesterSlashing;
     AggregateAndProof: electra.AggregateAndProof;
     SignedAggregateAndProof: electra.SignedAggregateAndProof;
-    ExecutionRequests: electra.ExecutionRequests;
+    ExecutionRequests: gloas.ExecutionRequests;
     ExecutionPayloadBid: gloas.ExecutionPayloadBid;
     DataColumnSidecar: gloas.DataColumnSidecar;
     DataColumnSidecars: gloas.DataColumnSidecars;
