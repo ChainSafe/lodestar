@@ -115,7 +115,6 @@ export type BeaconPreset = {
   MAX_DATA_COLUMN_SIDECAR_SIZE: number;
   MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: number;
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: number;
-  MAX_SIGNED_BEACON_BLOCK_SIZE: number;
 };
 
 /**
@@ -236,7 +235,6 @@ export const beaconPresetTypes: BeaconPresetTypes = {
   MAX_DATA_COLUMN_SIDECAR_SIZE: "number",
   MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: "number",
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: "number",
-  MAX_SIGNED_BEACON_BLOCK_SIZE: "number",
 };
 
 type BeaconPresetTypes = {

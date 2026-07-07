@@ -419,22 +419,6 @@
     MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: uint64 = 16829
     </spec>
 
-- name: MAX_SIGNED_BEACON_BLOCK_SIZE#gloas
-  sources:
-    - file: packages/params/src/presets/mainnet.ts
-      search: "MAX_SIGNED_BEACON_BLOCK_SIZE:"
-  spec: |
-    <spec preset_var="MAX_SIGNED_BEACON_BLOCK_SIZE" fork="gloas" hash="39e62604">
-    MAX_SIGNED_BEACON_BLOCK_SIZE: uint64 = 4027336
-    </spec>
-
-- name: MAX_SIGNED_BEACON_BLOCK_SIZE_HEZE#heze
-  sources: []
-  spec: |
-    <spec preset_var="MAX_SIGNED_BEACON_BLOCK_SIZE_HEZE" fork="heze" hash="cee41726">
-    MAX_SIGNED_BEACON_BLOCK_SIZE_HEZE: uint64 = 4027338
-    </spec>
-
 - name: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE#gloas
   sources:
     - file: packages/params/src/presets/mainnet.ts

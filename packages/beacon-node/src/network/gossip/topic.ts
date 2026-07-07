@@ -7,7 +7,6 @@ import {
   MAX_ATTESTER_SLASHING_SIZE,
   MAX_DATA_COLUMN_SIDECAR_SIZE,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_BEACON_BLOCK_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
@@ -142,10 +141,10 @@ export function getGossipSSZType(topic: GossipTopic): CompositeTypeAny {
  */
 export function getGossipSSZMaxSize(topic: GossipTopic, maxPayloadSize: number, sszType?: CompositeTypeAny): number {
   const {fork} = topic.boundary;
-  // Gloas progressive containers have broad theoretical SSZ max sizes; use the preset p2p bounds instead.
+  // Gloas progressive containers have broad theoretical SSZ max sizes; use preset p2p bounds where specified.
   switch (topic.type) {
     case GossipType.beacon_block:
-      return isForkPostGloas(fork) ? MAX_SIGNED_BEACON_BLOCK_SIZE : maxPayloadSize;
+      return maxPayloadSize;
     case GossipType.beacon_aggregate_and_proof:
       return isForkPostGloas(fork) ? MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
     case GossipType.attester_slashing:

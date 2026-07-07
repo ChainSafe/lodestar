@@ -129,7 +129,6 @@ exceptions:
   presets:
     # heze (not implemented)
     - INCLUSION_LIST_COMMITTEE_SIZE#heze
-    - MAX_SIGNED_BEACON_BLOCK_SIZE_HEZE#heze
     - MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE#heze
     - MAX_SIGNED_INCLUSION_LIST_SIZE#heze
 
