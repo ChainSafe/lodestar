@@ -9,6 +9,8 @@ export type FastConfirmationBalanceSource = {
   balances: EffectiveBalanceIncrements;
 };
 
+export type TotalActiveBalanceCacheKey = IBeaconStateView | EffectiveBalanceIncrements;
+
 export type ForkChoiceStateGetter = (
   opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
 ) => IBeaconStateView | null;
@@ -109,6 +111,8 @@ export type FastConfirmationCache = {
   isDescendantByRootPair: Map<string, boolean>;
   /** voteRoot -> totalWeight, keyed by sourceKey */
   voteWeightBySource: Map<BalanceSourceKey, Map<RootHex, number>>;
+  /** total active balance, keyed by the balance source's state or balances reference */
+  totalActiveBalanceByKey: Map<TotalActiveBalanceCacheKey, number>;
   headState?: IBeaconStateView;
   pulledUpHeadState?: IBeaconStateView;
   checkpointStateByKey: Map<string, IBeaconStateView | null>;

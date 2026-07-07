@@ -89,7 +89,7 @@ export const defaultSkipOpts: SkipOpts = {
     /\/gloas_fork$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: ["fast_confirmation", "networking"],
+  skippedRunners: ["networking"],
 };
 
 /**

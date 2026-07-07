@@ -1,4 +1,4 @@
-import {ApiClient, HttpStatusCode, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
 import {Slot, gloas} from "@lodestar/types";
@@ -69,9 +69,10 @@ export class PtcService {
     );
 
     try {
-      const payloadAttestationData = await this.producePayloadAttestationData(slot);
+      // No canonical block at slot resolves to `undefined`
+      const payloadAttestationData = (await this.api.validator.producePayloadAttestationData({slot})).value();
       // If no beacon block was seen for the assigned slot, do not submit a payload attestation
-      if (payloadAttestationData === null) {
+      if (!payloadAttestationData) {
         this.logger.debug("Skipping payload attestation, no beacon block seen for slot", {slot});
         return;
       }
@@ -80,14 +81,6 @@ export class PtcService {
       this.logger.error("Error on PTC routine", {slot}, e as Error);
     }
   };
-
-  private async producePayloadAttestationData(slot: Slot): Promise<gloas.PayloadAttestationData | null> {
-    const res = await this.api.validator.producePayloadAttestationData({slot});
-    if (!res.ok && res.status === HttpStatusCode.NOT_FOUND) {
-      return null;
-    }
-    return res.value();
-  }
 
   private async signAndPublishPayloadAttestations(
     slot: Slot,

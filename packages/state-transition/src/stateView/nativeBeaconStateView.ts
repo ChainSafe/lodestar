@@ -144,6 +144,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private _getNextShuffling: EpochShuffling | null = null;
   private _getEffectiveBalanceIncrementsZeroInactive: EffectiveBalanceIncrements | null = null;
   private _getAllValidators: phase0.Validator[] | null = null;
+  private _getBuildersLength: number | null = null;
   private _getAllBalances: number[] | null = null;
   private _getLatestWeakSubjectivityCheckpointEpoch: Epoch | null = null;
   private _getFinalizedRootProof: Uint8Array[] | null = null;
@@ -886,6 +887,13 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._getBuilder.set(index, cached);
     }
     return cached;
+  }
+
+  getBuildersLength(): number {
+    if (this._getBuildersLength === null) {
+      this._getBuildersLength = this.binding.getBuildersLength();
+    }
+    return this._getBuildersLength;
   }
 
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
