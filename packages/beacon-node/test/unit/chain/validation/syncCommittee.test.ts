@@ -39,11 +39,8 @@ describe("Sync Committee Signature validation", () => {
 
   beforeEach(() => {
     chain = getMockedBeaconChain({config});
-    (
-      chain as {
-        seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
-      }
-    ).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
+    (chain as {seenSyncCommitteeMessages: SeenSyncCommitteeMessages}).seenSyncCommitteeMessages =
+      new SeenSyncCommitteeMessages();
     clockStub = chain.clock;
     forkchoiceStub = chain.forkChoice;
     vi.spyOn(clockStub, "isCurrentSlotGivenGossipDisparity").mockReturnValue(true);

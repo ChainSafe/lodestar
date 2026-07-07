@@ -90,6 +90,10 @@ export type BlockAttributes = {
 export type PreparedBlockScalars = {
   proposerIndex: ValidatorIndex;
   proposerPubKey: BLSPubkey;
+  // Proposer fee recipient resolved by produceBlockBase (cached-or-default); the API-requested one, if
+  // supplied, overrides it. `feeRecipientCached` distinguishes registered vs default for logging.
+  defaultFeeRecipient: string;
+  feeRecipientCached: boolean;
   safeBlockHash: RootHex;
   finalizedBlockHash: RootHex;
   timestamp: number;
@@ -184,6 +188,8 @@ export async function produceBlockBody<T extends BlockType>(
     parentBlock,
     proposerIndex,
     proposerPubKey,
+    defaultFeeRecipient,
+    feeRecipientCached,
     commonBlockBodyPromise,
     builderBid,
     // Precomputed by produceBlockBase (gloas/V4); undefined on the V3 path → computed via `??` below
@@ -246,7 +252,7 @@ export async function produceBlockBody<T extends BlockType>(
     // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
     // ProposerPreferencesPool. Consider using this unified cache instead
     // see https://github.com/ChainSafe/lodestar/issues/9379
-    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
+    const feeRecipient = requestedFeeRecipient ?? defaultFeeRecipient;
 
     const endExecutionPayload = this.metrics?.executionBlockProductionTimeSteps.startTimer();
 
@@ -361,12 +367,8 @@ export async function produceBlockBody<T extends BlockType>(
       shouldOverrideBuilder,
     });
   } else if (isForkPostBellatrix(fork)) {
-    const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
-    const feeRecipientType = requestedFeeRecipient
-      ? "requested"
-      : this.beaconProposerCache.get(proposerIndex)
-        ? "cached"
-        : "default";
+    const feeRecipient = requestedFeeRecipient ?? defaultFeeRecipient;
+    const feeRecipientType = requestedFeeRecipient ? "requested" : feeRecipientCached ? "cached" : "default";
 
     Object.assign(logMeta, {feeRecipientType, feeRecipient});
 

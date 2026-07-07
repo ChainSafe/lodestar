@@ -774,7 +774,7 @@ export class BlockInputSync {
     const proposerBoostWindowMs = this.config.getAttestationDueMs(fork);
     if (
       this.chain.clock.msFromSlot(blockSlot) < proposerBoostWindowMs &&
-      this.chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)
+      this.chain.beaconEngine.isBlockProposerSeen(blockSlot, proposerIndex)
     ) {
       // proposer is known by a gossip block already, wait a bit to make sure this block is not
       // eligible for proposer boost to prevent unbundling attack

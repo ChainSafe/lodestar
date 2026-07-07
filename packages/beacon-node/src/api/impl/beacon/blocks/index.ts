@@ -868,7 +868,7 @@ export function getBeaconBlockApi({
       }
 
       try {
-        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
+        const insertOutcome = chain.beaconEngine.addExecutionPayloadBid(signedExecutionPayloadBid);
         metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
       } catch (e) {
         chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);

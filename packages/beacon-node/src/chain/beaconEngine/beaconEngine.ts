@@ -51,10 +51,12 @@ import {
 } from "@lodestar/state-transition";
 import {
   Attestation,
+  AttesterSlashing,
   BLSSignature,
   BeaconBlock,
   BlindedBeaconBlock,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   Gwei,
   IndexedAttestation,
@@ -63,10 +65,13 @@ import {
   SSEPayloadAttributes,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SingleAttestation,
   Slot,
+  SubcommitteeIndex,
   SubnetID,
   ValidatorIndex,
   altair,
+  capella,
   deneb,
   electra,
   fulu,
@@ -79,7 +84,8 @@ import {Logger, byteArrayEquals, fromHex, sleep, toRootHex} from "@lodestar/util
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {IClock} from "../../util/clock.js";
+import {BufferPool} from "../../util/bufferPool.js";
+import {ClockEvent, IClock} from "../../util/clock.js";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
@@ -92,7 +98,7 @@ import {
 } from "../archiveStore/utils/archiveBlocks.js";
 import {pruneHistory} from "../archiveStore/utils/pruneHistory.js";
 import {CheckpointBalancesCache} from "../balancesCache.js";
-import {BeaconProposerCache} from "../beaconProposerCache.js";
+import {BeaconProposerCache, ProposerPreparationData} from "../beaconProposerCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "../blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
@@ -116,6 +122,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
 } from "../opPools/index.js";
+import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
 import {
   BlockAttributes,
@@ -139,6 +146,7 @@ import {
 } from "../seenCache/index.js";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "../seenCache/seenAttestationData.js";
+import {SeenBlockAttesters} from "../seenCache/seenBlockAttesters.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {FIFOBlockStateCache} from "../stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache, toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
@@ -155,8 +163,13 @@ import {
   validateApiAttestation,
   validateGossipAttestationsSameAttData,
 } from "../validation/attestation.js";
+import {validateApiAttesterSlashing, validateGossipAttesterSlashing} from "../validation/attesterSlashing.js";
 import {validateGossipBlobSidecar} from "../validation/blobSidecar.js";
 import {GossipBlockValidationResult, validateGossipBlock} from "../validation/block.js";
+import {
+  validateApiBlsToExecutionChange,
+  validateGossipBlsToExecutionChange,
+} from "../validation/blsToExecutionChange.js";
 import {
   validateGossipFuluDataColumnSidecar,
   validateGossipGloasDataColumnSidecar,
@@ -172,12 +185,19 @@ import {
   validateGossipPayloadAttestationMessage,
 } from "../validation/payloadAttestationMessage.js";
 import {validateGossipProposerPreferences} from "../validation/proposerPreferences.js";
+import {validateApiProposerSlashing, validateGossipProposerSlashing} from "../validation/proposerSlashing.js";
 import {validateApiSyncCommittee, validateGossipSyncCommittee} from "../validation/syncCommittee.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../validation/syncCommitteeContributionAndProof.js";
+import {validateApiVoluntaryExit, validateGossipVoluntaryExit} from "../validation/voluntaryExit.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {computeNewStateRoot} from "./computeNewStateRoot.js";
 import {getPubkeysForIndices} from "./duties.js";
-import {GossipValidationResult, fromResult, runGossipValidation} from "./gossipValidationResult.js";
+import {
+  GossipValidationResult,
+  GossipValidationStatus,
+  fromResult,
+  runGossipValidation,
+} from "./gossipValidationResult.js";
 import {
   BeaconEngineModules,
   FinalizedProtoSummary,
@@ -214,6 +234,8 @@ export class BeaconEngine implements IBeaconEngine {
   readonly metrics: Metrics | null;
   readonly clock: IClock;
   readonly pubkeyCache: PubkeyCache;
+  // NodeJS-specific memory pool for state serialization; engine-internal (not on IBeaconEngine).
+  readonly bufferPool: BufferPool;
   readonly bls: IBlsVerifier;
   readonly shufflingCache: ShufflingCache;
 
@@ -243,6 +265,8 @@ export class BeaconEngine implements IBeaconEngine {
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
   readonly seenBlockProposers = new SeenBlockProposers();
+  // Liveness cache: attesters seen through imported blocks (populated in _importBlock).
+  readonly seenBlockAttesters = new SeenBlockAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenProposerPreferences = new SeenProposerPreferences();
@@ -270,7 +294,6 @@ export class BeaconEngine implements IBeaconEngine {
       metrics,
       clock,
       pubkeyCache,
-      bufferPool,
       cpStateDatastore,
       emitter,
       signal,
@@ -286,6 +309,8 @@ export class BeaconEngine implements IBeaconEngine {
     this.metrics = metrics;
     this.clock = clock;
     this.pubkeyCache = pubkeyCache;
+    // Engine owns the buffer pool; sized from the anchor state (NodeJS-specific, engine-internal).
+    this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
     this.seenBlockInputCache = seenBlockInputCache;
     this.validatorMonitor = validatorMonitor;
     this.lightClientServer = modules.lightClientServer;
@@ -325,7 +350,15 @@ export class BeaconEngine implements IBeaconEngine {
 
     this.blockStateCache = new FIFOBlockStateCache(opts, {metrics});
     this.checkpointStateCache = new PersistentCheckpointStateCache(
-      {config, metrics, logger, clock, blockStateCache: this.blockStateCache, bufferPool, datastore: cpStateDatastore},
+      {
+        config,
+        metrics,
+        logger,
+        clock,
+        blockStateCache: this.blockStateCache,
+        bufferPool: this.bufferPool,
+        datastore: cpStateDatastore,
+      },
       opts
     );
 
@@ -373,9 +406,46 @@ export class BeaconEngine implements IBeaconEngine {
 
     // Engine owns the states DB, so it owns the state-archive strategy (finalized + temp + shutdown).
     if (opts.archiveMode === ArchiveMode.Frequency) {
-      this.stateArchiveStrategy = new FrequencyStateArchiveStrategy(this.regen, db, logger, opts, bufferPool);
+      this.stateArchiveStrategy = new FrequencyStateArchiveStrategy(this.regen, db, logger, opts, this.bufferPool);
     } else {
       throw new Error(`State archive strategy "${opts.archiveMode}" currently not supported.`);
+    }
+
+    // The engine prunes its OWN caches on the clock tick (the facade no longer reaches in). More
+    // engine-owned pools/caches move under this listener in later slices.
+    clock.addListener(ClockEvent.slot, (slot: Slot) => {
+      this.attestationPool.prune(slot);
+      this.aggregatedAttestationPool.prune(slot);
+      this.syncCommitteeMessagePool.prune(slot);
+      this.payloadAttestationPool.prune(slot);
+      this.executionPayloadBidPool.prune(slot);
+      this.seenProposerPreferences.prune(slot);
+      this.proposerPreferencesPool.prune(slot);
+      this.seenSyncCommitteeMessages.prune(slot);
+      this.seenExecutionPayloadBids.prune(slot);
+      this.seenAttestationDatas.onSlot(slot);
+    });
+    clock.addListener(ClockEvent.epoch, (epoch: Epoch) => {
+      this.seenAttesters.prune(epoch);
+      this.seenAggregators.prune(epoch);
+      this.seenPayloadAttesters.prune(epoch);
+      this.seenAggregatedAttestations.prune(epoch);
+      this.seenBlockAttesters.prune(epoch);
+      this.beaconProposerCache.prune(epoch);
+    });
+
+    // The engine reports metrics for its own (internal) op pools.
+    if (metrics) {
+      metrics.clockSlot.addCollect(() => {
+        metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
+        metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
+        metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
+        metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+        metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
+        metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
+        metrics.opPool.payloadAttestationPool.size.set(this.payloadAttestationPool.size);
+        metrics.opPool.executionPayloadBidPool.size.set(this.executionPayloadBidPool.size);
+      });
     }
   }
 
@@ -387,6 +457,11 @@ export class BeaconEngine implements IBeaconEngine {
       throw Error(`headState does not exist for head root=${head.blockRoot} slot=${head.slot}`);
     }
     return headState;
+  }
+
+  /** Head state advanced to the current wall-clock epoch (mirrors the former `chain.getHeadStateAtCurrentEpoch`). */
+  async getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView> {
+    return this.getHeadStateAtEpoch(this.clock.currentEpoch, regenCaller);
   }
 
   /**
@@ -679,6 +754,13 @@ export class BeaconEngine implements IBeaconEngine {
     const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
     const prevRandao = state.getRandaoMix(state.epoch);
 
+    // Resolve the proposer fee recipient once (engine-owned cache); the API-requested one, if any,
+    // overrides it downstream. `feeRecipientCached` distinguishes a registered value from the default
+    // for block-production logging — so produceBlockBody never reaches back into the engine.
+    const cachedFeeRecipient = this.beaconProposerCache.get(proposerIndex);
+    const defaultFeeRecipient = this.beaconProposerCache.getOrDefault(proposerIndex);
+    const feeRecipientCached = cachedFeeRecipient !== undefined;
+
     let parentBlockHash: Bytes32;
     // parent execution gas limit: gloas keeps it on the bid (UintBn64 → cast), pre-gloas on the header
     let parentGasLimit: number;
@@ -752,6 +834,8 @@ export class BeaconEngine implements IBeaconEngine {
       parentBlock,
       proposerIndex,
       proposerPubKey,
+      defaultFeeRecipient,
+      feeRecipientCached,
       safeBlockHash,
       finalizedBlockHash,
       timestamp,
@@ -1685,11 +1769,266 @@ export class BeaconEngine implements IBeaconEngine {
     return runGossipValidation(() => validateApiExecutionPayloadBid(this, signedExecutionPayloadBid));
   }
 
-  validateGossipProposerPreferences(
+  async validateGossipProposerPreferences(
     _preferencesBytes: Uint8Array,
     signedProposerPreferences: gloas.SignedProposerPreferences
   ): Promise<GossipValidationResult<void>> {
-    return runGossipValidation(() => validateGossipProposerPreferences(this, signedProposerPreferences));
+    const res = await runGossipValidation(() => validateGossipProposerPreferences(this, signedProposerPreferences));
+    // Insert on Accept — the pool is engine-internal, so the facade (gossip handler / API) no longer adds.
+    if (res.status === GossipValidationStatus.Accept) {
+      this.proposerPreferencesPool.add(signedProposerPreferences);
+    }
+    return res;
+  }
+
+  // --- Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads ---
+  // The pools are engine-internal (not on IBeaconEngine's cache surface); the facade reaches them only
+  // through these narrow methods. gossip = no-throw result; API = throws (preserves REST error shape).
+
+  async validateGossipAttesterSlashing(
+    attesterSlashing: AttesterSlashing,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>> {
+    const res = await runGossipValidation(() => validateGossipAttesterSlashing(this, attesterSlashing));
+    if (res.status === GossipValidationStatus.Accept) {
+      // Contain insert failures — a pool error must not flip the gossip verdict (matches prior handler).
+      try {
+        this.opPool.insertAttesterSlashing(fork, attesterSlashing);
+        this.forkChoice.onAttesterSlashing(attesterSlashing);
+      } catch (e) {
+        this.logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+      }
+    }
+    return res;
+  }
+
+  async validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void> {
+    await validateApiAttesterSlashing(this, attesterSlashing);
+    this.opPool.insertAttesterSlashing(fork, attesterSlashing);
+  }
+
+  async validateGossipProposerSlashing(
+    proposerSlashing: phase0.ProposerSlashing
+  ): Promise<GossipValidationResult<void>> {
+    const res = await runGossipValidation(() => validateGossipProposerSlashing(this, proposerSlashing));
+    if (res.status === GossipValidationStatus.Accept) {
+      try {
+        this.opPool.insertProposerSlashing(proposerSlashing);
+      } catch (e) {
+        this.logger.error("Error adding proposerSlashing to pool", {}, e as Error);
+      }
+    }
+    return res;
+  }
+
+  async validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
+    await validateApiProposerSlashing(this, proposerSlashing);
+    this.opPool.insertProposerSlashing(proposerSlashing);
+  }
+
+  async validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<GossipValidationResult<void>> {
+    const res = await runGossipValidation(() => validateGossipVoluntaryExit(this, voluntaryExit));
+    if (res.status === GossipValidationStatus.Accept) {
+      try {
+        this.opPool.insertVoluntaryExit(voluntaryExit);
+      } catch (e) {
+        this.logger.error("Error adding voluntaryExit to pool", {}, e as Error);
+      }
+    }
+    return res;
+  }
+
+  async validateApiVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void> {
+    await validateApiVoluntaryExit(this, voluntaryExit);
+    this.opPool.insertVoluntaryExit(voluntaryExit);
+  }
+
+  async validateGossipBlsToExecutionChange(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange
+  ): Promise<GossipValidationResult<void>> {
+    const res = await runGossipValidation(() => validateGossipBlsToExecutionChange(this, blsToExecutionChange));
+    if (res.status === GossipValidationStatus.Accept) {
+      try {
+        this.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      } catch (e) {
+        this.logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
+      }
+    }
+    return res;
+  }
+
+  async validateApiBlsToExecutionChange(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange,
+    preCapella: boolean
+  ): Promise<void> {
+    await validateApiBlsToExecutionChange(this, blsToExecutionChange);
+    this.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+  }
+
+  getPoolProposerPreferences(slot?: Slot): gloas.SignedProposerPreferences[] {
+    return this.proposerPreferencesPool.getAll(slot);
+  }
+
+  getPoolAttesterSlashings(): AttesterSlashing[] {
+    return this.opPool.getAllAttesterSlashings();
+  }
+
+  getPoolProposerSlashings(): phase0.ProposerSlashing[] {
+    return this.opPool.getAllProposerSlashings();
+  }
+
+  getPoolVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+    return this.opPool.getAllVoluntaryExits();
+  }
+
+  getPoolBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[] {
+    return this.opPool.getAllBlsToExecutionChanges().map(({data}) => data);
+  }
+
+  // --- Op pools (engine-internal): narrow add/read bridges for gossip handlers + REST/validator API ---
+  // The pools are engine-owned; the facade reaches them only through these methods (never the objects).
+
+  addAttestationToPool(
+    committeeIndex: CommitteeIndex,
+    attestation: SingleAttestation,
+    attDataRootHex: RootHex,
+    validatorCommitteeIndex: number,
+    committeeSize: number,
+    priority?: boolean
+  ): InsertOutcome {
+    return this.attestationPool.add(
+      committeeIndex,
+      attestation,
+      attDataRootHex,
+      validatorCommitteeIndex,
+      committeeSize,
+      priority
+    );
+  }
+
+  getAttestationAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null {
+    return this.attestationPool.getAggregate(slot, dataRootHex, committeeIndex);
+  }
+
+  addAggregatedAttestation(
+    attestation: Attestation,
+    dataRootHex: RootHex,
+    attestingIndicesCount: number,
+    committee: Uint32Array
+  ): InsertOutcome {
+    return this.aggregatedAttestationPool.add(attestation, dataRootHex, attestingIndicesCount, committee);
+  }
+
+  getPoolAggregatedAttestations(bySlot?: Slot): Attestation[] {
+    return this.aggregatedAttestationPool.getAll(bySlot);
+  }
+
+  addSyncCommitteeMessage(
+    subnet: SubnetID,
+    signature: altair.SyncCommitteeMessage,
+    indexInSubcommittee: number,
+    priority?: boolean
+  ): InsertOutcome {
+    return this.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee, priority);
+  }
+
+  getSyncCommitteeContribution(
+    subnet: SubcommitteeIndex,
+    slot: Slot,
+    prevBlockRoot: Root
+  ): altair.SyncCommitteeContribution | null {
+    return this.syncCommitteeMessagePool.getContribution(subnet, slot, prevBlockRoot);
+  }
+
+  addSyncContributionAndProof(
+    contributionAndProof: altair.ContributionAndProof,
+    syncCommitteeParticipants: number,
+    priority?: boolean
+  ): InsertOutcome {
+    return this.syncContributionAndProofPool.add(contributionAndProof, syncCommitteeParticipants, priority);
+  }
+
+  addPayloadAttestation(
+    message: gloas.PayloadAttestationMessage,
+    payloadAttDataRootHex: RootHex,
+    validatorCommitteeIndices: number[]
+  ): InsertOutcome {
+    return this.payloadAttestationPool.add(message, payloadAttDataRootHex, validatorCommitteeIndices);
+  }
+
+  getPoolPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[] {
+    return this.payloadAttestationPool.getAll(slot);
+  }
+
+  addExecutionPayloadBid(bid: gloas.SignedExecutionPayloadBid): InsertOutcome {
+    return this.executionPayloadBidPool.add(bid);
+  }
+
+  // --- Proposer cache + finalized balances (engine-internal) ---
+
+  /** Fee recipient registered for a proposer, or undefined if none (block-production default is
+   * resolved in `produceBlockBase`; import uses this for its FCU fee recipient). */
+  getProposerFeeRecipient(proposerIndex: ValidatorIndex): string | undefined {
+    return this.beaconProposerCache.get(proposerIndex);
+  }
+
+  /** Register proposer preparation data. Returns true if new validators were discovered. */
+  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): boolean {
+    const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+    for (const proposer of proposers) {
+      this.beaconProposerCache.add(epoch, proposer);
+    }
+    return this.beaconProposerCache.getValidatorIndices().length > previousValidatorCount;
+  }
+
+  /** Validator indices with proposer preparation registered (attached validators). */
+  getProposerCacheValidatorIndices(): ValidatorIndex[] {
+    return this.beaconProposerCache.getValidatorIndices();
+  }
+
+  /** Cached finalized effective-balance increments for a checkpoint, or undefined if not cached. */
+  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined {
+    return this.checkpointBalancesCache.get(checkpoint);
+  }
+
+  /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
+  async pruneOnFinalized(): Promise<void> {
+    this.seenBlockProposers.prune(computeStartSlotAtEpoch(this.forkChoice.getFinalizedCheckpoint().epoch));
+
+    // TODO: Improve using regen here
+    const {blockRoot, stateRoot, slot} = this.forkChoice.getHead();
+    const headState = this.regen.getStateSync(stateRoot);
+    const res = await this.getSerializedBlockByRoot(fromHex(blockRoot));
+    if (res == null) {
+      throw Error(`Head block for ${slot} is not available in cache or database`);
+    }
+    if (headState) {
+      const headBlock = this.config.getForkTypes(res.slot).SignedBeaconBlock.deserialize(res.bytes);
+      this.opPool.pruneAll(headBlock, headState);
+    } else {
+      this.logger.verbose("Head state is null");
+    }
+  }
+
+  /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
+    return (
+      // Dedicated liveness cache, registers attesters seen through imported blocks.
+      this.seenBlockAttesters.isKnown(epoch, index) ||
+      // seenAttesters = single signer of unaggregated attestations
+      this.seenAttesters.isKnown(epoch, index) ||
+      // seenAggregators = single aggregator index, not participants of the aggregate
+      this.seenAggregators.isKnown(epoch, index) ||
+      // seenPayloadAttesters = single signer of payload attestation message
+      this.seenPayloadAttesters.isKnown(epoch, index) ||
+      // seenBlockProposers = single block proposer
+      this.seenBlockProposers.seenAtEpoch(epoch, index)
+    );
+  }
+
+  /** Whether a block proposer was already seen for this slot (sync anti-unbundling check). */
+  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean {
+    return this.seenBlockProposers.isKnown(slot, proposerIndex);
   }
 
   async verifyBlocks(
@@ -1839,7 +2178,6 @@ export class BeaconEngine implements IBeaconEngine {
 
     // 3. Import attestations to fork choice
     const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
-    const attestationsResult: {blockEpoch: number; attestingIndices: number[]}[] = [];
 
     if (
       opts.importAttestations === AttestationImportOpt.Force ||
@@ -1879,7 +2217,8 @@ export class BeaconEngine implements IBeaconEngine {
             );
           }
 
-          attestationsResult.push({blockEpoch, attestingIndices: Array.from(indexedAttestation.attestingIndices)});
+          // Register attesters seen in this block for the liveness cache (engine-owned).
+          this.seenBlockAttesters.addIndices(blockEpoch, Array.from(indexedAttestation.attestingIndices));
 
           const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(attestation.data.slot), beaconBlockRoot);
           const missedSlotVote =
@@ -2148,7 +2487,6 @@ export class BeaconEngine implements IBeaconEngine {
       oldHeadBlockRoot,
       newHeadBlockRoot: newHead.blockRoot,
       newHead,
-      attestations: attestationsResult,
       blockMeta: {
         slot: blockSlot,
         blockRootHex,

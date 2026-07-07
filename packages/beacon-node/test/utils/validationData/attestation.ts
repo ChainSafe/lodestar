@@ -18,7 +18,7 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/ch
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
-import {SeenAttesters} from "../../../src/chain/seenCache/index.js";
+import {SeenAggregators, SeenAttesters} from "../../../src/chain/seenCache/index.js";
 import {SeenAggregatedAttestations} from "../../../src/chain/seenCache/seenAggregateAndProof.js";
 import {SeenAttestationDatas} from "../../../src/chain/seenCache/seenAttestationData.js";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
@@ -40,8 +40,19 @@ export type AttestationValidDataOpts = {
 /**
  * Generate a valid gossip Attestation object. Common logic for unit and perf tests
  */
+/**
+ * `IBeaconChain` widened with the engine-internal seen-caches these fixtures surface (the flat mock
+ * doubles as the engine). Lets tests reach `chain.seenX` even though they are off `IBeaconChain`.
+ */
+export type ValidationTestChain = IBeaconChain & {
+  seenAttesters: SeenAttesters;
+  seenAggregators: SeenAggregators;
+  seenAggregatedAttestations: SeenAggregatedAttestations;
+  seenAttestationDatas: SeenAttestationDatas;
+};
+
 export function getAttestationValidData(opts: AttestationValidDataOpts): {
-  chain: IBeaconChain;
+  chain: ValidationTestChain;
   attestation: phase0.Attestation;
   subnet: SubnetID;
   validatorIndex: number;
@@ -167,6 +178,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),
+    seenAggregators: new SeenAggregators(),
     seenAggregatedAttestations: new SeenAggregatedAttestations(null),
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
     bls: blsVerifyAllMainThread
@@ -179,7 +191,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     pubkeyCache: state.epochCtx.pubkeyCache,
     shufflingCache,
     opts: defaultChainOptions,
-  } as Partial<IBeaconChain> as IBeaconChain;
+  } as Partial<IBeaconChain> as ValidationTestChain;
   // The gossip validators are BeaconEngine methods reading engine collaborators; in this flat fixture
   // the facade doubles as the engine, so `chain.beaconEngine` exposes the same collaborators.
   (chain as {beaconEngine: unknown}).beaconEngine = chain;

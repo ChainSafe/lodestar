@@ -2,10 +2,9 @@ import {DOMAIN_AGGREGATE_AND_PROOF, DOMAIN_SELECTION_PROOF} from "@lodestar/para
 import {computeSigningRoot} from "@lodestar/state-transition";
 import {getSecretKeyFromIndexCached} from "@lodestar/state-transition/test-utils";
 import {phase0, ssz} from "@lodestar/types";
-import {IBeaconChain} from "../../../src/chain/index.js";
 import {SeenAggregators} from "../../../src/chain/seenCache/index.js";
 import {signCached} from "../cache.js";
-import {AttestationValidDataOpts, getAttestationValidData} from "./attestation.js";
+import {AttestationValidDataOpts, ValidationTestChain, getAttestationValidData} from "./attestation.js";
 
 export type AggregateAndProofValidDataOpts = AttestationValidDataOpts;
 
@@ -13,7 +12,7 @@ export type AggregateAndProofValidDataOpts = AttestationValidDataOpts;
  * Generate a valid gossip SignedAggregateAndProof object. Common logic for unit and perf tests
  */
 export function getAggregateAndProofValidData(opts: AggregateAndProofValidDataOpts): {
-  chain: IBeaconChain;
+  chain: ValidationTestChain;
   signedAggregateAndProof: phase0.SignedAggregateAndProof;
   validatorIndex: number;
 } {
@@ -24,8 +23,8 @@ export function getAggregateAndProofValidData(opts: AggregateAndProofValidDataOp
 
   const sk = getSecretKeyFromIndexCached(validatorIndex);
 
-  // Get around the 'readonly' Typescript restriction
-  (chain as {seenAggregators: IBeaconChain["seenAggregators"]}).seenAggregators = new SeenAggregators();
+  // Reset the (engine-internal) seenAggregators for this fixture
+  chain.seenAggregators = new SeenAggregators();
 
   const aggregatorIndex = validatorIndex;
   const proofDomain = state.config.getDomain(state.slot, DOMAIN_SELECTION_PROOF, attSlot);

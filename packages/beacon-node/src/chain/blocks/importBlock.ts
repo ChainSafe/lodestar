@@ -58,12 +58,7 @@ export async function importBlock(
     opts
   );
 
-  // Register attesters seen in this block
-  for (const {blockEpoch, attestingIndices} of r.attestations) {
-    this.seenBlockAttesters.addIndices(blockEpoch, attestingIndices);
-  }
-
-  // Emit head event (engine already pruned pools and set head state)
+  // Emit head event (engine already pruned pools, registered seen-attesters, and set head state)
   if (r.head !== null) {
     try {
       this.emitter.emit(routes.events.EventType.head, r.head);
@@ -92,7 +87,7 @@ export async function importBlock(
       const proposerIndex = r.proposerIndexNextSlot;
       if (proposerIndex !== null) {
         // TODO - beacon engine: move this there
-        const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+        const feeRecipient = this.beaconEngine.getProposerFeeRecipient(proposerIndex);
         if (feeRecipient && r.blockSummary !== null) {
           const result = this.forkChoice.shouldOverrideForkChoiceUpdate(
             r.blockSummary,

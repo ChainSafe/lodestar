@@ -25,15 +25,13 @@ import {
 import {Logger} from "@lodestar/utils";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
-import {BufferPool} from "../util/bufferPool.js";
 import {IClock} from "../util/clock.js";
 import {CustodyConfig} from "../util/dataColumns.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot} from "../util/sszBytes.js";
 import {IArchiveStore} from "./archiveStore/interface.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
 import {IBeaconEngine} from "./beaconEngine/index.js";
-import {BeaconProposerCache, ProposerPreparationData} from "./beaconProposerCache.js";
+import {ProposerPreparationData} from "./beaconProposerCache.js";
 import {IBlockInput} from "./blocks/blockInput/index.js";
 import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
@@ -42,33 +40,10 @@ import {ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
-import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool.js";
-import {
-  AttestationPool,
-  ExecutionPayloadBidPool,
-  OpPool,
-  PayloadAttestationPool,
-  ProposerPreferencesPool,
-  SyncCommitteeMessagePool,
-  SyncContributionAndProofPool,
-} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
 import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {
-  SeenAggregators,
-  SeenAttesters,
-  SeenBlockProposers,
-  SeenContributionAndProof,
-  SeenExecutionPayloadBids,
-  SeenPayloadAttesters,
-  SeenProposerPreferences,
-  SeenSyncCommitteeMessages,
-} from "./seenCache/index.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
@@ -103,7 +78,6 @@ export interface IBeaconChain {
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly validatorMonitor: ValidatorMonitor | null;
-  readonly bufferPool: BufferPool | null;
 
   /** The initial slot that the chain is started with */
   readonly anchorStateLatestBlockSlot: Slot;
@@ -119,34 +93,12 @@ export interface IBeaconChain {
   readonly pubkeyCache: PubkeyCache;
   readonly archiveStore: IArchiveStore;
 
-  // Ops pool
-  readonly attestationPool: AttestationPool;
-  readonly aggregatedAttestationPool: AggregatedAttestationPool;
-  readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
-  readonly syncContributionAndProofPool: SyncContributionAndProofPool;
-  readonly executionPayloadBidPool: ExecutionPayloadBidPool;
-  readonly payloadAttestationPool: PayloadAttestationPool;
-  readonly proposerPreferencesPool: ProposerPreferencesPool;
-  readonly opPool: OpPool;
-
-  // Gossip seen cache
-  readonly seenAttesters: SeenAttesters;
-  readonly seenAggregators: SeenAggregators;
-  readonly seenPayloadAttesters: SeenPayloadAttesters;
-  readonly seenAggregatedAttestations: SeenAggregatedAttestations;
-  readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
-  readonly seenProposerPreferences: SeenProposerPreferences;
-  readonly seenBlockProposers: SeenBlockProposers;
-  readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
-  readonly seenContributionAndProof: SeenContributionAndProof;
-  readonly seenAttestationDatas: SeenAttestationDatas;
+  // Op pools are engine-internal (add/read via the engine); not on the facade.
+  // Gossip seen caches are engine-internal (pruned + read via the engine); not on the facade.
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
-  // Seen cache for liveness checks
-  readonly seenBlockAttesters: SeenBlockAttesters;
 
-  readonly beaconProposerCache: BeaconProposerCache;
-  readonly checkpointBalancesCache: CheckpointBalancesCache;
+  // beaconProposerCache + checkpointBalancesCache are engine-internal (read/written via the engine).
 
   readonly blockProductionCache: Map<RootHex, ProduceResult>;
 

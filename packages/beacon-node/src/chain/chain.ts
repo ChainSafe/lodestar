@@ -54,7 +54,6 @@ import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
-import {BufferPool} from "../util/bufferPool.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
 import {callInNextEventLoop} from "../util/eventLoop.js";
@@ -64,9 +63,7 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
-import {CheckpointBalancesCache} from "./balancesCache.js";
 import {BeaconEngine} from "./beaconEngine/index.js";
-import {BeaconProposerCache} from "./beaconProposerCache.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -80,37 +77,13 @@ import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
-import {
-  AggregatedAttestationPool,
-  AttestationPool,
-  ExecutionPayloadBidPool,
-  OpPool,
-  PayloadAttestationPool,
-  ProposerPreferencesPool,
-  SyncCommitteeMessagePool,
-  SyncContributionAndProofPool,
-} from "./opPools/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
 import {AssembledBlockType, BlockType, ProduceResult} from "./produceBlock/index.js";
 import {BlockAttributes, PreparedBlockScalars, produceBlockBody} from "./produceBlock/produceBlockBody.js";
 import {QueuedStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
-import {
-  PayloadEnvelopeInput,
-  SeenAggregators,
-  SeenAttesters,
-  SeenBlockProposers,
-  SeenContributionAndProof,
-  SeenExecutionPayloadBids,
-  SeenPayloadAttesters,
-  SeenPayloadEnvelopeInput,
-  SeenProposerPreferences,
-  SeenSyncCommitteeMessages,
-} from "./seenCache/index.js";
-import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
-import {SeenAttestationDatas} from "./seenCache/seenAttestationData.js";
-import {SeenBlockAttesters} from "./seenCache/seenBlockAttesters.js";
+import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/index.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {DbCPStateDatastore, checkpointToDatastoreKey} from "./stateCache/datastore/db.js";
 import {FileCPStateDatastore} from "./stateCache/datastore/file.js";
@@ -144,6 +117,7 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
+  readonly beaconEngine: BeaconEngine;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
@@ -152,11 +126,9 @@ export class BeaconChain implements IBeaconChain {
   readonly logger: Logger;
   readonly metrics: Metrics | null;
   readonly validatorMonitor: ValidatorMonitor | null;
-  readonly bufferPool: BufferPool;
 
   readonly anchorStateLatestBlockSlot: Slot;
 
-  readonly beaconEngine: BeaconEngine;
   // TODO - beacon engine: remove this?
   get bls(): IBlsVerifier {
     return this.beaconEngine.bls;
@@ -182,85 +154,15 @@ export class BeaconChain implements IBeaconChain {
   readonly unfinalizedBlockWrites: JobItemQueue<[IBlockInput], void>;
   readonly unfinalizedPayloadEnvelopeWrites: JobItemQueue<[PayloadEnvelopeInput], void>;
 
-  // Ops pool
-  get attestationPool(): AttestationPool {
-    return this.beaconEngine.attestationPool;
-  }
-  get aggregatedAttestationPool(): AggregatedAttestationPool {
-    return this.beaconEngine.aggregatedAttestationPool;
-  }
-  get syncCommitteeMessagePool(): SyncCommitteeMessagePool {
-    return this.beaconEngine.syncCommitteeMessagePool;
-  }
-  get syncContributionAndProofPool(): SyncContributionAndProofPool {
-    return this.beaconEngine.syncContributionAndProofPool;
-  }
-  // TODO - beacon engine: remove this
-  get executionPayloadBidPool(): ExecutionPayloadBidPool {
-    return this.beaconEngine.executionPayloadBidPool;
-  }
-  get payloadAttestationPool(): PayloadAttestationPool {
-    return this.beaconEngine.payloadAttestationPool;
-  }
-  // TODO - beacon engine: remove this
-  get proposerPreferencesPool(): ProposerPreferencesPool {
-    return this.beaconEngine.proposerPreferencesPool;
-  }
-  get opPool(): OpPool {
-    return this.beaconEngine.opPool;
-  }
+  // Op pools are engine-internal (pruned + read/written via the engine); no facade getters.
 
-  // Gossip seen cache
-  get seenAttesters(): SeenAttesters {
-    return this.beaconEngine.seenAttesters;
-  }
-  get seenAggregators(): SeenAggregators {
-    return this.beaconEngine.seenAggregators;
-  }
-  get seenPayloadAttesters(): SeenPayloadAttesters {
-    return this.beaconEngine.seenPayloadAttesters;
-  }
-  // TODO - beacon engine: remove this
-  get seenAggregatedAttestations(): SeenAggregatedAttestations {
-    return this.beaconEngine.seenAggregatedAttestations;
-  }
-  // TODO - beacon engine: remove this
-  get seenExecutionPayloadBids(): SeenExecutionPayloadBids {
-    return this.beaconEngine.seenExecutionPayloadBids;
-  }
-  // TODO - beacon engine: remove this
-  get seenProposerPreferences(): SeenProposerPreferences {
-    return this.beaconEngine.seenProposerPreferences;
-  }
-  // TODO - beacon engine: remove this
-  get seenBlockProposers(): SeenBlockProposers {
-    return this.beaconEngine.seenBlockProposers;
-  }
-  get seenSyncCommitteeMessages(): SeenSyncCommitteeMessages {
-    return this.beaconEngine.seenSyncCommitteeMessages;
-  }
-  get seenContributionAndProof(): SeenContributionAndProof {
-    return this.beaconEngine.seenContributionAndProof;
-  }
-  get seenAttestationDatas(): SeenAttestationDatas {
-    return this.beaconEngine.seenAttestationDatas;
-  }
+  // Gossip seen caches are engine-internal (pruned + read via the engine); no facade getters.
   readonly seenBlockInputCache: SeenBlockInput;
   readonly seenPayloadEnvelopeInputCache: SeenPayloadEnvelopeInput;
-  // Seen cache for liveness checks
-  readonly seenBlockAttesters = new SeenBlockAttesters();
 
   // Global state caches
+  // TODO - beacon engine: should this be moved to BeaconEngine?
   readonly pubkeyCache: PubkeyCache;
-
-  get beaconProposerCache(): BeaconProposerCache {
-    return this.beaconEngine.beaconProposerCache;
-  }
-
-  // TODO - beacon engine: remove this
-  get checkpointBalancesCache(): CheckpointBalancesCache {
-    return this.beaconEngine.checkpointBalancesCache;
-  }
 
   /**
    * Cache produced results (ExecutionPayload, DA Data) from the local execution so that we can send
@@ -354,7 +256,6 @@ export class BeaconChain implements IBeaconChain {
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
-    this.bufferPool = new BufferPool(anchorState.serializedSize(), metrics);
     const fileDataStore = opts.nHistoricalStatesFileDataStore ?? true;
     // checkpointState is an engine repo; build the datastore from the bootstrap `db` (union) param.
     this.cpStateDatastore = fileDataStore ? new FileCPStateDatastore(dataDir) : new DbCPStateDatastore(db);
@@ -391,7 +292,6 @@ export class BeaconChain implements IBeaconChain {
         metrics,
         clock,
         pubkeyCache,
-        bufferPool: this.bufferPool,
         cpStateDatastore: this.cpStateDatastore,
         emitter,
         signal,
@@ -548,23 +448,8 @@ export class BeaconChain implements IBeaconChain {
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {
     // Caller must check that epoch is not older that current epoch - 1
     // else the caches for that epoch may already be pruned.
-
-    // TODO - beacon engine: consider move all of these caches to BeaconEngine
-    return (
-      // Dedicated cache for liveness checks, registers attesters seen through blocks.
-      // Note: this check should be cheaper + overlap with counting participants of aggregates from gossip.
-      this.seenBlockAttesters.isKnown(epoch, index) ||
-      //
-      // Re-use gossip caches. Populated on validation of gossip + API messages
-      //   seenAttesters = single signer of unaggregated attestations
-      this.seenAttesters.isKnown(epoch, index) ||
-      //   seenAggregators = single aggregator index, not participants of the aggregate
-      this.seenAggregators.isKnown(epoch, index) ||
-      //   seenPayloadAttesters = single signer of payload attestation message
-      this.seenPayloadAttesters.isKnown(epoch, index) ||
-      //   seenBlockProposers = single block proposer
-      this.seenBlockProposers.seenAtEpoch(epoch, index)
-    );
+    // All liveness caches (seenBlockAttesters + gossip caches) are engine-internal.
+    return this.beaconEngine.validatorSeenAtEpoch(index, epoch);
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
@@ -1079,6 +964,8 @@ export class BeaconChain implements IBeaconChain {
       // produceBlockBody no longer needs a BeaconState here.
       proposerIndex,
       proposerPubKey,
+      defaultFeeRecipient,
+      feeRecipientCached,
       safeBlockHash,
       finalizedBlockHash,
       timestamp,
@@ -1117,6 +1004,8 @@ export class BeaconChain implements IBeaconChain {
         payloadAttestations,
         withdrawals,
         proposerPubKey,
+        defaultFeeRecipient,
+        feeRecipientCached,
         commonBlockBodyPromise,
         builderBid,
       }
@@ -1369,16 +1258,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
-    // aggregatedAttestationPool tracks metrics on its own
-    metrics.opPool.attestationPool.size.set(this.attestationPool.getAttestationCount());
-    metrics.opPool.attesterSlashingPoolSize.set(this.opPool.attesterSlashingsSize);
-    metrics.opPool.proposerSlashingPoolSize.set(this.opPool.proposerSlashingsSize);
-    metrics.opPool.voluntaryExitPoolSize.set(this.opPool.voluntaryExitsSize);
-    metrics.opPool.syncCommitteeMessagePoolSize.set(this.syncCommitteeMessagePool.size);
-    metrics.opPool.payloadAttestationPool.size.set(this.payloadAttestationPool.size);
-    metrics.opPool.executionPayloadBidPool.size.set(this.executionPayloadBidPool.size);
-    // syncContributionAndProofPool tracks metrics on its own
-    metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
+    // All op-pool sizes are reported by the engine (the pools are engine-internal).
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
     const headState = this.getHeadState();
@@ -1400,16 +1280,7 @@ export class BeaconChain implements IBeaconChain {
     this.beaconEngine.forkChoice.updateTime(slot);
     this.metrics?.clockSlot.set(slot);
 
-    this.attestationPool.prune(slot);
-    this.aggregatedAttestationPool.prune(slot);
-    this.syncCommitteeMessagePool.prune(slot);
-    this.seenSyncCommitteeMessages.prune(slot);
-    this.payloadAttestationPool.prune(slot);
-    this.executionPayloadBidPool.prune(slot);
-    this.seenExecutionPayloadBids.prune(slot);
-    this.seenProposerPreferences.prune(slot);
-    this.proposerPreferencesPool.prune(slot);
-    this.seenAttestationDatas.onSlot(slot);
+    // Engine-owned pools + seen-caches are pruned by the engine's own clock listener.
     this.reprocessController.onSlot(slot);
 
     // Prune old cached block production artifacts, those are only useful on their slot
@@ -1429,18 +1300,8 @@ export class BeaconChain implements IBeaconChain {
 
   private onClockEpoch(epoch: Epoch): void {
     this.metrics?.clockEpoch.set(epoch);
-
-    this.seenAttesters.prune(epoch);
-    this.seenAggregators.prune(epoch);
-    this.seenPayloadAttesters.prune(epoch);
-    this.seenAggregatedAttestations.prune(epoch);
-    this.seenBlockAttesters.prune(epoch);
-    this.beaconProposerCache.prune(epoch);
-  }
-
-  protected onNewHead(head: ProtoBlock): void {
-    this.syncContributionAndProofPool.prune(head.slot);
-    this.seenContributionAndProof.prune(head.slot);
+    // Engine-owned caches (seen-caches, seenBlockAttesters, beaconProposerCache) are pruned by the
+    // engine's own clock listener; nothing epoch-scoped remains facade-side.
   }
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
@@ -1456,40 +1317,20 @@ export class BeaconChain implements IBeaconChain {
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
     this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
-    const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
-    this.seenBlockProposers.prune(finalizedSlot);
 
     // Update validator custody to account for effective balance changes
     await this.updateValidatorsCustodyRequirement(cp);
 
-    // TODO: Improve using regen here
-    const {blockRoot, stateRoot, slot} = this.forkChoice.getHead();
-    const headState = this.regen.getStateSync(stateRoot);
-    const blockResult = await this.getBlockByRoot(blockRoot);
-    if (blockResult == null) {
-      throw Error(`Head block for ${slot} is not available in cache or database`);
-    }
-
-    if (headState) {
-      this.opPool.pruneAll(blockResult.block, headState);
-    }
-
-    if (headState === null) {
-      this.logger.verbose("Head state is null");
-    }
+    // Engine prunes its own op pool + seen-block-proposers on finalization.
+    await this.beaconEngine.pruneOnFinalized();
   }
 
   async updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void> {
-    const previousValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
-
-    for (const proposer of proposers) {
-      this.beaconProposerCache.add(epoch, proposer);
-    }
-
-    const newValidatorCount = this.beaconProposerCache.getValidatorIndices().length;
+    // Engine owns the proposer cache; it returns whether new validators were discovered.
+    const discoveredNewValidators = this.beaconEngine.updateProposerPreparation(epoch, proposers);
 
     // Only update validator custody if we discovered new validators
-    if (newValidatorCount > previousValidatorCount) {
+    if (discoveredNewValidators) {
       const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
@@ -1504,11 +1345,11 @@ export class BeaconChain implements IBeaconChain {
     }
 
     // Validators attached to the node
-    const validatorIndices = this.beaconProposerCache.getValidatorIndices();
+    const validatorIndices = this.beaconEngine.getProposerCacheValidatorIndices();
 
     // Update custody requirement based on finalized state
     let effectiveBalances: number[];
-    const effectiveBalanceIncrements = this.checkpointBalancesCache.get(finalizedCheckpoint);
+    const effectiveBalanceIncrements = this.beaconEngine.getCheckpointEffectiveBalances(finalizedCheckpoint);
     if (effectiveBalanceIncrements) {
       effectiveBalances = validatorIndices.map(
         (index) => (effectiveBalanceIncrements[index] ?? 0) * EFFECTIVE_BALANCE_INCREMENT

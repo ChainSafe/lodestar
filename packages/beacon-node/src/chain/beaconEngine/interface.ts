@@ -9,13 +9,16 @@ import {
   ProtoBlock,
 } from "@lodestar/fork-choice";
 import {ForkName, ForkPostBellatrix} from "@lodestar/params";
-import {DataAvailabilityStatus, PubkeyCache} from "@lodestar/state-transition";
+import {DataAvailabilityStatus, EffectiveBalanceIncrements, PubkeyCache} from "@lodestar/state-transition";
 import {
+  Attestation,
+  AttesterSlashing,
   BLSPubkey,
   BLSSignature,
   BeaconBlock,
   BlindedBeaconBlock,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   Gwei,
   Root,
@@ -23,26 +26,31 @@ import {
   SSEPayloadAttributes,
   SignedAggregateAndProof,
   SignedBeaconBlock,
+  SingleAttestation,
   Slot,
+  SubcommitteeIndex,
   SubnetID,
   ValidatorIndex,
   altair,
+  capella,
   deneb,
   fulu,
   gloas,
+  phase0,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
-import {BufferPool} from "../../util/bufferPool.js";
 import {IClock} from "../../util/clock.js";
 import {BlockRootSlot} from "../../util/sszBytes.js";
+import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {CommonBlockBody} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
+import {InsertOutcome} from "../opPools/types.js";
 import {BlockProcessOpts} from "../options.js";
 import {
   BlockAttributes,
@@ -67,7 +75,6 @@ export type BeaconEngineModules = {
   metrics: Metrics | null;
   clock: IClock;
   pubkeyCache: PubkeyCache;
-  bufferPool: BufferPool;
   cpStateDatastore: CPStateDatastore;
   // TODO - beacon engine: emitter is facade infra; forkChoice/regen should not depend on it inside the engine.
   emitter: ChainEventEmitter;
@@ -104,7 +111,6 @@ export type ImportBlockResult = {
   currFinalizedEpoch: number;
   oldHeadBlockRoot: string;
   newHeadBlockRoot: string;
-  attestations: {blockEpoch: number; attestingIndices: number[]}[];
   blockMeta: {
     slot: number;
     blockRootHex: string;
@@ -123,6 +129,10 @@ export type ProduceBlockBaseResult = {
   parentBlock: ProtoBlock;
   proposerIndex: ValidatorIndex;
   proposerPubKey: BLSPubkey;
+  /** Proposer fee recipient resolved from the engine cache (cached-or-default); API-requested overrides it */
+  defaultFeeRecipient: string;
+  /** Whether the proposer had a registered fee recipient (vs the configured default) — for logging */
+  feeRecipientCached: boolean;
   safeBlockHash: RootHex;
   finalizedBlockHash: RootHex;
   /** EL payload-attribute timestamp (computeTimeAtSlot) */
@@ -399,6 +409,85 @@ export interface IBeaconEngine {
     preferencesBytes: Uint8Array,
     signedProposerPreferences: gloas.SignedProposerPreferences
   ): Promise<GossipValidationResult<void>>;
+
+  // Op pool: gossip validate (+ insert on Accept) / API validate (throws, + insert) / REST reads. The
+  // pools live inside the engine (not exposed as cache objects); the facade reaches them only here.
+  validateGossipAttesterSlashing(
+    attesterSlashing: AttesterSlashing,
+    fork: ForkName
+  ): Promise<GossipValidationResult<void>>;
+  validateApiAttesterSlashing(attesterSlashing: AttesterSlashing, fork: ForkName): Promise<void>;
+  validateGossipProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<GossipValidationResult<void>>;
+  validateApiProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void>;
+  validateGossipVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<GossipValidationResult<void>>;
+  validateApiVoluntaryExit(voluntaryExit: phase0.SignedVoluntaryExit): Promise<void>;
+  validateGossipBlsToExecutionChange(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange
+  ): Promise<GossipValidationResult<void>>;
+  validateApiBlsToExecutionChange(
+    blsToExecutionChange: capella.SignedBLSToExecutionChange,
+    preCapella: boolean
+  ): Promise<void>;
+  getPoolProposerPreferences(slot?: Slot): gloas.SignedProposerPreferences[];
+  getPoolAttesterSlashings(): AttesterSlashing[];
+  getPoolProposerSlashings(): phase0.ProposerSlashing[];
+  getPoolVoluntaryExits(): phase0.SignedVoluntaryExit[];
+  getPoolBlsToExecutionChanges(): capella.SignedBLSToExecutionChange[];
+
+  // Op pools (engine-internal): narrow add/read bridges for gossip handlers + REST/validator API.
+  addAttestationToPool(
+    committeeIndex: CommitteeIndex,
+    attestation: SingleAttestation,
+    attDataRootHex: RootHex,
+    validatorCommitteeIndex: number,
+    committeeSize: number,
+    priority?: boolean
+  ): InsertOutcome;
+  getAttestationAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null;
+  addAggregatedAttestation(
+    attestation: Attestation,
+    dataRootHex: RootHex,
+    attestingIndicesCount: number,
+    committee: Uint32Array
+  ): InsertOutcome;
+  getPoolAggregatedAttestations(bySlot?: Slot): Attestation[];
+  addSyncCommitteeMessage(
+    subnet: SubnetID,
+    signature: altair.SyncCommitteeMessage,
+    indexInSubcommittee: number,
+    priority?: boolean
+  ): InsertOutcome;
+  getSyncCommitteeContribution(
+    subnet: SubcommitteeIndex,
+    slot: Slot,
+    prevBlockRoot: Root
+  ): altair.SyncCommitteeContribution | null;
+  addSyncContributionAndProof(
+    contributionAndProof: altair.ContributionAndProof,
+    syncCommitteeParticipants: number,
+    priority?: boolean
+  ): InsertOutcome;
+  addPayloadAttestation(
+    message: gloas.PayloadAttestationMessage,
+    payloadAttDataRootHex: RootHex,
+    validatorCommitteeIndices: number[]
+  ): InsertOutcome;
+  getPoolPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[];
+  addExecutionPayloadBid(bid: gloas.SignedExecutionPayloadBid): InsertOutcome;
+
+  // Proposer cache + finalized balances (engine-internal).
+  getProposerFeeRecipient(proposerIndex: ValidatorIndex): string | undefined;
+  updateProposerPreparation(epoch: Epoch, proposers: ProposerPreparationData[]): boolean;
+  getProposerCacheValidatorIndices(): ValidatorIndex[];
+  getCheckpointEffectiveBalances(checkpoint: CheckpointWithHex): EffectiveBalanceIncrements | undefined;
+
+  /** Prune the (internal) op pool + seen-block-proposers on finalization — driven by the facade's finalized event. */
+  pruneOnFinalized(): Promise<void>;
+  /** Liveness: whether the validator was seen via imported blocks or gossip/API in the epoch. */
+  validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
+  /** Whether a block proposer was already seen for this slot (sync anti-unbundling check). */
+  isBlockProposerSeen(slot: Slot, proposerIndex: ValidatorIndex): boolean;
+
   verifyBlocks(
     _blockBytes: Uint8Array[],
     parentBlock: ProtoBlock,

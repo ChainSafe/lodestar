@@ -11,6 +11,17 @@ import {ChainEventEmitter} from "../../src/chain/emitter.js";
 import {LightClientServer} from "../../src/chain/lightClient/index.js";
 import {AggregatedAttestationPool, OpPool, SyncContributionAndProofPool} from "../../src/chain/opPools/index.js";
 import {QueuedStateRegenerator} from "../../src/chain/regen/index.js";
+import {
+  SeenAggregators,
+  SeenAttesters,
+  SeenBlockProposers,
+  SeenContributionAndProof,
+  SeenExecutionPayloadBids,
+  SeenPayloadAttesters,
+  SeenSyncCommitteeMessages,
+} from "../../src/chain/seenCache/index.js";
+import {SeenAggregatedAttestations} from "../../src/chain/seenCache/seenAggregateAndProof.js";
+import {SeenAttestationDatas} from "../../src/chain/seenCache/seenAttestationData.js";
 import {SeenBlockInput} from "../../src/chain/seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../../src/chain/shufflingCache.js";
 import {ExecutionBuilderHttp} from "../../src/execution/builder/http.js";
@@ -28,6 +39,16 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   aggregatedAttestationPool: Mocked<AggregatedAttestationPool>;
   syncContributionAndProofPool: Mocked<SyncContributionAndProofPool>;
   beaconProposerCache: Mocked<BeaconProposerCache>;
+  // Engine-internal seen-caches surfaced on the flat mock (the mock doubles as the engine).
+  seenAttesters: SeenAttesters;
+  seenAggregators: SeenAggregators;
+  seenPayloadAttesters: SeenPayloadAttesters;
+  seenAggregatedAttestations: SeenAggregatedAttestations;
+  seenExecutionPayloadBids: SeenExecutionPayloadBids;
+  seenBlockProposers: SeenBlockProposers;
+  seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
+  seenContributionAndProof: SeenContributionAndProof;
+  seenAttestationDatas: SeenAttestationDatas;
   seenBlockInputCache: Mocked<SeenBlockInput>;
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
@@ -147,6 +168,17 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       opPool: new OpPool(config as BeaconConfig),
       aggregatedAttestationPool: new AggregatedAttestationPool(config as BeaconConfig),
       syncContributionAndProofPool: new SyncContributionAndProofPool(config, clock),
+      // Engine-internal gossip seen-caches; the flat mock doubles as the engine, so validators read
+      // these via `engine.seenX` and tests reach them via `chain.beaconEngine.seenX`.
+      seenAttesters: new SeenAttesters(),
+      seenAggregators: new SeenAggregators(),
+      seenPayloadAttesters: new SeenPayloadAttesters(),
+      seenAggregatedAttestations: new SeenAggregatedAttestations(null),
+      seenExecutionPayloadBids: new SeenExecutionPayloadBids(),
+      seenBlockProposers: new SeenBlockProposers(),
+      seenSyncCommitteeMessages: new SeenSyncCommitteeMessages(),
+      seenContributionAndProof: new SeenContributionAndProof(null),
+      seenAttestationDatas: new SeenAttestationDatas(null),
       payloadAttestationPool: {
         add: vi.fn(),
         getAll: vi.fn(),
@@ -236,6 +268,22 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "resolvePayloadAttributesInput",
     "getPayloadAttributesForSSE",
     "getProposerTargetGasLimit",
+    // Proposer cache + finalized balances bridges (forward to the mock's collaborators).
+    "getProposerFeeRecipient",
+    "updateProposerPreparation",
+    "getProposerCacheValidatorIndices",
+    "getCheckpointEffectiveBalances",
+    // Op-pool add/read bridges (forward to the mock's pools).
+    "addAttestationToPool",
+    "getAttestationAggregate",
+    "addAggregatedAttestation",
+    "getPoolAggregatedAttestations",
+    "addSyncCommitteeMessage",
+    "getSyncCommitteeContribution",
+    "addSyncContributionAndProof",
+    "addPayloadAttestation",
+    "getPoolPayloadAttestations",
+    "addExecutionPayloadBid",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
       BeaconEngine.prototype as unknown as Record<string, unknown>

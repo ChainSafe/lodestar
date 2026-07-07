@@ -453,7 +453,9 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
           if (blockRootHex === blockRootHexC) blockCResolver();
           if (blockRootHex === blockRootHexA) blockAResolver();
         },
-        seenBlockProposers: seenBlockProposers as SeenBlockProposers,
+        beaconEngine: {
+          isBlockProposerSeen: (blockSlot: number, index: number) => seenBlockProposers.isKnown(blockSlot, index),
+        } as unknown as IBeaconChain["beaconEngine"],
         seenBlockInputCache: {
           getByBlock: ({
             block,
@@ -680,16 +682,16 @@ describe("UnknownBlockSync", () => {
           prune: vi.fn(),
         } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
         seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-        seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
         forkChoice: {
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
           hasBlockHex: vi.fn().mockReturnValue(false),
           getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         } as unknown as IForkChoice,
-        // Envelope validation is now a BeaconEngine method; route it to the mocked module fn so the
-        // existing `validateGossipExecutionPayloadEnvelope` assertions still observe the calls.
+        // Envelope validation + seen-block-proposers are now BeaconEngine methods; route them to the
+        // mocked module fn / a stub so the existing assertions still observe the calls.
         beaconEngine: {
           validateGossipExecutionPayloadEnvelope,
+          isBlockProposerSeen: vi.fn().mockReturnValue(false),
         } as unknown as IBeaconChain["beaconEngine"],
         ...chainOverrides,
       } as IBeaconChain;
@@ -1605,9 +1607,9 @@ describe("UnknownBlockSync", () => {
         prune: vi.fn(),
       } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
       seenBlockInputCache: {prune: vi.fn()} as unknown as SeenBlockInput,
-      seenBlockProposers: {
-        isKnown: vi.fn().mockReturnValue(false),
-      } as unknown as SeenBlockProposers,
+      beaconEngine: {
+        isBlockProposerSeen: vi.fn().mockReturnValue(false),
+      } as unknown as IBeaconChain["beaconEngine"],
     };
 
     service = new BlockInputSync(gloasConfig, network, chainForTest as IBeaconChain, logger, null, defaultSyncOptions);

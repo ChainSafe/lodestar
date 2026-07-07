@@ -283,6 +283,9 @@ describe("api/validator - produceBlockV3", () => {
     // produceBlockBody now reads all inputs from the prepared scalars (no BeaconState). These mirror the
     // values produceBlockBase would derive for this bellatrix state.
     const preparedScalars = {
+      // produceBlockBase resolves the default fee recipient; the API-requested one (call 1) overrides it.
+      defaultFeeRecipient: "0x fee recipient address",
+      feeRecipientCached: false,
       safeBlockHash: ZERO_HASH_HEX,
       finalizedBlockHash: ZERO_HASH_HEX,
       timestamp: computeTimeAtSlot(modules.config, state.slot, state.genesisTime),
@@ -320,9 +323,7 @@ describe("api/validator - produceBlockV3", () => {
       }
     );
 
-    // use fee recipient set in beaconProposerCacheStub if none passed
-    modules.chain["beaconProposerCache"].getOrDefault.mockReturnValue("0x fee recipient address");
-
+    // no fee recipient passed → falls back to the prepared defaultFeeRecipient (resolved by produceBlockBase)
     await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),

@@ -58,14 +58,7 @@ import {
   PayloadAttestationErrorCode,
 } from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/interface.js";
-import {
-  GossipAttestation,
-  toElectraSingleAttestation,
-  validateGossipAttesterSlashing,
-  validateGossipBlsToExecutionChange,
-  validateGossipProposerSlashing,
-  validateGossipVoluntaryExit,
-} from "../../chain/validation/index.js";
+import {GossipAttestation, toElectraSingleAttestation} from "../../chain/validation/index.js";
 import {validateLightClientFinalityUpdate} from "../../chain/validation/lightClientFinalityUpdate.js";
 import {validateLightClientOptimisticUpdate} from "../../chain/validation/lightClientOptimisticUpdate.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
@@ -885,7 +878,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       );
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-      const insertOutcome = chain.aggregatedAttestationPool.add(
+      const insertOutcome = chain.beaconEngine.addAggregatedAttestation(
         aggregatedAttestation,
         attDataRootHex,
         indexedAttestation.attestingIndices.length,
@@ -916,18 +909,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {serializedData} = gossipData;
       const {fork} = topic.boundary;
       const attesterSlashing = sszDeserialize(topic, serializedData);
-      const res = await runGossipValidation(() => validateGossipAttesterSlashing(chain, attesterSlashing));
+      // Engine validates + inserts into its (internal) opPool + updates fork choice; facade only emits.
+      const res = await chain.beaconEngine.validateGossipAttesterSlashing(attesterSlashing, fork);
       if (res.status !== GossipValidationStatus.Accept) return res;
-
-      // Handler
-
-      try {
-        chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
-        // TODO - beacon engine
-        chain.beaconEngine.forkChoice.onAttesterSlashing(attesterSlashing);
-      } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
 
       chain.emitter.emit(routes.events.EventType.attesterSlashing, attesterSlashing);
       return accept(undefined);
@@ -939,16 +923,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.proposer_slashing>) => {
       const {serializedData} = gossipData;
       const proposerSlashing = sszDeserialize(topic, serializedData);
-      const res = await runGossipValidation(() => validateGossipProposerSlashing(chain, proposerSlashing));
+      const res = await chain.beaconEngine.validateGossipProposerSlashing(proposerSlashing);
       if (res.status !== GossipValidationStatus.Accept) return res;
-
-      // Handler
-
-      try {
-        chain.opPool.insertProposerSlashing(proposerSlashing);
-      } catch (e) {
-        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
-      }
 
       chain.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
       return accept(undefined);
@@ -957,16 +933,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.voluntary_exit]: async ({gossipData, topic}: GossipHandlerParamGeneric<GossipType.voluntary_exit>) => {
       const {serializedData} = gossipData;
       const voluntaryExit = sszDeserialize(topic, serializedData);
-      const res = await runGossipValidation(() => validateGossipVoluntaryExit(chain, voluntaryExit));
+      const res = await chain.beaconEngine.validateGossipVoluntaryExit(voluntaryExit);
       if (res.status !== GossipValidationStatus.Accept) return res;
-
-      // Handler
-
-      try {
-        chain.opPool.insertVoluntaryExit(voluntaryExit);
-      } catch (e) {
-        logger.error("Error adding voluntaryExit to pool", {}, e as Error);
-      }
 
       chain.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
       return accept(undefined);
@@ -996,7 +964,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         syncCommitteeParticipantIndices
       );
       try {
-        const insertOutcome = chain.syncContributionAndProofPool.add(
+        const insertOutcome = chain.beaconEngine.addSyncContributionAndProof(
           contributionAndProof.message,
           syncCommitteeParticipantIndices.length
         );
@@ -1025,7 +993,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       // Handler — add for ALL positions this validator holds in the subcommittee
       try {
         for (const indexInSubcommittee of indicesInSubcommittee) {
-          const insertOutcome = chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
+          const insertOutcome = chain.beaconEngine.addSyncCommitteeMessage(subnet, syncCommittee, indexInSubcommittee);
           metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
         }
       } catch (e) {
@@ -1063,15 +1031,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     }: GossipHandlerParamGeneric<GossipType.bls_to_execution_change>) => {
       const {serializedData} = gossipData;
       const blsToExecutionChange = sszDeserialize(topic, serializedData);
-      const res = await runGossipValidation(() => validateGossipBlsToExecutionChange(chain, blsToExecutionChange));
+      const res = await chain.beaconEngine.validateGossipBlsToExecutionChange(blsToExecutionChange);
       if (res.status !== GossipValidationStatus.Accept) return res;
-
-      // Handler
-      try {
-        chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
-      } catch (e) {
-        logger.error("Error adding blsToExecutionChange to pool", {}, e as Error);
-      }
 
       chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
       return accept(undefined);
@@ -1204,7 +1165,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const {attDataRootHex, validatorCommitteeIndices} = res.value;
 
       try {
-        const insertOutcome = chain.payloadAttestationPool.add(
+        const insertOutcome = chain.beaconEngine.addPayloadAttestation(
           payloadAttestationMessage,
           attDataRootHex,
           validatorCommitteeIndices
@@ -1234,7 +1195,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       // Handle valid payload bid by storing in a bid pool
       try {
-        const insertOutcome = chain.executionPayloadBidPool.add(executionPayloadBid);
+        const insertOutcome = chain.beaconEngine.addExecutionPayloadBid(executionPayloadBid);
         metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
       } catch (e) {
         logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
@@ -1257,7 +1218,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const res = await chain.beaconEngine.validateGossipProposerPreferences(serializedData, signedProposerPreferences);
       if (res.status !== GossipValidationStatus.Accept) return res;
 
-      chain.proposerPreferencesPool.add(signedProposerPreferences);
+      // Engine inserts into its (internal) proposerPreferencesPool on Accept; facade only emits.
       chain.emitter.emit(routes.events.EventType.proposerPreferences, {
         version: ForkName.gloas,
         data: signedProposerPreferences,
@@ -1320,7 +1281,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
           // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
           // but don't add to attestation pool, to save CPU and RAM
           if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-            const insertOutcome = chain.attestationPool.add(
+            const insertOutcome = chain.beaconEngine.addAttestationToPool(
               committeeIndex,
               attestation,
               attDataRootHex,

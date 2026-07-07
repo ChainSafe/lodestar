@@ -17,11 +17,7 @@ import {
   PayloadAttestationErrorCode,
   ProposerPreferencesErrorCode,
 } from "../../../../chain/errors/index.js";
-import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
-import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation} from "../../../../chain/validation/index.js";
-import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
-import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {getFixedListElementBytes} from "../../../../util/sszBytes.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
@@ -36,7 +32,7 @@ export function getBeaconPoolApi({
   return {
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
-      let attestations = chain.aggregatedAttestationPool.getAll(slot);
+      let attestations = chain.beaconEngine.getPoolAggregatedAttestations(slot);
       const fork = chain.config.getForkName(slot ?? attestations[0]?.data.slot ?? chain.clock.currentSlot);
       const isPostElectra = isForkPostElectra(fork);
 
@@ -57,7 +53,7 @@ export function getBeaconPoolApi({
         throw new ApiError(400, `Payload attestation pool is not supported before Gloas fork=${fork}`);
       }
 
-      return {data: chain.payloadAttestationPool.getAll(slot), meta: {version: fork}};
+      return {data: chain.beaconEngine.getPoolPayloadAttestations(slot), meta: {version: fork}};
     },
 
     async getPoolProposerPreferences({slot}) {
@@ -66,7 +62,7 @@ export function getBeaconPoolApi({
         throw new ApiError(400, `Proposer preferences pool is not supported before Gloas fork=${fork}`);
       }
 
-      return {data: chain.proposerPreferencesPool.getAll(slot), meta: {version: fork}};
+      return {data: chain.beaconEngine.getPoolProposerPreferences(slot), meta: {version: fork}};
     },
 
     async submitSignedProposerPreferences({signedProposerPreferences}, context) {
@@ -100,7 +96,7 @@ export function getBeaconPoolApi({
               return;
             }
 
-            chain.proposerPreferencesPool.add(signed);
+            // Engine inserted into its (internal) proposerPreferencesPool on Accept above.
             await network.publishProposerPreferences(signed);
             chain.emitter.emit(routes.events.EventType.proposerPreferences, {
               version: ForkName.gloas,
@@ -120,19 +116,19 @@ export function getBeaconPoolApi({
 
     async getPoolAttesterSlashingsV2() {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
-      return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: fork}};
+      return {data: chain.beaconEngine.getPoolAttesterSlashings(), meta: {version: fork}};
     },
 
     async getPoolProposerSlashings() {
-      return {data: chain.opPool.getAllProposerSlashings()};
+      return {data: chain.beaconEngine.getPoolProposerSlashings()};
     },
 
     async getPoolVoluntaryExits() {
-      return {data: chain.opPool.getAllVoluntaryExits()};
+      return {data: chain.beaconEngine.getPoolVoluntaryExits()};
     },
 
     async getPoolBLSToExecutionChanges() {
-      return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
+      return {data: chain.beaconEngine.getPoolBlsToExecutionChanges()};
     },
 
     async submitPoolAttestationsV2({signedAttestations}) {
@@ -173,7 +169,7 @@ export function getBeaconPoolApi({
               res.value;
 
             if (network.shouldAggregate(subnet, slot)) {
-              const insertOutcome = chain.attestationPool.add(
+              const insertOutcome = chain.beaconEngine.addAttestationToPool(
                 committeeIndex,
                 attestation,
                 attDataRootHex,
@@ -221,21 +217,19 @@ export function getBeaconPoolApi({
     },
 
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
-      await validateApiAttesterSlashing(chain, attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
-      chain.opPool.insertAttesterSlashing(fork, attesterSlashing);
+      // Engine validates + inserts into its (internal) opPool; facade only publishes.
+      await chain.beaconEngine.validateApiAttesterSlashing(attesterSlashing, fork);
       await network.publishAttesterSlashing(attesterSlashing);
     },
 
     async submitPoolProposerSlashings({proposerSlashing}) {
-      await validateApiProposerSlashing(chain, proposerSlashing);
-      chain.opPool.insertProposerSlashing(proposerSlashing);
+      await chain.beaconEngine.validateApiProposerSlashing(proposerSlashing);
       await network.publishProposerSlashing(proposerSlashing);
     },
 
     async submitPoolVoluntaryExit({signedVoluntaryExit}) {
-      await validateApiVoluntaryExit(chain, signedVoluntaryExit);
-      chain.opPool.insertVoluntaryExit(signedVoluntaryExit);
+      await chain.beaconEngine.validateApiVoluntaryExit(signedVoluntaryExit);
       chain.emitter.emit(routes.events.EventType.voluntaryExit, signedVoluntaryExit);
       await network.publishVoluntaryExit(signedVoluntaryExit);
     },
@@ -246,10 +240,9 @@ export function getBeaconPoolApi({
       await Promise.all(
         blsToExecutionChanges.map(async (blsToExecutionChange, i) => {
           try {
-            // Ignore even if the change exists and reprocess
-            await validateApiBlsToExecutionChange(chain, blsToExecutionChange);
             const preCapella = chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH;
-            chain.opPool.insertBlsToExecutionChange(blsToExecutionChange, preCapella);
+            // Ignore even if the change exists and reprocess; engine validates + inserts into its opPool.
+            await chain.beaconEngine.validateApiBlsToExecutionChange(blsToExecutionChange, preCapella);
 
             chain.emitter.emit(routes.events.EventType.blsToExecutionChange, blsToExecutionChange);
 
@@ -311,7 +304,7 @@ export function getBeaconPoolApi({
             }
             const {attDataRootHex, validatorCommitteeIndices} = res.value;
 
-            const insertOutcome = chain.payloadAttestationPool.add(
+            const insertOutcome = chain.beaconEngine.addPayloadAttestation(
               payloadAttestationMessage,
               attDataRootHex,
               validatorCommitteeIndices
@@ -407,7 +400,7 @@ export function getBeaconPoolApi({
               // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
               const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
               const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-              chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee, priority);
+              chain.beaconEngine.addSyncCommitteeMessage(subnet, signature, indexInSubcommittee, priority);
 
               // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
               if (subnets.length === 0 || subnets.at(-1) !== subnet) {

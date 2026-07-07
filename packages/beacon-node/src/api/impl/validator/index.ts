@@ -1072,7 +1072,7 @@ export function getValidatorApi(
       notOnOptimisticBlockRoot(beaconBlockRoot);
       notOnOutOfRangeData(beaconBlockRoot);
 
-      const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
+      const contribution = chain.beaconEngine.getSyncCommitteeContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) {
         throw new ApiError(
           404,
@@ -1244,7 +1244,7 @@ export function getValidatorApi(
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       const dataRootHex = toRootHex(attestationDataRoot);
-      const aggregate = chain.attestationPool.getAggregate(slot, dataRootHex, committeeIndex);
+      const aggregate = chain.beaconEngine.getAttestationAggregate(slot, dataRootHex, committeeIndex);
 
       if (!aggregate) {
         throw new ApiError(
@@ -1303,7 +1303,7 @@ export function getValidatorApi(
             }
             const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = res.value;
 
-            const insertOutcome = chain.aggregatedAttestationPool.add(
+            const insertOutcome = chain.beaconEngine.addAggregatedAttestation(
               signedAggregateAndProof.message.aggregate,
               attDataRootHex,
               indexedAttestation.attestingIndices.length,
@@ -1369,7 +1369,7 @@ export function getValidatorApi(
               return;
             }
             const {syncCommitteeParticipantIndices} = res.value;
-            const insertOutcome = chain.syncContributionAndProofPool.add(
+            const insertOutcome = chain.beaconEngine.addSyncContributionAndProof(
               contributionAndProof.message,
               syncCommitteeParticipantIndices.length,
               true

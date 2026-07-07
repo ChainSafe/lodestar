@@ -1,43 +1,43 @@
 import {assertValidProposerSlashing, getProposerSlashingSignatureSets} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
+import type {BeaconEngine} from "../beaconEngine/beaconEngine.js";
 import {GossipAction, ProposerSlashingError, ProposerSlashingErrorCode} from "../errors/index.js";
-import {IBeaconChain} from "../index.js";
 
 export async function validateApiProposerSlashing(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<void> {
   const prioritizeBls = true;
-  return validateProposerSlashing(chain, proposerSlashing, prioritizeBls);
+  return validateProposerSlashing(engine, proposerSlashing, prioritizeBls);
 }
 
 export async function validateGossipProposerSlashing(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<void> {
-  return validateProposerSlashing(chain, proposerSlashing);
+  return validateProposerSlashing(engine, proposerSlashing);
 }
 
 async function validateProposerSlashing(
-  chain: IBeaconChain,
+  engine: BeaconEngine,
   proposerSlashing: phase0.ProposerSlashing,
   prioritizeBls = false
 ): Promise<void> {
   // [IGNORE] The proposer slashing is the first valid proposer slashing received for the proposer with index
   // proposer_slashing.signed_header_1.message.proposer_index.
-  if (chain.opPool.hasSeenProposerSlashing(proposerSlashing.signedHeader1.message.proposerIndex)) {
+  if (engine.opPool.hasSeenProposerSlashing(proposerSlashing.signedHeader1.message.proposerIndex)) {
     throw new ProposerSlashingError(GossipAction.IGNORE, {
       code: ProposerSlashingErrorCode.ALREADY_EXISTS,
     });
   }
 
-  const state = chain.getHeadState();
+  const state = engine.getHeadState();
 
   // [REJECT] All of the conditions within process_proposer_slashing pass validation.
   try {
     const proposer = state.getValidator(proposerSlashing.signedHeader1.message.proposerIndex);
     // verifySignature = false, verified in batch below
-    assertValidProposerSlashing(chain.config, chain.pubkeyCache, state.slot, proposerSlashing, proposer, false);
+    assertValidProposerSlashing(engine.config, engine.pubkeyCache, state.slot, proposerSlashing, proposer, false);
   } catch (e) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
@@ -45,8 +45,8 @@ async function validateProposerSlashing(
     });
   }
 
-  const signatureSets = getProposerSlashingSignatureSets(chain.config, state.slot, proposerSlashing);
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
+  const signatureSets = getProposerSlashingSignatureSets(engine.config, state.slot, proposerSlashing);
+  if (!(await engine.bls.verifySignatureSets(signatureSets, {batchable: true, priority: prioritizeBls}))) {
     throw new ProposerSlashingError(GossipAction.REJECT, {
       code: ProposerSlashingErrorCode.INVALID,
       error: Error("Invalid signature"),

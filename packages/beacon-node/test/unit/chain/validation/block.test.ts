@@ -58,7 +58,7 @@ describe("gossip block validation", () => {
       rootHex: "",
     });
 
-    // Reset seen cache
+    // Reset seen cache (engine-internal; the flat mock doubles as the engine)
     (
       chain as {
         seenBlockProposers: SeenBlockProposers;

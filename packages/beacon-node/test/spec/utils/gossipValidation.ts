@@ -36,10 +36,6 @@ import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {validateGossipAggregateAndProof} from "../../../src/chain/validation/aggregateAndProof.js";
 import {GossipAttestation, validateGossipAttestationsSameAttData} from "../../../src/chain/validation/attestation.js";
-import {validateGossipAttesterSlashing} from "../../../src/chain/validation/attesterSlashing.js";
-import {validateGossipBlsToExecutionChange} from "../../../src/chain/validation/blsToExecutionChange.js";
-import {validateGossipProposerSlashing} from "../../../src/chain/validation/proposerSlashing.js";
-import {validateGossipVoluntaryExit} from "../../../src/chain/validation/voluntaryExit.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
@@ -621,8 +617,8 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.REJECT, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
+      // validateGossipBlock registers the proposer in the (engine-internal) seenBlockProposers on Accept.
       assertAccepted(await chain.beaconEngine.validateGossipBlock(bytes, signedBlock, fork));
-      chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
       break;
     }
 
@@ -684,26 +680,21 @@ async function validateMessageForTopic(
 
     case GossipType.proposer_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).ProposerSlashing.deserialize(bytes));
-      await validateGossipProposerSlashing(chain, slashing);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertProposerSlashing(slashing);
+      // Engine validates + inserts into its (internal) opPool (mirrors the gossip handler).
+      assertAccepted(await chain.beaconEngine.validateGossipProposerSlashing(slashing));
       break;
     }
 
     case GossipType.attester_slashing: {
       const slashing = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).AttesterSlashing.deserialize(bytes));
-      await validateGossipAttesterSlashing(chain, slashing);
-      // Mirror gossip handler: insert into opPool + fork choice
-      chain.opPool.insertAttesterSlashing(fork, slashing);
-      chain.beaconEngine.forkChoice.onAttesterSlashing(slashing);
+      // Engine validates + inserts into opPool + fork choice (mirrors the gossip handler).
+      assertAccepted(await chain.beaconEngine.validateGossipAttesterSlashing(slashing, fork));
       break;
     }
 
     case GossipType.voluntary_exit: {
       const exit = rejectOnInvalidSerializedBytes(() => sszTypesFor(fork).SignedVoluntaryExit.deserialize(bytes));
-      await validateGossipVoluntaryExit(chain, exit);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertVoluntaryExit(exit);
+      assertAccepted(await chain.beaconEngine.validateGossipVoluntaryExit(exit));
       break;
     }
 
@@ -738,9 +729,8 @@ async function validateMessageForTopic(
       if (chain.clock.currentEpoch < chain.config.CAPELLA_FORK_EPOCH) {
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_PRE_CAPELLA"});
       }
-      await validateGossipBlsToExecutionChange(chain, blsToExecutionChange);
-      // Mirror gossip handler: insert into opPool so duplicate detection works
-      chain.opPool.insertBlsToExecutionChange(blsToExecutionChange);
+      // Engine validates + inserts into its (internal) opPool (mirrors the gossip handler).
+      assertAccepted(await chain.beaconEngine.validateGossipBlsToExecutionChange(blsToExecutionChange));
       break;
     }
 

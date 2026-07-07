@@ -108,6 +108,8 @@ describe("produceBlockBody", () => {
         parentBlock: head,
         proposerIndex,
         proposerPubKey,
+        defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+        feeRecipientCached: false,
         commonBlockBodyPromise,
         safeBlockHash: parentHashHex,
         finalizedBlockHash: parentHashHex,

@@ -33,7 +33,7 @@ describe("GossipMessageValidator", () => {
       opPool.hasSeenAttesterSlashing.mockReturnValue(true);
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(chainStub, attesterSlashing),
+        validateGossipAttesterSlashing(chainStub.beaconEngine, attesterSlashing),
         AttesterSlashingErrorCode.ALREADY_EXISTS
       );
     });
@@ -42,7 +42,7 @@ describe("GossipMessageValidator", () => {
       const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(chainStub, attesterSlashing),
+        validateGossipAttesterSlashing(chainStub.beaconEngine, attesterSlashing),
         AttesterSlashingErrorCode.INVALID
       );
     });
@@ -62,7 +62,7 @@ describe("GossipMessageValidator", () => {
         },
       };
 
-      await validateGossipAttesterSlashing(chainStub, attesterSlashing);
+      await validateGossipAttesterSlashing(chainStub.beaconEngine, attesterSlashing);
     });
   });
 });

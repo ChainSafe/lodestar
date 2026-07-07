@@ -5,6 +5,7 @@ import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {phase0} from "@lodestar/types";
+import {BeaconEngine} from "../../../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconNode} from "../../../../src/index.js";
 import {ClockEvent} from "../../../../src/util/clock.js";
 import {waitForEvent} from "../../../utils/events/resolver.js";
@@ -60,15 +61,17 @@ describe("api / impl / validator", () => {
         logger: loggerNodeA,
       });
 
+      // seen-caches are engine-internal; reach them via the concrete engine for this liveness setup
+      const engine = bn.chain.beaconEngine as BeaconEngine;
       // live indices at epoch of consideration, epoch 0
-      bn.chain.seenBlockProposers.add(0, 1);
-      bn.chain.seenBlockAttesters.add(0, 2);
-      bn.chain.seenAttesters.add(0, 3);
-      bn.chain.seenAggregators.add(0, 4);
+      engine.seenBlockProposers.add(0, 1);
+      engine.seenBlockAttesters.add(0, 2);
+      engine.seenAttesters.add(0, 3);
+      engine.seenAggregators.add(0, 4);
       // live indices at other epochs, epoch 10
-      bn.chain.seenBlockProposers.add(10, 1000);
-      bn.chain.seenAttesters.add(10, 2000);
-      bn.chain.seenAggregators.add(10, 3000);
+      engine.seenBlockProposers.add(10, 1000);
+      engine.seenAttesters.add(10, 2000);
+      engine.seenAggregators.add(10, 3000);
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
@@ -105,7 +108,7 @@ describe("api / impl / validator", () => {
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 1
       await waitForEvent<phase0.Checkpoint>(bn.chain.clock, ClockEvent.epoch, timeout); // wait for epoch 2
 
-      bn.chain.seenBlockProposers.add(bn.chain.clock.currentEpoch, 1);
+      (bn.chain.beaconEngine as BeaconEngine).seenBlockProposers.add(bn.chain.clock.currentEpoch, 1);
 
       const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config});
 
