@@ -733,7 +733,7 @@
     <spec container="Builder" fork="gloas" hash="ae177179">
     class Builder(Container):
         pubkey: BLSPubkey
-        version: uint8
+        version: Bytes1
         execution_address: ExecutionAddress
         balance: Gwei
         deposit_epoch: Epoch

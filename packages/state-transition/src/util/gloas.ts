@@ -4,12 +4,14 @@ import {
   BUILDER_INDEX_FLAG,
   BUILDER_PAYMENT_THRESHOLD_DENOMINATOR,
   BUILDER_PAYMENT_THRESHOLD_NUMERATOR,
-  BUILDER_WITHDRAWAL_PREFIX,
+  BUILDER_WITHDRAWAL_PREFIX_MAX,
+  BUILDER_WITHDRAWAL_PREFIX_MIN,
   DOMAIN_BUILDER_DEPOSIT,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   MIN_DEPOSIT_AMOUNT,
   MIN_SEED_LOOKAHEAD,
+  PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
@@ -28,15 +30,12 @@ import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
-  return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
+  return byteArrayEquals(withdrawalCredentials.subarray(0, 1), PAYLOAD_BUILDER_WITHDRAWAL_PREFIX);
 }
 
 export function hasBuilderWithdrawalCredentialPrefix(withdrawalCredentials: Uint8Array): boolean {
-  return (withdrawalCredentials[0] & 0xf0) === BUILDER_WITHDRAWAL_PREFIX;
-}
-
-export function getBuilderVersion(withdrawalCredentials: Uint8Array): number {
-  return withdrawalCredentials[0] & 0x0f;
+  const prefix = withdrawalCredentials[0];
+  return prefix >= BUILDER_WITHDRAWAL_PREFIX_MIN && prefix <= BUILDER_WITHDRAWAL_PREFIX_MAX;
 }
 
 export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): number {
@@ -265,7 +264,7 @@ export function getPtcWindowEpochCacheData(state: CachedBeaconStateGloas): {
 export function addBuilderToRegistry(
   state: CachedBeaconStateGloas,
   pubkey: Uint8Array,
-  version: number,
+  version: Uint8Array,
   executionAddress: Uint8Array,
   amount: number,
   slot: number
@@ -284,7 +283,7 @@ export function addBuilderToRegistry(
 
   const newBuilder = ssz.gloas.Builder.toViewDU({
     pubkey,
-    version,
+    version: version.slice(),
     executionAddress,
     balance: amount,
     depositEpoch,

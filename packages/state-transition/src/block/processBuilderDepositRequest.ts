@@ -5,7 +5,6 @@ import {computeEpochAtSlot} from "../util/epoch.js";
 import {
   addBuilderToRegistry,
   findBuilderIndexByPubkey,
-  getBuilderVersion,
   hasBuilderWithdrawalCredentialPrefix,
   isValidBuilderDepositSignature,
 } from "../util/gloas.js";
@@ -32,7 +31,7 @@ export function processBuilderDepositRequest(
       addBuilderToRegistry(
         state,
         pubkey,
-        getBuilderVersion(withdrawalCredentials),
+        withdrawalCredentials.slice(0, 1),
         withdrawalCredentials.subarray(12),
         amount,
         state.slot

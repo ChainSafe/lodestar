@@ -93,13 +93,22 @@
     BUILDER_PAYMENT_THRESHOLD_NUMERATOR: uint64 = 6
     </spec>
 
-- name: BUILDER_WITHDRAWAL_PREFIX#gloas
+- name: BUILDER_WITHDRAWAL_PREFIX_MIN#gloas
   sources:
     - file: packages/params/src/index.ts
-      search: export const BUILDER_WITHDRAWAL_PREFIX =
+      search: export const BUILDER_WITHDRAWAL_PREFIX_MIN =
   spec: |
-    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX" fork="gloas" hash="1094ce21">
-    BUILDER_WITHDRAWAL_PREFIX: Bytes1 = '0x03'
+    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX_MIN" fork="gloas" hash="1094ce21">
+    BUILDER_WITHDRAWAL_PREFIX_MIN: Bytes1 = '0xB0'
+    </spec>
+
+- name: BUILDER_WITHDRAWAL_PREFIX_MAX#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_WITHDRAWAL_PREFIX_MAX =
+  spec: |
+    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX_MAX" fork="gloas" hash="1094ce21">
+    BUILDER_WITHDRAWAL_PREFIX_MAX: Bytes1 = '0xBF'
     </spec>
 
 - name: BYTES_PER_COMMITMENT#deneb
@@ -481,13 +490,13 @@
     PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
     </spec>
 
-- name: PAYLOAD_BUILDER_VERSION#gloas
+- name: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX#gloas
   sources:
     - file: packages/params/src/index.ts
-      search: export const PAYLOAD_BUILDER_VERSION =
+      search: export const PAYLOAD_BUILDER_WITHDRAWAL_PREFIX =
   spec: |
-    <spec constant_var="PAYLOAD_BUILDER_VERSION" fork="gloas" hash="96275869">
-    PAYLOAD_BUILDER_VERSION: uint8 = 0
+    <spec constant_var="PAYLOAD_BUILDER_WITHDRAWAL_PREFIX" fork="gloas" hash="96275869">
+    PAYLOAD_BUILDER_WITHDRAWAL_PREFIX: Bytes1 = '0xB0'
     </spec>
 
 - name: PAYLOAD_STATUS_EMPTY#gloas

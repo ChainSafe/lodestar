@@ -1,4 +1,4 @@
-import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {PAYLOAD_BUILDER_WITHDRAWAL_PREFIX, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
@@ -153,7 +153,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     addBuilderToRegistry(
       state,
       deposit.pubkey,
-      PAYLOAD_BUILDER_VERSION,
+      PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
       deposit.withdrawalCredentials.subarray(12),
       deposit.amount,
       deposit.slot

@@ -1,7 +1,13 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {BUILDER_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  BUILDER_WITHDRAWAL_PREFIX_MIN,
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 
 const isValidBuilderDepositSignatureMock = vi.hoisted(() =>
@@ -49,9 +55,12 @@ function buildGloasState(slot = 0) {
   );
 }
 
-function makeBuilderWithdrawalCredentials(executionAddress: Uint8Array, version = 0): Uint8Array {
+function makeBuilderWithdrawalCredentials(
+  executionAddress: Uint8Array,
+  prefix = PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0]
+): Uint8Array {
   const creds = new Uint8Array(32);
-  creds[0] = BUILDER_WITHDRAWAL_PREFIX | version;
+  creds[0] = prefix;
   creds.set(executionAddress, 12);
   return creds;
 }
@@ -62,20 +71,20 @@ function makeBuilderDepositRequest({
   amount = 1_000_000_000,
   signatureFirstByte = 1, // 1 => valid via mock, anything else => invalid
   withdrawalCredentials,
-  version = 0,
+  prefix = PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0],
 }: {
   pubkey?: Uint8Array;
   executionAddress?: Uint8Array;
   amount?: number;
   signatureFirstByte?: number;
   withdrawalCredentials?: Uint8Array;
-  version?: number;
+  prefix?: number;
 } = {}) {
   const signature = new Uint8Array(96);
   signature[0] = signatureFirstByte;
   return {
     pubkey,
-    withdrawalCredentials: withdrawalCredentials ?? makeBuilderWithdrawalCredentials(executionAddress, version),
+    withdrawalCredentials: withdrawalCredentials ?? makeBuilderWithdrawalCredentials(executionAddress, prefix),
     amount,
     signature,
   };
@@ -99,19 +108,19 @@ describe("processBuilderDepositRequest", () => {
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(32_000_000_000);
     expect(builder.executionAddress).toEqual(request.withdrawalCredentials.subarray(12));
-    expect(builder.version).toBe(0);
+    expect(builder.version).toEqual(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX);
     expect(builder.withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
   });
 
-  it("registers a new builder with the version from the withdrawal credentials low nibble", () => {
+  it("registers a new builder with the prefix from the withdrawal credentials", () => {
     const state = buildGloasState(1);
-    const request = makeBuilderDepositRequest({version: 15});
+    const request = makeBuilderDepositRequest({prefix: BUILDER_WITHDRAWAL_PREFIX_MIN | 0x0f});
 
     processBuilderDepositRequest(state, request);
 
     expect(isValidBuilderDepositSignatureMock).toHaveBeenCalledTimes(1);
     expect(state.builders.length).toBe(1);
-    expect(state.builders.get(0).version).toBe(15);
+    expect(state.builders.get(0).version).toEqual(Uint8Array.from([0xbf]));
   });
 
   it.each([
@@ -147,7 +156,7 @@ describe("processBuilderDepositRequest", () => {
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: 0,
+        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
         executionAddress: originalAddress,
         balance: 32_000_000_000,
         depositEpoch: 0,
@@ -172,7 +181,7 @@ describe("processBuilderDepositRequest", () => {
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(33_000_000_000);
     expect(builder.executionAddress).toEqual(originalAddress);
-    expect(builder.version).toBe(0);
+    expect(builder.version).toEqual(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX);
   });
 
   it("resets the withdrawable epoch when topping up an exited, fully-swept builder", () => {
@@ -185,7 +194,7 @@ describe("processBuilderDepositRequest", () => {
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: 0,
+        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
         executionAddress,
         balance: 0,
         depositEpoch: 0,
@@ -214,7 +223,7 @@ describe("processBuilderDepositRequest", () => {
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: 0,
+        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
         executionAddress,
         balance: 1_000_000_000,
         depositEpoch: 0,

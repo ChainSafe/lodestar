@@ -1,6 +1,7 @@
 import {
   BitVectorType,
   ByteListType,
+  ByteVectorType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
@@ -45,15 +46,16 @@ const {
   UintBn64,
   UintNum64,
   BLSPubkey,
-  Uint8,
   BuilderIndex,
   EpochInf,
 } = primitiveSsz;
 
+const Bytes1 = new ByteVectorType(1);
+
 export const Builder = new ContainerType(
   {
     pubkey: BLSPubkey,
-    version: Uint8,
+    version: Bytes1,
     executionAddress: ExecutionAddress,
     balance: UintNum64,
     depositEpoch: EpochInf,

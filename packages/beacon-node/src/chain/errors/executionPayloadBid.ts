@@ -25,8 +25,8 @@ export type ExecutionPayloadBidErrorType =
   | {
       code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION;
       builderIndex: BuilderIndex;
-      version: number;
-      expectedVersion: number;
+      version: string;
+      expectedVersion: string;
     }
   | {
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT;

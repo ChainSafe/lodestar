@@ -1,7 +1,10 @@
 import {describe, expect, it} from "vitest";
-import {BUILDER_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {
-  getBuilderVersion,
+  BUILDER_WITHDRAWAL_PREFIX_MAX,
+  BUILDER_WITHDRAWAL_PREFIX_MIN,
+  PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
+} from "@lodestar/params";
+import {
   getExpectedGasLimit,
   hasBuilderWithdrawalCredentialPrefix,
   isBuilderWithdrawalCredential,
@@ -16,22 +19,17 @@ describe("util / gloas", () => {
     }
 
     it("detects only the exact fork-time builder withdrawal credential", () => {
-      expect(isBuilderWithdrawalCredential(credentials(BUILDER_WITHDRAWAL_PREFIX))).toBe(true);
-      expect(isBuilderWithdrawalCredential(credentials(BUILDER_WITHDRAWAL_PREFIX | 0x0f))).toBe(false);
+      expect(isBuilderWithdrawalCredential(credentials(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0]))).toBe(true);
+      expect(isBuilderWithdrawalCredential(credentials(BUILDER_WITHDRAWAL_PREFIX_MAX))).toBe(false);
       expect(isBuilderWithdrawalCredential(credentials(0xaf))).toBe(false);
       expect(isBuilderWithdrawalCredential(credentials(0xc0))).toBe(false);
     });
 
     it("detects the builder withdrawal credential prefix range for builder deposit requests", () => {
-      expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX))).toBe(true);
-      expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX | 0x0f))).toBe(true);
+      expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX_MIN))).toBe(true);
+      expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX_MAX))).toBe(true);
       expect(hasBuilderWithdrawalCredentialPrefix(credentials(0xaf))).toBe(false);
       expect(hasBuilderWithdrawalCredentialPrefix(credentials(0xc0))).toBe(false);
-    });
-
-    it("gets the builder version from the low nibble", () => {
-      expect(getBuilderVersion(credentials(BUILDER_WITHDRAWAL_PREFIX))).toBe(0);
-      expect(getBuilderVersion(credentials(BUILDER_WITHDRAWAL_PREFIX | 0x0f))).toBe(15);
     });
   });
 
