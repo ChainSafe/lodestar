@@ -5,6 +5,7 @@ import {
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
+  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
   WITHDRAWAL_REQUEST_TYPE,
 } from "@lodestar/params";
 import {ExecutionRequests, gloas, ssz} from "@lodestar/types";
@@ -73,6 +74,24 @@ describe("execution / engine / types", () => {
       const serialized = serializeExecutionRequests(ForkName.electra, executionRequests);
 
       expect(serialized.length).toBe(0);
+    });
+
+    it("should serialize Gloas deposit requests beyond the Electra limit", () => {
+      const expectedLength = MAX_DEPOSIT_REQUESTS_PER_PAYLOAD + 1;
+      const executionRequests: gloas.ExecutionRequests = {
+        deposits: Array.from({length: expectedLength}, () => ssz.gloas.DepositRequest.defaultValue()),
+        withdrawals: [],
+        consolidations: [],
+        builderDeposits: [],
+        builderExits: [],
+      };
+
+      const serialized = serializeExecutionRequests(ForkName.gloas, executionRequests);
+      const deserialized = deserializeExecutionRequests(ForkName.gloas, serialized) as gloas.ExecutionRequests;
+
+      expect(serialized.length).toBe(1);
+      expect(deserialized.deposits.length).toBe(expectedLength);
+      expect(serializeExecutionRequests(ForkName.gloas, deserialized)).toEqual(serialized);
     });
 
     it("should serialize builder requests post-gloas", () => {

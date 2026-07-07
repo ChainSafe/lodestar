@@ -510,13 +510,24 @@ function prefixRequests(requestsBytes: Uint8Array, requestType: ExecutionRequest
   return prefixedRequests;
 }
 
-function serializeDepositRequests(depositRequests: electra.DepositRequests): DepositRequestsRpc {
-  const requestsBytes = ssz.electra.DepositRequests.serialize(depositRequests);
+function serializeDepositRequests(
+  fork: ForkName,
+  depositRequests: electra.DepositRequests | gloas.DepositRequests
+): DepositRequestsRpc {
+  const requestsBytes =
+    ForkSeq[fork] >= ForkSeq.gloas
+      ? ssz.gloas.DepositRequests.serialize(depositRequests)
+      : ssz.electra.DepositRequests.serialize(depositRequests);
   return bytesToData(prefixRequests(requestsBytes, DEPOSIT_REQUEST_TYPE));
 }
 
-function deserializeDepositRequests(serialized: DepositRequestsRpc): electra.DepositRequests {
-  return ssz.electra.DepositRequests.deserialize(dataToBytes(serialized, null));
+function deserializeDepositRequests(
+  fork: ForkName,
+  serialized: DepositRequestsRpc
+): electra.DepositRequests | gloas.DepositRequests {
+  return ForkSeq[fork] >= ForkSeq.gloas
+    ? ssz.gloas.DepositRequests.deserialize(dataToBytes(serialized, null))
+    : ssz.electra.DepositRequests.deserialize(dataToBytes(serialized, null));
 }
 
 function serializeWithdrawalRequests(withdrawalRequests: electra.WithdrawalRequests): WithdrawalRequestsRpc {
@@ -571,7 +582,7 @@ export function serializeExecutionRequests(fork: ForkName, executionRequests: Ex
   const result: ExecutionRequestsRpc = [];
 
   if (deposits.length !== 0) {
-    result.push(serializeDepositRequests(deposits));
+    result.push(serializeDepositRequests(fork, deposits));
   }
 
   if (withdrawals.length !== 0) {
@@ -637,7 +648,7 @@ export function deserializeExecutionRequests(fork: ForkName, serialized: Executi
 
     switch (currentRequestType) {
       case DEPOSIT_REQUEST_TYPE: {
-        result.deposits = deserializeDepositRequests(requests);
+        result.deposits = deserializeDepositRequests(fork, requests);
         break;
       }
       case WITHDRAWAL_REQUEST_TYPE: {
