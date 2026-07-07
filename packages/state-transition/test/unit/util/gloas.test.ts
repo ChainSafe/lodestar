@@ -22,14 +22,14 @@ describe("util / gloas", () => {
       expect(isBuilderWithdrawalCredential(credentials(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0]))).toBe(true);
       expect(isBuilderWithdrawalCredential(credentials(BUILDER_WITHDRAWAL_PREFIX_MAX))).toBe(false);
       expect(isBuilderWithdrawalCredential(credentials(0xaf))).toBe(false);
-      expect(isBuilderWithdrawalCredential(credentials(0xc0))).toBe(false);
+      expect(isBuilderWithdrawalCredential(credentials(0xb2))).toBe(false);
     });
 
     it("detects the builder withdrawal credential prefix range for builder deposit requests", () => {
       expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX_MIN))).toBe(true);
       expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX_MAX))).toBe(true);
       expect(hasBuilderWithdrawalCredentialPrefix(credentials(0xaf))).toBe(false);
-      expect(hasBuilderWithdrawalCredentialPrefix(credentials(0xc0))).toBe(false);
+      expect(hasBuilderWithdrawalCredentialPrefix(credentials(0xb2))).toBe(false);
     });
   });
 

@@ -114,18 +114,18 @@ describe("processBuilderDepositRequest", () => {
 
   it("registers a new builder with the prefix from the withdrawal credentials", () => {
     const state = buildGloasState(1);
-    const request = makeBuilderDepositRequest({prefix: BUILDER_WITHDRAWAL_PREFIX_MIN | 0x0f});
+    const request = makeBuilderDepositRequest({prefix: BUILDER_WITHDRAWAL_PREFIX_MIN + 1});
 
     processBuilderDepositRequest(state, request);
 
     expect(isValidBuilderDepositSignatureMock).toHaveBeenCalledTimes(1);
     expect(state.builders.length).toBe(1);
-    expect(state.builders.get(0).version).toEqual(Uint8Array.from([0xbf]));
+    expect(state.builders.get(0).version).toEqual(Uint8Array.from([0xb1]));
   });
 
   it.each([
     {name: "below range", prefix: 0xaf},
-    {name: "above range", prefix: 0xc0},
+    {name: "above range", prefix: 0xb2},
   ])("drops a new builder request when the withdrawal credentials prefix is $name", ({prefix}) => {
     const state = buildGloasState(1);
     const withdrawalCredentials = makeBuilderWithdrawalCredentials(new Uint8Array(20), 0);

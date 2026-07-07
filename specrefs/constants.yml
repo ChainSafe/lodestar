@@ -108,7 +108,7 @@
       search: export const BUILDER_WITHDRAWAL_PREFIX_MAX =
   spec: |
     <spec constant_var="BUILDER_WITHDRAWAL_PREFIX_MAX" fork="gloas" hash="1094ce21">
-    BUILDER_WITHDRAWAL_PREFIX_MAX: Bytes1 = '0xBF'
+    BUILDER_WITHDRAWAL_PREFIX_MAX: Bytes1 = '0xB1'
     </spec>
 
 - name: BYTES_PER_COMMITMENT#deneb
