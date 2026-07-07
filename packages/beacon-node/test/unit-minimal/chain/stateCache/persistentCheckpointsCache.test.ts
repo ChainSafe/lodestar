@@ -185,6 +185,28 @@ describe("PersistentCheckpointStateCache", () => {
     expect(cache.get(cp2Hex)).not.toBeNull();
   });
 
+  // regression: re-add()ing a checkpoint that is already in memory with a persistedKey (e.g. one that
+  // was reloaded from disk) must keep that persistedKey. Otherwise its on-disk copy is orphaned, since
+  // prune/finalize removes files by the stored persistedKey.
+  it("re-adding a reloaded checkpoint keeps its persistedKey (no orphan on disk)", async () => {
+    cache.add(cp2, states["cp2"]);
+    // persist cp0b to disk
+    expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
+    expect(Array.from(fileApisBuffer.keys())).toEqual([persistent0bKey]);
+
+    // reload cp0b back into memory -> {inMemory, state, persistedKey}
+    expect((await cache.getOrReload(cp0bHex))?.serialize()).toEqual(stateBytes["cp0b"]);
+
+    // re-add the same checkpoint while it is in memory with a persistedKey
+    cache.add(cp0b, states["cp0b"]);
+
+    // finalize epoch 21 -> epoch 20 (cp0b) is pruned; its on-disk copy must be removed, not orphaned
+    expect(await cache.processState(toHexString(cp2.root), stateWithFinalizedEpoch(21))).toEqual(0);
+    expect(fileApisBuffer.has(persistent0bKey)).toBe(false);
+    expect(fileApisBuffer.size).toEqual(0);
+    expect(await cache.getStateOrBytes(cp0bHex)).toBeNull();
+  });
+
   describe("findSeedStateToReload", () => {
     beforeEach(() => {
       fileApisBuffer = new Map();

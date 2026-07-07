@@ -233,6 +233,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {stateId: "head", validatorIds: [pubkeyHex, 1300], statuses: ["active_ongoing"]},
     res: {data: [validatorResponse], meta: {executionOptimistic: true, finalized: false}},
   },
+  getStateBuilders: {
+    args: {stateId: "head", builderIds: [pubkeyHex, 32], statuses: ["active"]},
+    res: {
+      data: [{index: 32, status: "active", builder: ssz.gloas.Builder.defaultValue()}],
+      meta: {executionOptimistic: true, finalized: false},
+    },
+  },
   postStateValidatorIdentities: {
     args: {stateId: "head", validatorIds: [1300]},
     res: {

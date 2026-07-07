@@ -255,6 +255,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
   latestExecutionPayloadBid: ExecutionPayloadBid;
   payloadExpectedWithdrawals: capella.Withdrawal[];
   getBuilder(index: BuilderIndex): gloas.Builder;
+  getBuildersLength(): number;
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean;
   getEpochPTCs(epoch: Epoch): Uint32Array[];
   getIndicesInPayloadTimelinessCommittee(validatorIndex: ValidatorIndex, slot: Slot): number[];
@@ -264,7 +265,7 @@ export interface IBeaconStateViewGloas extends IBeaconStateViewFulu {
    * operation selection (e.g. voluntary exits) see the same post-apply state that the block
    * processor will see at import.
    */
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas;
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas;
 }
 
 /**

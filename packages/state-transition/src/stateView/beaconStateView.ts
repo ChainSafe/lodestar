@@ -398,6 +398,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
   }
 
+  getBuildersLength(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).builders.length;
+  }
+
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("Builders are not supported before Gloas");
@@ -831,7 +839,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   /**
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("withParentPayloadApplied is not available before Gloas");
     }
