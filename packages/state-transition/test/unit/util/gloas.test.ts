@@ -1,7 +1,40 @@
 import {describe, expect, it} from "vitest";
-import {getExpectedGasLimit} from "../../../src/util/gloas.js";
+import {BUILDER_WITHDRAWAL_PREFIX} from "@lodestar/params";
+import {
+  getBuilderVersion,
+  getExpectedGasLimit,
+  hasBuilderWithdrawalCredentialPrefix,
+  isBuilderWithdrawalCredential,
+} from "../../../src/util/gloas.js";
 
 describe("util / gloas", () => {
+  describe("builder withdrawal credentials", () => {
+    function credentials(firstByte: number): Uint8Array {
+      const withdrawalCredentials = new Uint8Array(32);
+      withdrawalCredentials[0] = firstByte;
+      return withdrawalCredentials;
+    }
+
+    it("detects only the exact fork-time builder withdrawal credential", () => {
+      expect(isBuilderWithdrawalCredential(credentials(BUILDER_WITHDRAWAL_PREFIX))).toBe(true);
+      expect(isBuilderWithdrawalCredential(credentials(BUILDER_WITHDRAWAL_PREFIX | 0x0f))).toBe(false);
+      expect(isBuilderWithdrawalCredential(credentials(0xaf))).toBe(false);
+      expect(isBuilderWithdrawalCredential(credentials(0xc0))).toBe(false);
+    });
+
+    it("detects the builder withdrawal credential prefix range for builder deposit requests", () => {
+      expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX))).toBe(true);
+      expect(hasBuilderWithdrawalCredentialPrefix(credentials(BUILDER_WITHDRAWAL_PREFIX | 0x0f))).toBe(true);
+      expect(hasBuilderWithdrawalCredentialPrefix(credentials(0xaf))).toBe(false);
+      expect(hasBuilderWithdrawalCredentialPrefix(credentials(0xc0))).toBe(false);
+    });
+
+    it("gets the builder version from the low nibble", () => {
+      expect(getBuilderVersion(credentials(BUILDER_WITHDRAWAL_PREFIX))).toBe(0);
+      expect(getBuilderVersion(credentials(BUILDER_WITHDRAWAL_PREFIX | 0x0f))).toBe(15);
+    });
+  });
+
   describe("getExpectedGasLimit", () => {
     const testCases: {
       name: string;

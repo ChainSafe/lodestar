@@ -6,7 +6,7 @@ import {
   addBuilderToRegistry,
   findBuilderIndexByPubkey,
   getBuilderVersion,
-  isBuilderWithdrawalCredential,
+  hasBuilderWithdrawalCredentialPrefix,
   isValidBuilderDepositSignature,
 } from "../util/gloas.js";
 
@@ -24,7 +24,7 @@ export function processBuilderDepositRequest(
   const builderIndex = findBuilderIndexByPubkey(state, pubkey);
 
   if (builderIndex === null) {
-    if (!isBuilderWithdrawalCredential(withdrawalCredentials)) {
+    if (!hasBuilderWithdrawalCredentialPrefix(withdrawalCredentials)) {
       return;
     }
 

@@ -28,6 +28,10 @@ import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
+  return withdrawalCredentials[0] === BUILDER_WITHDRAWAL_PREFIX;
+}
+
+export function hasBuilderWithdrawalCredentialPrefix(withdrawalCredentials: Uint8Array): boolean {
   return (withdrawalCredentials[0] & 0xf0) === BUILDER_WITHDRAWAL_PREFIX;
 }
 
