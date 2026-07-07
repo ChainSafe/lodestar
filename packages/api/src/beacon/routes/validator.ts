@@ -274,6 +274,12 @@ export type LivenessResponseData = ValueOf<typeof LivenessResponseDataType>;
 export type LivenessResponseDataList = ValueOf<typeof LivenessResponseDataListType>;
 export type SignedValidatorRegistrationV1List = ValueOf<typeof SignedValidatorRegistrationV1ListType>;
 
+// The beacon node does not return any data if there is no canonical block at the requested slot (missed slot).
+// In this case, we receive a success response (204) which is not handled as an error. The generic response
+// handler already checks the status code and will not attempt to parse the body, but it will return no value.
+// It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
+export type MaybePayloadAttestationData = gloas.PayloadAttestationData | undefined;
+
 export type Endpoints = {
   /**
    * Get attester duties
@@ -483,7 +489,7 @@ export type Endpoints = {
       slot: Slot;
     },
     {params: {slot: Slot}},
-    gloas.PayloadAttestationData,
+    MaybePayloadAttestationData,
     VersionMeta
   >;
 
@@ -982,7 +988,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
       },
       resp: {
-        data: ssz.gloas.PayloadAttestationData,
+        data: WithVersion<MaybePayloadAttestationData, VersionMeta>(() => ssz.gloas.PayloadAttestationData),
         meta: VersionCodec,
       },
     },
