@@ -75,7 +75,7 @@
   },
   "dependencies": {
     "@chainsafe/persistent-merkle-tree": "^1.3.0",
-    "@chainsafe/ssz": "^1.6.0",
+    "@chainsafe/ssz": "^1.6.1",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",

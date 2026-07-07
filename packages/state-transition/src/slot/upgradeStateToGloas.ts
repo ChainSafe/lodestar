@@ -1,9 +1,5 @@
 import {BranchNode, LeafNode, Node} from "@chainsafe/persistent-merkle-tree";
-// TODO: @chainsafe/ssz should publish progressiveSubtreeFillToContents as a public export, then
-// drop this deep import. It is not re-exported from ssz's public entrypoint; resolvable because
-// ssz 1.6.0 has no package.json "exports" map. Fragile across ssz bumps.
-// biome-ignore lint/style/noRestrictedImports: no public export yet; see TODO above
-import {progressiveSubtreeFillToContents} from "@chainsafe/ssz/lib/type/progressive.js";
+import {progressiveSubtreeFillToContents} from "@chainsafe/ssz";
 import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
