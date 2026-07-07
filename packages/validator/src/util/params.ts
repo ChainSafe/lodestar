@@ -326,8 +326,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
     MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
     MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
-    BUILDER_REGISTRY_LIMIT: gloasForkRelevant,
-    BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
     MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: false,
     MAX_ATTESTER_SLASHING_SIZE: false,
