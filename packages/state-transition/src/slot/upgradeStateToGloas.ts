@@ -1,7 +1,7 @@
 import {BranchNode, LeafNode, Node} from "@chainsafe/persistent-merkle-tree";
-import {progressiveSubtreeFillToContents} from "@chainsafe/ssz";
+import {BitArray, progressiveSubtreeFillToContents} from "@chainsafe/ssz";
 import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {electra, gloas, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
@@ -98,6 +98,42 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloas["clearCache"]();
 
   return stateGloas;
+}
+
+export function upgradeAttestationToGloas(pre: electra.Attestation): gloas.Attestation {
+  return {
+    aggregationBits: cloneBitArray(pre.aggregationBits),
+    data: pre.data,
+    signature: pre.signature,
+    committeeBits: cloneBitArray(pre.committeeBits),
+  };
+}
+
+export function upgradeIndexedAttestationToGloas(pre: electra.IndexedAttestation): gloas.IndexedAttestation {
+  return {
+    attestingIndices: [...pre.attestingIndices],
+    data: pre.data,
+    signature: pre.signature,
+  };
+}
+
+export function upgradeAttesterSlashingToGloas(pre: electra.AttesterSlashing): gloas.AttesterSlashing {
+  return {
+    attestation1: upgradeIndexedAttestationBigintToGloas(pre.attestation1),
+    attestation2: upgradeIndexedAttestationBigintToGloas(pre.attestation2),
+  };
+}
+
+function upgradeIndexedAttestationBigintToGloas(pre: electra.IndexedAttestationBigint): gloas.IndexedAttestationBigint {
+  return {
+    attestingIndices: [...pre.attestingIndices],
+    data: pre.data,
+    signature: pre.signature,
+  };
+}
+
+function cloneBitArray(bitArray: BitArray): BitArray {
+  return bitArray.clone();
 }
 
 /**

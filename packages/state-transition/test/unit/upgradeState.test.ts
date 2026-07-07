@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest";
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
@@ -7,7 +8,12 @@ import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
 import {CachedBeaconStateFulu, createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
-import {upgradeStateToGloas} from "../../src/slot/upgradeStateToGloas.js";
+import {
+  upgradeAttestationToGloas,
+  upgradeAttesterSlashingToGloas,
+  upgradeIndexedAttestationToGloas,
+  upgradeStateToGloas,
+} from "../../src/slot/upgradeStateToGloas.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -113,6 +119,51 @@ describe("upgradeState", () => {
     // Full state still merkleizes and round-trips
     expect(() => gloasState.hashTreeRoot()).not.toThrow();
     expect(() => gloasState.toValue()).not.toThrow();
+  });
+
+  it("upgradeAttestationToGloas copies Fulu attestation bitlists into Gloas values", () => {
+    const attestation = ssz.electra.Attestation.defaultValue();
+    attestation.aggregationBits = BitArray.fromBitLen(4);
+    attestation.aggregationBits.set(0, true);
+    attestation.committeeBits.set(0, true);
+
+    const upgraded = upgradeAttestationToGloas(attestation);
+
+    expect(upgraded).toEqual(attestation);
+    expect(upgraded.aggregationBits).not.toBe(attestation.aggregationBits);
+    expect(upgraded.committeeBits).not.toBe(attestation.committeeBits);
+    expect(ssz.gloas.Attestation.deserialize(ssz.gloas.Attestation.serialize(upgraded))).toEqual(upgraded);
+
+    attestation.aggregationBits.set(0, false);
+    attestation.committeeBits.set(0, false);
+    expect(upgraded.aggregationBits.get(0)).toBe(true);
+    expect(upgraded.committeeBits.get(0)).toBe(true);
+  });
+
+  it("upgradeIndexedAttestationToGloas copies Fulu attesting indices into Gloas values", () => {
+    const indexedAttestation = ssz.electra.IndexedAttestation.defaultValue();
+    indexedAttestation.attestingIndices = [1, 3, 5];
+
+    const upgraded = upgradeIndexedAttestationToGloas(indexedAttestation);
+
+    expect(upgraded).toEqual(indexedAttestation);
+    expect(upgraded.attestingIndices).not.toBe(indexedAttestation.attestingIndices);
+    expect(ssz.gloas.IndexedAttestation.deserialize(ssz.gloas.IndexedAttestation.serialize(upgraded))).toEqual(
+      upgraded
+    );
+  });
+
+  it("upgradeAttesterSlashingToGloas upgrades both indexed attestations", () => {
+    const attesterSlashing = ssz.electra.AttesterSlashing.defaultValue();
+    attesterSlashing.attestation1.attestingIndices = [2, 4];
+    attesterSlashing.attestation2.attestingIndices = [6, 8];
+
+    const upgraded = upgradeAttesterSlashingToGloas(attesterSlashing);
+
+    expect(upgraded).toEqual(attesterSlashing);
+    expect(upgraded.attestation1.attestingIndices).not.toBe(attesterSlashing.attestation1.attestingIndices);
+    expect(upgraded.attestation2.attestingIndices).not.toBe(attesterSlashing.attestation2.attestingIndices);
+    expect(ssz.gloas.AttesterSlashing.deserialize(ssz.gloas.AttesterSlashing.serialize(upgraded))).toEqual(upgraded);
   });
 });
 

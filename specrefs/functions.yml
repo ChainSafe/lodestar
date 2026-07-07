@@ -12423,7 +12423,9 @@
     </spec>
 
 - name: upgrade_attestation_to_gloas#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
+      search: export function upgradeAttestationToGloas(
   spec: |
     <spec fn="upgrade_attestation_to_gloas" fork="gloas" hash="efd969bf">
     def upgrade_attestation_to_gloas(pre: fulu.Attestation) -> Attestation:
@@ -12436,7 +12438,9 @@
     </spec>
 
 - name: upgrade_attester_slashing_to_gloas#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
+      search: export function upgradeAttesterSlashingToGloas(
   spec: |
     <spec fn="upgrade_attester_slashing_to_gloas" fork="gloas" hash="35f9184f">
     def upgrade_attester_slashing_to_gloas(pre: fulu.AttesterSlashing) -> AttesterSlashing:
@@ -12447,7 +12451,9 @@
     </spec>
 
 - name: upgrade_indexed_attestation_to_gloas#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
+      search: export function upgradeIndexedAttestationToGloas(
   spec: |
     <spec fn="upgrade_indexed_attestation_to_gloas" fork="gloas" hash="b13fb8df">
     def upgrade_indexed_attestation_to_gloas(pre: fulu.IndexedAttestation) -> IndexedAttestation:
