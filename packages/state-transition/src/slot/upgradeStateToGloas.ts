@@ -109,7 +109,19 @@ export function upgradeAttestationToGloas(pre: electra.Attestation): gloas.Attes
   };
 }
 
-export function upgradeIndexedAttestationToGloas(pre: electra.IndexedAttestation): gloas.IndexedAttestation {
+export function upgradeIndexedAttestationToGloas(pre: electra.IndexedAttestation): gloas.IndexedAttestation;
+export function upgradeIndexedAttestationToGloas(pre: electra.IndexedAttestationBigint): gloas.IndexedAttestationBigint;
+export function upgradeIndexedAttestationToGloas(
+  pre: electra.IndexedAttestation | electra.IndexedAttestationBigint
+): gloas.IndexedAttestation | gloas.IndexedAttestationBigint {
+  if (isIndexedAttestationBigint(pre)) {
+    return {
+      attestingIndices: [...pre.attestingIndices],
+      data: pre.data,
+      signature: pre.signature,
+    };
+  }
+
   return {
     attestingIndices: [...pre.attestingIndices],
     data: pre.data,
@@ -119,21 +131,19 @@ export function upgradeIndexedAttestationToGloas(pre: electra.IndexedAttestation
 
 export function upgradeAttesterSlashingToGloas(pre: electra.AttesterSlashing): gloas.AttesterSlashing {
   return {
-    attestation1: upgradeIndexedAttestationBigintToGloas(pre.attestation1),
-    attestation2: upgradeIndexedAttestationBigintToGloas(pre.attestation2),
-  };
-}
-
-function upgradeIndexedAttestationBigintToGloas(pre: electra.IndexedAttestationBigint): gloas.IndexedAttestationBigint {
-  return {
-    attestingIndices: [...pre.attestingIndices],
-    data: pre.data,
-    signature: pre.signature,
+    attestation1: upgradeIndexedAttestationToGloas(pre.attestation1),
+    attestation2: upgradeIndexedAttestationToGloas(pre.attestation2),
   };
 }
 
 function cloneBitArray(bitArray: BitArray): BitArray {
   return bitArray.clone();
+}
+
+function isIndexedAttestationBigint(
+  attestation: electra.IndexedAttestation | electra.IndexedAttestationBigint
+): attestation is electra.IndexedAttestationBigint {
+  return typeof attestation.data.slot === "bigint";
 }
 
 /**

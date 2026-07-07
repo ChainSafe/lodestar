@@ -41,6 +41,11 @@ export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";
 export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";
+export {
+  upgradeAttestationToGloas,
+  upgradeAttesterSlashingToGloas,
+  upgradeIndexedAttestationToGloas,
+} from "./slot/upgradeStateToGloas.js";
 export * from "./stateTransition.js";
 export {BeaconStateView} from "./stateView/beaconStateView.js";
 export {

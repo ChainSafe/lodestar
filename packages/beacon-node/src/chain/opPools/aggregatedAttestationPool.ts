@@ -212,7 +212,7 @@ export class AggregatedAttestationPool {
     forkChoice: IForkChoice,
     shufflingCache: ShufflingCache,
     state: IBeaconStateView
-  ): Attestation[] {
+  ): electra.Attestation[] {
     const forkSeq = ForkSeq[fork];
     if (forkSeq < ForkSeq.electra) {
       throw new Error("Does not support producing blocks for pre-electra forks anymore");

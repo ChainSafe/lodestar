@@ -24,6 +24,8 @@ import {
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
+  upgradeAttestationToGloas,
+  upgradeAttesterSlashingToGloas,
 } from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -1014,11 +1016,11 @@ export async function produceCommonBlockBody<T extends BlockType>(
   //     logger.error("Attestation did not transfer to op pool", {}, e);
   //   }
   // }
-  const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
+  const [opPoolAttesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
     this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
-  const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
+  const opPoolAttestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,
     this.shufflingCache,
@@ -1027,6 +1029,11 @@ export async function produceCommonBlockBody<T extends BlockType>(
   endAttestations?.({
     step: BlockProductionStep.attestations,
   });
+
+  const attestations = isForkPostGloas(fork) ? opPoolAttestations.map(upgradeAttestationToGloas) : opPoolAttestations;
+  const attesterSlashings = isForkPostGloas(fork)
+    ? opPoolAttesterSlashings.map(upgradeAttesterSlashingToGloas)
+    : opPoolAttesterSlashings;
 
   const blockBody: Omit<CommonBlockBody, "blsToExecutionChanges" | "syncAggregate"> = {
     randaoReveal,
