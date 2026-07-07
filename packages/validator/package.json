@@ -49,7 +49,7 @@
   ],
   "dependencies": {
     "@chainsafe/blst": "^2.2.0",
-    "@chainsafe/ssz": "^1.6.0",
+    "@chainsafe/ssz": "^1.6.1",
     "@lodestar/api": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",

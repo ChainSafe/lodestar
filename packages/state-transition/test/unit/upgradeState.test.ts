@@ -1,12 +1,13 @@
 import {describe, expect, it} from "vitest";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
+import {FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
-import {createCachedBeaconState} from "../../src/cache/stateCache.js";
+import {CachedBeaconStateFulu, createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
+import {upgradeStateToGloas} from "../../src/slot/upgradeStateToGloas.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -36,6 +37,82 @@ describe("upgradeState", () => {
     );
     const newState = upgradeStateToElectra(stateView);
     expect(() => newState.toValue()).not.toThrow();
+  });
+
+  it("upgradeStateToGloas reuses composite-list nodes with identical merkle roots", () => {
+    // Enough validators to span multiple progressive subtrees (capacities 1, 4, 16, 64, ...) and to
+    // populate every slot's committee for the gloas PTC window computed during the upgrade.
+    const numValidators = 128;
+    const fuluStateView = ssz.fulu.BeaconState.defaultViewDU();
+    for (let i = 0; i < numValidators; i++) {
+      const validator = ssz.phase0.Validator.defaultValue();
+      // Distinct pubkey/withdrawalCredentials so each validator has a distinct subtree root
+      validator.pubkey = Buffer.alloc(48, i + 1);
+      validator.withdrawalCredentials = Buffer.alloc(32, i + 1);
+      validator.effectiveBalance = 32e9;
+      // Active at epoch 0 so shuffling / PTC committee selection has a non-empty validator set
+      validator.activationEligibilityEpoch = 0;
+      validator.activationEpoch = 0;
+      validator.exitEpoch = FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      fuluStateView.validators.push(ssz.phase0.Validator.toViewDU(validator));
+      fuluStateView.balances.push(32e9);
+      fuluStateView.previousEpochParticipation.push(0);
+      fuluStateView.currentEpochParticipation.push(0);
+      fuluStateView.inactivityScores.push(0);
+    }
+
+    // Populate the pending* composite queues so the node-reuse path is exercised for them too.
+    // Non-builder withdrawal credentials (default zeros) keep the deposits pending in-order.
+    for (let i = 0; i < 5; i++) {
+      const pendingDeposit = ssz.electra.PendingDeposit.defaultValue();
+      pendingDeposit.amount = 1000 + i;
+      fuluStateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(pendingDeposit));
+      const pendingPartialWithdrawal = ssz.electra.PendingPartialWithdrawal.defaultValue();
+      pendingPartialWithdrawal.amount = BigInt(2000 + i);
+      fuluStateView.pendingPartialWithdrawals.push(
+        ssz.electra.PendingPartialWithdrawal.toViewDU(pendingPartialWithdrawal)
+      );
+      const pendingConsolidation = ssz.electra.PendingConsolidation.defaultValue();
+      pendingConsolidation.sourceIndex = i;
+      fuluStateView.pendingConsolidations.push(ssz.electra.PendingConsolidation.toViewDU(pendingConsolidation));
+    }
+    fuluStateView.commit();
+
+    const config = getConfig(ForkName.fulu);
+    const fuluState = createCachedBeaconState(
+      fuluStateView,
+      {
+        config: createBeaconConfig(config, fuluStateView.genesisValidatorsRoot),
+        pubkeyCache: createPubkeyCache(),
+      },
+      // dummy pubkeys aren't valid BLS keys; skip syncing (no builder deposits need the cache)
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    ) as CachedBeaconStateFulu;
+
+    // Reference gloas roots via the value-based path (what the node-reuse replaces)
+    const expectedValidatorsRoot = ssz.gloas.Validators.hashTreeRoot(fuluState.validators.getAllReadonlyValues());
+    const expectedPendingDepositsRoot = ssz.gloas.PendingDeposits.hashTreeRoot(
+      fuluState.pendingDeposits.getAllReadonlyValues()
+    );
+    const expectedPendingPartialWithdrawalsRoot = ssz.gloas.PendingPartialWithdrawals.hashTreeRoot(
+      fuluState.pendingPartialWithdrawals.getAllReadonlyValues()
+    );
+    const expectedPendingConsolidationsRoot = ssz.gloas.PendingConsolidations.hashTreeRoot(
+      fuluState.pendingConsolidations.getAllReadonlyValues()
+    );
+
+    const gloasState = upgradeStateToGloas(fuluState);
+
+    // Node-reuse must produce byte-identical merkle roots for every migrated composite list
+    expect(gloasState.validators.hashTreeRoot()).toEqual(expectedValidatorsRoot);
+    expect(gloasState.validators.length).toEqual(numValidators);
+    expect(gloasState.pendingDeposits.hashTreeRoot()).toEqual(expectedPendingDepositsRoot);
+    expect(gloasState.pendingPartialWithdrawals.hashTreeRoot()).toEqual(expectedPendingPartialWithdrawalsRoot);
+    expect(gloasState.pendingConsolidations.hashTreeRoot()).toEqual(expectedPendingConsolidationsRoot);
+    // Full state still merkleizes and round-trips
+    expect(() => gloasState.hashTreeRoot()).not.toThrow();
+    expect(() => gloasState.toValue()).not.toThrow();
   });
 });
 
