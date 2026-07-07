@@ -146,13 +146,42 @@ describe("processBuilderDepositRequest", () => {
     expect(builder.version).toBe(BUILDER_WITHDRAWAL_PREFIX);
   });
 
-  it("resets the withdrawable epoch when topping up an exited builder", () => {
+  it("resets the withdrawable epoch when topping up an exited, fully-swept builder", () => {
     const slot = SLOTS_PER_EPOCH * 2;
     const state = buildGloasState(slot);
     const pubkey = Uint8Array.from({length: 48}, (_, i) => i + 1);
     const executionAddress = Uint8Array.from({length: 20}, (_, i) => i + 1);
 
-    // Exited builder: finite withdrawableEpoch
+    // Exited and fully swept builder: finite withdrawableEpoch, zero balance
+    state.builders.push(
+      ssz.gloas.Builder.toViewDU({
+        pubkey,
+        version: BUILDER_WITHDRAWAL_PREFIX,
+        executionAddress,
+        balance: 0,
+        depositEpoch: 0,
+        withdrawableEpoch: 1,
+      })
+    );
+
+    const request = makeBuilderDepositRequest({pubkey, executionAddress, amount: 1_000_000_000});
+
+    processBuilderDepositRequest(state, request);
+
+    const builder = state.builders.get(0);
+    expect(builder.balance).toBe(1_000_000_000);
+    const currentEpoch = Math.floor(slot / SLOTS_PER_EPOCH);
+    expect(builder.withdrawableEpoch).toBe(currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY);
+  });
+
+  it("does not reset the withdrawable epoch when topping up an exited builder with nonzero balance", () => {
+    const slot = SLOTS_PER_EPOCH * 2;
+    const state = buildGloasState(slot);
+    const pubkey = Uint8Array.from({length: 48}, (_, i) => i + 1);
+    const executionAddress = Uint8Array.from({length: 20}, (_, i) => i + 1);
+
+    // Exited builder that has NOT been swept: finite withdrawableEpoch, nonzero balance.
+    // Per spec, the reset is gated on balance == 0, so the withdrawableEpoch must be preserved.
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
@@ -170,7 +199,6 @@ describe("processBuilderDepositRequest", () => {
 
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(2_000_000_000);
-    const currentEpoch = Math.floor(slot / SLOTS_PER_EPOCH);
-    expect(builder.withdrawableEpoch).toBe(currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY);
+    expect(builder.withdrawableEpoch).toBe(1);
   });
 });
