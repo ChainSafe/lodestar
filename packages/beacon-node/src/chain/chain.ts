@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoiceRead, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoiceRead, ProtoBlock} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -73,9 +73,8 @@ import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToD
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
-import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
-import {CommonBlockBody, FindHeadFnName, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
+import {CommonBlockBody, IBeaconChain, ProposerPreparationData, StateGetOpts} from "./interface.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
 import {PrepareNextSlotScheduler} from "./prepareNextSlot.js";
@@ -1098,8 +1097,8 @@ export class BeaconChain implements IBeaconChain {
 
   /**
    * Single choke point for refreshing the cached head: pass the new canonical head here from ANY flow
-   * that updates it (importBlock, recomputeForkChoiceHead, getProposerHead, predictProposerHead). It
-   * emits fork-choice justified/finalized transitions facade-side — the engine no longer emits these
+   * that updates it (currently importBlock; head recompute / proposer-head selection are engine-internal).
+   * It emits fork-choice justified/finalized transitions facade-side — the engine no longer emits these
    * (a native engine can't emit into the JS emitter); they are derived from the head ProtoBlock's
    * justified and finalized checkpoints. Head-derived: a checkpoint that advances only via an
    * epoch-boundary tick is emitted on the next head update.
@@ -1120,56 +1119,6 @@ export class BeaconChain implements IBeaconChain {
         protoCheckpointToWithHex(newHead.finalizedEpoch, newHead.finalizedRoot)
       );
     }
-  }
-
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock {
-    this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
-
-    try {
-      // GetCanonicalHead runs updateHead(); the returned head IS the new canonical head — cache it
-      // (and emit any justified/finalized transition it carries) via the single choke point.
-      const head = this.beaconEngine.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
-      this.updateHeadAndEmitCheckpointEvents(head);
-      return head;
-    } catch (e) {
-      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
-      throw e;
-    } finally {
-      timer?.();
-    }
-  }
-
-  predictProposerHead(slot: Slot): ProtoBlock {
-    this.metrics?.forkChoice.requests.inc();
-    const timer = this.metrics?.forkChoice.findHead.startTimer({caller: FindHeadFnName.predictProposerHead});
-    const secFromSlot = this.clock.secFromSlot(slot);
-
-    try {
-      const predictedHead = this.beaconEngine.forkChoice.updateAndGetHead({
-        mode: UpdateHeadOpt.GetPredictedProposerHead,
-        secFromSlot,
-        slot,
-      }).head;
-      // The returned value is a proposer-boost-reorg prediction, NOT the canonical head — sync the
-      // cache to the canonical head (getHead()) through the choke point (may emit justified/finalized).
-      this.updateHeadAndEmitCheckpointEvents(this.beaconEngine.forkChoice.getHead());
-      return predictedHead;
-    } catch (e) {
-      this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetPredictedProposerHead});
-      throw e;
-    } finally {
-      timer?.();
-    }
-  }
-
-  getProposerHead(slot: Slot): ProtoBlock {
-    // engine.getProposerHead runs updateHead() (GetProposerHead) then returns the proposer head, which
-    // may be the parent for a reorg. Sync the cache to the canonical head (not the returned value)
-    // through the choke point so any justified/finalized transition is emitted.
-    const proposerHead = this.beaconEngine.getProposerHead(slot);
-    this.updateHeadAndEmitCheckpointEvents(this.beaconEngine.forkChoice.getHead());
-    return proposerHead;
   }
 
   /**

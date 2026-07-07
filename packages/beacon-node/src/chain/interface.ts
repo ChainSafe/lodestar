@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoiceRead, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoiceRead} from "@lodestar/fork-choice";
 import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -37,7 +37,6 @@ import {ImportBlockOpts, ImportPayloadOpts} from "./blocks/types.js";
 import {IBlsVerifier} from "./bls/index.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEventEmitter} from "./emitter.js";
-import {ForkchoiceCaller} from "./forkChoice/index.js";
 import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
@@ -226,14 +225,6 @@ export interface IBeaconChain {
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
 
   getStatus(): Status;
-
-  recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;
-
-  /** When proposerBoostReorg is enabled, this is called at slot n-1 to predict the head block to build on if we are proposing at slot n */
-  predictProposerHead(slot: Slot): ProtoBlock;
-
-  /** When proposerBoostReorg is enabled and we are proposing a block, this is called to determine which head block to build on */
-  getProposerHead(slot: Slot): ProtoBlock;
 
   waitForBlock(slot: Slot, root: RootHex): Promise<boolean>;
 

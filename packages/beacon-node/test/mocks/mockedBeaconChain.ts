@@ -33,6 +33,12 @@ import {getMockedLogger} from "./loggerMock.js";
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
   forkChoice: MockedForkChoice;
+  // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
+  // real `prepareForNextSlot` / `produceBlockBase` bound onto it call `this.recomputeForkChoiceHead`
+  // etc.). No longer on the facade — stubbed here so tests can control head selection.
+  recomputeForkChoiceHead: Mock<() => ProtoBlock>;
+  predictProposerHead: Mock<() => ProtoBlock>;
+  getProposerHead: Mock<() => ProtoBlock>;
   executionEngine: Mocked<ExecutionEngineHttp>;
   executionBuilder: Mocked<ExecutionBuilderHttp>;
   opPool: Mocked<OpPool>;
