@@ -83,7 +83,6 @@ export function getBeaconPoolApi({
           try {
             await validateGossipProposerPreferences(chain, signed);
 
-            chain.proposerPreferencesPool.add(signed);
             await network.publishProposerPreferences(signed);
             chain.emitter.emit(routes.events.EventType.proposerPreferences, {
               version: ForkName.gloas,

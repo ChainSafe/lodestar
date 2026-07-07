@@ -81,7 +81,7 @@ export async function validateGossipProposerPreferences(
   }
 
   // [IGNORE] First valid message for (dependent_root, proposal_slot, validator_index).
-  if (chain.proposerPreferencesPool.get(proposalSlot, dependentRootHex)?.message.validatorIndex === validatorIndex) {
+  if (chain.proposerPreferencesPool.isKnown(proposalSlot, dependentRootHex, validatorIndex)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
       proposalSlot,
@@ -104,4 +104,16 @@ export async function validateGossipProposerPreferences(
       validatorIndex,
     });
   }
+
+  // Repeated check - deals with race-condition between preferences submissions
+  if (chain.proposerPreferencesPool.isKnown(proposalSlot, dependentRootHex, validatorIndex)) {
+    throw new ProposerPreferencesError(GossipAction.IGNORE, {
+      code: ProposerPreferencesErrorCode.ALREADY_KNOWN,
+      proposalSlot,
+      validatorIndex,
+      dependentRoot: dependentRootHex,
+    });
+  }
+
+  chain.proposerPreferencesPool.add(signedProposerPreferences);
 }
