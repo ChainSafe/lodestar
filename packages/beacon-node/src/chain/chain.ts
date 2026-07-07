@@ -1222,11 +1222,12 @@ export class BeaconChain implements IBeaconChain {
     this.logger.verbose("Clock slot", {slot});
 
     // CRITICAL UPDATE
-    if (this.forkChoice.irrecoverableError) {
-      this.processShutdownCallback(this.forkChoice.irrecoverableError);
+    const irrecoverableError = this.beaconEngine.getIrrecoverableError();
+    if (irrecoverableError) {
+      this.processShutdownCallback(irrecoverableError);
     }
 
-    this.beaconEngine.forkChoice.updateTime(slot);
+    this.beaconEngine.updateTime(slot);
     this.metrics?.clockSlot.set(slot);
 
     // Engine-owned pools + seen-caches are pruned by the engine's own clock listener.

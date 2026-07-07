@@ -4,6 +4,7 @@ import {
   BlockExecutionStatus,
   CheckpointWithHex,
   IForkChoice,
+  LVHExecResponse,
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
@@ -21,6 +22,7 @@ import {
   CommitteeIndex,
   Epoch,
   Gwei,
+  IndexedAttestation,
   Root,
   RootHex,
   SSEPayloadAttributes,
@@ -518,6 +520,21 @@ export interface IBeaconEngine {
     opts: ImportBlockOpts
   ): Promise<ImportBlockResult>;
   discardVerifiedBlocks(blockRootHexes: RootHex[]): void;
+
+  // Fork-choice writes routed through the engine (so the facade never writes fork choice directly).
+  updateTime(currentSlot: Slot): void;
+  getIrrecoverableError(): Error | undefined;
+  validateLatestHash(execResponse: LVHExecResponse): void;
+  // TODO - beacon-engine: transitional — the gossip/api PTC + attestation consumers move into the engine
+  // (BLK-2), at which point these fork-choice writes become engine-internal and these wrappers go away.
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    slot: Slot,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void;
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
 
   // Execution payload envelope (gloas) import — consensus body of the facade `importExecutionPayload`.
   // `verifyExecutionPayloadEnvelope` (regen state + fields + BLS sig, throws `PayloadError`) runs

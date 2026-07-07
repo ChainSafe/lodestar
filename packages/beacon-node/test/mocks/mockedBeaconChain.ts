@@ -290,6 +290,12 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     "addPayloadAttestation",
     "getPoolPayloadAttestations",
     "addExecutionPayloadBid",
+    // Fork-choice write wrappers (forward to the mock's forkChoice).
+    "updateTime",
+    "getIrrecoverableError",
+    "validateLatestHash",
+    "notifyPtcMessages",
+    "onAttestation",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
       BeaconEngine.prototype as unknown as Record<string, unknown>

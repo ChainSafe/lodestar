@@ -889,7 +889,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (!options.dontSendGossipAttestationsToForkchoice) {
         try {
           // TODO beacon-engine: move to validateGossipAggregateAndProof
-          chain.beaconEngine.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+          chain.beaconEngine.onAttestation(indexedAttestation, attDataRootHex);
         } catch (e) {
           logger.debug(
             "Error adding gossip aggregated attestation to forkchoice",
@@ -1176,7 +1176,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       } catch (e) {
         logger.error("Error adding to payloadAttestation pool", {}, e as Error);
       }
-      chain.beaconEngine.forkChoice.notifyPtcMessages(
+      chain.beaconEngine.notifyPtcMessages(
         toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
         payloadAttestationMessage.data.slot,
         validatorCommitteeIndices,
@@ -1298,7 +1298,7 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
 
         if (!options.dontSendGossipAttestationsToForkchoice) {
           try {
-            chain.beaconEngine.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+            chain.beaconEngine.onAttestation(indexedAttestation, attDataRootHex);
           } catch (e) {
             logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
           }

@@ -11,6 +11,7 @@ import {
   ForkChoiceErrorCode,
   ForkChoiceStateGetter,
   IForkChoice,
+  LVHExecResponse,
   NotReorgedReason,
   PayloadExecutionStatus,
   PayloadStatus,
@@ -2790,6 +2791,36 @@ export class BeaconEngine implements IBeaconEngine {
     for (const r of blockRootHexes) {
       this.verifiedBlocks.delete(r);
     }
+  }
+
+  // --- Fork-choice writes (routed here so the facade never writes fork choice directly) ---
+
+  updateTime(currentSlot: Slot): void {
+    this.forkChoice.updateTime(currentSlot);
+  }
+
+  getIrrecoverableError(): Error | undefined {
+    return this.forkChoice.irrecoverableError;
+  }
+
+  validateLatestHash(execResponse: LVHExecResponse): void {
+    this.forkChoice.validateLatestHash(execResponse);
+  }
+
+  // TODO - beacon-engine: transitional wrappers — their gossip/api PTC + attestation consumers move into
+  // the engine (BLK-2), at which point these fork-choice writes become engine-internal and these go away.
+  notifyPtcMessages(
+    blockRoot: RootHex,
+    slot: Slot,
+    ptcIndices: number[],
+    payloadPresent: boolean,
+    blobDataAvailable: boolean
+  ): void {
+    this.forkChoice.notifyPtcMessages(blockRoot, slot, ptcIndices, payloadPresent, blobDataAvailable);
+  }
+
+  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void {
+    this.forkChoice.onAttestation(attestation, attDataRoot, forceImport);
   }
 
   // --- DB ownership (blocks + states) ---
