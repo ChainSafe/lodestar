@@ -67,7 +67,7 @@ export function computeDeltas(
     currentIndex = voteCurrentIndices[vIndex];
     nextIndex = voteNextIndices[vIndex];
 
-   // This equivocator check MUST be the first branch in the loop body. 
+    // This equivocator check MUST be the first branch in the loop body. 
     // Handle equivocating (attester-slashed) validators before the no-live-vote check so the sorted
     // cursor always advances; a jammed cursor would skip the discount for higher-index equivocators.
     if (vIndex === equivocatingValidatorIndex) {
