@@ -33,11 +33,13 @@ export function processBuilderDepositRequest(
 
   const builder = state.builders.get(builderIndex);
 
-  // Increase balance by deposit amount
-  builder.balance += amount;
-
-  // If exited, reset the withdrawable epoch
-  if (builder.withdrawableEpoch !== FAR_FUTURE_EPOCH) {
+  // If the builder has exited and been fully swept (balance drained to 0), reset the
+  // withdrawable epoch so this top-up becomes withdrawable again. Must run before the
+  // balance increase, since the reset is gated on the current balance being 0.
+  if (builder.withdrawableEpoch !== FAR_FUTURE_EPOCH && builder.balance === 0) {
     builder.withdrawableEpoch = computeEpochAtSlot(state.slot) + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY;
   }
+
+  // Increase balance by deposit amount
+  builder.balance += amount;
 }
