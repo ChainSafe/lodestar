@@ -411,6 +411,10 @@ export function createValidatorMonitor(
           validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss.inc();
         }
 
+        // Note: correct-head, inclusion-distance and attester hit/miss accounting lives in
+        // onceEveryEndOfEpoch(): that data is gossip-derived post-altair, and this function
+        // is never called when the native (Zig) state transition records the status metrics.
+        // inclusionDistance is only computed here for logging.
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
         const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
         const inclusionDistance =
@@ -421,13 +425,6 @@ export function createValidatorMonitor(
               ? // phase0, this is from the state transition
                 summary.inclusionDistance
               : null;
-
-        if (inclusionDistance !== null) {
-          validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
-          validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
-        } else {
-          validatorMonitorMetrics?.prevEpochOnChainAttesterMiss.inc();
-        }
 
         const balance = balances?.[index];
         if (balance !== undefined) {
@@ -779,13 +776,27 @@ export function createValidatorMonitor(
       if (prevEpoch > lastCorrectHeadRegisteredEpoch) {
         lastCorrectHeadRegisteredEpoch = prevEpoch;
         for (const validator of validators.values()) {
-          const attestationCorrectHead = validator.summaries.get(prevEpoch)?.attestationCorrectHead;
+          const summary = validator.summaries.get(prevEpoch);
+
+          const attestationCorrectHead = summary?.attestationCorrectHead;
           if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
             if (attestationCorrectHead) {
               validatorMonitorMetrics?.prevOnChainAttesterCorrectHead.inc();
             } else {
               validatorMonitorMetrics?.prevOnChainAttesterIncorrectHead.inc();
             }
+          }
+
+          // Inclusion distance and attester hit/miss are gossip-derived (min observed
+          // block inclusion distance of the validator's attestations). They are reported
+          // here rather than in registerValidatorStatuses() so they also work when the
+          // native (Zig) state transition records the epoch-status metrics.
+          const inclusionDistance = summary?.attestationMinBlockInclusionDistance;
+          if (inclusionDistance != null && inclusionDistance > 0) {
+            validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
+            validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
+          } else {
+            validatorMonitorMetrics?.prevEpochOnChainAttesterMiss.inc();
           }
         }
       }
@@ -1205,8 +1216,10 @@ export class RootHexCache {
 }
 
 function createValidatorMonitorMetrics(register: RegistryMetricCreator, nativeStatusMetrics = false) {
-  // The epoch-status metrics below are recorded by the native (Zig) state transition
-  // when it is enabled (see `registerValidatorStatuses` in lodestar-z)
+  // The state-derived status metrics (source/head/target attester hit/miss, on-chain
+  // balance) are recorded by the native (Zig) state transition when it is enabled (see
+  // `registerValidatorStatuses` in lodestar-z). Gossip-derived metrics (inclusion
+  // distance, attester hit/miss, correct head) stay TS-owned in both modes.
   const statusRegister: MetricsRegister = nativeStatusMetrics ? unregisteredMetrics : register;
 
   return {
@@ -1231,11 +1244,11 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator, nativeSt
       name: "validator_monitor_prev_epoch_on_chain_balance",
       help: "Total balance of all monitored validators after an epoch",
     }),
-    prevEpochOnChainAttesterHit: statusRegister.gauge({
+    prevEpochOnChainAttesterHit: register.gauge({
       name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
       help: "Incremented if validator's submitted attestation is included in some blocks",
     }),
-    prevEpochOnChainAttesterMiss: statusRegister.gauge({
+    prevEpochOnChainAttesterMiss: register.gauge({
       name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
       help: "Incremented if validator's submitted attestation is not included in any blocks",
     }),
@@ -1271,7 +1284,7 @@ function createValidatorMonitorMetrics(register: RegistryMetricCreator, nativeSt
       name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
       help: "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
     }),
-    prevEpochOnChainInclusionDistance: statusRegister.histogram({
+    prevEpochOnChainInclusionDistance: register.histogram({
       name: "validator_monitor_prev_epoch_on_chain_inclusion_distance",
       help: "The attestation inclusion distance calculated during per epoch processing",
       // min inclusion distance is 1, usual values are 1,2,3 max is 32 (1 epoch)
