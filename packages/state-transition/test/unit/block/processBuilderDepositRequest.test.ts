@@ -2,7 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {
-  BUILDER_WITHDRAWAL_PREFIX_MIN,
+  BUILDER_WITHDRAWAL_PREFIX_MAX,
   FAR_FUTURE_EPOCH,
   ForkName,
   PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
@@ -35,6 +35,7 @@ vi.mock("../../../src/util/gloas.js", async (importOriginal) => {
 
 const {processBuilderDepositRequest} = await import("../../../src/block/processBuilderDepositRequest.js");
 const {createCachedBeaconState, createPubkeyCache} = await import("../../../src/index.js");
+const PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES = Uint8Array.from([PAYLOAD_BUILDER_WITHDRAWAL_PREFIX]);
 
 function buildGloasState(slot = 0) {
   const config = getConfig(ForkName.gloas);
@@ -57,7 +58,7 @@ function buildGloasState(slot = 0) {
 
 function makeBuilderWithdrawalCredentials(
   executionAddress: Uint8Array,
-  prefix = PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0]
+  prefix = PAYLOAD_BUILDER_WITHDRAWAL_PREFIX
 ): Uint8Array {
   const creds = new Uint8Array(32);
   creds[0] = prefix;
@@ -71,7 +72,7 @@ function makeBuilderDepositRequest({
   amount = 1_000_000_000,
   signatureFirstByte = 1, // 1 => valid via mock, anything else => invalid
   withdrawalCredentials,
-  prefix = PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0],
+  prefix = PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
 }: {
   pubkey?: Uint8Array;
   executionAddress?: Uint8Array;
@@ -108,19 +109,19 @@ describe("processBuilderDepositRequest", () => {
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(32_000_000_000);
     expect(builder.executionAddress).toEqual(request.withdrawalCredentials.subarray(12));
-    expect(builder.version).toEqual(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX);
+    expect(builder.version).toEqual(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES);
     expect(builder.withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
   });
 
-  it("registers a new builder with the prefix from the withdrawal credentials", () => {
+  it("registers a new builder with the max builder withdrawal prefix", () => {
     const state = buildGloasState(1);
-    const request = makeBuilderDepositRequest({prefix: BUILDER_WITHDRAWAL_PREFIX_MIN + 1});
+    const request = makeBuilderDepositRequest({prefix: BUILDER_WITHDRAWAL_PREFIX_MAX});
 
     processBuilderDepositRequest(state, request);
 
     expect(isValidBuilderDepositSignatureMock).toHaveBeenCalledTimes(1);
     expect(state.builders.length).toBe(1);
-    expect(state.builders.get(0).version).toEqual(Uint8Array.from([0xb1]));
+    expect(state.builders.get(0).version).toEqual(Uint8Array.from([BUILDER_WITHDRAWAL_PREFIX_MAX]));
   });
 
   it.each([
@@ -156,7 +157,7 @@ describe("processBuilderDepositRequest", () => {
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
+        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES,
         executionAddress: originalAddress,
         balance: 32_000_000_000,
         depositEpoch: 0,
@@ -181,7 +182,7 @@ describe("processBuilderDepositRequest", () => {
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(33_000_000_000);
     expect(builder.executionAddress).toEqual(originalAddress);
-    expect(builder.version).toEqual(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX);
+    expect(builder.version).toEqual(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES);
   });
 
   it("resets the withdrawable epoch when topping up an exited, fully-swept builder", () => {
@@ -194,7 +195,7 @@ describe("processBuilderDepositRequest", () => {
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
+        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES,
         executionAddress,
         balance: 0,
         depositEpoch: 0,
@@ -223,7 +224,7 @@ describe("processBuilderDepositRequest", () => {
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
+        version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES,
         executionAddress,
         balance: 1_000_000_000,
         depositEpoch: 0,

@@ -19,7 +19,7 @@ describe("util / gloas", () => {
     }
 
     it("detects only the exact fork-time builder withdrawal credential", () => {
-      expect(isBuilderWithdrawalCredential(credentials(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0]))).toBe(true);
+      expect(isBuilderWithdrawalCredential(credentials(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX))).toBe(true);
       expect(isBuilderWithdrawalCredential(credentials(BUILDER_WITHDRAWAL_PREFIX_MAX))).toBe(false);
       expect(isBuilderWithdrawalCredential(credentials(0xaf))).toBe(false);
       expect(isBuilderWithdrawalCredential(credentials(0xb2))).toBe(false);

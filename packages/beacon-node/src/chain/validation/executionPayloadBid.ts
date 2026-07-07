@@ -9,7 +9,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {ValidatorIndex, gloas} from "@lodestar/types";
-import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toHexByte, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -142,12 +142,12 @@ async function validateExecutionPayloadBid(
 
   // [REJECT] The builder version is `PAYLOAD_BUILDER_WITHDRAWAL_PREFIX` -- i.e.
   // `state.builders[bid.builder_index].version == PAYLOAD_BUILDER_WITHDRAWAL_PREFIX`.
-  if (!byteArrayEquals(builder.version, PAYLOAD_BUILDER_WITHDRAWAL_PREFIX)) {
+  if (builder.version[0] !== PAYLOAD_BUILDER_WITHDRAWAL_PREFIX) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION,
       builderIndex: bid.builderIndex,
       version: toHex(builder.version),
-      expectedVersion: toHex(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX),
+      expectedVersion: toHexByte(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX),
     });
   }
 

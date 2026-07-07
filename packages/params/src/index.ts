@@ -141,14 +141,13 @@ export const JUSTIFICATION_BITS_LENGTH = 4;
 export const ZERO_HASH = Buffer.alloc(32, 0);
 export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 
-// Withdrawal prefixes
-// Since the prefixes are just 1 byte, we define and use them as number
+// Single-byte constants are represented as numbers for Lodestar call sites.
 export const BLS_WITHDRAWAL_PREFIX = 0x00;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
 export const BUILDER_WITHDRAWAL_PREFIX_MIN = 0xb0;
 export const BUILDER_WITHDRAWAL_PREFIX_MAX = 0xb1;
-export const PAYLOAD_BUILDER_WITHDRAWAL_PREFIX = Uint8Array.from([BUILDER_WITHDRAWAL_PREFIX_MIN]);
+export const PAYLOAD_BUILDER_WITHDRAWAL_PREFIX = 0xb0;
 
 // Domain types
 

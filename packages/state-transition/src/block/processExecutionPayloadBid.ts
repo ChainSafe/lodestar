@@ -6,7 +6,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {gloas, ssz} from "@lodestar/types";
-import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {byteArrayEquals, toHex, toHexByte, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
 import {CachedBeaconStateGloas} from "../types.js";
@@ -39,9 +39,9 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the builder is a payload builder
-    if (!byteArrayEquals(builder.version, PAYLOAD_BUILDER_WITHDRAWAL_PREFIX)) {
+    if (builder.version[0] !== PAYLOAD_BUILDER_WITHDRAWAL_PREFIX) {
       throw Error(
-        `Invalid execution payload bid: builder ${builderIndex} version ${toHex(builder.version)} != ${toHex(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX)}`
+        `Invalid execution payload bid: builder ${builderIndex} version ${toHex(builder.version)} != ${toHexByte(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX)}`
       );
     }
 

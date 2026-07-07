@@ -96,6 +96,7 @@ export {
   bytesToInt,
   fromHexInto,
   intToBytes,
+  toHexByte,
   toHexString,
   xor,
 } from "./browser.js";

@@ -60,6 +60,7 @@ import {
   WITHDRAWAL_REQUEST_TYPE,
   ZERO_HASH_HEX,
 } from "@lodestar/params";
+import {toHexByte} from "@lodestar/utils";
 
 /**
  * Hand-picked list of constants declared in consensus-spec .md files.
@@ -82,7 +83,7 @@ export const specConstants = {
   COMPOUNDING_WITHDRAWAL_PREFIX: toHexByte(COMPOUNDING_WITHDRAWAL_PREFIX),
   BUILDER_WITHDRAWAL_PREFIX_MIN: toHexByte(BUILDER_WITHDRAWAL_PREFIX_MIN),
   BUILDER_WITHDRAWAL_PREFIX_MAX: toHexByte(BUILDER_WITHDRAWAL_PREFIX_MAX),
-  PAYLOAD_BUILDER_WITHDRAWAL_PREFIX: toHexByte(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX[0]),
+  PAYLOAD_BUILDER_WITHDRAWAL_PREFIX: toHexByte(PAYLOAD_BUILDER_WITHDRAWAL_PREFIX),
   // ## Domain types
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_BEACON_ATTESTER,
@@ -151,11 +152,3 @@ export const specConstants = {
   BUILDER_DEPOSIT_REQUEST_TYPE: toHexByte(BUILDER_DEPOSIT_REQUEST_TYPE),
   BUILDER_EXIT_REQUEST_TYPE: toHexByte(BUILDER_EXIT_REQUEST_TYPE),
 };
-
-/** Convert single-byte numbers to hex strings for API spec compliance */
-function toHexByte(n: number): string {
-  if (n < 0 || n > 255 || !Number.isInteger(n)) {
-    throw new Error("toHexByte expected a single-byte integer, but received " + n);
-  }
-  return "0x" + n.toString(16).padStart(2, "0");
-}

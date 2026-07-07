@@ -33,6 +33,7 @@ function buildGloasState({slot = 0, finalizedEpoch = 0}: {slot?: number; finaliz
 const PUBKEY = Uint8Array.from({length: 48}, (_, i) => i + 1);
 const EXEC_ADDRESS = Uint8Array.from({length: 20}, (_, i) => i + 1);
 const OTHER_EXEC_ADDRESS = Uint8Array.from({length: 20}, () => 0xff);
+const PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES = Uint8Array.from([PAYLOAD_BUILDER_WITHDRAWAL_PREFIX]);
 
 function pushBuilder(
   state: ReturnType<typeof buildGloasState>["state"],
@@ -53,7 +54,7 @@ function pushBuilder(
   state.builders.push(
     ssz.gloas.Builder.toViewDU({
       pubkey,
-      version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
+      version: PAYLOAD_BUILDER_WITHDRAWAL_PREFIX_BYTES,
       executionAddress,
       balance,
       depositEpoch,

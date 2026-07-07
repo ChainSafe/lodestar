@@ -153,7 +153,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     addBuilderToRegistry(
       state,
       deposit.pubkey,
-      PAYLOAD_BUILDER_WITHDRAWAL_PREFIX,
+      Uint8Array.from([PAYLOAD_BUILDER_WITHDRAWAL_PREFIX]),
       deposit.withdrawalCredentials.subarray(12),
       deposit.amount,
       deposit.slot

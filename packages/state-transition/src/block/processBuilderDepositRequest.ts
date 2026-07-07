@@ -31,7 +31,7 @@ export function processBuilderDepositRequest(
       addBuilderToRegistry(
         state,
         pubkey,
-        withdrawalCredentials.slice(0, 1),
+        withdrawalCredentials.subarray(0, 1),
         withdrawalCredentials.subarray(12),
         amount,
         state.slot

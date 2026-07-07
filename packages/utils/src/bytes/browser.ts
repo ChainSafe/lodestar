@@ -12,6 +12,16 @@ export function toHex(bytes: Uint8Array): string {
   return String.fromCharCode(...charCodes);
 }
 
+/**
+ * Convert a single-byte number to a 0x-prefixed hex string.
+ */
+export function toHexByte(n: number): string {
+  if (n < 0 || n > 255 || !Number.isInteger(n)) {
+    throw new Error("toHexByte expected a single-byte integer, but received " + n);
+  }
+  return "0x" + n.toString(16).padStart(2, "0");
+}
+
 const rootCharCodes = new Array<number>(32 * 2 + 2);
 rootCharCodes[0] = CHAR_CODE_0;
 rootCharCodes[1] = CHAR_CODE_X;

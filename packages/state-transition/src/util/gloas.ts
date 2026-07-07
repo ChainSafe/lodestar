@@ -30,7 +30,7 @@ import {computeSigningRoot} from "./signingRoot.js";
 import {getActiveValidatorIndices} from "./validator.js";
 
 export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array): boolean {
-  return byteArrayEquals(withdrawalCredentials.subarray(0, 1), PAYLOAD_BUILDER_WITHDRAWAL_PREFIX);
+  return withdrawalCredentials[0] === PAYLOAD_BUILDER_WITHDRAWAL_PREFIX;
 }
 
 export function hasBuilderWithdrawalCredentialPrefix(withdrawalCredentials: Uint8Array): boolean {
