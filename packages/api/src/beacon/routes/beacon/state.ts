@@ -38,6 +38,7 @@ export type StateArgs = {
 };
 
 export type ValidatorId = string | number;
+export type BuilderId = string | number;
 
 export type {BuilderStatus, ValidatorStatus};
 
@@ -229,7 +230,7 @@ export type Endpoints = {
     "POST",
     StateArgs & {
       /** Either hex encoded public key (any bytes48 with 0x prefix) or builder index */
-      builderIds?: ValidatorId[];
+      builderIds?: BuilderId[];
       statuses?: BuilderStatus[];
     },
     {params: {state_id: string}; body: {ids?: string[]; statuses?: BuilderStatus[]}},
