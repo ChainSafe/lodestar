@@ -840,7 +840,7 @@ export function getPayloadAttributesForSSE(
   } as SSEPayloadAttributes;
 
   if (!isForkPostGloas(fork)) {
-    // Removed in Gloas, ELs can get the parent block number from the parent block hash
+    // Removed in Gloas, builders can get the parent block number from the EL via the parent block hash
     (ssePayloadAttributes as bellatrix.SSEPayloadAttributes).parentBlockNumber = prepareState.payloadBlockNumber;
   }
 
