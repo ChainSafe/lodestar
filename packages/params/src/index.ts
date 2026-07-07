@@ -146,7 +146,7 @@ export const ZERO_HASH_HEX = "0x" + "00".repeat(32);
 export const BLS_WITHDRAWAL_PREFIX = 0x00;
 export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = 0x01;
 export const COMPOUNDING_WITHDRAWAL_PREFIX = 0x02;
-export const BUILDER_WITHDRAWAL_PREFIX = 0x03;
+export const BUILDER_WITHDRAWAL_PREFIX = 0xb0;
 
 // Builder version
 export const PAYLOAD_BUILDER_VERSION = 0;
