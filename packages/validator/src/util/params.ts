@@ -332,7 +332,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
-    MAX_SIGNED_BEACON_BLOCK_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
 
     // FastConfirmationRule
