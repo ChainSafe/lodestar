@@ -1,13 +1,4 @@
-import {
-  ForkPostGloas,
-  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
-  MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
-  SLOTS_PER_EPOCH,
-  SLOTS_PER_HISTORICAL_ROOT,
-} from "@lodestar/params";
+import {ForkPostGloas, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconBlock, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex} from "@lodestar/utils";
 import {CachedBeaconStateGloas} from "../types.js";
@@ -56,8 +47,6 @@ export function processParentExecutionPayload(state: CachedBeaconStateGloas, blo
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.6/specs/gloas/beacon-chain.md#new-apply_parent_execution_payload
  */
 export function applyParentExecutionPayload(state: CachedBeaconStateGloas, requests: gloas.ExecutionRequests): void {
-  assertExecutionRequestsWithinLimits(requests);
-
   const fork = state.config.getForkSeq(state.slot);
   const parentBid = state.latestExecutionPayloadBid;
   const parentSlot = parentBid.slot;
@@ -125,22 +114,6 @@ function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: numbe
     state.builderPendingWithdrawals.push(payment.withdrawal);
   }
   state.builderPendingPayments.set(paymentIndex, ssz.gloas.BuilderPendingPayment.defaultViewDU());
-}
-
-function assertExecutionRequestsWithinLimits(requests: gloas.ExecutionRequests): void {
-  assertMaxLength("deposits", requests.deposits.length, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD);
-  assertMaxLength("withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
-  assertMaxLength("consolidations", requests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD);
-  // New in GLOAS:EIP8282
-  assertMaxLength("builderDeposits", requests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD);
-  // New in GLOAS:EIP8282
-  assertMaxLength("builderExits", requests.builderExits.length, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD);
-}
-
-function assertMaxLength(name: string, length: number, limit: number): void {
-  if (length > limit) {
-    throw new Error(`Too many parent execution request ${name} count=${length} limit=${limit}`);
-  }
 }
 
 function assertEmptyExecutionRequests(requests: gloas.ExecutionRequests): void {
