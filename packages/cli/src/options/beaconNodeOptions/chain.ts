@@ -244,6 +244,12 @@ Will double processing times. Use only for debugging purposes.",
     type: "number",
     description: "Fallback gas limit for when no proposer preferences are available",
     group: "chain",
+    coerce: (value: number): number => {
+      if (value <= 0 || !Number.isInteger(value)) {
+        throw new Error("chain.targetGasLimit must be a positive integer");
+      }
+      return value;
+    },
   },
 
   "chain.assertCorrectProgressiveBalances": {
