@@ -8,6 +8,7 @@ import {
   ListBasicType,
   ListCompositeType,
   ProgressiveBitListType,
+  ProgressiveByteListType,
   ProgressiveContainerType,
   ProgressiveListBasicType,
   ProgressiveListCompositeType,
@@ -85,7 +86,7 @@ const ComplexTestStruct = new ContainerType({
 //     C: ProgressiveList[SmallTestStruct]
 //     D: ProgressiveList[ProgressiveList[VarTestStruct]]
 const ProgressiveTestStruct = new ContainerType({
-  A: new ProgressiveListBasicType(byte),
+  A: new ProgressiveByteListType(),
   B: new ProgressiveListBasicType(uint64),
   C: new ProgressiveListCompositeType(SmallTestStruct),
   D: new ProgressiveListCompositeType(new ProgressiveListCompositeType(VarTestStruct)),
