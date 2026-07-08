@@ -190,7 +190,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, slot: SLOTS_PER_EPOCH * 2 - 1}, // Proposal slot = block slot + 1
       expectReorg: false,
-      expectedNotReorgedReason: NotReorgedReason.NotShufflingStable,
+      expectedNotReorgedReason: NotReorgedReason.AtEpochBoundary,
     },
     {
       id: "No reorg when the blocks are not ffg competitive",

@@ -157,4 +157,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {registrations: [ssz.bellatrix.SignedValidatorRegistrationV1.defaultValue()]},
     res: undefined,
   },
+  submitProposerPreferences: {
+    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
+    res: undefined,
+  },
 };

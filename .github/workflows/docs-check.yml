@@ -29,4 +29,4 @@ jobs:
 
       # Run spellcheck AFTER building docs, in case the CLI reference has issues
       - name: Spellcheck
-        uses: rojopolis/spellcheck-github-actions@390a08ee9c46943112f21d2ff671649a2bacd33f # 0.62.0
+        uses: rojopolis/spellcheck-github-actions@e619e00ca22f01ade9d73048dcd6518bedc552f2 # 0.63.0

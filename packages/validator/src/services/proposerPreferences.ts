@@ -47,6 +47,7 @@ export class ProposerPreferencesService {
     _metrics: Metrics | null
   ) {
     clock.runEverySlot(this.runProposerPreferencesTask);
+    clock.runEveryEpoch(this.pruneSubmitted);
   }
 
   private runProposerPreferencesTask = async (slot: Slot): Promise<void> => {
@@ -117,7 +118,7 @@ export class ProposerPreferencesService {
     }
 
     try {
-      await this.api.beacon.submitSignedProposerPreferences({signedProposerPreferences: batch});
+      await this.api.validator.submitProposerPreferences({signedProposerPreferences: batch});
       // Only mark as submitted after the API call succeeds; a thrown error leaves the
       // slot eligible for retry on the next tick.
       for (const {submission, slot: submittedSlot} of pending) {
@@ -126,6 +127,15 @@ export class ProposerPreferencesService {
       this.logger.debug("Submitted signed proposer preferences", {count: batch.length});
     } catch (e) {
       this.logger.error("Error submitting signed proposer preferences", {count: batch.length}, e as Error);
+    }
+  };
+
+  /** Drop tracking for past epochs; only currentEpoch and currentEpoch + 1 are ever processed. */
+  private pruneSubmitted = async (epoch: Epoch): Promise<void> => {
+    for (const trackedEpoch of this.submitted.keys()) {
+      if (trackedEpoch < epoch) {
+        this.submitted.delete(trackedEpoch);
+      }
     }
   };
 }

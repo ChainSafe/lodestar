@@ -193,7 +193,7 @@ describe("Forkchoice / GetProposerHead", () => {
       headBlock: {...baseHeadBlock},
       expectReorg: false,
       currentSlot: SLOTS_PER_EPOCH * 2,
-      expectedNotReorgedReason: NotReorgedReason.NotShufflingStable,
+      expectedNotReorgedReason: NotReorgedReason.AtEpochBoundary,
     },
     {
       id: "No reorg when the blocks are not ffg competitive",
