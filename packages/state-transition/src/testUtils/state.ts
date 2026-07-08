@@ -16,7 +16,7 @@ import {
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
-  createPubkeyCache,
+  getNativePubkeyCache,
 } from "../index.js";
 import {newZeroedArray} from "../util/index.js";
 
@@ -88,8 +88,7 @@ export function generateCachedState(
   const state = generateState(opts);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: getNativePubkeyCache(),
   });
 }
 
@@ -102,8 +101,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     state,
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
-      // This is a test state, there's no need to have a global shared cache of keys
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache: getNativePubkeyCache(),
     },
     opts
   );

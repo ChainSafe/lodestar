@@ -19,7 +19,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createCachedBeaconState,
-  createPubkeyCache,
+  getNativePubkeyCache,
   isExecutionStateType,
   syncPubkeys,
 } from "@lodestar/state-transition";
@@ -383,7 +383,7 @@ export async function runGossipValidationTest(
     logger: testLogger("executionEngine"),
   });
 
-  const pubkeyCache = createPubkeyCache();
+  const pubkeyCache = getNativePubkeyCache();
   syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,

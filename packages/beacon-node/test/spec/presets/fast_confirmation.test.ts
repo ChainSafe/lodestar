@@ -21,7 +21,7 @@ import {
   BeaconStateView,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
+  getNativePubkeyCache,
   isExecutionStateType,
   signedBlockToSignedHeader,
   syncPubkeys,
@@ -98,7 +98,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
+        const pubkeyCache = getNativePubkeyCache();
         syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,

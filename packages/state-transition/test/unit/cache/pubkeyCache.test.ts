@@ -2,6 +2,7 @@ import path from "node:path";
 import {Worker} from "node:worker_threads";
 import {beforeAll, describe, expect, it} from "vitest";
 import {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {phase0, ssz} from "@lodestar/types";
 import {getNativePubkeyCache, syncPubkeys} from "../../../src/cache/pubkeyCache.js";
 import {interopSecretKey} from "../../../src/util/interop.js";
 
@@ -159,8 +160,8 @@ describe("Global native pubkey cache - multithreaded access", () => {
       // Verify from main thread — both get() and getIndex() directions
       for (const idx of indices) {
         const pk = cache.get(idx);
-        expect(pk).toBeDefined();
-        expect(Buffer.from(pk!.toBytes()).toString("hex")).toBe(generatePubkeyHex(idx));
+        if (pk === undefined) throw Error(`Missing pubkey for index ${idx}`);
+        expect(Buffer.from(pk.toBytes()).toString("hex")).toBe(generatePubkeyHex(idx));
 
         const sk = interopSecretKey(idx);
         expect(cache.getIndex(sk.toPublicKey().toBytes())).toBe(idx);
@@ -182,12 +183,12 @@ describe("Global native pubkey cache - multithreaded access", () => {
     const syncCount = 10;
 
     // Build a validators array for syncPubkeys
-    const validators: {pubkey: Uint8Array}[] = new Array(syncStart + syncCount);
+    const validators: phase0.Validator[] = new Array(syncStart + syncCount);
     for (let i = syncStart; i < syncStart + syncCount; i++) {
       const sk = interopSecretKey(i);
-      validators[i] = {pubkey: sk.toPublicKey().toBytes()};
+      validators[i] = {...ssz.phase0.Validator.defaultValue(), pubkey: sk.toPublicKey().toBytes()};
     }
-    syncPubkeys(cache, validators as any);
+    syncPubkeys(cache, validators);
 
     // Worker should see the newly synced entries
     const indices = Array.from({length: syncCount}, (_, i) => syncStart + i);
@@ -220,8 +221,8 @@ describe("Global native pubkey cache - multithreaded access", () => {
       // Verify from main thread
       for (const idx of indices) {
         const pk = cache.get(idx);
-        expect(pk).toBeDefined();
-        expect(Buffer.from(pk!.toBytes()).toString("hex")).toBe(generatePubkeyHex(idx));
+        if (pk === undefined) throw Error(`Missing pubkey for index ${idx}`);
+        expect(Buffer.from(pk.toBytes()).toString("hex")).toBe(generatePubkeyHex(idx));
       }
 
       // Verify from a different worker thread

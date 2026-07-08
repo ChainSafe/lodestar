@@ -2,7 +2,7 @@ import {describe, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
-import {createCachedBeaconState, createPubkeyCache} from "../../../src/index.js";
+import {createCachedBeaconState, getNativePubkeyCache} from "../../../src/index.js";
 
 describe("CachedBeaconState", () => {
   it("Create empty CachedBeaconState", () => {
@@ -10,7 +10,7 @@ describe("CachedBeaconState", () => {
 
     createCachedBeaconState(emptyState, {
       config: createBeaconConfig(config, emptyState.genesisValidatorsRoot),
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache: getNativePubkeyCache(),
     });
   });
 });

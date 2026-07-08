@@ -11,7 +11,7 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateElectra,
   createCachedBeaconState,
-  createPubkeyCache,
+  getNativePubkeyCache,
 } from "../../src/index.js";
 import {generateValidator, generateValidators} from "./validator.js";
 
@@ -107,8 +107,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: getNativePubkeyCache(),
   });
 }
 
@@ -120,8 +119,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: getNativePubkeyCache(),
   });
 }
 
@@ -133,8 +131,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a performance test, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: getNativePubkeyCache(),
   });
 }
 
@@ -146,6 +143,6 @@ export function generateCachedElectraState(opts?: TestBeaconState, electraForkEp
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: getNativePubkeyCache(),
   });
 }

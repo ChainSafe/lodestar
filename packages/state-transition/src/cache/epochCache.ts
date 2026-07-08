@@ -55,7 +55,7 @@ import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../ut
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
-import {PubkeyCache, createPubkeyCache, syncPubkeys} from "./pubkeyCache.js";
+import {PubkeyCache, getNativePubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -1113,7 +1113,6 @@ export function createEmptyEpochCacheImmutableData(
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: pubkeyCache ?? createPubkeyCache(),
+    pubkeyCache: pubkeyCache ?? getNativePubkeyCache(),
   };
 }

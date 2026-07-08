@@ -23,8 +23,8 @@ import {
   DataAvailabilityStatus,
   IBeaconStateViewGloas,
   createCachedBeaconState,
-  createPubkeyCache,
   createSingleSignatureSetFromComponents,
+  getNativePubkeyCache,
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
   isGloasStateType,
@@ -115,7 +115,7 @@ const forkChoiceTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
+        const pubkeyCache = getNativePubkeyCache();
         syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,

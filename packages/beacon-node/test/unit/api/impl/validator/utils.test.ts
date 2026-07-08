@@ -5,7 +5,7 @@ import {
   BeaconStateAllForks,
   BeaconStateView,
   createCachedBeaconState,
-  createPubkeyCache,
+  getNativePubkeyCache,
 } from "@lodestar/state-transition";
 import {BLSPubkey, ValidatorIndex, ssz} from "@lodestar/types";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
@@ -34,7 +34,7 @@ describe("api / impl / validator / utils", () => {
       state,
       {
         config: createBeaconConfig(defaultChainConfig, state.genesisValidatorsRoot),
-        pubkeyCache: createPubkeyCache(),
+        pubkeyCache: getNativePubkeyCache(),
       },
       {skipSyncPubkeys: true}
     );

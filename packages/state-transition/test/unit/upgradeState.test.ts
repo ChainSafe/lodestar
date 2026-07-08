@@ -3,7 +3,7 @@ import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodes
 import {config as chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
+import {getNativePubkeyCache} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
@@ -16,7 +16,7 @@ describe("upgradeState", () => {
       capellaState,
       {
         config: createBeaconConfig(config, capellaState.genesisValidatorsRoot),
-        pubkeyCache: createPubkeyCache(),
+        pubkeyCache: getNativePubkeyCache(),
       },
       {skipSyncCommitteeCache: true}
     );
@@ -30,7 +30,7 @@ describe("upgradeState", () => {
       denebState,
       {
         config: createBeaconConfig(config, denebState.genesisValidatorsRoot),
-        pubkeyCache: createPubkeyCache(),
+        pubkeyCache: getNativePubkeyCache(),
       },
       {skipSyncCommitteeCache: true}
     );

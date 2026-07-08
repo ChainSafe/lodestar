@@ -28,7 +28,7 @@ vi.mock("../../../src/util/gloas.js", async (importOriginal) => {
 });
 
 const {processBuilderDepositRequest} = await import("../../../src/block/processBuilderDepositRequest.js");
-const {createCachedBeaconState, createPubkeyCache} = await import("../../../src/index.js");
+const {createCachedBeaconState, getNativePubkeyCache} = await import("../../../src/index.js");
 
 function buildGloasState(slot = 0) {
   const config = getConfig(ForkName.gloas);
@@ -43,7 +43,7 @@ function buildGloasState(slot = 0) {
     view,
     {
       config: createBeaconConfig(config, view.genesisValidatorsRoot),
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache: getNativePubkeyCache(),
     },
     {skipSyncCommitteeCache: true}
   );

@@ -2,7 +2,7 @@ import {describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateView, createCachedBeaconState, createPubkeyCache} from "@lodestar/state-transition";
+import {BeaconStateView, createCachedBeaconState, getNativePubkeyCache} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
 
@@ -26,7 +26,7 @@ describe("ValidatorMonitor", () => {
     state.slot = slot;
     const cachedState = createCachedBeaconState(state, {
       config: createBeaconConfig(defaultChainConfig, state.genesisValidatorsRoot),
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache: getNativePubkeyCache(),
     });
     expect(cachedState.epochCtx.proposersPrevEpoch).toBeNull();
     return new BeaconStateView(cachedState);

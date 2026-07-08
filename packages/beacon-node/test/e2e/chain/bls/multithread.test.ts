@@ -1,7 +1,7 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ISignatureSet, SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
+import {ISignatureSet, SignatureSetType, getNativePubkeyCache} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 
@@ -13,7 +13,7 @@ describe("chain / bls / multithread queue", () => {
   const sets: ISignatureSet[] = [];
   const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
-  const pubkeyCache = createPubkeyCache();
+  const pubkeyCache = getNativePubkeyCache();
 
   beforeAll(() => {
     for (let i = 0; i < 3; i++) {

@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {ForkName} from "@lodestar/params";
-import {SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
+import {SignatureSetType, getNativePubkeyCache} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
@@ -57,7 +57,7 @@ describe("validateGossipAttestationsSameAttData", () => {
   }
 
   // Build pubkeyCache for test
-  const pubkeyCache = createPubkeyCache();
+  const pubkeyCache = getNativePubkeyCache();
   for (let i = 0; i < 10; i++) {
     pubkeyCache.set(i, getKeypair(i).publicKey.toBytes());
   }
