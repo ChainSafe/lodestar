@@ -16,6 +16,7 @@ import {
   getEquivocationScore,
   isConfirmedChainSafe,
   isOneConfirmed,
+  willCurrentTargetBeJustified,
 } from "../../../src/forkChoice/fastConfirmation/utils.js";
 import {ExecutionStatus} from "../../../src/index.js";
 import {
@@ -61,6 +62,83 @@ describe("fast confirmation", () => {
   it("adjustCommitteeWeightEstimateToEnsureSafety applies the spec safety bump in effective balance increments", () => {
     expect(adjustCommitteeWeightEstimateToEnsureSafety(999)).toBe(1004);
     expect(adjustCommitteeWeightEstimateToEnsureSafety(1001)).toBe(1007);
+  });
+
+  // Perf regression guard: computing the total active balance scans (and in production allocates)
+  // the full validator set. It is invariant per balance source within an FCR run but is read several
+  // times per is_one_confirmed evaluation, across every block of the epoch-boundary chain walk.
+  // The cache must memoize it so the full-set work happens once per run, not once per evaluation.
+  it("memoizes total active balance once per balance source across a chain walk", () => {
+    const blockCount = 32;
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT})];
+    for (let slot = 1; slot <= blockCount; slot++) {
+      blocks.push(makeBlock(slot, blocks[slot - 1].blockRoot));
+    }
+
+    const baseState = makeState(256, 32, [1 as Slot]);
+    let zeroInactiveCalls = 0;
+    const state = {
+      ...baseState,
+      getEffectiveBalanceIncrementsZeroInactive: () => {
+        zeroInactiveCalls++;
+        return baseState.effectiveBalanceIncrements;
+      },
+    } as typeof baseState;
+    const balanceSource = {state, balances: state.effectiveBalanceIncrements};
+
+    const head = blocks[blockCount];
+    const currentSlot = (blockCount + 1) as Slot;
+    const store = makeStore(head.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, head.blockRoot, head.blockRoot, state);
+    const ctx = makeContext(
+      currentSlot,
+      head.blockRoot,
+      blocks,
+      latestMessagesFor(256, head.blockRoot, 0),
+      {epoch: 0, rootHex: ZERO_ROOT},
+      state
+    );
+
+    // Evaluate every block on the chain with the same per-run cache, mirroring the per-block
+    // is_one_confirmed calls of the chain-safety walk / descendant search at an epoch boundary.
+    const cache = createFastConfirmationCache();
+    for (let slot = 1; slot <= blockCount; slot++) {
+      computeSafetyThreshold(ctx, store, cache, balanceSource, blocks[slot].blockRoot);
+    }
+
+    // Memoized: one full-set computation per balance source per run, regardless of block count.
+    // Without the fix this is ~3 per evaluation (≈ 3 * blockCount).
+    expect(zeroInactiveCalls).toBe(1);
+  });
+
+  it("memoizes total active balance across current-target justification checks", () => {
+    const block = makeBlock(1, ZERO_ROOT);
+    const blocks = [makeBlock(0, ZERO_ROOT, {blockRoot: ZERO_ROOT}), block];
+
+    const baseState = makeState(256, 32, [1 as Slot]);
+    let zeroInactiveCalls = 0;
+    const state = {
+      ...baseState,
+      getEffectiveBalanceIncrementsZeroInactive: () => {
+        zeroInactiveCalls++;
+        return baseState.effectiveBalanceIncrements;
+      },
+    } as typeof baseState;
+
+    const store = makeStore(block.blockRoot, ZERO_ROOT, ZERO_ROOT, 0, 0, ZERO_ROOT, block.blockRoot, state);
+    const ctx = makeContext(
+      2 as Slot,
+      block.blockRoot,
+      blocks,
+      latestMessagesFor(256, block.blockRoot, 0),
+      {epoch: 0, rootHex: block.blockRoot},
+      state
+    );
+    const cache = createFastConfirmationCache();
+
+    expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
+    expect(willCurrentTargetBeJustified(ctx, store, cache)).toBe(true);
+
+    expect(zeroInactiveCalls).toBe(1);
   });
 
   it("isOneConfirmed returns true only when support exceeds the computed threshold", () => {

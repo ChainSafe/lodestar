@@ -14,6 +14,7 @@ export function createFastConfirmationCache(): FastConfirmationCache {
     committeeBySlot: new Map(),
     isDescendantByRootPair: new Map(),
     voteWeightBySource: new Map(),
+    totalActiveBalanceByKey: new Map(),
     checkpointStateByKey: new Map(),
   };
 }
