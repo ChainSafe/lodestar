@@ -92,6 +92,54 @@ describe("Gloas Fork Choice", () => {
     });
   });
 
+  describe("getPayloadRevealCounts", () => {
+    it("counts gloas blocks and revealed payloads within slot range", () => {
+      const currentSlot = gloasForkSlot + 2;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      const gloasBlocks = [
+        createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot),
+        createTestBlock(gloasForkSlot + 1, "0x03", genesisRoot, genesisRoot),
+        createTestBlock(gloasForkSlot + 2, "0x04", genesisRoot, genesisRoot),
+      ];
+      for (const block of gloasBlocks) {
+        protoArray.onBlock(block, currentSlot, null);
+      }
+      // Reveal payloads for the first two blocks only
+      for (const blockRoot of ["0x02", "0x03"]) {
+        protoArray.onExecutionPayload(
+          blockRoot,
+          currentSlot,
+          `${blockRoot}ff`,
+          1,
+          30000000,
+          null,
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
+        );
+      }
+
+      // Pre-gloas anchor block is not counted
+      expect(protoArray.getPayloadRevealCounts(0, currentSlot)).toEqual({blocksPresent: 3, payloadsRevealed: 2});
+      // Slot range bounds are inclusive
+      expect(protoArray.getPayloadRevealCounts(gloasForkSlot + 1, gloasForkSlot + 1)).toEqual({
+        blocksPresent: 1,
+        payloadsRevealed: 1,
+      });
+      expect(protoArray.getPayloadRevealCounts(gloasForkSlot + 2, currentSlot + 10)).toEqual({
+        blocksPresent: 1,
+        payloadsRevealed: 0,
+      });
+      expect(protoArray.getPayloadRevealCounts(currentSlot + 1, currentSlot + 10)).toEqual({
+        blocksPresent: 0,
+        payloadsRevealed: 0,
+      });
+    });
+  });
+
   describe("Pre-Gloas (Fulu) behavior", () => {
     let protoArray: ProtoArray;
 

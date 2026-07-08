@@ -589,6 +589,10 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.slot > windowStart).length;
   }
 
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
+    return this.protoArray.getPayloadRevealCounts(fromSlot, toSlot);
+  }
+
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
   getHeads(): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);

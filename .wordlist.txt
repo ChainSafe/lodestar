@@ -169,6 +169,7 @@ flamegraphs
 floodsub
 fsSL
 getNetworkIdentity
+gloas
 gnosis
 gpg
 heapdump

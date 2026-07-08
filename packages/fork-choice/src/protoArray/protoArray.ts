@@ -673,6 +673,26 @@ export class ProtoArray {
   }
 
   /**
+   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
+   * payload (FULL variant exists). Used by the builder circuit breaker.
+   */
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
+    let blocksPresent = 0;
+    let payloadsRevealed = 0;
+    for (const node of this.nodes) {
+      // Count each gloas block once via its PENDING variant, pre-gloas nodes are FULL only
+      if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
+        continue;
+      }
+      blocksPresent++;
+      if (this.getNodeIndexByRootAndStatus(node.blockRoot, PayloadStatus.FULL) !== undefined) {
+        payloadsRevealed++;
+      }
+    }
+    return {blocksPresent, payloadsRevealed};
+  }
+
+  /**
    * Update PTC votes for multiple validators attesting to a block
    * Spec: gloas/fork-choice.md#new-notify_ptc_messages
    */
