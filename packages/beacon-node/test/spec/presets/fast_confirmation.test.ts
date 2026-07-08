@@ -4,7 +4,7 @@ import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
@@ -20,10 +20,13 @@ import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
   BeaconStateView,
+  DataAvailabilityStatus,
+  IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
   createPubkeyCache,
   isExecutionStateType,
+  isGloasStateType,
   signedBlockToSignedHeader,
   syncPubkeys,
 } from "@lodestar/state-transition";
@@ -35,6 +38,7 @@ import {
   SignedBeaconBlock,
   deneb,
   fulu,
+  gloas,
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
@@ -47,6 +51,10 @@ import {
   BlockInputSource,
 } from "../../../src/chain/blocks/blockInput/index.ts";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.ts";
+import {
+  verifyExecutionPayloadEnvelope,
+  verifyExecutionPayloadEnvelopeSignature,
+} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.ts";
 import {defaultChainOptions} from "../../../src/chain/options.ts";
 import {RegenCaller} from "../../../src/chain/regen/index.ts";
@@ -92,9 +100,11 @@ const fastConfirmationTest =
         const clock = new ClockStopped(currentSlot);
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
-          genesisBlockHash: isExecutionStateType(anchorState)
-            ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
-            : ZERO_HASH_HEX,
+          genesisBlockHash: isGloasStateType(anchorState)
+            ? toHexString(anchorState.latestBlockHash)
+            : isExecutionStateType(anchorState)
+              ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
+              : ZERO_HASH_HEX,
         });
 
         const controller = new AbortController();
@@ -398,6 +408,64 @@ const fastConfirmationTest =
               }
             }
 
+            // execution_payload step for Gloas tests
+            else if (isExecutionPayload(step)) {
+              const isValid = Boolean(step.valid ?? true);
+              logger.debug(`Step ${i}/${stepsLen} execution_payload`, {
+                envelope: step.execution_payload,
+                valid: isValid,
+              });
+              const envelope = testcase.executionPayloadEnvelopes.get(step.execution_payload);
+              if (!envelope) throw Error(`No execution payload envelope ${step.execution_payload}`);
+
+              try {
+                const beaconBlockRoot = toHex(envelope.message.beaconBlockRoot);
+                const blockHash = toHex(envelope.message.payload.blockHash);
+                const blockNumber = envelope.message.payload.blockNumber;
+                const gasLimit = envelope.message.payload.gasLimit;
+
+                const protoBlock = chain.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
+                if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
+                const blockState = await chain.regen.getBlockSlotState(
+                  protoBlock,
+                  protoBlock.slot,
+                  {dontTransferCache: true},
+                  RegenCaller.processBlock
+                );
+                verifyExecutionPayloadEnvelope(beaconConfig, blockState as IBeaconStateViewGloas, envelope.message);
+
+                if (testcase.meta?.bls_setting === BigInt(1)) {
+                  const sigValid = await verifyExecutionPayloadEnvelopeSignature(
+                    beaconConfig,
+                    blockState as IBeaconStateViewGloas,
+                    pubkeyCache,
+                    envelope,
+                    blockState.latestBlockHeader.proposerIndex,
+                    chain.bls
+                  );
+                  if (!sigValid) throw Error("Invalid execution payload envelope signature");
+                }
+
+                executionEngineBackend.addPredefinedPayloadStatus(blockHash, {
+                  status: ExecutionPayloadStatus.VALID,
+                  latestValidHash: null,
+                  validationError: null,
+                });
+
+                (chain.forkChoice as ForkChoice).onExecutionPayload(
+                  beaconBlockRoot,
+                  blockHash,
+                  blockNumber,
+                  gasLimit,
+                  ExecutionStatus.Valid,
+                  DataAvailabilityStatus.Available
+                );
+                if (!isValid) throw Error("Expect error since this is a negative test");
+              } catch (e) {
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
+              }
+            }
+
             // Optional step for optimistic sync tests.
             else if (isOnPayloadInfoStep(step)) {
               logger.debug(`Step ${i}/${stepsLen} payload_status`, {blockHash: step.block_hash});
@@ -544,6 +612,7 @@ const fastConfirmationTest =
           const blocks = new Map<string, SignedBeaconBlock>();
           const blobs = new Map<string, deneb.Blobs>();
           const columns = new Map<string, fulu.DataColumnSidecar>();
+          const executionPayloadEnvelopes = new Map<string, gloas.SignedExecutionPayloadEnvelope>();
           const attestations = new Map<string, Attestation>();
           const attesterSlashings = new Map<string, AttesterSlashing>();
           for (const key in t) {
@@ -560,6 +629,10 @@ const fastConfirmationTest =
             const columnMatch = key.match(COLUMN_FILE_NAME);
             if (columnMatch) {
               columns.set(key, t[key]);
+            }
+            const envelopeMatch = key.match(EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME);
+            if (envelopeMatch) {
+              executionPayloadEnvelopes.set(key, t[key]);
             }
             const attMatch = key.match(ATTESTATION_FILE_NAME);
             if (attMatch) {
@@ -578,6 +651,7 @@ const fastConfirmationTest =
             blocks,
             blobs,
             columns,
+            executionPayloadEnvelopes,
             attestations,
             attesterSlashings,
           };
@@ -617,7 +691,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnPayloadInfo | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnExecutionPayloadEnvelope | OnPayloadInfo | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
@@ -654,6 +728,13 @@ type OnBlock = {
   blobs?: string;
   proofs?: string[];
   columns?: string[];
+  /** optional, default to `true`. */
+  valid?: number;
+};
+
+type OnExecutionPayloadEnvelope = {
+  /** the name of the execution_payload_envelope file */
+  execution_payload: string;
   /** optional, default to `true`. */
   valid?: number;
 };
@@ -708,6 +789,7 @@ type FastConfirmationTestCase = {
   blocks: Map<string, SignedBeaconBlock>;
   blobs: Map<string, deneb.Blobs>;
   columns: Map<string, fulu.DataColumnSidecar>;
+  executionPayloadEnvelopes: Map<string, gloas.SignedExecutionPayloadEnvelope>;
   attestations: Map<string, Attestation>;
   attesterSlashings: Map<string, AttesterSlashing>;
 };
@@ -726,6 +808,10 @@ function isAttesterSlashing(step: Step): step is OnAttesterSlashing {
 
 function isBlock(step: Step): step is OnBlock {
   return typeof (step as OnBlock).block === "string";
+}
+
+function isExecutionPayload(step: Step): step is OnExecutionPayloadEnvelope {
+  return typeof (step as OnExecutionPayloadEnvelope).execution_payload === "string";
 }
 
 function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
