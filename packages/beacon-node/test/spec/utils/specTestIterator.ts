@@ -75,7 +75,7 @@ export const defaultSkipOpts: SkipOpts = {
     /^.+\/light_client\/data_collection\/.*/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
-    /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
     /^gloas\/light_client\/sync\/.*/,

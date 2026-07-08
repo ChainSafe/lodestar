@@ -71,6 +71,7 @@ const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const BLOBS_FILE_NAME = "^(blobs)_([0-9a-zA-Z]+)$";
 const COLUMN_FILE_NAME = "^(column)_([0-9a-zA-Z]+)$";
+const EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME = "^(execution_payload_envelope)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 const ATTESTER_SLASHING_FILE_NAME = "^(attester_slashing)_([0-9a-zA-Z])+$";
 
@@ -534,6 +535,7 @@ const fastConfirmationTest =
           [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
           [BLOBS_FILE_NAME]: ssz.deneb.Blobs,
           [COLUMN_FILE_NAME]: ssz.fulu.DataColumnSidecar,
+          [EXECUTION_PAYLOAD_ENVELOPE_FILE_NAME]: ssz.gloas.SignedExecutionPayloadEnvelope,
           [ATTESTATION_FILE_NAME]: sszTypesFor(fork).Attestation,
           [ATTESTER_SLASHING_FILE_NAME]: sszTypesFor(fork).AttesterSlashing,
         },
