@@ -24,7 +24,7 @@ export interface PubkeyCache {
  * Extended pubkey cache backed by the native lodestar-z singleton.
  * Adds persistence (load/save) and pre-allocation (ensureCapacity).
  */
-export interface GlobalPubkeyCache extends PubkeyCache {
+export interface PersistentPubkeyCache extends PubkeyCache {
   /** Load pubkey cache state from a file */
   load(filepath: string): void;
   /** Save pubkey cache state to a file */
@@ -84,7 +84,7 @@ export function createPubkeyCache(): PubkeyCache {
  * Get the global native pubkey cache singleton backed by lodestar-z.
  * This is the production pubkey cache — shared across the entire process (including workers).
  */
-export function getPubkeyCache(): GlobalPubkeyCache {
+export function getPubkeyCache(): PersistentPubkeyCache {
   return pubkeyCache;
 }
 
