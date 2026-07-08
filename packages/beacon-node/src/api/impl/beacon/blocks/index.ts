@@ -867,13 +867,6 @@ export function getBeaconBlockApi({
         throw bidValidation.error ?? new ApiError(400, `Invalid execution payload bid: ${bidValidation.code}`);
       }
 
-      try {
-        const insertOutcome = chain.beaconEngine.addExecutionPayloadBid(signedExecutionPayloadBid);
-        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
-
       const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
 
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {

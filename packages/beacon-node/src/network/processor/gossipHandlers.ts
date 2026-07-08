@@ -79,14 +79,6 @@ import {INetwork} from "../interface.js";
 import {PeerAction} from "../peers/index.js";
 import {AggregatorTracker} from "./aggregatorTracker.js";
 
-/**
- * Gossip handler options as part of network options
- */
-export type GossipHandlerOpts = {
-  /** By default pass gossip attestations to forkchoice */
-  dontSendGossipAttestationsToForkchoice?: boolean;
-};
-
 export type ValidatorFnsModules = {
   chain: IBeaconChain;
   config: BeaconConfig;
@@ -114,15 +106,15 @@ const BLOCK_AVAILABILITY_CUTOFF_MS = 3_000;
  *   the handler function scope is hard to achieve without very hacky strategies
  * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
-export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
-  return {...getSequentialHandlers(modules, options), ...getBatchHandlers(modules, options)};
+export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers {
+  return {...getSequentialHandlers(modules), ...getBatchHandlers(modules)};
 }
 
 /**
  * Default handlers validate gossip messages one by one.
  * We only have a choice to do batch validation for beacon_attestation topic.
  */
-function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): SequentialGossipHandlers {
+function getSequentialHandlers(modules: ValidatorFnsModules): SequentialGossipHandlers {
   const {chain, config, metrics, logger, core} = modules;
 
   async function validateBeaconBlock(
@@ -870,34 +862,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       }
 
       // Handler
-      const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = res.value;
+      // TODO beacon-engine: make the result type thinner
+      const {indexedAttestation} = res.value;
       chain.validatorMonitor?.registerGossipAggregatedAttestation(
         seenTimestampSec,
         signedAggregateAndProof,
         indexedAttestation
       );
-      const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
-
-      const insertOutcome = chain.beaconEngine.addAggregatedAttestation(
-        aggregatedAttestation,
-        attDataRootHex,
-        indexedAttestation.attestingIndices.length,
-        committeeValidatorIndices
-      );
-      metrics?.opPool.aggregatedAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-
-      if (!options.dontSendGossipAttestationsToForkchoice) {
-        try {
-          // TODO beacon-engine: move to validateGossipAggregateAndProof
-          chain.beaconEngine.onAttestation(indexedAttestation, attDataRootHex);
-        } catch (e) {
-          logger.debug(
-            "Error adding gossip aggregated attestation to forkchoice",
-            {slot: aggregatedAttestation.data.slot},
-            e as Error
-          );
-        }
-      }
 
       chain.emitter.emit(routes.events.EventType.attestation, signedAggregateAndProof.message.aggregate);
       return accept(undefined);
@@ -964,15 +935,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         contributionAndProof.message,
         syncCommitteeParticipantIndices
       );
-      try {
-        const insertOutcome = chain.beaconEngine.addSyncContributionAndProof(
-          contributionAndProof.message,
-          syncCommitteeParticipantIndices.length
-        );
-        metrics?.opPool.syncContributionAndProofPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding to contributionAndProof pool", {}, e as Error);
-      }
 
       chain.emitter.emit(routes.events.EventType.contributionAndProof, contributionAndProof);
       return accept(undefined);
@@ -989,17 +951,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         }
         return res;
       }
-      const {indicesInSubcommittee} = res.value;
-
-      // Handler — add for ALL positions this validator holds in the subcommittee
-      try {
-        for (const indexInSubcommittee of indicesInSubcommittee) {
-          const insertOutcome = chain.beaconEngine.addSyncCommitteeMessage(subnet, syncCommittee, indexInSubcommittee);
-          metrics?.opPool.syncCommitteeMessagePoolInsertOutcome.inc({insertOutcome});
-        }
-      } catch (e) {
-        logger.debug("Error adding to syncCommittee pool", {subnet}, e as Error);
-      }
+      // Engine validated + inserted the message into its (internal) pool for every subcommittee position.
       return accept(undefined);
     },
 
@@ -1163,26 +1115,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         payloadAttestationMessage
       );
       if (res.status !== GossipValidationStatus.Accept) return res;
-      const {attDataRootHex, validatorCommitteeIndices} = res.value;
-
-      // TODO beacon engine: move to BeaconEngine, check other gossip handlers too
-      try {
-        const insertOutcome = chain.beaconEngine.addPayloadAttestation(
-          payloadAttestationMessage,
-          attDataRootHex,
-          validatorCommitteeIndices
-        );
-        metrics?.opPool.payloadAttestationPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding to payloadAttestation pool", {}, e as Error);
-      }
-      chain.beaconEngine.notifyPtcMessages(
-        toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-        payloadAttestationMessage.data.slot,
-        validatorCommitteeIndices,
-        payloadAttestationMessage.data.payloadPresent,
-        payloadAttestationMessage.data.blobDataAvailable
-      );
       return accept(undefined);
     },
     [GossipType.execution_payload_bid]: async ({
@@ -1194,14 +1126,6 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const res = await chain.beaconEngine.validateGossipExecutionPayloadBid(serializedData, executionPayloadBid);
       if (res.status !== GossipValidationStatus.Accept) return res;
       const {proposerIndex} = res.value;
-
-      // Handle valid payload bid by storing in a bid pool
-      try {
-        const insertOutcome = chain.beaconEngine.addExecutionPayloadBid(executionPayloadBid);
-        metrics?.opPool.executionPayloadBidPool.gossipInsertOutcome.inc({insertOutcome});
-      } catch (e) {
-        logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
-      }
 
       chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.gossip, proposerIndex, executionPayloadBid.message);
 
@@ -1233,8 +1157,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 /**
  * For now, only beacon_attestation topic is batched.
  */
-function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): BatchGossipHandlers {
-  const {chain, metrics, logger, aggregatorTracker} = modules;
+function getBatchHandlers(modules: ValidatorFnsModules): BatchGossipHandlers {
+  const {chain, metrics, aggregatorTracker} = modules;
   return {
     [GossipType.beacon_attestation]: async (
       gossipHandlerParams: GossipHandlerParamGeneric<GossipType.beacon_attestation>[]
@@ -1253,9 +1177,14 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         attDataBase64: param.gossipData.indexed,
         subnet: param.topic.subnet,
       })) as GossipAttestation[];
+      // Node may be subscribed to extra subnets (long-lived random subnets). For those, validate the
+      // messages but don't add to the attestation pool, to save CPU and RAM. This aggregatorTracker
+      // decision is facade/network state — computed here and passed to the engine (which inserts on Accept).
+      const shouldAddToPool = validationParams.map((p) => aggregatorTracker.shouldAggregate(p.subnet, p.attSlot));
       const {results: validationResults, batchableBls} = await chain.beaconEngine.validateGossipAttestationsSameAttData(
         fork,
-        validationParams
+        validationParams,
+        shouldAddToPool
       );
       for (const [i, validationResult] of validationResults.entries()) {
         if (validationResult.status !== GossipValidationStatus.Accept) {
@@ -1264,45 +1193,13 @@ function getBatchHandlers(modules: ValidatorFnsModules, options: GossipHandlerOp
         }
 
         // Handler
-        const {
-          indexedAttestation,
-          attDataRootHex,
-          attestation,
-          committeeIndex,
-          validatorCommitteeIndex,
-          committeeSize,
-        } = validationResult.value;
+        const {indexedAttestation, attestation} = validationResult.value;
         chain.validatorMonitor?.registerGossipUnaggregatedAttestation(
           gossipHandlerParams[i].seenTimestampSec,
           indexedAttestation
         );
 
-        const {subnet} = validationResult.value;
         results.push(accept(undefined));
-        try {
-          // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
-          // but don't add to attestation pool, to save CPU and RAM
-          if (aggregatorTracker.shouldAggregate(subnet, indexedAttestation.data.slot)) {
-            const insertOutcome = chain.beaconEngine.addAttestationToPool(
-              committeeIndex,
-              attestation,
-              attDataRootHex,
-              validatorCommitteeIndex,
-              committeeSize
-            );
-            metrics?.opPool.attestationPool.gossipInsertOutcome.inc({insertOutcome});
-          }
-        } catch (e) {
-          logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
-        }
-
-        if (!options.dontSendGossipAttestationsToForkchoice) {
-          try {
-            chain.beaconEngine.onAttestation(indexedAttestation, attDataRootHex);
-          } catch (e) {
-            logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
-          }
-        }
 
         if (isForkPostElectra(fork)) {
           chain.emitter.emit(

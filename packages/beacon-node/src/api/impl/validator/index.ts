@@ -1301,15 +1301,7 @@ export function getValidatorApi(
               }
               return;
             }
-            const {indexedAttestation, committeeValidatorIndices, attDataRootHex} = res.value;
-
-            const insertOutcome = chain.beaconEngine.addAggregatedAttestation(
-              signedAggregateAndProof.message.aggregate,
-              attDataRootHex,
-              indexedAttestation.attestingIndices.length,
-              committeeValidatorIndices
-            );
-            metrics?.opPool.aggregatedAttestationPool.apiInsertOutcome.inc({insertOutcome});
+            const {indexedAttestation} = res.value;
 
             const sentPeers = await network.publishBeaconAggregateAndProof(signedAggregateAndProof);
             chain.validatorMonitor?.onPoolSubmitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
@@ -1351,10 +1343,10 @@ export function getValidatorApi(
           };
           try {
             // TODO: Validate in batch
-            const res = await chain.beaconEngine.validateSyncCommitteeGossipContributionAndProof(
+            // Engine validates (skipping the known-participants check) + inserts into its (internal) pool on Accept.
+            const res = await chain.beaconEngine.validateApiSyncCommitteeContributionAndProof(
               contributionBytes[i],
-              contributionAndProof,
-              true // skip known participants check
+              contributionAndProof
             );
             if (res.status !== GossipValidationStatus.Accept) {
               if (res.code === SyncCommitteeErrorCode.SYNC_COMMITTEE_AGGREGATOR_ALREADY_KNOWN) {
@@ -1368,13 +1360,6 @@ export function getValidatorApi(
               }
               return;
             }
-            const {syncCommitteeParticipantIndices} = res.value;
-            const insertOutcome = chain.beaconEngine.addSyncContributionAndProof(
-              contributionAndProof.message,
-              syncCommitteeParticipantIndices.length,
-              true
-            );
-            metrics?.opPool.syncContributionAndProofPool.apiInsertOutcome.inc({insertOutcome});
             await network.publishContributionAndProof(contributionAndProof);
           } catch (e) {
             failures.push({index: i, message: (e as Error).message});

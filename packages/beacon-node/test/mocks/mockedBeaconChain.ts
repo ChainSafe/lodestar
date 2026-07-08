@@ -282,20 +282,13 @@ export function getMockedBeaconChain(opts?: Partial<MockedBeaconChainOptions>): 
     // Op-pool add/read bridges (forward to the mock's pools).
     "addAttestationToPool",
     "getAttestationAggregate",
-    "addAggregatedAttestation",
     "getPoolAggregatedAttestations",
-    "addSyncCommitteeMessage",
     "getSyncCommitteeContribution",
-    "addSyncContributionAndProof",
-    "addPayloadAttestation",
     "getPoolPayloadAttestations",
-    "addExecutionPayloadBid",
     // Fork-choice write wrappers (forward to the mock's forkChoice).
     "updateTime",
     "getIrrecoverableError",
     "validateLatestHash",
-    "notifyPtcMessages",
-    "onAttestation",
   ] as const) {
     (chain as unknown as Record<string, unknown>)[name] = (
       BeaconEngine.prototype as unknown as Record<string, unknown>

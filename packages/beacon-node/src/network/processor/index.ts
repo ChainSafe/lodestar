@@ -31,7 +31,7 @@ import {
   GossipValidatorFn,
 } from "../gossip/interface.js";
 import {createExtractBlockSlotRootFns} from "./extractSlotRootFns.js";
-import {GossipHandlerOpts, ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
+import {ValidatorFnsModules, getGossipHandlers} from "./gossipHandlers.js";
 import {createGossipQueues} from "./gossipQueues/index.js";
 import {ValidatorFnModules, getGossipValidatorBatchFn, getGossipValidatorFn} from "./gossipValidatorFn.js";
 import {PendingGossipsubMessage} from "./types.js";
@@ -49,7 +49,7 @@ export type NetworkProcessorModules = ValidatorFnsModules &
     gossipHandlers?: GossipHandlers;
   };
 
-export type NetworkProcessorOpts = GossipHandlerOpts & {
+export type NetworkProcessorOpts = {
   maxGossipTopicConcurrency?: number;
 };
 
@@ -206,9 +206,9 @@ export class NetworkProcessor {
     this.events = events;
     this.gossipQueues = createGossipQueues();
     this.gossipTopicConcurrency = mapValues(this.gossipQueues, () => 0);
-    this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules, opts), modules);
+    this.gossipValidatorFn = getGossipValidatorFn(modules.gossipHandlers ?? getGossipHandlers(modules), modules);
     this.gossipValidatorBatchFn = getGossipValidatorBatchFn(
-      modules.gossipHandlers ?? getGossipHandlers(modules, opts),
+      modules.gossipHandlers ?? getGossipHandlers(modules),
       modules
     );
 

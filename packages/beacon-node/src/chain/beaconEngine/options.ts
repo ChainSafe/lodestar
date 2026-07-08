@@ -36,6 +36,8 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
     maxSkipSlots?: number;
     /** Min number of same-message signature sets to batch in gossip attestation validation */
     minSameMessageSignatureSetsToBatch: number;
+    /** By default the engine passes gossip-validated attestations to fork choice; set to skip that write */
+    dontSendGossipAttestationsToForkchoice?: boolean;
     /** Default fee recipient used by the engine-owned beaconProposerCache */
     suggestedFeeRecipient: string;
     /** Emit an SSE payloadAttributes event every slot (not only when proposing) */

@@ -1,15 +1,7 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {
-  ForkName,
-  ForkPostElectra,
-  ForkPreElectra,
-  SYNC_COMMITTEE_SUBNET_SIZE,
-  isForkPostElectra,
-  isForkPostGloas,
-} from "@lodestar/params";
-import {isStatePostAltair} from "@lodestar/state-transition";
-import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {ForkName, ForkPostElectra, ForkPreElectra, isForkPostElectra, isForkPostGloas} from "@lodestar/params";
+import {SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipValidationStatus} from "../../../../chain/beaconEngine/gossipValidationResult.js";
 import {
@@ -302,23 +294,6 @@ export function getBeaconPoolApi({
               }
               return;
             }
-            const {attDataRootHex, validatorCommitteeIndices} = res.value;
-
-            const insertOutcome = chain.beaconEngine.addPayloadAttestation(
-              payloadAttestationMessage,
-              attDataRootHex,
-              validatorCommitteeIndices
-            );
-            metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
-
-            // TODO - beacon engine: refactor to beaconEngine.notifyPtcMessages()
-            chain.beaconEngine.notifyPtcMessages(
-              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
-              payloadAttestationMessage.data.slot,
-              validatorCommitteeIndices,
-              payloadAttestationMessage.data.payloadPresent,
-              payloadAttestationMessage.data.blobDataAvailable
-            );
 
             await network.publishPayloadAttestationMessage(payloadAttestationMessage);
           } catch (e) {
@@ -344,18 +319,6 @@ export function getBeaconPoolApi({
      * https://github.com/ethereum/beacon-APIs/pull/135
      */
     async submitPoolSyncCommitteeSignatures({signatures}, context) {
-      // Fetch states for all slots of the `signatures`
-      const slots = new Set<Epoch>();
-      for (const signature of signatures) {
-        slots.add(signature.slot);
-      }
-
-      // TODO: Fetch states at signature slots
-      const state = chain.getHeadState();
-      if (!isStatePostAltair(state)) {
-        throw new ApiError(400, "Sync committee pool is not supported before Altair");
-      }
-
       // SSZ request: slice each message out of the (fixed-size element) list body. JSON request
       // (no sszBytes): serialize once. Never re-serialize on the SSZ path.
       const signatureBytes = context?.sszBytes
@@ -367,14 +330,9 @@ export function getBeaconPoolApi({
       await Promise.all(
         signatures.map(async (signature, i) => {
           try {
-            const synCommittee = state.getIndexedSyncCommittee(signature.slot);
-            const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
-            if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-              return; // Not a sync committee member
-            }
-
-            // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
-            // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
+            // Engine verifies the signature (allowing late API messages), resolves committee membership,
+            // inserts into its (internal) pool, and returns the subnets to broadcast to (empty if this
+            // validator isn't in the sync committee).
             const res = await chain.beaconEngine.validateApiSyncCommittee(signatureBytes[i], signature);
             if (res.status !== GossipValidationStatus.Accept) {
               failures.push({index: i, message: res.error?.message ?? res.code});
@@ -389,27 +347,10 @@ export function getBeaconPoolApi({
               return;
             }
 
-            // The same validator can appear multiple times in the sync committee. It can appear multiple times per
-            // subnet even. First compute on which subnet the signature must be broadcasted to.
-            const subnets: number[] = [];
-            // same to api attestation, we allow api SyncCommittee to be added to pool even when it's late
-            // see https://github.com/ChainSafe/lodestar/issues/7548
-            const priority = true;
-
-            for (const indexInCommittee of indexesInCommittee) {
-              // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
-              const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
-              const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-              chain.beaconEngine.addSyncCommitteeMessage(subnet, signature, indexInSubcommittee, priority);
-
-              // Cheap de-duplication code to avoid using a Set. indexesInCommittee is always sorted
-              if (subnets.length === 0 || subnets.at(-1) !== subnet) {
-                subnets.push(subnet);
-              }
-            }
-
             // TODO: Broadcast at once to all topics
-            await Promise.all(subnets.map(async (subnet) => network.publishSyncCommitteeSignature(signature, subnet)));
+            await Promise.all(
+              res.value.subnets.map(async (subnet) => network.publishSyncCommitteeSignature(signature, subnet))
+            );
           } catch (e) {
             // TODO: gossipsub should allow publishing same message to different topics
             // https://github.com/ChainSafe/js-libp2p-gossipsub/issues/272

@@ -27,6 +27,7 @@ export type ChainArgs = {
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
+  "chain.dontSendGossipAttestationsToForkchoice"?: boolean;
   "chain.maxShufflingCacheEpochs"?: number;
   "chain.archiveStateEpochFrequency": number;
   "chain.archiveDataEpochs"?: number;
@@ -68,6 +69,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
       args["chain.minSameMessageSignatureSetsToBatch"] ?? defaultOptions.chain.minSameMessageSignatureSetsToBatch,
+    dontSendGossipAttestationsToForkchoice: args["chain.dontSendGossipAttestationsToForkchoice"],
     maxShufflingCacheEpochs: args["chain.maxShufflingCacheEpochs"] ?? defaultOptions.chain.maxShufflingCacheEpochs,
     archiveStateEpochFrequency: args["chain.archiveStateEpochFrequency"],
     archiveDataEpochs: args["chain.archiveDataEpochs"],
@@ -226,6 +228,13 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "number",
     description: "Refuse to skip more than this many slots when processing a block or attestation",
+    group: "chain",
+  },
+
+  "chain.dontSendGossipAttestationsToForkchoice": {
+    hidden: true,
+    type: "boolean",
+    description: "Pass gossip attestations to forkchoice or not",
     group: "chain",
   },
 

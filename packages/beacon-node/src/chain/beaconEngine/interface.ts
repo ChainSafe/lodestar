@@ -62,10 +62,8 @@ import {
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
-import {AggregateAndProofValidationResult} from "../validation/aggregateAndProof.js";
 import {ApiAttestation, AttestationValidationResult, GossipAttestation} from "../validation/attestation.js";
 import {GossipBlockValidationResult} from "../validation/block.js";
-import {PayloadAttestationValidationResult} from "../validation/payloadAttestationMessage.js";
 import {ValidatorMonitor} from "../validatorMonitor.js";
 import {GossipValidationResult} from "./gossipValidationResult.js";
 import {IBeaconEngineOptions} from "./options.js";
@@ -342,16 +340,20 @@ export interface IBeaconEngine {
     syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage,
     subnet: SubnetID
-  ): Promise<GossipValidationResult<{indicesInSubcommittee: number[]}>>;
+  ): Promise<GossipValidationResult<void>>;
   validateApiSyncCommittee(
     syncCommitteeBytes: Uint8Array,
     syncCommittee: altair.SyncCommitteeMessage
-  ): Promise<GossipValidationResult<void>>;
+  ): Promise<GossipValidationResult<{subnets: number[]}>>;
   validateSyncCommitteeGossipContributionAndProof(
     contributionBytes: Uint8Array,
     signedContributionAndProof: altair.SignedContributionAndProof,
     skipValidationKnownParticipants?: boolean
   ): Promise<GossipValidationResult<{syncCommitteeParticipantIndices: ValidatorIndex[]}>>;
+  validateApiSyncCommitteeContributionAndProof(
+    contributionBytes: Uint8Array,
+    signedContributionAndProof: altair.SignedContributionAndProof
+  ): Promise<GossipValidationResult<void>>;
   validateGossipBlobSidecar(
     blobBytes: Uint8Array,
     fork: ForkName,
@@ -372,14 +374,15 @@ export interface IBeaconEngine {
   validateGossipPayloadAttestationMessage(
     payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
-  ): Promise<GossipValidationResult<PayloadAttestationValidationResult>>;
+  ): Promise<GossipValidationResult<void>>;
   validateApiPayloadAttestationMessage(
     payloadAttestationBytes: Uint8Array,
     payloadAttestationMessage: gloas.PayloadAttestationMessage
-  ): Promise<GossipValidationResult<PayloadAttestationValidationResult>>;
+  ): Promise<GossipValidationResult<void>>;
   validateGossipAttestationsSameAttData(
     fork: ForkName,
-    attestations: GossipAttestation[]
+    attestations: GossipAttestation[],
+    shouldAddToPool: boolean[]
   ): Promise<{results: GossipValidationResult<AttestationValidationResult>[]; batchableBls: boolean}>;
   validateApiAttestation(
     fork: ForkName,
@@ -389,12 +392,12 @@ export interface IBeaconEngine {
     aggregateBytes: Uint8Array,
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
-  ): Promise<GossipValidationResult<AggregateAndProofValidationResult>>;
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
   validateApiAggregateAndProof(
     aggregateBytes: Uint8Array,
     fork: ForkName,
     signedAggregateAndProof: SignedAggregateAndProof
-  ): Promise<GossipValidationResult<AggregateAndProofValidationResult>>;
+  ): Promise<GossipValidationResult<{indexedAttestation: IndexedAttestation}>>;
   // The bid scalars + proposerIndex are looked up facade-side from the `PayloadEnvelopeInput` (the engine
   // no longer touches the DA seen cache) and passed in.
   validateGossipExecutionPayloadEnvelope(
@@ -420,7 +423,7 @@ export interface IBeaconEngine {
   validateApiExecutionPayloadBid(
     bidBytes: Uint8Array,
     signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
-  ): Promise<GossipValidationResult<{proposerIndex: ValidatorIndex}>>;
+  ): Promise<GossipValidationResult<void>>;
   validateGossipProposerPreferences(
     preferencesBytes: Uint8Array,
     signedProposerPreferences: gloas.SignedProposerPreferences
@@ -460,36 +463,13 @@ export interface IBeaconEngine {
     priority?: boolean
   ): InsertOutcome;
   getAttestationAggregate(slot: Slot, dataRootHex: RootHex, committeeIndex: CommitteeIndex): Attestation | null;
-  addAggregatedAttestation(
-    attestation: Attestation,
-    dataRootHex: RootHex,
-    attestingIndicesCount: number,
-    committee: Uint32Array
-  ): InsertOutcome;
   getPoolAggregatedAttestations(bySlot?: Slot): Attestation[];
-  addSyncCommitteeMessage(
-    subnet: SubnetID,
-    signature: altair.SyncCommitteeMessage,
-    indexInSubcommittee: number,
-    priority?: boolean
-  ): InsertOutcome;
   getSyncCommitteeContribution(
     subnet: SubcommitteeIndex,
     slot: Slot,
     prevBlockRoot: Root
   ): altair.SyncCommitteeContribution | null;
-  addSyncContributionAndProof(
-    contributionAndProof: altair.ContributionAndProof,
-    syncCommitteeParticipants: number,
-    priority?: boolean
-  ): InsertOutcome;
-  addPayloadAttestation(
-    message: gloas.PayloadAttestationMessage,
-    payloadAttDataRootHex: RootHex,
-    validatorCommitteeIndices: number[]
-  ): InsertOutcome;
   getPoolPayloadAttestations(slot?: Slot): gloas.PayloadAttestation[];
-  addExecutionPayloadBid(bid: gloas.SignedExecutionPayloadBid): InsertOutcome;
 
   // Proposer cache + finalized balances (engine-internal).
   getProposerFeeRecipient(proposerIndex: ValidatorIndex): string | undefined;
@@ -525,16 +505,6 @@ export interface IBeaconEngine {
   updateTime(currentSlot: Slot): void;
   getIrrecoverableError(): Error | undefined;
   validateLatestHash(execResponse: LVHExecResponse): void;
-  // TODO - beacon-engine: transitional — the gossip/api PTC + attestation consumers move into the engine
-  // (BLK-2), at which point these fork-choice writes become engine-internal and these wrappers go away.
-  notifyPtcMessages(
-    blockRoot: RootHex,
-    slot: Slot,
-    ptcIndices: number[],
-    payloadPresent: boolean,
-    blobDataAvailable: boolean
-  ): void;
-  onAttestation(attestation: IndexedAttestation, attDataRoot: string, forceImport?: boolean): void;
 
   // Execution payload envelope (gloas) import — consensus body of the facade `importExecutionPayload`.
   // `verifyExecutionPayloadEnvelope` (regen state + fields + BLS sig, throws `PayloadError`) runs
