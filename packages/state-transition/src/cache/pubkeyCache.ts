@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {PublicKey, aggregatePublicKeys} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {PubkeyIndexMap} from "@chainsafe/pubkey-index-map";
 import {ValidatorIndex, phase0} from "@lodestar/types";
@@ -16,6 +16,8 @@ export interface PubkeyCache {
   getIndex(pubkey: Uint8Array): ValidatorIndex | null;
   /** Set both directions atomically. Takes raw pubkey bytes — deserialization is handled internally. */
   set(index: ValidatorIndex, pubkey: Uint8Array): void;
+  /** Aggregates a list of `PublicKey`s by their indices. */
+  aggregate(indices: ValidatorIndex[]): PublicKey;
   /** Number of entries */
   readonly size: number;
 }
@@ -31,6 +33,7 @@ export interface PersistentPubkeyCache extends PubkeyCache {
   save(filepath: string): void;
   /** Pre-allocate internal storage for `capacity` validators */
   ensureCapacity(capacity: number): void;
+  aggregate: (indices: number[]) => PublicKey;
 }
 
 /**
@@ -70,6 +73,10 @@ class StandardPubkeyCache implements PubkeyCache {
     // Afterwards any public key in the state is considered validated.
     // > Do not do any validation here
     this.index2pubkey[index] = PublicKey.fromBytes(pubkey); // Optimize for aggregation
+  }
+
+  aggregate(indices: ValidatorIndex[]): PublicKey {
+    return aggregatePublicKeys(indices.map((i) => this.getOrThrow(i)));
   }
 }
 
