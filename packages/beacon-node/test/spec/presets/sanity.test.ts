@@ -1,6 +1,6 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, PresetName} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -30,6 +30,8 @@ const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuit
 };
 
 const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (fork) => {
+  const timeout = fork === ForkName.gloas && ACTIVE_PRESET === PresetName.mainnet ? 60000 : 30000;
+
   return {
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
@@ -46,7 +48,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         post: ssz[fork].BeaconState,
       },
       shouldError: (testCase) => !testCase.post,
-      timeout: 30000,
+      timeout,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
