@@ -7,13 +7,13 @@
  * See pubkeyCache.test.ts for usage.
  */
 import worker from "node:worker_threads";
-import {getPubkeyCache, syncPubkeys, interopSecretKey} from "@lodestar/state-transition";
+import {getNativePubkeyCache, syncPubkeys, interopSecretKey} from "@lodestar/state-transition";
 
 const parentPort = worker.parentPort;
 if (!parentPort) throw Error("parentPort must be defined");
 
 parentPort.on("message", (task) => {
-  const cache = getPubkeyCache();
+  const cache = getNativePubkeyCache();
 
   if (task.type === "get") {
     const entries = {};

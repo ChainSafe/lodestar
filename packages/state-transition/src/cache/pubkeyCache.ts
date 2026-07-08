@@ -81,10 +81,10 @@ export function createPubkeyCache(): PubkeyCache {
 }
 
 /**
- * Get the global native pubkey cache singleton backed by lodestar-z.
+ * Get the persistent native pubkey cache singleton backed by lodestar-z.
  * This is the production pubkey cache — shared across the entire process (including workers).
  */
-export function getPubkeyCache(): PersistentPubkeyCache {
+export function getNativePubkeyCache(): PersistentPubkeyCache {
   return pubkeyCache;
 }
 
