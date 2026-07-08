@@ -14,6 +14,9 @@ describe("beacon state api utils", () => {
       expect(getStateValidatorIndex("foo", state, pubkeyCache).valid).toBe(false);
       // "invalid hex"
       expect(getStateValidatorIndex("0xfoo", state, pubkeyCache).valid).toBe(false);
+      // "negative validator index"
+      expect(getStateValidatorIndex("-1", state, pubkeyCache).valid).toBe(false);
+      expect(getStateValidatorIndex(-1, state, pubkeyCache).valid).toBe(false);
     });
 
     it("should return valid: false on validator indices / pubkeys not in the state", () => {
