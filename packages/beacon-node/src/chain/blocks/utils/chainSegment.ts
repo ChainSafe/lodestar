@@ -17,8 +17,6 @@ export type ChainSegmentResult = {warnings: OrphanedPayloadEnvelope[] | null};
  * Assert this chain segment of blocks is linear with slot numbers and hashes,
  * and that the provided envelopes are consistent with their respective blocks.
  *
- * Must be called after verifyBlocksSanityChecks so that parentBlock (from forkchoice)
- * is available to seed the execution hash chain.
  *
  * For each block:
  * - Verifies parent root + slot linearity
@@ -31,7 +29,7 @@ export function assertLinearChainSegment(
   config: ChainForkConfig,
   blocks: IBlockInput[],
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null,
-  parentBlock: ProtoBlock
+  parentBlock: ProtoBlock | null
 ): ChainSegmentResult {
   const warnings: OrphanedPayloadEnvelope[] = [];
 
@@ -39,15 +37,16 @@ export function assertLinearChainSegment(
   // Starts from the known forkchoice parent's execution hash.
   // - FULL variant (envelope present for slot): advances to envelope.payload.blockHash
   // - EMPTY variant (no envelope for slot): execution hash is unchanged
-  // null only for pre-merge parents, which cannot precede gloas blocks.
-  let currentExecHash: string | null = parentBlock.executionPayloadBlockHash;
+  let currentExecHash: string | null = parentBlock?.executionPayloadBlockHash ?? null;
   // Checkpoint sync first batch: parent is the anchor PENDING whose executionPayloadBlockHash
   // is the inherited parentBlockHash semantic (= grandparent's payload), not its own payload.
   // If parent's own payload envelope arrives in this batch, advance currentExecHash to that
   // payload's blockHash so the segment validation sees the true EL chain head.
-  const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
-  if (parentPayloadInput?.hasPayloadEnvelope()) {
-    currentExecHash = parentPayloadInput.getBlockHashHex();
+  if (parentBlock !== null) {
+    const parentPayloadInput = payloadEnvelopes?.get(parentBlock.slot);
+    if (parentPayloadInput?.hasPayloadEnvelope()) {
+      currentExecHash = parentPayloadInput.getBlockHashHex();
+    }
   }
   // Track the execution hash before the last FULL advancement so we can recover
   // if the next block reveals that envelope was orphaned.
@@ -76,27 +75,31 @@ export function assertLinearChainSegment(
       }
     }
 
-    if (isGloasBeaconBlock(block.message) && currentExecHash !== null) {
-      // Verify the bid's parentBlockHash matches the tracked execution hash.
-      // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
-      const bidParentHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
-      if (bidParentHash !== currentExecHash) {
-        // Maybe the previous slot's FULL envelope was orphaned — try falling back.
-        // If even prevExecHash doesn't match, the segment is non-linear.
-        if (bidParentHash !== prevExecHash) {
-          throw new BlockError(block, {
-            code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
-            parentRoot: toRootHex(block.message.parentRoot),
-            parentBlockHash: bidParentHash,
-          });
-        }
-        if (lastFullSlot !== null && payloadEnvelopes !== null) {
-          const orphanedInput = payloadEnvelopes.get(lastFullSlot);
-          if (orphanedInput != null) {
-            warnings.push({slot: lastFullSlot, payloadEnvelopeInput: orphanedInput});
+    if (isGloasBeaconBlock(block.message)) {
+      // Bid check fires only when we have a seeded execution hash. With parentBlock=null the
+      // chain is seeded mid-segment by the first FULL envelope.
+      if (currentExecHash !== null) {
+        // Verify the bid's parentBlockHash matches the tracked execution hash.
+        // This ensures the block was built on the correct FULL or EMPTY variant of its parent.
+        const bidParentHash = toRootHex(block.message.body.signedExecutionPayloadBid.message.parentBlockHash);
+        if (bidParentHash !== currentExecHash) {
+          // Maybe the previous slot's FULL envelope was orphaned — try falling back.
+          // If even prevExecHash doesn't match, the segment is non-linear.
+          if (bidParentHash !== prevExecHash) {
+            throw new BlockError(block, {
+              code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+              parentRoot: toRootHex(block.message.parentRoot),
+              parentBlockHash: bidParentHash,
+            });
           }
+          if (lastFullSlot !== null && payloadEnvelopes !== null) {
+            const orphanedInput = payloadEnvelopes.get(lastFullSlot);
+            if (orphanedInput != null) {
+              warnings.push({slot: lastFullSlot, payloadEnvelopeInput: orphanedInput});
+            }
+          }
+          currentExecHash = prevExecHash;
         }
-        currentExecHash = prevExecHash;
       }
 
       const payloadInput = payloadEnvelopes?.get(slot) ?? null;

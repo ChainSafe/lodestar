@@ -9,7 +9,7 @@ import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
-import {RootHex, phase0} from "@lodestar/types";
+import {RootHex, phase0, ssz} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
 import {FIFOBlockStateCache} from "../../../../src/chain/index.js";
 import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
@@ -163,11 +163,47 @@ describe("PersistentCheckpointStateCache", () => {
     expect(cache.get(cp1Hex)).not.toBeNull();
     // cp2 is in memory
     expect(cache.get(cp2Hex)).not.toBeNull();
-    // finalize epoch cp2
-    cache.pruneFinalized(cp2.epoch);
+    // finalize epoch 22 via processState: prune is driven by state.finalizedCheckpoint.epoch
+    expect(await cache.processState(toHexString(cp2.root), stateWithFinalizedEpoch(22))).toEqual(0);
     expect(fileApisBuffer.size).toEqual(0);
     expect(cache.get(cp1Hex)).toBeNull();
     expect(cache.get(cp2Hex)).not.toBeNull();
+    expect(await cache.getStateOrBytes(cp0bHex)).toBeNull();
+  });
+
+  // regression: a finalized checkpoint state must be pruned, never persisted (no orphan on disk)
+  it("does not persist a finalized checkpoint state", async () => {
+    cache.add(cp2, states["cp2"]);
+    // state at epoch 22 that finalizes epoch 21 -> epoch 20 must be pruned before any persist
+    expect(await cache.processState(toHexString(cp2.root), stateWithFinalizedEpoch(21))).toEqual(0);
+    // epoch 20 (cp0a, cp0b) is gone from memory and was never written to disk
+    expect(fileApisBuffer.size).toEqual(0);
+    expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();
+    expect(await cache.getStateOrBytes(cp0bHex)).toBeNull();
+    // epoch 21 and 22 are kept
+    expect(cache.get(cp1Hex)).not.toBeNull();
+    expect(cache.get(cp2Hex)).not.toBeNull();
+  });
+
+  // regression: re-add()ing a checkpoint that is already in memory with a persistedKey (e.g. one that
+  // was reloaded from disk) must keep that persistedKey. Otherwise its on-disk copy is orphaned, since
+  // prune/finalize removes files by the stored persistedKey.
+  it("re-adding a reloaded checkpoint keeps its persistedKey (no orphan on disk)", async () => {
+    cache.add(cp2, states["cp2"]);
+    // persist cp0b to disk
+    expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
+    expect(Array.from(fileApisBuffer.keys())).toEqual([persistent0bKey]);
+
+    // reload cp0b back into memory -> {inMemory, state, persistedKey}
+    expect((await cache.getOrReload(cp0bHex))?.serialize()).toEqual(stateBytes["cp0b"]);
+
+    // re-add the same checkpoint while it is in memory with a persistedKey
+    cache.add(cp0b, states["cp0b"]);
+
+    // finalize epoch 21 -> epoch 20 (cp0b) is pruned; its on-disk copy must be removed, not orphaned
+    expect(await cache.processState(toHexString(cp2.root), stateWithFinalizedEpoch(21))).toEqual(0);
+    expect(fileApisBuffer.has(persistent0bKey)).toBe(false);
+    expect(fileApisBuffer.size).toEqual(0);
     expect(await cache.getStateOrBytes(cp0bHex)).toBeNull();
   });
 
@@ -1033,6 +1069,15 @@ describe("PersistentCheckpointStateCache", () => {
       });
     });
   });
+
+  // clone the epoch-22 state and set its finalized checkpoint so processState() drives the prune
+  function stateWithFinalizedEpoch(finalizedEpoch: number): BeaconStateView {
+    const cachedState = states["cp2"].cachedState.clone();
+    cachedState.slot = 22 * SLOTS_PER_EPOCH + 3;
+    cachedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({epoch: finalizedEpoch, root: root2});
+    cachedState.commit();
+    return new BeaconStateView(cachedState);
+  }
 
   async function assertPersistedCheckpointState(cps: phase0.Checkpoint[], stateBytesArr: Uint8Array[]): Promise<void> {
     const persistedKeys = cps.map((cp) => toHexString(checkpointToDatastoreKey(cp)));

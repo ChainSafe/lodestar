@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.42.0",
+  "version": "1.44.0",
   "type": "module",
   "exports": {
     ".": {
@@ -33,6 +33,11 @@
       "bun": "./src/slot/index.ts",
       "types": "./lib/slot/index.d.ts",
       "import": "./lib/slot/index.js"
+    },
+    "./light-client": {
+      "bun": "./src/lightClient/spec/index.ts",
+      "types": "./lib/lightClient/spec/index.d.ts",
+      "import": "./lib/lightClient/spec/index.js"
     },
     "./test-utils": {
       "bun": "./src/testUtils/index.ts",
@@ -62,8 +67,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
     "@chainsafe/blst": "^2.2.0",
-    "@chainsafe/persistent-merkle-tree": "^1.2.1",
-    "@chainsafe/persistent-ts": "^1.0.0",
+    "@chainsafe/persistent-merkle-tree": "^1.2.5",
     "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.4.0",
     "@chainsafe/swap-or-not-shuffle": "^1.2.1",

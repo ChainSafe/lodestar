@@ -93,6 +93,8 @@ export const chainConfig: ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: 5000,
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
+  // 75% of SLOT_DURATION_MS
+  PAYLOAD_DUE_BPS: 7500,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -190,4 +192,8 @@ export const chainConfig: ChainConfig = {
   // Blob Scheduling
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
+
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };

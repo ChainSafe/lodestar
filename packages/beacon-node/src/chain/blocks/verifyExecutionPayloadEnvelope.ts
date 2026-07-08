@@ -61,10 +61,8 @@ export function verifyExecutionPayloadEnvelope(
       `Prev randao mismatch between bid and payload bid=${toHex(bid.prevRandao)} payload=${toHex(payload.prevRandao)}`
     );
   }
-  if (Number(bid.gasLimit) !== payload.gasLimit) {
-    throw new Error(
-      `Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${Number(bid.gasLimit)}`
-    );
+  if (bid.gasLimit !== payload.gasLimit) {
+    throw new Error(`Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${bid.gasLimit}`);
   }
   if (!byteArrayEquals(bid.blockHash, payload.blockHash)) {
     throw new Error(
@@ -74,7 +72,7 @@ export function verifyExecutionPayloadEnvelope(
   // Verify execution_requests_root matches bid commitment.
   // Can be skipped if already verified during gossip validation.
   if (verifyExecutionRequestsRoot) {
-    const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
     if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
       throw new Error(
         `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} bid=${toRootHex(bid.executionRequestsRoot)}`
@@ -82,16 +80,19 @@ export function verifyExecutionPayloadEnvelope(
     }
   }
 
-  // Verify the execution payload is valid
-  if (payload.slotNumber !== state.slot) {
-    throw new Error(`Slot mismatch between payload and state payload=${payload.slotNumber} state=${state.slot}`);
+  // should not use state.slot, it does not work for skipped slot checkpoint sync
+  const blockSlot = state.latestBlockHeader.slot;
+  if (payload.slotNumber !== blockSlot) {
+    throw new Error(
+      `Slot mismatch between payload and latest block header payload=${payload.slotNumber} latestBlockHeader=${blockSlot}`
+    );
   }
   if (!byteArrayEquals(payload.parentHash, state.latestBlockHash)) {
     throw new Error(
       `Parent hash mismatch between payload and state payload=${toRootHex(payload.parentHash)} state=${toRootHex(state.latestBlockHash)}`
     );
   }
-  const expectedTimestamp = computeTimeAtSlot(config, state.slot, state.genesisTime);
+  const expectedTimestamp = computeTimeAtSlot(config, blockSlot, state.genesisTime);
   if (payload.timestamp !== expectedTimestamp) {
     throw new Error(
       `Timestamp mismatch between payload and state payload=${payload.timestamp} state=${expectedTimestamp}`

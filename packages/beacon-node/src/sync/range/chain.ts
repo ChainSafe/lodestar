@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {Epoch, Root, Slot} from "@lodestar/types";
+import {Epoch, Root, Slot, gloas} from "@lodestar/types";
 import {ErrorAborted, LodestarError, Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {isBlockInputBlobs, isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {BlockInputErrorCode} from "../../chain/blocks/blockInput/errors.js";
@@ -17,6 +17,7 @@ import {PeerIdStr} from "../../util/peerId.js";
 import {WarnResult, wrapError} from "../../util/wrapError.js";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, MAX_LOOK_AHEAD_EPOCHS} from "../constants.js";
 import {DownloadByRangeError, DownloadByRangeErrorCode} from "../utils/downloadByRange.js";
+import {getRateLimitedUntilMs} from "../utils/rateLimit.js";
 import {RangeSyncType} from "../utils/remoteSyncType.js";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./batch.js";
 import {
@@ -139,20 +140,33 @@ export class SyncChain {
   private readonly batchProcessor = new ItTrigger();
   /** Sorted map of batches undergoing some kind of processing. */
   private readonly batches = new Map<Epoch, Batch>();
+  /**
+   * `true` until the first `Batch` is constructed via `includeNextBatch`
+   */
+  private isFirstBatch = true;
   private readonly peerset = new Map<PeerIdStr, ChainTarget>();
+  /**
+   * Tracks peers that have rate-limited us, mapped to the timestamp (ms) until which we should avoid them.
+   * This is a sync-layer optimization to avoid assigning batches to backed-off peers.
+   * The reqresp SelfRateLimiter independently enforces backoff at the protocol level as a safety net.
+   */
+  private readonly rateLimitedPeers = new Map<PeerIdStr, number>();
+  private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
 
   private readonly logger: Logger;
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
   private readonly metrics: Metrics | null;
   private readonly custodyConfig: CustodyConfig;
+  private readonly latestBid: gloas.ExecutionPayloadBid | undefined;
 
   constructor(
     initialBatchEpoch: Epoch,
     initialTarget: ChainTarget,
     syncType: RangeSyncType,
     fns: SyncChainFns,
-    modules: SyncChainModules
+    modules: SyncChainModules,
+    latestBid: gloas.ExecutionPayloadBid | undefined
   ) {
     const {config, clock, custodyConfig, logger, metrics} = modules;
     this.firstBatchEpoch = initialBatchEpoch;
@@ -168,12 +182,9 @@ export class SyncChain {
     this.clock = clock;
     this.metrics = metrics;
     this.custodyConfig = custodyConfig;
+    this.latestBid = latestBid;
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
-
-    if (metrics) {
-      metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(metrics));
-    }
 
     // Trigger event on parent class
     this.sync().then(
@@ -222,6 +233,7 @@ export class SyncChain {
    */
   stopSyncing(): void {
     this.status = SyncChainStatus.Stopped;
+    this.clearRateLimitBackoffTimer();
     this.logger.debug("SyncChain stopSyncing", {id: this.logId});
   }
 
@@ -230,6 +242,7 @@ export class SyncChain {
    */
   remove(): void {
     this.logger.debug("SyncChain remove", {id: this.logId});
+    this.clearRateLimitBackoffTimer();
     this.batchProcessor.end(new ErrorAborted("SyncChain"));
   }
 
@@ -248,6 +261,7 @@ export class SyncChain {
    */
   removePeer(peerId: PeerIdStr): boolean {
     const deleted = this.peerset.delete(peerId);
+    this.rateLimitedPeers.delete(peerId);
     this.computeTarget();
     return deleted;
   }
@@ -351,6 +365,8 @@ export class SyncChain {
       }
 
       throw e;
+    } finally {
+      this.clearRateLimitBackoffTimer();
     }
   }
 
@@ -374,6 +390,44 @@ export class SyncChain {
     }
   }
 
+  private scheduleRateLimitBackoffRetry(): void {
+    this.clearRateLimitBackoffTimer();
+
+    if (this.status !== SyncChainStatus.Syncing || this.rateLimitedPeers.size === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    let retryAt: number | null = null;
+    for (const [peerId, rateLimitedUntil] of this.rateLimitedPeers.entries()) {
+      if (rateLimitedUntil <= now) {
+        this.rateLimitedPeers.delete(peerId);
+        continue;
+      }
+      retryAt = Math.min(retryAt ?? rateLimitedUntil, rateLimitedUntil);
+    }
+
+    if (retryAt === null) {
+      return;
+    }
+
+    this.rateLimitBackoffTimeout = setTimeout(
+      () => {
+        this.rateLimitBackoffTimeout = undefined;
+        this.triggerBatchDownloader();
+        this.scheduleRateLimitBackoffRetry();
+      },
+      Math.max(0, retryAt - now)
+    );
+  }
+
+  private clearRateLimitBackoffTimer(): void {
+    if (this.rateLimitBackoffTimeout !== undefined) {
+      clearTimeout(this.rateLimitBackoffTimeout);
+      this.rateLimitBackoffTimeout = undefined;
+    }
+  }
+
   /**
    * Attempts to request the next required batches from the peer pool if the chain is syncing.
    * It will exhaust the peer pool and left over batches until the batch buffer is reached.
@@ -383,8 +437,18 @@ export class SyncChain {
       return;
     }
 
+    const now = Date.now();
     const peersSyncInfo: PeerSyncInfo[] = [];
     for (const [peerId, target] of this.peerset.entries()) {
+      // Skip peers that are currently in rate-limit backoff
+      const rateLimitedUntil = this.rateLimitedPeers.get(peerId);
+      if (rateLimitedUntil !== undefined) {
+        if (now < rateLimitedUntil) {
+          continue;
+        }
+        this.rateLimitedPeers.delete(peerId);
+      }
+
       try {
         peersSyncInfo.push({...this.getConnectedPeerSyncMeta(peerId), target});
       } catch (e) {
@@ -458,7 +522,17 @@ export class SyncChain {
       return null;
     }
 
-    const batch = new Batch(startEpoch, this.config, this.clock, this.custodyConfig);
+    const batch = new Batch(
+      startEpoch,
+      this.config,
+      this.clock,
+      this.custodyConfig,
+      this.isFirstBatch,
+      // `latestBid` is only meaningful for the first batch's parent-payload check
+      this.isFirstBatch ? this.latestBid : undefined,
+      this.target.slot
+    );
+    this.isFirstBatch = false;
     this.batches.set(startEpoch, batch);
     return batch;
   }
@@ -473,7 +547,7 @@ export class SyncChain {
       peer: prettyPrintPeerIdStr(peer.peerId),
     });
     try {
-      batch.startDownloading(peer.peerId);
+      batch.startDownloading(peer);
 
       // wrapError ensures to never call both batch success() and batch error()
       const res = await wrapError(this.downloadByRange(peer, batch, this.syncType));
@@ -503,6 +577,8 @@ export class SyncChain {
           case DownloadByRangeErrorCode.OUT_OF_ORDER_BLOCKS:
           case DownloadByRangeErrorCode.OUT_OF_RANGE_BLOCKS:
           case DownloadByRangeErrorCode.PARENT_ROOT_MISMATCH:
+          case DownloadByRangeErrorCode.INVALID_ENVELOPE_BEACON_BLOCK_ROOT:
+          case DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT:
           case BlobSidecarErrorCode.INCLUSION_PROOF_INVALID:
           case BlobSidecarErrorCode.INVALID_KZG_PROOF_BATCH:
           case DataColumnSidecarErrorCode.INCORRECT_KZG_COMMITMENTS_COUNT:
@@ -516,7 +592,16 @@ export class SyncChain {
           {id: this.logId, ...batch.getMetadata(), peer: prettyPrintPeerIdStr(peer.peerId)},
           res.err
         );
-        batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        const rateLimitedUntilMs = getRateLimitedUntilMs(res.err);
+        if (rateLimitedUntilMs !== null) {
+          // Peer rate-limited us — don't count as a failed download attempt and mark peer for backoff
+          this.rateLimitedPeers.set(peer.peerId, rateLimitedUntilMs);
+          this.scheduleRateLimitBackoffRetry();
+          batch.downloadingRateLimited();
+          this.triggerBatchDownloader();
+        } else {
+          batch.downloadingError(peer.peerId); // Throws after MAX_DOWNLOAD_ATTEMPTS
+        }
       } else {
         this.logger.verbose("Batch download success", {
           id: this.logId,
@@ -686,7 +771,10 @@ export class SyncChain {
     });
   }
 
-  private scrapeMetrics(metrics: Metrics): void {
+  /**
+   * Called by `RangeSync`'s to avoid collecting metrics of removed chains.
+   */
+  scrapeMetrics(metrics: Metrics): void {
     const syncPeersMetric =
       this.syncType === RangeSyncType.Finalized
         ? metrics.syncRange.finalizedSyncPeers

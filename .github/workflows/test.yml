@@ -22,7 +22,7 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
@@ -44,13 +44,16 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       - name: Assert pnpm prints no warnings
         run: scripts/assert_no_pnpm_warnings.sh
+
+      - name: Assert @chainsafe/persistent-merkle-tree is not duplicated
+        run: scripts/assert_persistent_merkle_tree_dedup.sh
 
       - name: Lint Code
         run: pnpm lint
@@ -70,7 +73,7 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: "./.github/actions/setup-and-build"
         with:
@@ -91,14 +94,14 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
@@ -114,7 +117,7 @@ jobs:
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
@@ -131,7 +134,7 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: "./.github/actions/setup-and-build"
         with:
@@ -153,7 +156,7 @@ jobs:
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
@@ -168,12 +171,18 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install
-        run: pnpm playwright install
+        run: pnpm playwright install chromium chromium-headless-shell firefox
+        timeout-minutes: 15
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'
@@ -189,14 +198,14 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/beacon-node/spec-tests
           key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
