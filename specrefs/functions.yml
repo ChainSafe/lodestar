@@ -195,7 +195,7 @@
     - file: packages/state-transition/src/block/processParentExecutionPayload.ts
       search: export function applyParentExecutionPayload(
   spec: |
-    <spec fn="apply_parent_execution_payload" fork="gloas" hash="f4a8686c">
+    <spec fn="apply_parent_execution_payload" fork="gloas" hash="fd5aac1d">
     def apply_parent_execution_payload(
         state: BeaconState,
         requests: ExecutionRequests,
@@ -9321,15 +9321,19 @@
     - file: packages/state-transition/src/block/processBuilderDepositRequest.ts
       search: export function processBuilderDepositRequest(
   spec: |
-    <spec fn="process_builder_deposit_request" fork="gloas" hash="877a4ea3">
+    <spec fn="process_builder_deposit_request" fork="gloas" hash="1d458f9c">
     def process_builder_deposit_request(state: BeaconState, request: BuilderDepositRequest) -> None:
+        # Ignore deposits with unexpected withdrawal credential prefixes
+        if not is_builder_withdrawal_credential(request.withdrawal_credentials):
+            return
+
         builder_pubkeys = [b.pubkey for b in state.builders]
         if request.pubkey not in builder_pubkeys:
             if is_valid_builder_deposit_signature(request):
                 add_builder_to_registry(
                     state,
                     request.pubkey,
-                    uint8(request.withdrawal_credentials[0]),
+                    PAYLOAD_BUILDER_VERSION,
                     ExecutionAddress(request.withdrawal_credentials[12:]),
                     request.amount,
                     state.slot,
@@ -12448,7 +12452,8 @@
 - name: upgrade_indexed_attestation_to_gloas#gloas
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
-      search: export function upgradeIndexedAttestationToGloas(
+      search: '^export function upgradeIndexedAttestationToGloas\($'
+      regex: true
   spec: |
     <spec fn="upgrade_indexed_attestation_to_gloas" fork="gloas" hash="b13fb8df">
     def upgrade_indexed_attestation_to_gloas(pre: fulu.IndexedAttestation) -> IndexedAttestation:

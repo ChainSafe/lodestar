@@ -49,6 +49,8 @@ import {
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.ts";
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.ts";
 import {defaultChainOptions} from "../../../src/chain/options.ts";
+import {RegenCaller} from "../../../src/chain/regen/index.ts";
+import {getShufflingForAttestationVerification} from "../../../src/chain/validation/attestation.ts";
 import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.ts";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.ts";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.ts";
@@ -56,6 +58,7 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.ts"
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.ts";
 import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.ts";
 import {ClockEvent} from "../../../src/util/clock.ts";
+import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.ts";
 import {ClockStopped} from "../../mocks/clock.ts";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.ts";
 import {assertCorrectProgressiveBalances} from "../config.ts";
@@ -172,10 +175,25 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState();
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
-              const decisionRoot = headState.getShufflingDecisionRoot(attEpoch);
+              const attHeadBlock = chain.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
+              if (attHeadBlock === null) {
+                throw Error(`No attested block ${toHexString(attestation.data.beaconBlockRoot)}`);
+              }
+              const attHeadBlockEpoch = computeEpochAtSlot(attHeadBlock.slot);
+              const decisionRoot = getShufflingDependentRoot(
+                chain.forkChoice,
+                attEpoch,
+                attHeadBlockEpoch,
+                attHeadBlock
+              );
+              await getShufflingForAttestationVerification(
+                chain,
+                attEpoch,
+                attHeadBlock,
+                RegenCaller.validateGossipAttestation
+              );
               chain.forkChoice.onAttestation(
                 chain.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
                 attDataRootHex

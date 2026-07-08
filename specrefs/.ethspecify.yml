@@ -1,4 +1,4 @@
-version: nightly
+version: v1.7.0-alpha.12
 style: full
 
 specrefs:
@@ -401,9 +401,6 @@ exceptions:
     - validate_merge_block#gloas
     - validate_on_attestation#gloas
     - get_signed_proposer_preferences#gloas
-    - upgrade_attestation_to_gloas#gloas
-    - upgrade_attester_slashing_to_gloas#gloas
-    - upgrade_indexed_attestation_to_gloas#gloas
 
     # gloas (new in alpha.3, not yet implemented)
     - compute_weak_subjectivity_period#gloas
