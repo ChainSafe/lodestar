@@ -65,6 +65,8 @@ import {
   AttestationError,
   AttestationErrorCode,
   GossipAction,
+  ProposerPreferencesError,
+  ProposerPreferencesErrorCode,
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
@@ -74,6 +76,7 @@ import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/prod
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
@@ -1769,6 +1772,46 @@ export function getValidatorApi(
         epoch: currentEpoch,
         count: filteredRegistrations.length,
       });
+    },
+
+    async submitProposerPreferences({signedProposerPreferences}) {
+      const failures: FailureList = [];
+
+      await Promise.all(
+        signedProposerPreferences.map(async (signed, i) => {
+          try {
+            await validateGossipProposerPreferences(chain, signed);
+
+            chain.proposerPreferencesPool.add(signed);
+            await network.publishProposerPreferences(signed);
+            chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+              version: config.getForkName(signed.message.proposalSlot),
+              data: signed,
+            });
+          } catch (e) {
+            const logCtx = {
+              slot: signed.message.proposalSlot,
+              validatorIndex: signed.message.validatorIndex,
+              dependentRoot: toRootHex(signed.message.dependentRoot),
+            };
+
+            if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+              logger.debug("Ignoring known signed proposer preferences", logCtx);
+              return;
+            }
+
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, e as Error);
+            if (e instanceof ProposerPreferencesError && e.action === GossipAction.REJECT) {
+              chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
+            }
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing signed proposer preferences", failures);
+      }
     },
 
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {
