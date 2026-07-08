@@ -43,6 +43,7 @@ import {
   ValidatorIndex,
   Wei,
   altair,
+  bellatrix,
   capella,
   deneb,
   electra,
@@ -831,28 +832,19 @@ export function getPayloadAttributesForSSE(
     feeRecipient,
   });
 
-  let parentBlockNumber: number;
-  if (isForkPostGloas(fork)) {
-    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(
-      toRootHex(parentBlockRoot),
-      toRootHex(parentBlockHash)
-    );
-    if (parentBlock?.executionPayloadBlockHash == null) {
-      throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
-    }
-    parentBlockNumber = parentBlock.executionPayloadNumber;
-  } else {
-    parentBlockNumber = prepareState.payloadBlockNumber;
-  }
-
-  const ssePayloadAttributes: SSEPayloadAttributes = {
+  const ssePayloadAttributes = {
     proposerIndex: prepareState.getBeaconProposer(prepareSlot),
     proposalSlot: prepareSlot,
-    parentBlockNumber,
     parentBlockRoot,
     parentBlockHash,
     payloadAttributes,
-  };
+  } as SSEPayloadAttributes;
+
+  if (!isForkPostGloas(fork)) {
+    // Removed in Gloas, builders can get the block number from the EL via the block hash if required
+    (ssePayloadAttributes as bellatrix.SSEPayloadAttributes).parentBlockNumber = prepareState.payloadBlockNumber;
+  }
+
   return ssePayloadAttributes;
 }
 
