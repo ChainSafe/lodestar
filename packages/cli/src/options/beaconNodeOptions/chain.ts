@@ -25,6 +25,7 @@ export type ChainArgs = {
   "chain.fastConfirmation"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
+  "chain.targetGasLimit"?: number;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -66,6 +67,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     fastConfirmation: args["chain.fastConfirmation"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
+    targetGasLimit: args["chain.targetGasLimit"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -235,6 +237,12 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "number",
     description: "Refuse to skip more than this many slots when processing a block or attestation",
+    group: "chain",
+  },
+
+  "chain.targetGasLimit": {
+    type: "number",
+    description: "Fallback gas limit for when no proposer preferences are available",
     group: "chain",
   },
 

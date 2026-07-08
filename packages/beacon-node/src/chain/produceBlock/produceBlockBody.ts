@@ -702,6 +702,7 @@ export async function prepareExecutionPayload(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    opts?: {targetGasLimit?: number};
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -861,6 +862,7 @@ function preparePayloadAttributes(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    opts?: {targetGasLimit?: number};
   },
   {
     prepareState,
@@ -944,8 +946,9 @@ function preparePayloadAttributes(
  *
  * Sourced from the `SignedProposerPreferences` the proposer's VC submitted to the pool
  * (same `(slot, dependent_root)` lookup as gossip bid validation). When no matching
- * preferences are pooled, target the parent payload's gas limit so the gas limit stays
- * unchanged (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
+ * preferences are pooled, fallback to `chain.targetGasLimit` and if it is not provided,
+ * target the parent payload's gas limit so the gas limit stays unchanged
+ * (`is_gas_limit_target_compatible` then requires `gas_limit == parent_gas_limit`).
  *
  * The parent payload's gas_limit is read from fork choice — the variant matching
  * `(parentBlockRoot, parentBlockHash)` carries the correct value for both FULL parents
@@ -953,7 +956,7 @@ function preparePayloadAttributes(
  * (EMPTY.executionPayloadGasLimit = inherited grandparent's gas_limit).
  */
 function getProposerTargetGasLimit(
-  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool},
+  chain: {forkChoice: IForkChoice; proposerPreferencesPool: ProposerPreferencesPool; opts?: {targetGasLimit?: number}},
   prepareSlot: Slot,
   parentBlockRoot: Root,
   parentBlockHash: Bytes32
@@ -979,6 +982,12 @@ function getProposerTargetGasLimit(
   const pref = dependentRootHex !== null ? chain.proposerPreferencesPool.get(prepareSlot, dependentRootHex) : null;
   if (pref !== null) {
     return pref.message.targetGasLimit;
+  }
+
+  // Optional fallback for when there is no proposer preference provided.
+  const configuredTargetGasLimit = chain.opts?.targetGasLimit;
+  if (configuredTargetGasLimit !== undefined) {
+    return configuredTargetGasLimit;
   }
 
   const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, toRootHex(parentBlockHash));
