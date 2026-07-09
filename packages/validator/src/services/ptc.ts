@@ -1,4 +1,4 @@
-import {ApiClient, HttpStatusCode, routes} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
 import {Slot, gloas} from "@lodestar/types";
@@ -7,7 +7,7 @@ import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
-import {ValidatorEventEmitter} from "./emitter.js";
+import {ExecutionPayloadAvailableEventData, ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 import {PtcDutiesService} from "./ptcDuties.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
@@ -25,7 +25,7 @@ export class PtcService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
-    chainHeadTracker: ChainHeaderTracker,
+    private readonly chainHeadTracker: ChainHeaderTracker,
     syncingStatusTracker: SyncingStatusTracker,
     private readonly metrics: Metrics | null
   ) {
@@ -59,19 +59,26 @@ export class PtcService {
     }
 
     const payloadAttestationDueMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
-    await Promise.race([
-      sleep(payloadAttestationDueMs - this.clock.msFromSlot(slot), signal),
-      this.emitter.waitForExecutionPayloadAvailableSlot(slot),
-    ]);
+    // Submit as soon as the canonical head block's payload is available, or at the deadline
+    const payloadAvailable = new AbortController();
+    try {
+      await Promise.race([
+        sleep(payloadAttestationDueMs - this.clock.msFromSlot(slot), signal),
+        this.waitForCanonicalPayload(slot, payloadAvailable.signal),
+      ]);
+    } finally {
+      payloadAvailable.abort();
+    }
 
     this.metrics?.ptcStepCallProducePayloadAttestation.observe(
       this.clock.secFromSlot(slot) - payloadAttestationDueMs / 1000
     );
 
     try {
-      const payloadAttestationData = await this.producePayloadAttestationData(slot);
+      // No canonical block at slot resolves to `undefined`
+      const payloadAttestationData = (await this.api.validator.producePayloadAttestationData({slot})).value();
       // If no beacon block was seen for the assigned slot, do not submit a payload attestation
-      if (payloadAttestationData === null) {
+      if (!payloadAttestationData) {
         this.logger.debug("Skipping payload attestation, no beacon block seen for slot", {slot});
         return;
       }
@@ -81,12 +88,25 @@ export class PtcService {
     }
   };
 
-  private async producePayloadAttestationData(slot: Slot): Promise<gloas.PayloadAttestationData | null> {
-    const res = await this.api.validator.producePayloadAttestationData({slot});
-    if (!res.ok && res.status === HttpStatusCode.NOT_FOUND) {
-      return null;
-    }
-    return res.value();
+  /**
+   * Resolve when the payload for the canonical head block at `slot` is available
+   */
+  private waitForCanonicalPayload(slot: Slot, signal: AbortSignal): Promise<void> {
+    return new Promise((resolve) => {
+      const onPayloadAvailable = (payload: ExecutionPayloadAvailableEventData): void => {
+        const head = this.chainHeadTracker.getCurrentChainHead(slot);
+        if (payload.slot === slot && head !== null && payload.blockRoot === toRootHex(head)) {
+          this.emitter.off(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
+          resolve();
+        }
+      };
+      signal.addEventListener(
+        "abort",
+        () => this.emitter.off(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable),
+        {once: true}
+      );
+      this.emitter.on(ValidatorEvent.executionPayloadAvailable, onPayloadAvailable);
+    });
   }
 
   private async signAndPublishPayloadAttestations(

@@ -122,7 +122,6 @@ describe("PrepareNextSlot scheduler", () => {
     getForkStub.mockReturnValue(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
-    forkChoiceStub.getJustifiedBlock.mockReturnValue({} as ProtoBlock);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
     const state = generateCachedBellatrixState();
@@ -139,7 +138,6 @@ describe("PrepareNextSlot scheduler", () => {
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
     expect(updateBuilderStatus).toHaveBeenCalledOnce();
-    expect(forkChoiceStub.getJustifiedBlock).toHaveBeenCalledOnce();
     expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledOnce();
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(1);

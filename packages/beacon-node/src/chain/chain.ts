@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -40,7 +40,6 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
-  electra,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -108,7 +107,6 @@ import {
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
   SeenPayloadEnvelopeInput,
-  SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -190,7 +188,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
-  readonly seenProposerPreferences = new SeenProposerPreferences();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -382,6 +379,14 @@ export class BeaconChain implements IBeaconChain {
     blockStateCache.setHeadState(anchorState);
     checkpointStateCache.add(checkpoint, anchorState);
 
+    const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
+      if (stateRoot) return blockStateCache.get(stateRoot);
+
+      if (checkpoint) return checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex});
+
+      return null;
+    };
+
     const forkChoice = initializeForkChoice(
       config,
       emitter,
@@ -390,6 +395,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       opts,
       this.justifiedBalancesGetter.bind(this),
+      forkChoiceStateGetter,
       metrics,
       logger
     );
@@ -916,10 +922,10 @@ export class BeaconChain implements IBeaconChain {
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
-  ): Promise<electra.ExecutionRequests> {
+  ): Promise<gloas.ExecutionRequests> {
     // at the fork boundary, parent is pre-gloas
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
-      return ssz.electra.ExecutionRequests.defaultValue();
+      return ssz.gloas.ExecutionRequests.defaultValue();
     }
     const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
     if (envelope === null) {
@@ -1465,7 +1471,6 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
-    this.seenProposerPreferences.prune(slot);
     this.proposerPreferencesPool.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);

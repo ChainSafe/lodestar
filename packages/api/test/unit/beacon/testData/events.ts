@@ -296,10 +296,10 @@ export const eventTestData: EventData = {
     data: ssz.gloas.SignedProposerPreferences.fromJson({
       message: {
         dependent_root: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        proposal_slot: "10",
-        validator_index: "42",
+        proposal_slot: "32",
+        validator_index: "123",
         fee_recipient: "0x0000000000000000000000000000000000000000",
-        target_gas_limit: "30000000",
+        target_gas_limit: "60000000",
       },
       signature:
         "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
@@ -327,5 +327,10 @@ export const eventTestData: EventData = {
       signature:
         "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
     }),
+  },
+  [EventType.fastConfirmation]: {
+    block: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+    slot: 1,
+    currentSlot: 2,
   },
 };

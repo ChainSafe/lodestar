@@ -30,6 +30,7 @@ export interface SkipOpts {
 const coveredTestRunners = [
   "light_client",
   "epoch_processing",
+  "fast_confirmation",
   "finality",
   "fork",
   "fork_choice",
@@ -85,7 +86,7 @@ export const defaultSkipOpts: SkipOpts = {
     /\/gloas_fork$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: ["fast_confirmation", "networking"],
+  skippedRunners: ["networking"],
 };
 
 /**

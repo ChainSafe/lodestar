@@ -46,10 +46,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       meta: {executionOptimistic: true, finalized: false, version: ForkName.electra},
     },
   },
-  getBlockAttestations: {
-    args: {blockId: "head"},
-    res: {data: [ssz.phase0.Attestation.defaultValue()], meta: {executionOptimistic: true, finalized: false}},
-  },
   getBlockAttestationsV2: {
     args: {blockId: "head"},
     res: {
@@ -69,19 +65,11 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {blockId: "head"},
     res: {data: {root}, meta: {executionOptimistic: true, finalized: false}},
   },
-  publishBlock: {
-    args: {signedBlockContents: ssz.electra.SignedBlockContents.defaultValue()},
-    res: undefined,
-  },
   publishBlockV2: {
     args: {
       signedBlockContents: {signedBlock: ssz.gloas.SignedBeaconBlock.defaultValue()},
       broadcastValidation: BroadcastValidation.consensus,
     },
-    res: undefined,
-  },
-  publishBlindedBlock: {
-    args: {signedBlindedBlock: ssz.electra.SignedBlindedBeaconBlock.defaultValue()},
     res: undefined,
   },
   publishBlindedBlockV2: {
@@ -123,10 +111,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
 
   // pool
 
-  getPoolAttestations: {
-    args: {slot: 1, committeeIndex: 2},
-    res: {data: [ssz.phase0.Attestation.defaultValue()]},
-  },
   getPoolAttestationsV2: {
     args: {slot: 1, committeeIndex: 2},
     res: {data: [ssz.electra.Attestation.defaultValue()], meta: {version: ForkName.electra}},
@@ -134,14 +118,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
   getPoolPayloadAttestations: {
     args: {slot: 1},
     res: {data: [ssz.gloas.PayloadAttestation.defaultValue()], meta: {version: ForkName.gloas}},
-  },
-  getPoolProposerPreferences: {
-    args: {slot: 1},
-    res: {data: [ssz.gloas.SignedProposerPreferences.defaultValue()], meta: {version: ForkName.gloas}},
-  },
-  getPoolAttesterSlashings: {
-    args: undefined,
-    res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
   },
   getPoolAttesterSlashingsV2: {
     args: undefined,
@@ -159,16 +135,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: undefined,
     res: {data: [ssz.capella.SignedBLSToExecutionChange.defaultValue()]},
   },
-  submitPoolAttestations: {
-    args: {signedAttestations: [ssz.phase0.Attestation.defaultValue()]},
-    res: undefined,
-  },
   submitPoolAttestationsV2: {
     args: {signedAttestations: [ssz.electra.SingleAttestation.defaultValue()]},
-    res: undefined,
-  },
-  submitPoolAttesterSlashings: {
-    args: {attesterSlashing: ssz.phase0.AttesterSlashing.defaultValue()},
     res: undefined,
   },
   submitPoolAttesterSlashingsV2: {
@@ -193,10 +161,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   submitPayloadAttestationMessages: {
     args: {payloadAttestationMessages: [ssz.gloas.PayloadAttestationMessage.defaultValue()]},
-    res: undefined,
-  },
-  submitSignedProposerPreferences: {
-    args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
     res: undefined,
   },
 
@@ -232,6 +196,13 @@ export const testData: GenericServerTestCases<Endpoints> = {
   postStateValidators: {
     args: {stateId: "head", validatorIds: [pubkeyHex, 1300], statuses: ["active_ongoing"]},
     res: {data: [validatorResponse], meta: {executionOptimistic: true, finalized: false}},
+  },
+  getStateBuilders: {
+    args: {stateId: "head", builderIds: [pubkeyHex, 32], statuses: ["active"]},
+    res: {
+      data: [{index: 32, status: "active", builder: ssz.gloas.Builder.defaultValue()}],
+      meta: {executionOptimistic: true, finalized: false},
+    },
   },
   postStateValidatorIdentities: {
     args: {stateId: "head", validatorIds: [1300]},

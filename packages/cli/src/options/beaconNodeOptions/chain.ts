@@ -4,6 +4,7 @@ import {ensure0xPrefix} from "../../util/format.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
   "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
@@ -21,6 +22,7 @@ export type ChainArgs = {
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
+  "chain.fastConfirmation"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
   emitPayloadAttributes?: boolean;
@@ -42,6 +44,7 @@ export type ChainArgs = {
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
+    graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
     blacklistedBlocks: args["chain.blacklistedBlocks"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
@@ -60,6 +63,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
+    fastConfirmation: args["chain.fastConfirmation"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     emitPayloadAttributes: args.emitPayloadAttributes,
@@ -93,6 +97,13 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
     description: "Flag to SSE emit execution `payloadAttributes` before every slot",
+    group: "chain",
+  },
+
+  graffitiAppend: {
+    type: "boolean",
+    description: "Append CL/EL client info to graffiti supplied by validator client when space allows",
+    default: defaultOptions.chain.graffitiAppend,
     group: "chain",
   },
 
@@ -210,6 +221,13 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Compute unrealized checkpoints and use it in fork choice or not",
     defaultDescription: String(defaultOptions.chain.computeUnrealized),
+    group: "chain",
+  },
+
+  "chain.fastConfirmation": {
+    type: "boolean",
+    description: "Enable Fast Confirmation Rule for faster block confirmation (experimental)",
+    defaultDescription: String(defaultOptions.chain.fastConfirmation),
     group: "chain",
   },
 

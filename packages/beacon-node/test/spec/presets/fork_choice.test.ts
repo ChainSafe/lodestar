@@ -183,15 +183,22 @@ const forkChoiceTest =
 
             // attestation step
             else if (isAttestation(step)) {
-              logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
+              const isValid = Boolean(step.valid ?? true);
+              logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: isValid});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
               const headState = chain.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
-              chain.forkChoice.onAttestation(
-                headState.cachedState.epochCtx.getIndexedAttestation(ForkSeq[fork], attestation),
-                attDataRootHex
+              const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(
+                ForkSeq[fork],
+                attestation
               );
+              try {
+                chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+                if (!isValid) throw Error("Expect error since this is a negative test");
+              } catch (e) {
+                if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
+              }
             }
 
             // attester slashing step
@@ -732,18 +739,7 @@ const forkChoiceTest =
             (name.includes("simple_attempted_reorg_without_enough_ffg_votes") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_current_epoch") ||
               name.includes("include_votes_another_empty_chain_with_enough_ffg_votes_previous_epoch") ||
-              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))) ||
-          // TODO: re-enable after "apply proposer boost if dependent roots match" (consensus-specs #5306)
-          // is implemented. New behavior in v1.7.0-alpha.9; Lodestar still applies the boost
-          // unconditionally. Only the altair vectors exercise the changed condition (other forks pass).
-          name.endsWith("altair/fork_choice/on_block/pyspec_tests/justified_update_always_if_better") ||
-          name.endsWith("altair/fork_choice/on_block/pyspec_tests/justified_update_not_realized_finality") ||
-          name.endsWith("altair/fork_choice/get_head/pyspec_tests/voting_source_beyond_two_epoch") ||
-          // TODO GLOAS: re-enable after the validate_on_attestation payload-status updates
-          // (consensus-specs #5275) are implemented. New gloas on_attestation vectors in v1.7.0-alpha.9.
-          name.endsWith("validate_on_attestation_beacon_root_payload_check") ||
-          name.endsWith("validate_on_attestation_payload_invalid_index") ||
-          name.endsWith("validate_on_attestation_same_slot_full_vote_rejected"),
+              name.includes("include_votes_another_empty_chain_without_enough_ffg_votes_current_epoch"))),
       },
     };
   };

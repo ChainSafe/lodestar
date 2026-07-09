@@ -22,7 +22,8 @@ vi.mock("../../../src/services/chainHeaderTracker.js");
 describe("BlockDutiesService", () => {
   const api = getApiClientStub();
   const preFuluConfig = createChainForkConfig(defaultConfig);
-  const postFuluConfig = getConfig(ForkName.fulu);
+  const fuluConfig = getConfig(ForkName.fulu);
+  const postGloasConfig = getConfig(ForkName.gloas);
   let validatorStore: ValidatorStore;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
@@ -114,7 +115,7 @@ describe("BlockDutiesService", () => {
     expect(notifyBlockProductionFn).toHaveBeenCalledWith(slot, [pubkeys[0]]);
   });
 
-  it("Post-Fulu epoch tick fetches current and next epoch proposer duties", async () => {
+  it("Post-Gloas epoch tick fetches current and next epoch proposer duties", async () => {
     const dutiesEpoch0: routes.validator.ProposerDutyList = [{slot: 0, validatorIndex: 0, pubkey: pubkeys[0]}];
     const dutiesEpoch1: routes.validator.ProposerDutyList = [{slot: 32, validatorIndex: 1, pubkey: pubkeys[1]}];
     const depRootEpoch0 = ZERO_HASH_HEX;
@@ -128,7 +129,7 @@ describe("BlockDutiesService", () => {
 
     const clock = new ClockMock();
     const dutiesService = new BlockDutiesService(
-      postFuluConfig,
+      postGloasConfig,
       loggerVc,
       api,
       clock,
@@ -233,7 +234,7 @@ describe("BlockDutiesService", () => {
     expect(api.validator.getProposerDuties).toHaveBeenCalledTimes(1);
   });
 
-  it("Post-Fulu head event detects dep_root change for both current and next epoch", async () => {
+  it("Post-Gloas head event detects dep_root change for both current and next epoch", async () => {
     const depRootEpoch0 = toHex(Buffer.alloc(32, 10));
     const depRootEpoch1 = toHex(Buffer.alloc(32, 11));
     const depRootEpoch0Reorg = toHex(Buffer.alloc(32, 20));
@@ -249,7 +250,7 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    new BlockDutiesService(postFuluConfig, loggerVc, api, clock, validatorStore, chainHeaderTracker, null);
+    new BlockDutiesService(postGloasConfig, loggerVc, api, clock, validatorStore, chainHeaderTracker, null);
 
     await clock.tickEpochFns(0, controller.signal);
     expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(2);
@@ -260,8 +261,8 @@ describe("BlockDutiesService", () => {
     await onNewHeadCallback({
       slot: 0,
       head: ZERO_HASH_HEX,
-      previousDutyDependentRoot: depRootEpoch0Reorg, // post-Fulu maps to proposer_dep_root(currentEpoch)
-      currentDutyDependentRoot: depRootEpoch1Reorg, //  post-Fulu maps to proposer_dep_root(nextEpoch)
+      previousDutyDependentRoot: depRootEpoch0Reorg, // post-Gloas (v2) maps to proposer_dep_root(currentEpoch)
+      currentDutyDependentRoot: depRootEpoch1Reorg, //  post-Gloas (v2) maps to proposer_dep_root(nextEpoch)
     });
 
     expect(api.validator.getProposerDutiesV2).toHaveBeenCalledTimes(4);
@@ -316,13 +317,13 @@ describe("BlockDutiesService", () => {
     expect(api.validator.getProposerDuties).toHaveBeenCalledTimes(1);
   });
 
-  it("Post-Fulu last slot of epoch does NOT schedule a pre-Fulu boundary fetch", async () => {
+  it("Post-Gloas last slot of epoch does NOT schedule a boundary fetch", async () => {
     api.validator.getProposerDutiesV2.mockResolvedValue(
       mockApiResponse({data: [], meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false}})
     );
 
     const clock = new ClockMock();
-    new BlockDutiesService(postFuluConfig, loggerVc, api, clock, validatorStore, chainHeaderTracker, null);
+    new BlockDutiesService(postGloasConfig, loggerVc, api, clock, validatorStore, chainHeaderTracker, null);
 
     await clock.tickEpochFns(0, controller.signal);
     const callsAfterEpochTick = api.validator.getProposerDutiesV2.mock.calls.length;
@@ -330,8 +331,36 @@ describe("BlockDutiesService", () => {
     await clock.tickSlotFns(31, controller.signal);
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    // No extra fetch beyond what `runEveryEpoch` already did — boundary poll is pre-Fulu only
+    // No extra fetch beyond what `runEveryEpoch` already did, the boundary poll is pre-Gloas only
     expect(api.validator.getProposerDutiesV2.mock.calls.length).toBe(callsAfterEpochTick);
+  });
+
+  it("Fulu (pre-Gloas) uses the v1 endpoint and the boundary-poll path, not v2", async () => {
+    const epoch0Duties: routes.validator.ProposerDutyList = [];
+    const epoch1Duties: routes.validator.ProposerDutyList = [{slot: 32, validatorIndex: 0, pubkey: pubkeys[0]}];
+
+    api.validator.getProposerDuties.mockImplementation(async ({epoch}) =>
+      mockApiResponse({
+        data: epoch === 0 ? epoch0Duties : epoch1Duties,
+        meta: {dependentRoot: ZERO_HASH_HEX, executionOptimistic: false},
+      })
+    );
+
+    const clock = new ClockMock();
+    new BlockDutiesService(fuluConfig, loggerVc, api, clock, validatorStore, chainHeaderTracker, null);
+
+    // Epoch tick fetches only the current epoch via v1 (no v2, no next-epoch pre-fetch)
+    await clock.tickEpochFns(0, controller.signal);
+    expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+    expect(api.validator.getProposerDuties).toHaveBeenCalledTimes(1);
+    expect(api.validator.getProposerDuties.mock.calls[0][0]).toEqual({epoch: 0});
+
+    // Last slot of the epoch schedules the boundary fetch for nextEpoch, still via v1
+    await clock.tickSlotFns(31, controller.signal);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(api.validator.getProposerDutiesV2).not.toHaveBeenCalled();
+    expect(api.validator.getProposerDuties).toHaveBeenCalledTimes(2);
+    expect(api.validator.getProposerDuties.mock.calls[1][0]).toEqual({epoch: 1});
   });
 
   it("Should remove signer from duty across epochs", async () => {

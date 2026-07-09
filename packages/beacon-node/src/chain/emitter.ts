@@ -3,7 +3,7 @@ import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconStateView} from "@lodestar/state-transition";
-import {DataColumnSidecar, RootHex, deneb, phase0} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "./blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -94,7 +94,8 @@ export type ChainEventData = {
     peer: PeerIdStr;
     source: BlockInputSource;
   };
-  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; peer?: PeerIdStr; source: BlockInputSource};
+  // slot is the message slot, not necessarily the envelope's slot, but useful as a logging/prune hint
+  [ChainEvent.unknownEnvelopeBlockRoot]: {rootHex: RootHex; slot: Slot; peer?: PeerIdStr; source: BlockInputSource};
 };
 
 export type IChainEvents = ApiEvents & {
