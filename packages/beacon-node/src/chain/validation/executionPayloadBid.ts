@@ -37,9 +37,17 @@ async function validateExecutionPayloadBid(
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
 
-  // [IGNORE] `bid.slot` is the current slot or the next slot.
-  const currentSlot = chain.clock.currentSlot;
-  if (bid.slot !== currentSlot && bid.slot !== currentSlot + 1) {
+  // [IGNORE] `bid.slot` is the current slot or the next slot, with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY`
+  // allowance on both ends. Equivalent to the spec's `is_within_slot_range(state, bid.slot, 1, ...)`:
+  // the clock must be in slot `bid.slot - 1` (bid.slot is the next slot) or `bid.slot` (the current
+  // slot), i.e. now within `[start(bid.slot - 1), start(bid.slot + 1)] ± MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  // Millisecond-precise on purpose: the disparity boundary is sub-slot, so slot-granular helpers
+  // (`currentSlotWithGossipDisparity` / `slotWithFutureTolerance`) cannot express it.
+  const maxGossipClockDisparityMs = chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  if (
+    chain.clock.msFromSlot(bid.slot - 1) < -maxGossipClockDisparityMs ||
+    chain.clock.msFromSlot(bid.slot + 1) > maxGossipClockDisparityMs
+  ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
       builderIndex: bid.builderIndex,
