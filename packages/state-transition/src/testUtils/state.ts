@@ -93,7 +93,6 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
   configCustom: ChainForkConfig = config,
   opts?: EpochCacheOpts
 ): T & BeaconStateCache {
-  pubkeyCache.reset();
   return createCachedBeaconState<T>(
     state,
     {
