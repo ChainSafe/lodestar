@@ -1707,7 +1707,9 @@
     </spec>
 
 - name: compute_weak_subjectivity_period#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/weakSubjectivity.ts
+      search: export function computeWeakSubjectivityPeriod(
   spec: |
     <spec fn="compute_weak_subjectivity_period" fork="gloas" hash="8b1ddc92">
     def compute_weak_subjectivity_period(state: BeaconState) -> uint64:
