@@ -15,7 +15,7 @@ import {canBuilderCoverBid, isActiveBuilder} from "../util/gloas.js";
 import {getBlockRootAtSlot, getCurrentEpoch, getRandaoMix} from "../util/index.js";
 
 export function processExecutionPayloadBid(
-  state: CachedBeaconStateGloas,
+  state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   signedBid: gloas.SignedExecutionPayloadBid
 ): void {
   const bid = signedBid.message;
@@ -47,7 +47,7 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the builder has funds to cover the bid
-    if (!canBuilderCoverBid(state, builderIndex, amount)) {
+    if (!canBuilderCoverBid(state as CachedBeaconStateGloas, builderIndex, amount)) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} has insufficient balance`);
     }
 
@@ -106,15 +106,16 @@ export function processExecutionPayloadBid(
   }
 
   if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
-    const hezeState = state as unknown as CachedBeaconStateHeze;
-    hezeState.latestExecutionPayloadBid = ssz.heze.ExecutionPayloadBid.toViewDU(bid as heze.ExecutionPayloadBid);
+    (state as CachedBeaconStateHeze).latestExecutionPayloadBid = ssz.heze.ExecutionPayloadBid.toViewDU(
+      bid as heze.ExecutionPayloadBid
+    );
   } else {
-    state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
+    (state as CachedBeaconStateGloas).latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
   }
 }
 
 function verifyExecutionPayloadBidSignature(
-  state: CachedBeaconStateGloas,
+  state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   pubkey: Uint8Array,
   signedBid: gloas.SignedExecutionPayloadBid
 ): boolean {

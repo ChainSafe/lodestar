@@ -53,7 +53,7 @@ export const chainConfig: ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: b("0x07000001"),
   GLOAS_FORK_EPOCH: Infinity,
-  // HEZE (EIP-7805)
+  // HEZE
   HEZE_FORK_VERSION: b("0x08000001"),
   HEZE_FORK_EPOCH: Infinity,
 

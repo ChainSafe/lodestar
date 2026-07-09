@@ -1,8 +1,6 @@
 import {BitVectorType, ContainerType, ListCompositeType, VectorBasicType} from "@chainsafe/ssz";
 import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_PAYLOAD} from "@lodestar/params";
 import {ssz as bellatrixSsz} from "../bellatrix/index.js";
-import {ssz as denebSsz} from "../deneb/index.js";
-import {ssz as electraSsz} from "../electra/index.js";
 import {ssz as gloasSsz} from "../gloas/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
@@ -94,43 +92,6 @@ export const SignedBeaconBlock = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
-);
-
-// Gloas does not define blinded block types (post-ePBS uses bid/envelope split).
-// Heze inherits the electra blinded types for code paths still expecting them.
-export const BlindedBeaconBlockBody = new ContainerType(
-  {
-    ...electraSsz.BlindedBeaconBlockBody.fields,
-  },
-  {typeName: "BlindedBeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const BlindedBeaconBlock = new ContainerType(
-  {
-    ...electraSsz.BlindedBeaconBlock.fields,
-  },
-  {typeName: "BlindedBeaconBlock", jsonCase: "eth2", cachePermanentRootStruct: true}
-);
-
-export const SignedBlindedBeaconBlock = new ContainerType(
-  {
-    ...electraSsz.SignedBlindedBeaconBlock.fields,
-  },
-  {typeName: "SignedBlindedBeaconBlock", jsonCase: "eth2"}
-);
-
-export const ExecutionPayload = new ContainerType(
-  {
-    ...gloasSsz.ExecutionPayload.fields,
-  },
-  {typeName: "ExecutionPayload", jsonCase: "eth2"}
-);
-
-export const ExecutionPayloadHeader = new ContainerType(
-  {
-    ...denebSsz.ExecutionPayloadHeader.fields,
-  },
-  {typeName: "ExecutionPayloadHeader", jsonCase: "eth2"}
 );
 
 // PayloadAttributes primarily for SSE event

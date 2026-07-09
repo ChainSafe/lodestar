@@ -50,7 +50,7 @@ export type ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: Uint8Array;
   GLOAS_FORK_EPOCH: number;
-  // HEZE (EIP-7805)
+  // HEZE
   HEZE_FORK_VERSION: Uint8Array;
   HEZE_FORK_EPOCH: number;
 
