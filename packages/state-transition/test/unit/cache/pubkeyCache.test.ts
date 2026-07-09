@@ -129,7 +129,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
 
       // Give workers time to boot before dispatching, so reads overlap rather
       // than the first worker finishing before the last one comes online.
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const promises = workers.map((worker) => sendTask(worker, {type: "get", indices}));
       const results = await Promise.all(promises);
