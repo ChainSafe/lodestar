@@ -281,12 +281,12 @@ export function getLodestarApi({
     },
 
     async getFastConfirmationInfo() {
-      const confirmedRoot = chain.forkChoice.getConfirmedRoot();
-      const confirmedBlock = chain.forkChoice.getConfirmedBlock();
-      const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
-      const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-      const headRoot = chain.forkChoice.getHeadRoot();
-      const head = chain.forkChoice.getHead();
+      const confirmedRoot = chain.beaconEngine.getConfirmedRoot();
+      const confirmedBlock = chain.beaconEngine.getConfirmedBlock();
+      const justifiedCheckpoint = chain.beaconEngine.getJustifiedCheckpoint();
+      const finalizedCheckpoint = chain.beaconEngine.getFinalizedCheckpoint();
+      const headRoot = chain.beaconEngine.getHeadRoot();
+      const head = chain.beaconEngine.getHead();
 
       return {
         data: {

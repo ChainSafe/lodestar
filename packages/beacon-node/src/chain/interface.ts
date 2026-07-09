@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoiceRead} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -83,7 +83,6 @@ export interface IBeaconChain {
 
   readonly beaconEngine: IBeaconEngine;
   readonly bls: IBlsVerifier;
-  readonly forkChoice: IForkChoiceRead;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
   readonly regen: IStateRegenerator;

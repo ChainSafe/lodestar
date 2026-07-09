@@ -1,8 +1,8 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoiceRead} from "@lodestar/fork-choice";
 import {blockToHeader} from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, Slot} from "@lodestar/types";
+import {IBeaconEngine} from "../../../../chain/beaconEngine/index.js";
 import {IBeaconChain} from "../../../../chain/interface.js";
 import {GENESIS_SLOT} from "../../../../constants/index.js";
 import {rootHexRegex} from "../../../../execution/engine/utils.js";
@@ -23,10 +23,10 @@ export function toBeaconHeaderResponse(
   };
 }
 
-export function resolveBlockId(forkChoice: IForkChoiceRead, blockId: routes.beacon.BlockId): RootHex | Slot {
+export function resolveBlockId(beaconEngine: IBeaconEngine, blockId: routes.beacon.BlockId): RootHex | Slot {
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
-    return forkChoice.getHead().blockRoot;
+    return beaconEngine.getHead().blockRoot;
   }
 
   if (blockId === "genesis") {
@@ -34,11 +34,11 @@ export function resolveBlockId(forkChoice: IForkChoiceRead, blockId: routes.beac
   }
 
   if (blockId === "finalized") {
-    return forkChoice.getFinalizedBlock().blockRoot;
+    return beaconEngine.getFinalizedBlock().blockRoot;
   }
 
   if (blockId === "justified") {
-    return forkChoice.getJustifiedBlock().blockRoot;
+    return beaconEngine.getJustifiedBlock().blockRoot;
   }
 
   if (blockId.startsWith("0x")) {
@@ -60,7 +60,7 @@ export async function getBlockResponse(
   chain: IBeaconChain,
   blockId: routes.beacon.BlockId
 ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean}> {
-  const rootOrSlot = resolveBlockId(chain.forkChoice, blockId);
+  const rootOrSlot = resolveBlockId(chain.beaconEngine, blockId);
 
   const res =
     typeof rootOrSlot === "string"

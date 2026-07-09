@@ -2,7 +2,6 @@ import {ChainForkConfig} from "@lodestar/config";
 import {
   BlockExecutionStatus,
   ExecutionStatus,
-  IForkChoiceRead,
   LVHInvalidResponse,
   LVHValidResponse,
   ProtoBlock,
@@ -25,7 +24,6 @@ export type VerifyBlockExecutionPayloadModules = {
   clock: IClock;
   logger: Logger;
   metrics: Metrics | null;
-  forkChoice: IForkChoiceRead;
   config: ChainForkConfig;
 };
 

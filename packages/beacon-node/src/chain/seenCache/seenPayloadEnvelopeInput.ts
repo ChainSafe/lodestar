@@ -1,11 +1,12 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {Logger, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {IClock} from "../../util/clock.js";
 import {SerializedCache} from "../../util/serializedCache.js";
+import {IBeaconEngine} from "../beaconEngine/index.js";
 import {isDaOutOfRange} from "../blocks/blockInput/index.js";
 import {CreateFromBidProps, CreateFromBlockProps, PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ChainEvent, ChainEventEmitter} from "../emitter.js";
@@ -16,7 +17,7 @@ export {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 export type SeenPayloadEnvelopeInputModules = {
   config: ChainForkConfig;
   clock: IClock;
-  forkChoice: IForkChoice;
+  beaconEngine: IBeaconEngine;
   chainEvents: ChainEventEmitter;
   signal: AbortSignal;
   serializedCache: SerializedCache;
@@ -36,7 +37,7 @@ export type SeenPayloadEnvelopeInputModules = {
 export class SeenPayloadEnvelopeInput {
   private readonly config: ChainForkConfig;
   private readonly clock: IClock;
-  private readonly forkChoice: IForkChoice;
+  private readonly beaconEngine: IBeaconEngine;
   private readonly chainEvents: ChainEventEmitter;
   private readonly signal: AbortSignal;
   private readonly serializedCache: SerializedCache;
@@ -47,7 +48,7 @@ export class SeenPayloadEnvelopeInput {
   constructor({
     config,
     clock,
-    forkChoice,
+    beaconEngine,
     chainEvents,
     signal,
     serializedCache,
@@ -56,7 +57,7 @@ export class SeenPayloadEnvelopeInput {
   }: SeenPayloadEnvelopeInputModules) {
     this.config = config;
     this.clock = clock;
-    this.forkChoice = forkChoice;
+    this.beaconEngine = beaconEngine;
     this.chainEvents = chainEvents;
     this.signal = signal;
     this.serializedCache = serializedCache;
@@ -153,14 +154,18 @@ export class SeenPayloadEnvelopeInput {
   }
 
   pruneBelowParent(parentBlock: ProtoBlock): void {
-    for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
+    for (const block of this.beaconEngine.getAllAncestorBlockRootSlots(
+      parentBlock.blockRoot,
+      parentBlock.payloadStatus
+    )) {
       if (block.slot < parentBlock.slot) {
-        const input = this.payloadInputs.get(block.blockRoot);
+        const blockRootHex = toRootHex(block.root);
+        const input = this.payloadInputs.get(blockRootHex);
         if (input) {
           this.evictPayloadInput(input);
           this.logger?.verbose("SeenPayloadEnvelopeInput.pruneBelowParent deleted", {
             slot: block.slot,
-            root: block.blockRoot,
+            root: blockRootHex,
           });
         }
       }

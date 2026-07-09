@@ -42,7 +42,7 @@ export function getDebugApi({
 }: Pick<ApiModules, "chain" | "config" | "db">): ApplicationMethods<routes.debug.Endpoints> {
   return {
     async getDebugChainHeadsV2() {
-      const heads = chain.forkChoice.getHeads();
+      const heads = chain.beaconEngine.getHeads();
       return {
         data: heads.map((block) => ({
           slot: block.slot,
@@ -55,9 +55,9 @@ export function getDebugApi({
     async getDebugForkChoice() {
       return {
         data: {
-          justifiedCheckpoint: chain.forkChoice.getJustifiedCheckpoint(),
-          finalizedCheckpoint: chain.forkChoice.getFinalizedCheckpoint(),
-          forkChoiceNodes: chain.forkChoice.getAllNodes().map((node) => ({
+          justifiedCheckpoint: chain.beaconEngine.getJustifiedCheckpoint(),
+          finalizedCheckpoint: chain.beaconEngine.getFinalizedCheckpoint(),
+          forkChoiceNodes: chain.beaconEngine.getAllNodes().map((node) => ({
             slot: node.slot,
             blockRoot: node.blockRoot,
             parentRoot: node.parentRoot,
@@ -72,15 +72,16 @@ export function getDebugApi({
     },
 
     async getDebugForkChoiceV2() {
-      const {forkChoice} = chain;
+      const {beaconEngine} = chain;
       return {
         data: {
-          justifiedCheckpoint: forkChoice.getJustifiedCheckpoint(),
-          finalizedCheckpoint: forkChoice.getFinalizedCheckpoint(),
-          forkChoiceNodes: forkChoice.getAllNodes().map((node) => {
+          justifiedCheckpoint: beaconEngine.getJustifiedCheckpoint(),
+          finalizedCheckpoint: beaconEngine.getFinalizedCheckpoint(),
+          forkChoiceNodes: beaconEngine.getAllNodes().map((node) => {
             // Payload-specific fields apply only to a revealed Gloas payload = the FULL variant of a
             // Gloas block
-            const ptc = node.payloadStatus === PayloadStatus.FULL ? forkChoice.getPTCVoteCounts(node.blockRoot) : null;
+            const ptc =
+              node.payloadStatus === PayloadStatus.FULL ? beaconEngine.getPTCVoteCounts(node.blockRoot) : null;
             return {
               payloadStatus: toPayloadStatusName(node.payloadStatus),
               slot: node.slot,
@@ -108,18 +109,18 @@ export function getDebugApi({
             };
           }),
           extraData: {
-            unrealizedJustifiedCheckpoint: forkChoice.getUnrealizedJustifiedCheckpoint(),
-            unrealizedFinalizedCheckpoint: forkChoice.getUnrealizedFinalizedCheckpoint(),
-            proposerBoostRoot: forkChoice.getProposerBoostRoot(),
-            previousProposerBoostRoot: forkChoice.getPreviousProposerBoostRoot(),
-            headRoot: forkChoice.getHeadRoot(),
+            unrealizedJustifiedCheckpoint: beaconEngine.getUnrealizedJustifiedCheckpoint(),
+            unrealizedFinalizedCheckpoint: beaconEngine.getUnrealizedFinalizedCheckpoint(),
+            proposerBoostRoot: beaconEngine.getProposerBoostRoot(),
+            previousProposerBoostRoot: beaconEngine.getPreviousProposerBoostRoot(),
+            headRoot: beaconEngine.getHeadRoot(),
           },
         },
       };
     },
 
     async getProtoArrayNodes() {
-      const nodes = chain.forkChoice.getAllNodes().map((node) => ({
+      const nodes = chain.beaconEngine.getAllNodes().map((node) => ({
         // if node has executionPayloadNumber, it will overwrite the below default
         executionPayloadNumber: 0,
         ...node,

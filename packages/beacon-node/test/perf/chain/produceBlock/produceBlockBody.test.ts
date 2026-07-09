@@ -81,7 +81,7 @@ describe("produceBlockBody", () => {
     maxMs: Infinity,
     timeoutBench: 60 * 1000,
     beforeEach: async () => {
-      const head = chain.forkChoice.getHead();
+      const head = chain.beaconEngine.forkChoice.getHead();
       const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
       const proposerPubKey = state.epochCtx.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 

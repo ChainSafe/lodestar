@@ -254,7 +254,7 @@ function setFinalizedCheckpoint(chain: BeaconChain, checkpoint: FinalizedCheckpo
     rootHex: checkpoint.rootHex,
   };
 
-  const forkChoice = chain.forkChoice as unknown as {
+  const forkChoice = chain.beaconEngine.forkChoice as unknown as {
     fcStore: {
       finalizedCheckpoint: typeof checkpointWithHex;
       unrealizedFinalizedCheckpoint: typeof checkpointWithHex;
@@ -304,11 +304,11 @@ function computePostState(
 }
 
 function invalidateImportedBlock(chain: BeaconChain, blockRootHex: RootHex, parentRootHex: RootHex): void {
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentRootHex);
+  const parentBlock = chain.beaconEngine.forkChoice.getBlockHexDefaultStatus(parentRootHex);
   if (!parentBlock?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: parent ${parentRootHex} has no latest valid execution hash`);
   }
-  const block = chain.forkChoice.getBlockHexDefaultStatus(blockRootHex);
+  const block = chain.beaconEngine.forkChoice.getBlockHexDefaultStatus(blockRootHex);
   if (!block?.executionPayloadBlockHash) {
     throw new Error(`Cannot invalidate ${blockRootHex}: block has no execution payload hash`);
   }
@@ -328,7 +328,7 @@ function isDescendantAtFinalizedCheckpoint(
 ): boolean {
   try {
     const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
-    return chain.forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot === checkpoint.rootHex;
+    return chain.beaconEngine.forkChoice.getAncestor(blockRootHex, finalizedSlot).blockRoot === checkpoint.rootHex;
   } catch {
     return false;
   }

@@ -241,7 +241,7 @@ export function getBeaconBlockApi({
       case routes.beacon.BroadcastValidation.consensus: {
         // check if this beacon node produced the block else run validations
         if (!blockLocallyProduced) {
-          const parentBlock = chain.forkChoice.getBlockDefaultStatus(signedBlock.message.parentRoot);
+          const parentBlock = chain.beaconEngine.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
             chain.emitter.emit(ChainEvent.blockUnknownParent, {
               blockInput: blockForImport,
@@ -496,12 +496,12 @@ export function getBeaconBlockApi({
           const finalizedBlock = config.getForkTypes(blockSlot).SignedBeaconBlock.deserialize(finalizedBlockBytes);
           result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
         }
-        const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
+        const nonFinalizedBlocks = chain.beaconEngine.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
           nonFinalizedBlocks.map(async (summary) => {
             const blockResult = await chain.getBlockByRoot(summary.blockRoot);
             if (blockResult) {
-              const canonical = chain.forkChoice.getCanonicalBlockAtSlot(blockResult.block.message.slot);
+              const canonical = chain.beaconEngine.getCanonicalProtoBlockAtSlot(blockResult.block.message.slot);
               if (canonical) {
                 result.push(
                   toBeaconHeaderResponse(config, blockResult.block, canonical.blockRoot === summary.blockRoot)
@@ -525,7 +525,7 @@ export function getBeaconBlockApi({
         };
       }
 
-      const headSlot = chain.forkChoice.getHead().slot;
+      const headSlot = chain.beaconEngine.getHead().slot;
       if (!parentRoot && slot === undefined) {
         slot = headSlot;
       }
@@ -552,7 +552,7 @@ export function getBeaconBlockApi({
         // fork blocks
         // TODO: What is this logic?
         await Promise.all(
-          chain.forkChoice.getBlockSummariesAtSlot(slot).map(async (summary) => {
+          chain.beaconEngine.getBlockSummariesAtSlot(slot).map(async (summary) => {
             if (isOptimisticBlock(summary)) {
               executionOptimistic = true;
             }
@@ -624,7 +624,7 @@ export function getBeaconBlockApi({
       // Fast path: From head state already available in memory get historical blockRoot
       const slot = typeof blockId === "string" ? parseInt(blockId) : blockId;
       if (!Number.isNaN(slot)) {
-        const head = chain.forkChoice.getHead();
+        const head = chain.beaconEngine.getHead();
 
         if (slot === head.slot) {
           return {
@@ -639,12 +639,12 @@ export function getBeaconBlockApi({
             data: {root: state.getBlockRootAtSlot(slot)},
             meta: {
               executionOptimistic: isOptimisticBlock(head),
-              finalized: computeEpochAtSlot(slot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,
+              finalized: computeEpochAtSlot(slot) <= chain.beaconEngine.getFinalizedCheckpoint().epoch,
             },
           };
         }
       } else if (blockId === "head") {
-        const head = chain.forkChoice.getHead();
+        const head = chain.beaconEngine.getHead();
         return {
           data: {root: fromHex(head.blockRoot)},
           meta: {executionOptimistic: isOptimisticBlock(head), finalized: false},
@@ -675,7 +675,7 @@ export function getBeaconBlockApi({
       }
 
       // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
-      let block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+      let block = chain.beaconEngine.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
         // Only wait if the envelope is for the current slot
         if (chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
@@ -684,7 +684,7 @@ export function getBeaconBlockApi({
             slot,
           });
           await chain.waitForBlock(slot, blockRootHex);
-          block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+          block = chain.beaconEngine.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
         }
         if (block === null) {
           throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);

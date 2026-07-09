@@ -2,7 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoiceRead, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ProtoBlock} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -137,14 +137,11 @@ export class BeaconChain implements IBeaconChain {
   get bls(): IBlsVerifier {
     return this.beaconEngine.bls;
   }
-  // Read facet only — writes go through `beaconEngine.forkChoice`. TODO - beacon engine: remove this
-  // getter in Phase 6 when the facade holds no state.
-  get forkChoice(): IForkChoiceRead {
-    return this.beaconEngine.forkChoice;
-  }
   // Cached head ProtoBlock, updated from importBlock's result. Lets the facade serve getStatus and
   // detect finalized/justified transitions (it carries finalized*/justified* checkpoints) without the
   // engine emitting into the JS emitter (FFI-honest). Not the source of truth for all head reads yet.
+  // TODO - beacon engine: last fork-choice-derived field on the facade — move into the engine (the head
+  // cache belongs in NativeBeaconEngine); the checkpoint-event emission that reads it moves too.
   private headProtoBlock: ProtoBlock;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
@@ -307,7 +304,7 @@ export class BeaconChain implements IBeaconChain {
       anchorState
     );
     // Seed the facade head cache from the engine's initial head (one-time read); refreshed on each import.
-    this.headProtoBlock = this.beaconEngine.forkChoice.getHead();
+    this.headProtoBlock = this.beaconEngine.getHead();
 
     this.blacklistedBlocks = new Map((opts.blacklistedBlocks ?? []).map((hex) => [hex, null]));
 
@@ -330,8 +327,7 @@ export class BeaconChain implements IBeaconChain {
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
       clock,
-      // TODO - beacon engine: cannot have forkchoice here
-      forkChoice: this.beaconEngine.forkChoice,
+      beaconEngine: this.beaconEngine,
       chainEvents: emitter,
       signal,
       serializedCache: this.serializedCache,
@@ -434,11 +430,11 @@ export class BeaconChain implements IBeaconChain {
   }
 
   seenBlock(blockRoot: RootHex): boolean {
-    return this.seenBlockInputCache.hasBlock(blockRoot) || this.forkChoice.hasBlockHexUnsafe(blockRoot);
+    return this.seenBlockInputCache.hasBlock(blockRoot) || this.beaconEngine.hasBlockHexUnsafe(blockRoot);
   }
 
   seenPayloadEnvelope(blockRoot: RootHex): boolean {
-    return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.forkChoice.hasPayloadHexUnsafe(blockRoot);
+    return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.beaconEngine.hasPayloadHexUnsafe(blockRoot);
   }
 
   regenCanAcceptWork(): boolean {
@@ -471,7 +467,7 @@ export class BeaconChain implements IBeaconChain {
   // TODO - beacon engine: remove this
   getHeadState(): IBeaconStateView {
     // head state should always exist
-    const head = this.forkChoice.getHead();
+    const head = this.beaconEngine.getHead();
     const headState = this.regen.getClosestHeadState(head);
     if (!headState) {
       throw Error(`headState does not exist for head root=${head.blockRoot} slot=${head.slot}`);
@@ -492,7 +488,7 @@ export class BeaconChain implements IBeaconChain {
       return headState;
     }
     // only use regen queue if necessary, it'll cache in checkpointStateCache if regen gets through epoch transition
-    const head = this.forkChoice.getHead();
+    const head = this.beaconEngine.getHead();
     const startSlot = computeStartSlotAtEpoch(epoch);
     return this.regen.getBlockSlotState(head, startSlot, {dontTransferCache: true}, regenCaller);
   }
@@ -501,7 +497,7 @@ export class BeaconChain implements IBeaconChain {
     slot: Slot,
     opts?: StateGetOpts
   ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    const finalizedBlock = this.beaconEngine.getFinalizedBlock();
 
     if (slot < finalizedBlock.slot) {
       // request for finalized state not supported in this API
@@ -511,7 +507,7 @@ export class BeaconChain implements IBeaconChain {
 
     if (opts?.allowRegen) {
       // Find closest canonical block to slot, then trigger regen
-      const block = this.forkChoice.getCanonicalBlockClosestLteSlot(slot) ?? finalizedBlock;
+      const block = this.beaconEngine.getCanonicalBlockClosestLteSlot(slot) ?? finalizedBlock;
       const state = await this.regen.getBlockSlotState(block, slot, {dontTransferCache: true}, RegenCaller.restApi);
       return {
         state,
@@ -522,7 +518,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Just check if state is already in the cache. If it's not dialed to the correct slot,
     // do not bother in advancing the state. restApiCanTriggerRegen == false means do no work
-    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+    const block = this.beaconEngine.getCanonicalProtoBlockAtSlot(slot);
     if (!block) {
       return null;
     }
@@ -553,10 +549,10 @@ export class BeaconChain implements IBeaconChain {
   ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
     if (opts?.allowRegen) {
       const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
-      const block = this.forkChoice.getBlockDefaultStatus(
+      const block = this.beaconEngine.getBlockDefaultStatus(
         ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader)
       );
-      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+      const finalizedEpoch = this.beaconEngine.getFinalizedCheckpoint().epoch;
       return {
         state,
         executionOptimistic: block != null && isOptimisticBlock(block),
@@ -571,10 +567,10 @@ export class BeaconChain implements IBeaconChain {
     // TODO: This is very inneficient for debug requests of serialized content, since it deserializes to serialize again
     const cachedStateCtx = this.regen.getStateSync(stateRoot);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlockDefaultStatus(
+      const block = this.beaconEngine.getBlockDefaultStatus(
         ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
       );
-      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+      const finalizedEpoch = this.beaconEngine.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
         executionOptimistic: block != null && isOptimisticBlock(block),
@@ -610,10 +606,10 @@ export class BeaconChain implements IBeaconChain {
     const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
     const cachedStateCtx = this.regen.getCheckpointStateSync(checkpointHex);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlockDefaultStatus(
+      const block = this.beaconEngine.getBlockDefaultStatus(
         ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
       );
-      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+      const finalizedEpoch = this.beaconEngine.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
         executionOptimistic: block != null && isOptimisticBlock(block),
@@ -630,8 +626,8 @@ export class BeaconChain implements IBeaconChain {
     const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
     const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHex);
     if (cachedStateCtx) {
-      const block = this.forkChoice.getBlockDefaultStatus(checkpoint.root);
-      const finalizedEpoch = this.forkChoice.getFinalizedCheckpoint().epoch;
+      const block = this.beaconEngine.getBlockDefaultStatus(checkpoint.root);
+      const finalizedEpoch = this.beaconEngine.getFinalizedCheckpoint().epoch;
       return {
         state: cachedStateCtx,
         executionOptimistic: block != null && isOptimisticBlock(block),
@@ -645,10 +641,10 @@ export class BeaconChain implements IBeaconChain {
   async getCanonicalBlockAtSlot(
     slot: Slot
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    const finalizedBlock = this.beaconEngine.getFinalizedBlock();
     if (slot > finalizedBlock.slot) {
       // Unfinalized slot, attempt to find in fork-choice
-      const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+      const block = this.beaconEngine.getCanonicalProtoBlockAtSlot(slot);
       if (block) {
         // Block found in fork-choice.
         // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -683,7 +679,7 @@ export class BeaconChain implements IBeaconChain {
   async getBlockByRoot(
     root: string
   ): Promise<{block: SignedBeaconBlock; executionOptimistic: boolean; finalized: boolean} | null> {
-    const protoBlock = this.forkChoice.getBlockHexDefaultStatus(root);
+    const protoBlock = this.beaconEngine.getBlockHexDefaultStatus(root);
     if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -709,7 +705,7 @@ export class BeaconChain implements IBeaconChain {
     root: Uint8Array
   ): Promise<{block: Uint8Array; executionOptimistic: boolean; finalized: boolean; slot: Slot} | null> {
     // TODO - beacon engine: make a separate call, need to be lightweight
-    const protoBlock = this.forkChoice.getBlockHexDefaultStatus(toRootHex(root));
+    const protoBlock = this.beaconEngine.getBlockHexDefaultStatus(toRootHex(root));
     if (protoBlock) {
       // Block found in fork-choice.
       // It may be in the block input cache, awaiting full DA reconstruction, check there first
@@ -1286,7 +1282,7 @@ export class BeaconChain implements IBeaconChain {
 
     // Only update validator custody if we discovered new validators
     if (discoveredNewValidators) {
-      const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
+      const finalizedCheckpoint = this.beaconEngine.getFinalizedCheckpoint();
       await this.updateValidatorsCustodyRequirement(finalizedCheckpoint);
     }
   }
@@ -1351,7 +1347,7 @@ export class BeaconChain implements IBeaconChain {
     const executionBuilder = this.executionBuilder;
     if (executionBuilder) {
       const {faultInspectionWindow, allowedFaults} = executionBuilder;
-      const slotsPresent = this.forkChoice.getSlotsPresent(clockSlot - faultInspectionWindow);
+      const slotsPresent = this.beaconEngine.getSlotsPresent(clockSlot - faultInspectionWindow);
       const previousStatus = executionBuilder.status;
       const shouldEnable = slotsPresent >= Math.min(faultInspectionWindow - allowedFaults, clockSlot);
 

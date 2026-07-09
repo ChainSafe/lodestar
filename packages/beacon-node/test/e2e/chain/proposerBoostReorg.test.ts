@@ -89,7 +89,7 @@ describe("proposer boost reorg", () => {
       logger,
     });
 
-    (bn.chain.forkChoice as TimelinessForkChoice).lateSlot = reorgSlot;
+    (bn.chain.beaconEngine.forkChoice as TimelinessForkChoice).lateSlot = reorgSlot;
     afterEachCallbacks.push(async () => bn.close());
     const {validators} = await getAndInitDevValidators({
       node: bn,

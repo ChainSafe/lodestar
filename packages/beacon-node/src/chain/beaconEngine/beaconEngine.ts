@@ -16,6 +16,7 @@ import {
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
+  ProtoNode,
   UpdateHeadOpt,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
@@ -530,6 +531,110 @@ export class BeaconEngine implements IBeaconEngine {
     } finally {
       timer?.();
     }
+  }
+
+  // --- TODO - beacon engine: temp forkChoice read pass-throughs (curate when regen removed — BLK-3). ---
+  getHead(): ProtoBlock {
+    return this.forkChoice.getHead();
+  }
+  getHeadRoot(): RootHex {
+    return this.forkChoice.getHeadRoot();
+  }
+  getHeads(): ProtoBlock[] {
+    return this.forkChoice.getHeads();
+  }
+  getFinalizedCheckpoint(): CheckpointWithHex {
+    return this.forkChoice.getFinalizedCheckpoint();
+  }
+  getJustifiedCheckpoint(): CheckpointWithHex {
+    return this.forkChoice.getJustifiedCheckpoint();
+  }
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex {
+    return this.forkChoice.getUnrealizedJustifiedCheckpoint();
+  }
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex {
+    return this.forkChoice.getUnrealizedFinalizedCheckpoint();
+  }
+  getProposerBoostRoot(): RootHex {
+    return this.forkChoice.getProposerBoostRoot();
+  }
+  getPreviousProposerBoostRoot(): RootHex {
+    return this.forkChoice.getPreviousProposerBoostRoot();
+  }
+  getPTCVoteCounts(
+    blockRootHex: RootHex
+  ): {attesterCount: number; payloadPresentCount: number; dataAvailableCount: number} | null {
+    return this.forkChoice.getPTCVoteCounts(blockRootHex);
+  }
+  getFinalizedBlock(): ProtoBlock {
+    return this.forkChoice.getFinalizedBlock();
+  }
+  getJustifiedBlock(): ProtoBlock {
+    return this.forkChoice.getJustifiedBlock();
+  }
+  getConfirmedRoot(): RootHex {
+    return this.forkChoice.getConfirmedRoot();
+  }
+  getConfirmedBlock(): ProtoBlock | null {
+    return this.forkChoice.getConfirmedBlock();
+  }
+  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null {
+    return this.forkChoice.getBlockDefaultStatus(blockRoot);
+  }
+  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null {
+    return this.forkChoice.getBlockHexDefaultStatus(blockRoot);
+  }
+  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null {
+    return this.forkChoice.getBlockHex(blockRoot, payloadStatus);
+  }
+  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null {
+    return this.forkChoice.getBlockHexAndBlockHash(blockRoot, blockHash);
+  }
+  getCanonicalProtoBlockAtSlot(slot: Slot): ProtoBlock | null {
+    return this.forkChoice.getCanonicalBlockAtSlot(slot);
+  }
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null {
+    return this.forkChoice.getCanonicalBlockByRoot(blockRoot);
+  }
+  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null {
+    return this.forkChoice.getCanonicalBlockClosestLteSlot(slot);
+  }
+  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[] {
+    return this.forkChoice.getBlockSummariesAtSlot(slot);
+  }
+  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[] {
+    return this.forkChoice.getBlockSummariesByParentRoot(parentRoot);
+  }
+  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[] {
+    return this.forkChoice.getAllAncestorBlocks(blockRoot, payloadStatus);
+  }
+  getAllNodes(): ProtoNode[] {
+    return this.forkChoice.getAllNodes();
+  }
+  getSlotsPresent(windowStart: number): number {
+    return this.forkChoice.getSlotsPresent(windowStart);
+  }
+  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
+  hasBlock(blockRoot: Root): boolean {
+    return this.forkChoice.hasBlock(blockRoot);
+  }
+  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
+  hasBlockHex(blockRoot: RootHex): boolean {
+    return this.forkChoice.hasBlockHex(blockRoot);
+  }
+  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean {
+    return this.forkChoice.hasBlockHexUnsafe(blockRoot);
+  }
+  // TODO - beacon engine: hot path — cached in NativeBeaconEngine.
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean {
+    return this.forkChoice.hasPayloadHexUnsafe(blockRoot);
+  }
+  /** Projected thin ref (no ProtoBlock crosses) for DA-cache prune, anchored at (blockRoot, payloadStatus). */
+  getAllAncestorBlockRootSlots(blockRoot: RootHex, payloadStatus: PayloadStatus): BlockRootSlot[] {
+    return this.forkChoice
+      .getAllAncestorBlocks(blockRoot, payloadStatus)
+      .map((block) => ({slot: block.slot, root: fromHex(block.blockRoot)}));
   }
 
   /** DB read of an execution payload envelope. Callers that hold the DA cache check it first. */

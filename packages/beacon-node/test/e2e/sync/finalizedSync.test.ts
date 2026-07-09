@@ -126,7 +126,7 @@ describe("sync / finalized sync for gloas", () => {
     afterEachCallbacks.push(() => bn2.close());
     afterEachCallbacks.push(() => bn2.close());
 
-    const headSummary = bn.chain.forkChoice.getHead();
+    const headSummary = bn.chain.beaconEngine.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
     const waitForSynced = waitForEvent<routes.events.EventData[routes.events.EventType.head]>(
@@ -149,17 +149,20 @@ describe("sync / finalized sync for gloas", () => {
     // Walk Node B's fork-choice from head back through its ancestors. Every gloas block in the
     // canonical chain below the head MUST have its FULL payload variant in fork-choice
     // Also assert that some PTC votes have been included
-    const bn2Head = bn2.chain.forkChoice.getHead();
-    const bn2Ancestors = bn2.chain.forkChoice.getAllAncestorBlocks(bn2Head.blockRoot, bn2Head.payloadStatus);
+    const bn2Head = bn2.chain.beaconEngine.forkChoice.getHead();
+    const bn2Ancestors = bn2.chain.beaconEngine.forkChoice.getAllAncestorBlocks(
+      bn2Head.blockRoot,
+      bn2Head.payloadStatus
+    );
     const gloasFirstSlot = GLOAS_FORK_EPOCH * SLOTS_PER_EPOCH;
     for (const block of bn2Ancestors) {
       if (block.slot >= gloasFirstSlot && block.slot < bn2Head.slot) {
-        expect(bn2.chain.forkChoice.hasPayloadHexUnsafe(block.blockRoot)).toBeWithMessage(
+        expect(bn2.chain.beaconEngine.forkChoice.hasPayloadHexUnsafe(block.blockRoot)).toBeWithMessage(
           true,
           `Node B missing FULL payload variant for gloas block slot=${block.slot} root=${block.blockRoot}`
         );
         if (block.slot > gloasFirstSlot) {
-          const ptcVotes = bn2.chain.forkChoice.getPTCVotes(block.blockRoot) ?? [];
+          const ptcVotes = bn2.chain.beaconEngine.forkChoice.getPTCVotes(block.blockRoot) ?? [];
 
           expect(ptcVotes.some(Boolean)).toBeWithMessage(
             true,

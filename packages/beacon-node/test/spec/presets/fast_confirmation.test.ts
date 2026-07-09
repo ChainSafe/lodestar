@@ -378,11 +378,11 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} check`);
 
               // Forkchoice head is computed lazily only on request
-              const head = (chain.forkChoice as ForkChoice).updateHead();
-              const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
-              const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
-              const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-              const confirmedRoot = chain.forkChoice.getConfirmedRoot();
+              const head = (chain.beaconEngine.forkChoice as ForkChoice).updateHead();
+              const proposerBootRoot = (chain.beaconEngine.forkChoice as ForkChoice).getProposerBoostRoot();
+              const justifiedCheckpoint = chain.beaconEngine.forkChoice.getJustifiedCheckpoint();
+              const finalizedCheckpoint = chain.beaconEngine.forkChoice.getFinalizedCheckpoint();
+              const confirmedRoot = chain.beaconEngine.forkChoice.getConfirmedRoot();
 
               if (step.checks.head) {
                 expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
@@ -402,7 +402,7 @@ const fastConfirmationTest =
               // Compare in slots because proposer boost steps doesn't always come on
               // slot boundary.
               if (step.checks.time && step.checks.time > 0)
-                expect(chain.forkChoice.getTime()).toEqualWithMessage(
+                expect(chain.beaconEngine.forkChoice.getTime()).toEqualWithMessage(
                   Math.floor(bnToNum(step.checks.time) / (config.SLOT_DURATION_MS / 1000)),
                   `Invalid forkchoice time at step ${i}`
                 );
@@ -423,7 +423,7 @@ const fastConfirmationTest =
 
               if (step.checks.get_proposer_head) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const {proposerHead, notReorgedReason} = (chain.forkChoice as ForkChoice).getProposerHead(
+                const {proposerHead, notReorgedReason} = (chain.beaconEngine.forkChoice as ForkChoice).getProposerHead(
                   head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot
@@ -460,7 +460,7 @@ const fastConfirmationTest =
 
               if (step.checks.should_override_forkchoice_update) {
                 const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-                const result = chain.forkChoice.shouldOverrideForkChoiceUpdate(
+                const result = chain.beaconEngine.forkChoice.shouldOverrideForkChoiceUpdate(
                   head,
                   tickTime % (config.SLOT_DURATION_MS / 1000),
                   currentSlot

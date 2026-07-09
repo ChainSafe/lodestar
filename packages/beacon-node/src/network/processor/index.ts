@@ -342,8 +342,11 @@ export class NetworkProcessor {
     // this determines whether this message needs to wait for a Block or Envelope
     // a message should only wait for what it voted for, hence we don't want to put it on both queues
     let preprocessResult: PreprocessResult = {action: PreprocessAction.PushToQueue};
+    // TODO - beacon engine: hot path (per gossip message) — the beaconEngine membership reads below
+    // (hasBlockHexUnsafe / hasPayloadHexUnsafe / getBlockHexAndBlockHash / getBlockHexDefaultStatus) are
+    // cached in NativeBeaconEngine so they don't cross FFI. See BLK-1 plan §2b.
     // no need to check if root is a descendant of the current finalized block, it will be checked once we validate the message if needed
-    if (root && !this.chain.forkChoice.hasBlockHexUnsafe(root)) {
+    if (root && !this.chain.beaconEngine.hasBlockHexUnsafe(root)) {
       // starting from GLOAS, unknown root from data_column_sidecar also falls into this case
       this.searchUnknownBlock({slot, root}, BlockInputSource.network_processor, message.propagationSource.toString());
       // for beacon_attestation and beacon_aggregate_and_proof messages, this is only temporary.
@@ -362,8 +365,8 @@ export class NetworkProcessor {
         if (ForkSeq[fork] >= ForkSeq.gloas) {
           // GLOAS: also check parent envelope, same logic as execution_payload_bid
           const parentBlockHash = getParentBlockHashFromGloasSignedBeaconBlockSerialized(message.msg.data);
-          if (parentBlockHash && !this.chain.forkChoice.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
-            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentRoot);
+          if (parentBlockHash && !this.chain.beaconEngine.getBlockHexAndBlockHash(parentRoot, parentBlockHash)) {
+            const protoBlock = this.chain.beaconEngine.getBlockHexDefaultStatus(parentRoot);
             if (protoBlock === null) {
               this.searchUnknownBlock(
                 {slot, root: parentRoot},
@@ -382,7 +385,7 @@ export class NetworkProcessor {
               );
             }
           }
-        } else if (!this.chain.forkChoice.hasBlockHexUnsafe(parentRoot)) {
+        } else if (!this.chain.beaconEngine.hasBlockHexUnsafe(parentRoot)) {
           this.searchUnknownBlock(
             {slot, root: parentRoot},
             BlockInputSource.network_processor,
@@ -405,7 +408,7 @@ export class NetworkProcessor {
             topicType === GossipType.beacon_attestation
               ? getDataIndexFromSingleAttestationSerialized(fork, message.msg.data)
               : getDataIndexFromSignedAggregateAndProofSerialized(message.msg.data);
-          if (attIndex === 1 && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+          if (attIndex === 1 && !this.chain.beaconEngine.hasPayloadHexUnsafe(root)) {
             // attestation votes that the payload is available but it is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
@@ -419,7 +422,7 @@ export class NetworkProcessor {
         case GossipType.payload_attestation_message: {
           if (root == null) break;
           const payloadPresent = getPayloadPresentFromPayloadAttestationMessageSerialized(message.msg.data);
-          if (payloadPresent && !this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+          if (payloadPresent && !this.chain.beaconEngine.hasPayloadHexUnsafe(root)) {
             // payload attestation votes that the payload is available but it is not yet known
             this.searchUnknownEnvelope(
               {slot, root},
@@ -433,7 +436,7 @@ export class NetworkProcessor {
         }
         case GossipType.data_column_sidecar: {
           if (root == null) break;
-          if (!this.chain.forkChoice.hasPayloadHexUnsafe(root)) {
+          if (!this.chain.beaconEngine.hasPayloadHexUnsafe(root)) {
             this.searchUnknownEnvelope(
               {slot, root},
               BlockInputSource.network_processor,
@@ -448,7 +451,7 @@ export class NetworkProcessor {
           // extractBlockSlotRootFn does not return a root for this topic.
           // Extract beacon_block_root directly
           const blockRoot = getBeaconBlockRootFromExecutionPayloadEnvelopeSerialized(message.msg.data);
-          if (blockRoot && !this.chain.forkChoice.hasBlockHexUnsafe(blockRoot)) {
+          if (blockRoot && !this.chain.beaconEngine.hasBlockHexUnsafe(blockRoot)) {
             this.searchUnknownBlock(
               {slot, root: blockRoot},
               BlockInputSource.network_processor,
@@ -467,9 +470,9 @@ export class NetworkProcessor {
           if (
             parentBlockRoot &&
             parentBlockHash &&
-            !this.chain.forkChoice.getBlockHexAndBlockHash(parentBlockRoot, parentBlockHash)
+            !this.chain.beaconEngine.getBlockHexAndBlockHash(parentBlockRoot, parentBlockHash)
           ) {
-            const protoBlock = this.chain.forkChoice.getBlockHexDefaultStatus(parentBlockRoot);
+            const protoBlock = this.chain.beaconEngine.getBlockHexDefaultStatus(parentBlockRoot);
             if (protoBlock === null) {
               this.searchUnknownBlock(
                 {slot, root: parentBlockRoot},

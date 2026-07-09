@@ -304,7 +304,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules): SequentialGossipHa
     const blockRootHex = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(dataColumnBlockHeader));
 
     // check to see if block has already been processed and BlockInput has been deleted (column received via reqresp or other means)
-    if (chain.forkChoice.hasBlockHex(blockRootHex)) {
+    // TODO - beacon engine: hot path (per column sidecar) — cached in NativeBeaconEngine. See BLK-1 plan §2b.
+    if (chain.beaconEngine.hasBlockHex(blockRootHex)) {
       metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
       logger.debug("Already processed block for column sidecar, skipping processing", {
         slot,
@@ -406,7 +407,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules): SequentialGossipHa
     const blockRootHex = toRootHex(dataColumnSidecar.beaconBlockRoot);
 
     // check to see if payload has already been processed and PayloadEnvelopeInput has been deleted (column received via reqresp or other means)
-    if (chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null) {
+    // TODO - beacon engine: hot path (per column sidecar) — cached in NativeBeaconEngine. See BLK-1 plan §2b.
+    if (chain.beaconEngine.getBlockHex(blockRootHex, PayloadStatus.FULL) !== null) {
       metrics?.peerDas.dataColumnSidecarProcessingSkip.inc();
       logger.debug("Already processed payload for column sidecar, skipping processing", {
         slot,

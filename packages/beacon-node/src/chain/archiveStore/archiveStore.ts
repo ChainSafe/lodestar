@@ -114,7 +114,7 @@ export class ArchiveStore {
   async getHistoricalStateBySlot(
     slot: number
   ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.chain.forkChoice.getFinalizedBlock();
+    const finalizedBlock = this.chain.beaconEngine.getFinalizedBlock();
 
     if (slot >= finalizedBlock.slot) {
       return null;

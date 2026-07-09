@@ -8,6 +8,7 @@ import {
   PayloadExecutionStatus,
   PayloadStatus,
   ProtoBlock,
+  ProtoNode,
 } from "@lodestar/fork-choice";
 import {ForkName, ForkPostBellatrix} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, PubkeyCache} from "@lodestar/state-transition";
@@ -254,6 +255,49 @@ export interface IBeaconEngine {
   // builder-bid lookup, forkChoice exec hashes, base-state scalars) so they are not recomputed per path.
   // More of the production flow migrates here in later steps.
   getProposerHead(slot: Slot): ProtoBlock;
+
+  // --- TODO - beacon engine: temp forkChoice read pass-throughs (curate when regen removed — BLK-3). ---
+  // Thin forwards to `forkChoice`; return ProtoBlock/ProtoNode/CheckpointWithHex directly (not bytes-honest
+  // yet). Head is engine-owned; head/checkpoint reads route here (see BLK-1 plan §1).
+  getHead(): ProtoBlock;
+  getHeadRoot(): RootHex;
+  getHeads(): ProtoBlock[];
+  getFinalizedCheckpoint(): CheckpointWithHex;
+  getJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
+  getProposerBoostRoot(): RootHex;
+  getPreviousProposerBoostRoot(): RootHex;
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null;
+  getFinalizedBlock(): ProtoBlock;
+  getJustifiedBlock(): ProtoBlock;
+  getConfirmedRoot(): RootHex;
+  getConfirmedBlock(): ProtoBlock | null;
+  getBlockDefaultStatus(blockRoot: Root): ProtoBlock | null;
+  getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
+  getBlockHex(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock | null;
+  getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
+  // Distinct name from the facade's DB-backed `getCanonicalBlockAtSlot` (async, returns a full block).
+  getCanonicalProtoBlockAtSlot(slot: Slot): ProtoBlock | null;
+  getCanonicalBlockByRoot(blockRoot: Root): ProtoBlock | null;
+  getCanonicalBlockClosestLteSlot(slot: Slot): ProtoBlock | null;
+  getBlockSummariesAtSlot(slot: Slot): ProtoBlock[];
+  getBlockSummariesByParentRoot(parentRoot: RootHex): ProtoBlock[];
+  getAllAncestorBlocks(blockRoot: RootHex, payloadStatus: PayloadStatus): ProtoBlock[];
+  getAllNodes(): ProtoNode[];
+  getSlotsPresent(windowStart: number): number;
+  // Hot path (per gossip message / sidecar) — NativeBeaconEngine caches these; JS engine forwards to forkChoice.
+  hasBlock(blockRoot: Root): boolean;
+  hasBlockHex(blockRoot: RootHex): boolean;
+  hasBlockHexUnsafe(blockRoot: RootHex): boolean;
+  hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
+  // Projected thin ref (no ProtoBlock crosses) — DA-cache prune anchored at (blockRoot, payloadStatus).
+  getAllAncestorBlockRootSlots(blockRoot: RootHex, payloadStatus: PayloadStatus): BlockRootSlot[];
+
   // Execution payload envelope DB (engine-owned). Roots cross as raw bytes (FFI-honest).
   getExecutionPayloadEnvelope(
     blockSlot: Slot,

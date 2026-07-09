@@ -1,18 +1,19 @@
 import {routes} from "@lodestar/api";
-import {CheckpointWithHex, IForkChoiceRead} from "@lodestar/fork-choice";
+import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
+import {IBeaconEngine} from "../../../../chain/beaconEngine/index.js";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
 export function resolveStateId(
-  forkChoice: IForkChoiceRead,
+  beaconEngine: IBeaconEngine,
   stateId: routes.beacon.StateId
 ): RootHex | Slot | CheckpointWithHex {
   if (stateId === "head") {
-    return forkChoice.getHead().stateRoot;
+    return beaconEngine.getHead().stateRoot;
   }
 
   if (stateId === "genesis") {
@@ -20,11 +21,11 @@ export function resolveStateId(
   }
 
   if (stateId === "finalized") {
-    return forkChoice.getFinalizedCheckpoint();
+    return beaconEngine.getFinalizedCheckpoint();
   }
 
   if (stateId === "justified") {
-    return forkChoice.getJustifiedCheckpoint();
+    return beaconEngine.getJustifiedCheckpoint();
   }
 
   if (typeof stateId === "string" && stateId.startsWith("0x")) {
@@ -45,7 +46,7 @@ export async function getStateResponseWithRegen(
   chain: IBeaconChain,
   inStateId: routes.beacon.StateId
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
-  const stateId = resolveStateId(chain.forkChoice, inStateId);
+  const stateId = resolveStateId(chain.beaconEngine, inStateId);
 
   const res =
     typeof stateId === "string"
@@ -53,7 +54,7 @@ export async function getStateResponseWithRegen(
       : typeof stateId === "number"
         ? stateId > chain.clock.currentSlot
           ? null // Don't try to serve future slots
-          : stateId >= chain.forkChoice.getFinalizedBlock().slot
+          : stateId >= chain.beaconEngine.getFinalizedBlock().slot
             ? await chain.getStateBySlot(stateId, {allowRegen: true})
             : await chain.getHistoricalStateBySlot(stateId)
         : await chain.getStateOrBytesByCheckpoint(stateId);

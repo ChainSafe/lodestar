@@ -373,13 +373,13 @@ describe("regen/reload states with n-historical states configuration", () => {
       );
       expect(checkpoints[0]).toEqual(checkpoints[1]);
       expect(checkpoints[0].epoch).toEqual(3);
-      const head = reorgedBn.chain.forkChoice.getHead();
+      const head = reorgedBn.chain.beaconEngine.forkChoice.getHead();
       loggerNodeA.info("Node A emitted checkpoint event, head slot: " + head.slot);
 
       // setup reorg data for both bns
       for (const bn of [reorgedBn, followupBn]) {
-        (bn.chain.forkChoice as ReorgedForkChoice).reorgedSlot = reorgedSlot;
-        (bn.chain.forkChoice as ReorgedForkChoice).reorgDistance = reorgDistance;
+        (bn.chain.beaconEngine.forkChoice as ReorgedForkChoice).reorgedSlot = reorgedSlot;
+        (bn.chain.beaconEngine.forkChoice as ReorgedForkChoice).reorgDistance = reorgDistance;
       }
 
       // both nodes see the reorg event

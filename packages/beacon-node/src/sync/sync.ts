@@ -102,7 +102,7 @@ export class BeaconSync implements IBeaconSync {
       };
     }
 
-    const head = this.chain.forkChoice.getHead();
+    const head = this.chain.beaconEngine.getHead();
 
     switch (this.state) {
       case SyncState.SyncingFinalized:
@@ -139,7 +139,7 @@ export class BeaconSync implements IBeaconSync {
 
   get state(): SyncState {
     const currentSlot = this.chain.clock.currentSlot;
-    const headSlot = this.chain.forkChoice.getHead().slot;
+    const headSlot = this.chain.beaconEngine.getHead().slot;
 
     if (
       // Consider node synced IF
@@ -187,7 +187,7 @@ export class BeaconSync implements IBeaconSync {
    */
   private addPeer = (data: NetworkEventData[NetworkEvent.peerConnected]): void => {
     const localStatus = this.chain.getStatus();
-    const syncType = getPeerSyncType(localStatus, data.status, this.chain.forkChoice, this.slotImportTolerance);
+    const syncType = getPeerSyncType(localStatus, data.status, this.chain.beaconEngine, this.slotImportTolerance);
     this.logger.verbose("Peer sync type classified", {
       peer: data.peer,
       syncType,
@@ -249,7 +249,7 @@ export class BeaconSync implements IBeaconSync {
 
     // If we stopped being synced and fallen significantly behind, stop gossip
     else if (state !== SyncState.Synced) {
-      const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
+      const syncDiff = this.chain.clock.currentSlot - this.chain.beaconEngine.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
         if (this.network.isSubscribedToGossipCoreTopics()) {
           this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);

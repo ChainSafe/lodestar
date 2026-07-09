@@ -266,7 +266,7 @@ export function getValidatorApi(
       case SyncState.SyncingFinalized:
       case SyncState.SyncingHead: {
         const currentSlot = chain.clock.currentSlot;
-        const headSlot = chain.forkChoice.getHead().slot;
+        const headSlot = chain.beaconEngine.getHead().slot;
         if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
           throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
         }
@@ -303,7 +303,7 @@ export function getValidatorApi(
    */
 
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
+    const protoBeaconBlock = chain.beaconEngine.getBlockDefaultStatus(beaconBlockRoot);
     if (!protoBeaconBlock) {
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
@@ -315,7 +315,7 @@ export function getValidatorApi(
   }
 
   function notOnOutOfRangeData(beaconBlockRoot: Root): void {
-    const protoBeaconBlock = chain.forkChoice.getBlockDefaultStatus(beaconBlockRoot);
+    const protoBeaconBlock = chain.beaconEngine.getBlockDefaultStatus(beaconBlockRoot);
     if (!protoBeaconBlock) {
       throw new ApiError(404, `Block not in forkChoice, beaconBlockRoot=${toRootHex(beaconBlockRoot)}`);
     }
@@ -931,7 +931,7 @@ export function getValidatorApi(
       const headState = chain.getHeadState();
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
-      const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
+      const headBlockRootHex = chain.beaconEngine.getHead().blockRoot;
       const headBlockRoot = fromHex(headBlockRootHex);
       const fork = config.getForkName(slot);
 
@@ -945,7 +945,7 @@ export function getValidatorApi(
 
       let index: CommitteeIndex;
       if (isForkPostGloas(fork)) {
-        const canonicalBlock = chain.forkChoice.getCanonicalBlockByRoot(beaconBlockRoot);
+        const canonicalBlock = chain.beaconEngine.getCanonicalBlockByRoot(beaconBlockRoot);
         if (!canonicalBlock) {
           // This should never happen
           throw Error(`Block not found in fork choice for slot=${slot}, root=${toRootHex(beaconBlockRoot)}`);
@@ -1006,7 +1006,7 @@ export function getValidatorApi(
       notWhileSyncing();
       await waitForSlot(slot);
 
-      const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
+      const block = chain.beaconEngine.getCanonicalProtoBlockAtSlot(slot);
       if (!block) {
         // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
         throw new ApiError(404, `No canonical block found at slot=${slot}`);
@@ -1061,7 +1061,7 @@ export function getValidatorApi(
       // when a validator is configured with multiple beacon node urls, this beaconBlockRoot may come from another beacon node
       // and it hasn't been in our forkchoice since we haven't seen / processing that block
       // see https://github.com/ChainSafe/lodestar/issues/5063
-      if (!chain.forkChoice.hasBlock(beaconBlockRoot)) {
+      if (!chain.beaconEngine.hasBlock(beaconBlockRoot)) {
         const rootHex = toRootHex(beaconBlockRoot);
         network.searchUnknownBlock({slot, root: rootHex}, BlockInputSource.api);
         // if result of this call is false, i.e. block hasn't seen after 1 slot then the below notOnOptimisticBlockRoot call will throw error

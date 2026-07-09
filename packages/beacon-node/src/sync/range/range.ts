@@ -301,7 +301,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   /** Convenience method for `SyncChain` */
   private onSyncChainEnd: SyncChainFns["onEnd"] = (err, target) => {
-    this.update(this.chain.forkChoice.getFinalizedCheckpoint().epoch);
+    this.update(this.chain.beaconEngine.getFinalizedCheckpoint().epoch);
     this.emit(RangeSyncEvent.completedChain);
 
     if (err === null && target !== null) {
@@ -369,7 +369,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         syncChain.peers === 0 ||
         // Outdated: our chain has progressed beyond this sync chain
         syncChain.target.slot < localFinalizedSlot ||
-        this.chain.forkChoice.hasBlock(syncChain.target.root)
+        this.chain.beaconEngine.hasBlock(syncChain.target.root)
       ) {
         syncChain.remove();
         this.chains.delete(id);

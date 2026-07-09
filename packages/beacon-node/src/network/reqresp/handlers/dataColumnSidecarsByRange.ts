@@ -51,7 +51,7 @@ export async function* onDataColumnSidecarsByRange(
   }
 
   const finalized = db.dataColumnSidecarArchive;
-  const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  const finalizedSlot = chain.beaconEngine.getFinalizedBlock().slot;
   // Columns of the last finalized block live in different DBs depending on fork:
   // - Pre-gloas (fulu): migrated to dataColumnSidecarArchive in the same finalization run.
   // - Post-gloas: stay in the hot db (db.dataColumnSidecar) until the next finalization run,
@@ -99,12 +99,12 @@ export async function* onDataColumnSidecarsByRange(
 
   // Non-finalized range of columns
   if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
+    const headBlock = chain.beaconEngine.getHead();
     const headRoot = headBlock.blockRoot;
     // getAllAncestorBlocks includes the last finalized block as its final element.
     // Skip anything the archive loop above already served via the block.slot > archiveMaxSlot
     // filter below (pre-gloas this skips finalizedSlot, post-gloas it keeps it).
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
+    const headChain = chain.beaconEngine.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {
