@@ -13,6 +13,13 @@ export interface IPeerRpcScoreStore {
   getScoreState(peer: PeerId): ScoreState;
   isCoolingDown(peer: PeerIdStr): boolean;
   dumpPeerScoreStats(): PeerScoreStats;
+  /**
+   * Returns the score stat for a single peer, or null if no entry exists yet.
+   * Unlike getScore() this does not lazily create a default entry, so callers
+   * (e.g. read-only beacon API handlers) can introspect known peers without
+   * polluting the store.
+   */
+  getStatByPeerId(peerIdStr: PeerIdStr): PeerScoreStat | null;
   applyAction(peer: PeerId, action: PeerAction, actionName: string): void;
   applyReconnectionCoolDown(peer: PeerIdStr, reason: GoodByeReasonCode): number;
   update(): void;
@@ -23,7 +30,7 @@ export interface IPeerScore {
   getScore(): number;
   getGossipScore(): number;
   isCoolingDown(): boolean;
-  add(scoreDelta: number): number;
+  add(scoreDelta: number, actionName?: string): number;
   update(): number;
   updateGossipsubScore(newScore: number, ignore: boolean): void;
   getStat(): PeerScoreStat;
@@ -51,6 +58,12 @@ export type PeerScoreStat = {
   ignoreNegativeGossipScore: boolean;
   score: number;
   lastUpdate: number;
+  /** Name of the most recent `reportPeer` action applied, or null if no action has been applied. */
+  lastActionName: string | null;
+  /** Effective change to `lodestarScore` produced by the last action (post score clamp). */
+  lastActionDeltaScore: number;
+  /** Unix timestamp (ms) at which the last action was applied. */
+  lastActionUnixMs: number;
 };
 
 export enum PeerAction {

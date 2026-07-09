@@ -80,10 +80,86 @@ export const NodePeerType = new ContainerType(
 );
 export const NodePeersType = ArrayOf(NodePeerType);
 
-export type NodePeer = ValueOf<typeof NodePeerType>;
-export type NodePeers = ValueOf<typeof NodePeersType>;
+export type NodePeer = ValueOf<typeof NodePeerType> & {
+  /**
+   * libp2p `agentVersion` identify string for the peer (e.g. `Lighthouse/v5.4.0-...`).
+   * Optional per the beacon-API peer-scoring extension.
+   */
+  agentVersion?: string;
+  /**
+   * Composite lodestar score for the peer at the time of the request.
+   * Optional per the beacon-API peer-scoring extension.
+   */
+  score?: number;
+  /**
+   * Reason associated with the most recent disconnect, mapped to the controlled
+   * `PeerDisconnectReason` vocabulary. Omitted when no disconnect has been observed
+   * or the reason cannot be classified.
+   */
+  disconnectReason?: string;
+  /**
+   * Reasons that contributed to the peer's most recent downscore, mapped to the
+   * controlled `PeerScoreReason` vocabulary. Omitted when no downscore action has
+   * been applied. Lodestar surfaces the most recent action only, so the array will
+   * typically contain a single entry.
+   */
+  downscoreReasons?: string[];
+};
+export type NodePeers = NodePeer[];
 
 export type PeersMeta = {count: number};
+
+/** Snake-case keys for the optional peer-scoring extension fields. */
+type NodePeerJsonExtras = {
+  agent_version?: string;
+  score?: number;
+  disconnect_reason?: string;
+  downscore_reasons?: string[];
+};
+
+/**
+ * Serialize a NodePeer to JSON. Uses the SSZ container for the core fields
+ * (so the spec wire format is preserved) and appends the optional
+ * peer-scoring extension fields only when present.
+ */
+function nodePeerToJson(peer: NodePeer): unknown {
+  const json = NodePeerType.toJson(peer) as Record<string, unknown>;
+  if (peer.agentVersion !== undefined) {
+    (json as NodePeerJsonExtras).agent_version = peer.agentVersion;
+  }
+  if (peer.score !== undefined) {
+    (json as NodePeerJsonExtras).score = peer.score;
+  }
+  if (peer.disconnectReason !== undefined) {
+    (json as NodePeerJsonExtras).disconnect_reason = peer.disconnectReason;
+  }
+  if (peer.downscoreReasons !== undefined) {
+    (json as NodePeerJsonExtras).downscore_reasons = peer.downscoreReasons;
+  }
+  return json;
+}
+
+/**
+ * Inverse of nodePeerToJson. Lifts optional extension fields back onto the
+ * decoded NodePeer when present.
+ */
+function nodePeerFromJson(json: unknown): NodePeer {
+  const peer = NodePeerType.fromJson(json) as NodePeer;
+  const obj = json as NodePeerJsonExtras;
+  if (typeof obj.agent_version === "string") {
+    peer.agentVersion = obj.agent_version;
+  }
+  if (typeof obj.score === "number") {
+    peer.score = obj.score;
+  }
+  if (typeof obj.disconnect_reason === "string") {
+    peer.disconnectReason = obj.disconnect_reason;
+  }
+  if (Array.isArray(obj.downscore_reasons)) {
+    peer.downscoreReasons = obj.downscore_reasons.filter((s): s is string => typeof s === "string");
+  }
+  return peer;
+}
 
 export type PeerCount = ValueOf<typeof PeerCountType>;
 
@@ -296,7 +372,16 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
       },
       resp: {
-        data: NodePeersType,
+        data: {
+          ...JsonOnlyResponseCodec.data,
+          toJson: (data) => (data as NodePeer[]).map(nodePeerToJson),
+          fromJson: (json) => {
+            if (!Array.isArray(json)) {
+              throw Error("JSON peers payload must be an array");
+            }
+            return json.map(nodePeerFromJson);
+          },
+        },
         meta: {
           toJson: (d) => d,
           fromJson: (d) => ({count: (d as PeersMeta).count}),
@@ -319,7 +404,11 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         schema: {params: {peer_id: Schema.StringRequired}},
       },
       resp: {
-        data: NodePeerType,
+        data: {
+          ...JsonOnlyResponseCodec.data,
+          toJson: (data) => nodePeerToJson(data as NodePeer),
+          fromJson: (json) => nodePeerFromJson(json),
+        },
         meta: EmptyMetaCodec,
         onlySupport: WireFormat.json,
       },
