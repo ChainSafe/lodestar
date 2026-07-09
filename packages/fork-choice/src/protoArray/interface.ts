@@ -142,10 +142,11 @@ export type ProtoBlock = BlockExtraMeta & {
   unrealizedFinalizedRoot: RootHex;
 
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
+  // Spec: Store.block_timeliness[ATTESTATION_TIMELINESS_INDEX]
   timeliness: boolean;
 
   // Indicate whether block arrives before the PTC deadline
-  // Spec: gloas/fork-choice.md#record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
+  // Spec: Store.block_timeliness[PTC_TIMELINESS_INDEX]
   ptcTimeliness: boolean;
 
   // The index of the block proposer

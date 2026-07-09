@@ -1546,7 +1546,6 @@ export class ForkChoice implements IForkChoice {
 
   /**
    * Check if block arrived before the PTC deadline.
-   * Spec: gloas/fork-choice.md#record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
    */
   private isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const isCurrentSlot = this.fcStore.currentSlot === block.slot;
