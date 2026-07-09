@@ -1,6 +1,7 @@
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   computeEpochAtSlot,
+  computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
   getProposerPreferencesSigningRoot,
 } from "@lodestar/state-transition";
@@ -65,6 +66,20 @@ export async function validateGossipProposerPreferences(
   if (proposers === null) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.UNKNOWN_DEPENDENT_ROOT,
+      proposalSlot,
+      dependentRoot: dependentRootHex,
+    });
+  }
+
+  // [REJECT] The dependent root is a valid dependent block for the proposal slot: the dependent
+  // block's state must be strictly before the proposer lookahead epoch start. Spec:
+  // `lookahead_state.slot >= compute_start_slot_at_epoch(proposal_epoch - MIN_SEED_LOOKAHEAD)` rejects.
+  // A dependent block at or after that slot cannot be the block the lookahead was derived from.
+  const lookaheadEpochStartSlot = computeStartSlotAtEpoch(proposalEpoch - MIN_SEED_LOOKAHEAD);
+  const dependentBlock = chain.forkChoice.getBlockHexDefaultStatus(dependentRootHex);
+  if (dependentBlock !== null && dependentBlock.slot >= lookaheadEpochStartSlot) {
+    throw new ProposerPreferencesError(GossipAction.REJECT, {
+      code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT,
       proposalSlot,
       dependentRoot: dependentRootHex,
     });
