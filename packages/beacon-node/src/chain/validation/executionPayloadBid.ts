@@ -37,11 +37,11 @@ async function validateExecutionPayloadBid(
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
 
-  // [IGNORE] `bid.slot` is the current or next slot, allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  const maxGossipClockDisparityMs = chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY;
+  // [IGNORE] `bid.slot` is the current or next slot (allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`) --
+  // i.e. `bid.slot` is the current slot, or `bid.slot - 1` is the current slot so `bid.slot` is next.
   if (
-    chain.clock.msFromSlot(bid.slot - 1) < -maxGossipClockDisparityMs ||
-    chain.clock.msFromSlot(bid.slot + 1) > maxGossipClockDisparityMs
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
