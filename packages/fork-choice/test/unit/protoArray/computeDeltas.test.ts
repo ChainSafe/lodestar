@@ -308,4 +308,65 @@ describe("computeDeltas", () => {
     ).deltas;
     expect(deltas).toEqualWithMessage([0, 0], "calling computeDeltas again should not have any affect on the weight");
   });
+
+  it("voteless equivocator does not let a higher-index equivocator keep its weight", () => {
+    const balance = 32;
+    // Two proto nodes: index 0 (finalized root) and index 1 (contested child)
+    const numProtoNodes = 2;
+
+    // V0 (idx 0): attester-slashed, vote already nulled by prune -> both indices NULL (voteless)
+    // V1 (idx 1): attester-slashed, still holding a live vote on the contested child (proto node 1)
+    // V2 (idx 2): honest, voting for the same contested child
+    const voteCurrentIndices = [NULL_VOTE_INDEX, NULL_VOTE_INDEX, NULL_VOTE_INDEX];
+    const voteNextIndices = [NULL_VOTE_INDEX, 1, 1];
+    const balances = new Uint16Array([balance, balance, balance]);
+
+    // Both V0 and V1 are in the (add-only) equivocating set
+    const equivocatingIndices = new Set([0, 1]);
+
+    const {deltas} = computeDeltas(
+      numProtoNodes,
+      voteCurrentIndices,
+      voteNextIndices,
+      balances,
+      balances,
+      equivocatingIndices
+    );
+
+    // Only the honest validator V2 may contribute weight to the contested child.
+    // The slashed higher-index validator V1 must be discounted, even though a lower-index
+    // slashed validator V0 has no live vote.
+    expect(deltas[1]).toBeWithMessage(
+      balance,
+      "slashed higher-index validator must be discounted despite a voteless lower-index equivocator"
+    );
+  });
+
+  it("consecutive voteless equivocators do not jam the discount for a later equivocator", () => {
+    const balance = 32;
+    const numProtoNodes = 2;
+
+    // V0, V1: attester-slashed and voteless (both indices NULL)
+    // V2: attester-slashed but still voting for the contested child (proto node 1)
+    // V3: honest, voting for the contested child
+    const voteCurrentIndices = [NULL_VOTE_INDEX, NULL_VOTE_INDEX, NULL_VOTE_INDEX, NULL_VOTE_INDEX];
+    const voteNextIndices = [NULL_VOTE_INDEX, NULL_VOTE_INDEX, 1, 1];
+    const balances = new Uint16Array([balance, balance, balance, balance]);
+
+    const equivocatingIndices = new Set([0, 1, 2]);
+
+    const {deltas} = computeDeltas(
+      numProtoNodes,
+      voteCurrentIndices,
+      voteNextIndices,
+      balances,
+      balances,
+      equivocatingIndices
+    );
+
+    expect(deltas[1]).toBeWithMessage(
+      balance,
+      "only the honest validator counts; all slashed validators must be discounted"
+    );
+  });
 });

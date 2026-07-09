@@ -77,7 +77,7 @@ describe("api - validator - produceAttestationData", () => {
       } as PayloadEnvelopeInput);
 
       const res = await api.producePayloadAttestationData({slot: 0});
-      if (res.data instanceof Uint8Array) {
+      if (res.data === undefined || res.data instanceof Uint8Array) {
         throw Error("Expected payload attestation data object");
       }
 
@@ -87,7 +87,7 @@ describe("api - validator - produceAttestationData", () => {
       expect(res.data.blobDataAvailable).toBe(true);
     });
 
-    it("Should throw 404 when no canonical block has been seen for the assigned slot", async () => {
+    it("Should return no data when no canonical block has been seen for the assigned slot", async () => {
       const gloasConfig = createChainForkConfig({
         ...defaultChainConfig,
         ALTAIR_FORK_EPOCH: 0,
@@ -104,7 +104,8 @@ describe("api - validator - produceAttestationData", () => {
 
       modules.forkChoice.getCanonicalBlockAtSlot.mockReturnValue(null);
 
-      await expect(api.producePayloadAttestationData({slot: 1})).rejects.toThrow("No canonical block found at slot=1");
+      const res = await api.producePayloadAttestationData({slot: 1});
+      expect(res.data).toBeUndefined();
     });
   });
 });

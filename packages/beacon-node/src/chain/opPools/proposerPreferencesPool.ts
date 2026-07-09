@@ -1,4 +1,4 @@
-import {RootHex, Slot, gloas} from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 
 /**
@@ -20,6 +20,10 @@ export class ProposerPreferencesPool {
   /** Lookup for bid validation: matches `(bid.slot, get_proposer_dependent_root(parent_state, ...))`. */
   get(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null {
     return this.bySlot.get(slot)?.get(dependentRootHex) ?? null;
+  }
+
+  isKnown(proposalSlot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): boolean {
+    return this.get(proposalSlot, dependentRoot)?.message.validatorIndex === validatorIndex;
   }
 
   add(signed: gloas.SignedProposerPreferences): void {

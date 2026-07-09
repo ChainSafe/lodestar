@@ -1,4 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
+import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   createSingleSignatureSetFromComponents,
@@ -36,9 +37,11 @@ async function validateExecutionPayloadBid(
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
 
-  // [IGNORE] `bid.slot` is the current slot or the next slot.
-  const currentSlot = chain.clock.currentSlot;
-  if (bid.slot !== currentSlot && bid.slot !== currentSlot + 1) {
+  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  if (
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
+  ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
       builderIndex: bid.builderIndex,
@@ -121,21 +124,35 @@ async function validateExecutionPayloadBid(
     throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
   }
 
-  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
-  // `is_active_builder(state, bid.builder_index)` returns `True`.
-  let builder: gloas.Builder;
-  try {
-    builder = state.getBuilder(bid.builderIndex);
-  } catch {
+  // [REJECT] `bid.builder_index` is within bounds -- i.e. `bid.builder_index < len(state.builders)`.
+  // `state.getBuilder` returns a lazy SSZ `getReadonly` view that is not bounds-checked eagerly; an
+  // out-of-range index only throws (`LeafNode has no right node`) on deferred field access (e.g. inside
+  // `isActiveBuilder`), escaping a try/catch around `getBuilder`. Check the length explicitly instead.
+  if (bid.builderIndex >= state.getBuildersLength()) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
       builderIndex: bid.builderIndex,
     });
   }
+
+  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
+  // `is_active_builder(state, bid.builder_index)` returns `True`.
+  const builder = state.getBuilder(bid.builderIndex);
   if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
       builderIndex: bid.builderIndex,
+    });
+  }
+
+  // [REJECT] The builder version is `PAYLOAD_BUILDER_VERSION` -- i.e.
+  // `state.builders[bid.builder_index].version == PAYLOAD_BUILDER_VERSION`.
+  if (builder.version !== PAYLOAD_BUILDER_VERSION) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_BUILDER_VERSION,
+      builderIndex: bid.builderIndex,
+      version: builder.version,
+      expectedVersion: PAYLOAD_BUILDER_VERSION,
     });
   }
 
@@ -175,7 +192,7 @@ async function validateExecutionPayloadBid(
   // [IGNORE] `is_gas_limit_target_compatible(parent_gas_limit, bid.gas_limit, target_gas_limit)`,
   // where `parent_gas_limit` is the `gas_limit` of the parent execution payload and
   // `target_gas_limit` is `proposer_preferences.target_gas_limit`.
-  const bidGasLimit = Number(bid.gasLimit);
+  const bidGasLimit = bid.gasLimit;
   const parentGasLimit = parentPayloadVariant.executionPayloadGasLimit;
   const targetGasLimit = proposerPreferences.message.targetGasLimit;
   if (!isGasLimitTargetCompatible(parentGasLimit, bidGasLimit, targetGasLimit)) {
@@ -229,6 +246,18 @@ async function validateExecutionPayloadBid(
       code: ExecutionPayloadBidErrorCode.BID_TOO_HIGH,
       bidValue: bid.value,
       builderBalance: builder.balance,
+    });
+  }
+
+  // [REJECT] `bid.prev_randao` is the correct RANDAO mix -- i.e. validate that
+  // `bid.prev_randao == get_randao_mix(parent_state, get_current_epoch(parent_state))`.
+  const randaoMix = state.getRandaoMix(computeEpochAtSlot(state.slot));
+  if (!byteArrayEquals(bid.prevRandao, randaoMix)) {
+    throw new ExecutionPayloadBidError(GossipAction.REJECT, {
+      code: ExecutionPayloadBidErrorCode.INVALID_PREV_RANDAO,
+      builderIndex: bid.builderIndex,
+      bidPrevRandao: toHex(bid.prevRandao),
+      expectedPrevRandao: toHex(randaoMix),
     });
   }
 

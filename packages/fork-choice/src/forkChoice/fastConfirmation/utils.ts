@@ -18,6 +18,7 @@ import {
   FastConfirmationContext,
   FastConfirmationSnapshot,
   IFastConfirmationStore,
+  type TotalActiveBalanceCacheKey,
 } from "./types.ts";
 
 // Spec: adjust_committee_weight_estimate_to_ensure_safety
@@ -266,22 +267,34 @@ export function getPreviousBalanceSource(
   return getBalanceSource(store, cache, "previous");
 }
 
-export function getTotalActiveBalance(balanceSource: FastConfirmationBalanceSource): number {
-  if (balanceSource.state) {
-    return computeTotalBalance(balanceSource.state.getEffectiveBalanceIncrementsZeroInactive());
-  }
-  // Fallback balances come from the justified-balance path and already zero inactive
-  // validators, so summing them gives the active justified total for this balance source.
-  return computeTotalBalance(balanceSource.balances);
+export function getTotalActiveBalance(
+  balanceSource: FastConfirmationBalanceSource,
+  cache: FastConfirmationCache
+): number {
+  // Invariant per balance source within a run, but read many times per is_one_confirmed evaluation
+  // across the epoch-boundary chain walk; memoize so the full validator-set scan runs once per run.
+  const key: TotalActiveBalanceCacheKey = balanceSource.state ?? balanceSource.balances;
+  const cached = cache.totalActiveBalanceByKey.get(key);
+  if (cached !== undefined) return cached;
+
+  const total = balanceSource.state
+    ? computeTotalBalance(balanceSource.state.getEffectiveBalanceIncrementsZeroInactive())
+    : // Fallback balances come from the justified-balance path and already zero inactive
+      // validators, so summing them gives the active justified total for this balance source.
+      computeTotalBalance(balanceSource.balances);
+
+  cache.totalActiveBalanceByKey.set(key, total);
+  return total;
 }
 
 export function estimateCommitteeWeightBetweenSlots(
   balanceSource: FastConfirmationBalanceSource,
+  cache: FastConfirmationCache,
   startSlot: Slot,
   endSlot: Slot
 ): number {
   if (startSlot > endSlot) return 0;
-  const totalActiveBalance = getTotalActiveBalance(balanceSource);
+  const totalActiveBalance = getTotalActiveBalance(balanceSource, cache);
   const startEpoch = computeEpochAtSlot(startSlot);
   const endEpoch = computeEpochAtSlot(endSlot);
 
@@ -334,9 +347,10 @@ export function isFullValidatorSetCovered(startSlot: Slot, endSlot: Slot): boole
 
 export function computeProposerScore(
   ctx: FastConfirmationContext,
-  balanceSource: FastConfirmationBalanceSource
+  balanceSource: FastConfirmationBalanceSource,
+  cache: FastConfirmationCache
 ): number {
-  const totalActiveBalance = getTotalActiveBalance(balanceSource);
+  const totalActiveBalance = getTotalActiveBalance(balanceSource, cache);
   const committeeWeight = Math.floor(totalActiveBalance / SLOTS_PER_EPOCH);
   return Math.floor((committeeWeight * ctx.config.PROPOSER_SCORE_BOOST) / 100);
 }
@@ -436,13 +450,20 @@ export function getEquivocationScore(
   endSlot: Slot
 ): number {
   if (startSlot > endSlot) return 0;
+
+  // Equivocators are extremely rare (none in normal operation). With none, the equivocation score is
+  // always 0, so return before building the slot-range participant set, which otherwise spans up to a
+  // full epoch of committees (~all active validators) and is rebuilt on every is_one_confirmed
+  // evaluation. This build dominates fast-confirmation cost, especially the epoch-boundary chain walk.
+  const equivocating = ctx.getEquivocatingIndices();
+  if (equivocating.size === 0) return 0;
+
   const balances = balanceSource.balances;
   const state = balanceSource.state;
   const stateEpoch = state ? computeEpochAtSlot(state.slot) : null;
   const participants = getSlotRangeParticipants(ctx, store, cache, startSlot, endSlot);
   if (participants.size === 0) return 0;
 
-  const equivocating = ctx.getEquivocatingIndices();
   let score = 0;
   for (const i of participants) {
     if (!equivocating.has(i)) continue;
@@ -462,7 +483,7 @@ export function computeAdversarialWeight(
   startSlot: Slot,
   endSlot: Slot
 ): number {
-  const maximumWeight = estimateCommitteeWeightBetweenSlots(balanceSource, startSlot, endSlot);
+  const maximumWeight = estimateCommitteeWeightBetweenSlots(balanceSource, cache, startSlot, endSlot);
   // The spec uses raw Gwei and computes `maximum_weight // 100 * threshold`.
   // Lodestar carries effective-balance increments instead, so divide after multiplying to avoid
   // dropping the adversarial budget to zero for small validator sets/minimal presets.
@@ -557,9 +578,10 @@ export function computeSafetyThreshold(
   // Spec: compute_safety_threshold(store, block_root, balance_source)
   // Build the threshold from the same terms used in the paper/spec:
   // max possible committee support, proposer boost, empty-slot discount, and adversarial budget.
-  const proposerScore = computeProposerScore(ctx, balanceSource);
+  const proposerScore = computeProposerScore(ctx, balanceSource, cache);
   const maximumSupport = estimateCommitteeWeightBetweenSlots(
     balanceSource,
+    cache,
     (parentBlock.slot + 1) as Slot,
     (currentSlot - 1) as Slot
   );
@@ -704,10 +726,12 @@ export function computeHonestFfgSupportForCurrentTarget(
   const currentEpoch = computeEpochAtSlot(currentSlot);
   const targetState = getCurrentEpochState(ctx, store, cache);
   if (!targetState) return 0;
-  const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
+  const targetBalanceSource = {state: targetState, balances: targetState.effectiveBalanceIncrements};
+  const totalActiveBalance = getTotalActiveBalance(targetBalanceSource, cache);
   const ffgSupport = getCurrentTargetScore(ctx, store, cache);
   const tillNowFFGWeight = estimateCommitteeWeightBetweenSlots(
-    {state: targetState, balances: targetState.effectiveBalanceIncrements},
+    targetBalanceSource,
+    cache,
     computeStartSlotAtEpoch(currentEpoch),
     (currentSlot - 1) as Slot
   );
@@ -740,7 +764,10 @@ export function willNoConflictingCheckpointBeJustified(
   }
   const targetState = getCurrentEpochState(ctx, store, cache);
   if (!targetState) return false;
-  const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
+  const totalActiveBalance = getTotalActiveBalance(
+    {state: targetState, balances: targetState.effectiveBalanceIncrements},
+    cache
+  );
   const honestSupport = computeHonestFfgSupportForCurrentTarget(ctx, store, cache);
   return 3 * honestSupport > 1 * totalActiveBalance;
 }
@@ -752,7 +779,10 @@ export function willCurrentTargetBeJustified(
 ): boolean {
   const targetState = getCurrentEpochState(ctx, store, cache);
   if (!targetState) return false;
-  const totalActiveBalance = computeTotalBalance(targetState.getEffectiveBalanceIncrementsZeroInactive());
+  const totalActiveBalance = getTotalActiveBalance(
+    {state: targetState, balances: targetState.effectiveBalanceIncrements},
+    cache
+  );
   const honestSupport = computeHonestFfgSupportForCurrentTarget(ctx, store, cache);
   return 3 * honestSupport >= 2 * totalActiveBalance;
 }

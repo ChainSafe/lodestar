@@ -18,7 +18,6 @@ import {
   altair,
   capella,
   deneb,
-  electra,
   gloas,
   phase0,
   rewards,
@@ -62,7 +61,6 @@ import {
   SeenContributionAndProof,
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
-  SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -134,7 +132,6 @@ export interface IBeaconChain {
   readonly seenPayloadAttesters: SeenPayloadAttesters;
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids: SeenExecutionPayloadBids;
-  readonly seenProposerPreferences: SeenProposerPreferences;
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -236,7 +233,7 @@ export interface IBeaconChain {
     blockSlot: Slot,
     blockRootHex: string
   ): Promise<gloas.SignedExecutionPayloadEnvelope | null>;
-  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<electra.ExecutionRequests>;
+  getParentExecutionRequests(parentBlockSlot: Slot, parentBlockRootHex: RootHex): Promise<gloas.ExecutionRequests>;
 
   produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody>;
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
