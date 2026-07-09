@@ -122,17 +122,20 @@ async function validateExecutionPayloadBid(
     throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
   }
 
-  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
-  // `is_active_builder(state, bid.builder_index)` returns `True`.
-  let builder: gloas.Builder;
-  try {
-    builder = state.getBuilder(bid.builderIndex);
-  } catch {
+  // [REJECT] `bid.builder_index` is within bounds -- i.e. `bid.builder_index < len(state.builders)`.
+  // `state.getBuilder` returns a lazy SSZ `getReadonly` view that is not bounds-checked eagerly; an
+  // out-of-range index only throws (`LeafNode has no right node`) on deferred field access (e.g. inside
+  // `isActiveBuilder`), escaping a try/catch around `getBuilder`. Check the length explicitly instead.
+  if (bid.builderIndex >= state.getBuildersLength()) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
       builderIndex: bid.builderIndex,
     });
   }
+
+  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
+  // `is_active_builder(state, bid.builder_index)` returns `True`.
+  const builder = state.getBuilder(bid.builderIndex);
   if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
