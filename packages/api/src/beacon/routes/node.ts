@@ -106,6 +106,7 @@ export enum NodeHealth {
  */
 export enum ClientCode {
   BU = "BU", // besu
+  CN = "CN", // caplin
   EJ = "EJ", // ethereumJS
   EG = "EG", // erigon
   EX = "EX", // ethrex
