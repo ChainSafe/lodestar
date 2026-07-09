@@ -81,6 +81,7 @@ export function generateCachedState(
   opts: TestBeaconState = {}
 ): CachedBeaconStateAllForks {
   const state = generateState(opts);
+  pubkeyCache.reset();
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkeyCache,
@@ -92,6 +93,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
   configCustom: ChainForkConfig = config,
   opts?: EpochCacheOpts
 ): T & BeaconStateCache {
+  pubkeyCache.reset();
   return createCachedBeaconState<T>(
     state,
     {
