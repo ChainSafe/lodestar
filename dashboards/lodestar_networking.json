@@ -6980,12 +6980,8 @@
       "id": 634,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -7010,7 +7006,7 @@
       ],
       "title": "prioritizePeers duration",
       "type": "timeseries",
-      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **avg**; legend table shows mean/max/last.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
+      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **avg**.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
     },
     {
       "datasource": {
@@ -7069,12 +7065,8 @@
       "id": 635,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -7158,12 +7150,8 @@
       "id": 636,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max",
-            "lastNotNull"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
