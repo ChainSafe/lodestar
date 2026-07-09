@@ -7002,15 +7002,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_prioritize_peers_seconds_bucket[$rate_interval])) by (le, instance))",
-          "legendFormat": "p95",
+          "expr": "rate(lodestar_peer_manager_prioritize_peers_seconds_sum[$rate_interval]) / rate(lodestar_peer_manager_prioritize_peers_seconds_count[$rate_interval])",
+          "legendFormat": "avg",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "prioritizePeers duration",
       "type": "timeseries",
-      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **p95**; legend table shows mean/max/last.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
+      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **avg**; legend table shows mean/max/last.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
     },
     {
       "datasource": {
@@ -7091,15 +7091,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_score_update_seconds_bucket[$rate_interval])) by (le, instance))",
-          "legendFormat": "p95",
+          "expr": "rate(lodestar_peer_score_update_seconds_sum[$rate_interval]) / rate(lodestar_peer_score_update_seconds_count[$rate_interval])",
+          "legendFormat": "avg",
           "range": true,
           "refId": "A"
         }
       ],
       "title": "Peer score store update duration",
       "type": "timeseries",
-      "description": "Duration of the peer score store update (exponential decay + prune over every tracked peer) each heartbeat.\n\n**Metric:** `lodestar_peer_score_update_seconds`\n\n- Shows **p95**.\n- This loop iterates the whole score store, so divide by *score map size* (Map sizes panel) for time-per-peer — **not** by peers evaluated."
+      "description": "Duration of the peer score store update (exponential decay + prune over every tracked peer) each heartbeat.\n\n**Metric:** `lodestar_peer_score_update_seconds`\n\n- Shows **avg**.\n- This loop iterates the whole score store, so divide by *score map size* (Map sizes panel) for time-per-peer — **not** by peers evaluated."
     },
     {
       "datasource": {
@@ -7180,8 +7180,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_peers_evaluated_count_bucket[$rate_interval])) by (le, instance))",
-          "legendFormat": "p95",
+          "expr": "rate(lodestar_peer_manager_peers_evaluated_count_sum[$rate_interval]) / rate(lodestar_peer_manager_peers_evaluated_count_count[$rate_interval])",
+          "legendFormat": "avg",
           "range": true,
           "refId": "A"
         }
@@ -7520,7 +7520,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"attnets\"}[$rate_interval])\n/\nrate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"attnets\"}[$rate_interval])",
+          "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"attnets\"}[$rate_interval]) / rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"attnets\"}[$rate_interval])",
           "legendFormat": "attnets avg",
           "range": true,
           "refId": "A"
@@ -7531,37 +7531,15 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.1, sum(rate(lodestar_peer_manager_peers_per_active_subnet_bucket{type=\"attnets\"}[$rate_interval])) by (le, instance))",
-          "legendFormat": "attnets p10",
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"syncnets\"}[$rate_interval])\n/\nrate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"syncnets\"}[$rate_interval])",
+          "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"syncnets\"}[$rate_interval]) / rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"syncnets\"}[$rate_interval])",
           "legendFormat": "syncnets avg",
           "range": true,
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.1, sum(rate(lodestar_peer_manager_peers_per_active_subnet_bucket{type=\"syncnets\"}[$rate_interval])) by (le, instance))",
-          "legendFormat": "syncnets p10",
-          "range": true,
-          "refId": "D"
+          "refId": "B"
         }
       ],
       "title": "Peers per active subnet",
       "type": "timeseries",
-      "description": "Connected peer count per active subnet.\n\n**Metric:** `lodestar_peer_manager_peers_per_active_subnet` (label `type=attnets|syncnets`)\n\n- Checks the min-peers-per-subnet invariant; **p10** reveals under-subscribed subnets."
+      "description": "Connected peer count per active subnet (avg per type).\n\n**Metric:** `lodestar_peer_manager_peers_per_active_subnet` (label `type=attnets|syncnets`)\n\n- Checks the min-peers-per-subnet invariant."
     },
     {
       "datasource": {
