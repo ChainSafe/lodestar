@@ -7002,7 +7002,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_prioritize_peers_seconds_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_prioritize_peers_seconds_bucket[$rate_interval])) by (le, instance))",
           "legendFormat": "p95",
           "range": true,
           "refId": "A"
@@ -7010,7 +7010,7 @@
       ],
       "title": "prioritizePeers duration",
       "type": "timeseries",
-      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **fleet p95**; legend table shows mean/max/last.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
+      "description": "Duration of **prioritizePeers()**, the core peer selection/pruning algorithm run each heartbeat.\n\n**Metric:** `lodestar_peer_manager_prioritize_peers_seconds`\n\n- Shows **p95**; legend table shows mean/max/last.\n- Divide by *Peers evaluated* (panel below) for time-per-peer.\n- Split out of total heartbeat duration to attribute cost to this phase."
     },
     {
       "datasource": {
@@ -7091,7 +7091,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_score_update_seconds_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_score_update_seconds_bucket[$rate_interval])) by (le, instance))",
           "legendFormat": "p95",
           "range": true,
           "refId": "A"
@@ -7099,7 +7099,7 @@
       ],
       "title": "Peer score store update duration",
       "type": "timeseries",
-      "description": "Duration of the peer score store update (exponential decay + prune over every tracked peer) each heartbeat.\n\n**Metric:** `lodestar_peer_score_update_seconds`\n\n- Shows **fleet p95**.\n- This loop iterates the whole score store, so divide by *score map size* (Map sizes panel) for time-per-peer — **not** by peers evaluated."
+      "description": "Duration of the peer score store update (exponential decay + prune over every tracked peer) each heartbeat.\n\n**Metric:** `lodestar_peer_score_update_seconds`\n\n- Shows **p95**.\n- This loop iterates the whole score store, so divide by *score map size* (Map sizes panel) for time-per-peer — **not** by peers evaluated."
     },
     {
       "datasource": {
@@ -7180,7 +7180,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_peers_evaluated_count_bucket[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(lodestar_peer_manager_peers_evaluated_count_bucket[$rate_interval])) by (le, instance))",
           "legendFormat": "p95",
           "range": true,
           "refId": "A"
@@ -7265,7 +7265,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "60 * sum(rate(lodestar_peer_score_state_transitions_total[$rate_interval])) by (from, to)",
+          "expr": "60 * rate(lodestar_peer_score_state_transitions_total[$rate_interval])",
           "legendFormat": "{{from}} -> {{to}}",
           "range": true,
           "refId": "A"
@@ -7273,7 +7273,7 @@
       ],
       "title": "Peer score state transitions (rate / min)",
       "type": "timeseries",
-      "description": "Rate of peer score state crossings (Healthy / Disconnected / Banned), per minute, by transition.\n\n**Metric:** `lodestar_peer_score_state_transitions_total`\n\n- Sensitive to the decay formula, thresholds, and gossip-score weighting; given identical inputs both implementations should match.\n- Summed across the fleet by default — **filter to an instance** (Filters var) to attribute churn to a node."
+      "description": "Rate of peer score state crossings (Healthy / Disconnected / Banned), per minute, by transition.\n\n**Metric:** `lodestar_peer_score_state_transitions_total`\n\n- Sensitive to the decay formula, thresholds, and gossip-score weighting."
     },
     {
       "datasource": {
@@ -7350,7 +7350,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "60 * sum(rate(lodestar_peer_manager_peers_pruned_total[$rate_interval])) by (reason)",
+          "expr": "60 * rate(lodestar_peer_manager_peers_pruned_total[$rate_interval])",
           "legendFormat": "{{reason}}",
           "range": true,
           "refId": "A"
@@ -7358,7 +7358,7 @@
       ],
       "title": "Peers pruned (rate / min)",
       "type": "timeseries",
-      "description": "Rate of peers the manager intends to disconnect, per minute, by reason.\n\n**Metric:** `lodestar_peer_manager_peers_pruned_total`\n\n- Covers both top-of-heartbeat bad-score disconnects (`banned` / `score_too_low`) and prioritization reasons.\n- Counts **intent**, not completion (goodbye is fire-and-forget).\n- Summed across the fleet — **filter to an instance** to drill in."
+      "description": "Rate of peers the manager intends to disconnect, per minute, by reason.\n\n**Metric:** `lodestar_peer_manager_peers_pruned_total`\n\n- Covers both top-of-heartbeat bad-score disconnects (`banned` / `score_too_low`) and prioritization reasons.\n- Counts **intent**, not completion (goodbye is fire-and-forget)."
     },
     {
       "datasource": {
@@ -7435,7 +7435,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "60 * sum(rate(lodestar_peer_relevance_check_total[$rate_interval])) by (result)",
+          "expr": "60 * rate(lodestar_peer_relevance_check_total[$rate_interval])",
           "legendFormat": "{{result}}",
           "range": true,
           "refId": "A"
@@ -7443,7 +7443,7 @@
       ],
       "title": "Peer relevance checks (rate / min)",
       "type": "timeseries",
-      "description": "Rate of peer relevance checks on Status, per minute, by result.\n\n**Metric:** `lodestar_peer_relevance_check_total`\n\n- `result` is `relevant`, an irrelevant reason code (fork digest / clock skew / finalized mismatch / missing earliestAvailableSlot), or `error`.\n- Fires on every status evaluation.\n- Summed across the fleet — **filter to an instance** to drill in."
+      "description": "Rate of peer relevance checks on Status, per minute, by result.\n\n**Metric:** `lodestar_peer_relevance_check_total`\n\n- `result` is `relevant`, an irrelevant reason code (fork digest / clock skew / finalized mismatch / missing earliestAvailableSlot), or `error`.\n- Fires on every status evaluation."
     },
     {
       "datasource": {
@@ -7520,7 +7520,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"attnets\"}[$rate_interval]))\n/\nsum(rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"attnets\"}[$rate_interval]))",
+          "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"attnets\"}[$rate_interval])\n/\nrate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"attnets\"}[$rate_interval])",
           "legendFormat": "attnets avg",
           "range": true,
           "refId": "A"
@@ -7531,7 +7531,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.1, sum(rate(lodestar_peer_manager_peers_per_active_subnet_bucket{type=\"attnets\"}[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.1, sum(rate(lodestar_peer_manager_peers_per_active_subnet_bucket{type=\"attnets\"}[$rate_interval])) by (le, instance))",
           "legendFormat": "attnets p10",
           "range": true,
           "refId": "B"
@@ -7542,7 +7542,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"syncnets\"}[$rate_interval]))\n/\nsum(rate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"syncnets\"}[$rate_interval]))",
+          "expr": "rate(lodestar_peer_manager_peers_per_active_subnet_sum{type=\"syncnets\"}[$rate_interval])\n/\nrate(lodestar_peer_manager_peers_per_active_subnet_count{type=\"syncnets\"}[$rate_interval])",
           "legendFormat": "syncnets avg",
           "range": true,
           "refId": "C"
@@ -7553,7 +7553,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.1, sum(rate(lodestar_peer_manager_peers_per_active_subnet_bucket{type=\"syncnets\"}[$rate_interval])) by (le))",
+          "expr": "histogram_quantile(0.1, sum(rate(lodestar_peer_manager_peers_per_active_subnet_bucket{type=\"syncnets\"}[$rate_interval])) by (le, instance))",
           "legendFormat": "syncnets p10",
           "range": true,
           "refId": "D"
@@ -7561,7 +7561,7 @@
       ],
       "title": "Peers per active subnet",
       "type": "timeseries",
-      "description": "Connected peer count per active subnet.\n\n**Metric:** `lodestar_peer_manager_peers_per_active_subnet` (label `type=attnets|syncnets`)\n\n- Checks the min-peers-per-subnet invariant; **p10** reveals under-subscribed subnets.\n- Fleet-wide by default (avg + p10 per type) — **filter to an instance** to drill in."
+      "description": "Connected peer count per active subnet.\n\n**Metric:** `lodestar_peer_manager_peers_per_active_subnet` (label `type=attnets|syncnets`)\n\n- Checks the min-peers-per-subnet invariant; **p10** reveals under-subscribed subnets."
     },
     {
       "datasource": {
@@ -7638,7 +7638,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg(lodestar_peer_manager_outbound_peers_ratio)",
+          "expr": "avg_over_time(lodestar_peer_manager_outbound_peers_ratio[$rate_interval])",
           "legendFormat": "outbound ratio",
           "range": true,
           "refId": "A"
@@ -7646,7 +7646,7 @@
       ],
       "title": "Outbound peers ratio",
       "type": "timeseries",
-      "description": "Ratio of outbound to total connected healthy peers.\n\n**Metric:** `lodestar_peer_manager_outbound_peers_ratio`\n\n- Verifies the OUTBOUND_PEERS_RATIO floor (~10%, see issue #2215).\n- Shown as **fleet avg** — **filter to an instance** to verify a specific node holds the floor."
+      "description": "Ratio of outbound to total connected healthy peers.\n\n**Metric:** `lodestar_peer_manager_outbound_peers_ratio`\n\n- Verifies the OUTBOUND_PEERS_RATIO floor (~10%, see issue #2215)."
     },
     {
       "datasource": {
@@ -7723,7 +7723,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg(lodestar_peer_manager_score_map_size)",
+          "expr": "avg_over_time(lodestar_peer_manager_score_map_size[$rate_interval])",
           "legendFormat": "score map",
           "range": true,
           "refId": "A"
@@ -7734,7 +7734,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg(lodestar_peer_manager_connected_peers_map_size)",
+          "expr": "avg_over_time(lodestar_peer_manager_connected_peers_map_size[$rate_interval])",
           "legendFormat": "connected peers map",
           "range": true,
           "refId": "B"
@@ -7745,7 +7745,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "avg(libp2p_peers)",
+          "expr": "avg_over_time(libp2p_peers[$rate_interval])",
           "legendFormat": "libp2p_peers",
           "range": true,
           "refId": "C"
@@ -7753,7 +7753,7 @@
       ],
       "title": "Peer manager map sizes",
       "type": "timeseries",
-      "description": "Entry counts of peer manager data structures (**not bytes**).\n\n**Metrics:** `lodestar_peer_manager_score_map_size`, `lodestar_peer_manager_connected_peers_map_size`, `libp2p_peers`\n\n- *connected peers map* should track *libp2p_peers*; a persistent gap indicates a connection leak.\n- *score map* reflects prune-to-MAX_ENTRIES / SCORE_THRESHOLD retention.\n- Fleet avg — **filter to an instance** to drill in."
+      "description": "Entry counts of peer manager data structures (**not bytes**).\n\n**Metrics:** `lodestar_peer_manager_score_map_size`, `lodestar_peer_manager_connected_peers_map_size`, `libp2p_peers`\n\n- *connected peers map* should track *libp2p_peers*; a persistent gap indicates a connection leak.\n- *score map* reflects prune-to-MAX_ENTRIES / SCORE_THRESHOLD retention."
     }
   ],
   "refresh": "10s",
