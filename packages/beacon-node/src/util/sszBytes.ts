@@ -706,7 +706,7 @@ export function getBlockRootFromPayloadAttestationMessageSerialized(data: Uint8A
  *   blockHash: Bytes32            (32 bytes)
  *   prevRandao: Bytes32           (32 bytes)
  *   feeRecipient: ExecutionAddress(20 bytes)
- *   gasLimit: UintBn64            (8 bytes)
+ *   gasLimit: UintNum64           (8 bytes)
  *   builderIndex: BuilderIndex    (8 bytes)
  *   slot: Slot                    (8 bytes)  ← absolute offset 264
  */

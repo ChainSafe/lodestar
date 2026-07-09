@@ -331,8 +331,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
     const key = toCacheKey(cpHex);
     const cacheItem = this.cache.get(key);
     this.metrics?.cpStateCache.adds.inc();
-    if (cacheItem !== undefined && isPersistedCacheItem(cacheItem)) {
-      const persistedKey = cacheItem.value;
+    // keep an existing persistedKey (persisted or reloaded-in-memory); dropping it orphans the on-disk file
+    const persistedKey = cacheItem && (isPersistedCacheItem(cacheItem) ? cacheItem.value : cacheItem.persistedKey);
+    if (persistedKey !== undefined) {
       // was persisted to disk, set back to memory
       this.cache.set(key, {type: CacheItemType.inMemory, state, persistedKey});
       this.logger.verbose("Added checkpoint state to memory but a persisted key existed", {
@@ -414,11 +415,12 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
 
   /**
    * Prune all checkpoint states before the provided finalized epoch.
+   * Driven sequentially from processState() so it never interleaves with persist.
    */
-  pruneFinalized(finalizedEpoch: Epoch): void {
+  private async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
-        this.deleteAllEpochItems(epoch).catch((e) =>
+        await this.deleteAllEpochItems(epoch).catch((e) =>
           this.logger.debug("Error delete all epoch items", {epoch, finalizedEpoch}, e as Error)
         );
       }
@@ -476,6 +478,9 @@ export class PersistentCheckpointStateCache implements CheckpointStateCache {
    * As of Mar 2024, it takes <=350ms to persist a holesky state on fast server
    */
   async processState(blockRootHex: RootHex, state: IBeaconStateView): Promise<number> {
+    // prune finalized in the same flow so a finalized cp state is pruned, never persisted
+    await this.pruneFinalized(state.finalizedCheckpoint.epoch);
+
     let persistCount = 0;
     // it's important to sort the epochs in ascending order, in case of big reorg we always want to keep the most recent checkpoint states
     const sortedEpochs = Array.from(this.epochIndex.keys()).sort((a, b) => a - b);

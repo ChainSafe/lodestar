@@ -1,6 +1,6 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {isForkPostGloas} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, isForkPostGloas} from "@lodestar/params";
 import {
   BLSPubkey,
   BLSSignature,
@@ -52,18 +52,12 @@ export class BlockProposingService {
     private readonly api: ApiClient,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    dutiesService: BlockDutiesService,
     private readonly metrics: Metrics | null,
     private readonly opts: BlockProposalOpts
   ) {
-    this.dutiesService = new BlockDutiesService(
-      config,
-      logger,
-      api,
-      clock,
-      validatorStore,
-      metrics,
-      this.notifyBlockProductionFn
-    );
+    this.dutiesService = dutiesService;
+    this.dutiesService.setNotifyBlockProductionFn(this.notifyBlockProductionFn);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
@@ -218,9 +212,10 @@ export class BlockProposingService {
     const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
 
     const {broadcastValidation} = this.opts;
-    // TODO GLOAS: we should be able to publish block and execution payload in parallel
-    // however for devnet-0 it's unclear if all clients have implemented queuing of the
-    // execution payload on gossip and might ignore it if the receive it before the block
+
+    // Publish the block first so it propagates as soon as possible. This reduces the chance other nodes
+    // see the payload envelope before the block over gossip and have to queue it. There's also plenty of
+    // time left in the slot to propagate the payload, so publishing it in parallel is unnecessary.
     (
       await this.api.beacon
         .publishBlockV2({
@@ -235,37 +230,57 @@ export class BlockProposingService {
 
     this.logger.debug("Published beacon block", {...debugLogCtx, broadcastValidation});
 
-    // Step 3: Get the execution payload envelope
-    const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
-      slot,
-      beaconBlockRoot,
-    });
-    const envelope = envelopeRes.value();
+    const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
 
-    this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
+    if (isSelfBuild) {
+      // Self-build: proposer is responsible for building and publishing the execution payload envelope
+      // Step 3: Get the execution payload envelope
+      const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
+        slot,
+        beaconBlockRoot,
+      });
+      const envelope = envelopeRes.value();
 
-    // Step 4: Sign and publish the envelope
-    const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(pubkey, envelope, slot, this.logger);
+      this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
 
-    (
-      await this.api.beacon
-        .publishExecutionPayloadEnvelope({
-          signedExecutionPayloadEnvelope: signedEnvelope,
-        })
-        .catch((e: Error) => {
-          this.metrics?.blockProposingErrors.inc({error: "publish"});
-          throw extendError(e, "Failed to publish execution payload envelope");
-        })
-    ).assertOk();
+      // Step 4: Sign and publish the envelope
+      const signedEnvelope = await this.validatorStore.signExecutionPayloadEnvelope(
+        pubkey,
+        envelope,
+        slot,
+        this.logger
+      );
+
+      (
+        await this.api.beacon
+          .publishExecutionPayloadEnvelope({
+            signedExecutionPayloadEnvelope: signedEnvelope,
+          })
+          .catch((e: Error) => {
+            this.metrics?.blockProposingErrors.inc({error: "publish"});
+            throw extendError(e, "Failed to publish execution payload envelope");
+          })
+      ).assertOk();
+
+      this.logger.info("Published block and execution payload envelope", {
+        ...logCtx,
+        graffiti,
+        consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+        blockRoot: blockRootHex,
+      });
+    } else {
+      // Builder is responsible for broadcasting the execution payload envelope
+      this.logger.info("Published block with builder bid, envelope expected from builder", {
+        ...logCtx,
+        graffiti,
+        builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
+        consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+        blockRoot: blockRootHex,
+      });
+    }
 
     this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
     this.metrics?.blocksPublished.inc();
-    this.logger.info("Published block and execution payload envelope", {
-      ...logCtx,
-      graffiti,
-      consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
-      blockRoot: blockRootHex,
-    });
   }
 
   private publishBlockWrapper = async (

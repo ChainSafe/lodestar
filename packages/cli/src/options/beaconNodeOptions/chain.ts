@@ -4,6 +4,7 @@ import {ensure0xPrefix} from "../../util/format.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
   "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
@@ -21,6 +22,7 @@ export type ChainArgs = {
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
   "chain.computeUnrealized"?: boolean;
+  "chain.fastConfirmation"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
   emitPayloadAttributes?: boolean;
@@ -42,6 +44,7 @@ export type ChainArgs = {
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
+    graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
     blacklistedBlocks: args["chain.blacklistedBlocks"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
@@ -60,6 +63,7 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
     computeUnrealized: args["chain.computeUnrealized"],
+    fastConfirmation: args["chain.fastConfirmation"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
     emitPayloadAttributes: args.emitPayloadAttributes,
@@ -96,9 +100,18 @@ export const options: CliCommandOptions<ChainArgs> = {
     group: "chain",
   },
 
+  graffitiAppend: {
+    type: "boolean",
+    description: "Append CL/EL client info to graffiti supplied by validator client when space allows",
+    default: defaultOptions.chain.graffitiAppend,
+    group: "chain",
+  },
+
   serveHistoricalState: {
     description:
-      "Enable regenerating finalized state to serve historical data. Fetching this data is expensive and may affect validator performance.",
+      "Regenerate finalized beacon states on demand and serve them via the REST API (e.g. `/eth/v2/debug/beacon/states/{state_id}`). \
+Does not backfill historical data, only states the node already has (since genesis sync or `--checkpointState`) can be regenerated. \
+Regeneration cost depends on `--chain.archiveStateEpochFrequency` and may affect validator performance.",
     type: "boolean",
     default: defaultOptions.chain.serveHistoricalState,
     group: "chain",
@@ -211,6 +224,13 @@ Will double processing times. Use only for debugging purposes.",
     group: "chain",
   },
 
+  "chain.fastConfirmation": {
+    type: "boolean",
+    description: "Enable Fast Confirmation Rule for faster block confirmation (experimental)",
+    defaultDescription: String(defaultOptions.chain.fastConfirmation),
+    group: "chain",
+  },
+
   "chain.maxSkipSlots": {
     hidden: true,
     type: "number",
@@ -315,7 +335,10 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.pruneHistory": {
-    description: "Prune historical blocks and state",
+    description:
+      "Continually prune finalized blocks older than `MIN_EPOCHS_FOR_BLOCK_REQUESTS` (33024 epochs / ~5 months on mainnet) and all archived states before the finalized epoch. \
+This is useful to minimize disk usage when the node does not need to serve historical data. \
+Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
     group: "chain",

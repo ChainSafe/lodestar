@@ -1,16 +1,23 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
-import {Logger, toRootHex} from "@lodestar/utils";
+import {Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
+import {assertLinearChainSegment} from "../../chain/blocks/utils/chainSegment.js";
+import {BlockError} from "../../chain/errors/index.js";
 import {IBeaconChain} from "../../chain/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {INetwork} from "../../network/index.js";
 import {PeerIdStr} from "../../util/peerId.js";
-import {cacheByRangeResponses, downloadByRange} from "../utils/downloadByRange.js";
+import {
+  DownloadByRangeError,
+  DownloadByRangeErrorCode,
+  cacheByRangeResponses,
+  downloadByRange,
+} from "../utils/downloadByRange.js";
 import {RangeSyncType, getRangeSyncTarget, rangeSyncTypes} from "../utils/remoteSyncType.js";
 import {ChainTarget, SyncChain, SyncChainDebugState, SyncChainFns} from "./chain.js";
 import {updateChains} from "./utils/index.js";
@@ -98,6 +105,16 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     if (metrics) {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
+      metrics.syncRange.headSyncPeers.addCollect(() => {
+        // Gauges retain their last set value, so a removed chain would keep reporting stale
+        // per-column peer counts (finalizedSyncPeers especially, as it is rarely recreated once
+        // synced)
+        metrics.syncRange.headSyncPeers.reset();
+        metrics.syncRange.finalizedSyncPeers.reset();
+        for (const syncChain of this.chains.values()) {
+          syncChain.scrapeMetrics(metrics);
+        }
+      });
     }
   }
 
@@ -206,14 +223,18 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   private downloadByRange: SyncChainFns["downloadByRange"] = async (peer, batch) => {
     const batchBlocks = batch.getBlocks();
+    const requests = batch.getRequestsForPeer(peer);
+    const parentRoot = requests.parentPayloadRequest?.envelopeBlockRoot ?? requests.parentPayloadRequest?.blockRoot;
+    const parentPayloadCommitments = parentRoot ? batch.getParentPayloadCommitments(parentRoot) : undefined;
     const {result, warnings} = await downloadByRange({
       config: this.config,
       network: this.network,
       logger: this.logger,
       peerIdStr: peer.peerId,
       batchBlocks,
+      parentPayloadCommitments,
       peerDasMetrics: this.chain.metrics?.peerDas,
-      ...batch.getRequestsForPeer(peer),
+      ...requests,
     });
     const {responses, payloadEnvelopes: downloadedPayloadEnvelopes} = result;
     const {blocks, payloadEnvelopes} = cacheByRangeResponses({
@@ -227,6 +248,49 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       custodyConfig: this.chain.custodyConfig,
       seenTimestampSec: Date.now() / 1000,
     });
+
+    const segmentBlocks = blocks.filter((b) => b.hasBlock()).sort((a, b) => a.slot - b.slot);
+    const envelopeSlots = payloadEnvelopes
+      ? Array.from(payloadEnvelopes.entries())
+          .filter(([, pi]) => pi.hasPayloadEnvelope())
+          .map(([slot]) => slot)
+          .sort((a, b) => a - b)
+      : [];
+    this.logger.verbose("downloadByRange batch ready", {
+      peer: peer.peerId,
+      blockSlots: prettyPrintIndices(segmentBlocks.map((b) => b.slot)),
+      envelopeSlots: prettyPrintIndices(envelopeSlots),
+      ...batch.getMetadata(),
+    });
+
+    if (segmentBlocks.length > 1) {
+      try {
+        assertLinearChainSegment(this.config, segmentBlocks, payloadEnvelopes, null);
+      } catch (err) {
+        if (err instanceof BlockError) {
+          this.logger.debug(
+            "downloadByRange segment validation failed",
+            {
+              peer: peer.peerId,
+              reason: err.type.code,
+              slot: err.signedBlock.message.slot,
+              detail: JSON.stringify(err.type),
+              ...batch.getMetadata(),
+            },
+            err
+          );
+          // with this error, the peer will be penalized inside SyncChain
+          throw new DownloadByRangeError({
+            code: DownloadByRangeErrorCode.INVALID_CHAIN_SEGMENT,
+            slot: err.signedBlock.message.slot,
+            reason: err.type.code,
+          });
+        }
+
+        throw err;
+      }
+    }
+
     return {result: {blocks, payloadEnvelopes}, warnings};
   };
 
@@ -258,6 +322,14 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
+      // The first batch of a new sync chain may need to detect whether the parent block was an
+      // gloas "empty" block (no envelope produced). It does so by comparing the first
+      // downloaded block's `bid.parentBlockHash` against the head state's `latestExecutionPayloadBid.blockHash`.
+      const headState = this.chain.getHeadState();
+      const latestBid = isStatePostGloas(headState)
+        ? (headState as IBeaconStateViewGloas).latestExecutionPayloadBid
+        : undefined;
+
       syncChain = new SyncChain(
         startEpoch,
         target,
@@ -276,7 +348,8 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
           logger: this.logger,
           custodyConfig: this.chain.custodyConfig,
           metrics: this.metrics,
-        }
+        },
+        latestBid
       );
       this.chains.set(syncType, syncChain);
 

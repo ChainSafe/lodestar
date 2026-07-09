@@ -30,6 +30,23 @@ export type CreateFromBlockProps = {
   daOutOfRange: boolean;
 };
 
+/**
+ * Used to seed an entry from a state's `latestExecutionPayloadBid` (e.g., when initializing
+ * the chain from a checkpoint anchor state — we have the bid via the state but not the
+ * full SignedBeaconBlock).
+ */
+export type CreateFromBidProps = {
+  blockRootHex: RootHex;
+  slot: number;
+  forkName: ForkName;
+  proposerIndex: number;
+  bid: gloas.ExecutionPayloadBid;
+  sampledColumns: ColumnIndex[];
+  custodyColumns: ColumnIndex[];
+  timeCreatedSec: number;
+  daOutOfRange: boolean;
+};
+
 export type AddPayloadEnvelopeProps = SourceMeta & {
   envelope: gloas.SignedExecutionPayloadEnvelope;
 };

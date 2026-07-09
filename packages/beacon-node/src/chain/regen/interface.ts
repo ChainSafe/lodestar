@@ -17,10 +17,12 @@ export enum RegenCaller {
   predictProposerHead = "predictProposerHead",
   produceAttestationData = "produceAttestationData",
   processBlocksInEpoch = "processBlocksInEpoch",
+  importExecutionPayload = "importExecutionPayload",
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
   validateGossipVoluntaryExit = "validateGossipVoluntaryExit",
   validateGossipExecutionPayloadBid = "validateGossipExecutionPayloadBid",
+  validateGossipPayloadAttestationMessage = "validateGossipPayloadAttestationMessage",
   validateGossipProposerPreferences = "validateGossipProposerPreferences",
   onForkChoiceFinalized = "onForkChoiceFinalized",
   restApi = "restApi",
@@ -45,7 +47,6 @@ export interface IStateRegenerator extends IStateRegeneratorInternal {
   getCheckpointStateSync(cp: CheckpointHex): IBeaconStateView | null;
   getClosestHeadState(head: ProtoBlock): IBeaconStateView | null;
   pruneOnCheckpoint(finalizedEpoch: Epoch, justifiedEpoch: Epoch, headStateRoot: RootHex): void;
-  pruneOnFinalized(finalizedEpoch: Epoch): void;
   processState(blockRootHex: RootHex, postState: IBeaconStateView): void;
   addCheckpointState(cp: phase0.Checkpoint, item: IBeaconStateView): void;
   updateHeadState(newHead: ProtoBlock, maybeHeadState: IBeaconStateView): void;

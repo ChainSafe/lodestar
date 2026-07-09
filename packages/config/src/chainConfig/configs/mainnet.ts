@@ -70,8 +70,8 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs ~27 hours
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
-  // 2**6 (= 64) epochs
-  MIN_BUILDER_WITHDRAWABILITY_DELAY: 64,
+  // 2**13 (= 8,192) epochs ~36 days
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: 8192,
   // 2**8 (= 256) epochs ~27 hours
   SHARD_COMMITTEE_PERIOD: 256,
   // 2**11 (= 2,048) Eth1 blocks ~8 hours
@@ -99,6 +99,8 @@ export const chainConfig: ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: 5000,
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
+  // 75% of SLOT_DURATION_MS
+  PAYLOAD_DUE_BPS: 7500,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -204,4 +206,8 @@ export const chainConfig: ChainConfig = {
       MAX_BLOBS_PER_BLOCK: 21,
     },
   ],
+
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };

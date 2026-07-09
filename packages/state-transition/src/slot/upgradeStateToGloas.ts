@@ -1,12 +1,12 @@
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toHex} from "@lodestar/utils";
+import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
-import {applyDepositForBuilder} from "../block/processDepositRequest.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
+import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 
 /**
  * Upgrade a state from Fulu to Gloas.
@@ -48,8 +48,9 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
-  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
-    ssz.electra.ExecutionRequests.defaultValue()
+  stateGloasView.latestExecutionPayloadBid.gasLimit = stateFulu.latestExecutionPayloadHeader.gasLimit;
+  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
+    ssz.gloas.ExecutionRequests.defaultValue()
   );
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
@@ -86,55 +87,59 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
 /**
  * Applies any pending deposits for builders to onboard builders during the fork transition
- * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.2/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
+ * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  // Track pubkeys of new validators to keep their deposits pending
-  const validatorPubkeys = new Set<string>();
-
-  // Track pubkeys of new builders added when applying deposits
+  // Track pubkeys of new builders added when applying deposits. `state.builders` starts empty
+  // at the fork, so every builder pubkey here is one added in an earlier iteration.
   const builderPubkeys = new Set<string>();
 
-  const remainingPendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+  const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+  const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
+
   for (let i = 0; i < state.pendingDeposits.length; i++) {
     const deposit = state.pendingDeposits.getReadonly(i);
 
     const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
-    const pubkeyHex = toHex(deposit.pubkey);
+    const pubkeyHex = toPubkeyHex(deposit.pubkey);
 
-    // Deposits for existing validators stay in pending queue
-    if (isValidatorKnown(state, validatorIndex) || validatorPubkeys.has(pubkeyHex)) {
-      remainingPendingDeposits.push(deposit);
+    // Deposits for existing validators stay in the pending queue
+    if (isValidatorKnown(state, validatorIndex)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
       continue;
     }
 
-    // If the pubkey is associated with a builder that was created in a previous iteration
-    // or it is a builder deposit, try to apply the deposit to the new/existing builder
-    const isExistingBuilder = builderPubkeys.has(pubkeyHex);
-    const hasBuilderCredentials = isBuilderWithdrawalCredential(deposit.withdrawalCredentials);
-    if (isExistingBuilder || hasBuilderCredentials) {
-      const buildersLenBefore = state.builders.length;
-      applyDepositForBuilder(
-        state,
-        deposit.pubkey,
-        deposit.withdrawalCredentials,
-        deposit.amount,
-        deposit.signature,
-        deposit.slot
-      );
-      // Track newly added builders for subsequent iterations
-      if (!isExistingBuilder && state.builders.length > buildersLenBefore) {
-        builderPubkeys.add(pubkeyHex);
+    if (builderPubkeys.has(pubkeyHex)) {
+      // Top up an already-onboarded builder
+      // TODO GLOAS: linear search; consider builder pubkey cache when we drop the upgrade-time set
+      for (let j = 0; j < state.builders.length; j++) {
+        if (toPubkeyHex(state.builders.getReadonly(j).pubkey) === pubkeyHex) {
+          state.builders.get(j).balance += deposit.amount;
+          break;
+        }
       }
       continue;
     }
 
-    // If there is a pending deposit for a new validator that has a valid signature, track the
-    // pubkey so that subsequent builder deposits for the same pubkey stay in pending (applied to
-    // the validator later) rather than creating a builder. Deposits with invalid signatures are
-    // dropped here since they would fail in apply_pending_deposit anyway.
+    // Deposits for non-builders stay in the pending queue. If there is a valid pending
+    // deposit for a new validator with this pubkey, keep this deposit pending so the validator
+    // can pick it up later.
+    if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
+      continue;
+    }
+    if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
+      continue;
+    }
+
+    // Verify the deposit signature (proof of possession). If invalid the deposit is silently
+    // dropped — stake is forfeited, matching the validator deposit contract behavior.
     if (
-      isValidDepositSignature(
+      !isValidDepositSignature(
         state.config,
         deposit.pubkey,
         deposit.withdrawalCredentials,
@@ -142,10 +147,19 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
         deposit.signature
       )
     ) {
-      validatorPubkeys.add(pubkeyHex);
-      remainingPendingDeposits.push(deposit);
+      continue;
     }
+
+    addBuilderToRegistry(
+      state,
+      deposit.pubkey,
+      PAYLOAD_BUILDER_VERSION,
+      deposit.withdrawalCredentials.subarray(12),
+      deposit.amount,
+      deposit.slot
+    );
+    builderPubkeys.add(pubkeyHex);
   }
 
-  state.pendingDeposits = remainingPendingDeposits;
+  state.pendingDeposits = pendingDeposits;
 }
