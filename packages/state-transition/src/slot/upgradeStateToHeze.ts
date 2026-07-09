@@ -62,7 +62,6 @@ export function upgradeStateToHeze(stateGloas: CachedBeaconStateGloas): CachedBe
   stateHezeView.builderPendingPayments = stateHezeCloned.builderPendingPayments;
   stateHezeView.builderPendingWithdrawals = stateHezeCloned.builderPendingWithdrawals;
 
-  // [Modified in Heze:EIP7805] inclusion_list_bits = Bitvector[INCLUSION_LIST_COMMITTEE_SIZE]() (default zero)
   const oldBid = stateHezeCloned.latestExecutionPayloadBid;
   const newBid = ssz.heze.ExecutionPayloadBid.defaultViewDU();
   newBid.parentBlockHash = oldBid.parentBlockHash;
