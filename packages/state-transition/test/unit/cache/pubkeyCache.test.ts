@@ -1,15 +1,15 @@
 import path from "node:path";
 import {Worker} from "node:worker_threads";
 import {beforeAll, describe, expect, it} from "vitest";
-import {PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {phase0, ssz} from "@lodestar/types";
-import {getNativePubkeyCache, syncPubkeys} from "../../../src/cache/pubkeyCache.js";
+import {syncPubkeys} from "../../../src/cache/syncPubkeys.js";
 import {interopSecretKey} from "../../../src/util/interop.js";
 
 /**
- * Tests for the persistent native pubkey cache (getNativePubkeyCache) with multithreaded access.
+ * Tests for the persistent native pubkey cache with multithreaded access.
  *
- * In production, getNativePubkeyCache() and syncPubkeys() are called on the main thread
+ * In production, pubkeyCache and syncPubkeys() are called on the main thread
  * during beacon node startup. Worker threads (BLS verification, network core) then
  * read from the same native singleton. These tests verify that pattern: main thread
  * populates the cache, worker threads read it correctly.
@@ -63,7 +63,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
   const COUNT = 20;
 
   beforeAll(() => {
-    const cache = getNativePubkeyCache();
+    const cache = pubkeyCache;
     for (let i = BASE_INDEX; i < BASE_INDEX + COUNT; i++) {
       const sk = interopSecretKey(i);
       cache.set(i, sk.toPublicKey().toBytes());
@@ -106,7 +106,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
   });
 
   it("worker thread sees correct cache size", async () => {
-    const mainSize = getNativePubkeyCache().size;
+    const mainSize = pubkeyCache.size;
 
     const worker = spawnWorker();
     try {
@@ -146,7 +146,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
   });
 
   it("worker thread writes via set() are visible to main and other worker threads", async () => {
-    const cache = getNativePubkeyCache();
+    const cache = pubkeyCache;
     const startIndex = BASE_INDEX + 1000;
     const count = 10;
 
@@ -178,7 +178,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
   });
 
   it("syncPubkeys on main thread makes new entries visible to workers", async () => {
-    const cache = getNativePubkeyCache();
+    const cache = pubkeyCache;
     const syncStart = cache.size;
     const syncCount = 10;
 
@@ -206,7 +206,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
   });
 
   it("syncPubkeys from worker thread populates cache visible to main and other worker threads", async () => {
-    const cache = getNativePubkeyCache();
+    const cache = pubkeyCache;
     const currentSize = cache.size;
     const extraCount = 10;
     const totalCount = currentSize + extraCount;

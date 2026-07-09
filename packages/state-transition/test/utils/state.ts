@@ -1,3 +1,4 @@
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -11,7 +12,6 @@ import {
   CachedBeaconStateBellatrix,
   CachedBeaconStateElectra,
   createCachedBeaconState,
-  getNativePubkeyCache,
 } from "../../src/index.js";
 import {generateValidator, generateValidators} from "./validator.js";
 
@@ -107,7 +107,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkeyCache: getNativePubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -119,7 +119,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
   const state = generateState(opts, config);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkeyCache: getNativePubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -131,7 +131,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkeyCache: getNativePubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -143,6 +143,6 @@ export function generateCachedElectraState(opts?: TestBeaconState, electraForkEp
   const state = generateState(opts, config);
   return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    pubkeyCache: getNativePubkeyCache(),
+    pubkeyCache,
   });
 }

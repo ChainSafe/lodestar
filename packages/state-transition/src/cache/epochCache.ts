@@ -1,4 +1,5 @@
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -55,7 +56,6 @@ import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../ut
 import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalance.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
-import {PubkeyCache, getNativePubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -63,6 +63,7 @@ import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
+import {syncPubkeys} from "./syncPubkeys.js";
 import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
@@ -331,7 +332,7 @@ export class EpochCache {
     const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
 
-    // syncPubkeys here to ensure EpochCacheImmutableData is popualted before computing the rest of caches
+    // syncPubkeys here to ensure EpochCacheImmutableData is populated before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
       syncPubkeys(pubkeyCache, validators);
@@ -1108,11 +1109,10 @@ export class EpochCacheError extends LodestarError<EpochCacheErrorType> {}
 
 export function createEmptyEpochCacheImmutableData(
   chainConfig: ChainConfig,
-  state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">,
-  pubkeyCache?: PubkeyCache
+  state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    pubkeyCache: pubkeyCache ?? getNativePubkeyCache(),
+    pubkeyCache: defaultPubkeyCache,
   };
 }

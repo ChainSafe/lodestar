@@ -1,5 +1,6 @@
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
-import {ISignatureSet, PubkeyCache, SignatureSetType} from "@lodestar/state-transition";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/metrics.js";
 
 export function getAggregatedPubkey(

@@ -1,7 +1,7 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {getIndexedAttestationBigintSignatureSet, getIndexedAttestationSignatureSet} from "../signatureSets/index.js";
 import {verifySignatureSet} from "../util/index.js";
 

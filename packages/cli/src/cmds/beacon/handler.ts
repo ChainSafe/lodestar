@@ -1,13 +1,14 @@
 import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
 import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, PresetName} from "@lodestar/params";
-import {createBeaconStateView, getNativePubkeyCache, syncPubkeys} from "@lodestar/state-transition";
+import {createBeaconStateView, syncPubkeys} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -78,7 +79,6 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       wsCheckpoint,
     } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-    const pubkeyCache = getNativePubkeyCache();
     pubkeyCache.ensureCapacity(anchorState.validators.length);
     syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
     const anchorStateView = args["chain.nativeStateView"]

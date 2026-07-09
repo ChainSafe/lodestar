@@ -1,7 +1,8 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {PublicKey, SecretKey, Signature} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ISignatureSet, SignatureSetType, getNativePubkeyCache} from "@lodestar/state-transition";
+import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 
@@ -10,7 +11,6 @@ describe("BlsVerifier ", () => {
   const numKeys = 3;
   const secretKeys = Array.from({length: numKeys}, (_, i) => SecretKey.fromKeygen(Buffer.alloc(32, i)));
   // Create a mock pubkeyCache that maps indices to public keys
-  const pubkeyCache = getNativePubkeyCache();
   for (const [i, sk] of secretKeys.entries()) {
     pubkeyCache.set(i, sk.toPublicKey().toBytes());
   }

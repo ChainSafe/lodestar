@@ -1,7 +1,8 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {IBeaconStateView} from "@lodestar/state-transition";
 import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";

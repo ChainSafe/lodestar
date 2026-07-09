@@ -1,5 +1,5 @@
+import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
-import {PubkeyCache, getNativePubkeyCache} from "../cache/pubkeyCache.js";
 import {createCachedBeaconState} from "../cache/stateCache.js";
 import {BeaconStateAllForks} from "../cache/types.js";
 import {getStateTypeFromBytes} from "../util/sszBytes.js";
@@ -63,10 +63,6 @@ export function createBeaconStateViewForHistoricalRegen(opts: RegenNodeJSOpts | 
   }
   const {config, stateBytes} = opts;
   const state = getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes);
-  const cachedState = createCachedBeaconState(
-    state,
-    {config, pubkeyCache: getNativePubkeyCache()},
-    {skipSyncPubkeys: true}
-  );
+  const cachedState = createCachedBeaconState(state, {config, pubkeyCache}, {skipSyncPubkeys: true});
   return new BeaconStateView(cachedState);
 }
