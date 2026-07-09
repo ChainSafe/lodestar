@@ -2051,12 +2051,7 @@ export class ProtoArray {
       const nodeIndex = Array.isArray(variantOrArr) ? variantOrArr[0] : variantOrArr;
       if (nodeIndex === undefined) continue;
       const node = this.nodes[nodeIndex];
-      if (
-        node !== undefined &&
-        node.slot === slot &&
-        node.proposerIndex === proposerIndex &&
-        node.ptcTimeliness
-      ) {
+      if (node !== undefined && node.slot === slot && node.proposerIndex === proposerIndex && node.ptcTimeliness) {
         result.push(node);
       }
     }

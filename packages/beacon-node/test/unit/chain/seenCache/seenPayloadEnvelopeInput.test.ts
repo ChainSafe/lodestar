@@ -81,6 +81,8 @@ describe("SeenPayloadEnvelopeInput", () => {
       unrealizedFinalizedEpoch: 0,
       unrealizedFinalizedRoot: blockRoot,
       timeliness: false,
+      ptcTimeliness: false,
+      proposerIndex: 0,
       executionPayloadBlockHash: null,
       executionStatus: ExecutionStatus.PreMerge,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,

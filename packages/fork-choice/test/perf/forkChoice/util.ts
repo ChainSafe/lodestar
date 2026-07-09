@@ -149,6 +149,8 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
       executionStatus: ExecutionStatus.PreMerge,
 
       timeliness: false,
+      ptcTimeliness: false,
+      proposerIndex: 0,
       dataAvailabilityStatus: DataAvailabilityStatus.PreData,
 
       parentBlockHash: null,
