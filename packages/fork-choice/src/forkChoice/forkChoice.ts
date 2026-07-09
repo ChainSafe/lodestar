@@ -1587,7 +1587,7 @@ export class ForkChoice implements IForkChoice {
       slotsPerEpoch: SLOTS_PER_EPOCH,
       committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
     });
-    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, PayloadStatus.PENDING);
+    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentBlock.payloadStatus);
     if (parentNode === undefined || parentNode.weight >= reorgThreshold) {
       // Parent is not weak
       return true;
