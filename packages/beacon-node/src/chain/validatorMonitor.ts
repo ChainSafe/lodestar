@@ -11,6 +11,7 @@ import {
   parseAttesterFlags,
   parseParticipationFlags,
   registerNativeLocalValidator,
+  unregisterNativeLocalValidator,
 } from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -125,8 +126,6 @@ export type ValidatorMonitorOpts = {
   /**
    * True when the native (Zig) state transition records the epoch-status metrics
    * (prev epoch source/target/head attester hit/miss, inclusion distance, balance).
-   * Keeps the TS equivalents out of the metrics registry to avoid duplicate metric
-   * names, and forwards local validator registrations to the native monitor.
    */
   nativeStatusMetrics?: boolean;
 };
@@ -411,10 +410,6 @@ export function createValidatorMonitor(
           validatorMonitorMetrics?.prevEpochOnChainTargetAttesterMiss.inc();
         }
 
-        // Note: correct-head, inclusion-distance and attester hit/miss accounting lives in
-        // onceEveryEndOfEpoch(): that data is gossip-derived post-altair, and this function
-        // is never called when the native (Zig) state transition records the status metrics.
-        // inclusionDistance is only computed here for logging.
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
         const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
         const inclusionDistance =
@@ -738,6 +733,9 @@ export function createValidatorMonitor(
         if (Date.now() - validator.lastRegisteredTimeMs > retainRegisteredValidatorsMs) {
           validators.delete(index);
           removedValidatorsInEpoch.add(index);
+          if (opts.nativeStatusMetrics) {
+            unregisterNativeLocalValidator(index);
+          }
         }
       }
 
@@ -771,8 +769,11 @@ export function createValidatorMonitor(
         return;
       }
 
-      // Report whether each monitored validator's prev-epoch attestation voted the
-      // correct head.
+      // This code block was moved from registerValidatorStatuses(), which now
+      // lives in the partial native validator monitor called via bindings.
+      //
+      // Since correct head vote, inclusion distance and attester hit/miss are gossip-derived,
+      // We can track them here.
       if (prevEpoch > lastCorrectHeadRegisteredEpoch) {
         lastCorrectHeadRegisteredEpoch = prevEpoch;
         for (const validator of validators.values()) {
@@ -787,12 +788,8 @@ export function createValidatorMonitor(
             }
           }
 
-          // Inclusion distance and attester hit/miss are gossip-derived (min observed
-          // block inclusion distance of the validator's attestations). They are reported
-          // here rather than in registerValidatorStatuses() so they also work when the
-          // native (Zig) state transition records the epoch-status metrics.
           const inclusionDistance = summary?.attestationMinBlockInclusionDistance;
-          if (inclusionDistance != null && inclusionDistance > 0) {
+          if (inclusionDistance != null) {
             validatorMonitorMetrics?.prevEpochOnChainInclusionDistance.observe(inclusionDistance);
             validatorMonitorMetrics?.prevEpochOnChainAttesterHit.inc();
           } else {

@@ -43,6 +43,7 @@ export {
   initNativeStateTransitionMetrics,
   registerNativeLocalValidator,
   scrapeNativeStateTransitionMetrics,
+  unregisterNativeLocalValidator,
 } from "./nativeMetrics.js";
 export * from "./rewards/index.js";
 export * from "./signatureSets/index.js";
