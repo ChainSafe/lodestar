@@ -26,34 +26,28 @@ export class EraReader {
   readonly fh: FileHandle;
   /** The era number retrieved from the file name */
   readonly eraNumber: number;
-  /** The short historical root retrieved from the file name */
-  readonly shortHistoricalRoot: string;
+  /** The short era root retrieved from the file name */
+  readonly shortEraRoot: string;
   /** An array of state and block indices, one per group */
   readonly groups: EraIndices[];
 
-  constructor(
-    config: ChainForkConfig,
-    fh: FileHandle,
-    eraNumber: number,
-    shortHistoricalRoot: string,
-    indices: EraIndices[]
-  ) {
+  constructor(config: ChainForkConfig, fh: FileHandle, eraNumber: number, shortEraRoot: string, indices: EraIndices[]) {
     this.config = config;
     this.fh = fh;
     this.eraNumber = eraNumber;
-    this.shortHistoricalRoot = shortHistoricalRoot;
+    this.shortEraRoot = shortEraRoot;
     this.groups = indices;
   }
 
   static async open(config: ChainForkConfig, path: string): Promise<EraReader> {
     const fh = await open(path, "r");
     const name = basename(path);
-    const {configName, eraNumber, shortHistoricalRoot} = parseEraName(name);
+    const {configName, eraNumber, shortEraRoot} = parseEraName(name);
     if (config.CONFIG_NAME !== configName) {
       throw new Error(`Config name mismatch: expected ${config.CONFIG_NAME}, got ${configName}`);
     }
     const indices = await readAllEraIndices(fh);
-    return new EraReader(config, fh, eraNumber, shortHistoricalRoot, indices);
+    return new EraReader(config, fh, eraNumber, shortEraRoot, indices);
   }
 
   /**

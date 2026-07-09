@@ -1941,6 +1941,11 @@ export class ProtoArray {
    * Returns `true` if the `descendantRoot` has an ancestor with `ancestorRoot`.
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot` === `descendantRoot` and payload statuses match.
+   *
+   * Gloas payload-status matching: a `PENDING` ancestor matches any payload variant
+   * (PENDING/EMPTY/FULL) of the same block, so this can also return `true` for the same
+   * root when statuses differ (e.g. ancestor `PENDING`, descendant `EMPTY`/`FULL`).
+   * `EMPTY` and `FULL` are mutually exclusive siblings and never match each other.
    */
   isDescendant(
     ancestorRoot: RootHex,
@@ -1958,11 +1963,16 @@ export class ProtoArray {
     }
 
     for (const node of this.iterateAncestorNodes(descendantRoot, descendantPayloadStatus)) {
-      if (node.slot < ancestorNode.slot) {
-        return false;
+      if (node.blockRoot === ancestorNode.blockRoot) {
+        // Gloas is_ancestor: a PENDING ancestor matches any payload variant of the same block.
+        return (
+          node.payloadStatus === ancestorNode.payloadStatus || ancestorNode.payloadStatus === PayloadStatus.PENDING
+        );
       }
-      if (node.blockRoot === ancestorNode.blockRoot && node.payloadStatus === ancestorNode.payloadStatus) {
-        return true;
+      // Ancestors are iterated in decreasing slot, so once we reach the ancestor's slot
+      // without a root match it cannot be in this chain.
+      if (node.slot <= ancestorNode.slot) {
+        return false;
       }
     }
     return false;

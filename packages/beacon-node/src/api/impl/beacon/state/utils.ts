@@ -2,9 +2,18 @@ import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex, IForkChoice} from "@lodestar/fork-choice";
 import {GENESIS_SLOT} from "@lodestar/params";
-import {IBeaconStateView} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {IBeaconStateView, IBeaconStateViewGloas, PubkeyCache} from "@lodestar/state-transition";
+import {
+  BLSPubkey,
+  BuilderIndex,
+  Epoch,
+  RootHex,
+  Slot,
+  ValidatorIndex,
+  getValidatorStatus,
+  phase0,
+} from "@lodestar/types";
+import {byteArrayEquals, fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
@@ -79,6 +88,50 @@ export function toValidatorResponse(
   };
 }
 
+type StateBuilderIndexResponse =
+  | {valid: true; builderIndex: BuilderIndex}
+  | {valid: false; code: number; reason: string};
+
+export function getStateBuilderIndex(
+  id: routes.beacon.BuilderId | BLSPubkey,
+  state: IBeaconStateViewGloas
+): StateBuilderIndexResponse {
+  if (typeof id === "string") {
+    // mutate `id` and fallthrough to below
+    if (id.startsWith("0x")) {
+      try {
+        id = fromHex(id);
+      } catch (_e) {
+        return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
+      }
+    } else {
+      id = Number(id);
+    }
+  }
+
+  if (typeof id === "number") {
+    const builderIndex = id;
+    // builder is invalid or added later than given stateId
+    if (!Number.isSafeInteger(builderIndex) || builderIndex < 0) {
+      return {valid: false, code: 400, reason: "Invalid builder index"};
+    }
+    if (builderIndex >= state.getBuildersLength()) {
+      return {valid: false, code: 404, reason: "Builder index from future state"};
+    }
+    return {valid: true, builderIndex};
+  }
+
+  // typeof id === Uint8Array
+  // There is no builder pubkey cache, linear scan over the registry
+  const buildersLength = state.getBuildersLength();
+  for (let builderIndex = 0; builderIndex < buildersLength; builderIndex++) {
+    if (byteArrayEquals(state.getBuilder(builderIndex).pubkey, id)) {
+      return {valid: true, builderIndex};
+    }
+  }
+  return {valid: false, code: 404, reason: "Builder pubkey not found in state"};
+}
+
 export function filterStateValidatorsByStatus(
   statuses: string[],
   state: IBeaconStateView,
@@ -123,7 +176,7 @@ export function getStateValidatorIndex(
   if (typeof id === "number") {
     const validatorIndex = id;
     // validator is invalid or added later than given stateId
-    if (!Number.isSafeInteger(validatorIndex)) {
+    if (!Number.isSafeInteger(validatorIndex) || validatorIndex < 0) {
       return {valid: false, code: 400, reason: "Invalid validator index"};
     }
     if (validatorIndex >= state.validatorCount) {
