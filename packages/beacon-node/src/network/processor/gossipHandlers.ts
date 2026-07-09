@@ -1274,7 +1274,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
 
       chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-        version: ForkName.gloas,
+        version: config.getForkName(signedProposerPreferences.message.proposalSlot),
         data: signedProposerPreferences,
       });
     },
