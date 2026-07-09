@@ -48,6 +48,7 @@ export const InclusionListByCommitteeIndicesRequest = new ContainerType(
 export const ExecutionPayloadBid = new ContainerType(
   {
     ...gloasSsz.ExecutionPayloadBid.fields,
+    inclusionListBits: new BitVectorType(INCLUSION_LIST_COMMITTEE_SIZE), // [New in Heze:EIP7805]
   },
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
