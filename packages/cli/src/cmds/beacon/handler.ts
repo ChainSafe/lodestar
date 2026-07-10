@@ -79,7 +79,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       wsCheckpoint,
     } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-    // Growing the native cache reallocs its memory which is not safe while other threads
+    // Growing the native cache reallocates its memory which is not safe while other threads
     // read it. Reserve 3 months of worst-case registry growth (MAX_PENDING_DEPOSITS_PER_EPOCH
     // per epoch), over a year at organic rates. If exceeded, native capacity doubling kicks in.
     const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
