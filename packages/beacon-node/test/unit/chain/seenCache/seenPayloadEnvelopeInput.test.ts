@@ -8,7 +8,7 @@ import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
 import {getMockedClock} from "../../../mocks/clock.js";
-import {config, generateBlock} from "../../../utils/blocksAndData.js";
+import {config, generateBlock, generateBlockWithColumnSidecars} from "../../../utils/blocksAndData.js";
 
 describe("SeenPayloadEnvelopeInput", () => {
   let cache: SeenPayloadEnvelopeInput;
@@ -47,6 +47,24 @@ describe("SeenPayloadEnvelopeInput", () => {
       custodyColumns: [],
       timeCreatedSec: Date.now() / 1000,
     });
+    return rootHex;
+  }
+
+  function addNotComputedPayloadInput(slot: number): string {
+    const {block, rootHex} = generateBlockWithColumnSidecars({
+      forkName: ForkName.gloas,
+      slot,
+    });
+
+    cache.add({
+      blockRootHex: rootHex,
+      block,
+      forkName: ForkName.gloas,
+      sampledColumns: [0, 1],
+      custodyColumns: [0, 1],
+      timeCreatedSec: Date.now() / 1000,
+    });
+
     return rootHex;
   }
 
@@ -109,7 +127,7 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(cache.get(headRootHex)).toBeDefined();
   });
 
-  it("pruneBelowParent checks PENDING ancestry when payload envelope is not cached", () => {
+  it("pruneBelowParent checks FULL ancestry when payload envelope is not cached", () => {
     const oldRootHex = addPayloadInput(1);
     const newRootHex = addPayloadInput(2);
     const parentBlock = protoBlock(newRootHex, 2);
@@ -119,7 +137,7 @@ describe("SeenPayloadEnvelopeInput", () => {
 
     expect(forkChoice.isDescendant).toHaveBeenCalledWith(
       oldRootHex,
-      PayloadStatus.PENDING,
+      PayloadStatus.FULL,
       newRootHex,
       PayloadStatus.FULL
     );
@@ -182,5 +200,19 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(() => cache.prune(`0x${"ab".repeat(32)}`)).not.toThrow();
     expect(cache.get(rootHex)).toBeDefined();
     expect(cache.size()).toBe(1);
+  });
+
+  it("pruneBelowParent keeps payload inputs that have not computed all data", () => {
+    const oldRootHex = addNotComputedPayloadInput(1);
+    const newRootHex = addPayloadInput(2);
+    const parentBlock = protoBlock(newRootHex, 2);
+
+    expect(cache.get(oldRootHex)?.hasComputedAllData()).toBe(false);
+
+    vi.mocked(forkChoice.isDescendant).mockReturnValue(true);
+    cache.pruneBelowParent(parentBlock);
+
+    expect(cache.get(oldRootHex)).toBeDefined();
+    expect(forkChoice.isDescendant).not.toHaveBeenCalled();
   });
 });
