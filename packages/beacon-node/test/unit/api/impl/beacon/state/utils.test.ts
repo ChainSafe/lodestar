@@ -1,7 +1,11 @@
 import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
+import {IBeaconChain} from "../../../../../../src/chain/index.js";
+import {IBeaconSync, SyncState} from "../../../../../../src/sync/index.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
@@ -59,6 +63,19 @@ describe("beacon state api utils", () => {
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }
+    });
+  });
+
+  describe("getStateResponseWithRegen", () => {
+    it("throws NodeIsSyncing while the node is behind and syncing", async () => {
+      const chain = {
+        clock: {currentSlot: 10 * SLOTS_PER_EPOCH},
+        forkChoice: {getHead: () => ({slot: 0})},
+      } as unknown as IBeaconChain;
+      const sync = {state: SyncState.SyncingFinalized} as unknown as IBeaconSync;
+
+      // notWhileSyncing runs before any regen, so a minimal clock/forkChoice/sync mock is enough
+      await expect(getStateResponseWithRegen(chain, sync, "head")).rejects.toThrow(NodeIsSyncing);
     });
   });
 });

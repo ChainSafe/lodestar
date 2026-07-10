@@ -14,7 +14,9 @@ import {
 } from "@lodestar/types";
 import {byteArrayEquals, fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
+import {IBeaconSync} from "../../../../sync/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
+import {notWhileSyncing} from "../../utils.js";
 
 export function resolveStateId(
   forkChoice: IForkChoice,
@@ -51,8 +53,13 @@ export function resolveStateId(
 
 export async function getStateResponseWithRegen(
   chain: IBeaconChain,
+  sync: IBeaconSync,
   inStateId: routes.beacon.StateId
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
+  // A far-behind node must not serve state lookups: a REST-triggered regen can walk back past the
+  // block-root window (SLOTS_PER_HISTORICAL_ROOT) and wedge the node. Reject with 503 while syncing.
+  notWhileSyncing(chain, sync);
+
   const stateId = resolveStateId(chain.forkChoice, inStateId);
 
   const res =
