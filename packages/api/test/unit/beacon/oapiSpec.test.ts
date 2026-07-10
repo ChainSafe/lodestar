@@ -54,6 +54,10 @@ const testDatas = {
 const ignoredOperations = [
   // TODO GLOAS: not yet implemented
   "getExecutionPayloadBid",
+  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#626
+  // (slot path param -> query param). Pinned v5.0.0-alpha.2 still defines slot as a
+  // path param, so ignore this op to avoid a false conformance mismatch until the bump.
+  "producePayloadAttestationData",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {
