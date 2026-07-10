@@ -1,4 +1,4 @@
-import type {PublicKey} from "@chainsafe/lodestar-z/blst";
+import type {PublicKey} from "@chainsafe/bls/types";
 import {BeaconConfig} from "@lodestar/config";
 import {LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncPeriod} from "@lodestar/types";
 import {computeSyncPeriodAtSlot} from "../../util/epoch.js";

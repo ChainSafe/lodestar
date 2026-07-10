@@ -15,6 +15,7 @@ export function blsBrowserPlugin(): Plugin {
         },
         resolve: {
           alias: {
+            "@chainsafe/bls/herumi": "@chainsafe/bls/herumi",
             "@chainsafe/bls/types": "@chainsafe/bls/types",
             "@chainsafe/bls": "@chainsafe/bls/herumi",
             // This is just used to generate `privateKey` which is not used in the browser.
