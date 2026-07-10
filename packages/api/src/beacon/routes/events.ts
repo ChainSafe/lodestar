@@ -110,6 +110,8 @@ export enum EventType {
   executionPayloadBid = "execution_payload_bid",
   /** The node has received a `SignedProposerPreferences` (from P2P or API) that passes gossip validation on the `proposer_preferences` topic */
   proposerPreferences = "proposer_preferences",
+  /** The node has received a `PayloadAttestationMessage` (from P2P or API) that passes validation rules of the `payload_attestation_message` topic */
+  payloadAttestationMessage = "payload_attestation_message",
   /** The node has executed the Fast Confirmation Rule and produced a confirmed beacon block */
   fastConfirmation = "fast_confirmation",
 }
@@ -137,6 +139,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
   [EventType.executionPayloadBid]: EventType.executionPayloadBid,
   [EventType.proposerPreferences]: EventType.proposerPreferences,
+  [EventType.payloadAttestationMessage]: EventType.payloadAttestationMessage,
   [EventType.fastConfirmation]: EventType.fastConfirmation,
 };
 
@@ -206,6 +209,7 @@ export type EventData = {
   };
   [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
   [EventType.proposerPreferences]: {version: ForkName; data: gloas.SignedProposerPreferences};
+  [EventType.payloadAttestationMessage]: {version: ForkName; data: gloas.PayloadAttestationMessage};
   [EventType.fastConfirmation]: {
     block: RootHex;
     slot: Slot;
@@ -408,6 +412,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
     [EventType.proposerPreferences]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedProposerPreferences),
+    [EventType.payloadAttestationMessage]: WithVersion((fork) => getPostGloasForkTypes(fork).PayloadAttestationMessage),
     [EventType.fastConfirmation]: new ContainerType(
       {
         block: stringType,
