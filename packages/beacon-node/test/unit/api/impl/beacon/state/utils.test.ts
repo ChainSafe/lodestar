@@ -91,5 +91,19 @@ describe("beacon state api utils", () => {
 
       await expect(getStateResponseWithRegen(chain, String(requestedSlot))).rejects.toBe(err);
     });
+
+    it("returns 503 (NodeIsSyncing) when regen for a state root is too far ahead of head", async () => {
+      const stateRoot = `0x${"00".repeat(32)}`;
+      const chain = {
+        clock: {currentSlot: 14_734_273},
+        forkChoice: {},
+        getStateByStateRoot: () =>
+          Promise.reject(
+            new RegenError({code: RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK, slot: 14_734_272, blockSlot: 14_719_007})
+          ),
+      } as unknown as IBeaconChain;
+
+      await expect(getStateResponseWithRegen(chain, stateRoot)).rejects.toBeInstanceOf(NodeIsSyncing);
+    });
   });
 });

@@ -101,9 +101,12 @@ export class StateRegenerator implements IStateRegeneratorInternal {
       });
     }
 
-    // A state can't be advanced more than SLOTS_PER_HISTORICAL_ROOT slots past its block (empty-slot processing
-    // needs block roots within that window). Fail fast instead of grinding hundreds of epochs; REST maps to 503.
-    if (slot - block.slot > SLOTS_PER_HISTORICAL_ROOT) {
+    // A far-behind node polled via REST can request a state hundreds of epochs past its latest block.
+    // Regen can't advance a state more than SLOTS_PER_HISTORICAL_ROOT slots past its block (empty-slot
+    // processing needs block roots within that window), so fail fast instead of grinding hundreds of epochs
+    // and starving sync; the REST layer maps this to 503. Only the REST caller is guarded: consensus paths
+    // (block import, block production, gossip validation) must still advance through long empty-slot periods.
+    if (regenCaller === RegenCaller.restApi && slot - block.slot > SLOTS_PER_HISTORICAL_ROOT) {
       throw new RegenError({
         code: RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK,
         slot,

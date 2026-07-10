@@ -175,5 +175,19 @@ describe("regen", () => {
         )
       ).rejects.not.toThrow(RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK);
     });
+
+    it("does not throw SLOT_TOO_FAR_FROM_BLOCK for non-REST callers (consensus paths may advance through long skips)", async () => {
+      const regen = new StateRegenerator({} as unknown as RegenModules);
+      // Block import, production and gossip validation share this path and must not be rejected by the
+      // REST-only guard, even when a block arrives more than SLOTS_PER_HISTORICAL_ROOT slots after its parent.
+      await expect(
+        regen.getBlockSlotState(
+          block,
+          block.slot + SLOTS_PER_HISTORICAL_ROOT + 1,
+          {dontTransferCache: true},
+          RegenCaller.processBlocksInEpoch
+        )
+      ).rejects.not.toThrow(RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK);
+    });
   });
 });
