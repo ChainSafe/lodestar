@@ -1,4 +1,5 @@
-import {PublicKey, Signature, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
+import bls from "@chainsafe/bls/herumi";
+import type {PublicKey, Signature} from "@chainsafe/bls/types";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
@@ -128,16 +129,24 @@ export function validateLightClientUpdate(
  * Same as BLS.verifyAggregate but with detailed error messages
  */
 function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
+  let aggregatePubkey: PublicKey;
+  try {
+    aggregatePubkey = bls.PublicKey.aggregate(publicKeys);
+  } catch (e) {
+    (e as Error).message = `Error aggregating pubkeys: ${(e as Error).message}`;
+    throw e;
+  }
+
   let sig: Signature;
   try {
-    sig = Signature.fromBytes(signature, true);
+    sig = bls.Signature.fromBytes(signature, undefined, true);
   } catch (e) {
     (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
     throw e;
   }
 
   try {
-    return fastAggregateVerify(message, publicKeys, sig);
+    return sig.verify(aggregatePubkey, message);
   } catch (e) {
     (e as Error).message = `Error verifying signature: ${(e as Error).message}`;
     throw e;

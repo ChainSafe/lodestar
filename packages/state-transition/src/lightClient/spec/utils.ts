@@ -1,4 +1,5 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import bls from "@chainsafe/bls/herumi";
+import type {PublicKey} from "@chainsafe/bls/types";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
@@ -48,7 +49,7 @@ export function getParticipantPubkeys<T>(pubkeys: T[], bits: BitArray): T[] {
 }
 
 function deserializePubkeys(pubkeys: SyncCommittee["pubkeys"]): PublicKey[] {
-  return pubkeys.map((pk) => PublicKey.fromBytes(pk, true));
+  return pubkeys.map((pk) => bls.PublicKey.fromBytes(pk));
 }
 
 function serializePubkeys(pubkeys: PublicKey[]): SyncCommittee["pubkeys"] {
@@ -58,7 +59,7 @@ function serializePubkeys(pubkeys: PublicKey[]): SyncCommittee["pubkeys"] {
 export function deserializeSyncCommittee(syncCommittee: SyncCommittee): SyncCommitteeFast {
   return {
     pubkeys: deserializePubkeys(syncCommittee.pubkeys),
-    aggregatePubkey: PublicKey.fromBytes(syncCommittee.aggregatePubkey, true),
+    aggregatePubkey: bls.PublicKey.fromBytes(syncCommittee.aggregatePubkey),
   };
 }
 
