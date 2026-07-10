@@ -32,8 +32,9 @@ export async function validateGossipProposerPreferences(
     });
   }
 
-  // [IGNORE] `preferences.proposal_slot` has not already passed.
-  const currentSlot = chain.clock.currentSlot;
+  // [IGNORE] `preferences.proposal_slot` has not already passed, i.e. `proposal_slot > current_slot`,
+  // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  const currentSlot = chain.clock.currentSlotWithGossipDisparity;
   if (proposalSlot <= currentSlot) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED,
