@@ -14,7 +14,8 @@ import {
 } from "@lodestar/types";
 import {byteArrayEquals, fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../../chain/index.js";
-import {ApiError, ValidationError} from "../../errors.js";
+import {RegenError, RegenErrorCode} from "../../../../chain/regen/errors.js";
+import {ApiError, NodeIsSyncing, ValidationError} from "../../errors.js";
 
 export function resolveStateId(
   forkChoice: IForkChoice,
@@ -55,16 +56,28 @@ export async function getStateResponseWithRegen(
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
   const stateId = resolveStateId(chain.forkChoice, inStateId);
 
-  const res =
-    typeof stateId === "string"
-      ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
-      : typeof stateId === "number"
-        ? stateId > chain.clock.currentSlot
-          ? null // Don't try to serve future slots
-          : stateId >= chain.forkChoice.getFinalizedBlock().slot
-            ? await chain.getStateBySlot(stateId, {allowRegen: true})
-            : await chain.getHistoricalStateBySlot(stateId)
-        : await chain.getStateOrBytesByCheckpoint(stateId);
+  let res: {state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null;
+  try {
+    res =
+      typeof stateId === "string"
+        ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
+        : typeof stateId === "number"
+          ? stateId > chain.clock.currentSlot
+            ? null // Don't try to serve future slots
+            : stateId >= chain.forkChoice.getFinalizedBlock().slot
+              ? await chain.getStateBySlot(stateId, {allowRegen: true})
+              : await chain.getHistoricalStateBySlot(stateId)
+          : await chain.getStateOrBytesByCheckpoint(stateId);
+  } catch (e) {
+    // A far-behind node can't regenerate a state that is > SLOTS_PER_HISTORICAL_ROOT slots past its latest
+    // block. Surface that as 503 (node syncing) rather than a generic 500, matching the duties endpoints.
+    if (e instanceof RegenError && e.type.code === RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK) {
+      throw new NodeIsSyncing(
+        `requested state at slot ${e.type.slot} is too far ahead of head at slot ${e.type.blockSlot}`
+      );
+    }
+    throw e;
+  }
 
   if (!res) {
     throw new ApiError(404, `State not found for id '${inStateId}'`);

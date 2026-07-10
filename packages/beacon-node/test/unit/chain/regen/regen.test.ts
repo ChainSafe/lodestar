@@ -1,11 +1,17 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import type {ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconStateView, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
+import {RegenErrorCode} from "../../../../src/chain/regen/errors.js";
 import {RegenCaller} from "../../../../src/chain/regen/interface.js";
-import {processSlotsToNearestCheckpoint} from "../../../../src/chain/regen/regen.js";
+import {
+  type RegenModules,
+  StateRegenerator,
+  processSlotsToNearestCheckpoint,
+} from "../../../../src/chain/regen/regen.js";
 import {FIFOBlockStateCache} from "../../../../src/chain/stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
@@ -140,6 +146,34 @@ describe("regen", () => {
 
       // there are 2 epoch transitions, so the checkpoint states of epoch 20 should be pruned
       expect(fileApisBuffer.size).toEqual(1);
+    });
+  });
+
+  describe("getBlockSlotState", () => {
+    const block = {slot: 1000, blockRoot: "0x00"} as unknown as ProtoBlock;
+
+    it("throws SLOT_TOO_FAR_FROM_BLOCK when the slot is more than SLOTS_PER_HISTORICAL_ROOT past the block", async () => {
+      const regen = new StateRegenerator({} as unknown as RegenModules);
+      await expect(
+        regen.getBlockSlotState(
+          block,
+          block.slot + SLOTS_PER_HISTORICAL_ROOT + 1,
+          {dontTransferCache: true},
+          RegenCaller.restApi
+        )
+      ).rejects.toThrow(RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK);
+    });
+
+    it("does not throw SLOT_TOO_FAR_FROM_BLOCK at exactly SLOTS_PER_HISTORICAL_ROOT past the block", async () => {
+      const regen = new StateRegenerator({} as unknown as RegenModules);
+      await expect(
+        regen.getBlockSlotState(
+          block,
+          block.slot + SLOTS_PER_HISTORICAL_ROOT,
+          {dontTransferCache: true},
+          RegenCaller.restApi
+        )
+      ).rejects.not.toThrow(RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK);
     });
   });
 });

@@ -1,6 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   ExecutionPayloadStatus,
@@ -96,6 +96,16 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     if (slot < block.slot) {
       throw new RegenError({
         code: RegenErrorCode.SLOT_BEFORE_BLOCK_SLOT,
+        slot,
+        blockSlot: block.slot,
+      });
+    }
+
+    // A state can't be advanced more than SLOTS_PER_HISTORICAL_ROOT slots past its block (empty-slot processing
+    // needs block roots within that window). Fail fast instead of grinding hundreds of epochs; REST maps to 503.
+    if (slot - block.slot > SLOTS_PER_HISTORICAL_ROOT) {
+      throw new RegenError({
+        code: RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK,
         slot,
         blockSlot: block.slot,
       });

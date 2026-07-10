@@ -1,7 +1,10 @@
 import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
+import type {IBeaconChain} from "../../../../../../src/chain/index.js";
+import {RegenError, RegenErrorCode} from "../../../../../../src/chain/regen/errors.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
@@ -59,6 +62,34 @@ describe("beacon state api utils", () => {
       } else {
         expect.fail("validator index should be found - Uint8Array input");
       }
+    });
+  });
+
+  describe("getStateResponseWithRegen", () => {
+    it("returns 503 (NodeIsSyncing) when the requested slot is too far ahead of head to regenerate", async () => {
+      const requestedSlot = 14_734_272;
+      const chain = {
+        clock: {currentSlot: requestedSlot + 1},
+        forkChoice: {getFinalizedBlock: () => ({slot: 0})},
+        getStateBySlot: () =>
+          Promise.reject(
+            new RegenError({code: RegenErrorCode.SLOT_TOO_FAR_FROM_BLOCK, slot: requestedSlot, blockSlot: 14_719_007})
+          ),
+      } as unknown as IBeaconChain;
+
+      await expect(getStateResponseWithRegen(chain, String(requestedSlot))).rejects.toBeInstanceOf(NodeIsSyncing);
+    });
+
+    it("rethrows non-regen errors unchanged", async () => {
+      const requestedSlot = 14_734_272;
+      const err = new Error("boom");
+      const chain = {
+        clock: {currentSlot: requestedSlot + 1},
+        forkChoice: {getFinalizedBlock: () => ({slot: 0})},
+        getStateBySlot: () => Promise.reject(err),
+      } as unknown as IBeaconChain;
+
+      await expect(getStateResponseWithRegen(chain, String(requestedSlot))).rejects.toBe(err);
     });
   });
 });
