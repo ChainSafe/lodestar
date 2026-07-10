@@ -25,7 +25,7 @@ import {
   ValidatorIndex,
   gloas,
 } from "@lodestar/types";
-import {LodestarError, byteArrayEquals} from "@lodestar/utils";
+import {LodestarError} from "@lodestar/utils";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {
   EpochShuffling,
