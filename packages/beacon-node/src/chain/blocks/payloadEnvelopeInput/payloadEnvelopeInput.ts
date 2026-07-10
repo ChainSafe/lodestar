@@ -85,6 +85,14 @@ export class PayloadEnvelopeInput {
 
   state: PayloadEnvelopeInputState;
 
+  /**
+   * Set when the EL rejects this block's execution payload during import (`newPayload` ->
+   * INVALID). An immediate EL-INVALID throws before `onExecutionPayload`, so no FULL fork-choice
+   * variant is ever created; this flag is the only record that the payload failed validation and
+   * lets gossip validation still REJECT index-1 "payload present" attestations for it.
+   */
+  private payloadInvalid = false;
+
   private constructor(props: {
     blockRootHex: RootHex;
     slot: Slot;
@@ -288,6 +296,14 @@ export class PayloadEnvelopeInput {
 
   hasPayloadEnvelope(): boolean {
     return this.state.hasPayload;
+  }
+
+  markPayloadInvalid(): void {
+    this.payloadInvalid = true;
+  }
+
+  isPayloadInvalid(): boolean {
+    return this.payloadInvalid;
   }
 
   getPayloadEnvelope(): gloas.SignedExecutionPayloadEnvelope {

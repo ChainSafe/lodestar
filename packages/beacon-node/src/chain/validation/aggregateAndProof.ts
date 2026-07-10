@@ -1,3 +1,4 @@
+import {ExecutionStatus, PayloadStatus} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -90,17 +91,36 @@ async function validateAggregateAndProof(
       });
     }
 
-    // [REJECT] If `aggregate.data.index == 1` (payload present for a past
-    //   block), the execution payload for `block` passes validation.
-    // [IGNORE] When `aggregate.data.index == 1` (payload present for a past block),
-    // the corresponding execution payload for `block` has been seen (a client MAY queue
-    // attestations for processing once the payload is retrieved and SHOULD request the
-    // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
-    if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
-      throw new AttestationError(GossipAction.IGNORE, {
-        code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
-        beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
-      });
+    if (block !== null && attData.index === 1) {
+      const beaconBlockRootHex = toRootHex(attData.beaconBlockRoot);
+
+      // [REJECT] If `aggregate.data.index == 1` (payload present for a past block), the corresponding
+      // execution payload for `block` passes validation. A payload can fail EL validation with two
+      // distinct fork-choice representations, both of which must reject the aggregate:
+      //   - imported (VALID/SYNCING) then invalidated via latest-valid-hash: the FULL variant exists
+      //     with `executionStatus === Invalid`.
+      //   - rejected immediately by the EL at import (`newPayload` -> INVALID): `importExecutionPayload`
+      //     throws before `onExecutionPayload`, so no FULL variant is created, but the envelope was
+      //     already seen on gossip. The payload input is flagged via `markPayloadInvalid`, surfaced
+      //     here by `chain.payloadFailedValidation`.
+      const fullBlock = chain.forkChoice.getBlockHex(beaconBlockRootHex, PayloadStatus.FULL);
+      if (fullBlock?.executionStatus === ExecutionStatus.Invalid || chain.payloadFailedValidation(beaconBlockRootHex)) {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_FAILED_VALIDATION,
+          beaconBlockRoot: beaconBlockRootHex,
+        });
+      }
+
+      // [IGNORE] When `aggregate.data.index == 1` (payload present for a past block), the
+      // corresponding execution payload for `block` has been seen (a client MAY queue attestations
+      // for processing once the payload is retrieved and SHOULD request the payload envelope via
+      // `ExecutionPayloadEnvelopesByRoot`).
+      if (!chain.seenPayloadEnvelope(beaconBlockRootHex)) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+          beaconBlockRoot: beaconBlockRootHex,
+        });
+      }
     }
 
     // [REJECT] len(committee_indices) == 1, where committee_indices = get_committee_indices(aggregate)

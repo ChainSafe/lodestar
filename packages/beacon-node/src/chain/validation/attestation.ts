@@ -1,6 +1,6 @@
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {
   ATTESTATION_SUBNET_COUNT,
   DOMAIN_BEACON_ATTESTER,
@@ -291,48 +291,73 @@ async function validateAttestationNoSignatureCheck(
   const attEpoch = computeEpochAtSlot(attSlot);
   const attTarget = attData.target;
   const targetEpoch = attTarget.epoch;
+  // [Gloas] These payload-status checks depend only on `attData` plus live fork-choice / seen-payload
+  // state, so they must run for every attestation — including one whose `AttestationData` was already
+  // cached in `seenAttestationDatas`. Running them only on the freshly-deserialized path let a payload
+  // that was EL-invalidated *after* the `AttestationData` was first cached be bypassed by subsequent
+  // unaggregated attestations with the same data. This mirrors `validateAggregateAndProof`, which runs
+  // the same checks before its cache lookup.
+  if (isForkPostGloas(fork)) {
+    // [REJECT] `attestation.data.index < 2`.
+    if (attData.index >= 2) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE,
+        attDataIndex: attData.index,
+      });
+    }
+
+    // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
+    const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
+
+    // block being null will be handled by `verifyHeadBlockAndTargetRoot`
+    if (block !== null && block.slot === attSlot && attData.index !== 0) {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
+      });
+    }
+
+    if (block !== null && attData.index === 1) {
+      const beaconBlockRootHex = toRootHex(attData.beaconBlockRoot);
+
+      // [REJECT] If `attestation.data.index == 1` (payload present for a past block), the execution
+      // payload for `block` passes validation. A payload can fail EL validation with two distinct
+      // fork-choice representations, both of which must reject the attestation:
+      //   - imported (VALID/SYNCING) then invalidated via latest-valid-hash: the FULL variant exists
+      //     with `executionStatus === Invalid`.
+      //   - rejected immediately by the EL at import (`newPayload` -> INVALID): `importExecutionPayload`
+      //     throws before `onExecutionPayload`, so no FULL variant is created, but the envelope was
+      //     already seen on gossip (so the IGNORE below would not fire). The payload input is flagged
+      //     via `markPayloadInvalid`, surfaced here by `chain.payloadFailedValidation`.
+      const fullBlock = chain.forkChoice.getBlockHex(beaconBlockRootHex, PayloadStatus.FULL);
+      if (fullBlock?.executionStatus === ExecutionStatus.Invalid || chain.payloadFailedValidation(beaconBlockRootHex)) {
+        throw new AttestationError(GossipAction.REJECT, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_FAILED_VALIDATION,
+          beaconBlockRoot: beaconBlockRootHex,
+        });
+      }
+
+      // [IGNORE] When `attestation.data.index == 1` (payload present for a past block), the
+      // corresponding execution payload for `block` has been seen (a client MAY queue
+      // attestations for processing once the payload is retrieved and SHOULD request the
+      // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
+      if (!chain.seenPayloadEnvelope(beaconBlockRootHex)) {
+        throw new AttestationError(GossipAction.IGNORE, {
+          code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
+          beaconBlockRoot: beaconBlockRootHex,
+        });
+      }
+    }
+  }
+
   let committeeIndex: number | null;
   if (attestationOrCache.attestation) {
     if (isElectraSingleAttestation(attestationOrCache.attestation)) {
       // api or first time validation of a gossip attestation
       committeeIndex = attestationOrCache.attestation.committeeIndex;
 
-      if (isForkPostGloas(fork)) {
-        // [REJECT] `attestation.data.index < 2`.
-        if (attData.index >= 2) {
-          throw new AttestationError(GossipAction.REJECT, {
-            code: AttestationErrorCode.INVALID_PAYLOAD_STATUS_VALUE,
-            attDataIndex: attData.index,
-          });
-        }
-
-        // [REJECT] `attestation.data.index == 0` if `block.slot == attestation.data.slot`.
-        const block = chain.forkChoice.getBlockDefaultStatus(attData.beaconBlockRoot);
-
-        // block being null will be handled by `verifyHeadBlockAndTargetRoot`
-        if (block !== null && block.slot === attSlot && attData.index !== 0) {
-          throw new AttestationError(GossipAction.REJECT, {
-            code: AttestationErrorCode.PREMATURELY_INDICATED_PAYLOAD_PRESENT,
-          });
-        }
-
-        // [REJECT] If `attestation.data.index == 1` (payload present for a past
-        //   block), the execution payload for `block` passes validation.
-        // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
-        // the corresponding execution payload for `block` has been seen (a client MAY queue
-        // attestations for processing once the payload is retrieved and SHOULD request the
-        // payload envelope via `ExecutionPayloadEnvelopesByRoot`).
-        if (block !== null && attData.index === 1 && !chain.seenPayloadEnvelope(toRootHex(attData.beaconBlockRoot))) {
-          throw new AttestationError(GossipAction.IGNORE, {
-            code: AttestationErrorCode.EXECUTION_PAYLOAD_NOT_SEEN,
-            beaconBlockRoot: toRootHex(attData.beaconBlockRoot),
-          });
-        }
-      } else {
-        // [REJECT] attestation.data.index == 0
-        if (attData.index !== 0) {
-          throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
-        }
+      // [REJECT] `attestation.data.index == 0` (electra, pre-gloas; the gloas index checks run above)
+      if (!isForkPostGloas(fork) && attData.index !== 0) {
+        throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NON_ZERO_ATTESTATION_DATA_INDEX});
       }
     } else {
       // phase0 attestation
