@@ -1241,6 +1241,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         payloadAttestationMessage.data.payloadPresent,
         payloadAttestationMessage.data.blobDataAvailable
       );
+
+      chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
+        version: config.getForkName(payloadAttestationMessage.data.slot),
+        data: payloadAttestationMessage,
+      });
     },
     [GossipType.execution_payload_bid]: async ({
       gossipData,

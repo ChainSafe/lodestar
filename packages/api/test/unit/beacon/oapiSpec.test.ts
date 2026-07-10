@@ -72,8 +72,6 @@ const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
 const ignoredTopics: string[] = [
-  // TODO GLOAS: required by v5.0.0-alpha.1
-  "payload_attestation_message",
   "execution_payload_bid",
   // TODO: not yet implemented, added in v5.0.0-alpha.2
   "head_v2",
