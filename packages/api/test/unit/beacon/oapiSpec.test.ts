@@ -72,6 +72,7 @@ const openApiJson = await fetchOpenApiSpec(openApiFile);
 runTestCheckAgainstSpec(openApiJson, definitions, testDatas, ignoredOperations, ignoredProperties);
 
 const ignoredTopics: string[] = [
+  "execution_payload_bid",
   // TODO: not yet implemented, added in v5.0.0-alpha.2
   "head_v2",
   // TODO: unskip once the spec release adds `current_slot` to the fast_confirmation event
