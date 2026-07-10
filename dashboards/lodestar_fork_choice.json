@@ -249,7 +249,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=~\"$beacon_job|beacon\"}"
+              "options": "beacon_fork_choice_errors_total"
             },
             "properties": [
               {
@@ -1216,7 +1216,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Duration - {{instance}}",
+          "legendFormat": "Duration",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1309,7 +1309,7 @@
           "includeNullMetadata": true,
           "instant": false,
           "interval": "",
-          "legendFormat": "{{step}} - {{instance}}",
+          "legendFormat": "{{step}}",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1323,7 +1323,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Current fork choice state per instance: finalized / justified / fast-confirmed epoch, fast-confirmed slot, and head slot. One row per instance.",
+      "description": "Current fork choice state: finalized / justified / fast-confirmed epoch, fast-confirmed slot, and head slot.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1359,12 +1359,7 @@
           "show": false
         },
         "showHeader": true,
-        "sortBy": [
-          {
-            "desc": false,
-            "displayName": "Instance"
-          }
-        ]
+        "sortBy": []
       },
       "pluginVersion": "10.4.1",
       "targets": [
@@ -1374,7 +1369,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "max by (instance) (beacon_finalized_epoch)",
+          "expr": "max(beacon_finalized_epoch)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1387,7 +1382,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "max by (instance) (beacon_current_justified_epoch)",
+          "expr": "max(beacon_current_justified_epoch)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1400,7 +1395,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "max by (instance) (lodestar_fast_confirmation_confirmed_epoch)",
+          "expr": "max(lodestar_fast_confirmation_confirmed_epoch)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1413,7 +1408,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "max by (instance) (beacon_fast_confirmation_slot)",
+          "expr": "max(beacon_fast_confirmation_slot)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1426,7 +1421,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "max by (instance) (beacon_head_slot)",
+          "expr": "max(beacon_head_slot)",
           "format": "table",
           "instant": true,
           "legendFormat": "__auto",
@@ -1448,20 +1443,18 @@
             },
             "includeByName": {},
             "indexByName": {
-              "Confirmed Epoch": 3,
-              "Confirmed Slot": 4,
-              "Finalized Epoch": 1,
-              "Head Slot": 5,
-              "Justified Epoch": 2,
-              "instance": 0
+              "Confirmed Epoch": 2,
+              "Confirmed Slot": 3,
+              "Finalized Epoch": 0,
+              "Head Slot": 4,
+              "Justified Epoch": 1
             },
             "renameByName": {
               "Value #A": "Finalized Epoch",
               "Value #B": "Justified Epoch",
               "Value #C": "Confirmed Epoch",
               "Value #D": "Confirmed Slot",
-              "Value #E": "Head Slot",
-              "instance": "Instance"
+              "Value #E": "Head Slot"
             }
           }
         }
@@ -1550,7 +1543,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Resets - {{instance}}",
+          "legendFormat": "Resets",
           "range": true,
           "refId": "A",
           "useBackend": false
@@ -1566,7 +1559,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Reorgs - {{instance}}",
+          "legendFormat": "Reorgs",
           "range": true,
           "refId": "B",
           "useBackend": false
@@ -1582,7 +1575,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Fallbacks - {{instance}}",
+          "legendFormat": "Fallbacks",
           "range": true,
           "refId": "C",
           "useBackend": false
@@ -1598,7 +1591,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Restarts - {{instance}}",
+          "legendFormat": "Restarts",
           "range": true,
           "refId": "D",
           "useBackend": false
