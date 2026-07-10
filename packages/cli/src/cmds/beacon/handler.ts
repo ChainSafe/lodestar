@@ -79,11 +79,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
       wsCheckpoint,
     } = await initBeaconState(args, beaconPaths.dataDir, config, db, logger);
     const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-    // Reserve headroom so the native cache does not realloc on growth. Reallocs are unsafe
-    // while the historical state worker reads the cache, until lodestar-z adds locking.
-    // Registry growth is capped at MAX_PENDING_DEPOSITS_PER_EPOCH new validators per epoch,
-    // reserve 3 months of worst-case growth, over a year at organic rates. If exceeded,
-    // native capacity doubling kicks in.
+    // Growing the native cache reallocs its memory which is not safe while other threads
+    // read it. Reserve 3 months of worst-case registry growth (MAX_PENDING_DEPOSITS_PER_EPOCH
+    // per epoch), over a year at organic rates. If exceeded, native capacity doubling kicks in.
     const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
     const pubkeyCacheHeadroom = MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
     pubkeyCache.ensureCapacity(anchorState.validators.length + pubkeyCacheHeadroom);
