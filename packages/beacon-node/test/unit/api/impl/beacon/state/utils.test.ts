@@ -67,15 +67,33 @@ describe("beacon state api utils", () => {
   });
 
   describe("getStateResponseWithRegen", () => {
-    it("throws NodeIsSyncing while the node is behind and syncing", async () => {
-      const chain = {
-        clock: {currentSlot: 10 * SLOTS_PER_EPOCH},
-        forkChoice: {getHead: () => ({slot: 0})},
-      } as unknown as IBeaconChain;
-      const sync = {state: SyncState.SyncingFinalized} as unknown as IBeaconSync;
+    // Node far behind head and syncing. Chain getters return a dummy response so the resolved
+    // "already-available" state ids don't blow up; the regen paths are never reached in these tests.
+    const servedResponse = {state: {}, executionOptimistic: false, finalized: false};
+    const syncingChain = {
+      clock: {currentSlot: 10 * SLOTS_PER_EPOCH},
+      forkChoice: {
+        getHead: () => ({slot: 0, stateRoot: "0x00"}),
+        getFinalizedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
+        getJustifiedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
+        getFinalizedBlock: () => ({slot: 0}),
+      },
+      getStateByStateRoot: () => Promise.resolve(servedResponse),
+      getStateOrBytesByCheckpoint: () => Promise.resolve(servedResponse),
+      getStateBySlot: () => Promise.resolve(servedResponse),
+      getHistoricalStateBySlot: () => Promise.resolve(servedResponse),
+    } as unknown as IBeaconChain;
+    const sync = {state: SyncState.SyncingFinalized} as unknown as IBeaconSync;
 
+    it("throws NodeIsSyncing for a regen-triggering slot while the node is behind and syncing", async () => {
       // notWhileSyncing runs before any regen, so a minimal clock/forkChoice/sync mock is enough
-      await expect(getStateResponseWithRegen(chain, sync, "head")).rejects.toThrow(NodeIsSyncing);
+      await expect(getStateResponseWithRegen(syncingChain, sync, 5 * SLOTS_PER_EPOCH)).rejects.toThrow(NodeIsSyncing);
+    });
+
+    it("serves head/finalized/justified/genesis while syncing (no regen wedge risk)", async () => {
+      for (const stateId of ["head", "finalized", "justified", "genesis"] as const) {
+        await expect(getStateResponseWithRegen(syncingChain, sync, stateId), stateId).resolves.toBeDefined();
+      }
     });
   });
 });

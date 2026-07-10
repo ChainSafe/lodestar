@@ -56,9 +56,13 @@ export async function getStateResponseWithRegen(
   sync: IBeaconSync,
   inStateId: routes.beacon.StateId
 ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
-  // A far-behind node must not serve state lookups: a REST-triggered regen can walk back past the
-  // block-root window (SLOTS_PER_HISTORICAL_ROOT) and wedge the node. Reject with 503 while syncing.
-  notWhileSyncing(chain, sync);
+  // "head", "finalized" and "justified" resolve to already-available cached states, and "genesis" to a
+  // historical DB read - none trigger the forward regen that can walk back past the block-root window
+  // (SLOTS_PER_HISTORICAL_ROOT) and wedge a far-behind node. Keep serving those (node observability,
+  // dashboards, validator client checks) even while syncing; guard only the regen-capable lookups.
+  if (inStateId !== "head" && inStateId !== "finalized" && inStateId !== "justified" && inStateId !== "genesis") {
+    notWhileSyncing(chain, sync);
+  }
 
   const stateId = resolveStateId(chain.forkChoice, inStateId);
 
