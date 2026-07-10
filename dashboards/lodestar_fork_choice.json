@@ -1281,11 +1281,8 @@
       "id": 592,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -1517,11 +1514,8 @@
       "id": 599,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
