@@ -71,14 +71,8 @@ export async function validateGossipProposerPreferences(
     });
   }
 
-  // [REJECT] A dependent block after the lookahead decision slot cannot be the block the proposer
-  // lookahead was derived from. `get_proposer_dependent_root` is `block_root_at_slot(
-  // start_slot(proposal_epoch - MIN_SEED_LOOKAHEAD) - 1)` clamped to `GENESIS_SLOT`, so a valid
-  // dependent block is at or before that (clamped) decision slot. Clamping keeps genesis-epoch
-  // dependents (`proposalEpoch <= MIN_SEED_LOOKAHEAD` → the genesis block) valid instead of
-  // underflowing to a negative slot and rejecting every early-epoch preference. Kept after the
-  // proposer-resolution IGNORE so a dependent root whose state is unavailable stays IGNORE (per the
-  // `ignore_dependent_root_state_unavailable` spec fixture), not REJECT.
+  // [REJECT] Dependent block after the lookahead decision slot (clamped to `GENESIS_SLOT` so early epochs
+  // don't underflow). Kept after the proposer-resolution IGNORE so state-unavailable roots stay IGNORE (`ignore_dependent_root_state_unavailable`).
   const decisionSlot = Math.max(GENESIS_SLOT, computeStartSlotAtEpoch(proposalEpoch - MIN_SEED_LOOKAHEAD) - 1);
   const dependentBlock = chain.forkChoice.getBlockHexDefaultStatus(dependentRootHex);
   if (dependentBlock !== null && dependentBlock.slot > decisionSlot) {
