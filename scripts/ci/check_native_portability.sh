@@ -63,7 +63,12 @@ NODE
     EXIT_CODE=1
   fi
 else
-  echo "SKIP: @chainsafe/lodestar-z is not installed"
+  if [ "${CI:-}" = "true" ]; then
+    echo "FAIL: @chainsafe/lodestar-z is not installed"
+    EXIT_CODE=1
+  else
+    echo "SKIP: @chainsafe/lodestar-z is not installed"
+  fi
 fi
 
 echo ""
