@@ -372,7 +372,7 @@ Before pushing any commit, run only the checks relevant to the changed files and
 1. Write a failing test that reproduces the bug
 2. Fix the bug
 3. Verify the test passes
-4. Run `pnpm lint` and `pnpm check-types` when applicable
+4. Run targeted tests for the affected area, plus `pnpm lint` and `pnpm check-types` when applicable
 
 ### Adding a new SSZ type
 
