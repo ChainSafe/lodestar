@@ -126,6 +126,10 @@ function hasBundledPrebuild(prebuildFiles, targetName) {
   }
 }
 
+function hasZapiTarget(zapiTargets, target) {
+  return zapiTargets.some((zapiTarget) => target.aliases.includes(zapiTarget));
+}
+
 function visitManifest(manifestPath) {
   const realManifestPath = fs.realpathSync(manifestPath);
   if (visited.has(realManifestPath)) {
@@ -142,8 +146,12 @@ function visitManifest(manifestPath) {
   const hasTargetPackages = Object.keys(optionalDependencies).some((name) =>
     requiredTargets.some((target) => target.aliases.some((alias) => name.endsWith(`-${alias}`)))
   );
+  // zapi packages (e.g. @chainsafe/lodestar-z) declare their platform matrix as `zapi.targets` and
+  // build the `.node` under `zig-out/lib`, so they have neither per-target optionalDependencies nor a
+  // `prebuilds/` dir. Treat `zapi.targets` as a native-target signal so they aren't silently skipped.
+  const zapiTargets = Array.isArray(manifest.zapi?.targets) ? manifest.zapi.targets : [];
 
-  if (hasTargetPackages || prebuildFiles.length > 0) {
+  if (hasTargetPackages || prebuildFiles.length > 0 || zapiTargets.length > 0) {
     nativePackageCount++;
     const packageErrors = [];
     const knownPackageGaps = [];
@@ -154,8 +162,12 @@ function visitManifest(manifestPath) {
         if (!optionalDependencyForTarget(optionalDependencies, target)) {
           error = `missing optional dependency for ${target.name}`;
         }
-      } else if (!hasBundledPrebuild(prebuildFiles, target.name)) {
-        error = `missing bundled prebuild for ${target.name}`;
+      } else if (prebuildFiles.length > 0) {
+        if (!hasBundledPrebuild(prebuildFiles, target.name)) {
+          error = `missing bundled prebuild for ${target.name}`;
+        }
+      } else if (!hasZapiTarget(zapiTargets, target)) {
+        error = `missing zapi target for ${target.name}`;
       }
 
       if (error !== null) {
