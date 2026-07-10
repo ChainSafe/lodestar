@@ -898,12 +898,6 @@ export class EpochCache {
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    // Skip no-op rewrites so replaying already-known deposits, e.g. during historical
-    // state regen in the worker thread, never writes to the shared native cache
-    const existing = this.pubkeyCache.get(index);
-    if (existing !== undefined && byteArrayEquals(existing.toBytes(), pubkey)) {
-      return;
-    }
     this.pubkeyCache.set(index, pubkey);
   }
 
