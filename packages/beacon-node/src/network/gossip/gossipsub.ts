@@ -40,7 +40,7 @@ import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
 } from "./scoringParameters.js";
-import {GossipTopicCache, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
+import {GossipTopicCache, getAllowedTopics, getCoreTopicsAtFork, stringifyGossipTopic} from "./topic.js";
 
 /** As specified in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md */
 const GOSSIPSUB_HEARTBEAT_INTERVAL = 0.7 * 1000;
@@ -145,6 +145,7 @@ export class Eth2Gossipsub {
     const gossipsubInstance = gossipsub({
       globalSignaturePolicy: StrictNoSign,
       allowPublishToZeroTopicPeers: allowPublishToZeroPeers,
+      allowedTopics: getAllowedTopics(networkConfig),
       D: gossipsubD ?? GOSSIP_D,
       Dlo: gossipsubDLow ?? GOSSIP_D_LOW,
       Dhi: gossipsubDHigh ?? GOSSIP_D_HIGH,

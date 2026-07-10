@@ -276,7 +276,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
 export function getCoreTopicsAtFork(
   networkConfig: NetworkConfig,
   fork: ForkName,
-  opts: {subscribeAllSubnets?: boolean; disableLightClientServer?: boolean}
+  opts: {subscribeAllSubnets?: boolean; subscribeAllColumnSubnets?: boolean; disableLightClientServer?: boolean}
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   // Common topics for all forks
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [
@@ -296,7 +296,7 @@ export function getCoreTopicsAtFork(
 
   // After fulu also track data_column_sidecar_{index}
   if (ForkSeq[fork] >= ForkSeq.fulu) {
-    topics.push(...getDataColumnSidecarTopics(networkConfig));
+    topics.push(...getDataColumnSidecarTopics(networkConfig, opts.subscribeAllColumnSubnets));
   }
 
   // After Deneb and before Fulu also track blob_sidecar_{subnet_id}
@@ -340,14 +340,38 @@ export function getCoreTopicsAtFork(
 }
 
 /**
+ * Build the complete set of valid gossip topic strings across every fork boundary.
+ */
+export function getAllowedTopics(networkConfig: NetworkConfig): Set<string> {
+  const {config} = networkConfig;
+  const allowedTopics = new Set<string>();
+
+  for (const boundary of config.forkBoundariesAscendingEpochOrder) {
+    const topics = getCoreTopicsAtFork(networkConfig, boundary.fork, {
+      subscribeAllSubnets: true,
+      subscribeAllColumnSubnets: true,
+      disableLightClientServer: false,
+    });
+    for (const topic of topics) {
+      allowedTopics.add(stringifyGossipTopic(config, {...topic, boundary}));
+    }
+  }
+
+  return allowedTopics;
+}
+
+/**
  * Pick data column subnets to subscribe to post-fulu.
  */
 export function getDataColumnSidecarTopics(
-  networkConfig: NetworkConfig
+  networkConfig: NetworkConfig,
+  subscribeAllColumnSubnets = false
 ): GossipTopicTypeMap[keyof GossipTopicTypeMap][] {
   const topics: GossipTopicTypeMap[keyof GossipTopicTypeMap][] = [];
 
-  const subnets = networkConfig.custodyConfig.sampledSubnets;
+  const subnets = subscribeAllColumnSubnets
+    ? Array.from({length: networkConfig.config.DATA_COLUMN_SIDECAR_SUBNET_COUNT}, (_, i) => i)
+    : networkConfig.custodyConfig.sampledSubnets;
   for (const subnet of subnets) {
     topics.push({type: GossipType.data_column_sidecar, subnet});
   }
