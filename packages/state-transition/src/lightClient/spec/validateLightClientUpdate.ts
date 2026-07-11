@@ -1,5 +1,4 @@
-import bls from "@chainsafe/bls/herumi";
-import type {PublicKey, Signature} from "@chainsafe/bls/types";
+import {verifyAggregate} from "#light-client-bls";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   DOMAIN_SYNC_COMMITTEE,
@@ -120,35 +119,7 @@ export function validateLightClientUpdate(
     domain: store.config.getDomain(update.signatureSlot - 1, DOMAIN_SYNC_COMMITTEE),
   });
 
-  if (!isValidBlsAggregate(participantPubkeys, signingRoot, update.syncAggregate.syncCommitteeSignature)) {
+  if (!verifyAggregate(participantPubkeys, signingRoot, update.syncAggregate.syncCommitteeSignature)) {
     throw Error("Invalid aggregate signature");
-  }
-}
-
-/**
- * Same as BLS.verifyAggregate but with detailed error messages
- */
-function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signature: Uint8Array): boolean {
-  let aggregatePubkey: PublicKey;
-  try {
-    aggregatePubkey = bls.PublicKey.aggregate(publicKeys);
-  } catch (e) {
-    (e as Error).message = `Error aggregating pubkeys: ${(e as Error).message}`;
-    throw e;
-  }
-
-  let sig: Signature;
-  try {
-    sig = bls.Signature.fromBytes(signature, undefined, true);
-  } catch (e) {
-    (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
-    throw e;
-  }
-
-  try {
-    return sig.verify(aggregatePubkey, message);
-  } catch (e) {
-    (e as Error).message = `Error verifying signature: ${(e as Error).message}`;
-    throw e;
   }
 }

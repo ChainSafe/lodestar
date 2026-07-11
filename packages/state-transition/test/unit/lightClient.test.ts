@@ -1,12 +1,10 @@
 import {describe, expect, it} from "vitest";
 import {blsImplementation, deserializePublicKey, serializePublicKey, verifyAggregate} from "#light-client-bls";
-import {LightclientSpec} from "../../src/lightClient/spec/index.js";
 import {message, publicKey, signature} from "../utils/lightClientBls.js";
 
-describe("light client browser bundle", () => {
-  it("loads with the browser BLS implementation", () => {
-    expect(LightclientSpec).toBeTypeOf("function");
-    expect(blsImplementation).toBe("herumi");
+describe("light client Node.js BLS implementation", () => {
+  it("uses lodestar-z", () => {
+    expect(blsImplementation).toBe("lodestar-z");
   });
 
   it("verifies a sync committee signature", () => {

@@ -45,6 +45,12 @@
       "import": "./lib/testUtils/index.js"
     }
   },
+  "imports": {
+    "#light-client-bls": {
+      "browser": "./lib/lightClient/spec/bls/browser.js",
+      "default": "./lib/lightClient/spec/bls/nodejs.js"
+    }
+  },
   "files": [
     "src",
     "lib",
