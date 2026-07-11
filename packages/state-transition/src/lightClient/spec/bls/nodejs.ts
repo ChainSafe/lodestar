@@ -17,14 +17,12 @@ export function verifyAggregate(publicKeys: PublicKey[], message: Uint8Array, si
   try {
     sig = Signature.fromBytes(signature, true);
   } catch (e) {
-    (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
-    throw e;
+    throw new Error(`Error deserializing signature: ${e instanceof Error ? e.message : String(e)}`, {cause: e});
   }
 
   try {
     return fastAggregateVerify(message, publicKeys, sig);
   } catch (e) {
-    (e as Error).message = `Error verifying signature: ${(e as Error).message}`;
-    throw e;
+    throw new Error(`Error verifying signature: ${e instanceof Error ? e.message : String(e)}`, {cause: e});
   }
 }
