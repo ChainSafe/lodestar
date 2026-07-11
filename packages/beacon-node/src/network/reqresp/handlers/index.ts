@@ -1,4 +1,4 @@
-import {ProtocolHandler} from "@lodestar/reqresp";
+import {ProtocolHandler, RespStatus, ResponseError} from "@lodestar/reqresp";
 import {ssz} from "@lodestar/types";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
@@ -29,6 +29,14 @@ function notImplemented(method: ReqRespMethod): ProtocolHandler {
   };
 }
 
+function deserializeRequestBody<T>(deserialize: () => T): T {
+  try {
+    return deserialize();
+  } catch (e) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, (e as Error).message);
+  }
+}
+
 /**
  * The ReqRespHandler module handles app-level requests / responses from other peers,
  * fetching state from the chain and database as needed.
@@ -40,51 +48,61 @@ export function getReqRespHandlers({db, chain}: {db: IBeaconDb; chain: IBeaconCh
     [ReqRespMethod.Ping]: notImplemented(ReqRespMethod.Ping),
     [ReqRespMethod.Metadata]: notImplemented(ReqRespMethod.Metadata),
     [ReqRespMethod.BeaconBlocksByRange]: (req, peerId, peerClient) => {
-      const body = ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data);
+      const body = deserializeRequestBody(() => ssz.phase0.BeaconBlocksByRangeRequest.deserialize(req.data));
       return onBeaconBlocksByRange(body, chain, db, peerId, peerClient);
     },
     [ReqRespMethod.BeaconBlocksByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
-      const body = BeaconBlocksByRootRequestType(fork, chain.config).deserialize(req.data);
+      const body = deserializeRequestBody(() =>
+        BeaconBlocksByRootRequestType(fork, chain.config).deserialize(req.data)
+      );
       return onBeaconBlocksByRoot(body, chain);
     },
     [ReqRespMethod.BeaconBlocksByHead]: (req, peerId, peerClient) => {
-      const body = ssz.fulu.BeaconBlocksByHeadRequest.deserialize(req.data);
+      const body = deserializeRequestBody(() => ssz.fulu.BeaconBlocksByHeadRequest.deserialize(req.data));
       return onBeaconBlocksByHead(body, chain, peerId, peerClient);
     },
     [ReqRespMethod.BlobSidecarsByRoot]: (req) => {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
-      const body = BlobSidecarsByRootRequestType(fork, chain.config).deserialize(req.data);
+      const body = deserializeRequestBody(() =>
+        BlobSidecarsByRootRequestType(fork, chain.config).deserialize(req.data)
+      );
       return onBlobSidecarsByRoot(body, chain);
     },
     [ReqRespMethod.BlobSidecarsByRange]: (req) => {
-      const body = ssz.deneb.BlobSidecarsByRangeRequest.deserialize(req.data);
+      const body = deserializeRequestBody(() => ssz.deneb.BlobSidecarsByRangeRequest.deserialize(req.data));
       return onBlobSidecarsByRange(body, chain, db);
     },
     [ReqRespMethod.DataColumnSidecarsByRange]: (req, peerId, peerClient) => {
-      const body = ssz.fulu.DataColumnSidecarsByRangeRequest.deserialize(req.data);
+      const body = deserializeRequestBody(() => ssz.fulu.DataColumnSidecarsByRangeRequest.deserialize(req.data));
       return onDataColumnSidecarsByRange(body, chain, db, peerId, peerClient);
     },
     [ReqRespMethod.DataColumnSidecarsByRoot]: (req, peerId, peerClient) => {
-      const body = DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data);
+      const body = deserializeRequestBody(() =>
+        DataColumnSidecarsByRootRequestType(chain.config).deserialize(req.data)
+      );
       return onDataColumnSidecarsByRoot(body, chain, db, peerId, peerClient);
     },
 
     [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: (req, peerId, peerClient) => {
-      const body = ExecutionPayloadEnvelopesByRootRequestType(chain.config).deserialize(req.data);
+      const body = deserializeRequestBody(() =>
+        ExecutionPayloadEnvelopesByRootRequestType(chain.config).deserialize(req.data)
+      );
       return onExecutionPayloadEnvelopesByRoot(body, chain, db, peerId, peerClient);
     },
     [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: (req, peerId, peerClient) => {
-      const body = ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest.deserialize(req.data);
+      const body = deserializeRequestBody(() =>
+        ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest.deserialize(req.data)
+      );
       return onExecutionPayloadEnvelopesByRange(body, chain, db, peerId, peerClient);
     },
 
     [ReqRespMethod.LightClientBootstrap]: (req) => {
-      const body = ssz.Root.deserialize(req.data);
+      const body = deserializeRequestBody(() => ssz.Root.deserialize(req.data));
       return onLightClientBootstrap(body, chain);
     },
     [ReqRespMethod.LightClientUpdatesByRange]: (req) => {
-      const body = ssz.altair.LightClientUpdatesByRange.deserialize(req.data);
+      const body = deserializeRequestBody(() => ssz.altair.LightClientUpdatesByRange.deserialize(req.data));
       return onLightClientUpdatesByRange(body, chain);
     },
     [ReqRespMethod.LightClientFinalityUpdate]: () => onLightClientFinalityUpdate(chain),
