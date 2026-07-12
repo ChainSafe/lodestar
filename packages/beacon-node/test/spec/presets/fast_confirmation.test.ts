@@ -170,7 +170,7 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState();
+              const headState = chain.beaconEngine.getHeadState();
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
               const decisionRoot = headState.getShufflingDecisionRoot(attEpoch);

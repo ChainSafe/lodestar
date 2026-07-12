@@ -66,20 +66,6 @@ export interface IArchiveStore {
    */
   init(): Promise<void>;
   /**
-   * Cleanup and close any worker
-   */
-  close(): Promise<void>;
-  /**
-   * Scrape metrics from the archive store
-   */
-  scrapeMetrics(): Promise<string>;
-  /**
-   * Get historical state by slot
-   */
-  getHistoricalStateBySlot(
-    slot: number
-  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
-  /**
    * Archive latest finalized state
    */
   persistToDisk(): Promise<void>;

@@ -10,20 +10,23 @@ export function getBeaconRewardsApi({
   return {
     async getBlockRewards({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const data = await chain.getBlockRewards(block.message);
+      const data = await chain.beaconEngine.getBlockRewards(block.message);
       return {data, meta: {executionOptimistic, finalized}};
     },
     async getAttestationsRewards({epoch, validatorIds}) {
       assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
 
-      const {rewards, executionOptimistic, finalized} = await chain.getAttestationsRewards(epoch, validatorIds);
+      const {rewards, executionOptimistic, finalized} = await chain.beaconEngine.getAttestationsRewards(
+        epoch,
+        validatorIds
+      );
       return {data: rewards, meta: {executionOptimistic, finalized}};
     },
     async getSyncCommitteeRewards({blockId, validatorIds}) {
       assertUniqueItems(validatorIds, "Duplicate validator IDs provided");
 
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const data = await chain.getSyncCommitteeRewards(block.message, validatorIds);
+      const data = await chain.beaconEngine.getSyncCommitteeRewards(block.message, validatorIds);
       return {data, meta: {executionOptimistic, finalized}};
     },
   };

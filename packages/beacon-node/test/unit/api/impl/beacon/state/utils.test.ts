@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {getStateValidatorIndex} from "../../../../../../src/chain/beaconEngine/index.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {

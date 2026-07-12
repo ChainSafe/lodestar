@@ -482,7 +482,7 @@ export async function runGossipValidationTest(
         }
 
         const postState = computePostState(parentState, signedBlock, fork);
-        const expectedProposerIndex: number | null = chain.getHeadState().getBeaconProposerOrNull(slot);
+        const expectedProposerIndex: number | null = chain.beaconEngine.getHeadState().getBeaconProposerOrNull(slot);
 
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)

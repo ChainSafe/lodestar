@@ -634,14 +634,17 @@ export function getBeaconBlockApi({
         }
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
-          const state = chain.getHeadState();
-          return {
-            data: {root: state.getBlockRootAtSlot(slot)},
-            meta: {
-              executionOptimistic: isOptimisticBlock(head),
-              finalized: computeEpochAtSlot(slot) <= chain.beaconEngine.getFinalizedCheckpoint().epoch,
-            },
-          };
+          // Canonical block root ≤ slot (matches the former state.getBlockRootAtSlot; handles skipped slots).
+          const canonical = chain.beaconEngine.getCanonicalBlockClosestLteSlot(slot);
+          if (canonical) {
+            return {
+              data: {root: fromHex(canonical.blockRoot)},
+              meta: {
+                executionOptimistic: isOptimisticBlock(head),
+                finalized: computeEpochAtSlot(slot) <= chain.beaconEngine.getFinalizedCheckpoint().epoch,
+              },
+            };
+          }
         }
       } else if (blockId === "head") {
         const head = chain.beaconEngine.getHead();

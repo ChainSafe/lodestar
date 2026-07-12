@@ -32,6 +32,10 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
   StatesArchiveOpts &
   BlsMultiThreadWorkerPoolOptions & {
     blsVerifyAllMainThread?: boolean;
+    /** Serve historical (below-finalized) states via the engine-owned worker thread */
+    serveHistoricalState?: boolean;
+    /** Use the native state view in the historical-state worker */
+    nativeStateView?: boolean;
     /** Gossip block/blob/data-column validation observes (no longer gates) skipped slots */
     maxSkipSlots?: number;
     /** Min number of same-message signature sets to batch in gossip attestation validation */

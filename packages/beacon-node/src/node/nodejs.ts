@@ -316,7 +316,8 @@ export class BeaconNode {
     const metricsServer = opts.metrics.enabled
       ? await getHttpMetricsServer(opts.metrics, {
           register: (metrics as Metrics).register,
-          getOtherMetrics: async () => Promise.all([network.scrapeMetrics(), chain.archiveStore.scrapeMetrics()]),
+          getOtherMetrics: async () =>
+            Promise.all([network.scrapeMetrics(), chain.beaconEngine.scrapeHistoricalStateMetrics()]),
           logger: logger.child({module: LoggerModule.metrics}),
         })
       : null;

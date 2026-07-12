@@ -10,6 +10,7 @@ import {Epoch, Slot, electra} from "@lodestar/types";
 import {LogLevel, sleep} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {BeaconRestApiServerOpts} from "../../src/api/index.js";
+import {BeaconEngine} from "../../src/chain/beaconEngine/index.js";
 import {defaultExecutionEngineHttpOpts} from "../../src/execution/engine/http.js";
 import {ExecutionPayloadStatus, PayloadAttributes} from "../../src/execution/engine/interface.js";
 import {bytesToData, dataToBytes} from "../../src/execution/engine/utils.js";
@@ -359,7 +360,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
 
     await waitForSlot(bn, 5);
     // Expect new validator to be in unfinalized cache, in state.validators and not in finalized cache
-    let headState = bn.chain.getHeadState() as BeaconStateView;
+    let headState = (bn.chain.beaconEngine as BeaconEngine).getHeadState() as BeaconStateView;
     let epochCtx = headState.cachedState.epochCtx;
     if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {
       throw Error("New validator is not reflected in the beacon state at slot 5");
@@ -385,7 +386,7 @@ describe("executionEngine / ExecutionEngineHttp", () => {
     await sleep(500);
 
     // Check if new validator is in finalized cache
-    headState = bn.chain.getHeadState() as BeaconStateView;
+    headState = (bn.chain.beaconEngine as BeaconEngine).getHeadState() as BeaconStateView;
     epochCtx = headState.cachedState.epochCtx;
 
     if (headState.validatorCount !== 33 || headState.getAllBalances().length !== 33) {

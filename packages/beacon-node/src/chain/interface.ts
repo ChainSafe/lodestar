@@ -1,6 +1,5 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
@@ -20,7 +19,6 @@ import {
   deneb,
   gloas,
   phase0,
-  rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
@@ -41,7 +39,6 @@ import {GetBlobsTracker} from "./GetBlobsTracker.js";
 import {LightClientServer} from "./lightClient/index.js";
 import {IChainOptions} from "./options.js";
 import {AssembledBlockType, BlockAttributes, BlockType, ProduceResult} from "./produceBlock/produceBlockBody.js";
-import {IStateRegenerator, RegenCaller} from "./regen/index.js";
 import {ReprocessController} from "./reprocess.js";
 import {SeenBlockInput} from "./seenCache/seenGossipBlockInput.js";
 import {PayloadEnvelopeInput, SeenPayloadEnvelopeInput} from "./seenCache/seenPayloadEnvelopeInput.js";
@@ -85,7 +82,6 @@ export interface IBeaconChain {
   readonly bls: IBlsVerifier;
   readonly clock: IClock;
   readonly emitter: ChainEventEmitter;
-  readonly regen: IStateRegenerator;
   readonly lightClientServer?: LightClientServer;
   readonly reprocessController: ReprocessController;
   readonly pubkeyCache: PubkeyCache;
@@ -124,35 +120,8 @@ export interface IBeaconChain {
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean;
 
-  // TODO - beacon engine: remove getHeadState*
-  getHeadState(): IBeaconStateView;
-  getHeadStateAtCurrentEpoch(regenCaller: RegenCaller): Promise<IBeaconStateView>;
-  getHeadStateAtEpoch(epoch: Epoch, regenCaller: RegenCaller): Promise<IBeaconStateView>;
-
-  getHistoricalStateBySlot(
-    slot: Slot
-  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
-
-  /** Returns a local state canonical at `slot` */
-  getStateBySlot(
-    slot: Slot,
-    opts?: StateGetOpts
-  ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null>;
-  /** Returns a local state by state root */
-  getStateByStateRoot(
-    stateRoot: RootHex,
-    opts?: StateGetOpts
-  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
   /** Return serialized bytes of a persisted checkpoint state */
   getPersistedCheckpointState(checkpoint?: phase0.Checkpoint): Promise<Uint8Array | null>;
-  /** Returns a cached state by checkpoint */
-  getStateByCheckpoint(
-    checkpoint: CheckpointWithHex
-  ): {state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null;
-  /** Return state bytes by checkpoint */
-  getStateOrBytesByCheckpoint(
-    checkpoint: CheckpointWithHex
-  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
 
   /**
    * Since we can have multiple parallel chains,
@@ -241,16 +210,6 @@ export interface IBeaconChain {
 
   regenCanAcceptWork(): boolean;
   blsThreadPoolCanAcceptWork(): boolean;
-
-  getBlockRewards(blockRef: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
-  getAttestationsRewards(
-    epoch: Epoch,
-    validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
-  getSyncCommitteeRewards(
-    blockRef: BeaconBlock | BlindedBeaconBlock,
-    validatorIds?: (ValidatorIndex | string)[]
-  ): Promise<rewards.SyncCommitteeRewards>;
 }
 
 export type SSZObjectType =

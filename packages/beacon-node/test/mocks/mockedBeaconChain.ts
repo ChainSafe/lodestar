@@ -2,7 +2,7 @@ import {Mock, Mocked, vi} from "vitest";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {EpochDifference, ForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {createPubkeyCache} from "@lodestar/state-transition";
+import {IBeaconStateView, createPubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {BeaconEngine} from "../../src/chain/beaconEngine/beaconEngine.js";
 import {BeaconProposerCache} from "../../src/chain/beaconProposerCache.js";
@@ -58,6 +58,10 @@ export type MockedBeaconChain = Mocked<BeaconChain> & {
   seenBlockInputCache: Mocked<SeenBlockInput>;
   shufflingCache: Mocked<ShufflingCache>;
   regen: Mocked<QueuedStateRegenerator>;
+  // Engine state-read methods surfaced on the flat mock (the mock doubles as the engine). No longer on
+  // the facade after BLK-3 — stubbed here so validation tests can control the head state.
+  getHeadState: Mock<() => IBeaconStateView>;
+  getHeadStateAtCurrentEpoch: Mock<() => Promise<IBeaconStateView>>;
   bls: {
     verifySignatureSets: Mock<() => boolean>;
     verifySignatureSetsSameMessage: Mock<() => boolean>;

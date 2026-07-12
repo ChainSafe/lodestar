@@ -19,7 +19,7 @@ describe("GossipMessageValidator", () => {
     opPool = chainStub.opPool;
 
     const state = new BeaconStateView(generateCachedState());
-    vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
+    chainStub.getHeadState.mockReturnValue(state);
     vi.spyOn(opPool, "hasSeenAttesterSlashing");
   });
 

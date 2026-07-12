@@ -3,7 +3,8 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ApiOptions} from "../../options.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
-import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {resolveStateId} from "../beacon/state/utils.js";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 
 export function getProofApi(
@@ -21,13 +22,15 @@ export function getProofApi(
         throw new Error("Requested proof is too large.");
       }
 
-      const res = await getStateResponseWithRegen(chain, stateId);
-
-      const state = res.state instanceof Uint8Array ? chain.getHeadState().loadOtherState(res.state) : res.state;
+      const id = resolveStateId(chain.beaconEngine, stateId);
+      const res = await chain.beaconEngine.getStateProof(id, descriptor);
+      if (!res) {
+        throw new ApiError(404, `State not found for id '${stateId}'`);
+      }
 
       return {
-        data: state.createMultiProof(descriptor),
-        meta: {version: config.getForkName(state.slot)},
+        data: res.proof,
+        meta: {version: res.fork},
       };
     },
     async getBlockProof({blockId, descriptor}) {

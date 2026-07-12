@@ -1,11 +1,8 @@
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "@lodestar/params";
-import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
-import {BLSPubkey, Epoch, RootHex, Slot, ValidatorIndex, getValidatorStatus, phase0} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
-import {IBeaconEngine} from "../../../../chain/beaconEngine/index.js";
-import {IBeaconChain} from "../../../../chain/index.js";
+import {ForkName, GENESIS_SLOT} from "@lodestar/params";
+import {RootHex, Slot} from "@lodestar/types";
+import {ApiStateResult, ApiStateResultWithFork, IBeaconEngine} from "../../../../chain/beaconEngine/index.js";
 import {ApiError, ValidationError} from "../../errors.js";
 
 export function resolveStateId(
@@ -41,105 +38,33 @@ export function resolveStateId(
   return blockSlot;
 }
 
-// TODO - beacon engine: move it over there. Do not support returning the whole IBeaconStateView.
-export async function getStateResponseWithRegen(
-  chain: IBeaconChain,
-  inStateId: routes.beacon.StateId
-): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean}> {
-  const stateId = resolveStateId(chain.beaconEngine, inStateId);
-
-  const res =
-    typeof stateId === "string"
-      ? await chain.getStateByStateRoot(stateId, {allowRegen: true})
-      : typeof stateId === "number"
-        ? stateId > chain.clock.currentSlot
-          ? null // Don't try to serve future slots
-          : stateId >= chain.beaconEngine.getFinalizedBlock().slot
-            ? await chain.getStateBySlot(stateId, {allowRegen: true})
-            : await chain.getHistoricalStateBySlot(stateId)
-        : await chain.getStateOrBytesByCheckpoint(stateId);
-
-  if (!res) {
-    throw new ApiError(404, `State not found for id '${inStateId}'`);
+/**
+ * Unwrap an engine {@link ApiStateResult}: `null` → 404, `invalid` → the mapped `ApiError`, otherwise the
+ * DTO + meta. Keeps HTTP-status mapping in the API layer (the engine stays HTTP-free).
+ */
+export function unwrapStateResult<T>(
+  res: ApiStateResult<T>,
+  stateId: routes.beacon.StateId
+): {data: T; executionOptimistic: boolean; finalized: boolean; fork?: ForkName} {
+  if (res === null) {
+    throw new ApiError(404, `State not found for id '${stateId}'`);
   }
-
+  if ("invalid" in res) {
+    throw new ApiError(res.invalid.code, res.invalid.message);
+  }
   return res;
 }
 
-export function toValidatorResponse(
-  index: ValidatorIndex,
-  validator: phase0.Validator,
-  balance: number,
-  currentEpoch: Epoch
-): routes.beacon.ValidatorResponse {
-  return {
-    index,
-    status: getValidatorStatus(validator, currentEpoch),
-    balance,
-    validator,
-  };
-}
-
-export function filterStateValidatorsByStatus(
-  statuses: string[],
-  state: IBeaconStateView,
-  pubkeyCache: PubkeyCache,
-  currentEpoch: Epoch
-): routes.beacon.ValidatorResponse[] {
-  const responses: routes.beacon.ValidatorResponse[] = [];
-  const validators = state.getValidatorsByStatus(new Set(statuses), currentEpoch);
-  for (const validator of validators) {
-    const resp = getStateValidatorIndex(validator.pubkey, state, pubkeyCache);
-    if (resp.valid) {
-      responses.push(
-        toValidatorResponse(resp.validatorIndex, validator, state.getBalance(resp.validatorIndex), currentEpoch)
-      );
-    }
+/** {@link unwrapStateResult} for reads whose success branch always carries `fork` (used as `version` meta). */
+export function unwrapStateResultWithFork<T>(
+  res: ApiStateResultWithFork<T>,
+  stateId: routes.beacon.StateId
+): {data: T; executionOptimistic: boolean; finalized: boolean; fork: ForkName} {
+  if (res === null) {
+    throw new ApiError(404, `State not found for id '${stateId}'`);
   }
-  return responses;
-}
-
-type StateValidatorIndexResponse =
-  | {valid: true; validatorIndex: ValidatorIndex}
-  | {valid: false; code: number; reason: string};
-
-export function getStateValidatorIndex(
-  id: routes.beacon.ValidatorId | BLSPubkey,
-  state: IBeaconStateView,
-  pubkeyCache: PubkeyCache
-): StateValidatorIndexResponse {
-  if (typeof id === "string") {
-    // mutate `id` and fallthrough to below
-    if (id.startsWith("0x")) {
-      try {
-        id = fromHex(id);
-      } catch (_e) {
-        return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
-      }
-    } else {
-      id = Number(id);
-    }
+  if ("invalid" in res) {
+    throw new ApiError(res.invalid.code, res.invalid.message);
   }
-
-  if (typeof id === "number") {
-    const validatorIndex = id;
-    // validator is invalid or added later than given stateId
-    if (!Number.isSafeInteger(validatorIndex)) {
-      return {valid: false, code: 400, reason: "Invalid validator index"};
-    }
-    if (validatorIndex >= state.validatorCount) {
-      return {valid: false, code: 404, reason: "Validator index from future state"};
-    }
-    return {valid: true, validatorIndex};
-  }
-
-  // typeof id === Uint8Array
-  const validatorIndex = pubkeyCache.getIndex(id);
-  if (validatorIndex === null) {
-    return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
-  }
-  if (validatorIndex >= state.validatorCount) {
-    return {valid: false, code: 404, reason: "Validator pubkey from future state"};
-  }
-  return {valid: true, validatorIndex};
+  return res;
 }

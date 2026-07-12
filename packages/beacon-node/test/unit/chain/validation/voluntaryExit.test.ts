@@ -68,7 +68,7 @@ describe("validate voluntary exit", () => {
     state = new TestBeaconStateView(createCachedBeaconStateTest(originalState.clone(), config));
     chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(state);
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
     vi.spyOn(opPool, "hasSeenVoluntaryExit");
     chainStub.bls.verifySignatureSets.mockResolvedValue(true);
@@ -117,7 +117,7 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, inactiveValidator);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExit),
@@ -135,7 +135,7 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, exitedValidator);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExit),
@@ -151,7 +151,7 @@ describe("validate voluntary exit", () => {
 
     state.setValidator(0, recentlyActivated);
 
-    vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch").mockResolvedValue(state);
+    chainStub.getHeadStateAtCurrentEpoch.mockResolvedValue(state);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit.call(chainStub.beaconEngine, signedVoluntaryExit),

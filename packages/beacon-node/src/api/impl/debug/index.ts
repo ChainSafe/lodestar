@@ -9,7 +9,8 @@ import {getBlobKzgCommitments} from "../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getStateSlotFromBytes} from "../../../util/multifork.js";
 import {getBlockResponse} from "../beacon/blocks/utils.js";
-import {getStateResponseWithRegen} from "../beacon/state/utils.js";
+import {resolveStateId} from "../beacon/state/utils.js";
+import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {assertUniqueItems} from "../utils.js";
 
@@ -133,15 +134,17 @@ export function getDebugApi({
     },
 
     async getStateV2({stateId}, context) {
-      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
-      let slot: number, data: Uint8Array | BeaconState;
-      if (state instanceof Uint8Array) {
-        slot = getStateSlotFromBytes(state);
-        data = state;
-      } else {
-        slot = state.slot;
-        data = context?.returnBytes ? state.serialize() : state.toValue();
+      const id = resolveStateId(chain.beaconEngine, stateId);
+      const res = await chain.beaconEngine.getSerializedState(id);
+      if (!res) {
+        throw new ApiError(404, `State not found for id '${stateId}'`);
       }
+      const {state: stateBytes, executionOptimistic, finalized} = res;
+      const slot = getStateSlotFromBytes(stateBytes);
+      // Whole-state debug endpoint: bytes are the payload; JSON path materializes the full state value.
+      const data: Uint8Array | BeaconState = context?.returnBytes
+        ? stateBytes
+        : config.getForkTypes(slot).BeaconState.deserialize(stateBytes);
       return {
         data,
         meta: {

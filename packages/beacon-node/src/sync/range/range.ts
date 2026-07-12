@@ -1,7 +1,7 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
-import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
@@ -315,10 +315,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // The first batch of a new sync chain may need to detect whether the parent block was an
       // gloas "empty" block (no envelope produced). It does so by comparing the first
       // downloaded block's `bid.parentBlockHash` against the head state's `latestExecutionPayloadBid.blockHash`.
-      const headState = this.chain.getHeadState();
-      const latestBid = isStatePostGloas(headState)
-        ? (headState as IBeaconStateViewGloas).latestExecutionPayloadBid
-        : undefined;
+      const latestBid = this.chain.beaconEngine.getHeadLatestExecutionPayloadBid();
 
       syncChain = new SyncChain(
         startEpoch,

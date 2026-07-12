@@ -11,6 +11,7 @@ import {
 import {BeaconBlock, Epoch, Slot} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {Logger, mapValues, toRootHex} from "@lodestar/utils";
+import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {ChainEvent, HeadEventData} from "../../../src/chain/index.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
 import {BeaconNode} from "../../../src/index.js";
@@ -68,7 +69,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
-    const checkpointState = bn.chain.regen.getCheckpointStateSync({
+    const checkpointState = (bn.chain.beaconEngine as BeaconEngine).regen.getCheckpointStateSync({
       epoch: checkpoint.epoch,
       rootHex: toRootHex(checkpoint.root),
     });
@@ -77,7 +78,10 @@ export function simTestInfoTracker(bn: BeaconNode, logger: Logger): () => void {
     }
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.getStateRootAtSlot(lastSlot);
-    const lastState = await bn.chain.regen.getState(toRootHex(lastStateRoot), RegenCaller.onForkChoiceFinalized);
+    const lastState = await (bn.chain.beaconEngine as BeaconEngine).regen.getState(
+      toRootHex(lastStateRoot),
+      RegenCaller.onForkChoiceFinalized
+    );
     logParticipation(lastState);
   }
 

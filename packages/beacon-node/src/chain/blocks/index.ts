@@ -184,6 +184,7 @@ export async function processBlocks(
         const {preState, postState} = err.type;
         const preRoot = preState.hashTreeRoot();
         const postRoot = postState.hashTreeRoot();
+        // TODO beacon-engine: should belong to BeaconEngine
         this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
           this.logger.error(
             "Error persisting invalid state root objects",

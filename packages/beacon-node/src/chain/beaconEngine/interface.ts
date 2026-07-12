@@ -1,3 +1,4 @@
+import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {
@@ -10,7 +11,7 @@ import {
   ProtoBlock,
   ProtoNode,
 } from "@lodestar/fork-choice";
-import {ForkName, ForkPostBellatrix} from "@lodestar/params";
+import {ForkName, ForkPostBellatrix, ForkSeq} from "@lodestar/params";
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, PubkeyCache} from "@lodestar/state-transition";
 import {
   Attestation,
@@ -37,9 +38,11 @@ import {
   altair,
   capella,
   deneb,
+  electra,
   fulu,
   gloas,
   phase0,
+  rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {IBeaconEngineDb} from "../../db/index.js";
@@ -60,6 +63,7 @@ import {
   PayloadAttributesInput,
   PayloadAttributesWithdrawals,
 } from "../produceBlock/produceBlockBody.js";
+import {RegenRequest} from "../regen/index.js";
 import {SeenBlockInput} from "../seenCache/seenGossipBlockInput.js";
 import {ShufflingCache} from "../shufflingCache.js";
 import {CPStateDatastore} from "../stateCache/datastore/types.js";
@@ -73,6 +77,8 @@ export type BeaconEngineModules = {
   opts: IBeaconEngineOptions;
   config: BeaconConfig;
   logger: Logger;
+  /** Engine-owned DB directory (historical-state worker location). */
+  dbName: string;
   metrics: Metrics | null;
   clock: IClock;
   pubkeyCache: PubkeyCache;
@@ -240,6 +246,22 @@ export type MigrateFinalizedResult = {
  * collaborators and flows migrates here across later phases. This interface is the contract shared
  * with the native engine (lodestar-z) — both the JS and native engines implement the same signatures.
  */
+/**
+ * Result of an engine API state read. `null` = state not found (API → 404); `invalid` = a state-derived
+ * validation failure the API maps to `ApiError(code, message)` (keeps the engine HTTP-free); otherwise the
+ * targeted `data` + meta. `fork` is included where the response meta needs `version`.
+ */
+export type ApiStateResult<T> =
+  | {data: T; executionOptimistic: boolean; finalized: boolean; fork?: ForkName}
+  | {invalid: {code: number; message: string}}
+  | null;
+
+/** Like {@link ApiStateResult} but the success branch always carries `fork` (endpoints with `version` meta). */
+export type ApiStateResultWithFork<T> =
+  | {data: T; executionOptimistic: boolean; finalized: boolean; fork: ForkName}
+  | {invalid: {code: number; message: string}}
+  | null;
+
 export interface IBeaconEngine {
   readonly config: BeaconConfig;
   // Full fork choice (read + write). The engine owns it; writes are routed here while the flows that
@@ -371,6 +393,119 @@ export interface IBeaconEngine {
     indices: ValidatorIndex[],
     currentEpoch: Epoch
   ): Promise<{data: routes.validator.PtcDuty[]; dependentRoot: Root; head: ProtoBlock}>;
+
+  // State reads (regen-backed; no IBeaconStateView crosses — the engine resolves state internally and
+  // returns scalars / DTOs). See BLK-3.
+  dumpCacheSummary(): routes.lodestar.StateCacheItem[];
+  dropCache(): void;
+  dumpRegenQueueItems(): {key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[];
+  getActiveValidatorCount(): number;
+  getHeadPendingCounts(): {
+    pendingDeposits: number;
+    pendingPartialWithdrawals: number;
+    pendingConsolidations: number;
+  } | null;
+  validatorMonitorOnceEveryEndOfEpoch(): void;
+  regenCanAcceptWork(): boolean;
+  initRegen(): Promise<void>;
+  getHeadExecutionStateInfo(): {isExecutionStateType: boolean; isMergeTransitionComplete: boolean};
+  getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
+  // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
+  loadHistoricalStateRegen(): Promise<void>;
+  closeHistoricalStateRegen(): Promise<void>;
+  scrapeHistoricalStateMetrics(): Promise<string>;
+  getHistoricalStateBySlot(
+    slot: Slot
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  // API state queries — the engine resolves the state internally (no IBeaconStateView crosses). `id` is
+  // the resolved stateId (root / slot / checkpoint); the API keeps `resolveStateId` (400 on bad input).
+  getSerializedState(
+    id: RootHex | Slot | CheckpointWithHex
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null>;
+  getFinalizedEffectiveBalances(
+    finalizedCheckpoint: CheckpointWithHex,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<number[] | null>;
+  getStateProof(
+    id: RootHex | Slot | CheckpointWithHex,
+    descriptor: Uint8Array
+  ): Promise<{proof: CompactMultiProof; fork: ForkName} | null>;
+  getHistoricalSummaries(id: RootHex | Slot | CheckpointWithHex): Promise<{
+    slot: Slot;
+    historicalSummaries: capella.HistoricalSummaries;
+    proof: Uint8Array[];
+    fork: ForkName;
+    executionOptimistic: boolean;
+    finalized: boolean;
+  } | null>;
+  getIndexedAttestationsForSlashing(
+    requests: {slot: Slot; epoch: Epoch; attestations: Attestation[]}[],
+    forkSeq: ForkSeq
+  ): Promise<IndexedAttestation[]>;
+  // beacon/state family — each returns the endpoint DTO (or invalid/null); no IBeaconStateView crosses.
+  getStateRoot(id: RootHex | Slot | CheckpointWithHex): Promise<ApiStateResult<{root: Root}>>;
+  getStateFork(id: RootHex | Slot | CheckpointWithHex): Promise<ApiStateResult<phase0.Fork>>;
+  getStateRandao(id: RootHex | Slot | CheckpointWithHex, epoch?: Epoch): Promise<ApiStateResult<{randao: Bytes32}>>;
+  getStateFinalityCheckpoints(id: RootHex | Slot | CheckpointWithHex): Promise<
+    ApiStateResult<{
+      currentJustified: phase0.Checkpoint;
+      previousJustified: phase0.Checkpoint;
+      finalized: phase0.Checkpoint;
+    }>
+  >;
+  getStateValidators(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorIds: routes.beacon.ValidatorId[],
+    statuses: string[]
+  ): Promise<ApiStateResult<routes.beacon.ValidatorResponse[]>>;
+  getStateValidatorIdentities(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorIds: routes.beacon.ValidatorId[]
+  ): Promise<ApiStateResult<routes.beacon.ValidatorIdentities>>;
+  getStateValidator(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorId: routes.beacon.ValidatorId
+  ): Promise<ApiStateResult<routes.beacon.ValidatorResponse>>;
+  getStateValidatorBalances(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorIds: routes.beacon.ValidatorId[]
+  ): Promise<ApiStateResult<routes.beacon.ValidatorBalance[]>>;
+  getEpochCommittees(
+    id: RootHex | Slot | CheckpointWithHex,
+    filters: {epoch?: Epoch; index?: CommitteeIndex; slot?: Slot}
+  ): Promise<ApiStateResult<routes.beacon.EpochCommitteeResponse[]>>;
+  getEpochSyncCommittees(
+    id: RootHex | Slot | CheckpointWithHex,
+    epoch?: Epoch
+  ): Promise<ApiStateResult<routes.beacon.EpochSyncCommitteeResponse>>;
+  getStatePendingDeposits(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingDeposits>>;
+  getStatePendingPartialWithdrawals(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingPartialWithdrawals>>;
+  getStatePendingConsolidations(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingConsolidations>>;
+  getStateProposerLookahead(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | fulu.ProposerLookahead>>;
+  getHeadLatestExecutionPayloadBid(): gloas.ExecutionPayloadBid | undefined;
+  getActiveOrPendingValidators(indices: ValidatorIndex[]): Set<ValidatorIndex>;
+  getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint>;
+  getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards>;
+  getAttestationsRewards(
+    epoch: Epoch,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}>;
+  getSyncCommitteeRewards(
+    block: BeaconBlock | BlindedBeaconBlock,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<rewards.SyncCommitteeRewards>;
 
   // Gossip + API validation flows. The first parameter is the message's SSZ bytes (unused by the JS
   // engine, required by the native engine's bytes-first contract), followed by the deserialized object. Each

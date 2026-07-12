@@ -4,12 +4,10 @@ import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconChainDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
-import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
 import {IBeaconChain} from "../interface.js";
 import {PROCESS_FINALIZED_CHECKPOINT_QUEUE_LENGTH} from "./constants.js";
-import {HistoricalStateRegen} from "./historicalState/historicalStateRegen.js";
 import {ArchiveStoreOpts, ArchiveStoreTask} from "./interface.js";
 import {migrateFinalizedDA} from "./utils/archiveBlocks.js";
 import {updateBackfillRange} from "./utils/updateBackfillRange.js";
@@ -37,8 +35,6 @@ export class ArchiveStore {
   private readonly metrics: Metrics | null;
   private readonly opts: ArchiveStoreInitOpts;
   private readonly signal: AbortSignal;
-
-  private historicalStateRegen?: HistoricalStateRegen;
 
   constructor(modules: ArchiveStoreModules, opts: ArchiveStoreInitOpts, signal: AbortSignal) {
     this.chain = modules.chain;
@@ -87,46 +83,6 @@ export class ArchiveStore {
         this.signal
       );
     }
-
-    if (this.opts.serveHistoricalState) {
-      this.historicalStateRegen = await HistoricalStateRegen.init({
-        opts: {
-          genesisTime: this.chain.clock.genesisTime,
-          dbLocation: this.opts.dbName,
-          nativeStateView: this.opts.nativeStateView ?? false,
-        },
-        config: this.chain.config,
-        metrics: this.metrics,
-        logger: this.logger,
-        signal: this.signal,
-      });
-    }
-  }
-
-  async close(): Promise<void> {
-    await this.historicalStateRegen?.close();
-  }
-
-  async scrapeMetrics(): Promise<string> {
-    return this.historicalStateRegen?.scrapeMetrics() ?? "";
-  }
-
-  async getHistoricalStateBySlot(
-    slot: number
-  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
-    const finalizedBlock = this.chain.beaconEngine.getFinalizedBlock();
-
-    if (slot >= finalizedBlock.slot) {
-      return null;
-    }
-
-    // request for finalized state using historical state regen
-    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
-    if (!stateSerialized) {
-      return null;
-    }
-
-    return {state: stateSerialized, executionOptimistic: isOptimisticBlock(finalizedBlock), finalized: true};
   }
 
   /**

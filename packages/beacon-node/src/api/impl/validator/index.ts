@@ -34,9 +34,9 @@ import {
   ProducedBlockSource,
   Root,
   Slot,
+  ValidatorIndex,
   Wei,
   bellatrix,
-  getValidatorStatus,
   gloas,
   ssz,
   sszTypesFor,
@@ -62,7 +62,6 @@ import {
   ProduceFullDeneb,
   ProduceFullGloas,
 } from "../../../chain/produceBlock/index.js";
-import {RegenCaller} from "../../../chain/regen/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
@@ -928,12 +927,20 @@ export function getValidatorApi(
 
       // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
       // Note: This may trigger an epoch transition if there skipped slots at the beginning of the epoch.
-      const headState = chain.getHeadState();
-      const headSlot = headState.slot;
+      const head = chain.beaconEngine.getHead();
+      const headSlot = head.slot;
       const attEpoch = computeEpochAtSlot(slot);
-      const headBlockRootHex = chain.beaconEngine.getHead().blockRoot;
-      const headBlockRoot = fromHex(headBlockRootHex);
+      const headBlockRoot = fromHex(head.blockRoot);
       const fork = config.getForkName(slot);
+
+      // Canonical block root ≤ slot (matches the former state.getBlockRootAtSlot; handles skipped slots).
+      const blockRootAtSlot = (atSlot: Slot): Root => {
+        const canonical = chain.beaconEngine.getCanonicalBlockClosestLteSlot(atSlot);
+        if (!canonical) {
+          throw Error(`No canonical block found for slot=${atSlot}`);
+        }
+        return fromHex(canonical.blockRoot);
+      };
 
       const beaconBlockRoot =
         slot >= headSlot
@@ -941,7 +948,7 @@ export function getValidatorApi(
             headBlockRoot
           : // Permit attesting to slots *prior* to the current head. This is desirable when
             // the VC and BN are out-of-sync due to time issues or overloading.
-            headState.getBlockRootAtSlot(slot);
+            blockRootAtSlot(slot);
 
       let index: CommitteeIndex;
       if (isForkPostGloas(fork)) {
@@ -972,7 +979,7 @@ export function getValidatorApi(
         targetSlot >= headSlot
           ? // If the state is earlier than the target slot then the target *must* be the head block root.
             headBlockRoot
-          : headState.getBlockRootAtSlot(targetSlot);
+          : blockRootAtSlot(targetSlot);
 
       // Check the execution status as validator shouldn't vote on an optimistic head
       // Check on target is sufficient as a valid target would imply a valid source
@@ -980,18 +987,15 @@ export function getValidatorApi(
       notOnOutOfRangeData(targetRoot);
 
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
-      // An epoch transition may change state.currentJustifiedCheckpoint
-      const attEpochState = await chain.getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
-
-      // TODO confirm if the below is correct assertion
-      // notOnOutOfRangeData(attEpochState.currentJustifiedCheckpoint.root);
+      // An epoch transition may change state.currentJustifiedCheckpoint (resolved inside the engine).
+      const source = await chain.beaconEngine.getAttestationSourceCheckpoint(attEpoch);
 
       return {
         data: {
           slot,
           index,
           beaconBlockRoot,
-          source: attEpochState.currentJustifiedCheckpoint,
+          source,
           target: {epoch: attEpoch, root: targetRoot},
         },
       };
@@ -1477,24 +1481,18 @@ export function getValidatorApi(
 
       // should only send active or pending validator to builder
       // Spec: https://ethereum.github.io/builder-specs/#/Builder/registerValidator
-      const headState = chain.getHeadState();
       const currentEpoch = chain.clock.currentEpoch;
 
-      const filteredRegistrations = registrations.filter((registration) => {
-        const {pubkey} = registration.message;
-        const validatorIndex = chain.pubkeyCache.getIndex(pubkey);
-        if (validatorIndex === null) return false;
-
-        const validator = headState.getValidator(validatorIndex);
-        const status = getValidatorStatus(validator, currentEpoch);
-        return (
-          status === "active_exiting" ||
-          status === "active_ongoing" ||
-          status === "active_slashed" ||
-          status === "pending_initialized" ||
-          status === "pending_queued"
-        );
-      });
+      // Resolve pubkey→index facade-side (shared pubkeyCache); the engine returns which are active/pending.
+      const withIndex: {registration: (typeof registrations)[number]; index: ValidatorIndex}[] = [];
+      for (const registration of registrations) {
+        const index = chain.pubkeyCache.getIndex(registration.message.pubkey);
+        if (index !== null) {
+          withIndex.push({registration, index});
+        }
+      }
+      const activeOrPending = chain.beaconEngine.getActiveOrPendingValidators(withIndex.map((x) => x.index));
+      const filteredRegistrations = withIndex.filter((x) => activeOrPending.has(x.index)).map((x) => x.registration);
 
       await chain.executionBuilder.registerValidator(currentEpoch, filteredRegistrations);
 

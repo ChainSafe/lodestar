@@ -1,3 +1,4 @@
+import {CompactMultiProof} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -20,7 +21,9 @@ import {
   UpdateHeadOpt,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
+import type {LoggerNode} from "@lodestar/logger/node";
 import {
+  EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
   ForkPostAltair,
   ForkPostBellatrix,
@@ -40,23 +43,31 @@ import {
   EpochShuffling,
   IBeaconStateView,
   IBeaconStateViewBellatrix,
+  IBeaconStateViewGloas,
   PubkeyCache,
   RootCache,
   StateHashTreeRootSource,
   calculateCommitteeAssignments,
+  computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   computeTimeAtSlot,
+  getCurrentEpoch,
+  getEffectiveBalancesFromStateBytes,
+  getIndexedAttestation,
   isStartSlotOfEpoch,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
+  isStatePostElectra,
+  isStatePostFulu,
   isStatePostGloas,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
   Attestation,
   AttesterSlashing,
+  BLSPubkey,
   BLSSignature,
   BeaconBlock,
   BlindedBeaconBlock,
@@ -80,13 +91,15 @@ import {
   deneb,
   electra,
   fulu,
+  getValidatorStatus,
   gloas,
   isGloasBeaconBlock,
   phase0,
+  rewards,
   ssz,
 } from "@lodestar/types";
 import {Logger, byteArrayEquals, fromHex, sleep, toRootHex} from "@lodestar/utils";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
+import {GENESIS_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "../../constants/index.js";
 import {IBeaconEngineDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/index.js";
 import {BufferPool} from "../../util/bufferPool.js";
@@ -95,6 +108,7 @@ import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {BlockRootSlot, getSlotFromSignedBeaconBlockSerialized} from "../../util/sszBytes.js";
+import {HistoricalStateRegen} from "../archiveStore/historicalState/historicalStateRegen.js";
 import {ArchiveMode, ArchiveStoreTask, StateArchiveStrategy} from "../archiveStore/interface.js";
 import {FrequencyStateArchiveStrategy} from "../archiveStore/strategies/frequencyStateArchiveStrategy.js";
 import {
@@ -120,7 +134,7 @@ import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from ".
 import {ChainEvent, ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {ForkchoiceCaller, initializeForkChoice} from "../forkChoice/index.js";
-import {CommonBlockBody, FindHeadFnName} from "../interface.js";
+import {CommonBlockBody, FindHeadFnName, StateGetOpts} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
 import {
   AggregatedAttestationPool,
@@ -142,7 +156,7 @@ import {
   PayloadAttributesWithdrawals,
   preparePayloadAttributes,
 } from "../produceBlock/produceBlockBody.js";
-import {QueuedStateRegenerator, RegenCaller} from "../regen/index.js";
+import {QueuedStateRegenerator, RegenCaller, RegenRequest} from "../regen/index.js";
 import {
   SeenAggregators,
   SeenAttesters,
@@ -205,6 +219,8 @@ import {
   runGossipValidation,
 } from "./gossipValidationResult.js";
 import {
+  ApiStateResult,
+  ApiStateResultWithFork,
   BeaconEngineModules,
   FcuUpdate,
   FinalizedProtoSummary,
@@ -287,6 +303,10 @@ export class BeaconEngine implements IBeaconEngine {
   // Engine owns state archival (states DB). Finalized-state archive runs inside migrateFinalized; the
   // facade delegates temp-state (onCheckpoint) and shutdown persistence to engine methods.
   private readonly stateArchiveStrategy: StateArchiveStrategy;
+  // Historical (below-finalized) state serving via a worker thread; built lazily on --serveHistoricalState.
+  private historicalStateRegen?: HistoricalStateRegen;
+  private readonly dbName: string;
+  private readonly signal: AbortSignal;
   lightClientServer: LightClientServer | undefined;
   private readonly verifiedBlocks = new Map<string, VerifiedBlockBundle>();
   private readonly emitter: ChainEventEmitter;
@@ -313,6 +333,8 @@ export class BeaconEngine implements IBeaconEngine {
     this.opts = opts;
     this.logger = logger;
     this.db = db;
+    this.dbName = modules.dbName;
+    this.signal = signal;
     this.metrics = metrics;
     this.clock = clock;
     this.pubkeyCache = pubkeyCache;
@@ -3167,6 +3189,768 @@ export class BeaconEngine implements IBeaconEngine {
     await this.opPool.toPersisted(this.db);
   }
 
+  // === BLK-3: state-read engine methods (regen-backed; no IBeaconStateView crosses the seam) ===
+
+  /** Dump regen cache summary (lodestar debug endpoint). */
+  dumpCacheSummary(): routes.lodestar.StateCacheItem[] {
+    return this.regen.dumpCacheSummary();
+  }
+
+  /** Drop regen caches (lodestar debug endpoint). */
+  dropCache(): void {
+    this.regen.dropCache();
+  }
+
+  /** Snapshot of the regen job queue (lodestar debug endpoint). */
+  dumpRegenQueueItems(): {key: RegenRequest["key"]; args: RegenRequest; addedTimeMs: number}[] {
+    return this.regen.jobQueue.getItems().map((item) => ({
+      key: item.args[0].key,
+      args: item.args[0],
+      addedTimeMs: item.addedTimeMs,
+    }));
+  }
+
+  /** Active validator count of the head state (network init). */
+  getActiveValidatorCount(): number {
+    return this.getHeadState().activeValidatorCount;
+  }
+
+  /** Head-state electra queue counts (facade metrics); null pre-electra. */
+  getHeadPendingCounts(): {
+    pendingDeposits: number;
+    pendingPartialWithdrawals: number;
+    pendingConsolidations: number;
+  } | null {
+    const state = this.getHeadState();
+    if (!isStatePostElectra(state)) {
+      return null;
+    }
+    return {
+      pendingDeposits: state.pendingDepositsCount,
+      pendingPartialWithdrawals: state.pendingPartialWithdrawalsCount,
+      pendingConsolidations: state.pendingConsolidationsCount,
+    };
+  }
+
+  /** Validator-monitor end-of-epoch hook against the head state (facade clock listener drives the timing). */
+  validatorMonitorOnceEveryEndOfEpoch(): void {
+    this.validatorMonitor?.onceEveryEndOfEpoch(this.getHeadState());
+  }
+
+  /** Whether regen can accept more work (backpressure). */
+  regenCanAcceptWork(): boolean {
+    return this.regen.canAcceptWork();
+  }
+
+  /** Initialize regen caches from disk (startup). */
+  async initRegen(): Promise<void> {
+    await this.regen.init();
+  }
+
+  /** Head-state execution flags for the notifier (post-bellatrix merge-transition display). */
+  getHeadExecutionStateInfo(): {isExecutionStateType: boolean; isMergeTransitionComplete: boolean} {
+    const state = this.getHeadState();
+    if (!isStatePostBellatrix(state) || !state.isExecutionStateType) {
+      return {isExecutionStateType: false, isMergeTransitionComplete: false};
+    }
+    return {isExecutionStateType: true, isMergeTransitionComplete: state.isMergeTransitionComplete};
+  }
+
+  /** Build the historical-state worker if enabled (--serveHistoricalState). Idempotent; call on startup. */
+  async loadHistoricalStateRegen(): Promise<void> {
+    if (this.opts.serveHistoricalState && !this.historicalStateRegen) {
+      this.historicalStateRegen = await HistoricalStateRegen.init({
+        opts: {
+          genesisTime: this.clock.genesisTime,
+          dbLocation: this.dbName,
+          nativeStateView: this.opts.nativeStateView ?? false,
+        },
+        config: this.config,
+        metrics: this.metrics,
+        logger: this.logger as LoggerNode,
+        signal: this.signal,
+      });
+    }
+  }
+
+  /** Terminate the historical-state worker (graceful shutdown). */
+  async closeHistoricalStateRegen(): Promise<void> {
+    await this.historicalStateRegen?.close();
+  }
+
+  /** Prometheus metrics from the historical-state worker. */
+  async scrapeHistoricalStateMetrics(): Promise<string> {
+    return (await this.historicalStateRegen?.scrapeMetrics()) ?? "";
+  }
+
+  /** Serialized historical (below-finalized) state by slot; null if unavailable / not enabled. */
+  async getHistoricalStateBySlot(
+    slot: Slot
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    if (slot >= finalizedBlock.slot) {
+      return null;
+    }
+    const stateSerialized = await this.historicalStateRegen?.getHistoricalState(slot);
+    if (!stateSerialized) {
+      return null;
+    }
+    return {state: stateSerialized, executionOptimistic: isOptimisticBlock(finalizedBlock), finalized: true};
+  }
+
+  // --- API state resolution (engine-internal; state never leaves the engine) ---
+
+  /** Resolve an API stateId (already reduced to root/slot/checkpoint) to a state view or bytes. */
+  private async resolveStateForApi(
+    id: RootHex | Slot | CheckpointWithHex
+  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    if (typeof id === "string") {
+      return this.getStateByStateRoot(id, {allowRegen: true});
+    }
+    if (typeof id === "number") {
+      if (id > this.clock.currentSlot) {
+        return null; // Don't try to serve future slots
+      }
+      return id >= this.getFinalizedBlock().slot
+        ? this.getStateBySlot(id, {allowRegen: true})
+        : this.getHistoricalStateBySlot(id);
+    }
+    return this.getStateOrBytesByCheckpoint(id);
+  }
+
+  /** Resolve to a state *view* (deserializing archive/checkpoint bytes engine-side onto the head state). */
+  private async resolveStateViewForApi(
+    id: RootHex | Slot | CheckpointWithHex
+  ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null> {
+    const res = await this.resolveStateForApi(id);
+    if (!res) {
+      return null;
+    }
+    const state = res.state instanceof Uint8Array ? this.getHeadState().loadOtherState(res.state) : res.state;
+    return {state, executionOptimistic: res.executionOptimistic, finalized: res.finalized};
+  }
+
+  /** Serialized state for the debug `getStateV2` endpoint (the only whole-state-bytes crossing). */
+  async getSerializedState(
+    id: RootHex | Slot | CheckpointWithHex
+  ): Promise<{state: Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const res = await this.resolveStateForApi(id);
+    if (!res) {
+      return null;
+    }
+    const state = res.state instanceof Uint8Array ? res.state : res.state.serialize();
+    return {state, executionOptimistic: res.executionOptimistic, finalized: res.finalized};
+  }
+
+  /** Effective balances of `validatorIndices` from the finalized checkpoint state (custody group count). */
+  async getFinalizedEffectiveBalances(
+    finalizedCheckpoint: CheckpointWithHex,
+    validatorIndices: ValidatorIndex[]
+  ): Promise<number[] | null> {
+    const stateOrBytes = (await this.getStateOrBytesByCheckpoint(finalizedCheckpoint))?.state;
+    if (!stateOrBytes) {
+      return null;
+    }
+    if (stateOrBytes instanceof Uint8Array) {
+      return getEffectiveBalancesFromStateBytes(this.config, stateOrBytes, validatorIndices);
+    }
+    return validatorIndices.map((index) => stateOrBytes.getValidator(index).effectiveBalance ?? 0);
+  }
+
+  /** Multi-proof of the resolved state for the given SSZ `descriptor`; null if the state is unavailable. */
+  async getStateProof(
+    id: RootHex | Slot | CheckpointWithHex,
+    descriptor: Uint8Array
+  ): Promise<{proof: CompactMultiProof; fork: ForkName} | null> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) {
+      return null;
+    }
+    return {proof: res.state.createMultiProof(descriptor), fork: this.config.getForkName(res.state.slot)};
+  }
+
+  /** Historical summaries + single-proof of the resolved state; null if unavailable (post-capella only). */
+  async getHistoricalSummaries(id: RootHex | Slot | CheckpointWithHex): Promise<{
+    slot: Slot;
+    historicalSummaries: capella.HistoricalSummaries;
+    proof: Uint8Array[];
+    fork: ForkName;
+    executionOptimistic: boolean;
+    finalized: boolean;
+  } | null> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) {
+      return null;
+    }
+    const {state, executionOptimistic, finalized} = res;
+    const fork = this.config.getForkName(state.slot);
+    if (ForkSeq[fork] < ForkSeq.capella) {
+      throw new Error("Historical summaries are not supported before Capella");
+    }
+    if (!isStatePostCapella(state)) {
+      throw new Error("Expected Capella state for historical summaries");
+    }
+    const {gindex} = ssz[fork].BeaconState.getPathInfo(["historicalSummaries"]);
+    return {
+      slot: state.slot,
+      historicalSummaries: state.historicalSummaries,
+      proof: state.getSingleProof(gindex),
+      fork,
+      executionOptimistic,
+      finalized,
+    };
+  }
+
+  /** Resolve per-epoch shuffling and build indexed attestations (attester-slashing debug helper). */
+  async getIndexedAttestationsForSlashing(
+    requests: {slot: Slot; epoch: Epoch; attestations: Attestation[]}[],
+    forkSeq: ForkSeq
+  ): Promise<IndexedAttestation[]> {
+    const indexed: IndexedAttestation[] = [];
+    for (const {slot, epoch, attestations} of requests) {
+      const res = await this.resolveStateViewForApi(slot);
+      if (!res) {
+        throw Error(`State not available for slot ${slot}`);
+      }
+      const shuffling = res.state.getShufflingAtEpoch(epoch);
+      for (const attestation of attestations) {
+        indexed.push(getIndexedAttestation(shuffling, forkSeq, attestation));
+      }
+    }
+    return indexed;
+  }
+
+  // --- beacon/state API family (each resolves state internally, returns a targeted DTO) ---
+
+  private toValidatorResponse(
+    index: ValidatorIndex,
+    validator: phase0.Validator,
+    balance: number,
+    currentEpoch: Epoch
+  ): routes.beacon.ValidatorResponse {
+    return {index, status: getValidatorStatus(validator, currentEpoch), balance, validator};
+  }
+
+  private resolveStateValidatorIndex(
+    id: routes.beacon.ValidatorId | BLSPubkey,
+    state: IBeaconStateView
+  ): StateValidatorIndexResponse {
+    return getStateValidatorIndex(id, state, this.pubkeyCache);
+  }
+
+  private filterStateValidatorsByStatus(
+    statuses: string[],
+    state: IBeaconStateView,
+    currentEpoch: Epoch
+  ): routes.beacon.ValidatorResponse[] {
+    const responses: routes.beacon.ValidatorResponse[] = [];
+    const validators = state.getValidatorsByStatus(new Set(statuses), currentEpoch);
+    for (const validator of validators) {
+      const resp = this.resolveStateValidatorIndex(validator.pubkey, state);
+      if (resp.valid) {
+        responses.push(
+          this.toValidatorResponse(resp.validatorIndex, validator, state.getBalance(resp.validatorIndex), currentEpoch)
+        );
+      }
+    }
+    return responses;
+  }
+
+  async getStateRoot(id: RootHex | Slot | CheckpointWithHex): Promise<ApiStateResult<{root: Root}>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    return {
+      data: {root: res.state.hashTreeRoot()},
+      executionOptimistic: res.executionOptimistic,
+      finalized: res.finalized,
+    };
+  }
+
+  async getStateFork(id: RootHex | Slot | CheckpointWithHex): Promise<ApiStateResult<phase0.Fork>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    return {data: res.state.fork, executionOptimistic: res.executionOptimistic, finalized: res.finalized};
+  }
+
+  async getStateRandao(
+    id: RootHex | Slot | CheckpointWithHex,
+    epoch?: Epoch
+  ): Promise<ApiStateResult<{randao: Bytes32}>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    const stateEpoch = computeEpochAtSlot(state.slot);
+    const usedEpoch = epoch ?? stateEpoch;
+    if (!(stateEpoch < usedEpoch + EPOCHS_PER_HISTORICAL_VECTOR && usedEpoch <= stateEpoch)) {
+      return {invalid: {code: 400, message: "Requested epoch is out of range"}};
+    }
+    return {data: {randao: state.getRandaoMix(usedEpoch)}, executionOptimistic, finalized};
+  }
+
+  async getStateFinalityCheckpoints(id: RootHex | Slot | CheckpointWithHex): Promise<
+    ApiStateResult<{
+      currentJustified: phase0.Checkpoint;
+      previousJustified: phase0.Checkpoint;
+      finalized: phase0.Checkpoint;
+    }>
+  > {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    return {
+      data: {
+        currentJustified: state.currentJustifiedCheckpoint,
+        previousJustified: state.previousJustifiedCheckpoint,
+        finalized: state.finalizedCheckpoint,
+      },
+      executionOptimistic,
+      finalized,
+    };
+  }
+
+  async getStateValidators(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorIds: routes.beacon.ValidatorId[],
+    statuses: string[]
+  ): Promise<ApiStateResult<routes.beacon.ValidatorResponse[]>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    const currentEpoch = getCurrentEpoch(state);
+
+    let data: routes.beacon.ValidatorResponse[];
+    if (validatorIds.length) {
+      data = [];
+      for (const vid of validatorIds) {
+        const resp = this.resolveStateValidatorIndex(vid, state);
+        if (resp.valid) {
+          const validator = state.getValidator(resp.validatorIndex);
+          if (statuses.length && !statuses.includes(getValidatorStatus(validator, currentEpoch))) {
+            continue;
+          }
+          data.push(
+            this.toValidatorResponse(
+              resp.validatorIndex,
+              validator,
+              state.getBalance(resp.validatorIndex),
+              currentEpoch
+            )
+          );
+        }
+      }
+    } else if (statuses.length) {
+      data = this.filterStateValidatorsByStatus(statuses, state, currentEpoch);
+    } else {
+      // TODO: This loops over the entire state, it's a DOS vector
+      const validatorsArr = state.getAllValidators();
+      const balancesArr = state.getAllBalances();
+      data = [];
+      for (let i = 0; i < validatorsArr.length; i++) {
+        data.push(this.toValidatorResponse(i, validatorsArr[i], balancesArr[i], currentEpoch));
+      }
+    }
+    return {data, executionOptimistic, finalized};
+  }
+
+  async getStateValidatorIdentities(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorIds: routes.beacon.ValidatorId[]
+  ): Promise<ApiStateResult<routes.beacon.ValidatorIdentities>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+
+    let data: routes.beacon.ValidatorIdentities;
+    if (validatorIds.length) {
+      data = [];
+      for (const vid of validatorIds) {
+        const resp = this.resolveStateValidatorIndex(vid, state);
+        if (resp.valid) {
+          const {pubkey, activationEpoch} = state.getValidator(resp.validatorIndex);
+          data.push({index: resp.validatorIndex, pubkey, activationEpoch});
+        }
+      }
+    } else {
+      const validatorsArr = state.getAllValidators();
+      data = new Array(validatorsArr.length) as routes.beacon.ValidatorIdentities;
+      for (let i = 0; i < validatorsArr.length; i++) {
+        const {pubkey, activationEpoch} = validatorsArr[i];
+        data[i] = {index: i, pubkey, activationEpoch};
+      }
+    }
+    return {data, executionOptimistic, finalized};
+  }
+
+  async getStateValidator(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorId: routes.beacon.ValidatorId
+  ): Promise<ApiStateResult<routes.beacon.ValidatorResponse>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    const resp = this.resolveStateValidatorIndex(validatorId, state);
+    if (!resp.valid) {
+      return {invalid: {code: resp.code, message: resp.reason}};
+    }
+    return {
+      data: this.toValidatorResponse(
+        resp.validatorIndex,
+        state.getValidator(resp.validatorIndex),
+        state.getBalance(resp.validatorIndex),
+        getCurrentEpoch(state)
+      ),
+      executionOptimistic,
+      finalized,
+    };
+  }
+
+  async getStateValidatorBalances(
+    id: RootHex | Slot | CheckpointWithHex,
+    validatorIds: routes.beacon.ValidatorId[]
+  ): Promise<ApiStateResult<routes.beacon.ValidatorBalance[]>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+
+    let data: routes.beacon.ValidatorBalance[];
+    if (validatorIds.length) {
+      data = [];
+      for (const vid of validatorIds) {
+        const resp = this.resolveStateValidatorIndex(vid, state);
+        if (resp.valid) {
+          data.push({index: resp.validatorIndex, balance: state.getBalance(resp.validatorIndex)});
+        }
+      }
+    } else {
+      // TODO: This loops over the entire state, it's a DOS vector
+      const balancesArr = state.getAllBalances();
+      data = [];
+      for (let i = 0; i < balancesArr.length; i++) {
+        data.push({index: i, balance: balancesArr[i]});
+      }
+    }
+    return {data, executionOptimistic, finalized};
+  }
+
+  async getEpochCommittees(
+    id: RootHex | Slot | CheckpointWithHex,
+    filters: {epoch?: Epoch; index?: CommitteeIndex; slot?: Slot}
+  ): Promise<ApiStateResult<routes.beacon.EpochCommitteeResponse[]>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+
+    const stateEpoch = computeEpochAtSlot(state.slot);
+    const epoch = filters.epoch ?? stateEpoch;
+    const startSlot = computeStartSlotAtEpoch(epoch);
+    const endSlot = startSlot + SLOTS_PER_EPOCH - 1;
+
+    if (Math.abs(epoch - stateEpoch) > 1) {
+      return {invalid: {code: 400, message: `Epoch ${epoch} must be within one epoch of state epoch ${stateEpoch}`}};
+    }
+    if (filters.slot !== undefined && (filters.slot < startSlot || filters.slot > endSlot)) {
+      return {invalid: {code: 400, message: `Slot ${filters.slot} is not in epoch ${epoch}`}};
+    }
+
+    const decisionRoot = state.getShufflingDecisionRoot(epoch);
+    const shuffling = await this.shufflingCache.get(epoch, decisionRoot);
+    if (!shuffling) {
+      return {
+        invalid: {
+          code: 500,
+          message: `No shuffling found to calculate committees for epoch: ${epoch} and decisionRoot: ${decisionRoot}`,
+        },
+      };
+    }
+    const data = shuffling.committees.flatMap((slotCommittees, slotInEpoch) => {
+      const slot = startSlot + slotInEpoch;
+      if (filters.slot !== undefined && filters.slot !== slot) {
+        return [];
+      }
+      return slotCommittees.flatMap((committee, committeeIndex) => {
+        if (filters.index !== undefined && filters.index !== committeeIndex) {
+          return [];
+        }
+        return [{index: committeeIndex, slot, validators: Array.from(committee)}];
+      });
+    });
+    return {data, executionOptimistic, finalized};
+  }
+
+  async getEpochSyncCommittees(
+    id: RootHex | Slot | CheckpointWithHex,
+    epoch?: Epoch
+  ): Promise<ApiStateResult<routes.beacon.EpochSyncCommitteeResponse>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+
+    const stateEpoch = computeEpochAtSlot(state.slot);
+    if (stateEpoch < this.config.ALTAIR_FORK_EPOCH) {
+      return {invalid: {code: 400, message: "Requested state before ALTAIR_FORK_EPOCH"}};
+    }
+    if (!isStatePostAltair(state)) {
+      throw new Error("Expected Altair state for sync committee lookup");
+    }
+
+    const syncCommitteeCache = state.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
+    const validatorIndices = new Array<ValidatorIndex>(...syncCommitteeCache.validatorIndices);
+    const validatorAggregates: ValidatorIndex[][] = [];
+    for (let i = 0; i < validatorIndices.length; i += SYNC_COMMITTEE_SUBNET_SIZE) {
+      validatorAggregates.push(validatorIndices.slice(i, i + SYNC_COMMITTEE_SUBNET_SIZE));
+    }
+    return {data: {validators: validatorIndices, validatorAggregates}, executionOptimistic, finalized};
+  }
+
+  async getStatePendingDeposits(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingDeposits>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    const fork = state.forkName;
+    if (!isStatePostElectra(state)) {
+      return {invalid: {code: 400, message: `Cannot retrieve pending deposits for pre-electra state fork=${fork}`}};
+    }
+    const data = returnBytes ? ssz.electra.PendingDeposits.serialize(state.pendingDeposits) : state.pendingDeposits;
+    return {data, fork, executionOptimistic, finalized};
+  }
+
+  async getStatePendingPartialWithdrawals(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingPartialWithdrawals>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    const fork = state.forkName;
+    if (!isStatePostElectra(state)) {
+      return {
+        invalid: {code: 400, message: `Cannot retrieve pending partial withdrawals for pre-electra state fork=${fork}`},
+      };
+    }
+    const data = returnBytes
+      ? ssz.electra.PendingPartialWithdrawals.serialize(state.pendingPartialWithdrawals)
+      : state.pendingPartialWithdrawals;
+    return {data, fork, executionOptimistic, finalized};
+  }
+
+  async getStatePendingConsolidations(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | electra.PendingConsolidations>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    const fork = state.forkName;
+    if (!isStatePostElectra(state)) {
+      return {
+        invalid: {code: 400, message: `Cannot retrieve pending consolidations for pre-electra state fork=${fork}`},
+      };
+    }
+    const data = returnBytes
+      ? ssz.electra.PendingConsolidations.serialize(state.pendingConsolidations)
+      : state.pendingConsolidations;
+    return {data, fork, executionOptimistic, finalized};
+  }
+
+  async getStateProposerLookahead(
+    id: RootHex | Slot | CheckpointWithHex,
+    returnBytes: boolean
+  ): Promise<ApiStateResultWithFork<Uint8Array | fulu.ProposerLookahead>> {
+    const res = await this.resolveStateViewForApi(id);
+    if (!res) return null;
+    const {state, executionOptimistic, finalized} = res;
+    const fork = state.forkName;
+    if (!isStatePostFulu(state)) {
+      return {invalid: {code: 400, message: `Cannot retrieve proposer lookahead for pre-fulu state fork=${fork}`}};
+    }
+    const data = returnBytes ? ssz.fulu.ProposerLookahead.serialize(state.proposerLookahead) : state.proposerLookahead;
+    return {data, fork, executionOptimistic, finalized};
+  }
+
+  private async getStateBySlot(
+    slot: Slot,
+    opts?: StateGetOpts
+  ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean} | null> {
+    const finalizedBlock = this.getFinalizedBlock();
+
+    if (slot < finalizedBlock.slot) {
+      // request for finalized state not supported here; caller falls back to getHistoricalStateBySlot
+      return null;
+    }
+
+    if (opts?.allowRegen) {
+      const block = this.getCanonicalBlockClosestLteSlot(slot) ?? finalizedBlock;
+      const state = await this.regen.getBlockSlotState(block, slot, {dontTransferCache: true}, RegenCaller.restApi);
+      return {
+        state,
+        executionOptimistic: isOptimisticBlock(block),
+        finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
+      };
+    }
+
+    const block = this.getCanonicalProtoBlockAtSlot(slot);
+    if (!block) {
+      return null;
+    }
+
+    const state = this.regen.getStateSync(block.stateRoot);
+    return (
+      state && {
+        state,
+        executionOptimistic: isOptimisticBlock(block),
+        finalized: slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT,
+      }
+    );
+  }
+
+  private async getStateByStateRoot(
+    stateRoot: RootHex,
+    opts?: StateGetOpts
+  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    if (opts?.allowRegen) {
+      const state = await this.regen.getState(stateRoot, RegenCaller.restApi);
+      const block = this.getBlockDefaultStatus(ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader));
+      const finalizedEpoch = this.getFinalizedCheckpoint().epoch;
+      return {
+        state,
+        executionOptimistic: block != null && isOptimisticBlock(block),
+        finalized: state.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
+      };
+    }
+
+    const cachedStateCtx = this.regen.getStateSync(stateRoot);
+    if (cachedStateCtx) {
+      const block = this.getBlockDefaultStatus(
+        ssz.phase0.BeaconBlockHeader.hashTreeRoot(cachedStateCtx.latestBlockHeader)
+      );
+      const finalizedEpoch = this.getFinalizedCheckpoint().epoch;
+      return {
+        state: cachedStateCtx,
+        executionOptimistic: block != null && isOptimisticBlock(block),
+        finalized: cachedStateCtx.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
+      };
+    }
+
+    const data = await this.getSerializedStateByRoot(fromHex(stateRoot));
+    return data && {state: data, executionOptimistic: false, finalized: true};
+  }
+
+  private async getStateOrBytesByCheckpoint(
+    checkpoint: CheckpointWithHex
+  ): Promise<{state: IBeaconStateView | Uint8Array; executionOptimistic: boolean; finalized: boolean} | null> {
+    const checkpointHex = {epoch: checkpoint.epoch, rootHex: checkpoint.rootHex};
+    const cachedStateCtx = await this.regen.getCheckpointStateOrBytes(checkpointHex);
+    if (cachedStateCtx) {
+      const block = this.getBlockDefaultStatus(checkpoint.root);
+      const finalizedEpoch = this.getFinalizedCheckpoint().epoch;
+      return {
+        state: cachedStateCtx,
+        executionOptimistic: block != null && isOptimisticBlock(block),
+        finalized: checkpoint.epoch <= finalizedEpoch && finalizedEpoch !== GENESIS_EPOCH,
+      };
+    }
+
+    return null;
+  }
+
+  /** Latest weak-subjectivity checkpoint epoch from the head state (lodestar debug). */
+  getLatestWeakSubjectivityCheckpointEpoch(): Epoch {
+    return this.getHeadState().getLatestWeakSubjectivityCheckpointEpoch();
+  }
+
+  /** Head-state `latestExecutionPayloadBid` (gloas empty-block detection in range sync); undefined pre-gloas. */
+  getHeadLatestExecutionPayloadBid(): gloas.ExecutionPayloadBid | undefined {
+    const state = this.getHeadState();
+    return isStatePostGloas(state) ? (state as IBeaconStateViewGloas).latestExecutionPayloadBid : undefined;
+  }
+
+  /** Subset of `indices` that are active-or-pending at the current epoch (builder registration filter). */
+  getActiveOrPendingValidators(indices: ValidatorIndex[]): Set<ValidatorIndex> {
+    const state = this.getHeadState();
+    const currentEpoch = this.clock.currentEpoch;
+    const kept = new Set<ValidatorIndex>();
+    for (const index of indices) {
+      const status = getValidatorStatus(state.getValidator(index), currentEpoch);
+      if (
+        status === "active_exiting" ||
+        status === "active_ongoing" ||
+        status === "active_slashed" ||
+        status === "pending_initialized" ||
+        status === "pending_queued"
+      ) {
+        kept.add(index);
+      }
+    }
+    return kept;
+  }
+
+  /**
+   * Attestation `source` = the state's *realized* `currentJustifiedCheckpoint` in `attEpoch` (may regen
+   * forward past head). Not fork-choice's justified checkpoint — the two diverge at an epoch boundary and
+   * using fork-choice's would yield an invalid source.
+   */
+  async getAttestationSourceCheckpoint(attEpoch: Epoch): Promise<phase0.Checkpoint> {
+    const state = await this.getHeadStateAtEpoch(attEpoch, RegenCaller.produceAttestationData);
+    return state.currentJustifiedCheckpoint;
+  }
+
+  async getBlockRewards(block: BeaconBlock | BlindedBeaconBlock): Promise<rewards.BlockRewards> {
+    let preState = this.regen.getPreStateSync(block);
+
+    if (preState === null) {
+      throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
+    }
+
+    preState = preState.processSlots(block.slot); // Dial preState's slot to block.slot
+
+    const proposerRewards = this.regen.getStateSync(toRootHex(block.stateRoot))?.proposerRewards ?? undefined;
+
+    return preState.computeBlockRewards(block, proposerRewards);
+  }
+
+  async getAttestationsRewards(
+    epoch: Epoch,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<{rewards: rewards.AttestationsRewards; executionOptimistic: boolean; finalized: boolean}> {
+    // We use end slot of (epoch + 1) to ensure we have seen all attestations. On-time or late.
+    const slot = computeEndSlotAtEpoch(epoch + 1);
+    // No regen if state not in cache (mirrors former getStateBySlot({allowRegen: false})).
+    const finalizedBlock = this.forkChoice.getFinalizedBlock();
+    const block = slot < finalizedBlock.slot ? null : this.getCanonicalProtoBlockAtSlot(slot);
+    const cachedState = block && this.regen.getStateSync(block.stateRoot);
+
+    if (!block || !cachedState) {
+      throw Error(`State is unavailable for slot ${slot}`);
+    }
+
+    const executionOptimistic = isOptimisticBlock(block);
+    const finalized = slot === finalizedBlock.slot && finalizedBlock.slot !== GENESIS_SLOT;
+    const rewards = await cachedState.computeAttestationsRewards(validatorIds);
+
+    return {rewards, executionOptimistic, finalized};
+  }
+
+  async getSyncCommitteeRewards(
+    block: BeaconBlock | BlindedBeaconBlock,
+    validatorIds?: (ValidatorIndex | string)[]
+  ): Promise<rewards.SyncCommitteeRewards> {
+    let preState = this.regen.getPreStateSync(block);
+
+    if (preState === null) {
+      throw Error(`Pre-state is unavailable given block's parent root ${toRootHex(block.parentRoot)}`);
+    }
+
+    preState = preState.processSlots(block.slot); // Dial preState's slot to block.slot
+    if (!isStatePostAltair(preState)) {
+      throw new Error("Sync committee rewards are not supported before Altair");
+    }
+
+    return preState.computeSyncCommitteeRewards(block, validatorIds ?? []);
+  }
+
   // TODO - beacon engine: scalar state reads (getBeaconProposer, getValidator, getBalance,
   // getRandaoMix, getBlockRootAtSlot, getStateRootAtSlot, getShufflingDecisionRoot). Deferred —
   // signature shape (state vs stateRoot) to be decided alongside Phase 4 bytes-first.
@@ -3264,4 +4048,47 @@ export class BeaconEngine implements IBeaconEngine {
 /** Reduce a ProtoBlock to the plain scalars the facade needs for DA/light-client cleanup. */
 function toFinalizedProtoSummary(block: ProtoBlock): FinalizedProtoSummary {
   return {slot: block.slot, blockRoot: block.blockRoot, payloadStatus: block.payloadStatus};
+}
+
+export type StateValidatorIndexResponse =
+  | {valid: true; validatorIndex: ValidatorIndex}
+  | {valid: false; code: number; reason: string};
+
+/** Resolve a validator id (index | index-string | pubkey hex | pubkey bytes) to its index in `state`. */
+export function getStateValidatorIndex(
+  id: routes.beacon.ValidatorId | BLSPubkey,
+  state: IBeaconStateView,
+  pubkeyCache: PubkeyCache
+): StateValidatorIndexResponse {
+  if (typeof id === "string") {
+    if (id.startsWith("0x")) {
+      try {
+        id = fromHex(id);
+      } catch (_e) {
+        return {valid: false, code: 400, reason: "Invalid pubkey hex encoding"};
+      }
+    } else {
+      id = Number(id);
+    }
+  }
+
+  if (typeof id === "number") {
+    const validatorIndex = id;
+    if (!Number.isSafeInteger(validatorIndex)) {
+      return {valid: false, code: 400, reason: "Invalid validator index"};
+    }
+    if (validatorIndex >= state.validatorCount) {
+      return {valid: false, code: 404, reason: "Validator index from future state"};
+    }
+    return {valid: true, validatorIndex};
+  }
+
+  const validatorIndex = pubkeyCache.getIndex(id);
+  if (validatorIndex === null) {
+    return {valid: false, code: 404, reason: "Validator pubkey not found in state"};
+  }
+  if (validatorIndex >= state.validatorCount) {
+    return {valid: false, code: 404, reason: "Validator pubkey from future state"};
+  }
+  return {valid: true, validatorIndex};
 }

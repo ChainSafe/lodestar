@@ -187,7 +187,7 @@ const forkChoiceTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: isValid});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState() as BeaconStateView;
+              const headState = chain.beaconEngine.getHeadState() as BeaconStateView;
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const indexedAttestation = headState.cachedState.epochCtx.getIndexedAttestation(
                 ForkSeq[fork],
@@ -232,7 +232,7 @@ const forkChoiceTest =
                 }
 
                 if (protoBlock.slot === payloadAttestationMessage.data.slot) {
-                  const blockState = await chain.regen.getBlockSlotState(
+                  const blockState = await chain.beaconEngine.regen.getBlockSlotState(
                     protoBlock,
                     payloadAttestationMessage.data.slot,
                     {dontTransferCache: true},
@@ -489,7 +489,7 @@ const forkChoiceTest =
                 // Verify envelope against the state
                 const protoBlock = chain.beaconEngine.forkChoice.getBlockHexDefaultStatus(beaconBlockRoot);
                 if (!protoBlock) throw Error(`Block not found for root ${beaconBlockRoot}`);
-                const blockState = await chain.regen.getBlockSlotState(
+                const blockState = await chain.beaconEngine.regen.getBlockSlotState(
                   protoBlock,
                   protoBlock.slot,
                   {dontTransferCache: true},

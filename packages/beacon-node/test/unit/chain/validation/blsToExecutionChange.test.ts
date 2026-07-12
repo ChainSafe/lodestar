@@ -85,7 +85,7 @@ describe("validate bls to execution change", () => {
   beforeEach(() => {
     chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
-    vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
+    chainStub.getHeadState.mockReturnValue(state);
     vi.spyOn(chainStub, "getHeadStateAtCurrentEpoch");
     vi.spyOn(opPool, "hasSeenBlsToExecutionChange");
   });

@@ -7,6 +7,7 @@ import {LogLevel, TestLoggerOpts, testLogger} from "@lodestar/logger/test-utils"
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
+import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {ChainEvent} from "../../../src/chain/index.js";
 import {ReorgedForkChoice} from "../../mocks/fork-choice/reorg.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
@@ -220,11 +221,14 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
       rootHex: finalizedCp.rootHex,
     });
 
-    const finalizedStateRes = bn.chain.getStateByCheckpoint(finalizedCp);
+    const finalizedStateRes = (bn.chain.beaconEngine as BeaconEngine).regen.getCheckpointStateSync({
+      epoch: finalizedCp.epoch,
+      rootHex: finalizedCp.rootHex,
+    });
     if (!finalizedStateRes) {
       throw Error("Node A finalized checkpoint state not available");
     }
-    const anchorState = (finalizedStateRes.state as BeaconStateView).cachedState;
+    const anchorState = (finalizedStateRes as BeaconStateView).cachedState;
     expect(anchorState.slot, "Anchor state should be at the epoch-3 boundary slot").toEqual(REORGED_SLOT);
     expect(
       anchorState.latestBlockHeader.slot,
@@ -351,11 +355,14 @@ describe("sync / checkpoint sync optimistic flow for gloas", () => {
       EPOCH_3_BOUNDARY_SLOT
     );
 
-    const finalizedStateRes = bn.chain.getStateByCheckpoint(finalizedCp);
+    const finalizedStateRes = (bn.chain.beaconEngine as BeaconEngine).regen.getCheckpointStateSync({
+      epoch: finalizedCp.epoch,
+      rootHex: finalizedCp.rootHex,
+    });
     if (!finalizedStateRes) {
       throw Error("Node A finalized checkpoint state not available");
     }
-    const anchorState = (finalizedStateRes.state as BeaconStateView).cachedState;
+    const anchorState = (finalizedStateRes as BeaconStateView).cachedState;
     expect(anchorState.slot, "Anchor state should be at the epoch-3 boundary slot").toEqual(EPOCH_3_BOUNDARY_SLOT);
     expect(
       anchorState.latestBlockHeader.slot,
