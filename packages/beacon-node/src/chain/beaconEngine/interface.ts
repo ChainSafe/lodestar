@@ -53,6 +53,7 @@ import {ProposerPreparationData} from "../beaconProposerCache.js";
 import {IBlockInput} from "../blocks/blockInput/index.js";
 import {PayloadEnvelopeInput} from "../blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../blocks/types.js";
+import {IBlsVerifier} from "../bls/index.js";
 import {ChainEventEmitter, ReorgEventData} from "../emitter.js";
 import {CommonBlockBody} from "../interface.js";
 import {LightClientServer} from "../lightClient/index.js";
@@ -407,12 +408,22 @@ export interface IBeaconEngine {
   } | null;
   validatorMonitorOnceEveryEndOfEpoch(): void;
   regenCanAcceptWork(): boolean;
+  /**
+   * The shared, stateless JS BLS verifier the facade uses for backfill + DA-sidecar proposer-signature
+   * verification. A carve-out to the "methods only, no objects" rule — BLS is shared JS infra, not native
+   * consensus state. `NativeBeaconEngine` returns a JS verifier here and forwards its own internal
+   * (gossip/import) verification to the binding, so chain-bls and engine-internal bls are distinct.
+   */
+  chainBls(): IBlsVerifier;
+  /** Backpressure for the engine's internal (gossip/import) BLS pool — the binding's pool under native. */
+  blsCanAcceptWork(): boolean;
   initRegen(): Promise<void>;
+  /** Tear down engine-owned resources (historical-state regen worker, BLS pool, …). */
+  close(): Promise<void>;
   getHeadExecutionStateInfo(): {isExecutionStateType: boolean; isMergeTransitionComplete: boolean};
   getLatestWeakSubjectivityCheckpointEpoch(): Epoch;
   // Historical (below-finalized) state serving — engine-owned worker (--serveHistoricalState).
   loadHistoricalStateRegen(): Promise<void>;
-  closeHistoricalStateRegen(): Promise<void>;
   scrapeHistoricalStateMetrics(): Promise<string>;
   getHistoricalStateBySlot(
     slot: Slot

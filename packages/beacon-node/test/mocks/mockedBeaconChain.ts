@@ -32,6 +32,10 @@ import {getMockedLogger} from "./loggerMock.js";
 
 export type MockedBeaconChain = Mocked<BeaconChain> & {
   logger: Mocked<Logger>;
+  // The facade narrows `beaconEngine` to `IBeaconEngine`, but the flat mock doubles as the concrete
+  // engine (`chain.beaconEngine = chain`), so tests invoke the `this: BeaconEngine` phantom validators
+  // and reach engine internals (regen/bls/getHeadState) through it. Keep the concrete type here.
+  beaconEngine: BeaconEngine;
   forkChoice: MockedForkChoice;
   // Engine head-selection methods surfaced on the flat mock (the mock doubles as the engine, so the
   // real `prepareForNextSlot` / `produceBlockBase` bound onto it call `this.recomputeForkChoiceHead`

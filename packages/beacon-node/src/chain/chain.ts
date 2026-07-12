@@ -51,7 +51,7 @@ import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
 import {BlockRootSlot} from "../util/sszBytes.js";
 import {ArchiveStore} from "./archiveStore/archiveStore.js";
-import {BeaconEngine} from "./beaconEngine/index.js";
+import {BeaconEngine, IBeaconEngine} from "./beaconEngine/index.js";
 import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/blockInput/index.js";
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
@@ -103,12 +103,7 @@ const DEFAULT_MAX_PENDING_UNFINALIZED_PAYLOAD_ENVELOPE_WRITES = 16;
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
-  // TODO - beacon engine: narrow this to `IBeaconEngine` so the facade can't reach engine-owned
-  // consensus state. Blocked on the facade's remaining concrete-only reads — `bls` (kept shared; add to
-  // IBeaconEngine as a carve-out), `regen` and `lightClientServer` — which must route through engine
-  // methods first (Part B / BLK-1 + BLK-3). Narrowing now would force `as BeaconEngine` casts here + in
-  // ~46 validation unit-test call sites.
-  readonly beaconEngine: BeaconEngine;
+  readonly beaconEngine: IBeaconEngine;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   // Expose config for convenience in modularized functions
@@ -120,9 +115,9 @@ export class BeaconChain implements IBeaconChain {
 
   readonly anchorStateLatestBlockSlot: Slot;
 
-  // TODO - beacon engine: remove this?
+  // Shared JS BLS verifier for facade-side backfill + DA-sidecar proposer-sig checks (carve-out).
   get bls(): IBlsVerifier {
-    return this.beaconEngine.bls;
+    return this.beaconEngine.chainBls();
   }
   // Cached head ProtoBlock, updated from importBlock's result. Lets the facade serve getStatus and
   // detect finalized/justified transitions (it carries finalized*/justified* checkpoints) without the
@@ -268,6 +263,12 @@ export class BeaconChain implements IBeaconChain {
       logger,
     });
 
+    // lightClientServer proof-gen is engine-owned; created here (depends on nothing from the engine)
+    // and injected at construction.
+    if (!opts.disableLightClientServer) {
+      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
+    }
+
     this.beaconEngine = new BeaconEngine(
       {
         opts,
@@ -284,6 +285,7 @@ export class BeaconChain implements IBeaconChain {
         validatorMonitor,
         seenBlockInputCache: this.seenBlockInputCache,
         isAnchorStateFinalized,
+        lightClientServer: this.lightClientServer,
       },
       anchorState
     );
@@ -298,10 +300,6 @@ export class BeaconChain implements IBeaconChain {
     this.pubkeyCache = pubkeyCache;
 
     const {checkpoint} = anchorState.computeAnchorCheckpoint();
-
-    if (!opts.disableLightClientServer) {
-      this.lightClientServer = new LightClientServer(opts, {config, clock, db, metrics, emitter, logger, signal});
-    }
 
     this.reprocessController = new ReprocessController(this.metrics);
 
@@ -318,10 +316,6 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       logger,
     });
-    // Inject lightClientServer post-construction (created after engine, depends on nothing from engine)
-    // TODO - beacon engine
-    this.beaconEngine.lightClientServer = this.lightClientServer;
-
     const anchorBlockSlot = anchorState.latestBlockHeader.slot;
     if (isStatePostGloas(anchorState) && anchorBlockSlot > 0) {
       const anchorBid = anchorState.latestExecutionPayloadBid;
@@ -401,8 +395,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async close(): Promise<void> {
-    await this.beaconEngine.closeHistoricalStateRegen();
-    await this.bls.close();
+    // Engine owns teardown of its resources (historical-state regen + BLS pool).
+    await this.beaconEngine.close();
 
     // Since we don't persist unfinalized fork-choice,
     // we can abort any ongoing unfinalized block writes.
@@ -426,7 +420,8 @@ export class BeaconChain implements IBeaconChain {
   }
 
   blsThreadPoolCanAcceptWork(): boolean {
-    return this.bls.canAcceptWork();
+    // Gossip backpressure reflects the engine's internal BLS pool (the binding's pool under native).
+    return this.beaconEngine.blsCanAcceptWork();
   }
 
   validatorSeenAtEpoch(index: ValidatorIndex, epoch: Epoch): boolean {

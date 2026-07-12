@@ -29,6 +29,7 @@ import {
   GossipValidationResult,
   GossipValidationStatus,
 } from "../../../src/chain/beaconEngine/gossipValidationResult.js";
+import {BeaconEngine} from "../../../src/chain/beaconEngine/index.js";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";
 import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {GossipAction, GossipActionError} from "../../../src/chain/errors/gossipValidation.js";
@@ -482,7 +483,9 @@ export async function runGossipValidationTest(
         }
 
         const postState = computePostState(parentState, signedBlock, fork);
-        const expectedProposerIndex: number | null = chain.beaconEngine.getHeadState().getBeaconProposerOrNull(slot);
+        const expectedProposerIndex: number | null = (chain.beaconEngine as BeaconEngine)
+          .getHeadState()
+          .getBeaconProposerOrNull(slot);
 
         if (blockEntry.failed) {
           // payload_status === "VALID" (filtered above)
@@ -639,7 +642,7 @@ async function validateMessageForTopic(
         throw new GossipActionError(GossipAction.IGNORE, {code: "SPEC_FINALIZED_NOT_ANCESTOR"});
       }
 
-      await validateGossipAggregateAndProof.call(chain.beaconEngine, fork, aggregate, bytes);
+      await validateGossipAggregateAndProof.call(chain.beaconEngine as BeaconEngine, fork, aggregate, bytes);
       break;
     }
 
@@ -672,7 +675,7 @@ async function validateMessageForTopic(
         subnet: Number(message.subnet_id ?? 0),
       };
 
-      const batchResult = await validateGossipAttestationsSameAttData.call(chain.beaconEngine, fork, [
+      const batchResult = await validateGossipAttestationsSameAttData.call(chain.beaconEngine as BeaconEngine, fork, [
         gossipAttestation,
       ]);
       const first = batchResult.results[0];
