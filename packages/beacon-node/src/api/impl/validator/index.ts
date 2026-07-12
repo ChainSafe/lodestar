@@ -65,6 +65,8 @@ import {
   AttestationError,
   AttestationErrorCode,
   GossipAction,
+  ProposerPreferencesError,
+  ProposerPreferencesErrorCode,
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
@@ -74,6 +76,7 @@ import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/prod
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
@@ -82,7 +85,7 @@ import {CommitteeSubscription} from "../../../network/subnets/index.js";
 import {SyncState} from "../../../sync/index.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
+import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
@@ -611,7 +614,10 @@ export function getValidatorApi(
     }
 
     const graffitiBytes = toGraffitiBytes(
-      graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+      getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
+        private: opts.private,
+        graffitiAppend: chain.opts.graffitiAppend,
+      })
     );
 
     const loggerContext = {
@@ -921,7 +927,10 @@ export function getValidatorApi(
       metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
       const graffitiBytes = toGraffitiBytes(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+        getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
+          private: opts.private,
+          graffitiAppend: chain.opts.graffitiAppend,
+        })
       );
 
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
@@ -1144,8 +1153,8 @@ export function getValidatorApi(
 
       const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
-        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
-        throw new ApiError(404, `No canonical block found at slot=${slot}`);
+        // No canonical block is seen at slot. Return 204 so vc can skip casting payload attestation.
+        return {data: undefined, meta: {version: fork}, status: 204};
       }
 
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
@@ -1795,6 +1804,46 @@ export function getValidatorApi(
         epoch: currentEpoch,
         count: filteredRegistrations.length,
       });
+    },
+
+    async submitProposerPreferences({signedProposerPreferences}) {
+      const failures: FailureList = [];
+
+      await Promise.all(
+        signedProposerPreferences.map(async (signed, i) => {
+          try {
+            await validateGossipProposerPreferences(chain, signed);
+
+            chain.proposerPreferencesPool.add(signed);
+            await network.publishProposerPreferences(signed);
+            chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+              version: config.getForkName(signed.message.proposalSlot),
+              data: signed,
+            });
+          } catch (e) {
+            const logCtx = {
+              slot: signed.message.proposalSlot,
+              validatorIndex: signed.message.validatorIndex,
+              dependentRoot: toRootHex(signed.message.dependentRoot),
+            };
+
+            if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+              logger.debug("Ignoring known signed proposer preferences", logCtx);
+              return;
+            }
+
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, e as Error);
+            if (e instanceof ProposerPreferencesError && e.action === GossipAction.REJECT) {
+              chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
+            }
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing signed proposer preferences", failures);
+      }
     },
 
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {

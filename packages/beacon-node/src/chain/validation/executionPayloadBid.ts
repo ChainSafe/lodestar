@@ -37,9 +37,11 @@ async function validateExecutionPayloadBid(
   const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
   const parentBlockHashHex = toRootHex(bid.parentBlockHash);
 
-  // [IGNORE] `bid.slot` is the current slot or the next slot.
-  const currentSlot = chain.clock.currentSlot;
-  if (bid.slot !== currentSlot && bid.slot !== currentSlot + 1) {
+  // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  if (
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot) &&
+    !chain.clock.isCurrentSlotGivenGossipDisparity(bid.slot - 1)
+  ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
       builderIndex: bid.builderIndex,
@@ -122,17 +124,20 @@ async function validateExecutionPayloadBid(
     throw new Error(`Expected gloas+ state for execution payload bid validation, got fork=${state.forkName}`);
   }
 
-  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
-  // `is_active_builder(state, bid.builder_index)` returns `True`.
-  let builder: gloas.Builder;
-  try {
-    builder = state.getBuilder(bid.builderIndex);
-  } catch {
+  // [REJECT] `bid.builder_index` is within bounds -- i.e. `bid.builder_index < len(state.builders)`.
+  // `state.getBuilder` returns a lazy SSZ `getReadonly` view that is not bounds-checked eagerly; an
+  // out-of-range index only throws (`LeafNode has no right node`) on deferred field access (e.g. inside
+  // `isActiveBuilder`), escaping a try/catch around `getBuilder`. Check the length explicitly instead.
+  if (bid.builderIndex >= state.getBuildersLength()) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,
       builderIndex: bid.builderIndex,
     });
   }
+
+  // [REJECT] `bid.builder_index` is a valid/active builder index -- i.e.
+  // `is_active_builder(state, bid.builder_index)` returns `True`.
+  const builder = state.getBuilder(bid.builderIndex);
   if (!isActiveBuilder(builder, state.finalizedCheckpoint.epoch)) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.BUILDER_NOT_ELIGIBLE,

@@ -186,10 +186,6 @@ export class SyncChain {
     this.logger = logger;
     this.logId = `${syncType}-${nextChainId++}`;
 
-    if (metrics) {
-      metrics.syncRange.headSyncPeers.addCollect(() => this.scrapeMetrics(metrics));
-    }
-
     // Trigger event on parent class
     this.sync().then(
       () => fns.onEnd(null, this.target),
@@ -775,7 +771,10 @@ export class SyncChain {
     });
   }
 
-  private scrapeMetrics(metrics: Metrics): void {
+  /**
+   * Called by `RangeSync`'s to avoid collecting metrics of removed chains.
+   */
+  scrapeMetrics(metrics: Metrics): void {
     const syncPeersMetric =
       this.syncType === RangeSyncType.Finalized
         ? metrics.syncRange.finalizedSyncPeers

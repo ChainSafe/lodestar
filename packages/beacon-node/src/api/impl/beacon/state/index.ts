@@ -9,13 +9,15 @@ import {
   isStatePostAltair,
   isStatePostElectra,
   isStatePostFulu,
+  isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, getValidatorStatus, ssz} from "@lodestar/types";
+import {ValidatorIndex, getBuilderStatus, getValidatorStatus, ssz} from "@lodestar/types";
 import {ApiError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
 import {assertUniqueItems} from "../../utils.js";
 import {
   filterStateValidatorsByStatus,
+  getStateBuilderIndex,
   getStateResponseWithRegen,
   getStateValidatorIndex,
   toValidatorResponse,
@@ -141,6 +143,55 @@ export function getBeaconStateApi({
 
     async postStateValidators(args, context) {
       return this.getStateValidators(args, context);
+    },
+
+    async getStateBuilders({stateId, builderIds = [], statuses = []}) {
+      const {state, executionOptimistic, finalized} = await getState(stateId);
+      if (!isStatePostGloas(state)) {
+        throw new ApiError(400, `Builders are not supported for pre-gloas state fork=${state.forkName}`);
+      }
+      const finalizedEpoch = state.finalizedCheckpoint.epoch;
+
+      const builderResponses: routes.beacon.BuilderResponse[] = [];
+      if (builderIds.length) {
+        assertUniqueItems(builderIds, "Duplicate builder IDs provided");
+
+        for (const id of builderIds) {
+          const resp = getStateBuilderIndex(id, state);
+          if (resp.valid) {
+            const builderIndex = resp.builderIndex;
+            const builder = state.getBuilder(builderIndex);
+            const status = getBuilderStatus(builder, finalizedEpoch);
+            if (statuses.length && !statuses.includes(status)) {
+              continue;
+            }
+            builderResponses.push({index: builderIndex, status, builder});
+          }
+        }
+        return {
+          data: builderResponses,
+          meta: {executionOptimistic, finalized},
+        };
+      }
+
+      if (statuses.length) {
+        assertUniqueItems(statuses, "Duplicate statuses provided");
+      }
+
+      const buildersLength = state.getBuildersLength();
+      for (let builderIndex = 0; builderIndex < buildersLength; builderIndex++) {
+        const builder = state.getBuilder(builderIndex);
+        const status = getBuilderStatus(builder, finalizedEpoch);
+        if (statuses.length && !statuses.includes(status)) {
+          continue;
+        }
+        builderResponses.push({index: builderIndex, status, builder});
+      }
+
+      return {
+        data: builderResponses,
+        meta: {executionOptimistic, finalized},
+      };
     },
 
     async postStateValidatorIdentities({stateId, validatorIds = []}) {

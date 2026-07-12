@@ -1,4 +1,4 @@
-import {afterEach, describe, expect, it} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
 import {config} from "@lodestar/config/default";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -9,6 +9,7 @@ import {Logger, fromHex} from "@lodestar/utils";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import type {Metrics} from "../../../../src/metrics/metrics.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
@@ -150,6 +151,48 @@ describe("sync / range / chain", () => {
       });
     });
   }
+
+  it("does not self-register a metrics collect fn per SyncChain (leak regression)", () => {
+    const headSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};
+    const finalizedSyncPeers = {addCollect: vi.fn(), set: vi.fn(), reset: vi.fn()};
+    const metrics = {syncRange: {headSyncPeers, finalizedSyncPeers}} as unknown as Metrics;
+
+    const target: ChainTarget = {slot: computeStartSlotAtEpoch(16), root: ZERO_HASH};
+    const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+    const fns = logSyncChainFns(logger, {
+      processChainSegment: async () => {},
+      // never resolves; sync is never started in this test, so it is never called
+      downloadByRange: () => new Promise(() => {}),
+      getConnectedPeerSyncMeta,
+      reportPeer,
+      pruneBlockInputs,
+      onEnd: () => {},
+    });
+
+    const chains: SyncChain[] = [];
+    for (let i = 0; i < 5; i++) {
+      chains.push(
+        new SyncChain(
+          0,
+          target,
+          RangeSyncType.Finalized,
+          fns,
+          {config, logger, clock, custodyConfig, metrics},
+          undefined
+        )
+      );
+    }
+
+    // Constructing many SyncChains must not register any collect fn (the leak).
+    expect(headSyncPeers.addCollect).not.toHaveBeenCalled();
+    expect(finalizedSyncPeers.addCollect).not.toHaveBeenCalled();
+
+    // The collection logic still works when driven explicitly, as RangeSync's single collector does.
+    chains[0].scrapeMetrics(metrics);
+    expect(finalizedSyncPeers.set).toHaveBeenCalled();
+
+    for (const chain of chains) chain.remove();
+  });
 
   it("Should start with no peers, then sync to target", async () => {
     const startEpoch = 0;

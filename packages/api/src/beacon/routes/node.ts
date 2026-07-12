@@ -106,6 +106,7 @@ export enum NodeHealth {
  */
 export enum ClientCode {
   BU = "BU", // besu
+  CN = "CN", // caplin
   EJ = "EJ", // ethereumJS
   EG = "EG", // erigon
   EX = "EX", // ethrex
@@ -114,7 +115,8 @@ export enum ClientCode {
   LH = "LH", // lighthouse
   LS = "LS", // lodestar
   NM = "NM", // nethermind
-  NB = "NB", // nimbus
+  NB = "NB", // nimbus CL
+  NE = "NE", // nimbus EL
   TE = "TE", // trin-execution
   TK = "TK", // teku
   PM = "PM", // prysm
