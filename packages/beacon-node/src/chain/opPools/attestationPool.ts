@@ -1,7 +1,7 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {MAX_COMMITTEES_PER_SLOT, isForkPostElectra} from "@lodestar/params";
+import {Signature, aggregateSignatures} from "@lodestar/state-transition/bls";
 import {Attestation, RootHex, SingleAttestation, Slot, isElectraSingleAttestation} from "@lodestar/types";
 import {MapDef, assert} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";

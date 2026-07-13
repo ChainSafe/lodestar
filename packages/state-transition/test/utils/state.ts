@@ -1,9 +1,9 @@
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
 import {FAR_FUTURE_EPOCH, ForkName, ForkSeq, MAX_EFFECTIVE_BALANCE, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
+import {pubkeyCache} from "../../src/bls/index.js";
 import {
   BeaconStateAllForks,
   BeaconStateBellatrix,

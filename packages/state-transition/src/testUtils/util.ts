@@ -1,5 +1,3 @@
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -14,6 +12,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
+import {PublicKey, SecretKey, pubkeyCache} from "../bls/index.js";
 import {getEffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {
   computeCommitteeCount,

@@ -1,8 +1,8 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@lodestar/params";
 import {G2_POINT_AT_INFINITY} from "@lodestar/state-transition";
+import {Signature, aggregateSignatures} from "@lodestar/state-transition/bls";
 import {Root, Slot, SubnetID, altair, ssz} from "@lodestar/types";
 import {Logger, MapDef, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";

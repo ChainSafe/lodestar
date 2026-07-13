@@ -1,8 +1,7 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {PublicKey, SecretKey, pubkeyCache} from "@lodestar/state-transition/bls";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 

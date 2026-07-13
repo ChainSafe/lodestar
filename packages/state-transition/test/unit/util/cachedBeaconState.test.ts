@@ -1,8 +1,8 @@
 import {describe, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {ssz} from "@lodestar/types";
+import {pubkeyCache} from "../../../src/bls/index.js";
 import {createCachedBeaconState} from "../../../src/index.js";
 
 describe("CachedBeaconState", () => {

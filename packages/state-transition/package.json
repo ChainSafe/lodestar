@@ -39,6 +39,11 @@
       "types": "./lib/lightClient/spec/index.d.ts",
       "import": "./lib/lightClient/spec/index.js"
     },
+    "./bls": {
+      "bun": "./src/bls/index.ts",
+      "types": "./lib/bls/index.d.ts",
+      "import": "./lib/bls/index.js"
+    },
     "./test-utils": {
       "bun": "./src/testUtils/index.ts",
       "types": "./lib/testUtils/index.d.ts",
@@ -67,6 +72,7 @@
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.0",
     "@chainsafe/bls": "8.2.0",
+    "@chainsafe/blst": "^2.2.0",
     "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/persistent-merkle-tree": "^1.2.5",
     "@chainsafe/pubkey-index-map": "^3.0.0",

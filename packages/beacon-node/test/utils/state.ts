@@ -1,5 +1,3 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -15,6 +13,7 @@ import {
   DataAvailabilityStatus,
   createCachedBeaconState,
 } from "@lodestar/state-transition";
+import {SecretKey, pubkeyCache} from "@lodestar/state-transition/bls";
 import {BeaconState, altair, bellatrix, electra, ssz} from "@lodestar/types";
 import {ZERO_HASH_HEX} from "../../src/constants/constants.js";
 import {generateValidator, generateValidators} from "./validator.js";

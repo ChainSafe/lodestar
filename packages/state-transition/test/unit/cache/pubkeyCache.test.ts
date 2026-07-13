@@ -1,10 +1,16 @@
 import path from "node:path";
 import {Worker} from "node:worker_threads";
 import {beforeAll, describe, expect, it} from "vitest";
-import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {phase0, ssz} from "@lodestar/types";
+import type {PubkeyCache} from "../../../src/bls/index.js";
 import {syncPubkeys} from "../../../src/cache/syncPubkeys.js";
-import {interopSecretKey} from "../../../src/util/interop.js";
+
+process.env.LODESTAR_BLS_IMPLEMENTATION = "lodestar-z";
+
+const {ACTIVE_BLS_IMPLEMENTATION, BlsImplementation, createPubkeyCache, pubkeyCache} = await import(
+  "../../../src/bls/index.js"
+);
+const {interopSecretKey} = await import("../../../src/util/interop.js");
 
 /**
  * Tests for the persistent native pubkey cache with multithreaded access.
@@ -17,7 +23,7 @@ import {interopSecretKey} from "../../../src/util/interop.js";
 
 /* The type of task should match the pubkeyCache API.
  *
- * See: @chainsafe/lodestar-z/pubkeys
+ * See: ../../../src/bls/index.js
  */
 type WorkerTaskType = Extract<keyof PubkeyCache, "get" | "getIndex" | "set"> | "syncPubkeys";
 
@@ -63,6 +69,8 @@ describe("Global native pubkey cache - multithreaded access", () => {
   const COUNT = 20;
 
   beforeAll(() => {
+    expect(ACTIVE_BLS_IMPLEMENTATION).toBe(BlsImplementation.lodestarZ);
+    expect(createPubkeyCache()).toBe(pubkeyCache);
     const cache = pubkeyCache;
     for (let i = BASE_INDEX; i < BASE_INDEX + COUNT; i++) {
       const sk = interopSecretKey(i);

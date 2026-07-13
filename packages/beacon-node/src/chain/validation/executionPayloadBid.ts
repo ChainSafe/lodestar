@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -8,6 +7,7 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
+import {PublicKey} from "@lodestar/state-transition/bls";
 import {ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";

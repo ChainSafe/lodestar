@@ -1,4 +1,3 @@
-import {PublicKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {
   BUILDER_INDEX_FLAG,
@@ -16,6 +15,7 @@ import {
 import {BuilderIndex, Epoch, ValidatorIndex, gloas, ssz} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
+import {PublicKey, Signature, verify} from "../bls/index.js";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {getBlockRootAtSlot} from "./blockRoot.js";

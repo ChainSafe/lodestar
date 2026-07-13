@@ -1,10 +1,10 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
+import {pubkeyCache} from "../../src/bls/index.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../../src/testUtils/interop.js";
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";

@@ -1,6 +1,6 @@
 import worker from "node:worker_threads";
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {expose} from "@chainsafe/threads/worker";
+import {PublicKey} from "@lodestar/state-transition/bls";
 import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";

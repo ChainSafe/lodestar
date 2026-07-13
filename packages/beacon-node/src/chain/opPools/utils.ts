@@ -1,6 +1,6 @@
-import {Signature} from "@chainsafe/lodestar-z/blst";
 import {BLS_WITHDRAWAL_PREFIX} from "@lodestar/params";
 import {IBeaconStateView} from "@lodestar/state-transition";
+import {Signature} from "@lodestar/state-transition/bls";
 import {Slot, capella} from "@lodestar/types";
 import {AggregateFast, AggregateFastElectra} from "./attestationPool.js";
 

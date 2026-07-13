@@ -1,7 +1,7 @@
 import {MockedObject, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {altair} from "@lodestar/types";
 import {SyncCommitteeMessagePool} from "../../../../src/chain/opPools/index.js";
 import {Clock} from "../../../../src/util/clock.js";

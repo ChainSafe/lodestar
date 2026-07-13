@@ -1,7 +1,7 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {Signature, aggregateSignatures} from "@lodestar/state-transition/bls";
 import {Root, Slot, SubcommitteeIndex, SubnetID, altair} from "@lodestar/types";
 import {MapDef, toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";

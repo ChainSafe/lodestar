@@ -1,14 +1,14 @@
 import path from "node:path";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Worker, spawn} from "@chainsafe/threads";
+import {type PubkeyCache} from "@lodestar/state-transition/bls";
 
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
 // @ts-expect-error
 // biome-ignore lint/suspicious/noGlobalAssign: We need the global `self` to reassign module properties later
 self = undefined;
 
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
+import {PublicKey} from "@lodestar/state-transition/bls";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../../metrics/index.js";
 import {LinkedList} from "../../../util/array.js";

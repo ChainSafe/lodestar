@@ -2,7 +2,6 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import {PrivateKey} from "@libp2p/interface";
 import deepmerge from "deepmerge";
 import tmp from "tmp";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {setHasher} from "@chainsafe/persistent-merkle-tree";
 import {hasher} from "@chainsafe/persistent-merkle-tree/hasher/hashtree";
 import {ChainConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
@@ -19,6 +18,7 @@ import {
   createCachedBeaconState,
   syncPubkeys,
 } from "@lodestar/state-transition";
+import {pubkeyCache} from "@lodestar/state-transition/bls";
 import {phase0, ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject} from "@lodestar/utils";
 import {initStateFromDb} from "../../../src/chain/initState.js";

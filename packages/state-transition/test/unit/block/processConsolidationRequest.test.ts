@@ -1,6 +1,5 @@
 import {describe, expect, it} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {
   BLS_WITHDRAWAL_PREFIX,
   COMPOUNDING_WITHDRAWAL_PREFIX,
@@ -9,6 +8,7 @@ import {
 } from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {processConsolidationRequest} from "../../../src/block/processConsolidationRequest.js";
+import {SecretKey} from "../../../src/bls/index.js";
 import {generateCachedElectraState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 

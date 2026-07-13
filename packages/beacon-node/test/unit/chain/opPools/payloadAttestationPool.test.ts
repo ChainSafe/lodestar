@@ -1,8 +1,8 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {PTC_SIZE, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {gloas, ssz} from "@lodestar/types";
 import {PayloadAttestationPool} from "../../../../src/chain/opPools/payloadAttestationPool.js";
 import {InsertOutcome} from "../../../../src/chain/opPools/types.js";

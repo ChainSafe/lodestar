@@ -1,4 +1,3 @@
-import {aggregateSerializedPublicKeys} from "@chainsafe/lodestar-z/blst";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -10,6 +9,7 @@ import {
 } from "@lodestar/params";
 import {altair} from "@lodestar/types";
 import {bigIntSqrt} from "@lodestar/utils";
+import {aggregateSerializedPublicKeys} from "../bls/index.js";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "../types.js";
 import {getNextSyncCommitteeIndices} from "./seed.js";

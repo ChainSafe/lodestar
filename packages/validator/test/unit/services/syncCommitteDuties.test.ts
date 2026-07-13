@@ -1,11 +1,11 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {when} from "vitest-when";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {ssz} from "@lodestar/types";
 import {
   SyncCommitteeDutiesService,

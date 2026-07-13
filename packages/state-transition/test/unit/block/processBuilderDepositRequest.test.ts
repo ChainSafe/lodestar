@@ -1,9 +1,9 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {BUILDER_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {pubkeyCache} from "../../../src/bls/index.js";
 
 const isValidBuilderDepositSignatureMock = vi.hoisted(() =>
   // Treat the first byte of the BLS signature as the verification flag so each test can opt in

@@ -1,10 +1,10 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {
   type IBeaconStateViewGloas,
   computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";
+import {type PubkeyCache} from "@lodestar/state-transition/bls";
 import {gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {IBlsVerifier} from "../bls/index.js";

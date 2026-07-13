@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {PublicKey} from "@lodestar/state-transition/bls";
 import {fromHex} from "@lodestar/utils";
 
 /**

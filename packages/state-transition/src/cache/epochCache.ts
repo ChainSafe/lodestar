@@ -1,5 +1,3 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
-import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -26,6 +24,7 @@ import {
   gloas,
 } from "@lodestar/types";
 import {LodestarError} from "@lodestar/utils";
+import {type PubkeyCache, PublicKey, createPubkeyCache} from "../bls/index.js";
 import {getTotalSlashingsByIncrement} from "../epoch/processSlashings.js";
 import {
   EpochShuffling,
@@ -1113,6 +1112,6 @@ export function createEmptyEpochCacheImmutableData(
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    pubkeyCache: defaultPubkeyCache,
+    pubkeyCache: createPubkeyCache(),
   };
 }

@@ -1,5 +1,5 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@lodestar/state-transition/bls";
 
 export function memoOnce<R>(fn: () => R): () => R {
   let value: R | null = null;

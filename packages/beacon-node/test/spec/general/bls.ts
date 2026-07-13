@@ -1,3 +1,5 @@
+import {fromHexString} from "@chainsafe/ssz";
+import {InputType} from "@lodestar/spec-test-util";
 import {
   aggregateVerify as BLSAggregateVerify,
   fastAggregateVerify as BLSFastAggregateVerify,
@@ -7,9 +9,7 @@ import {
   verify as _verify,
   aggregateSerializedPublicKeys,
   aggregateSignatures,
-} from "@chainsafe/lodestar-z/blst";
-import {fromHexString} from "@chainsafe/ssz";
-import {InputType} from "@lodestar/spec-test-util";
+} from "@lodestar/state-transition/bls";
 import {TestRunnerFn} from "../utils/types.js";
 
 const testFnByType: Record<string, (data: any) => any> = {

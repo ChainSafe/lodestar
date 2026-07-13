@@ -1,7 +1,7 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BLS_TO_EXECUTION_CHANGE, ForkName} from "@lodestar/params";
 import {capella, ssz} from "@lodestar/types";
+import {PublicKey} from "../bls/index.js";
 import {SignatureSetType, SingleSignatureSet, computeSigningRoot, verifySignatureSet} from "../util/index.js";
 
 export function verifyBlsToExecutionChangeSignature(

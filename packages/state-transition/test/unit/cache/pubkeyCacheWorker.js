@@ -7,7 +7,7 @@
  * See pubkeyCache.test.ts for usage.
  */
 import worker from "node:worker_threads";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {pubkeyCache} from "@lodestar/state-transition/bls";
 import {interopSecretKey, syncPubkeys} from "@lodestar/state-transition";
 
 const parentPort = worker.parentPort;

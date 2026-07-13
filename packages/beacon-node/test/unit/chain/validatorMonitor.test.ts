@@ -1,9 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {pubkeyCache} from "@lodestar/state-transition/bls";
 import {ssz} from "@lodestar/types";
 import {createValidatorMonitor} from "../../../src/chain/validatorMonitor.js";
 

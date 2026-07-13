@@ -1,4 +1,3 @@
-import {PublicKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
@@ -11,6 +10,7 @@ import {
 } from "@lodestar/params";
 import {BLSPubkey, Bytes32, UintNum64, electra, phase0, ssz} from "@lodestar/types";
 import {verifyMerkleBranch} from "@lodestar/utils";
+import {PublicKey, Signature, verify} from "../bls/index.js";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
 import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";

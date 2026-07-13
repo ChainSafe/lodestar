@@ -1,11 +1,11 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {Mocked, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {AttestationDutiesService} from "../../../src/services/attestationDuties.js";

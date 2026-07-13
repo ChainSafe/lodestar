@@ -1,8 +1,8 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {MockInstance, afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "../../../src/services/externalSignerSync.js";
 import {SignerRemote, SignerType, ValidatorStore} from "../../../src/services/validatorStore.js";
 import * as externalSignerClient from "../../../src/util/externalSignerClient.js";

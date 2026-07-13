@@ -1,5 +1,5 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {phase0} from "@lodestar/types";
+import {type PubkeyCache} from "../bls/index.js";
 
 /**
  * Checks the pubkey indices against a state and adds missing pubkeys

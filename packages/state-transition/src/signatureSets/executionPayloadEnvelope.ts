@@ -1,8 +1,7 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_BUILDER} from "@lodestar/params";
 import {ValidatorIndex, gloas, ssz} from "@lodestar/types";
+import {type PubkeyCache, PublicKey} from "../bls/index.js";
 import {IBeaconStateView, isStatePostGloas} from "../stateView/interface.js";
 import {computeSigningRoot} from "../util/index.js";
 import {type SingleSignatureSet, createSingleSignatureSetFromComponents} from "../util/signatureSets.js";

@@ -1,9 +1,9 @@
 import {describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {pubkeyCache} from "../../src/bls/index.js";
 import {createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";

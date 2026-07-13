@@ -1,7 +1,7 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {digest} from "@chainsafe/as-sha256";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {bytesToBigInt, intToBytes} from "@lodestar/utils";
+import {SecretKey} from "../bls/index.js";
 
 let curveOrder: bigint;
 function getCurveOrder(): bigint {

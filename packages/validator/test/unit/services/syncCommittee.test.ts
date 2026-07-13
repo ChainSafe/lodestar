@@ -1,8 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {ssz} from "@lodestar/types";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "../../../src/services/emitter.js";

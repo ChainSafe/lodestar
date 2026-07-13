@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkName, SYNC_COMMITTEE_SIZE} from "@lodestar/params";
 import {BeaconBlock, ValidatorIndex, altair, rewards} from "@lodestar/types";
+import {type PubkeyCache} from "../bls/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../cache/stateCache.js";
 
 export async function computeSyncCommitteeRewards(

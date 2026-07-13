@@ -24,6 +24,10 @@ setHasher(hashtreeHasher);
 import {PresetName, presetFromJson, setActivePreset} from "@lodestar/params/setPreset";
 import {readFile} from "./util/file.js";
 
+if (process.argv.includes("--zig-bls")) {
+  process.env.LODESTAR_BLS_IMPLEMENTATION = "lodestar-z";
+}
+
 const network = valueOfArg("network");
 const preset = valueOfArg("preset");
 const presetFile = valueOfArg("presetFile");

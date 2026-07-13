@@ -1,7 +1,6 @@
 import {randomBytes} from "node:crypto";
 import {BYTES_PER_BLOB, BYTES_PER_FIELD_ELEMENT} from "@crate-crypto/node-eth-kzg";
 import {generateKeyPair} from "@libp2p/crypto/keys";
-import {Signature} from "@chainsafe/lodestar-z/blst";
 import {createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {
   ForkPostCapella,
@@ -17,6 +16,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
+import {Signature} from "@lodestar/state-transition/bls";
 import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";

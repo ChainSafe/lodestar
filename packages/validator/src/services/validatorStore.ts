@@ -1,4 +1,3 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -25,6 +24,7 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@lodestar/state-transition";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {
   AggregateAndProof,
   Attestation,

@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
+import {pubkeyCache} from "@lodestar/state-transition/bls";
 import {RunnerType, TestRunner} from "./types.js";
 
 const ARTIFACT_FILENAMES = new Set([

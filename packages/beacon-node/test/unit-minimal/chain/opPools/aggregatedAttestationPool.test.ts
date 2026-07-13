@@ -1,5 +1,4 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@chainsafe/lodestar-z/blst";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDefault} from "@lodestar/config/default";
@@ -17,6 +16,7 @@ import {
   CachedBeaconStateElectra,
   newFilledArray,
 } from "@lodestar/state-transition";
+import {SecretKey, Signature, aggregateSignatures, fastAggregateVerify} from "@lodestar/state-transition/bls";
 import {Attestation, electra, phase0, ssz} from "@lodestar/types";
 import {
   AggregatedAttestationPool,

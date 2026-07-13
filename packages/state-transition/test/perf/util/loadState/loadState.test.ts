@@ -1,5 +1,5 @@
 import {bench, describe} from "@chainsafe/benchmark";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {pubkeyCache} from "../../../../src/bls/index.js";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
 import {generatePerfTestCachedStateAltair} from "../../../../src/testUtils/util.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";

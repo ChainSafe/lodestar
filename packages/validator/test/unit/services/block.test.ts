@@ -1,10 +1,10 @@
 import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";

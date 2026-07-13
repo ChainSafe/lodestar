@@ -1,6 +1,5 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
@@ -25,6 +24,7 @@ import {
   isStatePostElectra,
   isStatePostGloas,
 } from "@lodestar/state-transition";
+import {type PubkeyCache} from "@lodestar/state-transition/bls";
 import {
   BeaconBlock,
   BlindedBeaconBlock,

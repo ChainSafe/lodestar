@@ -1,5 +1,5 @@
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {routes} from "@lodestar/api/beacon";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {toHex} from "@lodestar/utils";
 import {Assertion, AssertionResult, ValidatorClient, ValidatorClientKeys} from "../interfaces.js";
 import {arrayEquals} from "../utils/index.js";

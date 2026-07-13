@@ -1,6 +1,6 @@
 import {FastifyInstance, fastify} from "fastify";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {fromHexString} from "@chainsafe/ssz";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {EXTERNAL_SIGNER_BASE_PORT} from "./constants.js";
 
 export class ExternalSignerServer {

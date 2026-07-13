@@ -10,6 +10,7 @@ export {VoluntaryExitValidity, getVoluntaryExitValidity, isValidVoluntaryExit} f
 // Withdrawals for new blocks
 export {getExpectedWithdrawals} from "./block/processWithdrawals.js";
 export {ProposerRewardType} from "./block/types.js";
+export {type PubkeyCache, createPubkeyCache} from "./bls/index.js";
 export {
   type EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsWithLen,

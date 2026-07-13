@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {CompositeViewDU} from "@chainsafe/ssz";
 import {ValidatorIndex, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
+import {type PubkeyCache} from "../bls/index.js";
 
 type ValidatorSyncCommitteeIndexMap = Map<ValidatorIndex, number[]>;
 

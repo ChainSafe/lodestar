@@ -5,7 +5,6 @@ import {generateKeyPair} from "@libp2p/crypto/keys";
 import jsyaml from "js-yaml";
 import snappy from "snappy";
 import {expect} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {chainConfigFromJson, chainConfigTypes, createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ExecutionStatus} from "@lodestar/fork-choice";
@@ -23,6 +22,7 @@ import {
   isExecutionStateType,
   syncPubkeys,
 } from "@lodestar/state-transition";
+import {pubkeyCache} from "@lodestar/state-transition/bls";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputPreData, BlockInputSource} from "../../../src/chain/blocks/blockInput/index.js";

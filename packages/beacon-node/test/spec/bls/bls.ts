@@ -1,3 +1,4 @@
+import {fromHexString} from "@chainsafe/ssz";
 import {
   PublicKey,
   SecretKey,
@@ -7,8 +8,7 @@ import {
   aggregateVerify,
   fastAggregateVerify,
   verifyMultipleAggregateSignatures,
-} from "@chainsafe/lodestar-z/blst";
-import {fromHexString} from "@chainsafe/ssz";
+} from "@lodestar/state-transition/bls";
 
 export const testFnByType: Record<string, "skip" | ((data: any) => any)> = {
   aggregate_verify,

@@ -1,6 +1,5 @@
-import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
+import {type PubkeyCache, PublicKey, asyncAggregateWithRandomness} from "@lodestar/state-transition/bls";
 import {Metrics} from "../../../metrics/metrics.js";
 import {LinkedList} from "../../../util/array.js";
 import {VerifySignatureOpts} from "../interface.js";

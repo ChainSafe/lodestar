@@ -13,6 +13,7 @@ type GlobalSingleArgs = {
   rcConfig?: string;
   supernode?: boolean;
   semiSupernode?: boolean;
+  "zig-bls"?: boolean;
 };
 
 export const defaultNetwork: NetworkName = "mainnet";
@@ -75,6 +76,11 @@ metrics:
       "Subscribe to and custody half of the data column sidecar subnets to support blob reconstruction, enabling more efficient data availability with lower bandwidth and storage requirements compared to a supernode.",
     type: "boolean",
     conflicts: ["supernode"],
+  },
+
+  "zig-bls": {
+    hidden: true,
+    type: "boolean",
   },
 };
 

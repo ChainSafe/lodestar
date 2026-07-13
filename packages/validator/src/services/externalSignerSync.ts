@@ -1,6 +1,6 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {PublicKey} from "@lodestar/state-transition/bls";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {externalSignerGetKeys} from "../util/externalSignerClient.js";
 import {LoggerVc} from "../util/index.js";

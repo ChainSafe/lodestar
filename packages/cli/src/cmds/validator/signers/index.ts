@@ -1,7 +1,7 @@
 import path from "node:path";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {interopSecretKey} from "@lodestar/state-transition";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {LogLevel, Logger, isValidHttpUrl} from "@lodestar/utils";
 import {Signer, SignerType, externalSignerGetKeys} from "@lodestar/validator";
 import {GlobalArgs, defaultNetwork} from "../../../options/index.js";

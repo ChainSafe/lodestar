@@ -1,6 +1,5 @@
 import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {digest} from "@chainsafe/as-sha256";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {
@@ -12,6 +11,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {BeaconStateView, computeSigningRoot} from "@lodestar/state-transition";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {capella, ssz} from "@lodestar/types";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";

@@ -1,4 +1,3 @@
-import {Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
 import {IForkChoice} from "@lodestar/fork-choice";
@@ -29,6 +28,7 @@ import {
   isStatePostAltair,
   isStatePostGloas,
 } from "@lodestar/state-transition";
+import {Signature, aggregateSignatures} from "@lodestar/state-transition/bls";
 import {Attestation, Epoch, RootHex, Slot, electra, isElectraAttestation, phase0, ssz} from "@lodestar/types";
 import {MapDef, assert, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";

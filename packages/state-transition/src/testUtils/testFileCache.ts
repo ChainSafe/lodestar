@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {getClient} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {fetch} from "@lodestar/utils";
+import {pubkeyCache} from "../bls/index.js";
 import {CachedBeaconStateAllForks} from "../index.js";
 import {testCachePath} from "./cache.js";
 import {getInfuraBeaconUrl} from "./infura.js";

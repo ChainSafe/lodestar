@@ -1,5 +1,5 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
+import {PublicKey} from "@lodestar/state-transition/bls";
 
 export type VerifySignatureOpts = {
   /**

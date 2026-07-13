@@ -1,5 +1,4 @@
 import {afterEach, beforeAll, beforeEach, describe, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -9,6 +8,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
 } from "@lodestar/state-transition";
+import {SecretKey} from "@lodestar/state-transition/bls";
 import {phase0, ssz} from "@lodestar/types";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError.js";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit.js";

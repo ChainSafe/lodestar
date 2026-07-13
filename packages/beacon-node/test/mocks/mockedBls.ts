@@ -1,4 +1,4 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {PublicKey} from "@lodestar/state-transition/bls";
 import {IBlsVerifier} from "../../src/chain/bls/index.js";
 
 export class BlsVerifierMock implements IBlsVerifier {

@@ -1,8 +1,8 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0, ssz} from "@lodestar/types";
 import {Validator} from "@lodestar/types/phase0";
+import {type PubkeyCache} from "../bls/index.js";
 import {getProposerSlashingSignatureSets} from "../signatureSets/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateGloas} from "../types.js";
 import {computeEpochAtSlot, isSlashableValidator} from "../util/index.js";

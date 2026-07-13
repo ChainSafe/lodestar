@@ -1,4 +1,3 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -15,6 +14,7 @@ import {
 } from "@lodestar/params";
 import {ValidatorIndex, rewards} from "@lodestar/types";
 import {fromHex} from "@lodestar/utils";
+import {type PubkeyCache} from "../bls/index.js";
 import {EpochTransitionCache, beforeProcessEpoch} from "../cache/epochTransitionCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types.js";
 import {

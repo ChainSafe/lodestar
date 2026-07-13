@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import inquirer from "inquirer";
-import {Signature} from "@chainsafe/lodestar-z/blst";
 import {ApiClient, getClient} from "@lodestar/api";
 import {BeaconConfig, createBeaconConfig} from "@lodestar/config";
 import {
@@ -10,6 +9,7 @@ import {
   computeStartSlotAtEpoch,
   getCurrentSlot,
 } from "@lodestar/state-transition";
+import {Signature} from "@lodestar/state-transition/bls";
 import {Epoch, ValidatorIndex, phase0, ssz} from "@lodestar/types";
 import {CliCommand, fromHex, toPubkeyHex} from "@lodestar/utils";
 import {SignableMessageType, Signer, SignerType, externalSignerPostSignature} from "@lodestar/validator";
