@@ -1,7 +1,6 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -23,6 +22,7 @@ import {
   BeaconStateView,
   computeEpochAtSlot,
   createCachedBeaconState,
+  createPubkeyCache,
   isExecutionStateType,
   signedBlockToSignedHeader,
   syncPubkeys,
@@ -100,6 +100,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
+        const pubkeyCache = createPubkeyCache();
         syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,

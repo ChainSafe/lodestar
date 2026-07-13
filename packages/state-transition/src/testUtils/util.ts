@@ -1,5 +1,4 @@
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -19,6 +18,7 @@ import {
   computeCommitteeCount,
   computeEpochAtSlot,
   createCachedBeaconState,
+  createPubkeyCache,
   interopSecretKey,
   newFilledArray,
   processSlots,
@@ -91,7 +91,7 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
 
 function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>, vc = numValidators) {
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  pubkeyCache.reset();
+  const pubkeyCache = createPubkeyCache();
   for (let i = 0; i < vc; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     pubkeyCache.set(i, pubkey);
@@ -493,7 +493,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   const {pubkeys, pubkeysMod} = getPubkeys(vc);
 
   // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  pubkeyCache.reset();
+  const pubkeyCache = createPubkeyCache();
   for (let i = 0; i < vc; i++) {
     const pubkey = pubkeysMod[i % keypairsMod];
     pubkeyCache.set(i, pubkey);

@@ -1,11 +1,10 @@
 import {describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {BUILDER_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {processBuilderExitRequest} from "../../../src/block/processBuilderExitRequest.js";
-import {createCachedBeaconState} from "../../../src/index.js";
+import {createCachedBeaconState, createPubkeyCache} from "../../../src/index.js";
 
 function buildGloasState({slot = 0, finalizedEpoch = 0}: {slot?: number; finalizedEpoch?: number} = {}) {
   const config = getConfig(ForkName.gloas);
@@ -24,7 +23,7 @@ function buildGloasState({slot = 0, finalizedEpoch = 0}: {slot?: number; finaliz
     view,
     {
       config: createBeaconConfig(config, view.genesisValidatorsRoot),
-      pubkeyCache,
+      pubkeyCache: createPubkeyCache(),
     },
     {skipSyncCommitteeCache: true}
   );
