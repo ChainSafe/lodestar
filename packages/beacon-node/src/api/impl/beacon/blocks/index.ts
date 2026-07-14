@@ -926,8 +926,8 @@ export function getBeaconBlockApi({
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-        // Import execution payload. Signature verified above unless broadcast validation was skipped
-        // or the cached envelope was added by another source and might differ from the submitted one
+        // Import processes the envelope stored in the payload input, signature verification can only
+        // be skipped if that is the submitted envelope and it was verified during broadcast validation
         () => chain.processExecutionPayload(payloadInput, {validSignature: envelopeValidated && !envelopeAlreadyKnown}),
       ];
 
