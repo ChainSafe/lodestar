@@ -727,15 +727,10 @@ export function getBeaconBlockApi({
         blobDataIncluded,
         broadcastValidation,
       };
-      // Signature is verified for all validation levels except `none`, import can skip re-verification
-      let envelopeValidated = true;
-      let envelopeAlreadyKnown = false;
-
       try {
         switch (broadcastValidation) {
           case routes.beacon.BroadcastValidation.none: {
             chain.logger.debug("Skipping broadcast validation of execution payload envelope", valLogMeta);
-            envelopeValidated = false;
             break;
           }
 
@@ -792,8 +787,6 @@ export function getBeaconBlockApi({
               throw Error(message);
             }
             chain.logger.warn(message, valLogMeta);
-            // No validation was performed, the envelope signature must be verified on import
-            envelopeValidated = false;
           }
         }
       } catch (error) {
@@ -810,7 +803,6 @@ export function getBeaconBlockApi({
           // The envelope may have been gossiped without its data columns being published, e.g. if
           // another beacon node failed mid-publish, still publish columns from the submitted blobs
           chain.logger.debug("Publishing data columns of already-known execution payload envelope", valLogMeta);
-          envelopeAlreadyKnown = true;
         } else {
           throw error;
         }
@@ -891,7 +883,6 @@ export function getBeaconBlockApi({
       if (payloadInput.hasPayloadEnvelope()) {
         // The envelope may have been added while this request was being validated, e.g. via gossip
         chain.logger.debug("Execution payload envelope already added during publishing", valLogMeta);
-        envelopeAlreadyKnown = true;
       } else {
         payloadInput.addPayloadEnvelope({
           envelope: signedExecutionPayloadEnvelope,
@@ -926,9 +917,9 @@ export function getBeaconBlockApi({
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-        // Import processes the envelope stored in the payload input, signature verification can only
-        // be skipped if that is the submitted envelope and it was verified during broadcast validation
-        () => chain.processExecutionPayload(payloadInput, {validSignature: envelopeValidated && !envelopeAlreadyKnown}),
+        // Import execution payload. Signature is verified during broadcast validation, an already
+        // known envelope was verified by its original source and `none` deliberately skips validation
+        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
       const publishPromise = promiseAllMaybeAsync<number | void>(publishPromises);
