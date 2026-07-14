@@ -779,7 +779,7 @@ export function getValidatorApi(
     }
 
     // handle shouldOverrideBuilder separately
-    if (engine.status === "fulfilled" && engine.value.shouldOverrideBuilder) {
+    if (engine.status === "fulfilled" && engine.value.shouldOverrideBuilder && isBuilderEnabled) {
       logger.warn("Selected engine block: censorship suspected in builder blocks", {
         ...loggerContext,
         durationMs: engine.durationMs,
