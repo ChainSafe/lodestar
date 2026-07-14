@@ -6940,7 +6940,7 @@
 - name: is_head_weak#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak"
   spec: |
     <spec fn="is_head_weak" fork="phase0" hash="ac0fb917">
     def is_head_weak(store: Store, head_root: Root) -> bool:
@@ -6951,7 +6951,9 @@
     </spec>
 
 - name: is_head_weak#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak"
   spec: |
     <spec fn="is_head_weak" fork="gloas" hash="a763a3db">
     def is_head_weak(store: Store, head_root: Root) -> bool:

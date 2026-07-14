@@ -369,7 +369,6 @@ exceptions:
     - has_compounding_withdrawal_credential#gloas
     - is_ancestor#gloas
     - is_head_late#gloas
-    - is_head_weak#gloas
     - is_parent_node_full#gloas
     - is_previous_slot_payload_decision#gloas
     - is_valid_proposal_slot#gloas
