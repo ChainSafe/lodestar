@@ -2,10 +2,16 @@
 # the repo. Unless a later match takes precedence,
 # They will be requested for
 # review when someone opens a pull request.
-*       @ChainSafe/lodestar
+# *       @ChainSafe/lodestar
+
+# Removed the auto notification from this file. can uncomment the single line above and notifications will go to all
+# team members. We are moving to manual PR review requests and want to reduce the noise from these.  The repo
+# permissions are not modified by not using this file. Without this file anyone with "write" access on the repo can
+# approve PRs. Roles set in the github UI are the gate for being able to approve PRs as all "maintainers" have "write"
+# permissions so this change is a no-op
 
 # Order is important; the last matching pattern takes the most
 # precedence. When someone opens a pull request that only
 # modifies md files, only md owners and not the global
 # owner(s) will be requested for a review.
-*.md    @ChainSafe/lodestar
+# *.md    @ChainSafe/lodestar
