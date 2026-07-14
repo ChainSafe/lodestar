@@ -425,10 +425,10 @@ export type Endpoints = {
    * so there is no longer a concept of blinded or unblinded blocks. Builders release the payload later.
    * This endpoint is specific to the post-Gloas forks and is not backwards compatible with previous forks.
    *
-   * When self-building and `includePayload` is true (default), the response contains the full
-   * `BlockContents` (block, execution payload envelope, KZG proofs and blobs) which enables
-   * stateless envelope publishing via any beacon node. When `includePayload` is false, only the
-   * `BeaconBlock` is returned and the beacon node caches the envelope and blobs internally.
+   * When self-building and `includePayload` is true, the response contains the full `BlockContents`
+   * (block, execution payload envelope, KZG proofs and blobs) which enables stateless envelope
+   * publishing via any beacon node. When `includePayload` is false, only the `BeaconBlock` is
+   * returned and the beacon node caches the envelope and blobs internally.
    * When committing to a builder bid, only the `BeaconBlock` is returned in either case.
    */
   produceBlockV4: Endpoint<
@@ -443,7 +443,7 @@ export type Endpoints = {
       skipRandaoVerification?: boolean;
       builderBoostFactor?: UintBn64;
       /** Include execution payload envelope and blobs in the response when self-building */
-      includePayload?: boolean;
+      includePayload: boolean;
     } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
     {
       params: {slot: number};
@@ -455,7 +455,7 @@ export type Endpoints = {
         builder_selection?: string;
         builder_boost_factor?: string;
         strict_fee_recipient_check?: boolean;
-        include_payload?: boolean;
+        include_payload: boolean;
       };
     },
     BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>,
@@ -954,7 +954,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builder_selection: Schema.String,
             builder_boost_factor: Schema.String,
             strict_fee_recipient_check: Schema.Boolean,
-            include_payload: Schema.Boolean,
+            include_payload: Schema.BooleanRequired,
           },
         },
       },

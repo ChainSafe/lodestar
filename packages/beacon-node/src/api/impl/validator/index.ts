@@ -1028,9 +1028,9 @@ export function getValidatorApi(
         void chain.persistBlock(block, "produced_engine_block");
       }
 
-      // Include the payload for self-builds unless explicitly disabled (stateless flow, default)
+      // Include the payload for self-builds unless disabled (stateless flow)
       const isSelfBuild = source === ProducedBlockSource.engine;
-      if (isSelfBuild && includePayload !== false) {
+      if (isSelfBuild && includePayload) {
         const produceResult = chain.blockProductionCache.get(blockRoot);
         if (
           produceResult === undefined ||
