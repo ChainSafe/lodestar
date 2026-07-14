@@ -743,8 +743,8 @@ export function getBeaconBlockApi({
           case routes.beacon.BroadcastValidation.consensus: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
-            // Unlike blocks, the block production cache key (block root) does not bind the envelope
-            // content, so consensus checks must run even if the payload was produced by this node
+            // Unlike blocks, the published envelope is not identified by the block root, a locally
+            // produced payload cannot vouch for the submitted envelope, consensus checks always run
             const blockState = await chain.regen
               .getBlockSlotState(block, block.slot, {dontTransferCache: true}, RegenCaller.restApi)
               .catch((e) => {
