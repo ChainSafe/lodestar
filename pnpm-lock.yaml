@@ -139,8 +139,8 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/ssz':
         specifier: ^1.6.2
         version: 1.6.2
@@ -179,8 +179,8 @@ importers:
   packages/beacon-node:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/blst':
         specifier: ^2.2.0
         version: 2.2.0
@@ -197,8 +197,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -399,8 +399,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/ssz':
         specifier: ^1.6.2
         version: 1.6.2
@@ -481,8 +481,8 @@ importers:
         version: 17.7.2
     devDependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@ethereumjs/rlp':
         specifier: ^4.0.1
         version: 4.0.1
@@ -529,8 +529,8 @@ importers:
   packages/config:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/ssz':
         specifier: ^1.6.2
         version: 1.6.2
@@ -724,14 +724,14 @@ importers:
   packages/state-transition:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/blst':
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/pubkey-index-map':
         specifier: ^3.0.0
         version: 3.0.0
@@ -807,8 +807,8 @@ importers:
   packages/utils:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@vekexasia/bigint-buffer2':
         specifier: ^1.1.1
         version: 1.1.1
@@ -1054,9 +1054,6 @@ packages:
   '@chainsafe/as-chacha20poly1305@0.1.0':
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
 
-  '@chainsafe/as-sha256@1.2.0':
-    resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
-
   '@chainsafe/as-sha256@1.2.4':
     resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
 
@@ -1243,9 +1240,6 @@ packages:
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
-
-  '@chainsafe/persistent-merkle-tree@1.2.5':
-    resolution: {integrity: sha512-uyv3/nHkD8vNXjdez6q89rhXwGDUp3YX2mBbOwB7/xelgZ9E7hc3HQgOuq1EdfM9Vyh09jiwimXF/hskmymOfQ==}
 
   '@chainsafe/persistent-merkle-tree@1.3.0':
     resolution: {integrity: sha512-xGe95xNkYayC5BYQpo7ft5oHwyf52YtqBip+GJqZ9XgKSzraw93qUMNeqKrOVJbZM5HEOys8xxkt0h7VD1a9cw==}
@@ -6570,8 +6564,6 @@ snapshots:
 
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
 
-  '@chainsafe/as-sha256@1.2.0': {}
-
   '@chainsafe/as-sha256@1.2.4': {}
 
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
@@ -6715,7 +6707,7 @@ snapshots:
   '@chainsafe/libp2p-noise@17.0.0':
     dependencies:
       '@chainsafe/as-chacha20poly1305': 0.1.0
-      '@chainsafe/as-sha256': 1.2.0
+      '@chainsafe/as-sha256': 1.2.4
       '@libp2p/crypto': 5.1.19
       '@libp2p/interface': 3.2.3
       '@libp2p/peer-id': 6.0.10
@@ -6771,12 +6763,6 @@ snapshots:
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
-
-  '@chainsafe/persistent-merkle-tree@1.2.5':
-    dependencies:
-      '@chainsafe/as-sha256': 1.2.4
-      '@chainsafe/hashtree': 1.0.2
-      '@noble/hashes': 1.8.0
 
   '@chainsafe/persistent-merkle-tree@1.3.0':
     dependencies:
