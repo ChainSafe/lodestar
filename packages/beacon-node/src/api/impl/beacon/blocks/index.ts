@@ -708,8 +708,12 @@ export function getBeaconBlockApi({
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       const cachedResult = chain.blockProductionCache.get(blockRootHex);
+      // Bid-based blocks are cached without payload data, only a self-build entry can vouch for blob data
       const cachedGloasResult =
-        cachedResult !== undefined && isForkPostGloas(cachedResult.fork) && cachedResult.type === BlockType.Full
+        cachedResult !== undefined &&
+        isForkPostGloas(cachedResult.fork) &&
+        cachedResult.type === BlockType.Full &&
+        (cachedResult as ProduceFullGloas).executionPayload !== undefined
           ? (cachedResult as ProduceFullGloas)
           : undefined;
 
@@ -725,6 +729,7 @@ export function getBeaconBlockApi({
       };
       // Signature is verified for all validation levels except `none`, import can skip re-verification
       let envelopeValidated = true;
+      let envelopeAlreadyKnown = false;
 
       try {
         switch (broadcastValidation) {
@@ -798,15 +803,23 @@ export function getBeaconBlockApi({
         ) {
           // The envelope may already be known, e.g. received via gossip from another node in a
           // multi node setup, this is benign and treated as a successful publish (same as blocks)
-          chain.logger.debug("Ignoring already-known execution payload envelope during publishing", valLogMeta);
-          return;
+          if (submittedContents === null) {
+            chain.logger.debug("Ignoring already-known execution payload envelope during publishing", valLogMeta);
+            return;
+          }
+          // The envelope may have been gossiped without its data columns being published, e.g. if
+          // another beacon node failed mid-publish, still publish columns from the submitted blobs
+          chain.logger.debug("Publishing data columns of already-known execution payload envelope", valLogMeta);
+          envelopeAlreadyKnown = true;
+        } else {
+          throw error;
         }
-        throw error;
       }
 
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
       let cells: fulu.Cell[][] | undefined;
       let kzgProofs: deneb.KZGProofs | undefined;
+      let dataColumnTimer: (() => number) | undefined;
 
       if (submittedContents !== null) {
         // Validate submitted blob data against bid commitments before computing data column sidecars
@@ -827,6 +840,7 @@ export function getBeaconBlockApi({
           }
         }
         if (submittedContents.blobs.length > 0) {
+          dataColumnTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
           // If the block was produced by this node, we will already have computed cells
           cells = cachedGloasResult?.cells ?? submittedContents.blobs.map((blob) => kzg.computeCells(blob));
           kzgProofs = submittedContents.kzgProofs;
@@ -849,7 +863,7 @@ export function getBeaconBlockApi({
       }
 
       if (cells !== undefined && kzgProofs !== undefined && cells.length > 0) {
-        const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+        dataColumnTimer ??= metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         const proofs = kzgProofs;
         const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
           cells: rowCells,
@@ -857,7 +871,7 @@ export function getBeaconBlockApi({
         }));
 
         dataColumnSidecars = getGloasDataColumnSidecars(slot, envelope.beaconBlockRoot, cellsAndProofs);
-        timer?.();
+        dataColumnTimer?.();
       }
 
       // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
@@ -874,12 +888,18 @@ export function getBeaconBlockApi({
         throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
-      payloadInput.addPayloadEnvelope({
-        envelope: signedExecutionPayloadEnvelope,
-        source: PayloadEnvelopeInputSource.api,
-        seenTimestampSec,
-        peerIdStr: undefined,
-      });
+      if (payloadInput.hasPayloadEnvelope()) {
+        // The envelope may have been added while this request was being validated, e.g. via gossip
+        chain.logger.debug("Execution payload envelope already added during publishing", valLogMeta);
+        envelopeAlreadyKnown = true;
+      } else {
+        payloadInput.addPayloadEnvelope({
+          envelope: signedExecutionPayloadEnvelope,
+          source: PayloadEnvelopeInputSource.api,
+          seenTimestampSec,
+          peerIdStr: undefined,
+        });
+      }
 
       if (dataColumnSidecars.length > 0) {
         for (const columnSidecar of dataColumnSidecars) {
@@ -907,7 +927,8 @@ export function getBeaconBlockApi({
         // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
         // Import execution payload. Signature verified above unless broadcast validation was skipped
-        () => chain.processExecutionPayload(payloadInput, {validSignature: envelopeValidated}),
+        // or the cached envelope was added by another source and might differ from the submitted one
+        () => chain.processExecutionPayload(payloadInput, {validSignature: envelopeValidated && !envelopeAlreadyKnown}),
       ];
 
       const publishPromise = promiseAllMaybeAsync<number | void>(publishPromises);
