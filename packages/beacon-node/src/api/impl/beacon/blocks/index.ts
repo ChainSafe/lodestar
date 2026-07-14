@@ -43,7 +43,13 @@ import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
 import {verifyExecutionPayloadEnvelope} from "../../../../chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {ChainEvent} from "../../../../chain/emitter.js";
-import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
+import {
+  BlockError,
+  BlockErrorCode,
+  BlockGossipError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../../../../chain/errors/index.js";
 import {
   BlockType,
   ProduceFullBellatrix,
@@ -720,27 +726,31 @@ export function getBeaconBlockApi({
       // Signature is verified for all validation levels except `none`, import can skip re-verification
       let envelopeValidated = true;
 
-      switch (broadcastValidation) {
-        case routes.beacon.BroadcastValidation.none: {
-          chain.logger.debug("Skipping broadcast validation of execution payload envelope", valLogMeta);
-          envelopeValidated = false;
-          break;
-        }
+      try {
+        switch (broadcastValidation) {
+          case routes.beacon.BroadcastValidation.none: {
+            chain.logger.debug("Skipping broadcast validation of execution payload envelope", valLogMeta);
+            envelopeValidated = false;
+            break;
+          }
 
-        case routes.beacon.BroadcastValidation.gossip: {
-          await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
-          break;
-        }
+          case routes.beacon.BroadcastValidation.gossip: {
+            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            break;
+          }
 
-        case routes.beacon.BroadcastValidation.consensusAndEquivocation:
-        case routes.beacon.BroadcastValidation.consensus: {
-          await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+          case routes.beacon.BroadcastValidation.consensusAndEquivocation:
+          case routes.beacon.BroadcastValidation.consensus: {
+            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
-          // If the payload was produced by this node it already went through the state transition
-          if (cachedGloasResult === undefined) {
+            // Unlike blocks, the block production cache key (block root) does not bind the envelope
+            // content, so consensus checks must run even if the payload was produced by this node
             const blockState = await chain.regen
               .getBlockSlotState(block, block.slot, {dontTransferCache: true}, RegenCaller.restApi)
-              .catch(() => null);
+              .catch((e) => {
+                chain.logger.debug("Failed to regenerate block state for consensus checks", valLogMeta, e as Error);
+                return null;
+              });
             if (blockState === null || !isStatePostGloas(blockState)) {
               throw new ApiError(
                 400,
@@ -758,26 +768,39 @@ export function getBeaconBlockApi({
               );
               throw new ApiError(400, (error as Error).message);
             }
-          }
-          chain.logger.debug("Consensus validated while publishing execution payload envelope", valLogMeta);
+            chain.logger.debug("Consensus validated while publishing execution payload envelope", valLogMeta);
 
-          if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-            const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
+            if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+              const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
+              if (chain.opts.broadcastValidationStrictness === "error") {
+                throw Error(message);
+              }
+              chain.logger.warn(message, valLogMeta);
+            }
+            break;
+          }
+
+          default: {
+            const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
             if (chain.opts.broadcastValidationStrictness === "error") {
               throw Error(message);
             }
             chain.logger.warn(message, valLogMeta);
+            // No validation was performed, the envelope signature must be verified on import
+            envelopeValidated = false;
           }
-          break;
         }
-
-        default: {
-          const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
-          if (chain.opts.broadcastValidationStrictness === "error") {
-            throw Error(message);
-          }
-          chain.logger.warn(message, valLogMeta);
+      } catch (error) {
+        if (
+          error instanceof ExecutionPayloadEnvelopeError &&
+          error.type.code === ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN
+        ) {
+          // The envelope may already be known, e.g. received via gossip from another node in a
+          // multi node setup, this is benign and treated as a successful publish (same as blocks)
+          chain.logger.debug("Ignoring already-known execution payload envelope during publishing", valLogMeta);
+          return;
         }
+        throw error;
       }
 
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
