@@ -53,7 +53,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
     blindedLocal?: boolean;
-    statelessBlockProduction?: boolean;
+    payloadLocal?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -293,11 +293,11 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     defaultDescription: `${defaultOptions.blindedLocal}`,
   },
 
-  statelessBlockProduction: {
+  payloadLocal: {
     type: "boolean",
     description:
-      "Use stateless block production flow post-Gloas. Requests full block contents (execution payload envelope and blobs) when self-building which allows publishing the execution payload envelope via any beacon node. If set to false, the envelope must be published via the same beacon node that produced the block",
-    defaultDescription: "true if multiple beacon nodes are configured, otherwise false",
+      "Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth but the envelope must be published via the same beacon node that produced the block",
+    defaultDescription: "true if a single beacon node is configured, otherwise false",
   },
 
   importKeystores: {
