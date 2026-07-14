@@ -515,14 +515,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
   }
 
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
-    try {
-      return this.cachedState.epochCtx.getBeaconProposer(slot);
-    } catch {
-      return null;
-    }
-  }
-
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
     return computeAnchorCheckpoint(this.config, this.cachedState);
   }
