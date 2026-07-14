@@ -168,11 +168,11 @@ export class BlockProposingService {
 
   /**
    * Gloas block production flow:
-   * 1. Produce beacon block with execution payload bid, by default with full block contents
+   * 1. Produce beacon block with execution payload bid, with full block contents
    *    (execution payload envelope, KZG proofs and blobs) if self-building (stateless flow)
    * 2. Sign and publish the beacon block
    * 3. If self-building, sign and publish the execution payload envelope
-   *    - Stateless (default): envelope and blobs are available from step 1, publish
+   *    - Stateless (`payloadLocal=false`): envelope and blobs are available from step 1, publish
    *      `SignedExecutionPayloadEnvelopeContents` which works via any beacon node
    *    - Stateful (`payloadLocal=true`): fetch the envelope from the same beacon node that
    *      produced the block, which attaches cached blobs and KZG proofs on publish
