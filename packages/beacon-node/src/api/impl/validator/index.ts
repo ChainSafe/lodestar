@@ -780,7 +780,7 @@ export function getValidatorApi(
 
     // handle shouldOverrideBuilder separately
     if (engine.status === "fulfilled" && engine.value.shouldOverrideBuilder) {
-      logger.info("Selected engine block: censorship suspected in builder blocks", {
+      logger.warn("Selected engine block: censorship suspected in builder blocks", {
         ...loggerContext,
         durationMs: engine.durationMs,
         shouldOverrideBuilder: engine.value.shouldOverrideBuilder,
@@ -1051,7 +1051,7 @@ export function getValidatorApi(
           source: ProducedBlockSource.engine,
           reason: EngineBlockSelectionReason.BuilderCensorship,
         });
-        logger.info("Selected local block: censorship suspected in builder bid", logCtx);
+        logger.warn("Selected local block: censorship suspected in builder bid", logCtx);
       } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
         const result = selectBlockProductionSource({
           builderSelection,
