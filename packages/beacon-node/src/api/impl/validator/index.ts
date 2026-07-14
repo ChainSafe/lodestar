@@ -1057,7 +1057,7 @@ export function getValidatorApi(
           builderSelection,
           builderBoostFactor,
           engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
-          // The bid value is the protocol-enforced payment to the proposer, in Gwei
+          // The bid value is the payment to the proposer, in Gwei
           builderExecutionPayloadValue: BigInt(builderBid?.message.value ?? 0) * GWEI_TO_WEI,
         });
         source = result.source;
