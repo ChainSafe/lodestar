@@ -1012,8 +1012,22 @@ export function getValidatorApi(
       // not delay the proposal when a builder bid block is available (and vice versa)
       const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
 
+      // use abort controller to stop waiting for the bid block if the engine block will be selected
+      const controller = new AbortController();
+
       const enginePromise: ReturnType<typeof chain.produceBlock> = buildLocalBlock
-        ? timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs))
+        ? timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs)).then((engineBlock) => {
+            // No need to wait for the bid block if the engine block will always be selected due to
+            // suspected builder censorship, a builder boost factor of 0 or executionalways selection
+            if (
+              engineBlock.shouldOverrideBuilder ||
+              builderBoostFactor === BigInt(0) ||
+              builderSelection === routes.validator.BuilderSelection.ExecutionAlways
+            ) {
+              controller.abort();
+            }
+            return engineBlock;
+          })
         : Promise.reject(new Error("Local block production disabled by builderonly selection"));
       const bidPromise: ReturnType<typeof chain.produceBlock> =
         builderBid !== null
@@ -1023,31 +1037,32 @@ export function getValidatorApi(
       const [engineResult, bidResult] = await resolveOrRacePromises([enginePromise, bidPromise], {
         resolveTimeoutMs: cutoffMs,
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+        signal: controller.signal,
       });
 
       let bestResult: typeof engineResult | null = null;
       let source: ProducedBlockSource = ProducedBlockSource.engine;
 
-      if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
-        if (engineResult.value.shouldOverrideBuilder) {
-          source = ProducedBlockSource.engine;
-          metrics?.blockProductionSelectionResults.inc({
-            source: ProducedBlockSource.engine,
-            reason: EngineBlockSelectionReason.BuilderCensorship,
-          });
-          logger.info("Selected local block, engine suggested to ignore builder bid", logCtx);
-        } else {
-          const result = selectBlockProductionSource({
-            builderSelection,
-            builderBoostFactor,
-            engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
-            // The bid value is the payment promised to the proposer, in Gwei
-            builderExecutionPayloadValue: BigInt(builderBid?.message.value ?? 0) * GWEI_TO_WEI,
-          });
-          source = result.source;
-          metrics?.blockProductionSelectionResults.inc(result);
-          logger.info(`Selected ${source} block`, {reason: result.reason, ...logCtx});
-        }
+      // handle shouldOverrideBuilder separately
+      if (engineResult.status === "fulfilled" && engineResult.value.shouldOverrideBuilder && builderBid !== null) {
+        source = ProducedBlockSource.engine;
+        bestResult = engineResult;
+        metrics?.blockProductionSelectionResults.inc({
+          source: ProducedBlockSource.engine,
+          reason: EngineBlockSelectionReason.BuilderCensorship,
+        });
+        logger.info("Selected local block: censorship suspected in builder bid", logCtx);
+      } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
+        const result = selectBlockProductionSource({
+          builderSelection,
+          builderBoostFactor,
+          engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
+          // The bid value is the payment promised to the proposer, in Gwei
+          builderExecutionPayloadValue: BigInt(builderBid?.message.value ?? 0) * GWEI_TO_WEI,
+        });
+        source = result.source;
+        metrics?.blockProductionSelectionResults.inc(result);
+        logger.info(`Selected ${source} block`, {reason: result.reason, ...logCtx});
         bestResult = source === ProducedBlockSource.builder ? bidResult : engineResult;
       } else if (bidResult.status === "fulfilled") {
         source = ProducedBlockSource.builder;
@@ -1058,13 +1073,11 @@ export function getValidatorApi(
             ? BuilderBlockSelectionReason.EnginePending
             : BuilderBlockSelectionReason.EngineError;
         metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.builder, reason});
-        if (buildLocalBlock) {
-          logger.warn("Local block production did not complete, using builder bid block", {
-            ...logCtx,
-            reason,
-            error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
-          });
-        }
+        logger.info("Selected builder bid block: no local block produced", {
+          reason,
+          ...logCtx,
+          error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
+        });
       } else if (engineResult.status === "fulfilled") {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
@@ -1075,13 +1088,11 @@ export function getValidatorApi(
               ? EngineBlockSelectionReason.BuilderPending
               : EngineBlockSelectionReason.BuilderError;
         metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.engine, reason});
-        if (builderBid !== null) {
-          logger.warn("Builder bid block production did not complete, using local block", {
-            ...logCtx,
-            reason,
-            error: bidResult.status === "rejected" ? (bidResult.reason as Error).message : undefined,
-          });
-        }
+        logger.info("Selected local block: no builder bid block produced", {
+          reason,
+          ...logCtx,
+          error: bidResult.status === "rejected" ? (bidResult.reason as Error).message : undefined,
+        });
       }
 
       if (bestResult === null || bestResult.status !== "fulfilled") {
