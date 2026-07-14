@@ -50,6 +50,7 @@ import {
   ssz,
 } from "@lodestar/types";
 import {
+  GWEI_TO_WEI,
   TimeoutError,
   defer,
   formatWeiToEth,
@@ -116,7 +117,7 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * A cutoff of 2 seconds gives enough time and if there are unexpected delays it ensures we publish
  * in time as proposals post 4 seconds into the slot will likely be orphaned due to proposer boost reorg.
  *
- * TODO GLOAS: re-evaluate cutoff timing
+ * TODO GLOAS: re-evaluate cutoff timing due to attestation deadline changes in gloas
  */
 const BLOCK_PRODUCTION_RACE_CUTOFF_MS = 2_000;
 /** Overall timeout for execution and block production apis */
@@ -910,11 +911,25 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload}) {
+    async produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload,
+      builderSelection,
+      builderBoostFactor,
+    }) {
       const fork = config.getForkName(slot);
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
+      }
+
+      builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
+      builderBoostFactor = builderBoostFactor ?? BigInt(100);
+      if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+        throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
       }
 
       notWhileSyncing();
@@ -933,12 +948,20 @@ export function getValidatorApi(
         })
       );
 
-      // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
-      // the user control bid source preferences and value comparison. Also add external builder api
-      // support when it is implemented.
+      // TODO GLOAS: add external builder api support when it is implemented
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+      // Bids are only skipped entirely with executiononly, other engine-preferring selections
+      // still build a block with the best bid as fallback in case local production fails
+      const builderBid =
+        builderSelection === routes.validator.BuilderSelection.ExecutionOnly
+          ? null
+          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+
+      if (builderBid === null && builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
+        throw new ApiError(400, `No builder bid available for slot=${slot} with builderSelection=builderonly`);
+      }
+      const buildLocalBlock = builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
 
       const logCtx = {
         slot,
@@ -946,6 +969,8 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
+        builderSelection,
+        builderBoostFactor,
         ...(builderBid !== null
           ? {
               bidValue: builderBid.message.value,
@@ -971,7 +996,9 @@ export function getValidatorApi(
         commonBlockBodyPromise,
       };
 
-      metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
+      if (buildLocalBlock) {
+        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
+      }
       if (builderBid !== null) {
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
       }
@@ -981,33 +1008,91 @@ export function getValidatorApi(
         return fn().finally(() => t?.({source}));
       };
 
-      // Always build local block. If builder bid available, also build with it in parallel and prefer it.
-      const [engineResult, bidResult] = await Promise.allSettled([
-        timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs)),
+      // Calculate cutoff time based on start of the slot, ensures a slow local payload build does
+      // not delay the proposal when a builder bid block is available (and vice versa)
+      const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
+
+      const enginePromise: ReturnType<typeof chain.produceBlock> = buildLocalBlock
+        ? timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs))
+        : Promise.reject(new Error("Local block production disabled by builderonly selection"));
+      const bidPromise: ReturnType<typeof chain.produceBlock> =
         builderBid !== null
           ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}))
-          : Promise.reject(),
-      ]);
+          : Promise.reject(new Error("No builder bid available"));
+
+      const [engineResult, bidResult] = await resolveOrRacePromises([enginePromise, bidPromise], {
+        resolveTimeoutMs: cutoffMs,
+        raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
+      });
 
       let bestResult: typeof engineResult | null = null;
       let source: ProducedBlockSource = ProducedBlockSource.engine;
-      if (builderBid !== null && bidResult.status === "fulfilled") {
+
+      if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
+        if (engineResult.value.shouldOverrideBuilder) {
+          source = ProducedBlockSource.engine;
+          metrics?.blockProductionSelectionResults.inc({
+            source: ProducedBlockSource.engine,
+            reason: EngineBlockSelectionReason.BuilderCensorship,
+          });
+          logger.info("Selected local block, engine suggested to ignore builder bid", logCtx);
+        } else {
+          const result = selectBlockProductionSource({
+            builderSelection,
+            builderBoostFactor,
+            engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
+            // The bid value is the payment promised to the proposer, in Gwei
+            builderExecutionPayloadValue: BigInt(builderBid?.message.value ?? 0) * GWEI_TO_WEI,
+          });
+          source = result.source;
+          metrics?.blockProductionSelectionResults.inc(result);
+          logger.info(`Selected ${source} block`, {reason: result.reason, ...logCtx});
+        }
+        bestResult = source === ProducedBlockSource.builder ? bidResult : engineResult;
+      } else if (bidResult.status === "fulfilled") {
         source = ProducedBlockSource.builder;
         bestResult = bidResult;
-        logger.info("Selected builder bid block", logCtx);
+        const reason = !buildLocalBlock
+          ? BuilderBlockSelectionReason.EngineDisabled
+          : engineResult.status === "pending"
+            ? BuilderBlockSelectionReason.EnginePending
+            : BuilderBlockSelectionReason.EngineError;
+        metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.builder, reason});
+        if (buildLocalBlock) {
+          logger.warn("Local block production did not complete, using builder bid block", {
+            ...logCtx,
+            reason,
+            error: engineResult.status === "rejected" ? (engineResult.reason as Error).message : undefined,
+          });
+        }
       } else if (engineResult.status === "fulfilled") {
         source = ProducedBlockSource.engine;
         bestResult = engineResult;
+        const reason =
+          builderBid === null
+            ? EngineBlockSelectionReason.BuilderNoBid
+            : bidResult.status === "pending"
+              ? EngineBlockSelectionReason.BuilderPending
+              : EngineBlockSelectionReason.BuilderError;
+        metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.engine, reason});
         if (builderBid !== null) {
-          logger.warn("Builder bid block production failed, using local block", logCtx);
+          logger.warn("Builder bid block production did not complete, using local block", {
+            ...logCtx,
+            reason,
+            error: bidResult.status === "rejected" ? (bidResult.reason as Error).message : undefined,
+          });
         }
       }
 
       if (bestResult === null || bestResult.status !== "fulfilled") {
-        const engineReason = engineResult.status === "rejected" ? engineResult.reason : undefined;
-        const bidReason = builderBid !== null && bidResult.status === "rejected" ? bidResult.reason : undefined;
-        logger.error("Block production failed", {...logCtx, engineReason, bidReason});
-        throw Error(`Block production failed: engine=${engineReason ?? "n/a"} builder=${bidReason ?? "n/a"}`);
+        const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
+        const bidReason = bidResult.status === "rejected" ? bidResult.reason : bidResult.status;
+        logger.error("Block production failed", {
+          ...logCtx,
+          engineReason: String(engineReason),
+          bidReason: String(bidReason),
+        });
+        throw Error(`Block production failed: engine=${String(engineReason)} builder=${String(bidReason)}`);
       }
 
       const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;

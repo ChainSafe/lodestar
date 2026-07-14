@@ -190,6 +190,8 @@ export class BlockProposingService {
     this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, statelessBlockProduction});
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
+    // Builder selection params are not forwarded post-gloas for now, the pre-gloas defaults
+    // (executiononly) target the builder api flow and would disable p2p bids for most users
     // Step 1: Produce beacon block with execution payload bid
     const blockRes = await this.api.validator
       .produceBlockV4({
