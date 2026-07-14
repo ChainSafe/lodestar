@@ -1205,7 +1205,7 @@ describe("Gloas Fork Choice", () => {
 
       // Apply at currentSlot = blockSlot + 1 (makes block from slot n-1)
       protoArray.applyScoreChanges({
-        deltas,
+        attestationDeltas: deltas,
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
@@ -1246,7 +1246,7 @@ describe("Gloas Fork Choice", () => {
       deltas[emptyBIndex] = 100;
 
       protoArray.applyScoreChanges({
-        deltas,
+        attestationDeltas: deltas,
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,
@@ -1290,7 +1290,7 @@ describe("Gloas Fork Choice", () => {
 
       // currentSlot = blockSlot + 2, so block is from slot n-2 (not n-1)
       protoArray.applyScoreChanges({
-        deltas,
+        attestationDeltas: deltas,
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,

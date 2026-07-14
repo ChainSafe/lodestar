@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -455,14 +455,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak
-    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
-      slotsPerEpoch: SLOTS_PER_EPOCH,
-      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
-    });
-    const headNode = this.protoArray.getNode(headBlock.blockRoot, headBlock.payloadStatus);
-    // If headNode is unavailable, give up reorg
-    if (headNode === undefined || headNode.weight >= reorgThreshold) {
+    if (!this.isHeadWeak(headBlock.blockRoot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.HeadBlockNotWeak};
     }
 
@@ -521,7 +514,7 @@ export class ForkChoice implements IForkChoice {
 
     const timer = computeDeltasMetrics?.duration.startTimer();
     const {
-      deltas,
+      attestationDeltas,
       equivocatingValidators,
       oldInactiveValidators,
       newInactiveValidators,
@@ -537,8 +530,8 @@ export class ForkChoice implements IForkChoice {
     );
     timer?.();
 
-    computeDeltasMetrics?.deltasCount.set(deltas.length);
-    computeDeltasMetrics?.zeroDeltasCount.set(deltas.filter((d) => d === 0).length);
+    computeDeltasMetrics?.deltasCount.set(attestationDeltas.length);
+    computeDeltasMetrics?.zeroDeltasCount.set(attestationDeltas.filter((d) => d === 0).length);
     computeDeltasMetrics?.equivocatingValidators.set(equivocatingValidators);
     computeDeltasMetrics?.oldInactiveValidators.set(oldInactiveValidators);
     computeDeltasMetrics?.newInactiveValidators.set(newInactiveValidators);
@@ -564,7 +557,7 @@ export class ForkChoice implements IForkChoice {
 
     const currentSlot = this.fcStore.currentSlot;
     this.protoArray.applyScoreChanges({
-      deltas,
+      attestationDeltas,
       proposerBoost,
       justifiedEpoch: this.fcStore.justified.checkpoint.epoch,
       justifiedRoot: this.fcStore.justified.checkpoint.rootHex,
@@ -1530,6 +1523,60 @@ export class ForkChoice implements IForkChoice {
     }
 
     return headDependentRoot === blockDependentRoot;
+  }
+
+  /**
+   * Return true if the block is "weak" ie. its weight is below REORG_HEAD_WEIGHT_THRESHOLD of the
+   * total attester weight per slot.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak
+   */
+  private isHeadWeak(blockRoot: RootHex): boolean {
+    // The default variant is PENDING for gloas, FULL pre-gloas. PENDING is the variant gloas measures
+    // support on, ie. support for the beacon block root regardless of its payload status.
+    // Only ever called on a block already in fork choice, so a miss is a broken invariant.
+    const node = this.protoArray.getNodeDefaultStatus(blockRoot);
+    if (node === undefined) {
+      throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: blockRoot});
+    }
+
+    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
+    });
+
+    if (!isForkPostGloas(this.config.getForkName(node.slot))) {
+      return node.weight < reorgThreshold;
+    }
+
+    let headWeight = node.attestationScore;
+
+    const {equivocatingIndices} = this.fcStore;
+    // Equivocators are extremely rare (none in normal operation), and with none the added weight is
+    // always 0. Return before fetching the state and walking the block's committees.
+    if (equivocatingIndices.size > 0) {
+      const state = this.fcStore.stateGetter({stateRoot: node.stateRoot});
+      // Only ever called on the head or the boosted block's parent, so the state is always cached.
+      // A miss is a broken invariant, not a recoverable state.
+      if (state === null) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.BEACON_STATE_ERROR,
+          error: new Error(`Missing state for isHeadWeak, blockRoot=${blockRoot} stateRoot=${node.stateRoot}`),
+        });
+      }
+
+      const epoch = computeEpochAtSlot(node.slot);
+      for (let index = 0; index < state.getBeaconCommitteeCountPerSlot(epoch); index++) {
+        for (const validatorIndex of state.getBeaconCommittee(node.slot, index)) {
+          if (equivocatingIndices.has(validatorIndex)) {
+            headWeight += this.fcStore.justified.balances[validatorIndex] ?? 0;
+          }
+        }
+      }
+    }
+
+    return headWeight < reorgThreshold;
   }
 
   /**
