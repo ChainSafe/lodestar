@@ -775,7 +775,7 @@ export function getBeaconBlockApi({
             }
             chain.logger.debug("Consensus validated while publishing execution payload envelope", valLogMeta);
 
-            // TODO GLOAS: check the block is not a proposer equivocation when publishing blocks and envelopes
+            // TODO GLOAS: check the block is not a proposer equivocation before publishing the envelope
             if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
               const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
               if (chain.opts.broadcastValidationStrictness === "error") {
