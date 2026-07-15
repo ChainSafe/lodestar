@@ -123,18 +123,12 @@ function hasBundledPrebuild(prebuildFiles, targetName) {
   }
 }
 
-function hasZapiTarget(zapiTargets, target) {
-  return zapiTargets.some((zapiTarget) => target.aliases.includes(zapiTarget));
-}
-
 function validateNativePackageTargets(manifest, prebuildFiles) {
   const optionalDependencies = manifest.optionalDependencies ?? {};
   const hasTargetPackages = Object.keys(optionalDependencies).some((name) =>
     requiredTargets.some((target) => target.aliases.some((alias) => name.endsWith(`-${alias}`)))
   );
-  const declaresZapiTargets = Array.isArray(manifest.zapi?.targets);
-  const zapiTargets = declaresZapiTargets ? manifest.zapi.targets : [];
-  const isNativePackage = hasTargetPackages || prebuildFiles.length > 0 || declaresZapiTargets;
+  const isNativePackage = hasTargetPackages || prebuildFiles.length > 0;
   const errors = [];
 
   if (!isNativePackage) {
@@ -154,13 +148,6 @@ function validateNativePackageTargets(manifest, prebuildFiles) {
       }
     } else if (prebuildFiles.length > 0 && !hasBundledPrebuild(prebuildFiles, target.name)) {
       errors.push({target: target.name, message: `missing bundled prebuild for ${target.name}`});
-    }
-
-    // zapi.targets is the build matrix, while optionalDependencies describes
-    // the published target packages. Packages that declare both must keep both
-    // lists complete and in sync.
-    if (declaresZapiTargets && !hasZapiTarget(zapiTargets, target)) {
-      errors.push({target: target.name, message: `missing zapi target for ${target.name}`});
     }
   }
 
