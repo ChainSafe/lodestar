@@ -49,4 +49,5 @@ export type CreateFromBidProps = {
 
 export type AddPayloadEnvelopeProps = SourceMeta & {
   envelope: gloas.SignedExecutionPayloadEnvelope;
+  verified: boolean;
 };

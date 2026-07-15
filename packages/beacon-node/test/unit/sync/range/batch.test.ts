@@ -322,6 +322,7 @@ describe("sync / range / batch", async () => {
             source: PayloadEnvelopeInputSource.byRange,
             seenTimestampSec,
             peerIdStr: peer,
+            verified: false,
           });
         }
         if (addAllColumns && sampledColumns.length > 0) {

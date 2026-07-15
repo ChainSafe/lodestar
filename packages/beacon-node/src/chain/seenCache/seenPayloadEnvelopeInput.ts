@@ -160,6 +160,28 @@ export class SeenPayloadEnvelopeInput {
     }
   }
 
+  /**
+   * Detach an unverified envelope from a cached entry WITHOUT evicting the entry itself —
+   * whole-entry eviction breaks payload-by-root sync (see pruneBelowParent). The next
+   * by-range/by-root download can then attach fresh bytes. No-op if the entry does not exist,
+   * has no envelope, or the envelope is verified (see PayloadEnvelopeInput.removeUnverifiedPayloadEnvelope).
+   */
+  removeUnverifiedPayloadEnvelope(blockRootHex: RootHex): void {
+    const input = this.payloadInputs.get(blockRootHex);
+    const removed = input?.removeUnverifiedPayloadEnvelope();
+    if (input === undefined || removed == null) {
+      return;
+    }
+    this.serializedCache.delete([removed.envelope]);
+    this.metrics?.seenCache.payloadEnvelopeInput.envelopesRemoved.inc({source: removed.sourceMeta.source});
+    this.logger?.verbose("SeenPayloadEnvelopeInput.removeUnverifiedPayloadEnvelope detached envelope", {
+      slot: input.slot,
+      root: blockRootHex,
+      source: removed.sourceMeta.source,
+      peer: removed.sourceMeta.peerIdStr ?? "unknown",
+    });
+  }
+
   pruneBelowParent(parentBlock: ProtoBlock): void {
     for (const block of this.forkChoice.getAllAncestorBlocks(parentBlock.blockRoot, parentBlock.payloadStatus)) {
       // Only evict once the payload is FULL (revealed/imported) — on an EMPTY/PENDING branch we may

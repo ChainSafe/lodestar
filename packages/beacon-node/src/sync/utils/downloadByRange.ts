@@ -241,6 +241,8 @@ export function cacheByRangeResponses({
           source: PayloadEnvelopeInputSource.byRange,
           seenTimestampSec,
           peerIdStr,
+          // optimistically attached, signature is only verified during import
+          verified: false,
         });
       }
 

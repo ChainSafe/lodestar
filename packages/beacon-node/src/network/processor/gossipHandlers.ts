@@ -1170,6 +1170,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         source: PayloadEnvelopeInputSource.gossip,
         seenTimestampSec,
         peerIdStr,
+        // signature verified during gossip validation above
+        verified: true,
       });
 
       chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {

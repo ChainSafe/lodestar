@@ -148,75 +148,90 @@ export async function importExecutionPayload(
     });
   }
 
-  // 4. Verify envelope fields against state first to fail fast before the EL + BLS work.
+  // 4. Verify the envelope: fields against state first to fail fast, then EL and signature in
+  // parallel. On any verification failure, detach the envelope so a retry can attach fresh
+  // bytes from a different peer instead of re-verifying the same cached bad bytes forever.
+  // Detaching is a no-op for verified (gossip/API) envelopes.
   // When validSignature is true, gossip/API has already verified both the signature and the
   // executionRequestsRoot, so we skip those checks here.
+  let execStatus: PayloadExecutionStatus;
   try {
-    verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
-      verifyExecutionRequestsRoot: !opts.validSignature,
-    });
+    try {
+      verifyExecutionPayloadEnvelope(this.config, blockState, envelope, {
+        verifyExecutionRequestsRoot: !opts.validSignature,
+      });
+    } catch (e) {
+      throw new PayloadError(
+        {
+          code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
+          message: (e as Error).message,
+        },
+        `Envelope verification error: ${(e as Error).message}`
+      );
+    }
+
+    // 4a. Run EL and signature verification in parallel
+    const [execResult, signatureValid] = await Promise.all([
+      this.executionEngine.notifyNewPayload(
+        fork,
+        envelope.payload,
+        payloadInput.getVersionedHashes(),
+        envelope.parentBeaconBlockRoot,
+        envelope.executionRequests
+      ),
+
+      opts.validSignature === true
+        ? Promise.resolve(true)
+        : verifyExecutionPayloadEnvelopeSignature(
+            this.config,
+            blockState,
+            this.pubkeyCache,
+            signedEnvelope,
+            payloadInput.proposerIndex,
+            this.bls
+          ),
+    ]);
+
+    // 4b. Check signature verification result
+    if (!signatureValid) {
+      throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
+    }
+
+    // 4c. Handle EL response
+    switch (execResult.status) {
+      case ExecutionPayloadStatus.VALID:
+        break;
+
+      case ExecutionPayloadStatus.INVALID:
+        throw new PayloadError({
+          code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: execResult.status,
+          errorMessage: execResult.validationError ?? "",
+        });
+
+      case ExecutionPayloadStatus.ACCEPTED:
+      case ExecutionPayloadStatus.SYNCING:
+        break;
+
+      case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
+      case ExecutionPayloadStatus.ELERROR:
+      case ExecutionPayloadStatus.UNAVAILABLE:
+        throw new PayloadError({
+          code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: execResult.status,
+          errorMessage: execResult.validationError ?? "",
+        });
+    }
+
+    execStatus = toForkChoiceExecutionStatus(execResult.status);
   } catch (e) {
-    throw new PayloadError(
-      {
-        code: PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR,
-        message: (e as Error).message,
-      },
-      `Envelope verification error: ${(e as Error).message}`
-    );
+    this.seenPayloadEnvelopeInputCache.removeUnverifiedPayloadEnvelope(blockRootHex);
+    throw e;
   }
 
-  // 4a. Run EL and signature verification in parallel
-  const [execResult, signatureValid] = await Promise.all([
-    this.executionEngine.notifyNewPayload(
-      fork,
-      envelope.payload,
-      payloadInput.getVersionedHashes(),
-      envelope.parentBeaconBlockRoot,
-      envelope.executionRequests
-    ),
-
-    opts.validSignature === true
-      ? Promise.resolve(true)
-      : verifyExecutionPayloadEnvelopeSignature(
-          this.config,
-          blockState,
-          this.pubkeyCache,
-          signedEnvelope,
-          payloadInput.proposerIndex,
-          this.bls
-        ),
-  ]);
-
-  // 4b. Check signature verification result
-  if (!signatureValid) {
-    throw new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE});
-  }
-
-  // 4c. Handle EL response
-  switch (execResult.status) {
-    case ExecutionPayloadStatus.VALID:
-      break;
-
-    case ExecutionPayloadStatus.INVALID:
-      throw new PayloadError({
-        code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "",
-      });
-
-    case ExecutionPayloadStatus.ACCEPTED:
-    case ExecutionPayloadStatus.SYNCING:
-      break;
-
-    case ExecutionPayloadStatus.INVALID_BLOCK_HASH:
-    case ExecutionPayloadStatus.ELERROR:
-    case ExecutionPayloadStatus.UNAVAILABLE:
-      throw new PayloadError({
-        code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
-        execStatus: execResult.status,
-        errorMessage: execResult.validationError ?? "",
-      });
-  }
+  // The envelope passed all verification steps — mark verified so it is never removed later.
+  // No-op for gossip/API envelopes which are verified at attach time.
+  payloadInput.markPayloadEnvelopeVerified();
 
   // 5. Persist payload envelope to hot DB. Wait for write-queue space here to apply backpressure
   // on the import pipeline during sync, then perform the write asynchronously to avoid blocking.
@@ -232,7 +247,6 @@ export async function importExecutionPayload(
   });
 
   // 6. Update fork choice, transitions the block's PENDING variant to FULL
-  const execStatus = toForkChoiceExecutionStatus(execResult.status);
   this.forkChoice.onExecutionPayload(
     blockRootHex,
     blockHashHex,
