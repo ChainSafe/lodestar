@@ -708,7 +708,7 @@ export function getBeaconBlockApi({
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
       const cachedResult = chain.blockProductionCache.get(blockRootHex);
-      // Bid-based blocks are cached without payload data, only a self-build entry can vouch for blob data
+      // Only use the cached result if it contains payload data, blocks committing to a bid are cached without it
       const cachedGloasResult =
         cachedResult !== undefined &&
         isForkPostGloas(cachedResult.fork) &&
@@ -743,8 +743,7 @@ export function getBeaconBlockApi({
           case routes.beacon.BroadcastValidation.consensus: {
             await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
 
-            // Unlike blocks, the published envelope is not identified by the block root, a locally
-            // produced payload cannot vouch for the submitted envelope, consensus checks always run
+            // Verify the envelope against the post-block state
             const blockState = await chain.regen
               .getBlockSlotState(block, block.slot, {dontTransferCache: true}, RegenCaller.restApi)
               .catch((e) => {
