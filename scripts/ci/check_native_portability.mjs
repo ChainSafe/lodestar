@@ -123,12 +123,19 @@ function hasBundledPrebuild(prebuildFiles, targetName) {
   }
 }
 
+function hasZapiTarget(zapiTargets, target) {
+  return zapiTargets.some((zapiTarget) => target.aliases.includes(zapiTarget));
+}
+
 function validateNativePackageTargets(manifest, prebuildFiles) {
   const optionalDependencies = manifest.optionalDependencies ?? {};
   const hasTargetPackages = Object.keys(optionalDependencies).some((name) =>
     requiredTargets.some((target) => target.aliases.some((alias) => name.endsWith(`-${alias}`)))
   );
-  const isNativePackage = hasTargetPackages || prebuildFiles.length > 0;
+  // zapi packages can declare their build matrix before exposing target
+  // packages or bundled prebuilds, so use it only as a fallback.
+  const zapiTargets = Array.isArray(manifest.zapi?.targets) ? manifest.zapi.targets : [];
+  const isNativePackage = hasTargetPackages || prebuildFiles.length > 0 || zapiTargets.length > 0;
   const errors = [];
 
   if (!isNativePackage) {
@@ -146,8 +153,12 @@ function validateNativePackageTargets(manifest, prebuildFiles) {
           message: `optional dependency ${targetDependency[0]}@${targetDependency[1]} does not match ${manifest.name}@${manifest.version}`,
         });
       }
-    } else if (prebuildFiles.length > 0 && !hasBundledPrebuild(prebuildFiles, target.name)) {
-      errors.push({target: target.name, message: `missing bundled prebuild for ${target.name}`});
+    } else if (prebuildFiles.length > 0) {
+      if (!hasBundledPrebuild(prebuildFiles, target.name)) {
+        errors.push({target: target.name, message: `missing bundled prebuild for ${target.name}`});
+      }
+    } else if (!hasZapiTarget(zapiTargets, target)) {
+      errors.push({target: target.name, message: `missing zapi target for ${target.name}`});
     }
   }
 
