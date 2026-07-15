@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {IBeaconChain} from "../../chain/index.js";
-import {type IBeaconSync, SyncState} from "../../sync/index.js";
+import {SyncState} from "../../sync/index.js";
 import {ApiError, NodeIsSyncing} from "./errors.js";
 
 /**
@@ -24,13 +24,13 @@ export const SYNC_TOLERANCE_EPOCHS = 1;
  * back past the block-root window (`SLOTS_PER_HISTORICAL_ROOT`) and wedge the node. Throws
  * {@link NodeIsSyncing} (503).
  */
-export function notWhileSyncing(chain: IBeaconChain, sync: IBeaconSync): void {
+export function notWhileSyncing(chain: IBeaconChain, syncState: SyncState): void {
   // Consider node synced before or close to genesis
   if (chain.clock.currentSlot < SLOTS_PER_EPOCH) {
     return;
   }
 
-  switch (sync.state) {
+  switch (syncState) {
     case SyncState.SyncingFinalized:
     case SyncState.SyncingHead: {
       const currentSlot = chain.clock.currentSlot;

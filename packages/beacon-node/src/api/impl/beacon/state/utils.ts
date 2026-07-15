@@ -61,7 +61,7 @@ export async function getStateResponseWithRegen(
   // (SLOTS_PER_HISTORICAL_ROOT) and wedge a far-behind node. Keep serving those (node observability,
   // dashboards, validator client checks) even while syncing; guard only the regen-capable lookups.
   if (inStateId !== "head" && inStateId !== "finalized" && inStateId !== "justified" && inStateId !== "genesis") {
-    notWhileSyncing(chain, sync);
+    notWhileSyncing(chain, sync.state);
   }
 
   const stateId = resolveStateId(chain.forkChoice, inStateId);

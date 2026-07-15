@@ -528,7 +528,7 @@ export function getValidatorApi(
     builderBoostFactor?: bigint,
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOpts = {}
   ): Promise<ProduceBlindedBlockOrBlockContentsRes> {
-    notWhileSyncing(chain, sync);
+    notWhileSyncing(chain, sync.state);
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     const parentBlock = chain.getProposerHead(slot);
@@ -872,7 +872,7 @@ export function getValidatorApi(
         throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const parentBlock = chain.getProposerHead(slot);
@@ -990,7 +990,7 @@ export function getValidatorApi(
     },
 
     async produceAttestationData({committeeIndex, slot}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -1071,7 +1071,7 @@ export function getValidatorApi(
         throw new ApiError(400, `producePayloadAttestationData is not supported before Gloas fork=${fork}`);
       }
 
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
@@ -1156,7 +1156,7 @@ export function getValidatorApi(
     },
 
     async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
@@ -1297,7 +1297,7 @@ export function getValidatorApi(
     },
 
     async getAttesterDuties({epoch, indices}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -1357,7 +1357,7 @@ export function getValidatorApi(
     },
 
     async getPtcDuties({epoch, indices}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get PTC duties");
@@ -1419,7 +1419,7 @@ export function getValidatorApi(
      * @param validatorIndices an array of the validator indices for which to obtain the duties.
      */
     async getSyncCommitteeDuties({epoch, indices}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -1466,7 +1466,7 @@ export function getValidatorApi(
     },
 
     async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -1489,7 +1489,7 @@ export function getValidatorApi(
     },
 
     async publishAggregateAndProofsV2({signedAggregateAndProofs}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
@@ -1550,7 +1550,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/137
      */
     async publishContributionAndProofs({contributionAndProofs}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       const failures: FailureList = [];
 
@@ -1599,7 +1599,7 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
@@ -1632,7 +1632,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/136
      */
     async prepareSyncCommitteeSubnets({subscriptions}) {
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
       const subs: CommitteeSubscription[] = [];
@@ -1776,7 +1776,7 @@ export function getValidatorApi(
         throw new ApiError(400, `getExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing(chain, sync);
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const blockRootHex = toRootHex(beaconBlockRoot);
