@@ -3,7 +3,9 @@ import {ExecutionStatus, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
+import {RootHex, gloas, ssz} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
+import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
 import {ChainEventEmitter} from "../../../../src/chain/emitter.js";
 import {SeenPayloadEnvelopeInput} from "../../../../src/chain/seenCache/seenPayloadEnvelopeInput.js";
 import {SerializedCache} from "../../../../src/util/serializedCache.js";
@@ -171,5 +173,51 @@ describe("SeenPayloadEnvelopeInput", () => {
     expect(() => cache.prune(`0x${"ab".repeat(32)}`)).not.toThrow();
     expect(cache.get(rootHex)).toBeDefined();
     expect(cache.size()).toBe(1);
+  });
+
+  function attachEnvelope(rootHex: RootHex, verified: boolean): gloas.SignedExecutionPayloadEnvelope {
+    const envelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    envelope.message.beaconBlockRoot = fromHex(rootHex);
+    const input = cache.get(rootHex);
+    if (!input) throw new Error("input not found");
+    input.addPayloadEnvelope({
+      envelope,
+      source: PayloadEnvelopeInputSource.byRange,
+      seenTimestampSec: Date.now() / 1000,
+      peerIdStr: "peer",
+      verified,
+    });
+    return envelope;
+  }
+
+  it("removeUnverifiedPayloadEnvelope detaches an unverified envelope but keeps the entry", () => {
+    const rootHex = addPayloadInput(1);
+    const envelope = attachEnvelope(rootHex, false);
+    serializedCache.set(envelope, new Uint8Array([1, 2, 3]));
+
+    cache.removeUnverifiedPayloadEnvelope(rootHex);
+
+    expect(cache.get(rootHex)).toBeDefined();
+    expect(cache.hasPayload(rootHex)).toBe(false);
+    expect(serializedCache.get(envelope)).toBeUndefined();
+  });
+
+  it("removeUnverifiedPayloadEnvelope is a no-op for a verified envelope", () => {
+    const rootHex = addPayloadInput(1);
+    const envelope = attachEnvelope(rootHex, true);
+    serializedCache.set(envelope, new Uint8Array([1, 2, 3]));
+
+    cache.removeUnverifiedPayloadEnvelope(rootHex);
+
+    expect(cache.hasPayload(rootHex)).toBe(true);
+    expect(serializedCache.get(envelope)).toBeDefined();
+  });
+
+  it("removeUnverifiedPayloadEnvelope is a no-op for an unknown root or envelope-less entry", () => {
+    const rootHex = addPayloadInput(1);
+
+    expect(() => cache.removeUnverifiedPayloadEnvelope(`0x${"ab".repeat(32)}`)).not.toThrow();
+    expect(() => cache.removeUnverifiedPayloadEnvelope(rootHex)).not.toThrow();
+    expect(cache.get(rootHex)).toBeDefined();
   });
 });

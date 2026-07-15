@@ -1593,6 +1593,11 @@ export function createLodestarMetrics(
           name: "lodestar_seen_payload_envelope_input_cache_items_created_total",
           help: "Number of PayloadEnvelopeInputs created",
         }),
+        envelopesRemoved: register.counter<{source: PayloadEnvelopeInputSource}>({
+          name: "lodestar_seen_payload_envelope_input_cache_envelopes_removed_total",
+          help: "Number of unverified payload envelopes detached from cached PayloadEnvelopeInputs after import failure",
+          labelNames: ["source"],
+        }),
       },
     },
 

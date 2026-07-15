@@ -771,6 +771,8 @@ export function getBeaconBlockApi({
         source: PayloadEnvelopeInputSource.api,
         seenTimestampSec,
         peerIdStr: undefined,
+        // signature verified during API validation above
+        verified: true,
       });
 
       if (dataColumnSidecars.length > 0) {

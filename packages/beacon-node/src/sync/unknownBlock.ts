@@ -526,6 +526,8 @@ export class BlockInputSync {
         envelope: queuedEnvelope,
         source: PayloadEnvelopeInputSource.byRoot,
         seenTimestampSec: Date.now() / 1000,
+        // optimistically attached, signature is only verified during import
+        verified: false,
       });
     }
 
@@ -1042,8 +1044,9 @@ export class BlockInputSync {
         case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
         case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
         case PayloadErrorCode.INVALID_SIGNATURE:
-          // TODO GLOAS: Decide how invalid payload inputs should eventually leave memory without
-          // reintroducing envelope replacement / recreation flows.
+          // For unverified envelopes failing signature/envelope verification, the import already
+          // detached the bad envelope from the cached PayloadEnvelopeInput (see
+          // importExecutionPayload), so a later download can attach fresh bytes.
           this.logger.debug("Error processing payload from unknown sync", logCtx, res.err);
           this.removePendingPayloadAndDescendants(rootHex);
           break;
