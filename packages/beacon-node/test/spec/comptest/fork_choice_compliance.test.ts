@@ -10,8 +10,6 @@ import {RunnerType} from "../utils/types.js";
 // standard spec tests: its own vitest project, its own fixture directory
 // (`pnpm download-comptests`), sharing only the fork-choice test runner.
 
-// Zero-test guard: the workspace vitest config sets `passWithNoTests: true`, so without this a
-// run against missing fixtures would silently pass.
 const presetDir = path.join(comptestsSpecTests.outputDir, "tests", ACTIVE_PRESET);
 const hasComplianceFixtures =
   fs.existsSync(presetDir) &&

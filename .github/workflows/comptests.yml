@@ -10,10 +10,7 @@ permissions:
 
 on:
   schedule:
-    # 03:00 UTC — staggered against Kurtosis sim tests (00:00) and Nightly Spec Tests (06:00).
-    # Vectors are the pinned `comptests.tar.gz` release asset, so nightly cadence only tracks
-    # regressions on `unstable`, not upstream vector changes.
-    - cron: "0 3 * * *"
+    - cron: "0 3 * * *" # Runs at 3am UTC everyday
   workflow_dispatch:
 
 jobs:
@@ -34,7 +31,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/beacon-node/spec-tests-comptests
-          key: comptest-data-${{ hashFiles('packages/beacon-node/test/spec-tests-version.json') }}
+          key: comptest-data-${{ hashFiles('spec-tests-version.json') }}
       - name: Download compliance vectors
         run: pnpm download-comptests
 

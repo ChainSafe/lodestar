@@ -16,5 +16,11 @@
     "testsToDownload": [
       "bls_tests_yaml"
     ]
+  },
+  "comptestsSpecTests": {
+    "outputDirBase": "spec-tests-comptests",
+    "testsToDownload": [
+      "comptests"
+    ]
   }
 }
