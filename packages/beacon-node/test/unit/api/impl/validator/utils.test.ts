@@ -1,8 +1,12 @@
 import {beforeAll, describe, expect, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, defaultChainConfig} from "@lodestar/config";
-import {BeaconStateAllForks, BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
+import {
+  BeaconStateAllForks,
+  BeaconStateView,
+  createCachedBeaconState,
+  createPubkeyCache,
+} from "@lodestar/state-transition";
 import {BLSPubkey, ValidatorIndex, ssz} from "@lodestar/types";
 import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.js";
 
@@ -30,7 +34,7 @@ describe("api / impl / validator / utils", () => {
       state,
       {
         config: createBeaconConfig(defaultChainConfig, state.genesisValidatorsRoot),
-        pubkeyCache,
+        pubkeyCache: createPubkeyCache(),
       },
       {skipSyncPubkeys: true}
     );

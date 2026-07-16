@@ -1,7 +1,7 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_RANDAO} from "@lodestar/params";
 import {BeaconBlock, ssz} from "@lodestar/types";
+import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {
   ISignatureSet,
   SignatureSetType,

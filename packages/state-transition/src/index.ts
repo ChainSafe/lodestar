@@ -1,4 +1,8 @@
-export {type BlockExternalData, DataAvailabilityStatus, ExecutionPayloadStatus} from "./block/externalData.js";
+export {
+  type BlockExternalData,
+  DataAvailabilityStatus,
+  ExecutionPayloadStatus,
+} from "./block/externalData.js";
 export {getAttestationParticipationStatus, processAttestationsAltair} from "./block/processAttestationsAltair.js";
 export {assertValidAttesterSlashing} from "./block/processAttesterSlashing.js";
 export {isValidBlsToExecutionChange} from "./block/processBlsToExecutionChange.js";
@@ -21,6 +25,7 @@ export {
   createEmptyEpochCacheImmutableData,
 } from "./cache/epochCache.js";
 export {type EpochTransitionCache, beforeProcessEpoch} from "./cache/epochTransitionCache.js";
+export {type PubkeyCache, createPubkeyCache, syncPubkeys} from "./cache/pubkeyCache.js";
 // Main state caches
 export {
   type BeaconStateCache,
@@ -31,7 +36,6 @@ export {
   loadCachedBeaconState,
 } from "./cache/stateCache.js";
 export {type SyncCommitteeCache, SyncCommitteeCacheEmpty} from "./cache/syncCommitteeCache.js";
-export {syncPubkeys} from "./cache/syncPubkeys.js";
 export * from "./constants/index.js";
 export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";

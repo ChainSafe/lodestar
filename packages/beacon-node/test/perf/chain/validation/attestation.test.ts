@@ -1,6 +1,5 @@
 import assert from "node:assert";
-import {beforeAll, bench, describe} from "@chainsafe/benchmark";
-import {syncPubkeys} from "@lodestar/state-transition";
+import {bench, describe} from "@chainsafe/benchmark";
 import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
@@ -26,13 +25,6 @@ describe("validate gossip attestation", () => {
 
   const attSlot = attestation0.data.slot;
   const fork = chain.config.getForkName(stateSlot);
-
-  beforeAll(() => {
-    // Reset and resync since other benchmark runners may
-    // reset and corrupt this pubkey cache
-    chain.pubkeyCache.reset();
-    syncPubkeys(chain.pubkeyCache, state.validators.getAllReadonlyValues());
-  });
 
   for (const chunkSize of [32, 64, 128, 256]) {
     const attestations = [attestation0];

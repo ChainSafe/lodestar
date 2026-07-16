@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {beforeEach, describe, it} from "vitest";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {describe, it} from "vitest";
 import {ForkName} from "@lodestar/params";
 import {describeDirectorySpecTest} from "@lodestar/spec-test-util";
 import {RunnerType, TestRunner} from "./types.js";
@@ -168,7 +167,6 @@ export function specTestIterator(
             // Specific logic for ssz_static since it has one extra level of directories
             if (testRunner.type === RunnerType.custom) {
               describe(testId, () => {
-                beforeEach(() => pubkeyCache.reset());
                 testRunner.fn(fork, testHandler, testSuite, testSuiteDirpath);
               });
             }
@@ -181,15 +179,7 @@ export function specTestIterator(
                   return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
                 };
               }
-              describeDirectorySpecTest(
-                testId,
-                testSuiteDirpath,
-                (testCase, directoryName, testCaseName) => {
-                  pubkeyCache.reset();
-                  return testFunction(testCase, directoryName, testCaseName);
-                },
-                options
-              );
+              describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
             }
           }
         }

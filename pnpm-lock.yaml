@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@chainsafe/lodestar-z':
-      specifier: 0.1.2
-      version: 0.1.2
+      specifier: https://github.com/chainsafe/lodestar-z.git#2f5f281ccc6710630fcf0cb8e23c2eda3629974c
+      version: 0.1.2-rc.9
     '@vitest/browser':
       specifier: ^4.0.7
       version: 4.0.7
@@ -37,7 +37,7 @@ importers:
         version: link:packages/cli
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c
     devDependencies:
       '@actions/core':
         specifier: ^1.11.1
@@ -201,7 +201,7 @@ importers:
         version: 2.1.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.0
         version: 1.3.0
@@ -403,7 +403,7 @@ importers:
         version: 6.0.1
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.0
         version: 1.3.0
@@ -573,7 +573,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -737,7 +737,7 @@ importers:
         version: 8.2.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.0
         version: 1.3.0
@@ -777,7 +777,7 @@ importers:
         version: 3.1.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -845,7 +845,7 @@ importers:
     dependencies:
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
-        version: 0.1.2
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c
       '@chainsafe/ssz':
         specifier: ^1.6.2
         version: 1.6.2
@@ -1206,36 +1206,9 @@ packages:
     resolution: {integrity: sha512-S+IG3yJNLz/bFfOl4V5iGUBupoQlWYo/n1XiK/iCCX4WdoqIbvSYDbWfUYWKLt5EbXjUexa2jJctwZzXMYmhaw==}
     engines: {node: '>= 22'}
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2':
-    resolution: {integrity: sha512-8GBfY6NbXVDYdccWyzCwk0COeuxcRRqsP9J9qEMoEshkmpPSNos4RcLX5xvsEJw6OEbjSGa+Lp5V7lE8vC1Zog==}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2':
-    resolution: {integrity: sha512-JqlSAGQYg2wS7uYOLQulqxbQW8mokBTMCKT2JW/ka3VIiFoCMyRiwv8DhpjxEi39XlkUD0a86yCyjCoIZnHkeg==}
-    cpu: [arm64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2':
-    resolution: {integrity: sha512-6ZfDp2GK24Ft/WMSG2rcm7jU284yPgsqUAHVmgRmS4xgjUlIt+eEnpIKWSalaB+3pwZQiuocekhy2B39D1e8DQ==}
-    cpu: [x64]
-    os: [darwin]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2':
-    resolution: {integrity: sha512-GCGvLxsK3DrKoAXUCYR0rFoRuoQKFt4VpDoB4lIFbSbMx8CoN0KRWPz++xsKs+dk/eCDCiRC7783Z0cNki/zOQ==}
-    cpu: [x64]
-    os: [linux]
-    libc: [glibc]
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2':
-    resolution: {integrity: sha512-TKFfz/duhC2WQLggJ/cfhA7VQ9GBQgsOUT8e+9L+skxLef91gvJFv6vF8ryysyIfK/EAJKbTHhHaojQQ5tDixA==}
-    cpu: [x64]
-    os: [linux]
-    libc: [musl]
-
-  '@chainsafe/lodestar-z@0.1.2':
-    resolution: {integrity: sha512-NFdKrzjwKtPkS/UvdhearFuiZctj+0eYCk/7UNqOV2UyE76RH4PNPmKgAygWU+4skhvBhy93k70P4VI1D8CbYg==}
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c':
+    resolution: {tarball: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c}
+    version: 0.1.2-rc.9
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
@@ -1370,8 +1343,8 @@ packages:
   '@chainsafe/threads@1.11.3':
     resolution: {integrity: sha512-wTIHTOOJ3MMRFtnJJT6KJCuauyv8pgs79m5ipspyPjHdKM9HJnkeZcoo06G3qArx2xMvd6MqNj1TLfnh5iFvaQ==}
 
-  '@chainsafe/zapi@2.0.0':
-    resolution: {integrity: sha512-5HXO76Ep4tYU5NngsBSgE5t/xMQQZnap+Q9PKDXOa1Oe3VaP0hU2+visNlaxW7RrVK1plF0cGMIamLubpNdefw==}
+  '@chainsafe/zapi@3.1.0':
+    resolution: {integrity: sha512-WRamllUXrrmx4G4qzmg0vRvcWQ+/Lgm7TgOFbqeJFPKlNv8CApTyA3BP6tudBaJyQYJSXlOn2RWrdv5e0EFwSw==}
     hasBin: true
 
   '@colors/colors@1.5.0':
@@ -6740,30 +6713,9 @@ snapshots:
       '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.1
       '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.1
 
-  '@chainsafe/lodestar-z-aarch64-apple-darwin@0.1.2':
-    optional: true
-
-  '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu@0.1.2':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-apple-darwin@0.1.2':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu@0.1.2':
-    optional: true
-
-  '@chainsafe/lodestar-z-x86_64-unknown-linux-musl@0.1.2':
-    optional: true
-
-  '@chainsafe/lodestar-z@0.1.2':
+  '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/2f5f281ccc6710630fcf0cb8e23c2eda3629974c':
     dependencies:
-      '@chainsafe/zapi': 2.0.0
-    optionalDependencies:
-      '@chainsafe/lodestar-z-aarch64-apple-darwin': 0.1.2
-      '@chainsafe/lodestar-z-aarch64-unknown-linux-gnu': 0.1.2
-      '@chainsafe/lodestar-z-x86_64-apple-darwin': 0.1.2
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-gnu': 0.1.2
-      '@chainsafe/lodestar-z-x86_64-unknown-linux-musl': 0.1.2
+      '@chainsafe/zapi': 3.1.0
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
@@ -6867,7 +6819,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@chainsafe/zapi@2.0.0': {}
+  '@chainsafe/zapi@3.1.0': {}
 
   '@colors/colors@1.5.0': {}
 

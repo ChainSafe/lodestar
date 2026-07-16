@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {getClient} from "@lodestar/api";
 import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {NetworkName, networksChainConfig} from "@lodestar/config/networks";
@@ -41,7 +40,6 @@ export async function getNetworkCachedState(
 
   if (fs.existsSync(filepath)) {
     const stateSsz = fs.readFileSync(filepath);
-    pubkeyCache.reset();
     return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
   }
 
@@ -59,7 +57,6 @@ export async function getNetworkCachedState(
   ]);
 
   fs.writeFileSync(filepath, stateSsz);
-  pubkeyCache.reset();
   return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
 }
 

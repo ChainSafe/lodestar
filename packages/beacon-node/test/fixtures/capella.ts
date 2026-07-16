@@ -1,5 +1,4 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {CachedBeaconStateAltair} from "@lodestar/state-transition";
+import {CachedBeaconStateAltair, PubkeyCache} from "@lodestar/state-transition";
 import {capella} from "@lodestar/types";
 
 export function generateBlsToExecutionChanges(

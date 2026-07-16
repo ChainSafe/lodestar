@@ -1,5 +1,4 @@
 import path from "node:path";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Worker, spawn} from "@chainsafe/threads";
 
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
@@ -8,7 +7,7 @@ import {Worker, spawn} from "@chainsafe/threads";
 self = undefined;
 
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
-import {ISignatureSet} from "@lodestar/state-transition";
+import {ISignatureSet, PubkeyCache} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../../metrics/index.js";
 import {LinkedList} from "../../../util/array.js";
