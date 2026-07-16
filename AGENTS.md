@@ -105,6 +105,12 @@ pnpm download-spec-tests 2026-04-14                            # latest successf
 pnpm download-spec-tests latest <owner>/consensus-specs        # fork
 pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
 
+# Fork-choice compliance tests (model-generated vectors, standalone flow;
+# runs nightly in CI, not per-PR). Same version pin as the spec tests.
+pnpm download-comptests
+pnpm test:comptest
+SPEC_FILTER_FORK=deneb pnpm test:comptest   # single fork (from packages/beacon-node)
+
 # Run e2e tests (requires docker environment)
 ./scripts/run_e2e_env.sh start
 pnpm test:e2e
