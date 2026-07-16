@@ -78,7 +78,12 @@ describe("ProtoArray.getViableHeads", () => {
     fc.onBlock(
       {
         ...blockFields({slot: 1, blockRoot: "2", parentRoot: "1", payloadStatus: PayloadStatus.PENDING}),
-        ...{executionPayloadBlockHash: "0xeb", executionStatus: ExecutionStatus.Valid},
+        ...{
+          executionPayloadBlockHash: "0xeb",
+          executionPayloadNumber: 1,
+          executionPayloadGasLimit: 30_000_000,
+          executionStatus: ExecutionStatus.Valid,
+        },
         parentBlockHash: "0xea",
       },
       1,
