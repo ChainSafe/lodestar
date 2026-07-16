@@ -91,12 +91,7 @@ export const defaultSkipOpts: SkipOpts = {
     /\/gloas_fork$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
-  skippedRunners: [
-    "networking",
-    // fork_choice_compliance is opt-in (`pnpm test:comptest`): ~1472 model-generated cases per
-    // fork — running them inside the regular spec suite would double-run and blow the budget.
-    ...(process.env.RUN_FORK_CHOICE_COMPLIANCE === "1" ? [] : ["fork_choice_compliance"]),
-  ],
+  skippedRunners: ["networking"],
 };
 
 /**

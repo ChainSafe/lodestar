@@ -5,6 +5,7 @@ export const specProjectMinimal = defineProject({
   test: {
     name: "spec-minimal",
     include: ["**/test/spec/**/*.test.ts"],
+    exclude: ["**/test/spec/comptest/**"],
     setupFiles: [
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
@@ -26,6 +27,7 @@ export const specProjectMainnet = defineProject({
   test: {
     name: "spec-mainnet",
     include: ["**/test/spec/**/*.test.ts"],
+    exclude: ["**/test/spec/comptest/**"],
     setupFiles: [
       path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
       path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
@@ -39,6 +41,27 @@ export const specProjectMainnet = defineProject({
     pool: "forks",
     env: {
       LODESTAR_PRESET: "mainnet",
+    },
+  },
+});
+
+// Fork-choice compliance suite (`pnpm test:comptest`) — deliberately its own project so the
+// regular spec projects never pick it up: ~1472 model-generated cases per fork.
+// Fixtures via `pnpm download-comptests`.
+export const specProjectComptest = defineProject({
+  test: {
+    name: "comptest",
+    include: ["**/test/spec/comptest/**/*.test.ts"],
+    setupFiles: [
+      path.join(__dirname, "../scripts/vitest/setupFiles/customMatchers.ts"),
+      path.join(__dirname, "../scripts/vitest/setupFiles/dotenv.ts"),
+      path.join(__dirname, "../scripts/vitest/setupFiles/lodestarPreset.ts"),
+    ],
+    testTimeout: 1000 * 60 * 15,
+    hookTimeout: 1000 * 60 * 15,
+    pool: "forks",
+    env: {
+      LODESTAR_PRESET: "minimal",
     },
   },
 });
