@@ -1,3 +1,4 @@
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {config, config as minimalConfig} from "@lodestar/config/default";
 import {
@@ -11,13 +12,7 @@ import {phase0, ssz} from "@lodestar/types";
 import {EpochCacheOpts} from "../cache/epochCache.js";
 import {BeaconStateCache} from "../cache/stateCache.js";
 import {ZERO_HASH} from "../constants/index.js";
-import {
-  BeaconStateAllForks,
-  BeaconStatePhase0,
-  CachedBeaconStateAllForks,
-  createCachedBeaconState,
-  createPubkeyCache,
-} from "../index.js";
+import {BeaconStateAllForks, BeaconStatePhase0, CachedBeaconStateAllForks, createCachedBeaconState} from "../index.js";
 import {newZeroedArray} from "../util/index.js";
 
 /**
@@ -86,10 +81,10 @@ export function generateCachedState(
   opts: TestBeaconState = {}
 ): CachedBeaconStateAllForks {
   const state = generateState(opts);
+  pubkeyCache.reset();
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache,
   });
 }
 
@@ -102,8 +97,7 @@ export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(
     state,
     {
       config: createBeaconConfig(configCustom, state.genesisValidatorsRoot),
-      // This is a test state, there's no need to have a global shared cache of keys
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache,
     },
     opts
   );

@@ -1,7 +1,7 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {AttesterSlashing, Slot} from "@lodestar/types";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {CachedBeaconStateAllForks} from "../types.js";
 import {getAttesterSlashableIndices, isSlashableAttestationData, isSlashableValidator} from "../util/index.js";
 import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation.js";

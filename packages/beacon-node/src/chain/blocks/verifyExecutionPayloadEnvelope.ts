@@ -1,7 +1,7 @@
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {
   type IBeaconStateViewGloas,
-  type PubkeyCache,
   computeTimeAtSlot,
   getExecutionPayloadEnvelopeSignatureSet,
 } from "@lodestar/state-transition";

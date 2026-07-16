@@ -1,8 +1,8 @@
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas, isStatePostGloas} from "../stateView/interface.js";
 import {
   ISignatureSet,
