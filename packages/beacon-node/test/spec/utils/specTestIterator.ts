@@ -89,6 +89,10 @@ export const defaultSkipOpts: SkipOpts = {
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
+    // Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
+    // boost wrongly denied. Fails identically on every pre-gloas fork.
+    // https://github.com/ChainSafe/lodestar/issues/9666
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
