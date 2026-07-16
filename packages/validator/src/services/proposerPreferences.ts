@@ -29,7 +29,10 @@ type SubmittedAtEpoch = {dependentRoot: RootHex; slots: Set<Slot>};
  * dependent root for an epoch shifts (e.g. after a reorg) — detected by comparing the cached
  * `dependentRoot` reported by `BlockDutiesService` against the one we last submitted under.
  *
- * No-op pre-gloas.
+ * Proposers should broadcast their preferences before the fork so the proposer preference caches
+ * of beacon nodes and builders are warm for the first Gloas slots. We start submitting
+ * as soon as a duty's proposal slot is in Gloas, which is up to `SUBMIT_BEFORE_PROPOSAL_SLOTS`
+ * before the fork, so only the first few Gloas slots are affected by this pre-fork submission.
  */
 export class ProposerPreferencesService {
   private readonly submitted = new Map<Epoch, SubmittedAtEpoch>();
@@ -44,10 +47,14 @@ export class ProposerPreferencesService {
     _metrics: Metrics | null
   ) {
     clock.runEverySlot(this.runProposerPreferencesTask);
+    clock.runEveryEpoch(this.pruneSubmitted);
   }
 
   private runProposerPreferencesTask = async (slot: Slot): Promise<void> => {
-    if (!isForkPostGloas(this.config.getForkName(slot))) {
+    // Start running once the submission window (`slot + SUBMIT_BEFORE_PROPOSAL_SLOTS`) reaches
+    // Gloas, i.e. already in the epoch before the fork. This allows builders to prepare and
+    // submit bids for the first Gloas slots.
+    if (!isForkPostGloas(this.config.getForkName(slot + SUBMIT_BEFORE_PROPOSAL_SLOTS))) {
       return;
     }
 
@@ -82,6 +89,7 @@ export class ProposerPreferencesService {
       for (const duty of dutiesAtEpoch.data) {
         if (duty.slot <= slot) continue;
         if (duty.slot > slot + SUBMIT_BEFORE_PROPOSAL_SLOTS) continue;
+        if (!isForkPostGloas(this.config.getForkName(duty.slot))) continue;
         if (submission.slots.has(duty.slot)) continue;
 
         try {
@@ -110,7 +118,7 @@ export class ProposerPreferencesService {
     }
 
     try {
-      await this.api.beacon.submitSignedProposerPreferences({signedProposerPreferences: batch});
+      await this.api.validator.submitProposerPreferences({signedProposerPreferences: batch});
       // Only mark as submitted after the API call succeeds; a thrown error leaves the
       // slot eligible for retry on the next tick.
       for (const {submission, slot: submittedSlot} of pending) {
@@ -119,6 +127,15 @@ export class ProposerPreferencesService {
       this.logger.debug("Submitted signed proposer preferences", {count: batch.length});
     } catch (e) {
       this.logger.error("Error submitting signed proposer preferences", {count: batch.length}, e as Error);
+    }
+  };
+
+  /** Drop tracking for past epochs; only currentEpoch and currentEpoch + 1 are ever processed. */
+  private pruneSubmitted = async (epoch: Epoch): Promise<void> => {
+    for (const trackedEpoch of this.submitted.keys()) {
+      if (trackedEpoch < epoch) {
+        this.submitted.delete(trackedEpoch);
+      }
     }
   };
 }

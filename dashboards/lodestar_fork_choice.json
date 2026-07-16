@@ -249,7 +249,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "beacon_fork_choice_errors_total{group=\"beta\", instance=\"contabo-13\", job=~\"$beacon_job|beacon\"}"
+              "options": "beacon_fork_choice_errors_total"
             },
             "properties": [
               {
@@ -1216,7 +1216,7 @@
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
-          "legendFormat": "Fast Confirmation Duration",
+          "legendFormat": "Duration",
           "range": true,
           "refId": "A",
           "useBackend": false

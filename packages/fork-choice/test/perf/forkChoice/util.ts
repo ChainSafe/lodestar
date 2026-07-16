@@ -11,6 +11,7 @@ import {
   ProtoArray,
   ProtoBlock,
 } from "../../../src/index.js";
+import {makeState} from "../../unit/forkChoice/fastConfirmationTestUtils.js";
 
 const genesisSlot = 0;
 const genesisEpoch = 0;
@@ -51,6 +52,10 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
   );
 
   const balances = new Uint16Array(Array.from({length: opts.initialValidatorCount}, () => 32));
+
+  // Lightweight stub state so the FCR's FFG-justification path (getCurrentEpochState ->
+  // getHeadState -> ...) has a state to read. Reuses the same stub the unit tests use.
+  const stubState = makeState(opts.initialValidatorCount, 32, []);
 
   // The first block of epoch 1 is used as the confirmed root.
   // This ensures confirmedEpoch + 1 >= currentEpoch so findLatestConfirmedDescendant runs.
@@ -109,7 +114,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     previousEpochGreatestUnrealizedBalances: balances,
     previousSlotHead: genesisRoot,
     currentSlotHead: genesisRoot,
-    stateGetter: () => null,
+    stateGetter: () => stubState,
   };
 
   const forkchoice = new ForkChoice(config, fcStore, protoArr, opts.initialValidatorCount, null, {

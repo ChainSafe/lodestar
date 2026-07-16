@@ -52,6 +52,13 @@ export function fastMsgIdFn(rpcMsg: RPC.Message): string {
 }
 
 export function msgIdToStrFn(msgId: Uint8Array): string {
+  // Spec mandates a 20-byte gossipsub message-id, but control-message IDs from peers
+  // can be any length. Reject non-20-byte IDs to avoid a Buffer.set() RangeError on
+  // longer IDs and stale shared-buffer bytes on shorter ones.
+  // Ref: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.10/specs/phase0/p2p-interface.md?plain=1#L486
+  if (msgId.length !== 20) {
+    throw Error(`Expect msgId to be 20 bytes, got ${msgId.length}`);
+  }
   // this is the same logic to `toHex(msgId)` with better performance
   sharedMsgIdBuf.set(msgId);
   return `0x${sharedMsgIdBuf.toString("hex")}`;

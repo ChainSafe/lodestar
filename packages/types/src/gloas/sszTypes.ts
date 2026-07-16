@@ -25,7 +25,6 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
 import {ssz as altairSsz} from "../altair/index.js";
-import {ssz as bellatrixSsz} from "../bellatrix/index.js";
 import {ssz as capellaSsz} from "../capella/index.js";
 import {ssz as denebSsz} from "../deneb/index.js";
 import {ssz as electraSsz} from "../electra/index.js";
@@ -575,7 +574,11 @@ export const PayloadAttributes = new ContainerType(
 
 export const SSEPayloadAttributes = new ContainerType(
   {
-    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
+    proposerIndex: UintNum64,
+    proposalSlot: Slot,
+    // parentBlockNumber: UintNum64, // Removed in GLOAS:EIP7732
+    parentBlockRoot: Root,
+    parentBlockHash: Root,
     payloadAttributes: PayloadAttributes,
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
