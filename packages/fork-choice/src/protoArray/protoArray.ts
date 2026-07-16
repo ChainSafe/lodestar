@@ -1552,7 +1552,6 @@ export class ProtoArray {
     const justifiedSlot = justifiedIndex !== undefined ? this.getNodeByIndex(justifiedIndex)?.slot : undefined;
     // Gloas payload-status variants of one blockRoot are distinct nodes in the spec's filtered
     // tree, identified by (root, payload_status, weight) — emit one entry per variant.
-    // https://github.com/ethereum/consensus-specs/pull/5393
     const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] = [];
     for (const node of this.nodes) {
       if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {

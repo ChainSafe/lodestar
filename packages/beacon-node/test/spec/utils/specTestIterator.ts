@@ -81,17 +81,15 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after Gloas light client is implemented
     /^gloas\/light_client\/.*/,
     /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
-    // TODO GLOAS: compliance suite deferred to a follow-up PR — requires should_apply_proposer_boost
-    // (#9233), is_head_weak (#9654) and verifySignatures plumbing for embedded payload attestations.
-    // Baseline on the old artifact was 166/1472 (see PR #9314).
+    // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
-    // Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
+    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
     // boost wrongly denied. Fails identically on every pre-gloas fork.
-    // https://github.com/ChainSafe/lodestar/issues/9666
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
     /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5

@@ -46,7 +46,7 @@ export const specProjectMainnet = defineProject({
 });
 
 // Fork-choice compliance suite (`pnpm test:comptest`) — deliberately its own project so the
-// regular spec projects never pick it up: ~1472 model-generated cases per fork.
+// regular spec projects never pick it up.
 // Fixtures via `pnpm download-comptests`.
 export const specProjectComptest = defineProject({
   test: {

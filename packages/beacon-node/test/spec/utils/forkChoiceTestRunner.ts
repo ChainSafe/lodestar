@@ -668,10 +668,9 @@ export const forkChoiceTestRunner =
                 );
               }
               if (step.checks.viable_for_head_roots_and_weights !== undefined) {
-                // Entries are identified by (root, payload_status, weight) per
-                // https://github.com/ethereum/consensus-specs/pull/5393 — gloas EMPTY/FULL
-                // variants of one block root are separate entries. Pre-gloas vectors omit
-                // payload_status (every pre-gloas node is FULL internally).
+                // Entries are identified by (root, payload_status, weight).
+                // gloas EMPTY/FULL variants of one block root are separate entries.
+                // Pre-gloas vectors omit payload_status (every pre-gloas node is FULL internally).
                 const isGloas = ForkSeq[fork] >= ForkSeq.gloas;
                 const expected = step.checks.viable_for_head_roots_and_weights
                   .map((entry) => ({
@@ -735,7 +734,8 @@ export const forkChoiceTestRunner =
                 for (const [k, act] of actual.entries()) {
                   const exp = expected[k];
                   // TODO GLOAS: boost attribution across payload-status variants of the boosted
-                  // root is Phase 4 work; pre-gloas each root has exactly one entry.
+                  // root should be handled when we set up gloas compliance test.
+                  // Pre-gloas each root has exactly one entry.
                   const isBoosted = exp.root === expectedBoostRoot;
                   const expectedAdjusted = isBoosted
                     ? exp.weightGwei - specBoostGwei + lodestarBoostGwei
