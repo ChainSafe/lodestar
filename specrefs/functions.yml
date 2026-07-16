@@ -6484,7 +6484,7 @@
 - name: is_attestation_same_slot#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
-      search: export function isAttestationSameSlot(
+      search: export function isAttestationSameSlotRootCache(
   spec: |
     <spec fn="is_attestation_same_slot" fork="gloas" hash="0a194ce7">
     def is_attestation_same_slot(state: BeaconState, data: AttestationData) -> bool:
