@@ -1,17 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import {ACTIVE_PRESET} from "@lodestar/params";
-import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {comptestsSpecTests} from "../specTestVersioning.js";
 import {forkChoiceTestRunner} from "../utils/forkChoiceTestRunner.js";
 import {specTestIterator} from "../utils/specTestIterator.js";
 import {RunnerType} from "../utils/types.js";
 
-// Fork-choice compliance suite (`pnpm test:comptest`) — its own vitest project, never part of
-// the regular spec runs. Fixtures via `pnpm download-comptests`.
+// Fork-choice compliance suite (`pnpm test:comptest`) — a standalone flow parallel to the
+// standard spec tests: its own vitest project, its own fixture directory
+// (`pnpm download-comptests`), sharing only the fork-choice test runner.
 
 // Zero-test guard: the workspace vitest config sets `passWithNoTests: true`, so without this a
 // run against missing fixtures would silently pass.
-const presetDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
+const presetDir = path.join(comptestsSpecTests.outputDir, "tests", ACTIVE_PRESET);
 const hasComplianceFixtures =
   fs.existsSync(presetDir) &&
   fs.readdirSync(presetDir).some((fork) => fs.existsSync(path.join(presetDir, fork, "fork_choice_compliance")));

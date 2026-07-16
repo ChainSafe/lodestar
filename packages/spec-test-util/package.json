@@ -24,11 +24,6 @@
       "bun": "./src/downloadNightlyTests.ts",
       "types": "./lib/downloadNightlyTests.d.ts",
       "import": "./lib/downloadNightlyTests.js"
-    },
-    "./downloadComptests": {
-      "bun": "./src/downloadComptests.ts",
-      "types": "./lib/downloadComptests.d.ts",
-      "import": "./lib/downloadComptests.js"
     }
   },
   "files": [

@@ -1,16 +1,10 @@
-import {downloadComptests} from "@lodestar/spec-test-util/downloadComptests";
-import {ethereumConsensusSpecsTests} from "./specTestVersioning.js";
+import {downloadTests} from "@lodestar/spec-test-util/downloadTests";
+import {comptestsSpecTests} from "./specTestVersioning.js";
 
-// Same pin as the standard spec tests (spec-tests-version.json). The comptests.tar.gz release
-// asset exists for every release since v1.7.0-alpha.11 (consensus-specs #5334).
-await downloadComptests(
-  {
-    specVersion: ethereumConsensusSpecsTests.specVersion,
-    outputDir: ethereumConsensusSpecsTests.outputDir,
-    specTestsRepoUrl: ethereumConsensusSpecsTests.specTestsRepoUrl,
-  },
-  console.log
-).catch((e: Error) => {
+// Note: the release asset also packages non-vector content (tests/core, tests/formats,
+// tests/generators) next to tests/minimal — harmless, the spec-test iterator only reads
+// tests/<preset>.
+await downloadTests(comptestsSpecTests, console.log).catch((e: Error) => {
   console.error(e);
   process.exit(1);
 });
