@@ -82,15 +82,16 @@ export async function downloadComptests(
       }
     );
 
-    // Remove ALL existing comptest-owned paths first so forks dropped upstream leave no stale cases
-    for (const dir of findComptestDirs(outputDir)) {
-      fs.rmSync(dir, {recursive: true, force: true});
-    }
-
-    // Move only comptest-owned paths from the temp extraction into the shared dir
+    // Validate the extraction BEFORE touching the shared dir — tar can exit 0 on a truncated
+    // archive, and removing existing fixtures against an empty extraction would destroy them.
     const extracted = findComptestDirs(tmpDir);
     if (extracted.length === 0) {
       throw new Error(`No ${COMPTESTS_SUBDIR} directories found in comptests.tar.gz from ${url}`);
+    }
+
+    // Remove ALL existing comptest-owned paths so forks dropped upstream leave no stale cases
+    for (const dir of findComptestDirs(outputDir)) {
+      fs.rmSync(dir, {recursive: true, force: true});
     }
     for (const srcDir of extracted) {
       const destDir = path.join(outputDir, path.relative(tmpDir, srcDir));
