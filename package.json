@@ -30,6 +30,8 @@
     "test:browsers": "vitest run --project browser",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "download-spec-tests": "pnpm -r download-spec-tests",
+    "download-comptests": "pnpm -r download-comptests",
+    "test:comptest": "RUN_FORK_CHOICE_COMPLIANCE=1 vitest run --project spec-minimal packages/beacon-node/test/spec/presets/fork_choice.test.ts -t fork_choice_compliance",
     "test:spec": "vitest run --project spec-minimal --project spec-mainnet",
     "benchmark": "pnpm benchmark:files 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:files": "NODE_OPTIONS='--max-old-space-size=8192 --loader=ts-node/esm' benchmark --config .benchrc.yaml --defaultBranch unstable",
