@@ -1,16 +1,11 @@
 import {downloadComptests} from "@lodestar/spec-test-util/downloadComptests";
 import {ethereumConsensusSpecsTests} from "./specTestVersioning.js";
 
-// The comptests pin is independent of the standard spec-tests pin: pre-gloas fork-choice
-// semantics are identical between alpha.11 and alpha.12 (rename-only spec delta), so the
-// alpha.12 vectors are valid while unstable still pins alpha.11. Collapse this into
-// `ethereumConsensusSpecsTests.specVersion` once the standard pin reaches v1.7.0-alpha.12
-// (PR #9390).
-const COMPTESTS_SPEC_VERSION = "v1.7.0-alpha.12";
-
+// Same pin as the standard spec tests (spec-tests-version.json). The comptests.tar.gz release
+// asset exists for every release since v1.7.0-alpha.11 (consensus-specs #5334).
 await downloadComptests(
   {
-    specVersion: COMPTESTS_SPEC_VERSION,
+    specVersion: ethereumConsensusSpecsTests.specVersion,
     outputDir: ethereumConsensusSpecsTests.outputDir,
     specTestsRepoUrl: ethereumConsensusSpecsTests.specTestsRepoUrl,
   },
