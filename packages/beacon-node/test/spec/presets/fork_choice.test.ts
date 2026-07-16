@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
@@ -1062,6 +1063,20 @@ function isOnPayloadInfoStep(step: Step): step is OnPayloadInfo {
 
 function isCheck(step: Step): step is Checks {
   return typeof (step as Checks).checks === "object";
+}
+
+// Zero-test guard: `pnpm test:comptest` must fail loudly when fixtures are absent —
+// a filter matching zero tests would otherwise read as green.
+if (process.env.RUN_FORK_CHOICE_COMPLIANCE === "1") {
+  const presetDir = path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET);
+  const hasComplianceFixtures =
+    fs.existsSync(presetDir) &&
+    fs.readdirSync(presetDir).some((fork) => fs.existsSync(path.join(presetDir, fork, "fork_choice_compliance")));
+  if (!hasComplianceFixtures) {
+    throw Error(
+      "RUN_FORK_CHOICE_COMPLIANCE=1 but no fork_choice_compliance fixtures found — run `pnpm download-comptests` first"
+    );
+  }
 }
 
 specTestIterator(path.join(ethereumConsensusSpecsTests.outputDir, "tests", ACTIVE_PRESET), {
