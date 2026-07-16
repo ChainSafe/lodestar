@@ -76,9 +76,7 @@ describe("downloadComptests", () => {
     for (const fork of ["altair", "deneb"]) {
       expect(fs.existsSync(path.join(outputDir, "tests/minimal", fork, "fork_choice_compliance"))).toBe(true);
     }
-    expect(JSON.parse(fs.readFileSync(path.join(outputDir, "comptests-version.json"), "utf8"))).toEqual({
-      specVersion: "v1.7.0-alpha.12",
-    });
+    expect(fs.readFileSync(path.join(outputDir, "comptests-version.txt"), "utf8")).toBe("v1.7.0-alpha.12");
     // Junk dirs from the tarball are not merged
     expect(fs.existsSync(path.join(outputDir, "tests/core"))).toBe(false);
   });
@@ -96,9 +94,7 @@ describe("downloadComptests", () => {
     expect(fs.readdirSync(altairCompliance)).toEqual(["new_case"]);
     // bellatrix dropped upstream => no stale cases left behind
     expect(fs.existsSync(path.join(outputDir, "tests/minimal/bellatrix/fork_choice_compliance"))).toBe(false);
-    expect(JSON.parse(fs.readFileSync(path.join(outputDir, "comptests-version.json"), "utf8"))).toEqual({
-      specVersion: "v1.7.0-alpha.12",
-    });
+    expect(fs.readFileSync(path.join(outputDir, "comptests-version.txt"), "utf8")).toBe("v1.7.0-alpha.12");
   });
 
   it("cache hit does not fetch", async () => {
@@ -127,20 +123,16 @@ describe("downloadComptests", () => {
     expect(
       fs.existsSync(path.join(outputDir, "tests/minimal/altair/fork_choice_compliance/block_tree_test/good_case"))
     ).toBe(true);
-    expect(JSON.parse(fs.readFileSync(path.join(outputDir, "comptests-version.json"), "utf8"))).toEqual({
-      specVersion: "v1.7.0-alpha.11",
-    });
+    expect(fs.readFileSync(path.join(outputDir, "comptests-version.txt"), "utf8")).toBe("v1.7.0-alpha.11");
   });
 
-  it("unparseable marker is treated as stale and redownloads", async () => {
-    fs.writeFileSync(path.join(outputDir, "comptests-version.json"), "v1.7.0-alpha.12"); // legacy plain text
+  it("marker with a different version is treated as stale and redownloads", async () => {
+    fs.writeFileSync(path.join(outputDir, "comptests-version.txt"), "v1.7.0-alpha.11\n");
     mockFetchTarball(makeTarball({altair: ["case_a"]}));
 
     await downloadComptests(opts("v1.7.0-alpha.12"));
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(fs.readFileSync(path.join(outputDir, "comptests-version.json"), "utf8"))).toEqual({
-      specVersion: "v1.7.0-alpha.12",
-    });
+    expect(fs.readFileSync(path.join(outputDir, "comptests-version.txt"), "utf8")).toBe("v1.7.0-alpha.12");
   });
 });

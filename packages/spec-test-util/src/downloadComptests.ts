@@ -19,7 +19,8 @@ export type DownloadComptestsOptions = {
   fetchInit?: RequestInit;
 };
 
-const MARKER_FILENAME = "comptests-version.json";
+// Same convention as the standard downloader's version.txt, scoped to the comptests asset
+const MARKER_FILENAME = "comptests-version.txt";
 const COMPTESTS_SUBDIR = "fork_choice_compliance";
 
 /**
@@ -32,7 +33,7 @@ const COMPTESTS_SUBDIR = "fork_choice_compliance";
  * - extracts into a temporary directory first,
  * - replaces only comptest-owned paths (`tests/<preset>/<fork>/fork_choice_compliance/`),
  * - never deletes the shared output directory,
- * - writes its own marker (`comptests-version.json`) only after a successful merge, so a failed
+ * - writes its own marker (`comptests-version.txt`) only after a successful merge, so a failed
  *   download/extraction leaves existing fixtures and marker untouched.
  *
  * Note: a standard-tests version change wipes the whole shared dir including these vectors
@@ -101,7 +102,7 @@ export async function downloadComptests(
     }
 
     // Marker written only after a fully successful merge
-    fs.writeFileSync(markerPath, JSON.stringify({specVersion}, null, 2));
+    fs.writeFileSync(markerPath, specVersion);
     log(`comptests ${specVersion} ready`);
   } finally {
     fs.rmSync(tmpDir, {recursive: true, force: true});
@@ -110,13 +111,7 @@ export async function downloadComptests(
 
 function readMarkerVersion(markerPath: string): string | null {
   if (!fs.existsSync(markerPath)) return null;
-  try {
-    const parsed = JSON.parse(fs.readFileSync(markerPath, "utf8")) as {specVersion?: unknown};
-    return typeof parsed.specVersion === "string" ? parsed.specVersion : null;
-  } catch {
-    // Unparseable/legacy marker => treat as stale and redownload
-    return null;
-  }
+  return fs.readFileSync(markerPath, "utf8").trim();
 }
 
 /** Find all `tests/<preset>/<fork>/fork_choice_compliance` dirs under `root` */
