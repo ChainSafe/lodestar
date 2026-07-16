@@ -674,6 +674,26 @@ export class Batch {
   }
 
   /**
+   * Processing -> AwaitingProcessing
+   *
+   * The batch's own blocks are valid but processing failed because a PREVIOUS batch did not
+   * deliver the parent (`PARENT_UNKNOWN` on this batch's first block). Keep the downloaded
+   * blocks and re-process once the previous batch is repaired. Unlike {@link processingError}
+   * this does NOT re-download and does NOT record a failed attempt against this batch.
+   */
+  retainForReprocessing(): void {
+    if (this.state.status !== BatchStatus.Processing) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
+    }
+
+    this.state = {
+      status: BatchStatus.AwaitingProcessing,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+    };
+  }
+
+  /**
    * Processing -> AwaitingDownload
    */
   processingError(err: Error): void {
@@ -704,7 +724,8 @@ export class Batch {
   }
 
   /**
-   * AwaitingValidation -> Done
+   * AwaitingValidation -> Done (no status transition: `advanceChain` deletes the batch right
+   * after this call, so it only returns the winning Attempt for peer scoring).
    */
   validationSuccess(): Attempt {
     if (this.state.status !== BatchStatus.AwaitingValidation) {

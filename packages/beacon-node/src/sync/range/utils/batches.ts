@@ -1,6 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, Slot} from "@lodestar/types";
+import {BlockError, BlockErrorCode} from "../../../chain/errors/index.js";
 import {BATCH_SLOT_OFFSET, EPOCHS_PER_BATCH} from "../../constants.js";
 import {Batch, BatchStatus} from "../batch.js";
 
@@ -116,4 +117,61 @@ export function isSyncChainDone(batches: Batch[], lastEpochWithProcessBlocks: Ep
   }
 
   return batchStartEpochIsAfterSlot(lastEpochWithProcessBlocks, targetSlot);
+}
+
+/**
+ * Where a batch processing error should be attributed, so we re-download only the batch(es)
+ * actually at fault instead of tearing the whole chain down on any error.
+ */
+export enum ProcessingFaultKind {
+  /** This batch's own blocks are bad/short => re-download this batch. */
+  ThisBatch = "ThisBatch",
+  /** This batch is valid; a previous batch didn't deliver the parent => retain & re-process
+   * this batch, invalidate the previous batch(es). */
+  PreviousBatch = "PreviousBatch",
+  /** Could be either (this batch's leading withhold or the previous batch's short tail) =>
+   * hedge: re-download this batch AND invalidate the previous batch(es). */
+  Ambiguous = "Ambiguous",
+}
+
+/**
+ * Classify a `processChainSegment` error for `batch`.
+ *
+ * Relies on the invariant that when `batch` is processed, every earlier batch is
+ * `AwaitingValidation` = already imported (see `getNextBatchToProcess`). Given that:
+ * - Non-parent errors (bad signature/state/payload) are always this batch's own fault.
+ * - `PARENT_UNKNOWN`/`PARENT_PAYLOAD_UNKNOWN` fires on the batch's first not-yet-imported
+ *   block. If that block is anchored at `startSlot`, the missing parent lies before the batch
+ *   => previous-batch fault. Otherwise the missing parent could live inside this batch's own
+ *   leading range — certain only if the previous batch delivered a full tail (a block/payload
+ *   at `startSlot - 1`), else ambiguous.
+ *
+ * NOTE: this attribution assumes a single canonical chain and is precise for finalized sync.
+ * Head-sync peers may be on different forks; the actions are still safe there (retries can
+ * converge onto the target fork), but peer penalization on teardown is gated to finalized sync.
+ */
+export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Batch | undefined): ProcessingFaultKind {
+  if (!(err instanceof BlockError)) return ProcessingFaultKind.ThisBatch;
+  const {code} = err.type;
+  // Only the segment-boundary parent codes can implicate a previous batch. Everything else —
+  // including the internal-linkage codes NON_LINEAR_PARENT_ROOTS / NON_LINEAR_PAYLOAD_ROOTS — is
+  // this batch's own bad data. PARENT_UNKNOWN/PARENT_PAYLOAD_UNKNOWN are guaranteed to fire only
+  // on a segment's first block (see verifyBlocksSanityChecks and chainSegment's i === 0 branch).
+  if (code !== BlockErrorCode.PARENT_UNKNOWN && code !== BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) {
+    return ProcessingFaultKind.ThisBatch;
+  }
+
+  // PARENT_UNKNOWN/PARENT_PAYLOAD_UNKNOWN always fires on the batch's first not-yet-imported block.
+  const firstBlockSlot = err.signedBlock.message.slot;
+  // Anchored at the batch start => the missing parent is before this batch => previous-batch fault.
+  if (firstBlockSlot === batch.startSlot) return ProcessingFaultKind.PreviousBatch;
+
+  // firstBlockSlot > startSlot: this-batch fault ONLY if the previous batch delivered a full
+  // tail (a block/payload at startSlot - 1). Otherwise it is ambiguous.
+  const prevTailSlot = batch.startSlot - 1;
+  const prevHasFullTail =
+    code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+      ? (prevBatch?.getPayloadEnvelopes()?.get(prevTailSlot)?.hasPayloadEnvelope() ?? false)
+      : (prevBatch?.getBlocks().some((b) => b.slot === prevTailSlot) ?? false);
+  return prevHasFullTail ? ProcessingFaultKind.ThisBatch : ProcessingFaultKind.Ambiguous;
 }

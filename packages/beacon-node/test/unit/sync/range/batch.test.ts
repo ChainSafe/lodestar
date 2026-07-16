@@ -593,4 +593,58 @@ describe("sync / range / batch", async () => {
       })
     );
   });
+
+  describe("retainForReprocessing", () => {
+    const startEpoch = 0;
+
+    function batchInProcessing(): Batch {
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+      batch.startDownloading(peerSyncMeta);
+      batch.downloadingSuccess(
+        peer,
+        [
+          BlockInputPreData.createFromBlock({
+            block: ssz.capella.SignedBeaconBlock.defaultValue(),
+            blockRootHex: "0x1234",
+            source: BlockInputSource.byRoot,
+            seenTimestampSec: Date.now() / 1000,
+            forkName: ForkName.capella,
+            daOutOfRange: false,
+          }),
+        ],
+        null
+      );
+      batch.startProcessing();
+      return batch;
+    }
+
+    it("Processing -> AwaitingProcessing, keeps blocks and records no failed attempt", () => {
+      const batch = batchInProcessing();
+      expect(batch.state.status).toBe(BatchStatus.Processing);
+      const blocksBefore = batch.getBlocks();
+
+      batch.retainForReprocessing();
+
+      expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+      // blocks are retained, not cleared for re-download
+      expect(batch.getBlocks()).toBe(blocksBefore);
+      // this batch is not at fault, so no failed attempt / failed peer is recorded against it
+      expect(batch.failedProcessingAttempts.length).toBe(0);
+      expect(batch.getFailedPeers().length).toBe(0);
+    });
+
+    it("Should throw on inconsistent state - retainForReprocessing", () => {
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+
+      expectThrowsLodestarError(
+        () => batch.retainForReprocessing(),
+        new BatchError({
+          code: BatchErrorCode.WRONG_STATUS,
+          startEpoch,
+          status: BatchStatus.AwaitingDownload,
+          expectedStatus: BatchStatus.Processing,
+        })
+      );
+    });
+  });
 });

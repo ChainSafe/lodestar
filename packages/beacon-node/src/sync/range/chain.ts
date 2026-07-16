@@ -23,7 +23,9 @@ import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./b
 import {
   ChainPeersBalancer,
   PeerSyncInfo,
+  ProcessingFaultKind,
   batchStartEpochIsAfterSlot,
+  classifyProcessingFault,
   computeHighestTarget,
   getBatchSlotRange,
   getNextBatchToProcess,
@@ -355,7 +357,8 @@ export class SyncChain {
 
       // If a batch exceeds it's retry limit, maybe downscore peers.
       // shouldDownscoreOnBatchError() functions enforces that all BatchErrorCode values are covered
-      if (e instanceof BatchError) {
+      // Head-sync peers may legitimately be on different forks so we don't report peer in this case.
+      if (e instanceof BatchError && this.syncType === RangeSyncType.Finalized) {
         const shouldReportPeer = shouldReportPeerOnBatchError(e.type.code);
         if (shouldReportPeer) {
           for (const peer of this.peerset.keys()) {
@@ -708,23 +711,44 @@ export class SyncChain {
       this.triggerBatchProcessor();
     } else {
       this.logger.verbose("Batch process error", logCtx, res.err);
-      batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
-      // At least one block was successfully verified and imported, so we can be sure all
-      // previous batches are valid and we only need to download the current failed batch.
-      // TODO: Disabled for now
-      // if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
-      //   this.advanceChain(batch.startEpoch);
-      // }
-
-      // The current batch could not be processed, so either this or previous batches are invalid.
-      // All previous batches (AwaitingValidation) are potentially faulty and marked for retry.
-      // Progress will be drop back to `this.startEpoch`
-      for (const pendingBatch of this.batches.values()) {
-        if (pendingBatch.startEpoch < batch.startEpoch) {
-          this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
-          pendingBatch.validationError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
+      // Reset every previous AwaitingValidation batch so it re-downloads; throws after
+      // MAX_BATCH_PROCESSING_ATTEMPTS. The status guard matches validationError's precondition:
+      // by the ordering invariant all previous batches are AwaitingValidation here, but if that
+      // ever breaks we skip rather than throw WRONG_STATUS (which would tear the chain down).
+      const invalidatePreviousBatches = (): void => {
+        for (const pendingBatch of this.batches.values()) {
+          if (
+            pendingBatch.startEpoch < batch.startEpoch &&
+            pendingBatch.state.status === BatchStatus.AwaitingValidation
+          ) {
+            this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
+            pendingBatch.validationError(res.err);
+          }
         }
+      };
+
+      // Localize the fault so we only re-download the batch(es) actually at fault, instead of
+      // tearing the whole chain down on any error. See classifyProcessingFault.
+      const prevBatch = this.batches.get(batch.startEpoch - EPOCHS_PER_BATCH);
+      switch (classifyProcessingFault(res.err, batch, prevBatch)) {
+        case ProcessingFaultKind.ThisBatch:
+          // This batch's own blocks are bad/short => re-download it only.
+          batch.processingError(res.err);
+          break;
+
+        case ProcessingFaultKind.PreviousBatch:
+          // This batch is valid; retain its blocks (no re-download, no failed attempt) and
+          // invalidate the previous batch(es). It re-processes once the parent arrives.
+          batch.retainForReprocessing();
+          invalidatePreviousBatches();
+          break;
+
+        case ProcessingFaultKind.Ambiguous:
+          // Could be this batch's leading withhold or the previous batch's short tail => hedge both.
+          batch.processingError(res.err);
+          invalidatePreviousBatches();
+          break;
       }
     }
 
@@ -746,17 +770,21 @@ export class SyncChain {
         this.batches.delete(batchKey);
         this.validatedEpochs += EPOCHS_PER_BATCH;
 
-        // The last batch attempt is right, all others are wrong. Penalize other peers
+        // The last batch attempt is right, all others are wrong. Penalize other peers.
+        // Only during finalized sync: head-sync peers may be on different forks, so an attempt
+        // that disagreed with the winning one is not necessarily misbehavior, just a different fork.
         const attemptOk = batch.validationSuccess();
-        for (const attempt of batch.failedProcessingAttempts) {
-          if (attempt.hash !== attemptOk.hash) {
-            for (const badAttemptPeer of attempt.peers) {
-              if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
-                // The same peer corrected its previous attempt
-                this.reportPeer(badAttemptPeer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
-              } else {
-                // A different peer sent an bad batch
-                this.reportPeer(badAttemptPeer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
+        if (this.syncType === RangeSyncType.Finalized) {
+          for (const attempt of batch.failedProcessingAttempts) {
+            if (attempt.hash !== attemptOk.hash) {
+              for (const badAttemptPeer of attempt.peers) {
+                if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
+                  // The same peer corrected its previous attempt
+                  this.reportPeer(badAttemptPeer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
+                } else {
+                  // A different peer sent an bad batch
+                  this.reportPeer(badAttemptPeer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
+                }
               }
             }
           }

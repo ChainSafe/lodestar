@@ -15,12 +15,11 @@ export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
 export const RATE_LIMITED_PEER_BACKOFF_MS = 5_000;
 
 /**
- * Consider batch faulty after downloading and processing this number of times
- * as in https://github.com/ChainSafe/lodestar/issues/8147 we cannot proceed the sync chain if there is unknown parent
- * from prior batch. For example a peer may send us a non-canonical chain segment or not returning all blocks
- * in that case we should throw error and `RangeSync` should remove that error chain and add a new one.
+ * How many times a batch may be re-downloaded + re-processed before it is considered faulty.
+ * Shared budget (via `failedProcessingAttempts`) for both `processBatch` error tiers: a batch's
+ * own processing failure, and a later batch failing to build on it (`validationError`).
  **/
-export const MAX_BATCH_PROCESSING_ATTEMPTS = 0;
+export const MAX_BATCH_PROCESSING_ATTEMPTS = 3;
 
 /**
  * Number of slots to offset batches.

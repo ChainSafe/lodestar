@@ -15,7 +15,7 @@ import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
-import {validPeerIdStr} from "../../../utils/peer.js";
+import {getRandPeerIdStr, validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -392,6 +392,71 @@ describe("sync / range / chain", () => {
     });
 
     expect(downloads).toBeGreaterThanOrEqual(2);
+  });
+
+  describe("batch teardown peer reporting", () => {
+    // Reject every block so the first batch exhausts MAX_BATCH_PROCESSING_ATTEMPTS and the chain
+    // tears down. Needs several peers because each processing failure excludes the peer it used
+    // from the next re-download attempt (getFailedPeers).
+    async function runToTeardown(syncType: RangeSyncType): Promise<ReturnType<typeof vi.fn>> {
+      const reportPeerSpy = vi.fn();
+      const processChainSegment: SyncChainFns["processChainSegment"] = async () => {
+        throw Error("always reject to force teardown");
+      };
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request) => {
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+            })
+          );
+        }
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      };
+
+      const target: ChainTarget = {slot: computeStartSlotAtEpoch(16), root: ZERO_HASH};
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const peers = await Promise.all(Array.from({length: 6}, () => getRandPeerIdStr()));
+
+      await new Promise<void>((resolve) => {
+        const onEnd: SyncChainFns["onEnd"] = () => resolve(); // resolves on teardown (err) or done
+        const chain = new SyncChain(
+          0,
+          target,
+          syncType,
+          logSyncChainFns(logger, {
+            processChainSegment,
+            downloadByRange,
+            getConnectedPeerSyncMeta,
+            reportPeer: reportPeerSpy,
+            pruneBlockInputs,
+            onEnd,
+          }),
+          {config, logger, clock, custodyConfig, metrics: null},
+          undefined
+        );
+        for (const p of peers) chain.addPeer(p, target);
+        chain.startSyncing(0);
+      });
+
+      return reportPeerSpy;
+    }
+
+    it("finalized sync reports peers on teardown", async () => {
+      const reportPeerSpy = await runToTeardown(RangeSyncType.Finalized);
+      expect(reportPeerSpy).toHaveBeenCalled();
+    });
+
+    it("head sync does not penalize peers on teardown", async () => {
+      const reportPeerSpy = await runToTeardown(RangeSyncType.Head);
+      expect(reportPeerSpy).not.toHaveBeenCalled();
+    });
   });
 
   function generateEmptyBlock(slot: Slot): phase0.BeaconBlock {
