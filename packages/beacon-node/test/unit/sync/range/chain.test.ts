@@ -453,9 +453,9 @@ describe("sync / range / chain", () => {
       expect(reportPeerSpy).toHaveBeenCalled();
     });
 
-    it("head sync does not penalize peers on teardown", async () => {
+    it("head sync also reports peers on teardown", async () => {
       const reportPeerSpy = await runToTeardown(RangeSyncType.Head);
-      expect(reportPeerSpy).not.toHaveBeenCalled();
+      expect(reportPeerSpy).toHaveBeenCalled();
     });
   });
 

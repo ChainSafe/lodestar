@@ -223,7 +223,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     beaconBlockRoot: Root,
     parentBeaconBlockRoot: Root,
   },
-  {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
+  {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedExecutionPayloadEnvelope = new ContainerType(

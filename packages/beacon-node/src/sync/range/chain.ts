@@ -357,8 +357,7 @@ export class SyncChain {
 
       // If a batch exceeds it's retry limit, maybe downscore peers.
       // shouldDownscoreOnBatchError() functions enforces that all BatchErrorCode values are covered
-      // Head-sync peers may legitimately be on different forks so we don't report peer in this case.
-      if (e instanceof BatchError && this.syncType === RangeSyncType.Finalized) {
+      if (e instanceof BatchError) {
         const shouldReportPeer = shouldReportPeerOnBatchError(e.type.code);
         if (shouldReportPeer) {
           for (const peer of this.peerset.keys()) {
@@ -770,21 +769,18 @@ export class SyncChain {
         this.batches.delete(batchKey);
         this.validatedEpochs += EPOCHS_PER_BATCH;
 
-        // The last batch attempt is right, all others are wrong. Penalize other peers.
-        // Only during finalized sync: head-sync peers may be on different forks, so an attempt
-        // that disagreed with the winning one is not necessarily misbehavior, just a different fork.
+        // The winning attempt is right; any prior attempt with a different segment id (blocks +
+        // gloas payloads, see hashBlocks) delivered bad data => penalize its peers
         const attemptOk = batch.validationSuccess();
-        if (this.syncType === RangeSyncType.Finalized) {
-          for (const attempt of batch.failedProcessingAttempts) {
-            if (attempt.hash !== attemptOk.hash) {
-              for (const badAttemptPeer of attempt.peers) {
-                if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
-                  // The same peer corrected its previous attempt
-                  this.reportPeer(badAttemptPeer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
-                } else {
-                  // A different peer sent an bad batch
-                  this.reportPeer(badAttemptPeer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
-                }
+        for (const attempt of [...batch.failedProcessingAttempts, ...batch.executionErrorAttempts]) {
+          if (attempt.hash !== attemptOk.hash) {
+            for (const badAttemptPeer of attempt.peers) {
+              if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
+                // The same peer corrected its previous attempt
+                this.reportPeer(badAttemptPeer, PeerAction.MidToleranceError, "SyncChainInvalidBatchSelf");
+              } else {
+                // A different peer sent an bad batch
+                this.reportPeer(badAttemptPeer, PeerAction.LowToleranceError, "SyncChainInvalidBatchOther");
               }
             }
           }

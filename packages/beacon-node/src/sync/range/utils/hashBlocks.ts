@@ -1,27 +1,26 @@
-import {ChainForkConfig} from "@lodestar/config";
-import {RootHex, SignedBeaconBlock} from "@lodestar/types";
+import {RootHex, Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../../chain/blocks/blockInput/types.js";
+import {PayloadEnvelopeInput} from "../../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 
 /**
- * String to uniquely identify block segments. Used for peer scoring and to compare if batches are equivalent.
+ * String to uniquely identify a batch attempt (its blocks AND payloads). Used for peer scoring and to
+ * compare if two attempts are equivalent.
  */
-export function hashBlocks(blocks: IBlockInput[], config: ChainForkConfig): RootHex {
-  switch (blocks.length) {
-    case 0:
-      return "0x";
-    case 1: {
-      const block0 = blocks[0].getBlock();
-      return toRootHex(config.getForkTypes(block0.message.slot).SignedBeaconBlock.hashTreeRoot(block0));
-    }
-    default: {
-      const block0 = blocks[0].getBlock();
-      const blockN = blocks.at(-1)?.getBlock() as SignedBeaconBlock;
-      return (
-        // TODO(fulu): should we be doing checks for presence to make sure these do not blow up?
-        toRootHex(config.getForkTypes(block0.message.slot).SignedBeaconBlock.hashTreeRoot(block0)) +
-        toRootHex(config.getForkTypes(blockN.message.slot).SignedBeaconBlock.hashTreeRoot(blockN))
-      );
-    }
+export function hashBlocks(blocks: IBlockInput[], payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null): RootHex {
+  // blocks are stored slot-sorted (see Batch.downloadingSuccess)
+  const blockRoots = blocks.map((block) => block.blockRootHex).join(",");
+
+  let envelopeRoots = "";
+  if (payloadEnvelopes && payloadEnvelopes.size > 0) {
+    envelopeRoots = Array.from(payloadEnvelopes.entries())
+      .filter(([, envelope]) => envelope.hasPayloadEnvelope())
+      .sort(([slotA], [slotB]) => slotA - slotB)
+      .map(([, envelope]) =>
+        toRootHex(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(envelope.getPayloadEnvelope().message))
+      )
+      .join(",");
   }
+
+  return `${blockRoots}|${envelopeRoots}`;
 }
