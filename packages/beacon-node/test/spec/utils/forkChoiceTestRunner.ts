@@ -265,14 +265,10 @@ export const forkChoiceTestRunner =
                   throw Error(`Block not found for root ${blockRoot}`);
                 }
 
-                // Spec `on_payload_attestation_message` asserts the attested block is from the
-                // message's slot — a mismatch is a rejection, not a silent no-op.
-                if (protoBlock.slot !== payloadAttestationMessage.data.slot) {
-                  throw Error(
-                    `Block slot ${protoBlock.slot} does not match payload attestation slot ${payloadAttestationMessage.data.slot}`
-                  );
-                }
-                {
+                // "PTC votes can only change the vote for their assigned beacon block, return
+                // early otherwise" — a slot mismatch is a no-op SUCCESS, not a rejection.
+                // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#on_payload_attestation_message
+                if (protoBlock.slot === payloadAttestationMessage.data.slot) {
                   const blockState = await chain.regen.getBlockSlotState(
                     protoBlock,
                     payloadAttestationMessage.data.slot,
