@@ -139,11 +139,11 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -179,8 +179,8 @@ importers:
   packages/beacon-node:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/blst':
         specifier: ^2.2.0
         version: 2.2.0
@@ -197,8 +197,8 @@ importers:
         specifier: ^2.1.1
         version: 2.1.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -206,8 +206,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -399,11 +399,11 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -481,8 +481,8 @@ importers:
         version: 17.7.2
     devDependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@ethereumjs/rlp':
         specifier: ^4.0.1
         version: 4.0.1
@@ -529,11 +529,11 @@ importers:
   packages/config:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -547,8 +547,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -587,8 +587,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -624,8 +624,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -682,8 +682,8 @@ importers:
         version: 2.4.8
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@libp2p/crypto':
         specifier: ^5.1.13
         version: 5.1.19
@@ -703,8 +703,8 @@ importers:
   packages/spec-test-util:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -724,20 +724,20 @@ importers:
   packages/state-transition:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/blst':
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/pubkey-index-map':
         specifier: ^3.0.0
         version: 3.0.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -795,8 +795,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -807,8 +807,8 @@ importers:
   packages/utils:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@vekexasia/bigint-buffer2':
         specifier: ^1.1.1
         version: 1.1.1
@@ -838,8 +838,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1054,9 +1054,6 @@ packages:
   '@chainsafe/as-chacha20poly1305@0.1.0':
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
 
-  '@chainsafe/as-sha256@1.2.0':
-    resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
-
   '@chainsafe/as-sha256@1.2.4':
     resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
 
@@ -1244,8 +1241,8 @@ packages:
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
-  '@chainsafe/persistent-merkle-tree@1.2.5':
-    resolution: {integrity: sha512-uyv3/nHkD8vNXjdez6q89rhXwGDUp3YX2mBbOwB7/xelgZ9E7hc3HQgOuq1EdfM9Vyh09jiwimXF/hskmymOfQ==}
+  '@chainsafe/persistent-merkle-tree@1.3.0':
+    resolution: {integrity: sha512-xGe95xNkYayC5BYQpo7ft5oHwyf52YtqBip+GJqZ9XgKSzraw93qUMNeqKrOVJbZM5HEOys8xxkt0h7VD1a9cw==}
 
   '@chainsafe/prometheus-gc-stats@1.0.2':
     resolution: {integrity: sha512-h3mFKduSX85XMVbOdWOYvx9jNq99jGcRVNyW5goGOqju1CsI+ZJLhu5z4zBb/G+ksL0R4uLVulu/mIMe7Y0rNg==}
@@ -1312,8 +1309,8 @@ packages:
   '@chainsafe/snappy-wasm@0.5.0':
     resolution: {integrity: sha512-ydXvhr9p+JjvzSSEyi6XExq8pHugFnrk70mk17T6mhDsklPvaXc+8K90G7TJF+u51lxI/fpv7MahrA5ayjFcSA==}
 
-  '@chainsafe/ssz@1.4.0':
-    resolution: {integrity: sha512-DRje073CIU0lvIdNKmW89jAo4UAidoKpgYco5wvQve8WK1DUk/YS/54c5FX/e/iiKiJ1mo44CNCg4xiKWY3/yQ==}
+  '@chainsafe/ssz@1.6.2':
+    resolution: {integrity: sha512-XJELFJBHBstcvyRuXWPmNc/WRWmV5FVV03+iPTpgtCPQaImEHjKU4bc/5me35dRrXpehC04LD4ePYayOUjxFbw==}
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     resolution: {integrity: sha512-kTewLZe1KqMAJ1gHfagOxo0BI4kTcMOAkGJ7pRLFM5ZkL2P7sh3/4ixnjdbtMkO207vMZEZL3fxJSSs14kg9Kg==}
@@ -6567,8 +6564,6 @@ snapshots:
 
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
 
-  '@chainsafe/as-sha256@1.2.0': {}
-
   '@chainsafe/as-sha256@1.2.4': {}
 
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
@@ -6712,7 +6707,7 @@ snapshots:
   '@chainsafe/libp2p-noise@17.0.0':
     dependencies:
       '@chainsafe/as-chacha20poly1305': 0.1.0
-      '@chainsafe/as-sha256': 1.2.0
+      '@chainsafe/as-sha256': 1.2.4
       '@libp2p/crypto': 5.1.19
       '@libp2p/interface': 3.2.3
       '@libp2p/peer-id': 6.0.10
@@ -6769,7 +6764,7 @@ snapshots:
     dependencies:
       '@chainsafe/is-ip': 2.1.0
 
-  '@chainsafe/persistent-merkle-tree@1.2.5':
+  '@chainsafe/persistent-merkle-tree@1.3.0':
     dependencies:
       '@chainsafe/as-sha256': 1.2.4
       '@chainsafe/hashtree': 1.0.2
@@ -6816,10 +6811,10 @@ snapshots:
 
   '@chainsafe/snappy-wasm@0.5.0': {}
 
-  '@chainsafe/ssz@1.4.0':
+  '@chainsafe/ssz@1.6.2':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.0
-      '@chainsafe/persistent-merkle-tree': 1.2.5
+      '@chainsafe/as-sha256': 1.2.4
+      '@chainsafe/persistent-merkle-tree': 1.3.0
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     optional: true
