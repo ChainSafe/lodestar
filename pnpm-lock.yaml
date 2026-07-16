@@ -330,7 +330,7 @@ importers:
         version: 2.0.0
       systeminformation:
         specifier: ^5.22.9
-        version: 5.31.6
+        version: 5.31.7
       uint8arraylist:
         specifier: ^2.4.7
         version: 2.4.8
@@ -5121,8 +5121,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.61.0:
-    resolution: {integrity: sha512-caX7TrY3Ml6egyDX0WUcTHDxodl/b51y5wJOdCEA36QviK/s2g081hvmGs8eaE3DWb6NYZQ6BjO/QkNRPenoPA==}
+  playwright-core@1.61.1:
+    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -5131,8 +5131,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.61.0:
-    resolution: {integrity: sha512-Z+7BeeqQPRRzklHsVFP4KTGIyMxKUmfeRA4WisM6G3/XW6nwGeX6fX9qYaDa+CiUqpOkb2f6X3nar05R3kSuJQ==}
+  playwright@1.61.1:
+    resolution: {integrity: sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -5658,8 +5658,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  systeminformation@5.31.6:
-    resolution: {integrity: sha512-Uv2b2uGGM6ns+26czgW2cYRabYdnswM0ddSOOlryHOaelzsmDSet1iM/NT7VOYxW8x/BW+HkY+b1Ve2pLTSGSA==}
+  systeminformation@5.31.7:
+    resolution: {integrity: sha512-/8NC53e5nP9nmhn42/ncdOkyJnOoue/Vy+tJOyUGd1Yv66G069wK4rrziwhrqDETgk78CudTQupw5z19S5uoZw==}
     engines: {node: '>=8.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
@@ -8617,11 +8617,11 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.61.0)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser-playwright@4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
       '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
       '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))
-      playwright: 1.61.0
+      playwright: 1.61.1
       tinyrainbow: 3.0.3
       vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(yaml@2.8.2)
     transitivePeerDependencies:
@@ -11234,7 +11234,7 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
-  playwright-core@1.61.0:
+  playwright-core@1.61.1:
     optional: true
 
   playwright@1.60.0:
@@ -11243,9 +11243,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  playwright@1.61.0:
+  playwright@1.61.1:
     dependencies:
-      playwright-core: 1.61.0
+      playwright-core: 1.61.1
     optionalDependencies:
       fsevents: 2.3.2
     optional: true
@@ -11782,7 +11782,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  systeminformation@5.31.6: {}
+  systeminformation@5.31.7: {}
 
   tar-stream@2.2.0:
     dependencies:
@@ -12153,7 +12153,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.4.0
-      '@vitest/browser-playwright': 4.0.7(playwright@1.61.0)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser-playwright': 4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(yaml@2.8.2))(vitest@4.0.7)
     transitivePeerDependencies:
       - jiti
       - less
