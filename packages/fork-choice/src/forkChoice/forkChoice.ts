@@ -594,8 +594,18 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
   }
 
-  getViableHeads(): {root: RootHex; weight: number}[] {
+  /** Weights are in EFFECTIVE_BALANCE_INCREMENT units (NOT Gwei). */
+  getViableHeads(): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
     return this.protoArray.getViableHeads(this.fcStore.currentSlot);
+  }
+
+  /**
+   * The cached justified total active balance, in EFFECTIVE_BALANCE_INCREMENT units.
+   * This is the exact balance source production uses for the proposer boost score
+   * (see getCommitteeFraction); exposed for the spec-test runner's boost emulation.
+   */
+  getJustifiedTotalActiveBalanceByIncrement(): number {
+    return this.fcStore.justified.totalBalance;
   }
 
   /** This is for the debug API only */

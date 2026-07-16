@@ -4,7 +4,7 @@ import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ExecutionStatus, ForkChoice, getCommitteeFraction} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
   ACTIVE_PRESET,
@@ -16,6 +16,7 @@ import {
   ForkPreFulu,
   ForkPreGloas,
   ForkSeq,
+  SLOTS_PER_EPOCH,
 } from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
@@ -268,7 +269,14 @@ const forkChoiceTest =
                   throw Error(`Block not found for root ${blockRoot}`);
                 }
 
-                if (protoBlock.slot === payloadAttestationMessage.data.slot) {
+                // Spec `on_payload_attestation_message` asserts the attested block is from the
+                // message's slot — a mismatch is a rejection, not a silent no-op.
+                if (protoBlock.slot !== payloadAttestationMessage.data.slot) {
+                  throw Error(
+                    `Block slot ${protoBlock.slot} does not match payload attestation slot ${payloadAttestationMessage.data.slot}`
+                  );
+                }
+                {
                   const blockState = await chain.regen.getBlockSlotState(
                     protoBlock,
                     payloadAttestationMessage.data.slot,
@@ -280,6 +288,13 @@ const forkChoiceTest =
                     payloadAttestationMessage.validatorIndex,
                     payloadAttestationMessage.data.slot
                   );
+
+                  // Spec asserts the validator is a PTC member for the slot
+                  if (ptcIndices.length === 0) {
+                    throw Error(
+                      `Validator ${payloadAttestationMessage.validatorIndex} not in PTC for slot ${payloadAttestationMessage.data.slot}`
+                    );
+                  }
 
                   // Slot check, matching the `validateGossipPayloadAttestationMessage` flow
                   if (clock.currentSlot !== payloadAttestationMessage.data.slot) {
@@ -322,6 +337,7 @@ const forkChoiceTest =
                     payloadAttestationMessage.data.blobDataAvailable
                   );
                 }
+                if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
                 if (isValid || (e as Error).message === "Expect error since this is a negative test") throw e;
               }
@@ -604,12 +620,21 @@ const forkChoiceTest =
               // Forkchoice head is computed lazily only on request
               const head = (chain.forkChoice as ForkChoice).updateHead();
               const proposerBootRoot = (chain.forkChoice as ForkChoice).getProposerBoostRoot();
+              // Spec: EMPTY=0, FULL=1, PENDING=2; Ours: PENDING=0, EMPTY=1, FULL=2
+              const payloadStatusToSpec: Record<number, number> = {0: 2, 1: 0, 2: 1};
 
               if (step.checks.head !== undefined) {
                 expect({slot: head.slot, root: head.blockRoot}).toEqualWithMessage(
                   {slot: bnToNum(step.checks.head.slot), root: step.checks.head.root},
                   `Invalid head at step ${i}`
                 );
+                // Gloas and later: payload_status is nested inside the head check
+                if (step.checks.head.payload_status !== undefined) {
+                  expect(payloadStatusToSpec[head.payloadStatus]).toEqualWithMessage(
+                    bnToNum(step.checks.head.payload_status),
+                    `Invalid head payload status at step ${i}`
+                  );
+                }
               }
               if (step.checks.proposer_boost_root !== undefined) {
                 expect(proposerBootRoot).toEqualWithMessage(
@@ -650,43 +675,84 @@ const forkChoiceTest =
                   `Invalid proposer head at step ${i}`
                 );
               }
-              if (step.checks.head_payload_status !== undefined) {
-                // Spec: EMPTY=0, FULL=1, PENDING=2; Ours: PENDING=0, EMPTY=1, FULL=2
-                const payloadStatusToSpec: Record<number, number> = {0: 2, 1: 0, 2: 1};
-                expect(payloadStatusToSpec[head.payloadStatus]).toEqualWithMessage(
-                  bnToNum(step.checks.head_payload_status),
-                  `Invalid head payload status at step ${i}`
-                );
-              }
               if (step.checks.viable_for_head_roots_and_weights !== undefined) {
+                // Entries are identified by (root, payload_status, weight) per
+                // https://github.com/ethereum/consensus-specs/pull/5393 — gloas EMPTY/FULL
+                // variants of one block root are separate entries. Pre-gloas vectors omit
+                // payload_status (every pre-gloas node is FULL internally).
+                const isGloas = ForkSeq[fork] >= ForkSeq.gloas;
                 const expected = step.checks.viable_for_head_roots_and_weights
-                  .map((entry) => ({root: entry.root, weight: bnToNum(entry.weight)}))
-                  .sort((a, b) => a.root.localeCompare(b.root));
+                  .map((entry) => ({
+                    root: entry.root,
+                    payloadStatus: entry.payload_status !== undefined ? bnToNum(entry.payload_status) : undefined,
+                    weightGwei: entry.weight,
+                  }))
+                  .sort(cmpViableHead);
                 const actual = (chain.forkChoice as ForkChoice)
                   .getViableHeads()
-                  .map(({root, weight}) => ({root, weight}))
-                  .sort((a, b) => a.root.localeCompare(b.root));
+                  .map(({root, payloadStatus, weight}) => ({
+                    root,
+                    payloadStatus: isGloas ? payloadStatusToSpec[payloadStatus] : undefined,
+                    weightGwei: BigInt(weight) * BigInt(EFFECTIVE_BALANCE_INCREMENT),
+                  }))
+                  .sort(cmpViableHead);
 
                 // The set of viable heads is determined by justified/finalized epochs, not weight,
-                // so it must match exactly. Comparing the root sets (not a subset) also rejects a
-                // degenerate empty result.
-                expect(actual.map((h) => h.root)).toEqualWithMessage(
-                  expected.map((h) => h.root),
+                // so identity must match exactly. Comparing the full sets (not a subset) also
+                // rejects a degenerate empty result.
+                expect(actual.map(({root, payloadStatus}) => ({root, payloadStatus}))).toEqualWithMessage(
+                  expected.map(({root, payloadStatus}) => ({root, payloadStatus})),
                   `Invalid viable head roots at step ${i}`
                 );
 
-                // Weights are stored in EFFECTIVE_BALANCE_INCREMENT units, so the proposer-boost
-                // score is floored to whole ETH while the spec keeps Gwei precision. Attestation
-                // weight is exact, so the per-head divergence is only the boost quantization, bounded
-                // by (100 - gcd(PROPOSER_SCORE_BOOST, 100) + PROPOSER_SCORE_BOOST) / 100 = 1.2 ETH,
-                // independent of SLOTS_PER_EPOCH and total balance. Compare within that bound.
-                const tolerance = 1.2 * EFFECTIVE_BALANCE_INCREMENT;
-                for (const [k, {root, weight}] of actual.entries()) {
-                  const diff = Math.abs(weight - expected[k].weight);
-                  expect(
-                    diff,
-                    `Viable head ${root} weight off by ${diff} Gwei (> 1.2 ETH) at step ${i}`
-                  ).toBeLessThanOrEqual(tolerance);
+                // Exact weight comparison with boost emulation. Lodestar tracks weights in
+                // EFFECTIVE_BALANCE_INCREMENT units: attestation weight is exact (effective
+                // balances are increment multiples) but the proposer-boost score is double-floored
+                // to whole ETH (getCommitteeFraction) while the spec keeps Gwei precision — a
+                // known production divergence, bounded by
+                // (100 - gcd(PROPOSER_SCORE_BOOST, 100) + PROPOSER_SCORE_BOOST) / 100 = 1.2 ETH.
+                // Rather than compare within a tolerance (which would mask sub-1.2-ETH weight
+                // bugs), normalize the expected weight of the boosted entry by
+                // `- spec_boost + lodestar_boost` and compare exactly.
+                //
+                // Ordering rules (so normalization cannot mask a wrong boost root):
+                // - `checks.proposer_boost_root` was already asserted above, unadjusted.
+                // - Normalize using the VECTOR's expected boost root, never our actual one.
+                // - Zero boost root or absent field => no adjustment.
+                const expectedBoostRoot = step.checks.proposer_boost_root;
+                let specBoostGwei = BigInt(0);
+                let lodestarBoostGwei = BigInt(0);
+                if (expectedBoostRoot !== undefined && expectedBoostRoot !== ZERO_HASH_HEX) {
+                  const totalBalanceByIncrement = (
+                    chain.forkChoice as ForkChoice
+                  ).getJustifiedTotalActiveBalanceByIncrement();
+                  const totalBalanceGwei = BigInt(totalBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
+                  // Spec: ((total_active_balance // SLOTS_PER_EPOCH) * PROPOSER_SCORE_BOOST) // 100, in Gwei
+                  specBoostGwei =
+                    ((totalBalanceGwei / BigInt(SLOTS_PER_EPOCH)) * BigInt(config.PROPOSER_SCORE_BOOST)) / BigInt(100);
+                  // Lodestar: same formula double-floored in increment units — use the production
+                  // function directly so the emulation cannot drift from the implementation.
+                  lodestarBoostGwei =
+                    BigInt(
+                      getCommitteeFraction(totalBalanceByIncrement, {
+                        slotsPerEpoch: SLOTS_PER_EPOCH,
+                        committeePercent: config.PROPOSER_SCORE_BOOST,
+                      })
+                    ) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
+                }
+                for (const [k, act] of actual.entries()) {
+                  const exp = expected[k];
+                  // TODO GLOAS: boost attribution across payload-status variants of the boosted
+                  // root is Phase 4 work; pre-gloas each root has exactly one entry.
+                  const isBoosted = exp.root === expectedBoostRoot;
+                  const expectedAdjusted = isBoosted
+                    ? exp.weightGwei - specBoostGwei + lodestarBoostGwei
+                    : exp.weightGwei;
+                  expect(act.weightGwei).toEqualWithMessage(
+                    expectedAdjusted,
+                    `Invalid viable head weight for ${act.root} at step ${i}` +
+                      (isBoosted ? ` (boost-normalized: spec=${specBoostGwei} lodestar=${lodestarBoostGwei})` : "")
+                  );
                 }
               }
               if (step.checks.should_override_forkchoice_update) {
@@ -918,12 +984,13 @@ type Checks = {
     head?: {
       slot: bigint;
       root: string;
+      /** Gloas and later */
+      payload_status?: bigint;
     };
     time?: bigint;
     justified_checkpoint?: SpecTestCheckpoint;
     finalized_checkpoint?: SpecTestCheckpoint;
     proposer_boost_root?: RootHex;
-    head_payload_status?: bigint;
     get_proposer_head?: string;
     should_override_forkchoice_update?: {
       validator_is_connected: boolean;
@@ -939,9 +1006,14 @@ type Checks = {
       block_root: RootHex;
       votes: (boolean | null)[];
     };
-    viable_for_head_roots_and_weights?: {root: RootHex; weight: bigint}[];
+    viable_for_head_roots_and_weights?: {root: RootHex; weight: bigint; payload_status?: bigint}[];
   };
 };
+
+/** Sort by (root, payload_status) — the spec fixes no order; gloas variants share a root. */
+function cmpViableHead(a: {root: string; payloadStatus?: number}, b: {root: string; payloadStatus?: number}): number {
+  return a.root.localeCompare(b.root) || (a.payloadStatus ?? 0) - (b.payloadStatus ?? 0);
+}
 
 type ForkChoiceTestCase = {
   meta?: {

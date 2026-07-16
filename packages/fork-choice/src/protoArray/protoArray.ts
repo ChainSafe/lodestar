@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {EFFECTIVE_BALANCE_INCREMENT, GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
@@ -1541,8 +1541,8 @@ export class ProtoArray {
     return correctJustified && correctFinalized;
   }
 
-  /** Weight is converted from increment units to Gwei. */
-  getViableHeads(currentSlot: Slot): {root: RootHex; weight: number}[] {
+  /** Weights are in EFFECTIVE_BALANCE_INCREMENT units (NOT Gwei); callers scale as needed. */
+  getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
     // Mirror the spec's `get_filtered_block_tree`, which is rooted at the store's justified
     // checkpoint: a viable head is a leaf (no viable descendant, i.e. `bestChild === undefined`)
     // that descends from the justified checkpoint block AND is itself viable for head. Iterating
@@ -1550,11 +1550,10 @@ export class ProtoArray {
     // that hang off the finalized checkpoint on a branch not under the current justified checkpoint.
     const justifiedIndex = this.getDefaultNodeIndex(this.justifiedRoot);
     const justifiedSlot = justifiedIndex !== undefined ? this.getNodeByIndex(justifiedIndex)?.slot : undefined;
-    // Gloas payload-status variants share a blockRoot and more than one can be a leaf (EMPTY and
-    // FULL are both parented under PENDING); the spec's filtered tree is keyed by block root, so
-    // emit each root at most once. Which variant's weight the spec expects is an open gloas
-    // divergence — deterministically keep the heaviest qualifying variant.
-    const weightByRoot = new Map<RootHex, number>();
+    // Gloas payload-status variants of one blockRoot are distinct nodes in the spec's filtered
+    // tree, identified by (root, payload_status, weight) — emit one entry per variant.
+    // https://github.com/ethereum/consensus-specs/pull/5393
+    const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] = [];
     for (const node of this.nodes) {
       if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {
         continue;
@@ -1562,15 +1561,9 @@ export class ProtoArray {
       if (this.justifiedEpoch !== GENESIS_EPOCH && !this.descendsFromJustified(node, justifiedSlot)) {
         continue;
       }
-      const prev = weightByRoot.get(node.blockRoot);
-      if (prev === undefined || node.weight > prev) {
-        weightByRoot.set(node.blockRoot, node.weight);
-      }
+      heads.push({root: node.blockRoot, payloadStatus: node.payloadStatus, weight: node.weight});
     }
-    return Array.from(weightByRoot.entries()).map(([root, weight]) => ({
-      root,
-      weight: weight * EFFECTIVE_BALANCE_INCREMENT,
-    }));
+    return heads;
   }
 
   /**
