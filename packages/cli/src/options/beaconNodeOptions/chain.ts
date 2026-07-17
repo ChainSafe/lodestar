@@ -4,6 +4,7 @@ import {ensure0xPrefix} from "../../util/format.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
+  graffitiAppend?: boolean;
   serveHistoricalState?: boolean;
   "chain.blacklistedBlocks"?: string[];
   "chain.blsVerifyAllMultiThread"?: boolean;
@@ -43,6 +44,7 @@ export type ChainArgs = {
 export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
+    graffitiAppend: args.graffitiAppend,
     serveHistoricalState: args.serveHistoricalState,
     blacklistedBlocks: args["chain.blacklistedBlocks"],
     blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
@@ -95,6 +97,13 @@ export const options: CliCommandOptions<ChainArgs> = {
     type: "boolean",
     defaultDescription: String(defaultOptions.chain.emitPayloadAttributes),
     description: "Flag to SSE emit execution `payloadAttributes` before every slot",
+    group: "chain",
+  },
+
+  graffitiAppend: {
+    type: "boolean",
+    description: "Append CL/EL client info to graffiti supplied by validator client when space allows",
+    default: defaultOptions.chain.graffitiAppend,
     group: "chain",
   },
 

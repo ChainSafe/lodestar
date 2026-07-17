@@ -398,6 +398,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
   }
 
+  getBuildersLength(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).builders.length;
+  }
+
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("Builders are not supported before Gloas");
@@ -505,14 +513,6 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getBeaconProposer(slot: number): ValidatorIndex {
     return this.cachedState.epochCtx.getBeaconProposer(slot);
-  }
-
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
-    try {
-      return this.cachedState.epochCtx.getBeaconProposer(slot);
-    } catch {
-      return null;
-    }
   }
 
   computeAnchorCheckpoint(): {checkpoint: phase0.Checkpoint; blockHeader: phase0.BeaconBlockHeader} {
