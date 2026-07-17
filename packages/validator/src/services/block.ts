@@ -186,12 +186,12 @@ export class BlockProposingService {
     const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
     const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
     const {broadcastValidation, payloadLocal} = this.opts;
+    const {selection: builderSelection, boostFactor: builderBoostFactor} =
+      this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
 
-    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, payloadLocal});
+    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, payloadLocal, builderSelection});
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
-    // Builder selection params are not forwarded post-gloas for now, the pre-gloas defaults
-    // (executiononly) target the builder api flow and would disable p2p bids for most users
     // Step 1: Produce beacon block with execution payload bid
     const blockRes = await this.api.validator
       .produceBlockV4({
@@ -200,6 +200,8 @@ export class BlockProposingService {
         graffiti,
         feeRecipient,
         includePayload: !payloadLocal,
+        builderSelection,
+        builderBoostFactor,
       })
       .catch((e: Error) => {
         this.metrics?.blockProposingErrors.inc({error: "produce"});
