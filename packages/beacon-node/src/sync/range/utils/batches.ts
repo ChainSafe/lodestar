@@ -124,13 +124,13 @@ export function isSyncChainDone(batches: Batch[], lastEpochWithProcessBlocks: Ep
  * actually at fault instead of tearing the whole chain down on any error.
  */
 export enum ProcessingFaultKind {
-  /** This batch's own blocks are bad/short => re-download this batch. */
+  // This batch's own blocks are bad/short => re-download this batch.
   ThisBatch = "ThisBatch",
-  /** This batch is valid; a previous batch didn't deliver the parent => retain & re-process
-   * this batch, invalidate the previous batch(es). */
+  // This batch is valid; a previous batch didn't deliver the parent => retain & re-process
+  // this batch, invalidate the previous batch(es)
   PreviousBatch = "PreviousBatch",
-  /** Could be either (this batch's leading withhold or the previous batch's short tail) =>
-   * hedge: re-download this batch AND invalidate the previous batch(es). */
+  // Could be either (this batch's leading withhold or the previous batch's short tail)
+  // => re-download this batch AND invalidate the previous batch(es).
   Ambiguous = "Ambiguous",
 }
 
@@ -140,8 +140,8 @@ export enum ProcessingFaultKind {
  * Relies on the invariant that when `batch` is processed, every earlier batch is
  * `AwaitingValidation` = already imported (see `getNextBatchToProcess`). Given that:
  * - Non-parent errors (bad signature/state/payload) are always this batch's own fault.
- * - `PARENT_UNKNOWN`/`PARENT_PAYLOAD_UNKNOWN` fires on the batch's first not-yet-imported
- *   block. If that block is anchored at `startSlot`, the missing parent lies before the batch
+ * - `PARENT_UNKNOWN`/`PARENT_PAYLOAD_UNKNOWN` fires on the batch's first block.
+ *   If that block is anchored at `startSlot`, the missing parent lies before the batch
  *   => previous-batch fault. Otherwise the missing parent could live inside this batch's own
  *   leading range — certain only if the previous batch delivered a full tail (a block/payload
  *   at `startSlot - 1`), else ambiguous.

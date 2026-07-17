@@ -42,7 +42,7 @@ export enum BlockErrorCode {
   NOT_LATER_THAN_PARENT = "BLOCK_ERROR_NOT_LATER_THAN_PARENT",
   /**
    * A block in the middle of a chain segment does not set its parentRoot to the previous block's root
-   * (broken parent-root link inside the segment). Cf. PARENT_UNKNOWN for the segment's first block.
+   * (broken parent-root link inside the segment).
    */
   NON_LINEAR_PARENT_ROOTS = "BLOCK_ERROR_NON_LINEAR_PARENT_ROOTS",
   /** The slots of the blocks in the chain segment were not strictly increasing. */
