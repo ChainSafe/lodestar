@@ -2,6 +2,7 @@ import {zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {ssz} from "@lodestar/types";
 import type {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
 import {isGloasStateType} from "../util/execution.js";
+import {zeroProgressiveListBasicRootNode} from "../util/ssz.js";
 
 /**
  * Updates `state.previousEpochParticipation` with precalculated epoch participation. Creates a new empty tree for
@@ -34,7 +35,11 @@ export function processParticipationFlagUpdates(state: CachedBeaconStateAltair):
 
 function processParticipationFlagUpdatesGloas(state: CachedBeaconStateGloas): void {
   state.previousEpochParticipation = state.currentEpochParticipation;
-  state.currentEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
-    new Array<number>(state.currentEpochParticipation.length).fill(0)
+
+  // Same trick as the altair path above, adapted to the progressive-list tree shape: all chunks
+  // are zero so the chunks tree is a chain of pre-computed zeroNodes, built in O(log n) instead
+  // of re-merkleizing a validator-count-sized array every epoch.
+  state.currentEpochParticipation = ssz.gloas.EpochParticipation.getViewDU(
+    zeroProgressiveListBasicRootNode(ssz.gloas.EpochParticipation.itemsPerChunk, state.currentEpochParticipation.length)
   );
 }

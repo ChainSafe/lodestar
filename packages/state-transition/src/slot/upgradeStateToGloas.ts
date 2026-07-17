@@ -1,5 +1,15 @@
-import {BranchNode, LeafNode, Node} from "@chainsafe/persistent-merkle-tree";
-import {progressiveSubtreeFillToContents} from "@chainsafe/ssz";
+import {getNodesAtDepth} from "@chainsafe/persistent-merkle-tree";
+import {
+  BasicType,
+  CompositeType,
+  CompositeView,
+  CompositeViewDU,
+  ListBasicTreeViewDU,
+  ListCompositeTreeViewDU,
+  ProgressiveListBasicType,
+  ProgressiveListCompositeType,
+  ValueOf,
+} from "@chainsafe/ssz";
 import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
@@ -9,6 +19,7 @@ import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
+import {progressiveListRootNode} from "../util/ssz.js";
 
 /**
  * Upgrade a state from Fulu to Gloas.
@@ -37,20 +48,25 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.eth1DataVotes = stateGloasCloned.eth1DataVotes;
   stateGloasView.eth1DepositIndex = stateGloasCloned.eth1DepositIndex;
   stateGloasView.validators = migrateCompositeListToGloas(stateGloasCloned.validators, ssz.gloas.Validators);
-  stateGloasView.balances = ssz.gloas.Balances.toViewDU(stateGloasCloned.balances.getAll());
+  stateGloasView.balances = migrateBasicListToGloas(stateGloasCloned.balances, ssz.gloas.Balances);
   stateGloasView.randaoMixes = stateGloasCloned.randaoMixes;
   stateGloasView.slashings = stateGloasCloned.slashings;
-  stateGloasView.previousEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
-    stateGloasCloned.previousEpochParticipation.getAll()
+  stateGloasView.previousEpochParticipation = migrateBasicListToGloas(
+    stateGloasCloned.previousEpochParticipation,
+    ssz.gloas.EpochParticipation
   );
-  stateGloasView.currentEpochParticipation = ssz.gloas.EpochParticipation.toViewDU(
-    stateGloasCloned.currentEpochParticipation.getAll()
+  stateGloasView.currentEpochParticipation = migrateBasicListToGloas(
+    stateGloasCloned.currentEpochParticipation,
+    ssz.gloas.EpochParticipation
   );
   stateGloasView.justificationBits = stateGloasCloned.justificationBits;
   stateGloasView.previousJustifiedCheckpoint = stateGloasCloned.previousJustifiedCheckpoint;
   stateGloasView.currentJustifiedCheckpoint = stateGloasCloned.currentJustifiedCheckpoint;
   stateGloasView.finalizedCheckpoint = stateGloasCloned.finalizedCheckpoint;
-  stateGloasView.inactivityScores = ssz.gloas.InactivityScores.toViewDU(stateGloasCloned.inactivityScores.getAll());
+  stateGloasView.inactivityScores = migrateBasicListToGloas(
+    stateGloasCloned.inactivityScores,
+    ssz.gloas.InactivityScores
+  );
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
@@ -102,7 +118,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 
 /**
  * Migrate a composite list from fulu to its gloas progressive-list equivalent by reusing the fulu
- * list's cached element nodes.
+ * list's element nodes.
  *
  * Works whenever the element type is identical across the fork (e.g. validators use ValidatorNodeStruct,
  * the pending* queues use the same electra element types). Each element's cached subtree root is then
@@ -110,15 +126,38 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
  * hashTreeRoot() skips re-hashing every element — the dominant cost for large lists like validators.
  * Much cheaper than `gloasType.toViewDU(fuluList.getAllReadonlyValues())`, which decodes every element
  * to a value and forces a full re-hash.
+ *
+ * The chunk nodes of a composite list ARE the element root nodes, so they are extracted directly
+ * with getNodesAtDepth instead of allocating a temporary ViewDU wrapper per element (getAllReadonly).
+ * Requires the fulu view to be committed (done at the top of upgradeStateToGloas).
  */
-function migrateCompositeListToGloas<V>(
-  fuluList: {getAllReadonly(): {node: Node}[]},
-  gloasType: {getViewDU(node: Node): V}
-): V {
-  const elementNodes = fuluList.getAllReadonly().map((v) => v.node);
-  const chunksNode = progressiveSubtreeFillToContents(elementNodes);
-  const rootNode = new BranchNode(chunksNode, LeafNode.fromUint32(elementNodes.length));
-  return gloasType.getViewDU(rootNode);
+function migrateCompositeListToGloas<
+  ElementType extends CompositeType<ValueOf<ElementType>, CompositeView<ElementType>, CompositeViewDU<ElementType>>,
+>(fuluList: ListCompositeTreeViewDU<ElementType>, gloasType: ProgressiveListCompositeType<ElementType>) {
+  const {length, type} = fuluList;
+  const elementNodes = getNodesAtDepth(fuluList.node.left, type.chunkDepth, 0, length);
+  return gloasType.getViewDU(progressiveListRootNode(elementNodes, length));
+}
+
+/**
+ * Migrate a basic list from fulu to its gloas progressive-list equivalent by reusing the fulu
+ * list's packed chunk leaf nodes.
+ *
+ * Packed leaf chunks are bit-identical between List[T, N] and ProgressiveList[T] (same 32-byte
+ * LE packing, zero-padded final chunk); only the superstructure above the leaves differs. Reusing
+ * the leaves avoids materializing the value array (getAll), re-serializing it, and allocating
+ * fresh LeafNodes — the gloas tree shares the leaf nodes with the fulu tree.
+ * Requires the fulu view to be committed (done at the top of upgradeStateToGloas).
+ */
+function migrateBasicListToGloas<ElementType extends BasicType<unknown>>(
+  fuluList: ListBasicTreeViewDU<ElementType>,
+  gloasType: ProgressiveListBasicType<ElementType>
+) {
+  const {length, type} = fuluList;
+  const chunkCount = Math.ceil(length / type.itemsPerChunk);
+  // List root = BranchNode(chunksNode, lengthNode) → chunks tree is the left child
+  const chunkLeafNodes = getNodesAtDepth(fuluList.node.left, type.chunkDepth, 0, chunkCount);
+  return gloasType.getViewDU(progressiveListRootNode(chunkLeafNodes, length));
 }
 
 /**

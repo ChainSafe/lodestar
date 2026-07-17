@@ -42,7 +42,9 @@ describe("upgradeState", () => {
   it("upgradeStateToGloas reuses composite-list nodes with identical merkle roots", () => {
     // Enough validators to span multiple progressive subtrees (capacities 1, 4, 16, 64, ...) and to
     // populate every slot's committee for the gloas PTC window computed during the upgrade.
-    const numValidators = 128;
+    // Not a multiple of itemsPerChunk (4 for uint64, 32 for uint8) so basic-list migration covers
+    // a zero-padded partial final chunk.
+    const numValidators = 130;
     const fuluStateView = ssz.fulu.BeaconState.defaultViewDU();
     for (let i = 0; i < numValidators; i++) {
       const validator = ssz.phase0.Validator.defaultValue();
@@ -56,10 +58,11 @@ describe("upgradeState", () => {
       validator.exitEpoch = FAR_FUTURE_EPOCH;
       validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
       fuluStateView.validators.push(ssz.phase0.Validator.toViewDU(validator));
-      fuluStateView.balances.push(32e9);
-      fuluStateView.previousEpochParticipation.push(0);
-      fuluStateView.currentEpochParticipation.push(0);
-      fuluStateView.inactivityScores.push(0);
+      // Distinct per-index values so basic-list leaf reuse in the wrong order would be caught
+      fuluStateView.balances.push(32e9 + i);
+      fuluStateView.previousEpochParticipation.push(i % 8);
+      fuluStateView.currentEpochParticipation.push((i + 3) % 8);
+      fuluStateView.inactivityScores.push(i % 5);
     }
 
     // Populate the pending* composite queues so the node-reuse path is exercised for them too.
@@ -101,6 +104,14 @@ describe("upgradeState", () => {
     const expectedPendingConsolidationsRoot = ssz.gloas.PendingConsolidations.hashTreeRoot(
       fuluState.pendingConsolidations.getAllReadonlyValues()
     );
+    const expectedBalancesRoot = ssz.gloas.Balances.hashTreeRoot(fuluState.balances.getAll());
+    const expectedPreviousEpochParticipationRoot = ssz.gloas.EpochParticipation.hashTreeRoot(
+      fuluState.previousEpochParticipation.getAll()
+    );
+    const expectedCurrentEpochParticipationRoot = ssz.gloas.EpochParticipation.hashTreeRoot(
+      fuluState.currentEpochParticipation.getAll()
+    );
+    const expectedInactivityScoresRoot = ssz.gloas.InactivityScores.hashTreeRoot(fuluState.inactivityScores.getAll());
 
     const gloasState = upgradeStateToGloas(fuluState);
 
@@ -110,6 +121,12 @@ describe("upgradeState", () => {
     expect(gloasState.pendingDeposits.hashTreeRoot()).toEqual(expectedPendingDepositsRoot);
     expect(gloasState.pendingPartialWithdrawals.hashTreeRoot()).toEqual(expectedPendingPartialWithdrawalsRoot);
     expect(gloasState.pendingConsolidations.hashTreeRoot()).toEqual(expectedPendingConsolidationsRoot);
+    // Basic-list leaf reuse must produce byte-identical merkle roots too
+    expect(gloasState.balances.hashTreeRoot()).toEqual(expectedBalancesRoot);
+    expect(gloasState.balances.getAll()).toEqual(fuluStateView.balances.getAll());
+    expect(gloasState.previousEpochParticipation.hashTreeRoot()).toEqual(expectedPreviousEpochParticipationRoot);
+    expect(gloasState.currentEpochParticipation.hashTreeRoot()).toEqual(expectedCurrentEpochParticipationRoot);
+    expect(gloasState.inactivityScores.hashTreeRoot()).toEqual(expectedInactivityScoresRoot);
     // Full state still merkleizes and round-trips
     expect(() => gloasState.hashTreeRoot()).not.toThrow();
     expect(() => gloasState.toValue()).not.toThrow();
