@@ -147,6 +147,14 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         name: "beacon_builder_circuit_breaker_faults",
         help: "Count of blocks with unrevealed payloads in the fault inspection window",
       }),
+      blocksPresent: register.gauge({
+        name: "beacon_builder_circuit_breaker_blocks_present",
+        help: "Count of blocks present in the fault inspection window",
+      }),
+      payloadsRevealed: register.gauge({
+        name: "beacon_builder_circuit_breaker_payloads_revealed",
+        help: "Count of blocks with revealed payloads in the fault inspection window",
+      }),
     },
 
     blockPayload: {

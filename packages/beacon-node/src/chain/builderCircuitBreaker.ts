@@ -62,6 +62,8 @@ export class BuilderCircuitBreaker {
 
     this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);
     this.modules.metrics?.builderCircuitBreaker.faults.set(faults);
+    this.modules.metrics?.builderCircuitBreaker.blocksPresent.set(blocksPresent);
+    this.modules.metrics?.builderCircuitBreaker.payloadsRevealed.set(payloadsRevealed);
 
     const logCtx = {
       blocksPresent,
