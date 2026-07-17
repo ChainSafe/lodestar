@@ -138,6 +138,75 @@ describe("Gloas Fork Choice", () => {
         payloadsRevealed: 0,
       });
     });
+
+    // Counting all branches is intentional, withheld payloads on orphaned blocks still signal
+    // non-reveal risk for the next proposal, and unlike counting only the head branch the
+    // result cannot be gamed by steering which branch is head when the breaker is evaluated
+    it("counts competing blocks at the same slot on different branches", () => {
+      const currentSlot = gloasForkSlot + 1;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      // Two blocks at the same slot on competing branches, as observed on devnets
+      for (const blockRoot of ["0x02", "0x03"]) {
+        protoArray.onBlock(createTestBlock(gloasForkSlot, blockRoot, genesisRoot, genesisRoot), currentSlot, null);
+      }
+      protoArray.onExecutionPayload(
+        "0x02",
+        currentSlot,
+        "0x02ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
+
+      // Both branches are assessed, not just the one that ends up on the head branch
+      expect(protoArray.getPayloadRevealCounts(gloasForkSlot, currentSlot)).toEqual({
+        blocksPresent: 2,
+        payloadsRevealed: 1,
+      });
+    });
+
+    it("keeps counting past FULL variants appended below the window", () => {
+      const currentSlot = gloasForkSlot + 3;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      // Block below the window plus two within it
+      for (const [slot, blockRoot] of [
+        [gloasForkSlot, "0x02"],
+        [gloasForkSlot + 2, "0x03"],
+        [gloasForkSlot + 3, "0x04"],
+      ] as const) {
+        protoArray.onBlock(createTestBlock(slot, blockRoot, genesisRoot, genesisRoot), currentSlot, null);
+      }
+
+      // Reveal the below-window payload last so its FULL node is appended after the in-window
+      // nodes, backward iteration must skip it instead of breaking on its slot
+      for (const blockRoot of ["0x04", "0x02"]) {
+        protoArray.onExecutionPayload(
+          blockRoot,
+          currentSlot,
+          `${blockRoot}ff`,
+          1,
+          30000000,
+          null,
+          ExecutionStatus.Valid,
+          DataAvailabilityStatus.Available
+        );
+      }
+
+      expect(protoArray.getPayloadRevealCounts(gloasForkSlot + 2, currentSlot)).toEqual({
+        blocksPresent: 2,
+        payloadsRevealed: 1,
+      });
+    });
   });
 
   describe("Pre-Gloas (Fulu) behavior", () => {
