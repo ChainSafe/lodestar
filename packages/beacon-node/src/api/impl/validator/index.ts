@@ -529,9 +529,6 @@ export function getValidatorApi(
     builderBoostFactor?: bigint,
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOpts = {}
   ): Promise<ProduceBlindedBlockOrBlockContentsRes> {
-    // set some sensible opts
-    // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
-    // and the actual selection will be determined using builderBoostFactor passed by the validator
     builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
     if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
       logger.warn("Builder selection builderonly is no longer supported, treating as builderalways");

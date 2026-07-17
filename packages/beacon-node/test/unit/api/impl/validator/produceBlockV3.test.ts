@@ -170,18 +170,30 @@ describe("api/validator - produceBlockV3", () => {
     modules.chain.recomputeForkChoiceHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
     modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
-    modules.chain.produceCommonBlockBody.mockResolvedValue(fullBlock.body as never);
+    modules.chain.produceCommonBlockBody.mockResolvedValue({
+      attestations: fullBlock.body.attestations,
+      attesterSlashings: fullBlock.body.attesterSlashings,
+      deposits: fullBlock.body.deposits,
+      proposerSlashings: fullBlock.body.proposerSlashings,
+      eth1Data: fullBlock.body.eth1Data,
+      graffiti: fullBlock.body.graffiti,
+      randaoReveal: fullBlock.body.randaoReveal,
+      voluntaryExits: fullBlock.body.voluntaryExits,
+      blsToExecutionChanges: [],
+      syncAggregate: fullBlock.body.syncAggregate,
+    });
     // Local payload value (2) exceeds the builder value (1), builderalways still selects the builder block
     modules.chain.produceBlock.mockResolvedValue({
       block: fullBlock,
       executionPayloadValue: BigInt(2),
       consensusBlockValue: BigInt(0),
-    } as never);
+      shouldOverrideBuilder: false,
+    });
     modules.chain.produceBlindedBlock.mockResolvedValue({
       block: blindedBlock,
       executionPayloadValue: BigInt(1),
       consensusBlockValue: BigInt(0),
-    } as never);
+    });
 
     const {data: block, meta} = await api.produceBlockV3({
       slot,
