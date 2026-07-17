@@ -76,6 +76,10 @@ export class NoBidReceived extends Error {
  *
  * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
  * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
+ *
+ * The values are randomized per node so builders cannot predict when a given proposer will
+ * fall back to local blocks. With fixed thresholds a builder could withhold payloads right up
+ * to the limit without ever tripping the breaker.
  */
 export function getFaultInspectionParams(opts: {faultInspectionWindow?: number; allowedFaults?: number}): {
   faultInspectionWindow: number;
