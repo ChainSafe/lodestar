@@ -93,7 +93,7 @@ describe("Gloas Fork Choice", () => {
   });
 
   describe("getPayloadRevealCounts", () => {
-    it("counts gloas blocks and revealed payloads within slot range", () => {
+    it("counts blocks and revealed payloads within slot range", () => {
       const currentSlot = gloasForkSlot + 2;
       const protoArray = ProtoArray.initialize(
         createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
