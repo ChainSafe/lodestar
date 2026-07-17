@@ -72,12 +72,11 @@ export class BuilderCircuitBreaker {
       allowedFaults: this.allowedFaults,
     };
     if (this.active !== wasActive) {
-      this.modules.logger.info(
-        this.active
-          ? "Builder circuit breaker activated, ignoring builder bids"
-          : "Builder circuit breaker deactivated",
-        logCtx
-      );
+      if (this.active) {
+        this.modules.logger.warn("Builder circuit breaker activated, ignoring builder bids", logCtx);
+      } else {
+        this.modules.logger.info("Builder circuit breaker deactivated", logCtx);
+      }
     } else {
       this.modules.logger.verbose("Builder circuit breaker status", {active: this.active, ...logCtx});
     }
