@@ -5,6 +5,7 @@ import {
   ForkName,
   ForkPostAltair,
   ForkPostBellatrix,
+  ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
@@ -52,7 +53,12 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
-import {getBlockBodyExecutionHeaderProof, getCurrentSyncCommitteeBranch, getNextSyncCommitteeBranch} from "./proofs.js";
+import {
+  getBlockBodyExecutionBlockHashProof,
+  getBlockBodyExecutionHeaderProof,
+  getCurrentSyncCommitteeBranch,
+  getNextSyncCommitteeBranch,
+} from "./proofs.js";
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;
@@ -769,22 +775,24 @@ export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
 }
 
-// TODO GLOAS: Pending light-client spec but this function probably won't be used
-// in Gloas. So we can assume any types here are pre-gloas
-export function blockToLightClientHeader(
-  fork: ForkName,
-  block: BeaconBlock<ForkPostAltair & ForkPreGloas>
-): LightClientHeader {
-  const blockSlot = block.slot;
+export function blockToLightClientHeader(fork: ForkName, block: BeaconBlock<ForkPostAltair>): LightClientHeader {
   const beacon: phase0.BeaconBlockHeader = {
-    slot: blockSlot,
+    slot: block.slot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: block.stateRoot,
-    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair & ForkPreGloas, "BeaconBlockBody">).hashTreeRoot(
-      block.body
-    ),
+    bodyRoot: (ssz[fork].BeaconBlockBody as SSZTypesFor<ForkPostAltair, "BeaconBlockBody">).hashTreeRoot(block.body),
   };
+
+  if (isForkPostGloas(fork)) {
+    const blockBody = block.body as BeaconBlockBody<ForkPostGloas>;
+    return {
+      beacon,
+      executionBlockHash: blockBody.signedExecutionPayloadBid.message.parentBlockHash,
+      executionBranch: getBlockBodyExecutionBlockHashProof(fork, blockBody),
+    };
+  }
+
   if (ForkSeq[fork] >= ForkSeq.capella) {
     const blockBody = block.body as BeaconBlockBody<ForkPostBellatrix & ForkPreGloas>;
     const execution = executionPayloadToPayloadHeader(ForkSeq[fork], blockBody.executionPayload);
