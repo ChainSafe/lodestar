@@ -1,7 +1,7 @@
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
-import {ExecutionBuilderArgs} from "./builder.js";
+import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -42,9 +42,7 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-export function parseArgs(
-  args: ChainArgs & Pick<ExecutionBuilderArgs, "builder.faultInspectionWindow" | "builder.allowedFaults">
-): IBeaconNodeOptions["chain"] {
+export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,

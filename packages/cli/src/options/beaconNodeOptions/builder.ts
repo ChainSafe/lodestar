@@ -10,6 +10,9 @@ export type ExecutionBuilderArgs = {
   "builder.allowedFaults"?: number;
 };
 
+/** Circuit breaker thresholds, also consumed by the chain options for the post-gloas breaker */
+export type CircuitBreakerArgs = Pick<ExecutionBuilderArgs, "builder.faultInspectionWindow" | "builder.allowedFaults">;
+
 export function parseArgs(args: ExecutionBuilderArgs): IBeaconNodeOptions["executionBuilder"] {
   if (Array.isArray(args["builder.url"]) || args["builder.url"]?.includes(",http")) {
     throw new YargsError(
