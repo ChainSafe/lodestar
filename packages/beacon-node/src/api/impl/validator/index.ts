@@ -534,7 +534,8 @@ export function getValidatorApi(
     // and the actual selection will be determined using builderBoostFactor passed by the validator
     builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
     if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-      throw new ApiError(400, "Builder selection builderonly is no longer supported, use builderalways instead");
+      logger.warn("Builder selection builderonly is no longer supported, treating as builderalways");
+      builderSelection = routes.validator.BuilderSelection.BuilderAlways;
     }
     builderBoostFactor = builderBoostFactor ?? BigInt(100);
     if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
@@ -858,7 +859,8 @@ export function getValidatorApi(
 
       builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
       if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        throw new ApiError(400, "Builder selection builderonly is no longer supported, use builderalways instead");
+        logger.warn("Builder selection builderonly is no longer supported, treating as builderalways");
+        builderSelection = routes.validator.BuilderSelection.BuilderAlways;
       }
       builderBoostFactor = builderBoostFactor ?? BigInt(100);
       if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {

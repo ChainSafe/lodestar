@@ -150,17 +150,29 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
-  it("rejects builderonly selection", async () => {
-    await expect(
-      api.produceBlockV4({
-        slot,
-        randaoReveal,
-        graffiti,
-        feeRecipient,
-        includePayload: false,
-        builderSelection: routes.validator.BuilderSelection.BuilderOnly,
-      })
-    ).rejects.toThrow("Builder selection builderonly is no longer supported");
-    expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+  it("treats deprecated builderonly selection as builderalways", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    // Bid (1 gwei) is preferred over the higher local payload value (2 gwei) since builderalways
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+      block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+      executionPayloadValue: BigInt(2e9),
+      consensusBlockValue: BigInt(0),
+    }));
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+    });
+
+    expect(modules.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Builder selection builderonly is no longer supported")
+    );
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(block).toEqual(bidBlock);
   });
 });

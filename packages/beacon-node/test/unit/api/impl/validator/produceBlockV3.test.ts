@@ -160,22 +160,42 @@ describe("api/validator - produceBlockV3", () => {
     });
   }
 
-  it("rejects builderonly selection", async () => {
+  it("treats deprecated builderonly selection as builderalways", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+    const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
     const slot = 1 * SLOTS_PER_EPOCH;
 
     vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+    modules.chain.recomputeForkChoiceHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
+    modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
+    modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
+    modules.chain.produceCommonBlockBody.mockResolvedValue(fullBlock.body as never);
+    // Local payload value (2) exceeds the builder value (1), builderalways still selects the builder block
+    modules.chain.produceBlock.mockResolvedValue({
+      block: fullBlock,
+      executionPayloadValue: BigInt(2),
+      consensusBlockValue: BigInt(0),
+    } as never);
+    modules.chain.produceBlindedBlock.mockResolvedValue({
+      block: blindedBlock,
+      executionPayloadValue: BigInt(1),
+      consensusBlockValue: BigInt(0),
+    } as never);
 
-    await expect(
-      api.produceBlockV3({
-        slot,
-        randaoReveal: fullBlock.body.randaoReveal,
-        graffiti: "a".repeat(32),
-        skipRandaoVerification: false,
-        builderSelection: routes.validator.BuilderSelection.BuilderOnly,
-      })
-    ).rejects.toThrow("Builder selection builderonly is no longer supported");
+    const {data: block, meta} = await api.produceBlockV3({
+      slot,
+      randaoReveal: fullBlock.body.randaoReveal,
+      graffiti: "a".repeat(32),
+      skipRandaoVerification: false,
+      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+    });
+
+    expect(modules.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Builder selection builderonly is no longer supported")
+    );
+    expect(block).toEqual(blindedBlock);
+    expect(meta.executionPayloadBlinded).toBe(true);
   });
 
   it("correctly pass feeRecipient to produceBlock", async () => {
