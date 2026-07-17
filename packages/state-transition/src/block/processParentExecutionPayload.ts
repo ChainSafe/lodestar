@@ -3,7 +3,6 @@ import {
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -128,7 +127,6 @@ function settleBuilderPayment(state: CachedBeaconStateGloas, paymentIndex: numbe
 }
 
 function assertExecutionRequestsWithinLimits(requests: gloas.ExecutionRequests): void {
-  assertMaxLength("deposits", requests.deposits.length, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD);
   assertMaxLength("withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD);
   assertMaxLength("consolidations", requests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD);
   // New in GLOAS:EIP8282
