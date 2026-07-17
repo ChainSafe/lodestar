@@ -83,7 +83,6 @@ import {ZERO_HASH} from "../../../constants/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {SyncState} from "../../../sync/index.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
 import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
@@ -92,22 +91,8 @@ import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
+import {notWhileSyncing} from "../utils.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
-
-/**
- * If the node is within this many epochs from the head, we declare it to be synced regardless of
- * the network sync state.
- *
- * This helps prevent attacks where nodes can convince us that we're syncing some non-existent
- * finalized head.
- *
- * TODO: Lighthouse uses 8 for the attack described above. However, 8 kills Lodestar since validators
- * can trigger regen to fast-forward head state 8 epochs to be immediately invalidated as sync sets
- * a new head. Then the checkpoint state cache grows unbounded with very different states (because
- * they are 8 epochs apart) and causes an OOM. Research a proper solution once regen and the state
- * caches are better.
- */
-export const SYNC_TOLERANCE_EPOCHS = 1;
 
 /**
  * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve.
@@ -343,36 +328,6 @@ export function getValidatorApi(
   }
 
   /**
-   * Reject any request while the node is syncing
-   */
-  function notWhileSyncing(): void {
-    // Consider node synced before or close to genesis
-    if (chain.clock.currentSlot < SLOTS_PER_EPOCH) {
-      return;
-    }
-
-    const syncState = sync.state;
-    switch (syncState) {
-      case SyncState.SyncingFinalized:
-      case SyncState.SyncingHead: {
-        const currentSlot = chain.clock.currentSlot;
-        const headSlot = chain.forkChoice.getHead().slot;
-        if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
-          throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
-        }
-
-        return;
-      }
-
-      case SyncState.Synced:
-        return;
-
-      case SyncState.Stalled:
-        throw new NodeIsSyncing("waiting for peers");
-    }
-  }
-
-  /**
    * Post merge, the CL and EL could be out of step in the sync, and could result in
    * Syncing status of the chain head. To be precise:
    * 1. CL could be ahead of the EL, with the validity of head payload not yet verified
@@ -574,7 +529,7 @@ export function getValidatorApi(
     builderBoostFactor?: bigint,
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOpts = {}
   ): Promise<ProduceBlindedBlockOrBlockContentsRes> {
-    notWhileSyncing();
+    notWhileSyncing(chain, sync.state);
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     const parentBlock = chain.getProposerHead(slot);
@@ -932,7 +887,7 @@ export function getValidatorApi(
         throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const parentBlock = chain.getProposerHead(slot);
@@ -951,15 +906,22 @@ export function getValidatorApi(
       // TODO GLOAS: add external builder api support when it is implemented
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      // Bids are only skipped entirely with executiononly, other engine-preferring selections
-      // still build a block with the best bid as fallback in case local production fails
+      // Bids are only skipped entirely with executiononly or while the circuit breaker is active,
+      // other engine-preferring selections still build a block with the best bid as fallback in
+      // case local production fails
+      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
       const builderBid =
-        builderSelection === routes.validator.BuilderSelection.ExecutionOnly
+        builderSelection === routes.validator.BuilderSelection.ExecutionOnly || circuitBreakerActive
           ? null
           : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       if (builderBid === null && builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        throw new ApiError(400, `No builder bid available for slot=${slot} with builderSelection=builderonly`);
+        throw new ApiError(
+          400,
+          circuitBreakerActive
+            ? `Builder circuit breaker is active, refusing to produce block with builderSelection=builderonly for slot=${slot}`
+            : `No builder bid available for slot=${slot} with builderSelection=builderonly`
+        );
       }
       const buildLocalBlock = builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
 
@@ -971,6 +933,7 @@ export function getValidatorApi(
         fork,
         builderSelection,
         builderBoostFactor,
+        circuitBreakerActive,
         ...(builderBid !== null
           ? {
               bidValue: builderBid.message.value,
@@ -1163,7 +1126,7 @@ export function getValidatorApi(
     },
 
     async produceAttestationData({committeeIndex, slot}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -1244,7 +1207,7 @@ export function getValidatorApi(
         throw new ApiError(400, `producePayloadAttestationData is not supported before Gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
@@ -1329,7 +1292,7 @@ export function getValidatorApi(
     },
 
     async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
@@ -1376,7 +1339,7 @@ export function getValidatorApi(
           // requested epoch is within that range, we can use the head state at current epoch
           state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
         } else {
-          const res = await getStateResponseWithRegen(chain, startSlot);
+          const res = await getStateResponseWithRegen(chain, sync, startSlot);
 
           state = res.state instanceof Uint8Array ? chain.getHeadState().loadOtherState(res.state) : res.state;
 
@@ -1470,7 +1433,7 @@ export function getValidatorApi(
     },
 
     async getAttesterDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -1530,7 +1493,7 @@ export function getValidatorApi(
     },
 
     async getPtcDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get PTC duties");
@@ -1592,7 +1555,7 @@ export function getValidatorApi(
      * @param validatorIndices an array of the validator indices for which to obtain the duties.
      */
     async getSyncCommitteeDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -1639,7 +1602,7 @@ export function getValidatorApi(
     },
 
     async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -1662,7 +1625,7 @@ export function getValidatorApi(
     },
 
     async publishAggregateAndProofsV2({signedAggregateAndProofs}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
@@ -1723,7 +1686,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/137
      */
     async publishContributionAndProofs({contributionAndProofs}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const failures: FailureList = [];
 
@@ -1772,7 +1735,7 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
@@ -1805,7 +1768,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/136
      */
     async prepareSyncCommitteeSubnets({subscriptions}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
       const subs: CommitteeSubscription[] = [];
@@ -1949,7 +1912,7 @@ export function getValidatorApi(
         throw new ApiError(400, `getExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const blockRootHex = toRootHex(beaconBlockRoot);
