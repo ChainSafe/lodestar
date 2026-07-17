@@ -1967,6 +1967,11 @@ export function getValidatorApi(
 
       const {executionPayload, executionRequests, parentBlockRoot} = produceResult as ProduceFullGloas;
 
+      if (executionPayload === undefined) {
+        // Blocks committing to a builder bid are cached as full but without payload data
+        throw new ApiError(404, `No self-build execution payload cached for block root ${blockRootHex}`);
+      }
+
       if (executionPayload.slotNumber !== slot) {
         throw new ApiError(
           404,
