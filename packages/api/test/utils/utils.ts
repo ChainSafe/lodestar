@@ -9,7 +9,9 @@ export function getTestServer(): {server: FastifyInstance; start: () => Promise<
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
     routerOptions: {
-      querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false}),
+      // Keep options in sync with `QUERY_STRING_ARRAY_LIMIT` in
+      // packages/beacon-node/src/api/rest/base.ts so tests mirror the real server (see #9672)
+      querystringParser: (str) => parseQueryString(str, {comma: true, parseArrays: false, arrayLimit: 64}),
     },
   });
 

@@ -56,6 +56,21 @@ const INVALID_MEDIA_TYPE_CODE = errorCodes.FST_ERR_CTP_INVALID_MEDIA_TYPE().code
 const SCHEMA_VALIDATION_ERROR_CODE = errorCodes.FST_ERR_VALIDATION().code;
 
 /**
+ * Maximum number of items parsed from a comma-separated (`?id=a,b,c`) or repeated
+ * (`?id=a&id=b`) array query param. `qs` converts arrays longer than this into an
+ * object, which then fails schema validation (e.g. `id must be array`).
+ *
+ * Set to the largest `maxItems` across beacon-API query array params: the validator
+ * `id` lists on `getStateValidators` / `getStateValidatorBalances` allow up to 64 ids.
+ *
+ * Before `qs` 6.14.2, comma arrays bypassed `arrayLimit`; enforcing it (CVE-2026-2391,
+ * pulled in by the `qs` bump in #9399) regressed requests sending more than 20 ids in
+ * comma form, such as those from the Nimbus validator client.
+ * See https://github.com/ChainSafe/lodestar/issues/9672
+ */
+const QUERY_STRING_ARRAY_LIMIT = 64;
+
+/**
  * REST API powered by `fastify` server.
  */
 export class RestApiServer {
@@ -82,6 +97,9 @@ export class RestApiServer {
             // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
             // The schema validation will catch this and throw an error as parsed query string results in an object.
             parseArrays: false,
+            // Cap comma-separated/repeated array query params at the largest beacon-API `maxItems`.
+            // Without this, `qs` defaults to 20 and turns longer arrays into an object (see #9672).
+            arrayLimit: QUERY_STRING_ARRAY_LIMIT,
           }),
       },
       bodyLimit: opts.bodyLimit,
