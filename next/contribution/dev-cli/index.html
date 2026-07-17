@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.78a93a4a.css">
-<script src="/lodestar/assets/js/runtime~main.9b901b8d.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.d5e3c89d.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.8aeb25ba.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -181,10 +181,10 @@
 <p>type: <code>number</code></p>
 <p>default: <code>12000</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--builderfaultinspectionwindow"><code>--builder.faultInspectionWindow</code><a href="#--builderfaultinspectionwindow" class="hash-link" aria-label="Direct link to --builderfaultinspectionwindow" title="Direct link to --builderfaultinspectionwindow">​</a></h4>
-<p>Window to inspect missed slots for enabling/disabling builder circuit breaker</p>
+<p>Window to inspect missed slots (pre-gloas) or unrevealed payloads (post-gloas) for enabling/disabling builder circuit breaker</p>
 <p>type: <code>number</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--builderallowedfaults"><code>--builder.allowedFaults</code><a href="#--builderallowedfaults" class="hash-link" aria-label="Direct link to --builderallowedfaults" title="Direct link to --builderallowedfaults">​</a></h4>
-<p>Number of missed slots allowed in the <code>faultInspectionWindow</code> for builder circuit</p>
+<p>Number of missed slots (pre-gloas) or unrevealed payloads (post-gloas) allowed in the <code>faultInspectionWindow</code> for builder circuit</p>
 <p>type: <code>number</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--metrics"><code>--metrics</code><a href="#--metrics" class="hash-link" aria-label="Direct link to --metrics" title="Direct link to --metrics">​</a></h4>
 <p>Enable the Prometheus metrics HTTP server</p>
@@ -245,7 +245,7 @@
 <p>Bootnodes for discv5 discovery</p>
 <p>type: <code>string[]</code></p>
 <p>default: <code>[ &quot;[]&quot; ]</code></p>
-<h4 class="anchor anchorWithStickyNavbar_d3C5" id="--targetpeers"><code>--targetPeers</code><a href="#--targetpeers" class="hash-link" aria-label="Direct link to --targetpeers" title="Direct link to --targetpeers"> ​</a></h4>
+<h4 class="anchor anchorWithStickyNavbar_d3C5" id="--targetpeers"><code>--targetPeers</code><a href="#--targetpeers" class="hash-link" aria-label="Direct link to --targetpeers" title="Direct link to --targetpeers">​</a></h4>
 <p>The target connected peers. Above this number peers will be disconnected</p>
 <p>type: <code>number</code></p>
 <p>default: <code>200</code></p>
