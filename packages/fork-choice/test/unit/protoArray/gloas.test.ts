@@ -139,9 +139,8 @@ describe("Gloas Fork Choice", () => {
       });
     });
 
-    // Counting all branches is intentional, withheld payloads on orphaned blocks still signal
-    // non-reveal risk for the next proposal, and unlike counting only the head branch the
-    // result cannot be gamed by steering which branch is head when the breaker is evaluated
+    // Counting all branches is intentional, it keeps the count independent of which branch is
+    // head at evaluation time and errs toward local building when forks are frequent
     it("counts competing blocks at the same slot on different branches", () => {
       const currentSlot = gloasForkSlot + 1;
       const protoArray = ProtoArray.initialize(
