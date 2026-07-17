@@ -195,8 +195,9 @@ export const forkChoiceTestRunner =
               // (an attestation may only influence fork choice from the slot AFTER it was created). Lodestar
               // enforces this 1-slot delay in the gossip/attestation-pool layer, not in `forkChoice.onAttestation`,
               // so replicate the precondition here since the runner calls `onAttestation` directly.
-              const currentSlot = Math.floor(tickTime / (config.SLOT_DURATION_MS / 1000));
-              if (currentSlot < attestation.data.slot + 1) {
+              // `clock.currentSlot` is initialized from the anchor state slot and advanced by tick
+              // steps — matching `get_current_slot(store)` even before the first tick.
+              if (clock.currentSlot < attestation.data.slot + 1) {
                 if (isValid) {
                   throw Error(`Attestation not yet 1 slot old but marked valid at step ${i}`);
                 }
@@ -204,7 +205,7 @@ export const forkChoiceTestRunner =
                   `Step ${i}/${stepsLen} skip attestation: not yet 1 slot old (spec on_attestation rejects)`,
                   {
                     attSlot: attestation.data.slot,
-                    currentSlot,
+                    currentSlot: clock.currentSlot,
                   }
                 );
                 continue;
@@ -516,8 +517,11 @@ export const forkChoiceTestRunner =
                 });
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
-                // Spec `on_block` is a no-op success on a known block; lodestar's production
-                // import path rejects with ALREADY_KNOWN. Treat as success in the spec runner.
+                // Runner accommodation with a known limitation: the spec re-processes a duplicate
+                // block (re-runs the state transition and may refresh timeliness/boost/checkpoint
+                // state), while lodestar's production import path rejects duplicates with
+                // ALREADY_KNOWN. Treat as success; a vector that relies on duplicate-block side
+                // effects would diverge here.
                 if (isValid && e instanceof BlockError && e.type.code === BlockErrorCode.ALREADY_KNOWN) {
                   logger.debug(`Step ${i}/${stepsLen} block already known — treating as no-op success`, {
                     id: step.block,
