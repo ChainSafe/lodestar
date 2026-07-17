@@ -70,7 +70,7 @@ describe("api/validator - produceBlockV4", () => {
     vi.clearAllMocks();
   });
 
-  it("prefers builder bid block when a bid is available", async () => {
+  it("builds with the builder bid when a bid is available", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
 
