@@ -236,36 +236,29 @@ export class BeaconNode {
       };
     }
 
-    const chain = new BeaconChain(
-      {
-        ...opts.chain,
-        faultInspectionWindow: opts.executionBuilder.faultInspectionWindow,
-        allowedFaults: opts.executionBuilder.allowedFaults,
-      },
-      {
-        privateKey,
-        config,
-        clock,
-        pubkeyCache,
-        dataDir,
-        db,
-        dbName: opts.db.name,
-        logger: logger.child({module: LoggerModule.chain}),
-        processShutdownCallback,
+    const chain = new BeaconChain(opts.chain, {
+      privateKey,
+      config,
+      clock,
+      pubkeyCache,
+      dataDir,
+      db,
+      dbName: opts.db.name,
+      logger: logger.child({module: LoggerModule.chain}),
+      processShutdownCallback,
+      metrics,
+      validatorMonitor,
+      anchorState,
+      isAnchorStateFinalized,
+      executionEngine: initializeExecutionEngine(executionEngineOpts, {
         metrics,
-        validatorMonitor,
-        anchorState,
-        isAnchorStateFinalized,
-        executionEngine: initializeExecutionEngine(executionEngineOpts, {
-          metrics,
-          signal,
-          logger: logger.child({module: LoggerModule.execution}),
-        }),
-        executionBuilder: opts.executionBuilder.enabled
-          ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
-          : undefined,
-      }
-    );
+        signal,
+        logger: logger.child({module: LoggerModule.execution}),
+      }),
+      executionBuilder: opts.executionBuilder.enabled
+        ? initializeExecutionBuilder(opts.executionBuilder, config, metrics, logger)
+        : undefined,
+    });
 
     // Load persisted data from disk to in-memory caches
     await chain.init();
