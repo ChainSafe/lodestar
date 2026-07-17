@@ -495,7 +495,7 @@ export type Endpoints = {
       /** The slot for which payload attestation data should be created */
       slot: Slot;
     },
-    {params: {slot: Slot}},
+    {query: {slot: Slot}},
     MaybePayloadAttestationData,
     VersionMeta
   >;
@@ -999,13 +999,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     producePayloadAttestationData: {
-      url: "/eth/v1/validator/payload_attestation_data/{slot}",
+      url: "/eth/v1/validator/payload_attestation_data",
       method: "GET",
       req: {
-        writeReq: ({slot}) => ({params: {slot}}),
-        parseReq: ({params}) => ({slot: params.slot}),
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
         schema: {
-          params: {slot: Schema.UintRequired},
+          query: {slot: Schema.UintRequired},
         },
       },
       resp: {
