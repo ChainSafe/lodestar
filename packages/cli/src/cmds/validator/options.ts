@@ -262,7 +262,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description:
-      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
+      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`. Post-gloas `builderonly` is treated the same as `builderalways`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },

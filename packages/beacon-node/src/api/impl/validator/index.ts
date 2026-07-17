@@ -882,6 +882,10 @@ export function getValidatorApi(
       }
 
       builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
+      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
+        // The local block is always built post-gloas as fallback, treat builderonly as builderalways
+        builderSelection = routes.validator.BuilderSelection.BuilderAlways;
+      }
       builderBoostFactor = builderBoostFactor ?? BigInt(100);
       if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
         throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
@@ -914,16 +918,6 @@ export function getValidatorApi(
         builderSelection === routes.validator.BuilderSelection.ExecutionOnly || circuitBreakerActive
           ? null
           : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
-
-      if (builderBid === null && builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        throw new ApiError(
-          400,
-          circuitBreakerActive
-            ? `Builder circuit breaker is active, refusing to produce block with builderSelection=builderonly for slot=${slot}`
-            : `No builder bid available for slot=${slot} with builderSelection=builderonly`
-        );
-      }
-      const buildLocalBlock = builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
 
       const logCtx = {
         slot,
@@ -959,9 +953,7 @@ export function getValidatorApi(
         commonBlockBodyPromise,
       };
 
-      if (buildLocalBlock) {
-        metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
-      }
+      metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
       if (builderBid !== null) {
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
       }
@@ -978,20 +970,20 @@ export function getValidatorApi(
       // use abort controller to stop waiting for the bid block if the engine block will be selected
       const controller = new AbortController();
 
-      const enginePromise: ReturnType<typeof chain.produceBlock> = buildLocalBlock
-        ? timed(ProducedBlockSource.engine, () => chain.produceBlock(baseAttrs)).then((engineBlock) => {
-            // No need to wait for the bid block if the engine block will always be selected due to
-            // suspected builder censorship, a builder boost factor of 0 or executionalways selection
-            if (
-              engineBlock.shouldOverrideBuilder ||
-              builderBoostFactor === BigInt(0) ||
-              builderSelection === routes.validator.BuilderSelection.ExecutionAlways
-            ) {
-              controller.abort();
-            }
-            return engineBlock;
-          })
-        : Promise.reject(new Error("Local block production disabled by builderonly selection"));
+      const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
+        chain.produceBlock(baseAttrs)
+      ).then((engineBlock) => {
+        // No need to wait for the bid block if the engine block will always be selected due to
+        // suspected builder censorship, a builder boost factor of 0 or executionalways selection
+        if (
+          engineBlock.shouldOverrideBuilder ||
+          builderBoostFactor === BigInt(0) ||
+          builderSelection === routes.validator.BuilderSelection.ExecutionAlways
+        ) {
+          controller.abort();
+        }
+        return engineBlock;
+      });
       const bidPromise: ReturnType<typeof chain.produceBlock> =
         builderBid !== null
           ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}))
@@ -1030,9 +1022,8 @@ export function getValidatorApi(
       } else if (bidResult.status === "fulfilled") {
         source = ProducedBlockSource.builder;
         bestResult = bidResult;
-        const reason = !buildLocalBlock
-          ? BuilderBlockSelectionReason.EngineDisabled
-          : engineResult.status === "pending"
+        const reason =
+          engineResult.status === "pending"
             ? BuilderBlockSelectionReason.EnginePending
             : BuilderBlockSelectionReason.EngineError;
         metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.builder, reason});

@@ -72,7 +72,7 @@ describe("api/validator - produceBlockV4", () => {
     vi.clearAllMocks();
   });
 
-  it("builds with the builder bid when a bid is available", async () => {
+  it("picks builder bid block when bid value is higher", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
 
@@ -92,6 +92,40 @@ describe("api/validator - produceBlockV4", () => {
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(bidBlock);
     expect(meta.version).toBe(ForkName.gloas);
+  });
+
+  it("picks local block when local payload value is higher", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    // Local payload value (2 gwei) exceeds the bid value (1 gwei)
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+      block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+      executionPayloadValue: BigInt(2e9),
+      consensusBlockValue: BigInt(0),
+    }));
+
+    const {data: block} = await api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload: false});
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(block).toEqual(engineBlock);
+  });
+
+  it("skips builder bids with executiononly selection", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+    });
+
+    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    expect(block).toEqual(engineBlock);
   });
 
   it("produces local block when no bid is available", async () => {
@@ -116,21 +150,44 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
-  it("fails builderonly proposals while the builder circuit breaker is active", async () => {
+  it("treats builderonly as builderalways", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    // Bid block is preferred despite the higher local payload value, but local block is still built
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+      block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
+      executionPayloadValue: BigInt(2e9),
+      consensusBlockValue: BigInt(0),
+    }));
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+    });
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(block).toEqual(bidBlock);
+  });
+
+  it("produces local block for builderonly proposals while the circuit breaker is active", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
 
-    await expect(
-      api.produceBlockV4({
-        slot,
-        randaoReveal,
-        graffiti,
-        feeRecipient,
-        includePayload: false,
-        builderSelection: routes.validator.BuilderSelection.BuilderOnly,
-      })
-    ).rejects.toThrow("Builder circuit breaker is active");
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+    });
+
     expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
-    expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    expect(block).toEqual(engineBlock);
   });
 });
