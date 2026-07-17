@@ -938,8 +938,8 @@ export function getValidatorApi(
       // support when it is implemented.
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      const builderCircuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
-      const builderBid = builderCircuitBreakerActive
+      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
+      const builderBid = circuitBreakerActive
         ? null
         : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
@@ -949,7 +949,7 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
-        builderCircuitBreakerActive,
+        circuitBreakerActive,
         ...(builderBid !== null
           ? {
               bidValue: builderBid.message.value,
