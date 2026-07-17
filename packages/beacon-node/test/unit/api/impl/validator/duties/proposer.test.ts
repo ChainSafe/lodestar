@@ -5,7 +5,8 @@ import {ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params
 import {BeaconStateAllForks, BeaconStateView} from "@lodestar/state-transition";
 import {Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {SYNC_TOLERANCE_EPOCHS, getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
+import {SYNC_TOLERANCE_EPOCHS} from "../../../../../../src/api/impl/utils.js";
+import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../../src/api/options.js";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants/index.js";
 import {SyncState} from "../../../../../../src/sync/interface.js";
