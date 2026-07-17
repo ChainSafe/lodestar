@@ -529,6 +529,18 @@ export function getValidatorApi(
     builderBoostFactor?: bigint,
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOpts = {}
   ): Promise<ProduceBlindedBlockOrBlockContentsRes> {
+    // set some sensible opts
+    // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
+    // and the actual selection will be determined using builderBoostFactor passed by the validator
+    builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
+    if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
+      throw new ApiError(400, "Builder selection builderonly is no longer supported, use builderalways instead");
+    }
+    builderBoostFactor = builderBoostFactor ?? BigInt(100);
+    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
+      throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
+    }
+
     notWhileSyncing(chain, sync.state);
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -539,35 +551,11 @@ export function getValidatorApi(
     metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
     const fork = config.getForkName(slot);
-    // set some sensible opts
-    // builderSelection will be deprecated and will run in mode MaxProfit if builder is enabled
-    // and the actual selection will be determined using builderBoostFactor passed by the validator
-    builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
-    builderBoostFactor = builderBoostFactor ?? BigInt(100);
-    if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
-      throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
-    }
 
     const isBuilderEnabled =
       ForkSeq[fork] >= ForkSeq.bellatrix &&
       chain.executionBuilder !== undefined &&
       builderSelection !== routes.validator.BuilderSelection.ExecutionOnly;
-
-    // At any point either the builder or execution or both flows should be active.
-    //
-    // Ideally such a scenario should be prevented on startup, but proposerSettingsFile or keymanager
-    // configurations could cause a validator pubkey to have builder disabled with builder selection builder only
-    // (TODO: independently make sure such an options update is not successful for a validator pubkey)
-    //
-    // So if builder is disabled ignore builder selection of builder only if caused by user mistake
-    // https://github.com/ChainSafe/lodestar/issues/6338
-    const isEngineEnabled = !isBuilderEnabled || builderSelection !== routes.validator.BuilderSelection.BuilderOnly;
-
-    if (!isEngineEnabled && !isBuilderEnabled) {
-      throw Error(
-        `Internal Error: Neither builder nor execution proposal flow activated isBuilderEnabled=${isBuilderEnabled} builderSelection=${builderSelection}`
-      );
-    }
 
     const graffitiBytes = toGraffitiBytes(
       getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
@@ -583,7 +571,6 @@ export function getValidatorApi(
       fork,
       builderSelection,
       isBuilderEnabled,
-      isEngineEnabled,
       strictFeeRecipientCheck,
       // winston logger doesn't like bigint
       builderBoostFactor: `${builderBoostFactor}`,
@@ -609,27 +596,25 @@ export function getValidatorApi(
         })
       : Promise.reject(new Error("Builder disabled"));
 
-    const enginePromise = isEngineEnabled
-      ? produceEngineBlockContents(slot, randaoReveal, graffitiBytes, {
-          feeRecipient,
-          strictFeeRecipientCheck,
-          commonBlockBodyPromise,
-          parentBlock,
-        }).then((engineBlock) => {
-          // Once the engine returns a block, in the event of either:
-          // - suspected builder censorship
-          // - builder boost factor set to 0 or builder selection `executionalways`
-          // we don't need to wait for builder block as engine block will always be selected
-          if (
-            engineBlock.shouldOverrideBuilder ||
-            builderBoostFactor === BigInt(0) ||
-            builderSelection === routes.validator.BuilderSelection.ExecutionAlways
-          ) {
-            controller.abort();
-          }
-          return engineBlock;
-        })
-      : Promise.reject(new Error("Engine disabled"));
+    const enginePromise = produceEngineBlockContents(slot, randaoReveal, graffitiBytes, {
+      feeRecipient,
+      strictFeeRecipientCheck,
+      commonBlockBodyPromise,
+      parentBlock,
+    }).then((engineBlock) => {
+      // Once the engine returns a block, in the event of either:
+      // - suspected builder censorship
+      // - builder boost factor set to 0 or builder selection `executionalways`
+      // we don't need to wait for builder block as engine block will always be selected
+      if (
+        engineBlock.shouldOverrideBuilder ||
+        builderBoostFactor === BigInt(0) ||
+        builderSelection === routes.validator.BuilderSelection.ExecutionAlways
+      ) {
+        controller.abort();
+      }
+      return engineBlock;
+    });
 
     // Calculate cutoff time based on start of the slot
     const cutoffMs = Math.max(0, BLOCK_PRODUCTION_RACE_CUTOFF_MS - chain.clock.msFromSlot(slot));
@@ -676,30 +661,24 @@ export function getValidatorApi(
       throw Error("Builder and engine both failed to produce the block within timeout");
     }
 
-    if (builder.status === "pending" && !isEngineEnabled) {
-      throw Error("Builder failed to produce the block within timeout");
-    }
-
     if (engine.status === "pending" && !isBuilderEnabled) {
       throw Error("Engine failed to produce the block within timeout");
     }
 
-    if (isEngineEnabled) {
-      if (engine.status === "rejected") {
-        logger.warn(
-          "Engine failed to produce the block",
-          {
-            ...loggerContext,
-            durationMs: engine.durationMs,
-          },
-          engine.reason
-        );
-      } else if (engine.status === "pending") {
-        logger.warn("Engine failed to produce the block within cutoff time", {
+    if (engine.status === "rejected") {
+      logger.warn(
+        "Engine failed to produce the block",
+        {
           ...loggerContext,
-          cutoffMs,
-        });
-      }
+          durationMs: engine.durationMs,
+        },
+        engine.reason
+      );
+    } else if (engine.status === "pending") {
+      logger.warn("Engine failed to produce the block within cutoff time", {
+        ...loggerContext,
+        cutoffMs,
+      });
     }
 
     if (isBuilderEnabled) {
@@ -728,9 +707,7 @@ export function getValidatorApi(
     }
 
     if (builder.status === "rejected" && engine.status === "rejected") {
-      throw Error(
-        `${isBuilderEnabled && isEngineEnabled ? "Builder and engine both" : isBuilderEnabled ? "Builder" : "Engine"} failed to produce the block`
-      );
+      throw Error(`${isBuilderEnabled ? "Builder and engine both" : "Engine"} failed to produce the block`);
     }
 
     // handle shouldOverrideBuilder separately
@@ -752,11 +729,9 @@ export function getValidatorApi(
 
     if (builder.status === "fulfilled" && engine.status !== "fulfilled") {
       const reason =
-        isEngineEnabled === false
-          ? BuilderBlockSelectionReason.EngineDisabled
-          : engine.status === "pending"
-            ? BuilderBlockSelectionReason.EnginePending
-            : BuilderBlockSelectionReason.EngineError;
+        engine.status === "pending"
+          ? BuilderBlockSelectionReason.EnginePending
+          : BuilderBlockSelectionReason.EngineError;
 
       logger.info("Selected builder block: no engine block produced", {
         reason,
@@ -883,8 +858,7 @@ export function getValidatorApi(
 
       builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
       if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        // The local block is always built post-gloas as fallback, treat builderonly as builderalways
-        builderSelection = routes.validator.BuilderSelection.BuilderAlways;
+        throw new ApiError(400, "Builder selection builderonly is no longer supported, use builderalways instead");
       }
       builderBoostFactor = builderBoostFactor ?? BigInt(100);
       if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {

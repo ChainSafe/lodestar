@@ -150,44 +150,17 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
-  it("treats builderonly as builderalways", async () => {
-    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
-    // Bid block is preferred despite the higher local payload value, but local block is still built
-    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
-      block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
-      executionPayloadValue: BigInt(2e9),
-      consensusBlockValue: BigInt(0),
-    }));
-
-    const {data: block} = await api.produceBlockV4({
-      slot,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      includePayload: false,
-      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
-    });
-
-    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
-    expect(block).toEqual(bidBlock);
-  });
-
-  it("produces local block for builderonly proposals while the circuit breaker is active", async () => {
-    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(true);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
-
-    const {data: block} = await api.produceBlockV4({
-      slot,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      includePayload: false,
-      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
-    });
-
-    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
-    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
-    expect(block).toEqual(engineBlock);
+  it("rejects builderonly selection", async () => {
+    await expect(
+      api.produceBlockV4({
+        slot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+        builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+      })
+    ).rejects.toThrow("Builder selection builderonly is no longer supported");
+    expect(modules.chain.produceBlock).not.toHaveBeenCalled();
   });
 });

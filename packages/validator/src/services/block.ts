@@ -391,10 +391,8 @@ function parseProduceBlockResponse(
   const executionPayloadSource = response.executionPayloadSource;
 
   if (
-    (builderSelection === routes.validator.BuilderSelection.BuilderOnly &&
-      executionPayloadSource === ProducedBlockSource.engine) ||
-    (builderSelection === routes.validator.BuilderSelection.ExecutionOnly &&
-      executionPayloadSource === ProducedBlockSource.builder)
+    builderSelection === routes.validator.BuilderSelection.ExecutionOnly &&
+    executionPayloadSource === ProducedBlockSource.builder
   ) {
     throw Error(
       `Block not produced as per desired builderSelection=${builderSelection} executionPayloadSource=${executionPayloadSource}`

@@ -66,9 +66,7 @@ describe("api/validator - produceBlockV3", () => {
     [routes.validator.BuilderSelection.ExecutionAlways, null, 0, 1, false, "engine"],
     [routes.validator.BuilderSelection.ExecutionAlways, 1, 1, 1, true, "engine"],
 
-    [routes.validator.BuilderSelection.BuilderOnly, 0, 2, 0, false, "builder"],
     [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, 1, false, "engine"],
-    [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "builder"],
     [routes.validator.BuilderSelection.ExecutionOnly, 1, 1, 1, true, "engine"],
   ];
 
@@ -158,13 +156,27 @@ describe("api/validator - produceBlockV3", () => {
         expect(modules.chain.produceBlindedBlock).toBeCalledTimes(1);
       }
 
-      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        expect(modules.chain.produceBlock).toBeCalledTimes(0);
-      } else {
-        expect(modules.chain.produceBlock).toBeCalledTimes(1);
-      }
+      expect(modules.chain.produceBlock).toBeCalledTimes(1);
     });
   }
+
+  it("rejects builderonly selection", async () => {
+    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+    const slot = 1 * SLOTS_PER_EPOCH;
+
+    vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
+    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+
+    await expect(
+      api.produceBlockV3({
+        slot,
+        randaoReveal: fullBlock.body.randaoReveal,
+        graffiti: "a".repeat(32),
+        skipRandaoVerification: false,
+        builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+      })
+    ).rejects.toThrow("Builder selection builderonly is no longer supported");
+  });
 
   it("correctly pass feeRecipient to produceBlock", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
