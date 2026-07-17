@@ -632,11 +632,7 @@ export class ForkChoice implements IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    // The expected proposer index on the canonical chain we are following.
-    // Calculated by our head state. We use it as part of the proposer
-    // boost decision making. No boost will be set if this is null.
-    expectedProposerIndex: ValidatorIndex | null
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toRootHex(parentRoot);
@@ -711,8 +707,6 @@ export class ForkChoice implements IForkChoice {
       isTimely &&
       // only boost the first block we see
       this.proposerBoostRoot === null &&
-      expectedProposerIndex !== null &&
-      block.proposerIndex === expectedProposerIndex &&
       this.isProposerBoostSameDependentRoot(this.head.blockRoot, parentRootHex);
     // Candidate boost root used for protoArray.onBlock's best-child weighting. Committed to the
     // store only after the insertion succeeds.
@@ -1505,11 +1499,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Spec: phase0/fork-choice.md#update_proposer_boost_root (`is_same_dependent_root` condition,
-   * consensus-specs #5306). Proposer boost is only granted when the imported block shares the same
-   * proposer-shuffling dependent root for the current epoch as the canonical head computed before
-   * the block was imported. This withholds the boost from a block built on a different shuffling
-   * branch than the head.
+   * Spec: phase0/fork-choice.md#update_proposer_boost_root (`is_same_dependent_root` condition, added in
+   * https://github.com/ethereum/consensus-specs/pull/5306). Proposer boost is only granted when the imported
+   * block shares the same proposer-shuffling dependent root for the current epoch as the canonical head
+   * computed before the block was imported. This withholds the boost from a block built on a different
+   * shuffling branch than the head.
    *
    * The block is not yet in the proto-array when this runs, so its dependent root is traced from
    * its parent

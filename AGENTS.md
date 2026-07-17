@@ -10,6 +10,7 @@
 - **Follow existing patterns** before introducing new abstractions
 - **Structured logging** with specific error codes (not generic `Error`)
 - **Incremental commits** after review starts — do not force push unless maintainer requests it
+- **Communication style:** DO NOT use `—`. Keep communication succinct and human-friendly. NO AI SLOP VERBOSITY.
 
 ## Project overview
 
