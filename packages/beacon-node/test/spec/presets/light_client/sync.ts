@@ -1,32 +1,41 @@
 import {expect} from "vitest";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {isForkPostAltair} from "@lodestar/params";
+import {ForkName, ForkPostAltair, ForkSeq, isForkPostAltair} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
-import {LightclientSpec, toLightClientUpdateSummary} from "@lodestar/state-transition/light-client";
-import {RootHex, Slot, altair, phase0, ssz, sszTypesFor} from "@lodestar/types";
-import {fromHex, toHex} from "@lodestar/utils";
+import {
+  LightclientSpec,
+  getLcExecutionRoot,
+  toLightClientUpdateSummary,
+  upgradeLightClientBootstrap,
+  upgradeLightClientStore,
+  upgradeLightClientUpdate,
+} from "@lodestar/state-transition/light-client";
+import {
+  LightClientBootstrap,
+  LightClientHeader,
+  LightClientUpdate,
+  RootHex,
+  Slot,
+  phase0,
+  ssz,
+  sszTypesFor,
+} from "@lodestar/types";
+import {fromHex, intToBytes, toHex} from "@lodestar/utils";
 import {TestRunnerFn} from "../../utils/types.js";
 
-// https://github.com/ethereum/consensus-specs/blob/da3f5af919be4abb5a6db5a80b235deb8b4b5cba/tests/formats/light_client/single_merkle_proof.md
+// https://github.com/ethereum/consensus-specs/blob/master/tests/formats/light_client/sync.md
 type SyncTestCase = {
   meta: {
     genesis_validators_root: RootHex;
     trusted_block_root: RootHex;
+    bootstrap_fork_digest: string;
+    store_fork_version: string;
   };
   steps: LightclientSyncSteps[];
   config: Partial<ChainConfig>;
-  bootstrap: altair.LightClientBootstrap;
-
-  // leaf: Bytes32            # string, hex encoded, with 0x prefix
-  // leaf_index: int          # integer, decimal
-  // branch: list of Bytes32  # list, each element is a string, hex encoded, with 0x prefix
-  proof: {
-    leaf: RootHex;
-    leaf_index: bigint;
-    branch: RootHex[];
-  };
+  bootstrap: LightClientBootstrap;
 
   // Injected after parsing
   // However updates are multifork and need config and step access to deserialize inside test
@@ -36,6 +45,7 @@ type SyncTestCase = {
 type CheckHeader = {
   slot: bigint;
   beacon_root: RootHex;
+  execution_root?: RootHex;
 };
 
 type Checks = {
@@ -46,14 +56,15 @@ type Checks = {
 };
 
 // - process_update:
-//     update: update_0x460ec66196a5732b306791e82a0d949b49be812cf09b72667fe90735994c3b68_xx
+//     update_fork_digest: "0xfdb20282"
+//     update: update_0x460ec66196a5732b306791e82a0d949b49be812cf09b72667fe90735994c3b68_sf
 //     current_slot: 97
 //     checks:
-//       finalized_header: {slot: 72, beacon_root: '0x36c5a33d8843f26749697a72de42b5bf621c760502847fdb6d50c1e0f1a04ac1'}
-//       optimistic_header: {slot: 96, beacon_root: '0x460ec66196a5732b306791e82a0d949b49be812cf09b72667fe90735994c3b68'}
-
+//       finalized_header: {slot: 72, beacon_root: "0x...", execution_root: "0x..."}
+//       optimistic_header: {slot: 96, beacon_root: "0x...", execution_root: "0x..."}
 type ProcessUpdateStep = {
   process_update: {
+    update_fork_digest: string;
     update: string;
     current_slot: bigint;
     checks: Checks;
@@ -67,7 +78,14 @@ type ForceUpdateStep = {
   };
 };
 
-type LightclientSyncSteps = ProcessUpdateStep | ForceUpdateStep;
+type UpgradeStoreStep = {
+  upgrade_store: {
+    store_fork_version: string;
+    checks: Checks;
+  };
+};
+
+type LightclientSyncSteps = ProcessUpdateStep | ForceUpdateStep | UpgradeStoreStep;
 
 const logger = testLogger("spec-test");
 const UPDATE_FILE_NAME = "^(update)_([0-9a-zA-Z_]+)$";
@@ -75,17 +93,21 @@ const UPDATE_FILE_NAME = "^(update)_([0-9a-zA-Z_]+)$";
 export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
   return {
     testFunction: async (testcase) => {
-      // Grab only the ALTAIR_FORK_EPOCH, since the domains are the same as minimal
+      // Fork digests depend on the vector's fork epochs, versions, and BPO schedule.
       const config = createBeaconConfig(
-        pickConfigForkEpochs(testcase.config),
+        pickConfigForkValues(testcase.config),
         fromHex(testcase.meta.genesis_validators_root)
       );
+      let storeFork = getForkFromVersion(config, testcase.meta.store_fork_version);
+      const bootstrapFork = config.forkDigest2ForkBoundary(fromHex(testcase.meta.bootstrap_fork_digest)).fork;
+      const bootstrap = maybeUpgradeBootstrap(config, bootstrapFork, storeFork, testcase.bootstrap);
 
       const lightClientOpts = {
         allowForcedUpdates: true,
         updateHeadersOnForcedUpdate: true,
       };
-      const lightClient = new LightclientSpec(config, lightClientOpts, testcase.bootstrap);
+      const lightClient = new LightclientSpec(config, lightClientOpts, bootstrap);
+      let latestSignatureSlot = bootstrap.header.beacon.slot;
 
       const stepsLen = testcase.steps.length;
 
@@ -96,20 +118,22 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         };
       }
 
-      function assertHeader(actualHeader: phase0.BeaconBlockHeader, expectedHeader: CheckHeader, msg: string): void {
-        expect(toHeaderSummary(actualHeader)).deep.equals(
-          {root: expectedHeader.beacon_root, slot: Number(expectedHeader.slot as bigint)},
+      function assertHeader(actualHeader: LightClientHeader, expectedHeader: CheckHeader, msg: string): void {
+        expect(toHeaderSummary(actualHeader.beacon)).deep.equals(
+          {root: expectedHeader.beacon_root, slot: Number(expectedHeader.slot)},
           msg
         );
+        if (expectedHeader.execution_root !== undefined) {
+          expect(toHex(getLcExecutionRoot(config, actualHeader))).equals(
+            expectedHeader.execution_root,
+            `${msg} executionRoot`
+          );
+        }
       }
 
-      function runChecks(update: {checks: Checks}): void {
-        assertHeader(lightClient.store.finalizedHeader.beacon, update.checks.finalized_header, "wrong finalizedHeader");
-        assertHeader(
-          lightClient.store.optimisticHeader.beacon,
-          update.checks.optimistic_header,
-          "wrong optimisticHeader"
-        );
+      function runChecks(checks: Checks): void {
+        assertHeader(lightClient.store.finalizedHeader, checks.finalized_header, "wrong finalizedHeader");
+        assertHeader(lightClient.store.optimisticHeader, checks.optimistic_header, "wrong optimisticHeader");
       }
 
       function renderSlot(currentSlot: Slot): {currentSlot: number; curretPeriod: number} {
@@ -119,33 +143,51 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       for (const [i, step] of testcase.steps.entries()) {
         try {
           if (isProcessUpdateStep(step)) {
-            const currentSlot = Number(step.process_update.current_slot as bigint);
+            const {process_update: processUpdate} = step;
+            const currentSlot = Number(processUpdate.current_slot);
             logger.debug(`Step ${i}/${stepsLen} process_update`, renderSlot(currentSlot));
 
-            const updateBytes = testcase.updates.get(step.process_update.update);
+            const updateBytes = testcase.updates.get(processUpdate.update);
             if (!updateBytes) {
-              throw Error(`update ${step.process_update.update} not found`);
+              throw Error(`update ${processUpdate.update} not found`);
             }
 
-            const headerSlot = Number(step.process_update.checks.optimistic_header.slot);
-            const update = config.getPostAltairForkTypes(headerSlot).LightClientUpdate.deserialize(updateBytes);
+            // Decode the original network object using its context fork before upgrading it to the store's fork.
+            const updateFork = onlyPostAltairFork(
+              config.forkDigest2ForkBoundary(fromHex(processUpdate.update_fork_digest)).fork
+            );
+            let update = sszTypesFor(updateFork).LightClientUpdate.deserialize(updateBytes) as LightClientUpdate;
+            if (ForkSeq[updateFork] < ForkSeq[storeFork]) {
+              update = upgradeLightClientUpdate(config, storeFork, update);
+            }
 
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 
             lightClient.onUpdate(currentSlot, update);
-            runChecks(step.process_update);
+            latestSignatureSlot = update.signatureSlot;
+            runChecks(processUpdate.checks);
           }
 
           // force_update step
           else if (isForceUpdateStep(step)) {
-            const currentSlot = Number(step.force_update.current_slot as bigint);
+            const {force_update: forceUpdate} = step;
+            const currentSlot = Number(forceUpdate.current_slot);
             logger.debug(`Step ${i}/${stepsLen} force_update`, renderSlot(currentSlot));
 
             // Simulate force_update()
             lightClient.forceUpdate(currentSlot);
+            runChecks(forceUpdate.checks);
+          }
 
-            // lightClient.forceUpdate();
-            runChecks(step.force_update);
+          // upgrade_store step
+          else if (isUpgradeStoreStep(step)) {
+            const {upgrade_store: upgradeStore} = step;
+            const targetFork = getForkFromVersion(config, upgradeStore.store_fork_version);
+            logger.debug(`Step ${i}/${stepsLen} upgrade_store`, {storeFork, targetFork});
+
+            upgradeLightClientStore(config, targetFork, lightClient.store, latestSignatureSlot);
+            storeFork = targetFork;
+            runChecks(upgradeStore.checks);
           }
 
           logger.debug(
@@ -166,52 +208,83 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       },
       sszTypes: {
         bootstrap: isForkPostAltair(fork) ? sszTypesFor(fork).LightClientBootstrap : ssz.altair.LightClientBootstrap,
-        // The updates are multifork and need config and step info to be deserialized within the test
+        // Updates are multifork and need their step's fork digest to select the SSZ type inside the test.
         [UPDATE_FILE_NAME]: {typeName: "LightClientUpdate", deserialize: (bytes: Uint8Array) => bytes},
       },
-      mapToTestCase: (t: Record<string, any>) => {
+      mapToTestCase: (t: Record<string, unknown>) => {
         // t has input file name as key
+        // Collect dynamically named update files for fork-aware deserialization in each process_update step.
         const updates = new Map<string, Uint8Array>();
-        for (const key in t) {
-          if (!Object.prototype.hasOwnProperty.call(t, key)) continue;
-
-          const updateMatch = key.match(UPDATE_FILE_NAME);
-          if (updateMatch) {
-            updates.set(key, t[key]);
+        for (const [key, value] of Object.entries(t)) {
+          if (key.match(UPDATE_FILE_NAME)) {
+            updates.set(key, value as Uint8Array);
           }
         }
-        return {
-          ...t,
-          updates,
-        } as SyncTestCase;
+        return {...t, updates} as SyncTestCase;
       },
       timeout: 10000,
       expectFunc: () => {},
-      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
+      // Do not manually skip tests here, do it in packages/beacon-node/test/spec/utils/specTestIterator.ts.
     },
   };
 };
 
-function pickConfigForkEpochs(config: Partial<ChainConfig>): Partial<ChainConfig> {
-  const configOnlyFork: Record<string, number> = {};
-  for (const key of Object.keys(config) as (keyof ChainConfig)[]) {
-    if (key.endsWith("_FORK_EPOCH")) {
-      const value = config[key];
-      // Overwrite 2^64 to Infinity
-      if (typeof value === "bigint" && value > BigInt(Number.MAX_SAFE_INTEGER)) {
-        configOnlyFork[key] = Infinity;
-      } else {
-        configOnlyFork[key] = Number(value);
-      }
+function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
+  if (!isForkPostAltair(fork)) {
+    throw Error(`Invalid light client fork ${fork}`);
+  }
+  return fork;
+}
+
+function maybeUpgradeBootstrap(
+  config: ReturnType<typeof createBeaconConfig>,
+  bootstrapFork: ForkName,
+  storeFork: ForkName,
+  bootstrap: LightClientBootstrap
+): LightClientBootstrap {
+  if (ForkSeq[bootstrapFork] < ForkSeq[storeFork]) {
+    return upgradeLightClientBootstrap(config, storeFork, bootstrap);
+  }
+  return bootstrap;
+}
+
+function getForkFromVersion(config: ReturnType<typeof createBeaconConfig>, versionHex: string): ForkName {
+  const version = fromHex(versionHex);
+  for (const fork of config.forksAscendingEpochOrder) {
+    if (ssz.Version.equals(fork.version, version)) {
+      return fork.name;
     }
   }
-  return configOnlyFork;
+  throw Error(`Unknown fork version ${versionHex}`);
 }
 
-function isProcessUpdateStep(step: unknown): step is ProcessUpdateStep {
-  return (step as ProcessUpdateStep).process_update !== undefined;
+function pickConfigForkValues(config: Partial<ChainConfig>): Partial<ChainConfig> {
+  const forkConfig: Partial<ChainConfig> = {};
+  for (const key of Object.keys(config) as (keyof ChainConfig)[]) {
+    const value = config[key];
+    if (key.endsWith("_FORK_EPOCH") && typeof value === "bigint") {
+      // Overwrite 2^64 to Infinity for an unscheduled fork.
+      forkConfig[key] = (value > BigInt(Number.MAX_SAFE_INTEGER) ? Infinity : Number(value)) as never;
+    } else if (key.endsWith("_FORK_VERSION") && typeof value === "bigint") {
+      forkConfig[key] = intToBytes(value, 4, "be") as never;
+    } else if (key === "BLOB_SCHEDULE" && Array.isArray(value)) {
+      forkConfig[key] = value.map((entry) => ({
+        EPOCH: Number(entry.EPOCH),
+        MAX_BLOBS_PER_BLOCK: Number(entry.MAX_BLOBS_PER_BLOCK),
+      }));
+    }
+  }
+  return forkConfig;
 }
 
-function isForceUpdateStep(step: unknown): step is ForceUpdateStep {
-  return (step as ForceUpdateStep).force_update !== undefined;
+function isProcessUpdateStep(step: LightclientSyncSteps): step is ProcessUpdateStep {
+  return "process_update" in step;
+}
+
+function isForceUpdateStep(step: LightclientSyncSteps): step is ForceUpdateStep {
+  return "force_update" in step;
+}
+
+function isUpgradeStoreStep(step: LightclientSyncSteps): step is UpgradeStoreStep {
+  return "upgrade_store" in step;
 }

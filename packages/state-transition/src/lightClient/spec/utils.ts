@@ -23,6 +23,7 @@ import {
 } from "@lodestar/params";
 import {
   BeaconBlockHeader,
+  LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientHeader,
   LightClientOptimisticUpdate,
@@ -32,9 +33,9 @@ import {
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
-import {byteArrayEquals, verifyMerkleBranch} from "@lodestar/utils";
+import {byteArrayEquals, hash, verifyMerkleBranch} from "@lodestar/utils";
 import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "../../util/epoch.js";
-import type {LightClientStore, SyncCommitteeFast} from "./store.js";
+import type {ILightClientStore, SyncCommitteeFast} from "./store.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
@@ -197,6 +198,64 @@ export function getGindexDepth(gindex: number): number {
 
 export function getGindexIndex(gindex: number): number {
   return gindex - 2 ** getGindexDepth(gindex);
+}
+
+export function getLcExecutionRoot(config: ChainForkConfig, header: LightClientHeader): Uint8Array {
+  const epoch = computeEpochAtSlot(header.beacon.slot);
+
+  if (!isGloasLightClientHeader(header)) {
+    if (epoch < config.CAPELLA_FORK_EPOCH) {
+      return ZERO_HASH;
+    }
+
+    return config
+      .getPostBellatrixForkTypes(header.beacon.slot)
+      .ExecutionPayloadHeader.hashTreeRoot((header as LightClientHeader<ForkName.capella>).execution);
+  }
+
+  if (epoch >= config.GLOAS_FORK_EPOCH) {
+    return header.executionBlockHash;
+  }
+
+  const executionPayloadDepth = getGindexDepth(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX);
+  const innerBranch = header.executionBranch.slice(0, -executionPayloadDepth);
+
+  if (epoch >= config.DENEB_FORK_EPOCH) {
+    if (header.beacon.slot === GENESIS_SLOT) {
+      return ssz.deneb.ExecutionPayloadHeader.hashTreeRoot(ssz.deneb.ExecutionPayloadHeader.defaultValue());
+    }
+    return computeBranchRoot(
+      header.executionBlockHash,
+      innerBranch,
+      ssz.deneb.ExecutionPayloadHeader.getPathInfo(["blockHash"]).gindex
+    );
+  }
+
+  if (epoch >= config.CAPELLA_FORK_EPOCH) {
+    if (header.beacon.slot === GENESIS_SLOT) {
+      return ssz.capella.ExecutionPayloadHeader.hashTreeRoot(ssz.capella.ExecutionPayloadHeader.defaultValue());
+    }
+    return computeBranchRoot(
+      header.executionBlockHash,
+      innerBranch,
+      ssz.capella.ExecutionPayloadHeader.getPathInfo(["blockHash"]).gindex
+    );
+  }
+
+  return ZERO_HASH;
+}
+
+export function upgradeLightClientBootstrap(
+  config: ChainForkConfig,
+  targetFork: ForkName,
+  bootstrap: LightClientBootstrap
+): LightClientBootstrap {
+  bootstrap.header = upgradeLightClientHeader(config, targetFork, bootstrap.header);
+  bootstrap.currentSyncCommitteeBranch = normalizeMerkleBranch(
+    bootstrap.currentSyncCommitteeBranch,
+    currentSyncCommitteeGindexAtFork(targetFork)
+  );
+  return bootstrap;
 }
 
 export function upgradeLightClientHeader(
@@ -396,9 +455,9 @@ export function upgradeLightClientOptimisticUpdate(
 export function upgradeLightClientStore(
   config: ChainForkConfig,
   targetFork: ForkName,
-  store: LightClientStore,
+  store: ILightClientStore,
   signatureSlot: Slot
-): LightClientStore {
+): ILightClientStore {
   const updateSignaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
   const bestValidUpdate = store.bestValidUpdates.get(updateSignaturePeriod);
 
@@ -413,6 +472,19 @@ export function upgradeLightClientStore(
   store.optimisticHeader = upgradeLightClientHeader(config, targetFork, store.optimisticHeader);
 
   return store;
+}
+
+function computeBranchRoot(leaf: Uint8Array, branch: Uint8Array[], gindex: bigint): Uint8Array {
+  const depth = getGindexDepth(Number(gindex));
+  const proof = branch.slice(-depth);
+  const index = getGindexIndex(Number(gindex));
+  let root = leaf;
+
+  for (let i = 0; i < depth; i++) {
+    root = Math.floor(index / 2 ** i) % 2 === 1 ? hash(proof[i], root) : hash(root, proof[i]);
+  }
+
+  return root;
 }
 
 function isGloasLightClientHeader(header: LightClientHeader): header is LightClientHeader<ForkName.gloas> {
