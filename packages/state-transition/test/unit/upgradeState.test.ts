@@ -67,6 +67,8 @@ describe("upgradeState", () => {
 
     // Populate the pending* composite queues so the node-reuse path is exercised for them too.
     // Non-builder withdrawal credentials (default zeros) keep the deposits pending in-order.
+    // pendingConsolidations is deliberately left EMPTY to cover migrating an empty list
+    // (a realistic fork-boundary state) through the same node-reuse path.
     for (let i = 0; i < 5; i++) {
       const pendingDeposit = ssz.electra.PendingDeposit.defaultValue();
       pendingDeposit.amount = 1000 + i;
@@ -76,9 +78,6 @@ describe("upgradeState", () => {
       fuluStateView.pendingPartialWithdrawals.push(
         ssz.electra.PendingPartialWithdrawal.toViewDU(pendingPartialWithdrawal)
       );
-      const pendingConsolidation = ssz.electra.PendingConsolidation.defaultValue();
-      pendingConsolidation.sourceIndex = i;
-      fuluStateView.pendingConsolidations.push(ssz.electra.PendingConsolidation.toViewDU(pendingConsolidation));
     }
     fuluStateView.commit();
 
@@ -121,6 +120,7 @@ describe("upgradeState", () => {
     expect(gloasState.pendingDeposits.hashTreeRoot()).toEqual(expectedPendingDepositsRoot);
     expect(gloasState.pendingPartialWithdrawals.hashTreeRoot()).toEqual(expectedPendingPartialWithdrawalsRoot);
     expect(gloasState.pendingConsolidations.hashTreeRoot()).toEqual(expectedPendingConsolidationsRoot);
+    expect(gloasState.pendingConsolidations.length).toBe(0);
     // Basic-list leaf reuse must produce byte-identical merkle roots too
     expect(gloasState.balances.hashTreeRoot()).toEqual(expectedBalancesRoot);
     expect(gloasState.balances.getAll()).toEqual(fuluStateView.balances.getAll());
