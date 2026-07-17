@@ -831,9 +831,14 @@ export function getBeaconBlockApi({
           }
         }
         if (submittedContents.blobs.length > 0) {
-          dataColumnTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
-          // If the block was produced by this node, we will already have computed cells
-          cells = cachedGloasResult?.cells ?? submittedContents.blobs.map((blob) => kzg.computeCells(blob));
+          // If the block was produced by this node, reuse the cached cells and only time the
+          // metric when cells are actually computed from the submitted blobs
+          if (cachedGloasResult?.cells) {
+            cells = cachedGloasResult.cells;
+          } else {
+            dataColumnTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+            cells = submittedContents.blobs.map((blob) => kzg.computeCells(blob));
+          }
           kzgProofs = submittedContents.kzgProofs;
         }
       } else if (cachedGloasResult !== undefined) {
@@ -854,7 +859,6 @@ export function getBeaconBlockApi({
       }
 
       if (cells !== undefined && kzgProofs !== undefined && cells.length > 0) {
-        dataColumnTimer ??= metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         const proofs = kzgProofs;
         const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
           cells: rowCells,
