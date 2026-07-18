@@ -1,4 +1,3 @@
-import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
@@ -44,8 +43,6 @@ import {Metrics} from "../metrics/index.js";
 import {computeNodeIdFromPrivateKey} from "../network/subnets/interface.js";
 import {Clock, ClockEvent, IClock} from "../util/clock.js";
 import {CustodyConfig, getValidatorsCustodyRequirement} from "../util/dataColumns.js";
-import {callInNextEventLoop} from "../util/eventLoop.js";
-import {ensureDir, writeIfNotExist} from "../util/file.js";
 import {isOptimisticBlock} from "../util/forkChoice.js";
 import {JobItemQueue} from "../util/queue/itemQueue.js";
 import {SerializedCache} from "../util/serializedCache.js";
@@ -56,6 +53,7 @@ import {IBlockInput, isBlockInputBlobs, isBlockInputColumns} from "./blocks/bloc
 import {BlockProcessor, ImportBlockOpts} from "./blocks/index.js";
 import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
+import {persistInvalidSszObject} from "./blocks/utils/persistInvalidSszObject.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {IBlsVerifier} from "./bls/index.js";
@@ -386,7 +384,6 @@ export class BeaconChain implements IBeaconChain {
     clock.addListener(ClockEvent.epoch, this.onClockEpoch.bind(this));
     emitter.addListener(ChainEvent.forkChoiceFinalized, this.onForkChoiceFinalized.bind(this));
     emitter.addListener(ChainEvent.forkChoiceJustified, this.onForkChoiceJustified.bind(this));
-    emitter.addListener(ChainEvent.checkpoint, this.onCheckpoint.bind(this));
   }
 
   async init(): Promise<void> {
@@ -964,41 +961,6 @@ export class BeaconChain implements IBeaconChain {
     }
   }
 
-  /**
-   * Invalid state root error is critical and it causes the node to stale most of the time so we want to always
-   * persist preState, postState and block for further investigation.
-   */
-  async persistInvalidStateRoot(
-    preState: IBeaconStateView,
-    postState: IBeaconStateView,
-    block: SignedBeaconBlock
-  ): Promise<void> {
-    const blockSlot = block.message.slot;
-    const blockType = this.config.getForkTypes(blockSlot).SignedBeaconBlock;
-    const postStateRoot = postState.hashTreeRoot();
-    const logStr = `slot_${blockSlot}_invalid_state_root_${toRootHex(postStateRoot)}`;
-    await Promise.all([
-      this.persistSszObject(
-        `SignedBeaconBlock_slot_${blockSlot}`,
-        blockType.serialize(block),
-        blockType.hashTreeRoot(block),
-        `${logStr}_block`
-      ),
-      this.persistSszObject(
-        `preState_slot_${preState.slot}_BeaconState`,
-        preState.serialize(),
-        preState.hashTreeRoot(),
-        `${logStr}_pre_state`
-      ),
-      this.persistSszObject(
-        `postState_slot_${postState.slot}_BeaconState`,
-        postState.serialize(),
-        postState.hashTreeRoot(),
-        `${logStr}_post_state`
-      ),
-    ]);
-  }
-
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T, suffix?: string): void {
     if (this.opts.persistInvalidSszObjects) {
       void this.persistSszObject(type.typeName, type.serialize(sszObject), type.hashTreeRoot(sszObject), suffix);
@@ -1012,21 +974,14 @@ export class BeaconChain implements IBeaconChain {
   }
 
   private async persistSszObject(prefix: string, bytes: Uint8Array, root: Uint8Array, logStr?: string): Promise<void> {
-    const now = new Date();
-    // yyyy-MM-dd
-    const dateStr = now.toISOString().split("T")[0];
-
-    // by default store to lodestar_archive of current dir
-    const dirpath = path.join(this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects", dateStr);
-    const filepath = path.join(dirpath, `${prefix}_${toRootHex(root)}.ssz`);
-
-    await ensureDir(dirpath);
-
-    // as of Feb 17 2022 there are a lot of duplicate files stored with different date suffixes
-    // remove date suffixes in file name, and check duplicate to avoid redundant persistence
-    await writeIfNotExist(filepath, bytes);
-
-    this.logger.debug("Persisted invalid ssz object", {id: logStr, filepath});
+    await persistInvalidSszObject(
+      this.opts.persistInvalidSszObjectsDir ?? "invalid_ssz_objects",
+      this.logger,
+      prefix,
+      bytes,
+      root,
+      logStr
+    );
   }
 
   private onScrapeMetrics(metrics: Metrics): void {
@@ -1080,14 +1035,6 @@ export class BeaconChain implements IBeaconChain {
 
   private onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
     this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
-  }
-
-  // TODO beacon-engine: move to BeaconEngine
-  private onCheckpoint(this: BeaconChain, _checkpoint: phase0.Checkpoint, state: IBeaconStateView): void {
-    // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
-    callInNextEventLoop(() => {
-      this.beaconEngine.shufflingCache.processState(state);
-    });
   }
 
   private async onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {

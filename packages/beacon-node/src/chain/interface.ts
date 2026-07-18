@@ -1,6 +1,6 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {IBeaconStateView, PubkeyCache} from "@lodestar/state-transition";
+import {PubkeyCache} from "@lodestar/state-transition";
 import {
   BeaconBlock,
   BlindedBeaconBlock,
@@ -199,11 +199,6 @@ export interface IBeaconChain {
   updateBeaconProposerData(epoch: Epoch, proposers: ProposerPreparationData[]): Promise<void>;
 
   persistBlock(data: BeaconBlock | BlindedBeaconBlock, suffix?: string): void;
-  persistInvalidStateRoot(
-    preState: IBeaconStateView,
-    postState: IBeaconStateView,
-    block: SignedBeaconBlock
-  ): Promise<void>;
   persistInvalidSszValue<T>(type: Type<T>, sszObject: T | Uint8Array, suffix?: string): void;
   persistInvalidSszBytes(type: string, sszBytes: Uint8Array, suffix?: string): void;
   updateBuilderStatus(clockSlot: Slot): void;

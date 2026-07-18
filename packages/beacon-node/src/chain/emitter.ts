@@ -2,7 +2,6 @@ import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {routes} from "@lodestar/api";
 import {CheckpointWithHex} from "@lodestar/fork-choice";
-import {IBeaconStateView} from "@lodestar/state-transition";
 import {DataColumnSidecar, RootHex, Slot, deneb, phase0} from "@lodestar/types";
 import {PeerIdStr} from "../util/peerId.js";
 import {BlockInputSource, IBlockInput} from "./blocks/blockInput/types.js";
@@ -99,7 +98,7 @@ export type ChainEventData = {
 };
 
 export type IChainEvents = ApiEvents & {
-  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: IBeaconStateView) => void;
+  [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint) => void;
 
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;

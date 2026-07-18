@@ -375,7 +375,7 @@ export async function processSlotsToNearestCheckpoint(
     const cp = getCheckpointFromState(checkpointState);
     checkpointStateCache.add(cp, checkpointState);
     // consumers should not mutate state ever
-    emitter?.emit(ChainEvent.checkpoint, cp, checkpointState);
+    emitter?.emit(ChainEvent.checkpoint, cp);
 
     if (count >= 1) {
       // in normal condition, we only process 1 epoch so never reach this

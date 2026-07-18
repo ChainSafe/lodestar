@@ -344,6 +344,9 @@ export class BeaconEngine implements IBeaconEngine {
     this.validatorMonitor = validatorMonitor;
     this.lightClientServer = modules.lightClientServer;
     this.emitter = emitter;
+    // Warm the shuffling cache on each checkpoint — engine-internal (re-fetches the checkpoint state from
+    // regen, so no IBeaconStateView crosses the seam on the event).
+    this.emitter.addListener(ChainEvent.checkpoint, this.onCheckpoint.bind(this));
 
     // by default, verify signatures on both main threads and worker threads
     this.bls = opts.blsVerifyAllMainThread
@@ -2376,8 +2379,16 @@ export class BeaconEngine implements IBeaconEngine {
       });
     }
 
+    // Fold the engine-owned invalid-SSZ persist config into the STF opts so the engine (not the facade)
+    // persists invalid pre/post states on STF failure (keeps IBeaconStateView off BlockError).
+    const stfOpts = {
+      ...opts,
+      persistInvalidSszObjects: this.opts.persistInvalidSszObjects,
+      persistInvalidSszObjectsDir: this.opts.persistInvalidSszObjectsDir,
+    };
     const [{postStates, proposerBalanceDeltas, verifyStateTime}, {verifySignaturesTime}] = await Promise.all([
       verifyBlocksStateTransitionOnly(
+        this.config,
         preState0,
         blockInputs,
         blocks.map(() => DataAvailabilityStatus.Available),
@@ -2385,7 +2396,7 @@ export class BeaconEngine implements IBeaconEngine {
         this.metrics,
         this.validatorMonitor,
         signal,
-        opts
+        stfOpts
       ),
       opts.skipVerifyBlockSignatures !== true
         ? verifyBlocksSignatures(
@@ -2396,7 +2407,7 @@ export class BeaconEngine implements IBeaconEngine {
             preState0,
             blocks,
             indexedAttestationsByBlock,
-            opts
+            stfOpts
           )
         : Promise.resolve({verifySignaturesTime: Date.now()}),
     ]);
@@ -2823,7 +2834,7 @@ export class BeaconEngine implements IBeaconEngine {
       const checkpointState = postState;
       const cp = getCheckpointFromState(checkpointState);
       this.regen.addCheckpointState(cp, checkpointState);
-      this.emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
+      this.emitter.emit(ChainEvent.checkpoint, cp);
       this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
       const activeValidatorsCount = checkpointState.activeValidatorCount;
@@ -3254,6 +3265,16 @@ export class BeaconEngine implements IBeaconEngine {
   /** Whether the engine's internal (gossip/import) BLS pool can accept more work (backpressure). */
   blsCanAcceptWork(): boolean {
     return this.bls.canAcceptWork();
+  }
+
+  /**
+   * On each checkpoint, warm the shuffling cache. Re-fetches the checkpoint state from regen (it was just
+   * added to the checkpoint-state cache before the event fired) so the state never rides on the event.
+   */
+  private onCheckpoint(cp: phase0.Checkpoint): void {
+    const state = this.regen.getCheckpointStateSync({epoch: cp.epoch, rootHex: toRootHex(cp.root)});
+    // Defer to not block other checkpoint event handlers, which can cause lightclient update delays
+    if (state) callInNextEventLoop(() => this.shufflingCache.processState(state));
   }
 
   /** Initialize regen caches from disk (startup). */

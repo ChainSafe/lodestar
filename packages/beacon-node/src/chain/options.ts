@@ -20,8 +20,6 @@ export type IChainOptions = IBeaconEngineOptions &
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?
     persistProducedBlocks?: boolean;
-    persistInvalidSszObjects?: boolean;
-    persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;

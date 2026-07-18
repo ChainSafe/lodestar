@@ -49,4 +49,7 @@ export type IBeaconEngineOptions = ShufflingCacheOpts &
     /** Persist orphaned (non-canonical finalized) blocks to disk before deleting them on finalization */
     persistOrphanedBlocks?: boolean;
     persistOrphanedBlocksDir?: string;
+    /** Persist invalid pre/post states to disk on state-transition failure (STF), for investigation */
+    persistInvalidSszObjects?: boolean;
+    persistInvalidSszObjectsDir?: string;
   };

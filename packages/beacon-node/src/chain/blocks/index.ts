@@ -1,7 +1,7 @@
 import {BlockExecutionStatus} from "@lodestar/fork-choice";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
-import {isErrorAborted, toRootHex} from "@lodestar/utils";
+import {isErrorAborted} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
 import {nextEventLoop} from "../../util/eventLoop.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
@@ -170,29 +170,7 @@ export async function processBlocks(
       this.logger.debug("Non BlockError received", {}, err);
     } else if (!opts.disableOnBlockError) {
       this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
-
-      if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {state} = err.type;
-        const forkTypes = this.config.getForkTypes(blockSlot);
-        this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
-        this.persistInvalidSszBytes("BeaconState", state.serialize(), `${state.slot}_invalid_signature`);
-      } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
-        const {signedBlock} = err;
-        const blockSlot = signedBlock.message.slot;
-        const {preState, postState} = err.type;
-        const preRoot = preState.hashTreeRoot();
-        const postRoot = postState.hashTreeRoot();
-        // TODO beacon-engine: should belong to BeaconEngine
-        this.persistInvalidStateRoot(preState, postState, signedBlock).catch((e) => {
-          this.logger.error(
-            "Error persisting invalid state root objects",
-            {slot: blockSlot, preStateRoot: toRootHex(preRoot), postStateRoot: toRootHex(postRoot)},
-            e
-          );
-        });
-      }
+      // The invalid block + pre/post states are persisted engine-side on STF failure (see verifyBlocks*).
     }
 
     throw err;
