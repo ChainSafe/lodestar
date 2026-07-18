@@ -76,7 +76,6 @@ export class ChainHeaderTracker {
   }
 
   private onEvent = (event: routes.events.BeaconEvent): void => {
-    // Use head_v2 instead when gloas is configured, as head is deprecated post-gloas
     if (event.type === EventType.head) {
       const {message} = event;
       const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
