@@ -256,7 +256,7 @@ export async function importExecutionPayload(
   );
 
   // 7. Queue notifyForkchoiceUpdate to engine api
-  const head = this.forkChoice.getHead();
+  const head = this.recomputeForkChoiceHead(ForkchoiceCaller.importExecutionPayload);
   if (!this.opts.disableImportExecutionFcU && blockRootHex === head.blockRoot) {
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
     const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
@@ -267,20 +267,19 @@ export async function importExecutionPayload(
     });
   }
 
-  const headUpdated = this.recomputeForkChoiceHead(ForkchoiceCaller.importExecutionPayload);
   try {
-    if (blockRootHex === headUpdated.blockRoot && headUpdated.payloadStatus === PayloadStatus.FULL) {
+    if (blockRootHex === head.blockRoot && head.payloadStatus === PayloadStatus.FULL) {
       this.emitter.emit(routes.events.EventType.headV2, {
-        version: this.config.getForkName(headUpdated.slot),
+        version: this.config.getForkName(head.slot),
         data: {
-          slot: headUpdated.slot,
-          block: headUpdated.blockRoot,
-          state: headUpdated.stateRoot,
+          slot: head.slot,
+          block: head.blockRoot,
+          state: head.stateRoot,
           payloadStatus: "full",
-          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(headUpdated.slot)) === headUpdated.slot,
-          currentEpochDependentRoot: this.forkChoice.getDependentRoot(headUpdated, EpochDifference.previous),
-          nextEpochDependentRoot: this.forkChoice.getDependentRoot(headUpdated, EpochDifference.current),
-          executionOptimistic: isOptimisticBlock(headUpdated),
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+          currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
+          nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(head),
         },
       });
     }
