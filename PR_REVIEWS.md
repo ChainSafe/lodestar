@@ -1,41 +1,78 @@
 # Pull Request Review Policy
 
-With a goal to share the load and direct PR reviews to domain experts we have put forth this policy to organize our efforts. We want to ensure that reviews are timely and we do not rely on one or two team members to conduct all reviews. This is also aimed at hopefully getting more eyes on code reviews. We want to, as a team, make sure that no one on the team feels the burden to "check all the code" or on the flip side of that for code that has not been well vetted to get merged. Its both a policy to protect people and the standards that we uphold as a team. All code owners on the team are responsible for the quality of code that gets merged.
+## Purpose
 
-This policy is not much different from the existing process that we already use. The goal is to explicitly outline where we can possibly improve and help spread the load so that no one team member feels "obligated" or "required" to look at everything.
+This policy organizes how we request, perform, and follow up on pull request reviews. Its goals:
 
-### Requesting a Review
+- Distribute review work across the team and direct reviews to domain experts
+- Keep reviews timely so PRs do not sit blocked waiting on feedback
+- Make review responsibility explicit, so that no team member feels obligated to review everything, and no code merges without proper vetting
 
-It is up to the author of a PR to manually add one, or two if they feel it appropriate, reviewers from the team. Currently all team members are auto-notified as CODEOWNERS that a review is required. We want to remove the noise of these blanket requests and increase the signal from the reviews where each individual can provide value.
+This is not a departure from our current process; it makes existing expectations explicit. All code owners share responsibility for the quality of the code that gets merged. Quality is a property of the team and its process, not of any individual
 
-It will then be the responsibility of that (those) team members to review the PR. It is 100% ok for others to also review the PR but this is strictly additional and not considered "necessary work". A "drive-by" review does not preclude the requested reviewer from their responsibility. This is aimed at distributing reviews amongst the team.
+## Principles
 
-If should also be stated that team time is limited, so the author should ideally only request the reviewers that they want to look at the code. If you are not the requested reviewer, you are not required to review and you should not feel that you "need" to review the code.
+1. **Reviews are assigned, not ambient.** Review responsibility is created by an explicit request. If you were not requested, you are not responsible
+2. **Responsibility transfers with the request.** Once a PR has its requested reviewer(s), they own the review
+3. **Timeliness is part of quality.** A slow review costs the team as much as a defect that slips through
 
-### Responsibilities of the Reviewer
+## 1. Requesting a Review
 
-Being requested for a review does not mean that you are required to "approve" the PR. Requesting a review just means that the requested reviewer must/should add comments. This is true both before and after merge. Even if the PR got merged via approval of another team member, ideally the PR will still get reviewed by the requested person post-merge.
+- The PR author selects one reviewer (or two, where they feel it appropriate) from the team, ideally based on domain relevance or to engage members that can benefit from the nudge
+- We will remove the blanket CODEOWNERS auto-notification. A review request should be a clear, personal signal, not background noise sent to everyone
+- Team time is limited: request only the reviewers whose input you actually want on the code
 
-### Merging a PR
+## 2. Responsibilities of the Requested Reviewer
 
-It is the responsibility of the author to merge a PR, after the PR is reviewed by the requested reviewer. Drive-by reviews "can" be considered as a green thumb for merge, but ideally the requested reviewers should be the ones that gate the PR for merging. This is up to the authors discretion. Authors should be the final arbiter of "what is good to merge".
+- Respond within the review SLA (Section 3) with substantive feedback
+- A response means comments, not necessarily approval. Being requested for review does not obligate you to approve the PR
+- A voluntary review by someone else does not discharge the requested reviewer's responsibility (see Section 4)
 
-### Requesting Additional Reviews
+## 3. Review SLA
 
-At any point in the review process, any team member, can request that another team member give a review. If this is requested, it should be considered a hard requirement for both the requested reviewer to give feedback and the author to wait for that feedback before merging. The goal of this is to allow for domain expertise where someone feels it is appropriate.
+- **Target: initial feedback within 24 hours.** Faster is always welcome
+- **SLA: 2 business days.** The SLA is where escalation happens, not the target
+- If the SLA lapses, the author escalates to a team lead, who either reassigns the review or does the review themselves
+- Repeated lapses are handled by the team lead directly with the reviewer, informed by the review-load metrics (Section 8). The goal is rebalancing workload, not assigning blame
 
-### Post-Merge Comments
+## 4. Voluntary Reviews
 
-Time is tight and its possible that reviews might get merged before the requested reviewer (or anyone else for that matter) has a change to look at the code.
+- Anyone may review any PR at any time. Voluntary ("drive-by") reviews are welcomed but never required
+- A voluntary review is a non-blocking contribution: it creates no obligation for the volunteer and removes none from the requested reviewer
+- **If you were not requested, you are not responsible.** No team member should feel they need to monitor or vet all incoming code. That burden belongs to no one; the request mechanism exists so it is shared deliberately
 
-At any point after a merge, anyone can add comments to a PR. These comments are considered "live" but it is on the commenter to notify the PR author. It should not be considered the PR authors job to pay attention to already closed PRs. There are a few possible resolutions to this situation. One solution is the comments can be left on the PR and the commenter can put up a new issue pointing to the comments. The commenter can also put up a PR to fix the issues directly, but ultimately its should be the work of the author of the original PR to address the comments (either in the new issue or via a new PR).
+## 5. Merging
 
-Vacation is anther time when this might come up. If the domain expert is on vacation and requested to look at the code, but the merge is time sensitive, it is possible for another team member to do their best with review and to help get the code merged. The requested review can help to serve as a signal for what PRs might need to be looked at when the team member returns. That way team members can focus efforts on just the PRs that others on the team would like highlighted.
+- The author is responsible for merging the PR after the requested reviewer(s) have responded, or after the SLA escalation path (Section 3) has elicited a review
+- The author is the final arbiter of what is good to merge, subject to open review requests (Sections 2 and 6)
+- A voluntary approval may inform the author's decision at their discretion, but it does not replace the requested review unless a team lead has reassigned the review under Section 3
 
-### Review Arbitration
+## 6. Additional Review Requests
 
-While not common, from time to time an author and a reviewer might disagree on a feature/idea/comment/fix/etc. The resolution for this will be to have a third-party arbiter weigh in. It can be anyone that any party chooses. It will be the arbiter that makes the final call. If the arbiter is not comfortable making the final decisions they may reach out to a different person to help with the decision.
+- At any point in the review process, any team member may request that another team member review a PR. The purpose is to bring in domain expertise where someone judges it necessary
+- An additional review request is **binding**: the requested reviewer must provide feedback, and the author must wait for that feedback before merging
+- Additional requests run on the same SLA as any other review request (Section 3), including the escalation path. Binding, but bounded
 
-### Reassignment of Reviews
+## 7. Post-Merge Reviews and Comments
 
-If over time, we find that some team members are requested for, or doing too many reviews, either the team as a whole, or one of the team leads can reassign reviews from the overburdened reviewer to another team member. This is still a flexible part of the policy and will evolve over time. The goal of this will be to not get into a situation where one person is the "sole domain" expert for all domains. We should be able to share the load and if reassignment can help to train other team members it can be a valuable tool to grow the process and individual abilities.
+Time is tight, and a PR may merge before every requested reviewer has had a chance to look at it (time-sensitive merges, vacations)
+
+- An outstanding review request survives the merge: the requested reviewer should still review the code when they are able. There is no deadline on post-merge review, but resolution of findings is tracked (below)
+- Anyone may comment on a merged PR at any time. It is on the commenter to notify the author; authors are not expected to monitor closed PRs
+- Post-merge findings are resolved through one of two mechanisms:
+  1. **An issue** pointing to the comments. This is an implicit request for the original author to address the findings
+  2. **A fix PR** opened by the commenter, with the discussion living on that PR
+- The issue or fix PR is the tracking mechanism for follow-up by the team and the team lead
+- **Vacation:** if a requested reviewer is away and the merge is time-sensitive, another team member may step in to review and unblock the merge. The outstanding request then serves as the returning reviewer's catch-up list; they can focus on the PRs teammates flagged for them rather than everything merged while they were away
+
+## 8. Review Load, Metrics, and Reassignment
+
+- The team will regularly review the distribution of requested and completed reviews, using lightweight metrics (e.g., review counts from GitHub, discussed at retros)
+- If a team member is being requested for, or performing, a disproportionate share of reviews, the team or a team lead can reassign reviews to others
+- Reassignment is also a training mechanism: spreading reviews grows domain expertise across the team so that no one becomes the sole expert for any area
+
+## 9. Arbitration
+
+- From time to time an author and a reviewer will disagree on a feature, idea, comment, or fix. If they cannot resolve it between themselves, either party may propose a third-party arbiter
+- If no arbiter is agreed within the SLA (2 business days), a team lead assigns one
+- The arbiter makes the final call. If the arbiter is not comfortable deciding alone, they may bring in another person to help reach the decision
