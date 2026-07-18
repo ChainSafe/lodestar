@@ -26,6 +26,7 @@ import {
   verifyExecutionPayloadEnvelopeSignature,
 } from "./verifyExecutionPayloadEnvelope.js";
 import {verifyPayloadsDataAvailability} from "./verifyPayloadsDataAvailability.js";
+import { ForkchoiceCaller } from "../forkChoice/index.js";
 
 const EVENTSTREAM_EMIT_RECENT_EXECUTION_PAYLOAD_SLOTS = 64;
 
@@ -266,19 +267,20 @@ export async function importExecutionPayload(
     });
   }
 
+  const headUpdated = this.recomputeForkChoiceHead(ForkchoiceCaller.importExecutionPayload);
   try {
-    if (blockRootHex === head.blockRoot && head.payloadStatus !== PayloadStatus.FULL) {
+    if (blockRootHex === headUpdated.blockRoot && headUpdated.payloadStatus === PayloadStatus.FULL) {
       this.emitter.emit(routes.events.EventType.headV2, {
-        version: this.config.getForkName(head.slot),
+        version: this.config.getForkName(headUpdated.slot),
         data: {
-          slot: head.slot,
-          block: head.blockRoot,
-          state: head.stateRoot,
+          slot: headUpdated.slot,
+          block: headUpdated.blockRoot,
+          state: headUpdated.stateRoot,
           payloadStatus: "full",
-          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
-          currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
-          nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
-          executionOptimistic: isOptimisticBlock(head),
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(headUpdated.slot)) === headUpdated.slot,
+          currentEpochDependentRoot: this.forkChoice.getDependentRoot(headUpdated, EpochDifference.previous),
+          nextEpochDependentRoot: this.forkChoice.getDependentRoot(headUpdated, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(headUpdated),
         },
       });
     }
