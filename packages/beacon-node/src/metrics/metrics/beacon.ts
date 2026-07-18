@@ -137,10 +137,6 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_block_production_cache_size",
       help: "Count of cached produced results",
     }),
-    headV2PayloadStatusCacheSize: register.gauge({
-      name: "head_v2_payload_status_cache_size",
-      help: "Count of cached head v2 payload statuses",
-    }),
 
     blockPayload: {
       payloadAdvancePrepTime: register.histogram({

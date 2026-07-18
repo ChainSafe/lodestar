@@ -1,14 +1,25 @@
 import {routes} from "@lodestar/api";
-import {ExecutionStatus, PayloadExecutionStatus, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {DataAvailabilityStatus, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  EpochDifference,
+  ExecutionStatus,
+  PayloadExecutionStatus,
+  PayloadStatus,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
+import {
+  DataAvailabilityStatus,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {isErrorAborted} from "@lodestar/utils";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
+import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
 import {BeaconChain} from "../chain.js";
 import {RegenCaller} from "../regen/interface.js";
 import {PayloadEnvelopeInput} from "../seenCache/seenPayloadEnvelopeInput.js";
-import {emitHeadV2} from "./headV2Event.js";
 import {ImportPayloadOpts} from "./types.js";
 import {
   verifyExecutionPayloadEnvelope,
@@ -256,7 +267,21 @@ export async function importExecutionPayload(
   }
 
   try {
-    emitHeadV2.call(this, head, false);
+    if (blockRootHex === head.blockRoot && head.payloadStatus !== PayloadStatus.FULL) {
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(head.slot),
+        data: {
+          slot: head.slot,
+          block: head.blockRoot,
+          state: head.stateRoot,
+          payloadStatus: "full",
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+          currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
+          nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      });
+    }
   } catch (e) {
     this.logger.debug("Error emitting head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
   }

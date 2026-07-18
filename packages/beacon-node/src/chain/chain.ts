@@ -2,14 +2,7 @@ import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {
-  CheckpointWithHex,
-  ForkChoiceStateGetter,
-  IForkChoice,
-  PayloadStatus,
-  ProtoBlock,
-  UpdateHeadOpt,
-} from "@lodestar/fork-choice";
+import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -226,12 +219,6 @@ export class BeaconChain implements IBeaconChain {
   readonly columnReconstructionTracker: ColumnReconstructionTracker;
 
   readonly opts: IChainOptions;
-
-  /**
-   * Cache of head block payload status at time of head_v2 emission, used to detect
-   * empty -> full transitions and emit a second head_v2 event accordingly.
-   */
-  readonly headV2PayloadStatusCache = new Map<RootHex, {status: PayloadStatus; slot: Slot}>();
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly payloadEnvelopeProcessor: PayloadEnvelopeProcessor;
@@ -1491,14 +1478,6 @@ export class BeaconChain implements IBeaconChain {
     // Prune old cached block production artifacts, those are only useful on their slot
     pruneSetToMax(this.blockProductionCache, this.opts.maxCachedProducedRoots ?? DEFAULT_MAX_CACHED_PRODUCED_RESULTS);
     this.metrics?.blockProductionCacheSize.set(this.blockProductionCache.size);
-
-    // Prune outdated head v2 payload statuses
-    for (const [blockRoot, value] of this.headV2PayloadStatusCache.entries()) {
-      if (value.slot + SLOTS_PER_EPOCH < slot) {
-        this.headV2PayloadStatusCache.delete(blockRoot);
-      }
-    }
-    this.metrics?.headV2PayloadStatusCacheSize.set(this.headV2PayloadStatusCache.size);
 
     const metrics = this.metrics;
     if (metrics && (slot + 1) % SLOTS_PER_EPOCH === 0) {

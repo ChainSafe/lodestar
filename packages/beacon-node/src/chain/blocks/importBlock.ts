@@ -7,6 +7,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  PayloadStatus,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
@@ -39,7 +40,6 @@ import {ForkchoiceCaller} from "../forkChoice/index.js";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "../reprocess.js";
 import {toCheckpointHex} from "../stateCache/persistentCheckpointsCache.js";
 import {isBlockInputBlobs, isBlockInputColumns} from "./blockInput/blockInput.js";
-import {emitHeadV2} from "./headV2Event.js";
 import {AttestationImportOpt, FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 
@@ -312,7 +312,19 @@ export async function importBlock(
         currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
         executionOptimistic: isOptimisticBlock(newHead),
       });
-      emitHeadV2.call(this, newHead, true);
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(newHead.slot),
+        data: {
+          slot: newHead.slot,
+          block: newHead.blockRoot,
+          state: newHead.stateRoot,
+          payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+          currentEpochDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
+          nextEpochDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(newHead),
+        },
+      });
     } catch (e) {
       // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
       this.logger.debug("Error emitting head/head_v2 event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);

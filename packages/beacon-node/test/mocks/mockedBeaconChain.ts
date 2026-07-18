@@ -186,7 +186,6 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         canAcceptWork: vi.fn().mockReturnValue(true),
       },
       emitter: new ChainEventEmitter(),
-      headV2PayloadStatusCache: new Map(),
     };
   });
 
