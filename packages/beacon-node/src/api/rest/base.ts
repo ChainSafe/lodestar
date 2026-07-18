@@ -1,9 +1,7 @@
 import bearerAuthPlugin from "@fastify/bearer-auth";
 import {fastifyCors} from "@fastify/cors";
 import {FastifyError, FastifyInstance, FastifyRequest, errorCodes, fastify} from "fastify";
-import {parse as parseQueryString} from "qs";
-import {addSszContentTypeParser} from "@lodestar/api/server";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {addSszContentTypeParser, parseRestQueryString} from "@lodestar/api/server";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
@@ -57,13 +55,6 @@ const INVALID_MEDIA_TYPE_CODE = errorCodes.FST_ERR_CTP_INVALID_MEDIA_TYPE().code
 const SCHEMA_VALIDATION_ERROR_CODE = errorCodes.FST_ERR_VALIDATION().code;
 
 /**
- * Cap for array query params, set to the largest array any beacon-API query can carry:
- * a full data-column custody set (`getDebugDataColumnSidecars` `indices`). `qs` turns
- * longer arrays into an object, which then fails schema validation.
- */
-const QUERY_STRING_ARRAY_LIMIT = NUMBER_OF_COLUMNS;
-
-/**
  * REST API powered by `fastify` server.
  */
 export class RestApiServer {
@@ -82,16 +73,7 @@ export class RestApiServer {
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
       routerOptions: {
-        querystringParser: (str) =>
-          parseQueryString(str, {
-            // Array as comma-separated values must be supported to be OpenAPI spec compliant
-            comma: true,
-            // Drop support for array query strings like `id[0]=1&id[1]=2&id[2]=3` as those are not required to
-            // be OpenAPI spec compliant and results are inconsistent, see https://github.com/ljharb/qs/issues/331.
-            // The schema validation will catch this and throw an error as parsed query string results in an object.
-            parseArrays: false,
-            arrayLimit: QUERY_STRING_ARRAY_LIMIT,
-          }),
+        querystringParser: parseRestQueryString,
       },
       bodyLimit: opts.bodyLimit,
       http: {maxHeaderSize: opts.headerLimit},

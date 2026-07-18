@@ -1,3 +1,4 @@
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {MediaType} from "./headers.js";
 import {Endpoint, HeaderParams, PathParams, QueryParams} from "./types.js";
 
@@ -20,16 +21,23 @@ export type SchemaDefinition<ReqType extends Endpoint["request"]> = (ReqType["pa
   (ReqType["headers"] extends HeaderParams ? {headers: RequireSchema<ReqType["headers"]>} : {headers?: never}) &
   (ReqType extends {body: unknown} ? {body: Schema} : {body?: never});
 
+/** Beacon API `maxItems` for validator `id` query arrays on GET validators / balances. */
+export const BEACON_API_VALIDATOR_IDS_QUERY_MAX_ITEMS = 64;
+
 export enum Schema {
   Uint,
   UintRequired,
   UintArray,
+  /** Uint array capped at `NUMBER_OF_COLUMNS` (data-column `indices` query). */
+  UintArrayMaxColumns,
   String,
   StringRequired,
   StringArray,
   StringArrayRequired,
   UintOrStringRequired,
   UintOrStringArray,
+  /** Uint-or-string array capped at Beacon API validator `id` query `maxItems`. */
+  UintOrStringArrayMax64,
   Object,
   ObjectArray,
   AnyArray,
@@ -48,6 +56,9 @@ function getJsonSchemaItem(schema: Schema): JsonSchema {
     case Schema.UintArray:
       return {type: "array", items: {type: "integer", minimum: 0}};
 
+    case Schema.UintArrayMaxColumns:
+      return {type: "array", items: {type: "integer", minimum: 0}, maxItems: NUMBER_OF_COLUMNS};
+
     case Schema.String:
     case Schema.StringRequired:
       return {type: "string"};
@@ -60,6 +71,12 @@ function getJsonSchemaItem(schema: Schema): JsonSchema {
       return {anyOf: [{type: "string"}, {type: "integer"}]};
     case Schema.UintOrStringArray:
       return {type: "array", items: {anyOf: [{type: "string"}, {type: "integer"}]}};
+    case Schema.UintOrStringArrayMax64:
+      return {
+        type: "array",
+        items: {anyOf: [{type: "string"}, {type: "integer"}]},
+        maxItems: BEACON_API_VALIDATOR_IDS_QUERY_MAX_ITEMS,
+      };
 
     case Schema.Object:
       return {type: "object"};

@@ -1,17 +1,14 @@
 import {FastifyInstance, fastify} from "fastify";
-import {parse as parseQueryString} from "qs";
 import {MockedObject, vi} from "vitest";
-import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {mapValues} from "@lodestar/utils";
 import {Endpoint} from "../../src/utils/index.js";
-import {ApplicationMethods, addSszContentTypeParser} from "../../src/utils/server/index.js";
+import {ApplicationMethods, addSszContentTypeParser, parseRestQueryString} from "../../src/utils/server/index.js";
 
 export function getTestServer(): {server: FastifyInstance; start: () => Promise<string>} {
   const server = fastify({
     ajv: {customOptions: {coerceTypes: "array"}},
     routerOptions: {
-      querystringParser: (str) =>
-        parseQueryString(str, {comma: true, parseArrays: false, arrayLimit: NUMBER_OF_COLUMNS}),
+      querystringParser: parseRestQueryString,
     },
   });
 
