@@ -30,8 +30,9 @@ This is not a departure from our current process; it makes existing expectations
 
 ## 3. Review SLA
 
-- **Target: initial feedback within 24 hours.** Faster is always welcome
+- Only working days are counted for SLA. Weekends and holidays are excluded as non-working days
 - **SLA: 2 business days.** The SLA is where escalation happens, not the target
+- **Target: initial feedback within 24 hours.** Faster than the SLA is always welcome but not required
 - If the SLA lapses, the author escalates to a team lead, who either reassigns the review or does the review themselves
 - Repeated lapses are handled by the team lead directly with the reviewer, informed by the review-load metrics (Section 8). The goal is rebalancing workload, not assigning blame
 
@@ -76,3 +77,72 @@ Time is tight, and a PR may merge before every requested reviewer has had a chan
 - From time to time an author and a reviewer will disagree on a feature, idea, comment, or fix. If they cannot resolve it between themselves, either party may propose a third-party arbiter
 - If no arbiter is agreed within the SLA (2 business days), a team lead assigns one
 - The arbiter makes the final call. If the arbiter is not comfortable deciding alone, they may bring in another person to help reach the decision
+
+## 10. Daily Review Tracking Report
+
+Companion automation for this policy. A daily markdown report shows review status at a glance without opening PRs or digging through notifications, and structured snapshots are archived for historical analysis
+
+Goals, in order: identification (what is waiting on whom), enforcement support (what is past the SLA window), and historical analysis (load distribution, time-to-review, requested vs voluntary review counts). Non-goals: pinging people, leaderboards, or any per-person scoring in the report itself
+
+### Runtime
+
+- GitHub Action in the lodestar repo: `.github/workflows/review-report.yml`
+- Schedule: daily cron at `01:00 UTC` (08:00 ICT), so the report is ready for Asia-based team members at the start of their day, after North America is usually offline. Also `workflow_dispatch` for manual runs
+- One script (TypeScript, executed with the repo's existing toolchain) under `scripts/`, run in four phases: fetch → snapshot → render → deliver
+- Auth: the built-in `GITHUB_TOKEN` (contents: write for the data branch, issues: write for the report comment). The optional Discord step would add one webhook secret later
+
+### Data Collection
+
+One GraphQL query set against the lodestar repo:
+
+- **Open PRs**, excluding drafts and bot authors (dependabot etc.): number, title, author, URL, `createdAt`, currently requested reviewers, and timeline events for review requests (who was requested, when)
+- **Reviews submitted** on those PRs: reviewer, `submittedAt`, state (approved / changes requested / commented). Each review is classified as **requested** (the reviewer was a requested reviewer at submission time) or **voluntary** (drive-by). Voluntary reviews are the signal for "this person is doing reviews nobody asked them for" and inform feedback conversations; they appear in the snapshot data only, not in the report
+- **PRs closed or merged since the last run**: number, author, `createdAt`, `closedAt`/`mergedAt`, merged flag. Captured for open-to-close duration analysis
+
+### Report
+
+Delivered as a new comment on a pinned "Daily Review Report" tracking issue. Sections in order:
+
+1. **Past SLA review window**: review requests older than 2 business days (weekends and holidays excluded), listed as PR link/title plus requested reviewer. No ages, no ordering by lateness; just what is lagging. Empty section renders as "None"
+2. **New review requests** (since the last run): PR link/title, author, requested reviewer(s)
+3. **Open review requests by team member**: one list per person of the PRs currently waiting on them. The grouping is derived from whoever appears as a requested reviewer; there is no team roster to maintain
+
+No timing information is displayed anywhere; timestamps are used only to decide membership in the Past SLA section. Nobody appears in the report unless they have an open request
+
+### History (Data Branch)
+
+Each run commits `review-metrics/YYYY-MM-DD.json` to the dedicated `review-metrics` branch. The snapshot is deliberately richer than the report:
+
+```jsonc
+{
+  "generatedAt": "2026-07-18T01:00:00Z",
+  "lastProcessedPr": 9682, // watermark: highest PR number seen
+  "openPrs": [
+    {
+      "number": 9679,
+      "title": "...",
+      "author": "...",
+      "createdAt": "...",
+      "reviewRequests": [{"reviewer": "...", "requestedAt": "..."}],
+      "reviews": [{"reviewer": "...", "submittedAt": "...", "state": "APPROVED", "requested": false}],
+    },
+  ],
+  "closedPrs": [{"number": 9670, "author": "...", "createdAt": "...", "closedAt": "...", "merged": true}],
+}
+```
+
+This supports later analysis without changing the collector: reviews-per-person (requested vs voluntary split), time from request to review, time from open to close, and load trends are all "write a script over the branch" problems. More robust analysis scripts can be added as needed
+
+### New-Since-Last-Run Detection
+
+- **New PRs**: any PR with a number greater than the previous snapshot's `lastProcessedPr` watermark
+- **New review requests on existing PRs**: any review-request timeline event with `requestedAt` after the previous snapshot's `generatedAt`. (Additional review requests under Section 6 land on already-open PRs, so the watermark alone would miss them)
+- First run (no previous snapshot): everything currently open is treated as pre-existing; the "New review requests" section states that tracking starts today
+
+### Exclusions
+
+- Draft PRs and bot-authored PRs are excluded from all sections and from snapshots
+
+### Discord Delivery (Optional, Later)
+
+A final isolated workflow step posts a trimmed version (section counts, the Past SLA list, and a link to the full issue comment) to a Discord webhook. Nice to have, not need to have; nothing in the design depends on it
