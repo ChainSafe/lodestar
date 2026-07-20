@@ -8,7 +8,7 @@ import {BlockError, BlockErrorCode, isBlockErrorAborted} from "../errors/index.j
 import {BlockProcessOpts} from "../options.js";
 import {IBlockInput} from "./blockInput/types.js";
 import {importBlock} from "./importBlock.js";
-import {importExecutionPayload} from "./importExecutionPayload.js";
+import {PayloadError, importExecutionPayload} from "./importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {FullyVerifiedBlock, ImportBlockOpts} from "./types.js";
 import {assertLinearChainSegment} from "./utils/chainSegment.js";
@@ -63,6 +63,10 @@ export async function processBlocks(
   if (blocks.length === 0) {
     return; // TODO: or throw?
   }
+
+  // Set only while importExecutionPayload is in flight, so the catch below can report which payload
+  // a PayloadError belongs to. PayloadError carries no block reference of its own.
+  let importingPayload: PayloadEnvelopeInput | undefined;
 
   try {
     const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, payloadEnvelopes, opts);
@@ -149,7 +153,9 @@ export async function processBlocks(
         if (payloadDA === undefined) {
           throw new Error(`Missing payload DA status for slot ${slot}`);
         }
+        importingPayload = payloadInput;
         await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
+        importingPayload = undefined;
       }
 
       await nextEventLoop();
@@ -159,13 +165,21 @@ export async function processBlocks(
       return; // Ignore
     }
 
-    // above functions should only throw BlockError
+    // above functions should only throw BlockError, or PayloadError from the gloas payload import
     const err = getBlockError(e, blocks[0].getBlock());
 
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
-    if (!(err instanceof BlockError)) {
+    if (!(err instanceof BlockError) && !(err instanceof PayloadError)) {
       this.logger.debug("Non BlockError received", {}, err);
+    } else if (err instanceof PayloadError) {
+      if (!opts.disableOnBlockError) {
+        this.logger.debug(
+          "Payload error",
+          {slot: importingPayload?.slot ?? null, blockRoot: importingPayload?.blockRootHex ?? null},
+          err
+        );
+      }
     } else if (!opts.disableOnBlockError) {
       this.logger.debug("Block error", {slot: err.signedBlock.message.slot}, err);
 
@@ -196,8 +210,12 @@ export async function processBlocks(
   }
 }
 
-function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError {
+function getBlockError(e: unknown, block: SignedBeaconBlock): BlockError | PayloadError {
   if (e instanceof BlockError) {
+    return e;
+  }
+
+  if (e instanceof PayloadError) {
     return e;
   }
 

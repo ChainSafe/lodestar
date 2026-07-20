@@ -8,8 +8,11 @@ import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
+import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
+import {BatchError, BatchErrorCode} from "../../../../src/sync/range/batch.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
@@ -398,11 +401,13 @@ describe("sync / range / chain", () => {
     // Reject every block so the first batch exhausts MAX_BATCH_PROCESSING_ATTEMPTS and the chain
     // tears down. Needs several peers because each processing failure excludes the peer it used
     // from the next re-download attempt (getFailedPeers).
-    async function runToTeardown(syncType: RangeSyncType): Promise<ReturnType<typeof vi.fn>> {
-      const reportPeerSpy = vi.fn();
-      const processChainSegment: SyncChainFns["processChainSegment"] = async () => {
+    async function runToTeardown(
+      syncType: RangeSyncType,
+      processChainSegment: SyncChainFns["processChainSegment"] = async () => {
         throw Error("always reject to force teardown");
-      };
+      }
+    ): Promise<{reportPeerSpy: ReturnType<typeof vi.fn>; err: Error | null}> {
+      const reportPeerSpy = vi.fn();
       const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request) => {
         const blocks: IBlockInput[] = [];
         for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
@@ -424,8 +429,9 @@ describe("sync / range / chain", () => {
       const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
       const peers = await Promise.all(Array.from({length: 6}, () => getRandPeerIdStr()));
 
-      await new Promise<void>((resolve) => {
-        const onEnd: SyncChainFns["onEnd"] = () => resolve(); // resolves on teardown (err) or done
+      let timer: NodeJS.Timeout | undefined;
+      const ended = new Promise<Error | null>((resolve) => {
+        const onEnd: SyncChainFns["onEnd"] = (err) => resolve(err ?? null); // teardown (err) or done
         const chain = new SyncChain(
           0,
           target,
@@ -445,17 +451,82 @@ describe("sync / range / chain", () => {
         chain.startSyncing(0);
       });
 
-      return reportPeerSpy;
+      // A stalled SyncChain never calls onEnd, so fail fast and loudly rather than letting the whole
+      // suite time out with no explanation.
+      const err = await Promise.race([
+        ended,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(Error("SyncChain stalled: onEnd never called")), 5000);
+        }),
+      ]).finally(() => clearTimeout(timer));
+
+      return {reportPeerSpy, err};
     }
 
     it("finalized sync reports peers on teardown", async () => {
-      const reportPeerSpy = await runToTeardown(RangeSyncType.Finalized);
+      const {reportPeerSpy} = await runToTeardown(RangeSyncType.Finalized);
       expect(reportPeerSpy).toHaveBeenCalled();
     });
 
     it("head sync also reports peers on teardown", async () => {
-      const reportPeerSpy = await runToTeardown(RangeSyncType.Head);
+      const {reportPeerSpy} = await runToTeardown(RangeSyncType.Head);
       expect(reportPeerSpy).toHaveBeenCalled();
+    });
+
+    // Regression: PARENT_UNKNOWN on the first block of the chain's FIRST batch used to classify as
+    // PreviousBatch, which retains the batch without recording an attempt and with nothing to
+    // invalidate => the chain never re-downloads, never reaches MAX_BATCH_PROCESSING_ATTEMPTS, and
+    // stalls silently in Syncing.
+    it("first batch failing PARENT_UNKNOWN at startSlot tears down instead of stalling", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        // blocks[0].slot is the batch's startSlot, so this is the "parent is before this batch" case
+        const signedBlock = blocks[0].getBlock();
+        throw new BlockError(signedBlock, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot: "0x00"});
+      };
+
+      const {err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect(err).toBeInstanceOf(BatchError);
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+    });
+
+    it("does not report peers when teardown is caused by execution engine errors", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: ExecutionPayloadStatus.ELERROR,
+          errorMessage: "el is down",
+        });
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
+      // our EL malfunctioning is not evidence against any peer
+      expect(reportPeerSpy).not.toHaveBeenCalled();
+    });
+
+    it("reports only the offending peers when teardown is caused by INVALID payloads", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        throw new BlockError(blocks[0].getBlock(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "bal is empty",
+        });
+      };
+
+      const {reportPeerSpy, err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS);
+      expect(reportPeerSpy).toHaveBeenCalled();
+
+      const reportedPeers = reportPeerSpy.mock.calls.map(([peerId]) => peerId);
+      // only the peers that actually served an INVALID attempt, each reported once
+      expect(new Set(reportedPeers).size).toBe(reportedPeers.length);
+      expect(reportedPeers.length).toBeLessThan(6);
+      for (const call of reportPeerSpy.mock.calls) {
+        expect(call[2]).toBe("SyncChainMaxExecutionEngineInvalid");
+      }
     });
   });
 

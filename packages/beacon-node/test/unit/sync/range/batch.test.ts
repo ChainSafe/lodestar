@@ -9,8 +9,11 @@ import {
   BlockInputPreData,
 } from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
+import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
+import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {getBatchSlotRange} from "../../../../src/sync/range/utils/index.js";
@@ -645,6 +648,228 @@ describe("sync / range / batch", async () => {
           expectedStatus: BatchStatus.Processing,
         })
       );
+    });
+  });
+
+  describe("processing failure routing", () => {
+    const startEpoch = 0;
+
+    function downloadedBatch(): Batch {
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+      batch.startDownloading(peerSyncMeta);
+      batch.downloadingSuccess(
+        peer,
+        [
+          BlockInputPreData.createFromBlock({
+            block: ssz.capella.SignedBeaconBlock.defaultValue(),
+            blockRootHex: "0x1234",
+            source: BlockInputSource.byRoot,
+            seenTimestampSec: Date.now() / 1000,
+            forkName: ForkName.capella,
+            daOutOfRange: false,
+          }),
+        ],
+        null
+      );
+      return batch;
+    }
+
+    function blockError(type: ConstructorParameters<typeof BlockError>[1]): BlockError {
+      return new BlockError(ssz.phase0.SignedBeaconBlock.defaultValue(), type);
+    }
+
+    const executionInvalidBlockError = (): BlockError =>
+      blockError({
+        code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+        execStatus: ExecutionPayloadStatus.INVALID,
+        errorMessage: "bal is empty",
+      });
+
+    type ExecutionEngineErrorStatus =
+      | ExecutionPayloadStatus.ELERROR
+      | ExecutionPayloadStatus.UNAVAILABLE
+      | ExecutionPayloadStatus.INVALID_BLOCK_HASH;
+
+    const executionErrorBlockError = (execStatus: ExecutionEngineErrorStatus): BlockError =>
+      blockError({code: BlockErrorCode.EXECUTION_ENGINE_ERROR, execStatus, errorMessage: "el is down"});
+
+    describe("processingError", () => {
+      const executionEngineErrorStatuses: ExecutionEngineErrorStatus[] = [
+        ExecutionPayloadStatus.ELERROR,
+        ExecutionPayloadStatus.UNAVAILABLE,
+        ExecutionPayloadStatus.INVALID_BLOCK_HASH,
+      ];
+
+      it.each(executionEngineErrorStatuses)(
+        "EXECUTION_ENGINE_ERROR (%s) => executionErrorAttempts, not peer attributable",
+        (execStatus) => {
+          const batch = downloadedBatch();
+          batch.startProcessing();
+          batch.processingError(executionErrorBlockError(execStatus));
+
+          expect(batch.failedProcessingAttempts.length).toBe(0);
+          expect(batch.executionErrorAttempts.length).toBe(1);
+          expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+          expect(batch.getPeerAttributableAttempts()).toEqual([]);
+          expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
+        }
+      );
+
+      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(executionInvalidBlockError());
+
+        // shares the EL budget rather than the processing budget
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getPeerAttributableAttempts().flatMap((a) => a.peers)).toEqual([peer]);
+      });
+
+      it("PayloadError EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          new PayloadError({
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.ELERROR,
+            errorMessage: "el is down",
+          })
+        );
+
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+      });
+
+      it("PayloadError EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          new PayloadError({
+            code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+            execStatus: ExecutionPayloadStatus.INVALID,
+            errorMessage: "bal is empty",
+          })
+        );
+
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+      });
+
+      it("non execution error => failedProcessingAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(blockError({code: BlockErrorCode.NON_LINEAR_SLOTS}));
+
+        expect(batch.executionErrorAttempts.length).toBe(0);
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getFailedPeers()).toContain(peer);
+      });
+
+      it("mixed EL statuses share one budget and trip MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS", () => {
+        const errors = [
+          executionErrorBlockError(ExecutionPayloadStatus.ELERROR),
+          executionInvalidBlockError(),
+          executionErrorBlockError(ExecutionPayloadStatus.UNAVAILABLE),
+        ];
+
+        const batch = downloadedBatch();
+        for (const err of errors) {
+          batch.startProcessing();
+          batch.processingError(err);
+          // re-download so the batch can be processed again
+          batch.startDownloading(peerSyncMeta);
+          batch.downloadingSuccess(
+            peer,
+            [
+              BlockInputPreData.createFromBlock({
+                block: ssz.capella.SignedBeaconBlock.defaultValue(),
+                blockRootHex: "0x1234",
+                source: BlockInputSource.byRoot,
+                seenTimestampSec: Date.now() / 1000,
+                forkName: ForkName.capella,
+                daOutOfRange: false,
+              }),
+            ],
+            null
+          );
+        }
+        expect(batch.executionErrorAttempts.length).toBe(3);
+
+        // the 4th EL failure exceeds MAX_BATCH_PROCESSING_ATTEMPTS
+        batch.startProcessing();
+        expectThrowsLodestarError(
+          () => batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR)),
+          new BatchError({
+            code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS,
+            startEpoch,
+            status: BatchStatus.Processing,
+          })
+        );
+      });
+    });
+
+    describe("validationError", () => {
+      function batchAwaitingValidation(): Batch {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingSuccess();
+        return batch;
+      }
+
+      it("EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR));
+
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+        expect(batch.getPeerAttributableAttempts()).toEqual([]);
+      });
+
+      it("EXECUTION_ENGINE_INVALID => executionErrorAttempts, peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(executionInvalidBlockError());
+
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getPeerAttributableAttempts().length).toBe(1);
+      });
+
+      it("PayloadError EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(
+          new PayloadError({
+            code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.UNAVAILABLE,
+            errorMessage: "el is down",
+          })
+        );
+
+        expect(batch.failedProcessingAttempts.length).toBe(0);
+        expect(batch.executionErrorAttempts.length).toBe(1);
+        expect(batch.executionErrorAttempts[0].peerAttributable).toBe(false);
+      });
+
+      it("non execution error => failedProcessingAttempts, peer attributable", () => {
+        const batch = batchAwaitingValidation();
+        batch.validationError(blockError({code: BlockErrorCode.NON_LINEAR_SLOTS}));
+
+        expect(batch.executionErrorAttempts.length).toBe(0);
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
+      });
+    });
+
+    it("getFailedPeers excludes a peer whose only failure was an execution engine error", () => {
+      const batch = downloadedBatch();
+      batch.startProcessing();
+      batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR));
+
+      expect(batch.getFailedPeers()).not.toContain(peer);
     });
   });
 });

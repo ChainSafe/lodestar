@@ -666,8 +666,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
             case BlockErrorCode.PARENT_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
-              // Errors might indicate an issue with our node or the connected EL client
+              // Errors might indicate an issue with our node or the connected EL client.
               logLevel = LogLevel.error;
+              break;
+            case BlockErrorCode.EXECUTION_ENGINE_INVALID:
+              // the peer served a bad block
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "BadGossipBlock");
+              logLevel = LogLevel.warn;
               break;
             default:
               // TODO: Should it use PeerId or string?

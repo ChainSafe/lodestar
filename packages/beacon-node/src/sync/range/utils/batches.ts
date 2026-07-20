@@ -147,8 +147,9 @@ export enum ProcessingFaultKind {
  *   at `startSlot - 1`), else ambiguous.
  *
  * NOTE: this attribution assumes a single canonical chain and is precise for finalized sync.
- * Head-sync peers may be on different forks; the actions are still safe there (retries can
- * converge onto the target fork), but peer penalization on teardown is gated to finalized sync.
+ * Head-sync peers may be on different forks; the actions (re-download / invalidate) are still safe
+ * there, as retries can converge onto the target fork. Peer reporting on teardown applies to both
+ * sync types, see `SyncChain.sync`.
  */
 export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Batch | undefined): ProcessingFaultKind {
   if (!(err instanceof BlockError)) return ProcessingFaultKind.ThisBatch;
@@ -164,7 +165,9 @@ export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Bat
   // PARENT_UNKNOWN/PARENT_PAYLOAD_UNKNOWN always fires on the batch's first not-yet-imported block.
   const firstBlockSlot = err.signedBlock.message.slot;
   // Anchored at the batch start => the missing parent is before this batch => previous-batch fault.
-  if (firstBlockSlot === batch.startSlot) return ProcessingFaultKind.PreviousBatch;
+  if (firstBlockSlot === batch.startSlot) {
+    return prevBatch === undefined ? ProcessingFaultKind.ThisBatch : ProcessingFaultKind.PreviousBatch;
+  }
 
   // firstBlockSlot > startSlot: this-batch fault ONLY if the previous batch delivered a full
   // tail (a block/payload at startSlot - 1). Otherwise it is ambiguous.

@@ -308,12 +308,30 @@ describe("sync / range / batches", () => {
       );
     });
 
-    it("PARENT_UNKNOWN at startSlot => PreviousBatch (regardless of prevBatch)", () => {
+    it("PARENT_UNKNOWN at startSlot with a previous batch => PreviousBatch", () => {
       const err = parentError(BlockErrorCode.PARENT_UNKNOWN, startSlot);
-      expect(classifyProcessingFault(err, batch, undefined)).toBe(ProcessingFaultKind.PreviousBatch);
       expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [startSlot - 1]))).toBe(
         ProcessingFaultKind.PreviousBatch
       );
+    });
+
+    // Regression: returning PreviousBatch here makes SyncChain retainForReprocessing() the batch with
+    // nothing to invalidate, so no failed attempt is ever recorded and the chain stalls silently.
+    it("PARENT_UNKNOWN at startSlot with no previous batch => ThisBatch (first batch must not stall)", () => {
+      const err = parentError(BlockErrorCode.PARENT_UNKNOWN, startSlot);
+      expect(classifyProcessingFault(err, batch, undefined)).toBe(ProcessingFaultKind.ThisBatch);
+    });
+
+    it("PARENT_PAYLOAD_UNKNOWN at startSlot with a previous batch => PreviousBatch", () => {
+      const err = parentError(BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, startSlot);
+      expect(classifyProcessingFault(err, batch, fakeBatch(prevStartSlot, [], [startSlot - 1]))).toBe(
+        ProcessingFaultKind.PreviousBatch
+      );
+    });
+
+    it("PARENT_PAYLOAD_UNKNOWN at startSlot with no previous batch => ThisBatch", () => {
+      const err = parentError(BlockErrorCode.PARENT_PAYLOAD_UNKNOWN, startSlot);
+      expect(classifyProcessingFault(err, batch, undefined)).toBe(ProcessingFaultKind.ThisBatch);
     });
 
     it("PARENT_UNKNOWN after startSlot, prev batch delivered tail block => ThisBatch", () => {

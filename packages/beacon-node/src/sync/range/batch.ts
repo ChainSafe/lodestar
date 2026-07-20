@@ -5,6 +5,7 @@ import {LodestarError, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lo
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {ZERO_HASH} from "../../constants/constants.js";
@@ -43,6 +44,12 @@ export type Attempt = {
   peers: PeerIdStr[];
   /** The hash of the blocks of the attempt */
   hash: RootHex;
+  /**
+   * True if this attempt's failure is evidence that the peers served bad data, so they may be
+   * downscored. False when our own execution engine is either unavailable,
+   * or errored) — that is our malfunction.
+   */
+  peerAttributable: boolean;
 };
 
 type TrackedRequest = {
@@ -424,6 +431,13 @@ export class Batch {
   }
 
   /**
+   * Attempts whose failure is evidence the peers served bad data, so they may be downscored.
+   */
+  getPeerAttributableAttempts(): Attempt[] {
+    return [...this.failedProcessingAttempts, ...this.executionErrorAttempts].filter((a) => a.peerAttributable);
+  }
+
+  /**
    * True only if the peer has already returned a successful response for the current request.
    * A by_range success may update `this.requests` to parent_payload, and the same peer is then
    * still eligible for the newly discovered parent payload data.
@@ -653,7 +667,13 @@ export class Batch {
     // the peers that the data came from will be handled by the Attempt that goes for processing.
     const peers = this.getSuccessfulPeers();
     this.successfulDownloads.clear();
-    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
+    // `peerAttributable` is only known once processing fails, see routeProcessingFailure()
+    this.state = {
+      status: BatchStatus.Processing,
+      blocks,
+      payloadEnvelopes,
+      attempt: {peers, hash, peerAttributable: false},
+    };
     return {blocks, payloadEnvelopes, peers};
   }
 
@@ -701,11 +721,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
-      this.onExecutionEngineError(this.state.attempt);
-    } else {
-      this.onProcessingError(this.state.attempt);
-    }
+    this.routeProcessingFailure(err, this.state.attempt);
   }
 
   /**
@@ -716,11 +732,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
-      this.onExecutionEngineError(this.state.attempt);
-    } else {
-      this.onProcessingError(this.state.attempt);
-    }
+    this.routeProcessingFailure(err, this.state.attempt);
   }
 
   /**
@@ -732,6 +744,23 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
     return this.state.attempt;
+  }
+
+  /**
+   * Record a failed processing attempt, and tag whether its peers may be downscored for it.
+   */
+  private routeProcessingFailure(err: Error, attempt: Attempt): void {
+    const code = err instanceof BlockError || err instanceof PayloadError ? err.type.code : null;
+    const isExecutionInvalid =
+      code === BlockErrorCode.EXECUTION_ENGINE_INVALID || code === PayloadErrorCode.EXECUTION_ENGINE_INVALID;
+    const isExecutionError =
+      code === BlockErrorCode.EXECUTION_ENGINE_ERROR || code === PayloadErrorCode.EXECUTION_ENGINE_ERROR;
+
+    if (isExecutionInvalid || isExecutionError) {
+      this.onExecutionEngineError({...attempt, peerAttributable: isExecutionInvalid});
+    } else {
+      this.onProcessingError({...attempt, peerAttributable: true});
+    }
   }
 
   private onExecutionEngineError(attempt: Attempt): void {
