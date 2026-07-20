@@ -244,6 +244,10 @@ export class ForkChoice implements IForkChoice {
     if (!this.fastConfirmationRule) return;
     if (enabled === this.fastConfirmationEnabled) return;
     this.fastConfirmationEnabled = enabled;
+    if (!enabled) {
+      // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+    }
     this.metrics?.fastConfirmation.enabled.set(enabled ? 1 : 0);
     this.logger?.info(enabled ? "Enabled fast confirmation" : "Disabled fast confirmation", {
       slot: this.fcStore.currentSlot,

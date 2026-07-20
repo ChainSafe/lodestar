@@ -91,6 +91,19 @@ describe("fast confirmation runtime toggle", () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
+  it("pins confirmed root to finalized immediately on disable, before the next slot tick", () => {
+    const notify = vi.fn();
+    const fcStore = makeFcStore(notify);
+    const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
+      fastConfirmation: true,
+    });
+
+    fcStore.confirmedRoot = `0x${"12".repeat(32)}`;
+    forkchoice.disableFastConfirmation();
+
+    expect(fcStore.confirmedRoot).toBe(finalizedRoot);
+  });
+
   it("resumes the rule as soon as it is re-enabled", () => {
     const notify = vi.fn();
     const fcStore = makeFcStore(notify);
