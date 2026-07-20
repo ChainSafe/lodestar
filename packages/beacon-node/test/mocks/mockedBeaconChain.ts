@@ -67,6 +67,8 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getFinalizedCheckpoint: vi.fn(),
       getConfirmedRoot: vi.fn(),
       getConfirmedBlock: vi.fn(),
+      enableFastConfirmation: vi.fn(),
+      disableFastConfirmation: vi.fn(),
       hasBlock: vi.fn(),
       hasBlockHex: vi.fn(),
       getBlockSummariesAtSlot: vi.fn(),

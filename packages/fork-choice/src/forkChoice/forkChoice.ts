@@ -152,6 +152,7 @@ export class ForkChoice implements IForkChoice {
   /** Optional fast confirmation rule implementation */
   private readonly fastConfirmationRule?: IFastConfirmationRule;
   private readonly fastConfirmationContext?: FastConfirmationContext;
+  private fastConfirmationEnabled = true;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -180,6 +181,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.fastConfirmation) {
       this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
       this.fastConfirmationContext = this.createFastConfirmationContext();
+      metrics?.fastConfirmation.enabled.set(1);
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -228,6 +230,24 @@ export class ForkChoice implements IForkChoice {
 
   getConfirmedBlock(): ProtoBlock | null {
     return this.getBlockHexDefaultStatus(this.getConfirmedRoot());
+  }
+
+  enableFastConfirmation(): void {
+    this.toggleFastConfirmation(true);
+  }
+
+  disableFastConfirmation(): void {
+    this.toggleFastConfirmation(false);
+  }
+
+  private toggleFastConfirmation(enabled: boolean): void {
+    if (!this.fastConfirmationRule) return;
+    if (enabled === this.fastConfirmationEnabled) return;
+    this.fastConfirmationEnabled = enabled;
+    this.metrics?.fastConfirmation.enabled.set(enabled ? 1 : 0);
+    this.logger?.info(enabled ? "Enabled fast confirmation" : "Disabled fast confirmation", {
+      slot: this.fcStore.currentSlot,
+    });
   }
 
   /**
@@ -1978,9 +1998,17 @@ export class ForkChoice implements IForkChoice {
   }
 
   private runFastConfirmation(): void {
-    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
-      if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
+    const fastConfirmationRule = this.fastConfirmationRule;
+    const fastConfirmationContext = this.fastConfirmationContext;
+    if (!fastConfirmationRule || !fastConfirmationContext) return;
 
+    if (!this.fastConfirmationEnabled) {
+      // Keep consumers on a safe, available root while the rule is disabled
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      return;
+    }
+
+    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
       try {
         withObservedDuration(
           this.metrics?.fastConfirmation.stepsDuration.startTimer({
@@ -1989,7 +2017,7 @@ export class ForkChoice implements IForkChoice {
           () => this.updateHead()
         );
 
-        const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
+        const result = fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext);
         this.fcStore.confirmedRoot = result.confirmedRoot;
 
         const confirmedBlock = this.getBlockHexDefaultStatus(result.confirmedRoot);
