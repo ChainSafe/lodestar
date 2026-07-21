@@ -267,26 +267,6 @@ export async function importExecutionPayload(
     });
   }
 
-  try {
-    if (blockRootHex === head.blockRoot && head.payloadStatus === PayloadStatus.FULL) {
-      this.emitter.emit(routes.events.EventType.headV2, {
-        version: this.config.getForkName(head.slot),
-        data: {
-          slot: head.slot,
-          block: head.blockRoot,
-          state: head.stateRoot,
-          payloadStatus: "full",
-          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
-          currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
-          nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
-          executionOptimistic: isOptimisticBlock(head),
-        },
-      });
-    }
-  } catch (e) {
-    this.logger.debug("Error emitting head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
-  }
-
   // 8. Record metrics for payload envelope and column sources
   const delaySec = this.clock.secFromSlot(slot);
   this.metrics?.importPayload.elapsedTimeTillImported.observe(
@@ -315,6 +295,27 @@ export async function importExecutionPayload(
     blockHash: blockHashHex,
     delaySec,
   });
+
+  // 10. Emit head_v2 event with a new payload status, if payload became a part of a canonical block
+  try {
+    if (blockRootHex === head.blockRoot && head.payloadStatus === PayloadStatus.FULL) {
+      this.emitter.emit(routes.events.EventType.headV2, {
+        version: this.config.getForkName(head.slot),
+        data: {
+          slot: head.slot,
+          block: head.blockRoot,
+          state: head.stateRoot,
+          payloadStatus: "full",
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+          currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
+          nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
+          executionOptimistic: isOptimisticBlock(head),
+        },
+      });
+    }
+  } catch (e) {
+    this.logger.debug("Error emitting head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
+  }
 }
 
 /**
