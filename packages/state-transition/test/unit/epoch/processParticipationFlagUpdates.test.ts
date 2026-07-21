@@ -1,7 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {ssz} from "@lodestar/types";
 import {processParticipationFlagUpdates} from "../../../src/epoch/processParticipationFlagUpdates.js";
-import type {CachedBeaconStateAltair} from "../../../src/types.js";
 
 describe("processParticipationFlagUpdates", () => {
   it("preserves Gloas progressive participation trees", () => {
@@ -14,7 +13,7 @@ describe("processParticipationFlagUpdates", () => {
       Array.from({length: validatorCount}, () => 7)
     );
 
-    processParticipationFlagUpdates(state as unknown as CachedBeaconStateAltair);
+    processParticipationFlagUpdates(state);
 
     expect(state.previousEpochParticipation.getAll()).toEqual(Array.from({length: validatorCount}, () => 7));
     expect(state.currentEpochParticipation.getAll()).toEqual(Array.from({length: validatorCount}, () => 0));
@@ -34,7 +33,7 @@ describe("processParticipationFlagUpdates", () => {
       Array.from({length: validatorCount}, (_, i) => i % 8)
     );
 
-    processParticipationFlagUpdates(state as unknown as CachedBeaconStateAltair);
+    processParticipationFlagUpdates(state);
 
     // Differential oracle: the naive implementation this fast path replaces
     const naive = ssz.gloas.EpochParticipation.toViewDU(new Array<number>(validatorCount).fill(0));
