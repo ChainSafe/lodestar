@@ -40,9 +40,7 @@ export function hashBlocks(blocks: IBlockInput[], payloadEnvelopes: Map<Slot, Pa
   buf.writeUInt32LE(blocks.length, 0);
   let offset = BLOCK_COUNT_SIZE;
 
-  // all zeros, and allocUnsafe means skipping the write entirely would yield a non-deterministic id.
   for (const block of blocks) {
-    // `blockRootHex` is cached thanks to cachePermanentRootStruct, so this avoids re-hashing
     buf.set(fromHex(block.blockRootHex), offset);
     offset += ROOT_SIZE;
     buf.set(block.getBlock().signature, offset);
@@ -51,11 +49,12 @@ export function hashBlocks(blocks: IBlockInput[], payloadEnvelopes: Map<Slot, Pa
 
   for (const [, envelope] of envelopes) {
     const signedEnvelope = envelope.getPayloadEnvelope();
+    // envelope's root is cached thanks to cachePermanentRootStruct, so this avoids re-hashing
     buf.set(ssz.gloas.ExecutionPayloadEnvelope.hashTreeRoot(signedEnvelope.message), offset);
     offset += ROOT_SIZE;
     buf.set(signedEnvelope.signature, offset);
     offset += SIGNATURE_SIZE;
   }
 
-  return toRootHex(digest(buf.subarray(0, offset)));
+  return toRootHex(digest(buf));
 }
