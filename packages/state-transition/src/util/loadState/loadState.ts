@@ -25,6 +25,23 @@ export function loadState(
 ): MigrateStateOutput {
   // casting only to make typescript happy
   const stateType = getStateTypeFromBytes(config, stateBytes) as typeof ssz.capella.BeaconState;
+  const fork = getForkFromStateBytes(config, stateBytes);
+  const seedFork = config.getForkSeq(seedState.slot);
+
+  // EIP-7688 replaces List with ProgressiveList for validators and inactivityScores at gloas,
+  // changing the merkle tree shape. Seed nodes can only be reused if the seed state is on the
+  // same side of the gloas fork as the state to load.
+  const canReuseSeedNodes = fork >= ForkSeq.gloas === seedFork >= ForkSeq.gloas;
+  if (!canReuseSeedNodes) {
+    const migratedState = stateType.deserializeToViewDU(stateBytes) as BeaconStateAllForks;
+    // only validators unknown to the seed state must be registered in the pubkey cache
+    const modifiedValidators: number[] = [];
+    for (let i = seedState.validators.length; i < migratedState.validators.length; i++) {
+      modifiedValidators.push(i);
+    }
+    return {state: migratedState, modifiedValidators};
+  }
+
   const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
   const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
   const allFields = Object.keys(stateType.fields);
@@ -49,9 +66,6 @@ export function loadState(
 
   // inactivityScores are rarely changed
   // this saves ~500ms of hashTreeRoot() time of state
-  const fork = getForkFromStateBytes(config, stateBytes);
-  const seedFork = config.getForkSeq(seedState.slot);
-
   if (fork >= ForkSeq.altair && seedFork >= ForkSeq.altair) {
     const inactivityScoresIndex = allFields.indexOf("inactivityScores");
     const inactivityScoresRange = fieldRanges[inactivityScoresIndex];
@@ -141,7 +155,9 @@ function loadInactivityScores(
     }
   } else {
     if (newValidator - 1 < 0) {
-      migratedState.inactivityScores = ssz.altair.InactivityScores.defaultViewDU();
+      // use the state's own field type, the list shape differs between altair (List) and gloas (ProgressiveList)
+      const inactivityScoresType = (migratedState.type as typeof ssz.altair.BeaconState).fields.inactivityScores;
+      migratedState.inactivityScores = inactivityScoresType.defaultViewDU();
     } else {
       migratedState.inactivityScores = migratedState.inactivityScores.sliceTo(newValidator - 1);
     }
