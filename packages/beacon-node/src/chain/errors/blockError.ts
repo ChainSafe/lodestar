@@ -67,6 +67,8 @@ export enum BlockErrorCode {
   TOO_MANY_KZG_COMMITMENTS = "BLOCK_ERROR_TOO_MANY_KZG_COMMITMENTS",
   /** Bid parent block root does not match block parent root */
   BID_PARENT_ROOT_MISMATCH = "BLOCK_ERROR_BID_PARENT_ROOT_MISMATCH",
+  /** A block body operation or parent execution request list exceeds its per-block limit */
+  TOO_MANY_BLOCK_OPERATIONS = "BLOCK_ERROR_TOO_MANY_BLOCK_OPERATIONS",
   /** The parent block's execution payload has been verified as invalid */
   PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
   /** The block's parent execution payload (defined by bid.parent_block_hash) has not been seen */
@@ -118,6 +120,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
   | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
   | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
+  | {code: BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS; name: string; count: number; limit: number}
   | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
   | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex};
 
