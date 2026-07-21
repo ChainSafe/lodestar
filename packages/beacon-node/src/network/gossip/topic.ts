@@ -92,7 +92,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
   }
 }
 
-export function getGossipSSZType(topic: GossipTopic): CompositeTypeAny {
+export function getGossipSSZType(topic: GossipTopic) {
   const {fork} = topic.boundary;
   switch (topic.type) {
     case GossipType.beacon_block:

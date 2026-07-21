@@ -17,7 +17,7 @@ import {
  *
  * This mainly entails making sure all numbers are bignumbers
  */
-export function replaceUintTypeWithUintBigintType<T extends Type<unknown>>(type: T): T {
+export function replaceUintTypeWithUintBigintType<T extends Type<any>>(type: T): T {
   if (type instanceof UintNumberType && type.byteLength === 8) {
     return new UintBigintType(type.byteLength) as unknown as T;
   }

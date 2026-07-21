@@ -1,6 +1,6 @@
 import {zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {ssz} from "@lodestar/types";
-import type {CachedBeaconStateAltair, CachedBeaconStateGloas} from "../types.js";
+import type {BeaconStateAltair, BeaconStateGloas} from "../types.js";
 import {isGloasStateType} from "../util/execution.js";
 import {zeroProgressiveListBasicRootNode} from "../util/ssz.js";
 
@@ -11,9 +11,9 @@ import {zeroProgressiveListBasicRootNode} from "../util/ssz.js";
  * PERF: Cost = 'proportional' $VALIDATOR_COUNT. Since it updates all of them at once, it will always recreate both
  * trees completely.
  */
-export function processParticipationFlagUpdates(state: CachedBeaconStateAltair): void {
+export function processParticipationFlagUpdates(state: BeaconStateAltair | BeaconStateGloas): void {
   if (isGloasStateType(state)) {
-    processParticipationFlagUpdatesGloas(state as CachedBeaconStateGloas);
+    processParticipationFlagUpdatesGloas(state);
     return;
   }
 
@@ -33,7 +33,7 @@ export function processParticipationFlagUpdates(state: CachedBeaconStateAltair):
   state.currentEpochParticipation = ssz.altair.EpochParticipation.getViewDU(currentEpochParticipationNode);
 }
 
-function processParticipationFlagUpdatesGloas(state: CachedBeaconStateGloas): void {
+function processParticipationFlagUpdatesGloas(state: BeaconStateGloas): void {
   state.previousEpochParticipation = state.currentEpochParticipation;
 
   // Same trick as the altair path above, adapted to the progressive-list tree shape: all chunks

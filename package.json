@@ -44,7 +44,6 @@
     "@chainsafe/benchmark": "^2.0.2",
     "@chainsafe/biomejs-config": "^1.0.0",
     "@chainsafe/caxa": "3.0.6",
-    "@chainsafe/ssz": "^1.6.2",
     "@lerna-lite/cli": "^4.9.4",
     "@lerna-lite/exec": "^4.9.4",
     "@lerna-lite/publish": "^4.9.4",

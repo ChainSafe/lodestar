@@ -48,9 +48,6 @@ importers:
       '@chainsafe/caxa':
         specifier: 3.0.6
         version: 3.0.6
-      '@chainsafe/ssz':
-        specifier: ^1.6.2
-        version: 1.6.2
       '@lerna-lite/cli':
         specifier: ^4.9.4
         version: 4.9.4(@lerna-lite/exec@4.10.3)(@lerna-lite/publish@4.9.4)(@lerna-lite/run@4.9.4)(@lerna-lite/version@4.9.4)(@types/node@24.10.1)
