@@ -187,7 +187,7 @@ describe("Gloas Fork Choice", () => {
       }
 
       // Reveal the below-window payload last so its FULL node is appended after the in-window
-      // nodes, backward iteration must skip it instead of breaking on its slot
+      // nodes, the scan must skip it instead of counting or stopping on it
       for (const blockRoot of ["0x04", "0x02"]) {
         protoArray.onExecutionPayload(
           blockRoot,
@@ -204,6 +204,26 @@ describe("Gloas Fork Choice", () => {
       expect(protoArray.getPayloadRevealCounts(gloasForkSlot + 2, currentSlot)).toEqual({
         blocksPresent: 2,
         payloadsRevealed: 1,
+      });
+    });
+
+    it("counts in-window blocks even when an older block is imported afterwards", () => {
+      const currentSlot = gloasForkSlot + 3;
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot - 1, genesisRoot, "0x00"),
+        gloasForkSlot - 1
+      );
+
+      // Two in-window blocks
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 2, "0x03", genesisRoot, genesisRoot), currentSlot, null);
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 3, "0x04", genesisRoot, genesisRoot), currentSlot, null);
+      // Old block below the window imported last, so its PENDING node lands at the end of the array.
+      // The scan must not stop on it and miss the in-window nodes inserted earlier (nodes are not slot ordered)
+      protoArray.onBlock(createTestBlock(gloasForkSlot, "0x02", genesisRoot, genesisRoot), currentSlot, null);
+
+      expect(protoArray.getPayloadRevealCounts(gloasForkSlot + 2, currentSlot)).toEqual({
+        blocksPresent: 2,
+        payloadsRevealed: 0,
       });
     });
   });
