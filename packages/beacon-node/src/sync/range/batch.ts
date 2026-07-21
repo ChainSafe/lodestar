@@ -42,7 +42,7 @@ export enum BatchStatus {
 export type Attempt = {
   /** The peer that made the attempt */
   peers: PeerIdStr[];
-  /** The hash of the blocks of the attempt */
+  /** The hash of the blocks + envelopes of the attempt */
   hash: RootHex;
   /**
    * True if this attempt's failure is evidence that the peers served bad data, so they may be
@@ -71,6 +71,7 @@ export type DownloadSuccessState = {
   status: BatchStatus.AwaitingProcessing;
   blocks: IBlockInput[];
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  attempt: Attempt;
 };
 
 export type BatchState =
@@ -424,10 +425,17 @@ export class Batch {
   }
 
   /**
-   * Gives a list of peers from which this batch has had a failed download or processing attempt.
+   * Gives a list of peers from which this batch has had a failed download or processing attempt, so
+   * `peerBalancer` skips them on the next attempt.
+   *
+   * Execution-engine failures are included for ONLY attributable peers
    */
   getFailedPeers(): PeerIdStr[] {
-    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
+    return [
+      ...this.failedDownloadAttempts,
+      ...this.failedProcessingAttempts.flatMap((a) => a.peers),
+      ...this.executionErrorAttempts.filter((a) => a.peerAttributable).flatMap((a) => a.peers),
+    ];
   }
 
   /**
@@ -603,7 +611,12 @@ export class Batch {
     }
 
     if (allComplete) {
-      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes};
+      const attempt: Attempt = {
+        peers: this.getSuccessfulPeers(),
+        hash: hashBlocks(blocks, newPayloadEnvelopes),
+        peerAttributable: false,
+      };
+      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes, attempt};
     } else {
       this.state = {status: BatchStatus.AwaitingDownload, blocks, payloadEnvelopes: newPayloadEnvelopes};
       this.requests = this.getRequests(blocks);
@@ -660,21 +673,11 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
-    const blocks = this.state.blocks;
-    const payloadEnvelopes = this.state.payloadEnvelopes;
-    const hash = hashBlocks(blocks, payloadEnvelopes); // id (blocks + gloas payloads) to detect bad attempts
-    // Reset successfulDownloads in case another download attempt needs to be made. When Attempt is successful or not
-    // the peers that the data came from will be handled by the Attempt that goes for processing.
-    const peers = this.getSuccessfulPeers();
+    const {blocks, payloadEnvelopes, attempt} = this.state;
+    // No need to track successfulDownloads anymore, the batch goes to Processing status
     this.successfulDownloads.clear();
-    // `peerAttributable` is only known once processing fails, see routeProcessingFailure()
-    this.state = {
-      status: BatchStatus.Processing,
-      blocks,
-      payloadEnvelopes,
-      attempt: {peers, hash, peerAttributable: false},
-    };
-    return {blocks, payloadEnvelopes, peers};
+    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt};
+    return {blocks, payloadEnvelopes, peers: attempt.peers};
   }
 
   /**
@@ -710,6 +713,7 @@ export class Batch {
       status: BatchStatus.AwaitingProcessing,
       blocks: this.state.blocks,
       payloadEnvelopes: this.state.payloadEnvelopes,
+      attempt: this.state.attempt,
     };
   }
 

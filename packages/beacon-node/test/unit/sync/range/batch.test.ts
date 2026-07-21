@@ -649,6 +649,40 @@ describe("sync / range / batch", async () => {
         })
       );
     });
+
+    // Regression: retain used to drop the attempt, so on reprocess startProcessing rebuilt it from an
+    // already-cleared successfulDownloads => peers: []. A later peer-attributable failure of the
+    // retained bytes would then avoid scoring the original sender.
+    it("preserves the original peer across retain: a non-EL failure on reprocess is still attributed", () => {
+      const batch = batchInProcessing(); // downloadingSuccess(peer) -> startProcessing
+      batch.retainForReprocessing();
+      batch.startProcessing(); // reprocess the retained bytes
+      batch.processingError(
+        new BlockError(ssz.phase0.SignedBeaconBlock.defaultValue(), {code: BlockErrorCode.NON_LINEAR_SLOTS})
+      );
+
+      expect(batch.failedProcessingAttempts).toHaveLength(1);
+      expect(batch.failedProcessingAttempts[0].peers).toEqual([peer]);
+    });
+
+    it("preserves the original peer across retain: an EL INVALID on reprocess is attributable", () => {
+      const batch = batchInProcessing();
+      batch.retainForReprocessing();
+      batch.startProcessing();
+      batch.processingError(
+        new BlockError(ssz.phase0.SignedBeaconBlock.defaultValue(), {
+          code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "bal is empty",
+        })
+      );
+
+      expect(batch.executionErrorAttempts).toHaveLength(1);
+      expect(batch.executionErrorAttempts[0].peerAttributable).toBe(true);
+      expect(batch.executionErrorAttempts[0].peers).toEqual([peer]);
+      // and it must be excluded from the next retry
+      expect(batch.getFailedPeers()).toContain(peer);
+    });
   });
 
   describe("processing failure routing", () => {
@@ -864,12 +898,36 @@ describe("sync / range / batch", async () => {
       });
     });
 
-    it("getFailedPeers excludes a peer whose only failure was an execution engine error", () => {
+    it("getFailedPeers excludes a peer whose only failure was a local execution engine error", () => {
       const batch = downloadedBatch();
       batch.startProcessing();
       batch.processingError(executionErrorBlockError(ExecutionPayloadStatus.ELERROR));
 
+      // local EL error is blameless => peer stays retryable
       expect(batch.getFailedPeers()).not.toContain(peer);
+    });
+
+    it("getFailedPeers includes a peer that served a definitively invalid payload (BlockError)", () => {
+      const batch = downloadedBatch();
+      batch.startProcessing();
+      batch.processingError(executionInvalidBlockError());
+
+      // stored in executionErrorAttempts but peer-attributable => must not be retried
+      expect(batch.getFailedPeers()).toContain(peer);
+    });
+
+    it("getFailedPeers includes a peer that served a definitively invalid payload (PayloadError)", () => {
+      const batch = downloadedBatch();
+      batch.startProcessing();
+      batch.processingError(
+        new PayloadError({
+          code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+          execStatus: ExecutionPayloadStatus.INVALID,
+          errorMessage: "bal is empty",
+        })
+      );
+
+      expect(batch.getFailedPeers()).toContain(peer);
     });
   });
 });
