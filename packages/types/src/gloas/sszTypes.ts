@@ -366,7 +366,7 @@ export const ExecutionPayloadEnvelope = new ProgressiveContainerType(
     parentBeaconBlockRoot: Root,
   },
   activeFields(5),
-  {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
+  {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
 export const SignedExecutionPayloadEnvelope = new ContainerType(

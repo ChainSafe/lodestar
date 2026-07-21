@@ -648,7 +648,7 @@ export class Batch {
 
     const blocks = this.state.blocks;
     const payloadEnvelopes = this.state.payloadEnvelopes;
-    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
+    const hash = hashBlocks(blocks, payloadEnvelopes); // tracks blocks to report peer on processing error
     // Reset successfulDownloads in case another download attempt needs to be made. When Attempt is successful or not
     // the peers that the data came from will be handled by the Attempt that goes for processing.
     const peers = this.getSuccessfulPeers();
