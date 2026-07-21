@@ -46,7 +46,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^1.2.0",
+    "@chainsafe/as-sha256": "^1.2.4",
     "@vekexasia/bigint-buffer2": "^1.1.1",
     "any-signal": "^4.1.1",
     "case": "^1.6.3",
