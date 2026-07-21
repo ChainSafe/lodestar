@@ -607,9 +607,11 @@ export class ValidatorStore {
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
     const isPostElectra = this.config.getForkSeq(signingSlot) >= ForkSeq.electra;
-    const signingRoot = isPostElectra
-      ? computeSigningRoot(ssz.electra.AggregateAndProof, aggregateAndProof, domain)
-      : computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
+    const signingRoot = computeSigningRoot(
+      this.config.getForkTypes(signingSlot).AggregateAndProof,
+      aggregateAndProof,
+      domain
+    );
 
     const signableMessage: SignableMessage = {
       type: isPostElectra ? SignableMessageType.AGGREGATE_AND_PROOF_V2 : SignableMessageType.AGGREGATE_AND_PROOF,

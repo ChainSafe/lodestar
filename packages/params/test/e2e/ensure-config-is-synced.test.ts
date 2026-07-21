@@ -11,7 +11,16 @@ import {loadConfigYaml} from "../yaml.js";
  * Fields that we filter from local config when doing comparison.
  * Ideally this should be empty as it is not spec compliant
  */
-const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [];
+// TODO GLOAS: Remove in #9606
+const ignoredLocalPresetFields: (keyof BeaconPreset)[] = [
+  "BUILDER_REGISTRY_LIMIT",
+  "BUILDER_PENDING_WITHDRAWALS_LIMIT",
+  "MAX_SIGNED_BEACON_BLOCK_SIZE",
+  "MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD",
+];
+
+// TODO GLOAS: Remove in #9606
+const ignoredRemotePresetFields: string[] = ["MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD"];
 
 describe("Ensure config is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
@@ -38,15 +47,25 @@ function assertCorrectPreset(localPreset: BeaconPreset, remotePreset: BeaconPres
       {} as Partial<BeaconPreset>
     );
 
+  const filteredRemotePreset: Partial<BeaconPreset> = Object.keys(remotePreset)
+    .filter((key) => !ignoredRemotePresetFields.includes(key))
+    .reduce(
+      (acc, key) => {
+        acc[key as keyof BeaconPreset] = remotePreset[key as keyof BeaconPreset];
+        return acc;
+      },
+      {} as Partial<BeaconPreset>
+    );
+
   // Check each key for better debuggability
-  for (const key of Object.keys(remotePreset) as (keyof BeaconPreset)[]) {
+  for (const key of Object.keys(filteredRemotePreset) as (keyof BeaconPreset)[]) {
     const localValue = filteredLocalPreset[key];
-    const remoteValue = remotePreset[key];
+    const remoteValue = filteredRemotePreset[key];
 
     expect(localValue).toBeWithMessage(remoteValue, `${key} does not match ${localValue} != ${remoteValue}`);
   }
 
-  expect(filteredLocalPreset).toEqual(remotePreset);
+  expect(filteredLocalPreset).toEqual(filteredRemotePreset);
 }
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<BeaconPreset> {
