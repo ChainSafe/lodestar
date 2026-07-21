@@ -32,11 +32,13 @@ export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array)
 }
 
 export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): number {
-  const quorum =
-    Math.floor((state.epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT) / SLOTS_PER_EPOCH) *
-    BUILDER_PAYMENT_THRESHOLD_NUMERATOR;
+  // total active balance exceeds Number.MAX_SAFE_INTEGER at mainnet scale, keep the intermediate math in bigint
+  const perSlotBalance =
+    (BigInt(state.epochCtx.totalActiveBalanceIncrements) * BigInt(EFFECTIVE_BALANCE_INCREMENT)) /
+    BigInt(SLOTS_PER_EPOCH);
+  const quorum = perSlotBalance * BigInt(BUILDER_PAYMENT_THRESHOLD_NUMERATOR);
 
-  return Math.floor(quorum / BUILDER_PAYMENT_THRESHOLD_DENOMINATOR);
+  return Number(quorum / BigInt(BUILDER_PAYMENT_THRESHOLD_DENOMINATOR));
 }
 
 function hasBuilderIndexFlag(index: number): boolean {
