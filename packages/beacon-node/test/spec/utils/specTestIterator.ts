@@ -83,29 +83,10 @@ export const defaultSkipOpts: SkipOpts = {
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
-    // TODO GLOAS: Unskip in #9606
-    /^gloas\/operations\/builder_deposit_request\/.*$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
-    // TODO GLOAS: Unskip in #9606
-    /^gloas\/operations\/builder_deposit_request\/.*$/,
-    /\/fork_builder_deposit_followed_by_non_builder_credentials$/,
-    /\/fork_builder_deposit_uses_deposit_slot_epoch$/,
-    /\/fork_builder_deposit_version$/,
-    /\/fork_invalid_builder_deposit_followed_by_valid_builder_deposit$/,
-    /\/fork_invalid_validator_deposit_followed_by_builder_credentials$/,
-    /\/fork_mixed_pending_deposits$/,
-    /\/fork_multiple_builder_deposits$/,
-    /\/fork_multiple_deposits_same_builder$/,
-    /\/fork_single_builder_deposit$/,
-    /\/fork_valid_builder_deposit_followed_by_invalid_builder_deposit$/,
-    /\/deposit_requests_greater_than_electra_max$/,
-    /\/process_parent_execution_payload__new_builder_does_not_reuse_topped_up_builder_slot$/,
-    /\/process_builder_exit_request__success$/,
-    /\/process_parent_execution_payload__builder_exit_request$/,
-    /\/switch_to_compounding_with_pending_consolidations_at_limit$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
