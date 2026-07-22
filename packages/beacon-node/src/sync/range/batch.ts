@@ -64,6 +64,7 @@ export type DownloadSuccessState = {
   status: BatchStatus.AwaitingProcessing;
   blocks: IBlockInput[];
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  attempt: Attempt;
 };
 
 export type BatchState =
@@ -589,7 +590,11 @@ export class Batch {
     }
 
     if (allComplete) {
-      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes};
+      const attempt: Attempt = {
+        peers: this.getSuccessfulPeers(),
+        hash: hashBlocks(blocks, this.config),
+      };
+      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes, attempt};
     } else {
       this.state = {status: BatchStatus.AwaitingDownload, blocks, payloadEnvelopes: newPayloadEnvelopes};
       this.requests = this.getRequests(blocks);
@@ -646,15 +651,11 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
-    const blocks = this.state.blocks;
-    const payloadEnvelopes = this.state.payloadEnvelopes;
-    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
-    // Reset successfulDownloads in case another download attempt needs to be made. When Attempt is successful or not
-    // the peers that the data came from will be handled by the Attempt that goes for processing.
-    const peers = this.getSuccessfulPeers();
+    const {blocks, payloadEnvelopes, attempt} = this.state;
+    // No need to track successfulDownloads anymore, the batch goes to Processing status.
     this.successfulDownloads.clear();
-    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
-    return {blocks, payloadEnvelopes, peers};
+    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt};
+    return {blocks, payloadEnvelopes, peers: attempt.peers};
   }
 
   /**
@@ -667,6 +668,26 @@ export class Batch {
 
     this.state = {
       status: BatchStatus.AwaitingValidation,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+      attempt: this.state.attempt,
+    };
+  }
+
+  /**
+   * Processing -> AwaitingProcessing
+   *
+   * The batch's own blocks are valid but processing failed because a previous batch did not
+   * deliver the parent. Keep the downloaded blocks and process them again once the previous
+   * batch is repaired.
+   */
+  retainForReprocessing(): void {
+    if (this.state.status !== BatchStatus.Processing) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
+    }
+
+    this.state = {
+      status: BatchStatus.AwaitingProcessing,
       blocks: this.state.blocks,
       payloadEnvelopes: this.state.payloadEnvelopes,
       attempt: this.state.attempt,

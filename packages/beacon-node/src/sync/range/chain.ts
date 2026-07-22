@@ -23,7 +23,9 @@ import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchStatus} from "./b
 import {
   ChainPeersBalancer,
   PeerSyncInfo,
+  ProcessingFaultKind,
   batchStartEpochIsAfterSlot,
+  classifyProcessingFault,
   computeHighestTarget,
   getBatchSlotRange,
   getNextBatchToProcess,
@@ -708,23 +710,41 @@ export class SyncChain {
       this.triggerBatchProcessor();
     } else {
       this.logger.verbose("Batch process error", logCtx, res.err);
-      batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
-      // At least one block was successfully verified and imported, so we can be sure all
-      // previous batches are valid and we only need to download the current failed batch.
-      // TODO: Disabled for now
-      // if (res.err instanceof ChainSegmentError && res.err.importedBlocks > 0) {
-      //   this.advanceChain(batch.startEpoch);
-      // }
-
-      // The current batch could not be processed, so either this or previous batches are invalid.
-      // All previous batches (AwaitingValidation) are potentially faulty and marked for retry.
-      // Progress will be drop back to `this.startEpoch`
-      for (const pendingBatch of this.batches.values()) {
-        if (pendingBatch.startEpoch < batch.startEpoch) {
-          this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
-          pendingBatch.validationError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
+      const invalidatePreviousBatches = (): number => {
+        let invalidatedCount = 0;
+        for (const pendingBatch of this.batches.values()) {
+          if (
+            pendingBatch.startEpoch < batch.startEpoch &&
+            pendingBatch.state.status === BatchStatus.AwaitingValidation
+          ) {
+            this.logger.verbose("Batch validation error", {id: this.logId, ...pendingBatch.getMetadata()});
+            pendingBatch.validationError(res.err);
+            invalidatedCount++;
+          }
         }
+        return invalidatedCount;
+      };
+
+      const prevBatch = this.batches.get(batch.startEpoch - EPOCHS_PER_BATCH);
+      switch (classifyProcessingFault(res.err, batch, prevBatch)) {
+        case ProcessingFaultKind.ThisBatch:
+          batch.processingError(res.err);
+          break;
+
+        case ProcessingFaultKind.PreviousBatch:
+          // If no previous batch was invalidated, it means the error is on this batch
+          if (invalidatePreviousBatches() === 0) {
+            batch.processingError(res.err);
+          } else {
+            batch.retainForReprocessing();
+          }
+          break;
+
+        case ProcessingFaultKind.Ambiguous:
+          batch.processingError(res.err);
+          invalidatePreviousBatches();
+          break;
       }
     }
 
