@@ -142,11 +142,16 @@ describe("loadState across the gloas fork boundary", () => {
   it("loads a gloas state from a fulu seed state", () => {
     const seedState = buildState(preGloasSlot, numValidator);
     const targetState = buildState(postGloasSlot, numValidator + 2);
+    // simulate a diverged branch where an overlapping index holds a different validator
+    const validator = targetState.validators.get(1);
+    validator.pubkey = new Uint8Array(48).fill(0xaa);
+    targetState.validators.set(1, validator);
+    targetState.commit();
 
     const {state: loadedState, modifiedValidators} = loadState(config, seedState, targetState.serialize());
     expect(loadedState.hashTreeRoot()).toEqual(targetState.hashTreeRoot());
-    // validators unknown to the seed state must be reported for the pubkey cache
-    expect(modifiedValidators).toEqual([numValidator, numValidator + 1]);
+    // modified and appended validators must be reported for the pubkey cache
+    expect(modifiedValidators).toEqual([1, numValidator, numValidator + 1]);
   });
 
   it("loads a fulu state from a gloas seed state", () => {

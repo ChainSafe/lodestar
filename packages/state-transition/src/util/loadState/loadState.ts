@@ -28,6 +28,13 @@ export function loadState(
   const fork = getForkFromStateBytes(config, stateBytes);
   const seedFork = config.getForkSeq(seedState.slot);
 
+  const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
+  const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
+  const allFields = Object.keys(stateType.fields);
+  const validatorsFieldIndex = allFields.indexOf("validators");
+  const validatorsRange = fieldRanges[validatorsFieldIndex];
+  const newValidatorsBytes = stateBytes.subarray(validatorsRange.start, validatorsRange.end);
+
   // EIP-7688 replaces List with ProgressiveList for validators and inactivityScores at gloas,
   // changing the merkle tree shape. Seed nodes cannot be reused when one state is pre-gloas
   // and the other post-gloas.
@@ -35,18 +42,12 @@ export function loadState(
     (fork >= ForkSeq.gloas && seedFork < ForkSeq.gloas) || (fork < ForkSeq.gloas && seedFork >= ForkSeq.gloas);
   if (crossesGloasFork) {
     const migratedState = stateType.deserializeToViewDU(stateBytes) as BeaconStateAllForks;
-    // only validators unknown to the seed state must be registered in the pubkey cache
-    const modifiedValidators: number[] = [];
-    for (let i = seedState.validators.length; i < migratedState.validators.length; i++) {
-      modifiedValidators.push(i);
-    }
+    // modified validators must still be reported so that the pubkey cache is refreshed for
+    // any index that differs from the seed state, which may not be an ancestor of this state
+    const modifiedValidators = findModifiedAndAppendedValidators(seedState, newValidatorsBytes, seedValidatorsBytes);
     return {state: migratedState, modifiedValidators};
   }
 
-  const dataView = new DataView(stateBytes.buffer, stateBytes.byteOffset, stateBytes.byteLength);
-  const fieldRanges = stateType.getFieldRanges(dataView, 0, stateBytes.length);
-  const allFields = Object.keys(stateType.fields);
-  const validatorsFieldIndex = allFields.indexOf("validators");
   // start with default view has the same performance to start with seed state
   // and it is not fork dependent
   const migratedState = deserializeContainerIgnoreFields(
@@ -57,13 +58,7 @@ export function loadState(
   ) as BeaconStateAllForks;
 
   // validators are rarely changed
-  const validatorsRange = fieldRanges[validatorsFieldIndex];
-  const modifiedValidators = loadValidators(
-    migratedState,
-    seedState,
-    stateBytes.subarray(validatorsRange.start, validatorsRange.end),
-    seedValidatorsBytes
-  );
+  const modifiedValidators = loadValidators(migratedState, seedState, newValidatorsBytes, seedValidatorsBytes);
 
   // inactivityScores are rarely changed
   // this saves ~500ms of hashTreeRoot() time of state
@@ -194,6 +189,33 @@ function loadInactivityScores(
  * @param migratedState state to be migrated, the validators are loaded to this state
  * @returns modified validator indices
  */
+/**
+ * Find indices of validators whose serialized bytes differ from the seed state, plus indices
+ * appended past the seed state's validator count. Unlike loadValidators() this only diffs
+ * bytes and does not share the seed state's tree.
+ */
+function findModifiedAndAppendedValidators(
+  seedState: BeaconStateAllForks,
+  newValidatorsBytes: Uint8Array,
+  seedStateValidatorsBytes?: Uint8Array
+): number[] {
+  const seedValidatorCount = seedState.validators.length;
+  const newValidatorCount = Math.floor(newValidatorsBytes.length / VALIDATOR_BYTES_SIZE);
+  const minValidatorCount = Math.min(seedValidatorCount, newValidatorCount);
+  const seedValidatorsBytes = seedStateValidatorsBytes ?? seedState.validators.serialize();
+  const modifiedValidators: number[] = [];
+  findModifiedValidators(
+    seedValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE),
+    newValidatorsBytes.subarray(0, minValidatorCount * VALIDATOR_BYTES_SIZE),
+    modifiedValidators
+  );
+
+  for (let validatorIndex = seedValidatorCount; validatorIndex < newValidatorCount; validatorIndex++) {
+    modifiedValidators.push(validatorIndex);
+  }
+  return modifiedValidators;
+}
+
 function loadValidators(
   migratedState: BeaconStateAllForks,
   seedState: BeaconStateAllForks,
