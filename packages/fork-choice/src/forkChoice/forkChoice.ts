@@ -1538,6 +1538,7 @@ export class ForkChoice implements IForkChoice {
     // Only ever called on a block already in fork choice, so a miss is a broken invariant.
     const node = this.protoArray.getNodeDefaultStatus(blockRoot);
     if (node === undefined) {
+      // this is called for head so we should always have this in forkchoice, otherwise we have a serious error
       throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: blockRoot});
     }
 
@@ -1557,7 +1558,7 @@ export class ForkChoice implements IForkChoice {
     // always 0. Return before fetching the state and walking the block's committees.
     if (equivocatingIndices.size > 0) {
       const state = this.fcStore.stateGetter({stateRoot: node.stateRoot});
-      // Only ever called on the head or the boosted block's parent, so the state is always cached.
+      // Only ever called on the head, so the state is always cached.
       // A miss is a broken invariant, not a recoverable state.
       if (state === null) {
         throw new ForkChoiceError({
