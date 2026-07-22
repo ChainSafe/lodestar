@@ -76,9 +76,9 @@ export class BeaconSync implements IBeaconSync {
       metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
     }
 
-    // A from-scratch or large-gap start boots not synced; updateSyncState re-enables once synced
+    // A from-scratch or large-gap start boots not synced; updateSyncState resumes once synced
     if (this.state !== SyncState.Synced) {
-      this.chain.forkChoice.disableFastConfirmation();
+      this.chain.forkChoice.pauseFastConfirmation();
     }
   }
 
@@ -233,7 +233,7 @@ export class BeaconSync implements IBeaconSync {
 
     // We have become synced, subscribe to all the gossip core topics
     if (state === SyncState.Synced && this.chain.clock.currentEpoch >= MIN_EPOCH_TO_START_GOSSIP) {
-      this.chain.forkChoice.enableFastConfirmation();
+      this.chain.forkChoice.resumeFastConfirmation();
 
       if (!this.network.isSubscribedToGossipCoreTopics()) {
         this.network
@@ -258,8 +258,8 @@ export class BeaconSync implements IBeaconSync {
     else if (state !== SyncState.Synced) {
       const syncDiff = this.chain.clock.currentSlot - this.chain.forkChoice.getHead().slot;
       if (syncDiff > this.slotImportTolerance * 2) {
-        // Same debounce as gossip: transient blips keep the rule running, only a real gap disables it
-        this.chain.forkChoice.disableFastConfirmation();
+        // Same debounce as gossip: transient blips keep the rule running, only a real gap pauses it
+        this.chain.forkChoice.pauseFastConfirmation();
 
         if (this.network.isSubscribedToGossipCoreTopics()) {
           this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);

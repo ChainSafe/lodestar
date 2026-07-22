@@ -14,7 +14,7 @@ import {
 } from "../../../src/index.js";
 import {getBlockRoot, getStateRoot} from "../../utils/index.js";
 
-describe("fast confirmation runtime toggle", () => {
+describe("fast confirmation pause/resume", () => {
   const genesisSlot = 0;
   const genesisEpoch = 0;
   const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
@@ -75,53 +75,55 @@ describe("fast confirmation runtime toggle", () => {
     };
   }
 
-  it("pins confirmed root to finalized and skips the rule while disabled", () => {
+  it("pins confirmed root to finalized and emits the event while paused", () => {
     const notify = vi.fn();
     const fcStore = makeFcStore(notify);
     const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
       fastConfirmation: true,
     });
-    forkchoice.disableFastConfirmation();
+    forkchoice.pauseFastConfirmation();
 
-    // Simulate a stale confirmed root that the disabled path must pin back to finalized
+    // Simulate a stale confirmed root that the paused path must pin back to finalized
     fcStore.confirmedRoot = `0x${"12".repeat(32)}`;
     forkchoice.updateTime((genesisSlot + 2) as Slot);
 
     expect(fcStore.confirmedRoot).toBe(finalizedRoot);
-    expect(notify).not.toHaveBeenCalled();
-  });
-
-  it("pins confirmed root to finalized immediately on disable, before the next slot tick", () => {
-    const notify = vi.fn();
-    const fcStore = makeFcStore(notify);
-    const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
-      fastConfirmation: true,
-    });
-
-    fcStore.confirmedRoot = `0x${"12".repeat(32)}`;
-    forkchoice.disableFastConfirmation();
-
-    expect(fcStore.confirmedRoot).toBe(finalizedRoot);
-  });
-
-  it("resumes the rule as soon as it is re-enabled", () => {
-    const notify = vi.fn();
-    const fcStore = makeFcStore(notify);
-    const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
-      fastConfirmation: true,
-    });
-    forkchoice.disableFastConfirmation();
-
-    forkchoice.updateTime((genesisSlot + 2) as Slot);
-    expect(notify).not.toHaveBeenCalled();
-
-    forkchoice.enableFastConfirmation();
-    forkchoice.updateTime((genesisSlot + 3) as Slot);
     expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith({block: finalizedRoot, slot: genesisSlot, currentSlot: genesisSlot + 2});
+  });
+
+  it("pins confirmed root to finalized immediately on pause, before the next slot tick", () => {
+    const notify = vi.fn();
+    const fcStore = makeFcStore(notify);
+    const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
+      fastConfirmation: true,
+    });
+
+    fcStore.confirmedRoot = `0x${"12".repeat(32)}`;
+    forkchoice.pauseFastConfirmation();
+
     expect(fcStore.confirmedRoot).toBe(finalizedRoot);
   });
 
-  it("runs the rule normally when never disabled", () => {
+  it("runs the rule again after resume", () => {
+    const notify = vi.fn();
+    const fcStore = makeFcStore(notify);
+    const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
+      fastConfirmation: true,
+    });
+    forkchoice.pauseFastConfirmation();
+
+    forkchoice.updateTime((genesisSlot + 2) as Slot);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenLastCalledWith({block: finalizedRoot, slot: genesisSlot, currentSlot: genesisSlot + 2});
+
+    forkchoice.resumeFastConfirmation();
+    forkchoice.updateTime((genesisSlot + 3) as Slot);
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(fcStore.confirmedRoot).toBe(finalizedRoot);
+  });
+
+  it("runs the rule normally when never paused", () => {
     const notify = vi.fn();
     const fcStore = makeFcStore(notify);
     const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {

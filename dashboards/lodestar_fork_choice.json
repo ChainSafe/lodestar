@@ -1329,14 +1329,14 @@
             {
               "options": {
                 "0": {
-                  "color": "orange",
-                  "index": 1,
-                  "text": "Disabled"
-                },
-                "1": {
                   "color": "green",
                   "index": 0,
-                  "text": "Enabled"
+                  "text": "Running"
+                },
+                "1": {
+                  "color": "orange",
+                  "index": 1,
+                  "text": "Paused"
                 }
               },
               "type": "value"
@@ -1377,7 +1377,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "lodestar_fast_confirmation_enabled",
+          "expr": "lodestar_fast_confirmation_paused",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": false,
@@ -1387,7 +1387,7 @@
           "useBackend": false
         }
       ],
-      "title": "Enabled",
+      "title": "Status",
       "type": "stat"
     },
     {

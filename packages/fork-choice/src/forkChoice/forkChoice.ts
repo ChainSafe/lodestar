@@ -152,7 +152,7 @@ export class ForkChoice implements IForkChoice {
   /** Optional fast confirmation rule implementation */
   private readonly fastConfirmationRule?: IFastConfirmationRule;
   private readonly fastConfirmationContext?: FastConfirmationContext;
-  private fastConfirmationEnabled = true;
+  private fastConfirmationPaused = false;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -181,7 +181,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.fastConfirmation) {
       this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
       this.fastConfirmationContext = this.createFastConfirmationContext();
-      metrics?.fastConfirmation.enabled.set(1);
+      metrics?.fastConfirmation.paused.set(0);
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -232,24 +232,24 @@ export class ForkChoice implements IForkChoice {
     return this.getBlockHexDefaultStatus(this.getConfirmedRoot());
   }
 
-  enableFastConfirmation(): void {
-    this.toggleFastConfirmation(true);
-  }
-
-  disableFastConfirmation(): void {
+  resumeFastConfirmation(): void {
     this.toggleFastConfirmation(false);
   }
 
-  private toggleFastConfirmation(enabled: boolean): void {
+  pauseFastConfirmation(): void {
+    this.toggleFastConfirmation(true);
+  }
+
+  private toggleFastConfirmation(paused: boolean): void {
     if (!this.fastConfirmationRule) return;
-    if (enabled === this.fastConfirmationEnabled) return;
-    this.fastConfirmationEnabled = enabled;
-    if (!enabled) {
+    if (paused === this.fastConfirmationPaused) return;
+    this.fastConfirmationPaused = paused;
+    if (paused) {
       // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
       this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
     }
-    this.metrics?.fastConfirmation.enabled.set(enabled ? 1 : 0);
-    this.logger?.info(enabled ? "Enabled fast confirmation" : "Disabled fast confirmation", {
+    this.metrics?.fastConfirmation.paused.set(paused ? 1 : 0);
+    this.logger?.info(paused ? "Paused fast confirmation" : "Resumed fast confirmation", {
       slot: this.fcStore.currentSlot,
     });
   }
@@ -2006,9 +2006,17 @@ export class ForkChoice implements IForkChoice {
     const fastConfirmationContext = this.fastConfirmationContext;
     if (!fastConfirmationRule || !fastConfirmationContext) return;
 
-    if (!this.fastConfirmationEnabled) {
-      // Keep consumers on a safe, available root while the rule is disabled
+    if (this.fastConfirmationPaused) {
+      // Keep consumers on a safe, available root while the rule is paused
       this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      const confirmedBlock = this.getBlockHexDefaultStatus(this.fcStore.confirmedRoot);
+      if (confirmedBlock !== null) {
+        this.fcStore.notifyFastConfirmation?.({
+          block: this.fcStore.confirmedRoot,
+          slot: confirmedBlock.slot,
+          currentSlot: this.fcStore.currentSlot,
+        });
+      }
       return;
     }
 

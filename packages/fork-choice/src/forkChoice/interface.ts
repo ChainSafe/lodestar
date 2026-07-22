@@ -100,10 +100,10 @@ export interface IForkChoice {
   getHead(): ProtoBlock;
   getConfirmedRoot(): RootHex;
   getConfirmedBlock(): ProtoBlock | null;
-  /** Re-enable the fast confirmation rule; restarts from the finalized root on the next slot tick */
-  enableFastConfirmation(): void;
-  /** Disable the fast confirmation rule (e.g. while syncing); pins the confirmed root to the finalized root */
-  disableFastConfirmation(): void;
+  /** Resume the fast confirmation rule; restarts from the finalized root on the next slot tick */
+  resumeFastConfirmation(): void;
+  /** Pause the fast confirmation rule (e.g. while syncing); pins the confirmed root to the finalized root */
+  pauseFastConfirmation(): void;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
