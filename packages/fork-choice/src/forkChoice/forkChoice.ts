@@ -460,18 +460,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_parent_strong
-    // For Gloas: measure support for the parent beacon block root regardless of its payload status by
-    // looking up the PENDING variant.
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_parent_strong
-    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
-      slotsPerEpoch: SLOTS_PER_EPOCH,
-      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
-    });
-    const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;
-    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentStrongVariant);
-    // If parentNode is unavailable, give up reorg
-    if (parentNode === undefined || parentNode.weight <= parentThreshold) {
+    if (!this.isParentStrong(parentBlock.blockRoot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotStrong};
     }
 
@@ -1579,6 +1568,31 @@ export class ForkChoice implements IForkChoice {
     }
 
     return headWeight < reorgThreshold;
+  }
+
+  /**
+   * Return true if the parent block is "strong" ie. its weight exceeds REORG_PARENT_WEIGHT_THRESHOLD
+   * of the total attester weight per slot.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_parent_strong
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-is_parent_strong
+   */
+  private isParentStrong(parentRoot: RootHex): boolean {
+    const node = this.protoArray.getNodeDefaultStatus(parentRoot);
+    // If parentNode is unavailable, give up reorg
+    if (node === undefined) {
+      return false;
+    }
+
+    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
+    });
+
+    // pre-gloas uses get_weight() (boost-inclusive), gloas uses get_attestation_score() (boost-excluded)
+    const parentWeight = isForkPostGloas(this.config.getForkName(node.slot)) ? node.attestationScore : node.weight;
+
+    return parentWeight > parentThreshold;
   }
 
   /**
