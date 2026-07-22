@@ -724,10 +724,8 @@ specTestIterator(
     skippedRunners: [],
     skippedTestSuites: [
       ...(defaultSkipOpts.skippedTestSuites ?? []),
-      // TODO-GLOAS: lodestar's fast-confirmation rule is block-root based and does not model the
-      // ePBS payload_status dimension required by specs/gloas/fast-confirmation.md (PTC payload
-      // presence/timeliness, get_node_for_root with PAYLOAD_STATUS_PENDING). Head/justified/
-      // finalized/proposer-head all match; only getConfirmedRoot diverges.
+      // TODO-GLOAS: The fast-confirmation runner does not process the execution_payload steps or
+      // execution_payload_envelope_* files required by these vectors.
       /^gloas\/fast_confirmation\/.*/,
     ],
   }
