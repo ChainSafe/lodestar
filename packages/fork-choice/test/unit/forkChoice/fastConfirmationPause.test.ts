@@ -88,11 +88,11 @@ describe("fast confirmation pause/resume", () => {
     forkchoice.updateTime((genesisSlot + 2) as Slot);
 
     expect(fcStore.confirmedRoot).toBe(finalizedRoot);
-    expect(notify).toHaveBeenCalledTimes(1);
-    expect(notify).toHaveBeenCalledWith({block: finalizedRoot, slot: genesisSlot, currentSlot: genesisSlot + 2});
+    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenLastCalledWith({block: finalizedRoot, slot: genesisSlot, currentSlot: genesisSlot + 2});
   });
 
-  it("pins confirmed root to finalized immediately on pause, before the next slot tick", () => {
+  it("pins confirmed root to finalized and emits the event immediately on pause, before the next slot tick", () => {
     const notify = vi.fn();
     const fcStore = makeFcStore(notify);
     const forkchoice = new ForkChoice(config, fcStore, makeProtoArr(), validatorCount, null, {
@@ -103,6 +103,8 @@ describe("fast confirmation pause/resume", () => {
     forkchoice.pauseFastConfirmation();
 
     expect(fcStore.confirmedRoot).toBe(finalizedRoot);
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith({block: finalizedRoot, slot: genesisSlot, currentSlot: genesisSlot + 1});
   });
 
   it("runs the rule again after resume", () => {
@@ -114,12 +116,12 @@ describe("fast confirmation pause/resume", () => {
     forkchoice.pauseFastConfirmation();
 
     forkchoice.updateTime((genesisSlot + 2) as Slot);
-    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledTimes(2);
     expect(notify).toHaveBeenLastCalledWith({block: finalizedRoot, slot: genesisSlot, currentSlot: genesisSlot + 2});
 
     forkchoice.resumeFastConfirmation();
     forkchoice.updateTime((genesisSlot + 3) as Slot);
-    expect(notify).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledTimes(3);
     expect(fcStore.confirmedRoot).toBe(finalizedRoot);
   });
 

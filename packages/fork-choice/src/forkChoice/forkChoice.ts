@@ -247,10 +247,22 @@ export class ForkChoice implements IForkChoice {
     if (paused) {
       // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
       this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      this.notifyConfirmedRoot();
     }
     this.metrics?.fastConfirmation.paused.set(paused ? 1 : 0);
     this.logger?.info(paused ? "Paused fast confirmation" : "Resumed fast confirmation", {
       slot: this.fcStore.currentSlot,
+    });
+  }
+
+  private notifyConfirmedRoot(): void {
+    const confirmedRoot = this.fcStore.confirmedRoot;
+    const confirmedBlock = this.getBlockHexDefaultStatus(confirmedRoot);
+    if (confirmedBlock === null) return;
+    this.fcStore.notifyFastConfirmation?.({
+      block: confirmedRoot,
+      slot: confirmedBlock.slot,
+      currentSlot: this.fcStore.currentSlot,
     });
   }
 
@@ -2009,14 +2021,7 @@ export class ForkChoice implements IForkChoice {
     if (this.fastConfirmationPaused) {
       // Keep consumers on a safe, available root while the rule is paused
       this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
-      const confirmedBlock = this.getBlockHexDefaultStatus(this.fcStore.confirmedRoot);
-      if (confirmedBlock !== null) {
-        this.fcStore.notifyFastConfirmation?.({
-          block: this.fcStore.confirmedRoot,
-          slot: confirmedBlock.slot,
-          currentSlot: this.fcStore.currentSlot,
-        });
-      }
+      this.notifyConfirmedRoot();
       return;
     }
 
