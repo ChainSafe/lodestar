@@ -86,11 +86,22 @@ export function assertLinearChainSegment(
           // Maybe the previous slot's FULL envelope was orphaned — try falling back.
           // If even prevExecHash doesn't match, the segment is non-linear.
           if (bidParentHash !== prevExecHash) {
-            throw new BlockError(block, {
-              code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
-              parentRoot: toRootHex(block.message.parentRoot),
-              parentBlockHash: bidParentHash,
-            });
+            // i === 0 compares against the seeded fork-choice parent (segment boundary); i > 0
+            // compares against the in-segment predecessor's payload (broken link inside the segment).
+            throw new BlockError(
+              block,
+              i === 0
+                ? {
+                    code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN,
+                    parentRoot: toRootHex(block.message.parentRoot),
+                    parentBlockHash: bidParentHash,
+                  }
+                : {
+                    code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS,
+                    parentBlockHash: bidParentHash,
+                    expectedBlockHash: currentExecHash,
+                  }
+            );
           }
           if (lastFullSlot !== null && payloadEnvelopes !== null) {
             const orphanedInput = payloadEnvelopes.get(lastFullSlot);

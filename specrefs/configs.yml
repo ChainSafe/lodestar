@@ -220,8 +220,8 @@
       search: '^\s+CUSTODY_REQUIREMENT:'
       regex: true
   spec: |
-    <spec config_var="CUSTODY_REQUIREMENT" fork="fulu" hash="b7340203">
-    CUSTODY_REQUIREMENT = 4
+    <spec config_var="CUSTODY_REQUIREMENT" fork="fulu" hash="3ed53d1d">
+    CUSTODY_REQUIREMENT: uint64 = 4
     </spec>
 
 - name: DATA_COLUMN_SIDECAR_SUBNET_COUNT#fulu
@@ -229,8 +229,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "DATA_COLUMN_SIDECAR_SUBNET_COUNT:"
   spec: |
-    <spec config_var="DATA_COLUMN_SIDECAR_SUBNET_COUNT" fork="fulu" hash="626172a6">
-    DATA_COLUMN_SIDECAR_SUBNET_COUNT = 128
+    <spec config_var="DATA_COLUMN_SIDECAR_SUBNET_COUNT" fork="fulu" hash="4b4dd06b">
+    DATA_COLUMN_SIDECAR_SUBNET_COUNT: uint64 = 128
     </spec>
 
 - name: DENEB_FORK_EPOCH#deneb
@@ -516,8 +516,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_BUILDER_WITHDRAWABILITY_DELAY:"
   spec: |
-    <spec config_var="MIN_BUILDER_WITHDRAWABILITY_DELAY" fork="gloas" hash="e1cd053c">
-    MIN_BUILDER_WITHDRAWABILITY_DELAY: uint64 = 8192
+    <spec config_var="MIN_BUILDER_WITHDRAWABILITY_DELAY" fork="gloas" hash="be7f8473">
+    MIN_BUILDER_WITHDRAWABILITY_DELAY: uint64 = 64
     </spec>
 
 - name: MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS#deneb
@@ -534,8 +534,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS:"
   spec: |
-    <spec config_var="MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS" fork="fulu" hash="910e49bb">
-    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS = 4096
+    <spec config_var="MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS" fork="fulu" hash="b717a22d">
+    MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: uint64 = 4096
     </spec>
 
 - name: MIN_GENESIS_ACTIVE_VALIDATOR_COUNT#phase0
@@ -588,8 +588,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "NUMBER_OF_CUSTODY_GROUPS:"
   spec: |
-    <spec config_var="NUMBER_OF_CUSTODY_GROUPS" fork="fulu" hash="05e3016e">
-    NUMBER_OF_CUSTODY_GROUPS = 128
+    <spec config_var="NUMBER_OF_CUSTODY_GROUPS" fork="fulu" hash="ef65e821">
+    NUMBER_OF_CUSTODY_GROUPS: uint64 = 128
     </spec>
 
 - name: PAYLOAD_ATTESTATION_DUE_BPS#gloas
@@ -606,8 +606,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "PAYLOAD_DUE_BPS:"
   spec: |
-    <spec config_var="PAYLOAD_DUE_BPS" fork="gloas" hash="ee4d44de">
-    PAYLOAD_DUE_BPS: uint64 = 7500
+    <spec config_var="PAYLOAD_DUE_BPS" fork="gloas" hash="07d2a783">
+    PAYLOAD_DUE_BPS: uint64 = 5000
     </spec>
 
 - name: PROPOSER_REORG_CUTOFF_BPS#phase0
@@ -660,8 +660,8 @@
     - file: packages/config/src/chainConfig/configs/mainnet.ts
       search: "SAMPLES_PER_SLOT:"
   spec: |
-    <spec config_var="SAMPLES_PER_SLOT" fork="fulu" hash="158798b8">
-    SAMPLES_PER_SLOT = 8
+    <spec config_var="SAMPLES_PER_SLOT" fork="fulu" hash="dfbcb295">
+    SAMPLES_PER_SLOT: uint64 = 8
     </spec>
 
 - name: SECONDS_PER_ETH1_BLOCK#phase0
