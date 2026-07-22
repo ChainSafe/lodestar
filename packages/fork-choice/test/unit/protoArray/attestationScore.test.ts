@@ -57,6 +57,27 @@ function setupProtoArray(): ProtoArray {
 
 type ProposerBoost = {root: RootHex; score: number} | null;
 
+/** Mirror of a ProtoNode, driven by the naive oracle */
+type OracleNode = {blockRoot: RootHex; parent?: number; weight: number; invalid?: boolean};
+
+/**
+ * applyScoreChanges() reads executionStatus straight off the node, so flip it in place. Driving this
+ * through validateLatestHash() would exercise the LVH plumbing instead, which executionStatusUpdates
+ * .test.ts already covers.
+ */
+function markInvalid(protoArray: ProtoArray, oracleNodes: OracleNode[], blockRoot: RootHex): void {
+  for (const node of protoArray.nodes) {
+    if (node.blockRoot === blockRoot) {
+      (node as {executionStatus: ExecutionStatus}).executionStatus = ExecutionStatus.Invalid;
+    }
+  }
+  for (const node of oracleNodes) {
+    if (node.blockRoot === blockRoot) {
+      node.invalid = true;
+    }
+  }
+}
+
 /** A round of score changes: the deltas fed to applyScoreChanges plus the boost in effect */
 type Round = {deltas: number[]; proposerBoost: ProposerBoost};
 
@@ -87,7 +108,7 @@ describe("ProtoArray attestationScore", () => {
    * attester votes and proposer boost. Kept as an oracle: splitting the channels must not move `weight`.
    */
   function naiveApplyScoreChanges(
-    nodes: {blockRoot: RootHex; parent?: number; weight: number}[],
+    nodes: OracleNode[],
     deltas: number[],
     proposerBoost: ProposerBoost,
     previousProposerBoost: ProposerBoost
@@ -100,7 +121,8 @@ describe("ProtoArray attestationScore", () => {
       const previousBoost =
         previousProposerBoost && previousProposerBoost.root === node.blockRoot ? previousProposerBoost.score : 0;
 
-      const nodeDelta = deltas[nodeIndex] + currentBoost - previousBoost;
+      // an invalid node drops its whole weight, boost included, and stays at 0 from then on
+      const nodeDelta = node.invalid ? -node.weight : deltas[nodeIndex] + currentBoost - previousBoost;
       node.weight += nodeDelta;
 
       if (node.parent !== undefined) {
@@ -112,7 +134,7 @@ describe("ProtoArray attestationScore", () => {
   it("weight matches the pre-split implementation over a sequence of attestations and boosts", () => {
     const protoArray = setupProtoArray();
     // Mirror of protoArray.nodes, driven by the naive oracle
-    const oracleNodes = protoArray.nodes.map((node) => ({
+    const oracleNodes: OracleNode[] = protoArray.nodes.map((node) => ({
       blockRoot: node.blockRoot,
       parent: node.parent,
       weight: 0,
@@ -135,8 +157,17 @@ describe("ProtoArray attestationScore", () => {
       null,
     ];
 
+    // 3A is invalidated while it still carries a boost, so the round it goes invalid must drop both
+    // its attester votes and its boost, and every later round must leave it at 0
+    const invalidateBeforeRound: Record<number, RootHex> = {4: "3A"};
+
     let previousProposerBoost: ProposerBoost = null;
-    for (const proposerBoost of boostable) {
+    for (const [round, proposerBoost] of boostable.entries()) {
+      const toInvalidate = invalidateBeforeRound[round];
+      if (toInvalidate !== undefined) {
+        markInvalid(protoArray, oracleNodes, toInvalidate);
+      }
+
       const deltas = protoArray.nodes.map(() => nextDelta());
 
       // applyScoreChanges mutates the deltas array in place, so give each side its own copy
@@ -190,6 +221,57 @@ describe("ProtoArray attestationScore", () => {
     // 2B forks off 1A, so it is not an ancestor of 3A
     expect(weights(protoArray)["2B"]).toBe(0);
     expect(attestationScores(protoArray)["2B"]).toBe(0);
+  });
+
+  it("zeroes both channels of an invalid node and unwinds both from its ancestors", () => {
+    const protoArray = setupProtoArray();
+
+    // 10 votes on 3A and 5 on 2B, plus a boost on 3A
+    const deltas = protoArray.nodes.map((node) => (node.blockRoot === "3A" ? 10 : node.blockRoot === "2B" ? 5 : 0));
+    applyScoreChanges(protoArray, {deltas, proposerBoost: {root: "3A", score: 100}});
+
+    expect(attestationScores(protoArray)).toEqual({[ANCHOR]: 15, "1A": 15, "2A": 10, "3A": 10, "2B": 5});
+    expect(weights(protoArray)).toEqual({[ANCHOR]: 115, "1A": 115, "2A": 110, "3A": 110, "2B": 5});
+
+    // 3A goes invalid while still boosted. The invalid branch derives the boost to remove as
+    // `weight - attestationScore`, so both channels have to unwind on 3A and on 2A/1A/anchor.
+    markInvalid(protoArray, [], "3A");
+    applyScoreChanges(protoArray, {
+      deltas: protoArray.nodes.map(() => 0),
+      proposerBoost: {root: "3A", score: 100},
+    });
+
+    expect(attestationScores(protoArray)).toEqualWithMessage(
+      {[ANCHOR]: 5, "1A": 5, "2A": 0, "3A": 0, "2B": 5},
+      "the invalid node's attester votes must be removed from it and from every ancestor"
+    );
+    expect(weights(protoArray)).toEqualWithMessage(
+      {[ANCHOR]: 5, "1A": 5, "2A": 0, "3A": 0, "2B": 5},
+      "the invalid node's boost must be removed alongside its votes, leaving only 2B's votes"
+    );
+  });
+
+  it("keeps an invalid node at zero on later rounds without double-unwinding its boost", () => {
+    const protoArray = setupProtoArray();
+
+    const deltas = protoArray.nodes.map((node) => (node.blockRoot === "3A" ? 10 : node.blockRoot === "2B" ? 5 : 0));
+    applyScoreChanges(protoArray, {deltas, proposerBoost: {root: "3A", score: 100}});
+
+    markInvalid(protoArray, [], "3A");
+    applyScoreChanges(protoArray, {
+      deltas: protoArray.nodes.map(() => 0),
+      proposerBoost: {root: "3A", score: 100},
+    });
+
+    // The boost is cleared on the next tick. 3A is still invalid, so its deltas must compute to 0
+    // rather than removing the already-removed boost a second time.
+    applyScoreChanges(protoArray, {deltas: protoArray.nodes.map(() => 0), proposerBoost: null});
+
+    expect(attestationScores(protoArray)).toEqual({[ANCHOR]: 5, "1A": 5, "2A": 0, "3A": 0, "2B": 5});
+    expect(weights(protoArray)).toEqualWithMessage(
+      {[ANCHOR]: 5, "1A": 5, "2A": 0, "3A": 0, "2B": 5},
+      "clearing the boost must not unwind it a second time through the invalid node"
+    );
   });
 
   it("weight returns to attestationScore once the boost is cleared", () => {
