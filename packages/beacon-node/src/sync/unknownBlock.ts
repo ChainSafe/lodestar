@@ -819,7 +819,7 @@ export class BlockInputSync {
           // case BlockErrorCode.ALREADY_KNOWN:
           // case BlockErrorCode.GENESIS_BLOCK:
 
-          case BlockErrorCode.PARENT_UNKNOWN:
+          case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
           case BlockErrorCode.PRESTATE_MISSING:
             // Should not happen, mark as downloaded to try again latter
             this.logger.debug("Attempted to process block but its parent was still unknown", errorData, res.err);

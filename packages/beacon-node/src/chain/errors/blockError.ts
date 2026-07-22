@@ -8,8 +8,10 @@ import {GossipActionError} from "./gossipValidation.js";
 export enum BlockErrorCode {
   /** The prestate cannot be fetched */
   PRESTATE_MISSING = "BLOCK_ERROR_PRESTATE_MISSING",
-  /** The parent block was unknown. */
-  PARENT_UNKNOWN = "BLOCK_ERROR_PARENT_UNKNOWN",
+  /**
+   * The first block of a chain segment references a parentRoot unknown to fork-choice.
+   */
+  PARENT_BLOCK_UNKNOWN = "BLOCK_ERROR_PARENT_BLOCK_UNKNOWN",
   /** The block slot is greater than the present slot. */
   FUTURE_SLOT = "BLOCK_ERROR_FUTURE_SLOT",
   /** The block state_root does not match the generated state. */
@@ -38,7 +40,10 @@ export enum BlockErrorCode {
   NOT_FINALIZED_DESCENDANT = "BLOCK_ERROR_NOT_FINALIZED_DESCENDANT",
   /** The provided block is from an later slot than its parent. */
   NOT_LATER_THAN_PARENT = "BLOCK_ERROR_NOT_LATER_THAN_PARENT",
-  /** At least one block in the chain segment did not have it's parent root set to the root of the prior block. */
+  /**
+   * A block in the middle of a chain segment does not set its parentRoot to the previous block's root
+   * (broken parent-root link inside the segment).
+   */
   NON_LINEAR_PARENT_ROOTS = "BLOCK_ERROR_NON_LINEAR_PARENT_ROOTS",
   /** The slots of the blocks in the chain segment were not strictly increasing. */
   NON_LINEAR_SLOTS = "BLOCK_ERROR_NON_LINEAR_SLOTS",
@@ -71,8 +76,16 @@ export enum BlockErrorCode {
   TOO_MANY_BLOCK_OPERATIONS = "BLOCK_ERROR_TOO_MANY_BLOCK_OPERATIONS",
   /** The parent block's execution payload has been verified as invalid */
   PARENT_EXECUTION_INVALID = "BLOCK_ERROR_PARENT_EXECUTION_INVALID",
-  /** The block's parent execution payload (defined by bid.parent_block_hash) has not been seen */
+  /**
+   * [gloas] The first block of a chain segment references a parent execution payload
+   * (bid.parent_block_hash) unknown to fork-choice (segment boundary).
+   */
   PARENT_PAYLOAD_UNKNOWN = "BLOCK_ERROR_PARENT_PAYLOAD_UNKNOWN",
+  /**
+   * [gloas] A block in the middle of a chain segment has a bid.parent_block_hash that does not chain onto the
+   * previous block's execution payload (broken payload link inside the segment).
+   */
+  NON_LINEAR_PAYLOAD_ROOTS = "BLOCK_ERROR_NON_LINEAR_PAYLOAD_ROOTS",
   /** An execution payload envelope in the chain segment references a block root that does not match its slot's block */
   ENVELOPE_BLOCK_ROOT_MISMATCH = "BLOCK_ERROR_ENVELOPE_BLOCK_ROOT_MISMATCH",
 }
@@ -84,7 +97,7 @@ type ExecutionErrorStatus = Exclude<
 
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
-  | {code: BlockErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
+  | {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
   | {code: BlockErrorCode.GENESIS_BLOCK}
@@ -122,7 +135,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
   | {code: BlockErrorCode.TOO_MANY_BLOCK_OPERATIONS; name: string; count: number; limit: number}
   | {code: BlockErrorCode.PARENT_EXECUTION_INVALID; parentRoot: RootHex}
-  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex};
+  | {code: BlockErrorCode.PARENT_PAYLOAD_UNKNOWN; parentRoot: RootHex; parentBlockHash: RootHex}
+  | {code: BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS; parentBlockHash: RootHex; expectedBlockHash: RootHex};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
