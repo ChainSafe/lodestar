@@ -134,6 +134,8 @@ export enum ProcessingFaultKind {
 /**
  * Classify a processChainSegment error for a batch so range sync only redownloads
  * the batch or batches that could actually be at fault.
+ * Note that range sync is supposed to only handle linear chain, for forky condition we'll handle it via backward sync
+ * in BlockInputSync or the upcoming/TODO beacon_blocks_by_head req/resp.
  */
 export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Batch | undefined): ProcessingFaultKind {
   if (!(err instanceof BlockError)) {
