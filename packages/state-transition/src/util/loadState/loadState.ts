@@ -29,10 +29,11 @@ export function loadState(
   const seedFork = config.getForkSeq(seedState.slot);
 
   // EIP-7688 replaces List with ProgressiveList for validators and inactivityScores at gloas,
-  // changing the merkle tree shape. Seed nodes can only be reused if the seed state is on the
-  // same side of the gloas fork as the state to load.
-  const canReuseSeedNodes = fork >= ForkSeq.gloas === seedFork >= ForkSeq.gloas;
-  if (!canReuseSeedNodes) {
+  // changing the merkle tree shape. Seed nodes cannot be reused when one state is pre-gloas
+  // and the other post-gloas.
+  const crossesGloasFork =
+    (fork >= ForkSeq.gloas && seedFork < ForkSeq.gloas) || (fork < ForkSeq.gloas && seedFork >= ForkSeq.gloas);
+  if (crossesGloasFork) {
     const migratedState = stateType.deserializeToViewDU(stateBytes) as BeaconStateAllForks;
     // only validators unknown to the seed state must be registered in the pubkey cache
     const modifiedValidators: number[] = [];
