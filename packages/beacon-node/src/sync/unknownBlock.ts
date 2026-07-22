@@ -841,8 +841,14 @@ export class BlockInputSync {
 
           case BlockErrorCode.EXECUTION_ENGINE_ERROR:
             // Removing the block(s) without penalizing the peers, hoping for EL to
-            // recover on a latter download + verify attempt
+            // recover on a latter download + verify attempt.
             this.removeAllDescendants(pendingBlock);
+            break;
+
+          case BlockErrorCode.EXECUTION_ENGINE_INVALID:
+            // the peer served a bad block
+            this.logger.debug("Execution engine rejected block from unknown parent sync", errorData, res.err);
+            this.removeAndDownScoreAllDescendants(pendingBlock);
             break;
 
           default:

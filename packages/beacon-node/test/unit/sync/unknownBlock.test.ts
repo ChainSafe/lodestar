@@ -9,7 +9,7 @@ import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
-import {BlockInputNoData} from "../../../src/chain/blocks/blockInput/blockInput.js";
+import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, DAType, IBlockInput} from "../../../src/chain/blocks/blockInput/types.js";
 import {PayloadError, PayloadErrorCode} from "../../../src/chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
@@ -624,6 +624,139 @@ describe("UnknownBlockSync", () => {
           expect(events.listenerCount(routes.events.EventType.executionPayload)).toBe(0);
           expect(service.isSubscribedToNetwork()).toBe(false);
         }
+      });
+    }
+  });
+
+  describe("block processing execution errors", () => {
+    const executionErrorCases = [
+      {
+        code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+        error: (block: SignedBeaconBlock) =>
+          new BlockError(block, {
+            code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+            execStatus: ExecutionPayloadStatus.ELERROR,
+            errorMessage: "execution engine offline",
+          }),
+        logsInvalidBranch: false,
+      },
+      {
+        code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+        error: (block: SignedBeaconBlock) =>
+          new BlockError(block, {
+            code: BlockErrorCode.EXECUTION_ENGINE_INVALID,
+            execStatus: ExecutionPayloadStatus.INVALID,
+            errorMessage: "invalid payload",
+          }),
+        logsInvalidBranch: true,
+      },
+    ];
+
+    for (const {code, error, logsInvalidBranch} of executionErrorCases) {
+      it(`handles ${code} without live unknown-block peer reporting`, async () => {
+        const peer = await getRandPeerIdStr();
+        const block = ssz.phase0.SignedBeaconBlock.defaultValue();
+        block.message.slot = 1;
+        block.message.parentRoot = Buffer.alloc(32, 0xaa);
+
+        const blockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(block.message);
+        const blockRootHex = toRootHex(blockRoot);
+        const parentRootHex = toRootHex(block.message.parentRoot);
+        const networkEvents = new NetworkEventBus();
+        const reportPeer = vi.fn();
+
+        const networkForTest = {
+          events: networkEvents,
+          getConnectedPeers: () => [peer],
+          getConnectedPeerSyncMeta: () => ({
+            peerId: peer,
+            client: "execution-error-test-client",
+            custodyColumns: [],
+            earliestAvailableSlot: 0,
+          }),
+          custodyConfig: {sampledColumns: [], sampleGroups: [[]]} as unknown as CustodyConfig,
+          sendBeaconBlocksByRoot: vi.fn().mockResolvedValue([block]),
+          reportPeer,
+        } as unknown as INetwork;
+
+        const processBlock = vi.fn().mockRejectedValue(error(block));
+        const chainForTest = {
+          emitter: new ChainEventEmitter(),
+          clock: new ClockStopped(0),
+          forkChoice: {
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+          genesisTime: 0,
+          custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+          processBlock,
+          seenBlockInputCache: {
+            getByBlock: ({
+              block,
+              blockRootHex,
+              seenTimestampSec,
+              source,
+              peerIdStr,
+            }: {
+              block: SignedBeaconBlock;
+              blockRootHex: string;
+              seenTimestampSec: number;
+              source: BlockInputSource;
+              peerIdStr?: PeerIdStr;
+            }) =>
+              BlockInputPreData.createFromBlock({
+                block,
+                blockRootHex,
+                forkName: ForkName.phase0,
+                daOutOfRange: false,
+                seenTimestampSec,
+                source,
+                peerIdStr,
+              }),
+            prune: vi.fn(),
+          } as unknown as SeenBlockInput,
+          seenBlockProposers: {isKnown: vi.fn().mockReturnValue(false)} as unknown as SeenBlockProposers,
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockReturnValue(undefined),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+        } as unknown as IBeaconChain;
+
+        const debug = vi.fn();
+        const loggerForTest = Object.assign(Object.create(logger), {debug}) as typeof logger;
+        service = new BlockInputSync(
+          minimalConfig,
+          networkForTest,
+          chainForTest,
+          loggerForTest,
+          null,
+          defaultSyncOptions
+        );
+        service.subscribeToNetwork();
+
+        networkEvents.emit(NetworkEvent.peerConnected, {
+          peer,
+          status: {} as never,
+          custodyColumns: [],
+          clientAgent: "execution-error-test-client",
+        });
+        chainForTest.emitter.emit(ChainEvent.unknownBlockRoot, {
+          rootHex: blockRootHex,
+          peer,
+          source: BlockInputSource.gossip,
+        });
+
+        await sleep(20);
+
+        expect(processBlock).toHaveBeenCalledOnce();
+        expect(reportPeer).not.toHaveBeenCalled();
+        expect(
+          debug.mock.calls.some(([message]) => message === "Execution engine rejected block from unknown parent sync")
+        ).toBe(logsInvalidBranch);
+
+        service.close();
       });
     }
   });

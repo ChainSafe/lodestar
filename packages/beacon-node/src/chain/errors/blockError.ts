@@ -66,6 +66,12 @@ export enum BlockErrorCode {
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
   /** Execution engine is unavailable, syncing, or api call errored. Peers must not be downscored on this code */
   EXECUTION_ENGINE_ERROR = "BLOCK_ERROR_EXECUTION_ERROR",
+  /**
+   * Execution engine returned a definitive INVALID verdict on the payload. Unlike
+   * EXECUTION_ENGINE_ERROR this is evidence about the data itself, not a local malfunction, so
+   * whoever served the block MAY be downscored. Mirrors PayloadErrorCode.EXECUTION_ENGINE_INVALID.
+   */
+  EXECUTION_ENGINE_INVALID = "BLOCK_ERROR_EXECUTION_INVALID",
   /** The blobs are unavailable */
   DATA_UNAVAILABLE = "BLOCK_ERROR_DATA_UNAVAILABLE",
   /** Block contains too many kzg commitments */
@@ -94,6 +100,15 @@ type ExecutionErrorStatus = Exclude<
   ExecutionPayloadStatus,
   ExecutionPayloadStatus.VALID | ExecutionPayloadStatus.ACCEPTED | ExecutionPayloadStatus.SYNCING
 >;
+
+/**
+ * Statuses where the execution engine could NOT render a verdict on the payload: it is unreachable
+ * (UNAVAILABLE), errored (ELERROR), or returned a malformed/client-specific response
+ * (INVALID_BLOCK_HASH, dropped from engine_newPayloadV2+). None of these are evidence about the
+ * data, so peers must not be downscored on them. A definitive INVALID carries
+ * BlockErrorCode.EXECUTION_ENGINE_INVALID instead.
+ */
+type ExecutionEngineErrorStatus = Exclude<ExecutionErrorStatus, ExecutionPayloadStatus.INVALID>;
 
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
@@ -129,7 +144,12 @@ export type BlockErrorType =
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string}
+  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionEngineErrorStatus; errorMessage: string}
+  | {
+      code: BlockErrorCode.EXECUTION_ENGINE_INVALID;
+      execStatus: ExecutionPayloadStatus.INVALID;
+      errorMessage: string;
+    }
   | {code: BlockErrorCode.DATA_UNAVAILABLE}
   | {code: BlockErrorCode.TOO_MANY_KZG_COMMITMENTS; blobKzgCommitmentsLen: number; commitmentLimit: number}
   | {code: BlockErrorCode.BID_PARENT_ROOT_MISMATCH; bidParentRoot: RootHex; blockParentRoot: RootHex}
