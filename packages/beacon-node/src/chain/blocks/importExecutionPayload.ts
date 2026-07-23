@@ -198,6 +198,10 @@ export async function importExecutionPayload(
       break;
 
     case ExecutionPayloadStatus.INVALID:
+      // Flag the payload input so gossip validation can REJECT index-1 "payload present"
+      // attestations for this block: we throw here before `onExecutionPayload`, so no FULL
+      // fork-choice variant is created to carry the Invalid execution status.
+      payloadInput.markPayloadInvalid();
       throw new PayloadError({
         code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
         execStatus: execResult.status,

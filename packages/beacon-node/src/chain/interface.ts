@@ -166,6 +166,8 @@ export interface IBeaconChain {
   seenBlock(blockRoot: RootHex): boolean;
   /** Chain has seen a SignedExecutionPayloadEnvelope for this block root (via seenCache or fork choice FULL variant) */
   seenPayloadEnvelope(blockRoot: RootHex): boolean;
+  /** [Gloas] EL rejected this block's execution payload at import (`newPayload` -> INVALID); no FULL variant exists */
+  payloadFailedValidation(blockRoot: RootHex): boolean;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */

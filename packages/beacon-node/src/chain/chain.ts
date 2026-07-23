@@ -544,6 +544,10 @@ export class BeaconChain implements IBeaconChain {
     return this.seenPayloadEnvelopeInputCache.hasPayload(blockRoot) || this.forkChoice.hasPayloadHexUnsafe(blockRoot);
   }
 
+  payloadFailedValidation(blockRoot: RootHex): boolean {
+    return this.seenPayloadEnvelopeInputCache.get(blockRoot)?.isPayloadInvalid() ?? false;
+  }
+
   regenCanAcceptWork(): boolean {
     return this.regen.canAcceptWork();
   }

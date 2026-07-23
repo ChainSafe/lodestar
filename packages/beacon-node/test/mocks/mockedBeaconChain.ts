@@ -172,6 +172,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
         get: vi.fn(),
       },
       seenPayloadEnvelope: vi.fn(),
+      payloadFailedValidation: vi.fn(),
       shufflingCache: new ShufflingCache(),
       pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
