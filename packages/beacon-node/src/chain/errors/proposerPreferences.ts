@@ -32,7 +32,7 @@ export type ProposerPreferencesErrorType =
       code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT_SLOT;
       dependentRoot: RootHex;
       dependentBlockSlot: Slot;
-      dependentRootPivotSlot: Slot;
+      dependentRootSlot: Slot;
       dependentEpoch: Epoch;
     }
   | {
