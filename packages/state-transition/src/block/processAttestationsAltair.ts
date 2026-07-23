@@ -188,7 +188,7 @@ export function getAttestationParticipationStatus(
   // Both are tracked to properly incentivise validators
   //
   // The source vote always matches the justified checkpoint (else its invalid)
-  // The target vote should match the most recent checkpoint (eg: the first root of the epoch)
+  // The target vote should match the most recent checkpoint.
   // The head vote should match the root at the attestation slot (eg: the root at data.slot)
   const isMatchingSource = checkpointValueEquals(data.source, justifiedCheckpoint);
   if (!isMatchingSource) {
@@ -199,7 +199,7 @@ export function getAttestationParticipationStatus(
     );
   }
 
-  const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
+  const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getCheckpointRoot(data.target.epoch));
 
   // a timely head is only be set if the target is _also_ matching
   // In gloas, this is called `head_root_matches`

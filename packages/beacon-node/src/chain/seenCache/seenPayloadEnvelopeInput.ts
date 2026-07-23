@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {CheckpointWithHex, IForkChoice, PayloadStatus, ProtoBlock} from "@lodestar/fork-choice";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -82,7 +81,7 @@ export class SeenPayloadEnvelopeInput {
   }
 
   private pruneFinalized = (checkpoint: CheckpointWithHex): void => {
-    const finalizedSlot = computeStartSlotAtEpoch(checkpoint.epoch);
+    const finalizedSlot = this.forkChoice.getFinalizedCheckpointSlot();
     let deletedCount = 0;
     for (const [, input] of this.payloadInputs) {
       if (input.slot < finalizedSlot) {

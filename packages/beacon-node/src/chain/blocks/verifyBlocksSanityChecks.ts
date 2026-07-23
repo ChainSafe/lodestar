@@ -1,6 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {IClock} from "../../util/clock.js";
@@ -76,7 +75,7 @@ export function verifyBlocksSanityChecks(
 
     // Not finalized slot
     // IGNORE if `partiallyVerifiedBlock.ignoreIfFinalized`
-    const finalizedSlot = computeStartSlotAtEpoch(chain.forkChoice.getFinalizedCheckpoint().epoch);
+    const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
     if (blockSlot <= finalizedSlot) {
       if (opts.ignoreIfFinalized) {
         continue;

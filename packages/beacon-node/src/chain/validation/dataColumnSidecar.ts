@@ -6,7 +6,6 @@ import {
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
@@ -61,10 +60,8 @@ export async function validateGossipFuluDataColumnSidecar(
     });
   }
 
-  // 4) [IGNORE] The sidecar is from a slot greater than the latest finalized slot -- i.e. validate that
-  //             sidecar.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-  const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+  // 4) [IGNORE] The sidecar is from a slot greater than the latest finalized checkpoint slot.
+  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
   if (blockHeader.slot <= finalizedSlot) {
     throw new DataColumnSidecarGossipError(GossipAction.IGNORE, {
       code: DataColumnSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT,

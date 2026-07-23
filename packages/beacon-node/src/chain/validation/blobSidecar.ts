@@ -7,7 +7,6 @@ import {
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   getBlockHeaderProposerSignatureSetByHeaderSlot,
   getBlockHeaderProposerSignatureSetByParentStateSlot,
 } from "@lodestar/state-transition";
@@ -58,10 +57,8 @@ export async function validateGossipBlobSidecar(
     });
   }
 
-  // [IGNORE] The sidecar is from a slot greater than the latest finalized slot -- i.e. validate that
-  // sidecar.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-  const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+  // [IGNORE] The sidecar is from a slot greater than the latest finalized checkpoint slot.
+  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
   if (blobSlot <= finalizedSlot) {
     throw new BlobSidecarGossipError(GossipAction.IGNORE, {
       code: BlobSidecarErrorCode.WOULD_REVERT_FINALIZED_SLOT,

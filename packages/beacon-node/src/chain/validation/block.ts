@@ -19,7 +19,6 @@ import {
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   computeTimeAtSlot,
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
@@ -58,10 +57,8 @@ export async function validateGossipBlock(
     });
   }
 
-  // [IGNORE] The block is from a slot greater than the latest finalized slot -- i.e. validate that
-  // signed_beacon_block.message.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
-  const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+  // [IGNORE] The block is from a slot greater than the latest finalized checkpoint slot.
+  const finalizedSlot = chain.forkChoice.getFinalizedCheckpointSlot();
   if (blockSlot <= finalizedSlot) {
     throw new BlockGossipError(GossipAction.IGNORE, {
       code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
