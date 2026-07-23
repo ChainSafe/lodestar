@@ -1577,8 +1577,7 @@ export class ProtoArray {
     // that descends from the justified checkpoint block AND is itself viable for head. Iterating
     // all nodes without the justified-descendant filter would wrongly include FFG-viable leaves
     // that hang off the finalized checkpoint on a branch not under the current justified checkpoint.
-    const justifiedIndex = this.getDefaultNodeIndex(this.justifiedRoot);
-    const justifiedSlot = justifiedIndex !== undefined ? this.getNodeByIndex(justifiedIndex)?.slot : undefined;
+    const justifiedVariant = this.getDefaultVariant(this.justifiedRoot);
     // Gloas payload-status variants of one blockRoot are distinct nodes in the spec's filtered
     // tree, identified by (root, payload_status, weight) — emit one entry per variant.
     const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] = [];
@@ -1586,27 +1585,21 @@ export class ProtoArray {
       if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {
         continue;
       }
-      if (this.justifiedEpoch !== GENESIS_EPOCH && !this.descendsFromJustified(node, justifiedSlot)) {
-        continue;
+      if (this.justifiedEpoch !== GENESIS_EPOCH) {
+        // Same-root short-circuit: every payload-status variant of the justified block itself is
+        // in the filtered tree, but `isDescendant` from the default (PENDING) variant does not
+        // reach the sibling EMPTY/FULL variants of the same root.
+        const descendsFromJustified =
+          node.blockRoot === this.justifiedRoot ||
+          (justifiedVariant !== undefined &&
+            this.isDescendant(this.justifiedRoot, justifiedVariant, node.blockRoot, node.payloadStatus));
+        if (!descendsFromJustified) {
+          continue;
+        }
       }
       heads.push({root: node.blockRoot, payloadStatus: node.payloadStatus, weight: node.weight});
     }
     return heads;
-  }
-
-  /**
-   * True if `node` is the justified checkpoint block or one of its descendants.
-   * Parent slots are non-increasing, so the walk stops once it passes the justified block's slot.
-   */
-  private descendsFromJustified(node: ProtoNode, justifiedSlot: Slot | undefined): boolean {
-    let current: ProtoNode | undefined = node;
-    while (current !== undefined && (justifiedSlot === undefined || current.slot >= justifiedSlot)) {
-      if (current.blockRoot === this.justifiedRoot) {
-        return true;
-      }
-      current = current.parent !== undefined ? this.getNodeByIndex(current.parent) : undefined;
-    }
-    return false;
   }
 
   /**
