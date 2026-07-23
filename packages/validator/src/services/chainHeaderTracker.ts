@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Root, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromHex} from "@lodestar/utils";
+import {Logger, fromHex, toRootHex} from "@lodestar/utils";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 
 const {EventType} = routes.events;
@@ -106,6 +106,15 @@ export class ChainHeaderTracker {
     if (event.type === EventType.headV2) {
       const {data} = event.message;
       const {slot, block, currentEpochDependentRoot, nextEpochDependentRoot} = data;
+
+      // head_v2 is emitted for the second time when the payload status transitions EMPTY -> FULL.
+      // The VC only tracks head root/slot and duty dependent roots, which are identical
+      // across a block's payload variants so we can skip the second emission (payload
+      // availability is delivered via `execution_payload_available` event).
+      if (this.headBlockRoot !== null && block === toRootHex(this.headBlockRoot)) {
+        return;
+      }
+
       this.headBlockSlot = slot;
       this.headBlockRoot = fromHex(block);
 
