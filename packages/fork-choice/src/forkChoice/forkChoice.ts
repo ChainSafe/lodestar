@@ -1558,10 +1558,14 @@ export class ForkChoice implements IForkChoice {
       for (let index = 0; index < state.getBeaconCommitteeCountPerSlot(epoch); index++) {
         for (const validatorIndex of state.getBeaconCommittee(node.slot, index)) {
           if (equivocatingIndices.has(validatorIndex)) {
-            // the spec specifies to use effective_balance of justified state but it could be zero for equivocating validators
-            // due to getEffectiveBalanceIncrementsZeroInactive()
-            headWeight +=
-              this.fcStore.justified.balances[validatorIndex] ?? state.effectiveBalanceIncrements[validatorIndex];
+            // the spec specifies to use effective_balance of the justified state
+            let balance = this.fcStore.justified.balances[validatorIndex];
+            if (!balance) {
+              // 0 (zeroed by getEffectiveBalanceIncrementsZeroInactive) or undefined (validator not in
+              // the justified state) - fall back to the head state's effective balance
+              balance = state.effectiveBalanceIncrements[validatorIndex];
+            }
+            headWeight += balance;
           }
         }
       }
