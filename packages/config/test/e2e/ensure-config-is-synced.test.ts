@@ -57,6 +57,9 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // These are preset values, not config values - they're tested separately
   "PRESET_BASE",
   "CONFIG_NAME",
+  // TODO GLOAS: Unskip in #9606
+  "PAYLOAD_DUE_BPS" as keyof ChainConfig,
+  "MIN_BUILDER_WITHDRAWABILITY_DELAY" as keyof ChainConfig,
 ];
 
 /**

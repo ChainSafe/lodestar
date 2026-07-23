@@ -176,7 +176,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
     // optimistically add gossip block to the seen cache
     // if validation fails, we will NOT forward this gossip block to peers
-    //   - if PARENT_UNKNOWN error, blockInput will then be queued inside BlockInputSync. If the gossip block is really invalid, it will be pruned there
+    //   - if PARENT_BLOCK_UNKNOWN error, blockInput will then be queued inside BlockInputSync. If the gossip block is really invalid, it will be pruned there
     //   - if other validator errors, blockInput will stay in the seen cache and will be pruned on finalization
     const blockInput = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
@@ -187,7 +187,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     });
 
     // Optimistically seed the payload-envelope cache too, mirroring seenBlockInputCache above.
-    // This ensures we have PayloadEnvelopeInput, even through "PARENT_UNKNOWN" error
+    // This ensures we have PayloadEnvelopeInput, even through "PARENT_BLOCK_UNKNOWN" error
     // see https://github.com/ChainSafe/lodestar/issues/9475
     if (isForkPostGloas(fork)) {
       chain.seenPayloadEnvelopeInputCache.add({
@@ -227,7 +227,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       if (e instanceof BlockGossipError) {
         logger.debug("Gossip block has error", {slot, root: blockShortHex, code: e.type.code});
         if (
-          (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) &&
+          (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+            e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) &&
           blockInput
         ) {
           chain.emitter.emit(ChainEvent.blockUnknownParent, {
@@ -661,13 +662,18 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
               break;
             }
             // ALREADY_KNOWN should not happen with ignoreIfKnown=true above
-            // PARENT_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
+            // PARENT_BLOCK_UNKNOWN should not happen, we handled this in validateBeaconBlock() function above
             case BlockErrorCode.ALREADY_KNOWN:
-            case BlockErrorCode.PARENT_UNKNOWN:
+            case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
             case BlockErrorCode.PRESTATE_MISSING:
             case BlockErrorCode.EXECUTION_ENGINE_ERROR:
-              // Errors might indicate an issue with our node or the connected EL client
+              // Errors might indicate an issue with our node or the connected EL client.
               logLevel = LogLevel.error;
+              break;
+            case BlockErrorCode.EXECUTION_ENGINE_INVALID:
+              // the peer served a bad block
+              core.reportPeer(peerIdStr, PeerAction.LowToleranceError, "ExecutionEngineInvalid");
+              logLevel = LogLevel.warn;
               break;
             default:
               // TODO: Should it use PeerId or string?

@@ -712,7 +712,7 @@ export const forkChoiceTestRunner =
                 //
                 // TODO: this normalization is a workaround for the root cause: `getCommitteeFraction`
                 // floors in increment units instead of the spec's Gwei-precision `get_proposer_score`
-                // (https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#get_proposer_score).
+                // (https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#get_proposer_score).
                 // Computing the boost in Gwei (bigint) and flooring once to increments would shrink
                 // the divergence to <1 ETH, but exact spec weights require Gwei-precision weight
                 // tracking in protoarray (increments exist because Gwei-scale totals overflow 2^53).
