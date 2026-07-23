@@ -710,13 +710,13 @@ export const forkChoiceTestRunner =
                 // bugs), normalize the expected weight of the boosted entry by
                 // `- spec_boost + lodestar_boost` and compare exactly.
                 //
-                // TODO: this normalization is a workaround for the root cause: `getCommitteeFraction`
+                // TODO: remove this normalization when https://github.com/ChainSafe/lodestar/issues/9694
+                // is resolved. It is a workaround for the root cause: `getCommitteeFraction`
                 // floors in increment units instead of the spec's Gwei-precision `get_proposer_score`
                 // (https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#get_proposer_score).
                 // Computing the boost in Gwei (bigint) and flooring once to increments would shrink
                 // the divergence to <1 ETH, but exact spec weights require Gwei-precision weight
                 // tracking in protoarray (increments exist because Gwei-scale totals overflow 2^53).
-                // Remove this normalization if/when weights match the spec exactly.
                 //
                 // Ordering rules (so normalization cannot mask a wrong boost root):
                 // - `checks.proposer_boost_root` was already asserted above, unadjusted.
