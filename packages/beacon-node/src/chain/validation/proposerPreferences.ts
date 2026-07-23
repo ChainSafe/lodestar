@@ -1,12 +1,12 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   createSingleSignatureSetFromComponents,
   getProposerPreferencesSigningRoot,
 } from "@lodestar/state-transition";
-import {Epoch, ValidatorIndex, gloas} from "@lodestar/types";
+import {Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {GossipAction, ProposerPreferencesError, ProposerPreferencesErrorCode} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -56,11 +56,11 @@ export async function validateGossipProposerPreferences(
   }
 
   const dependentEpoch = proposalEpoch - MIN_SEED_LOOKAHEAD;
-  const dependentEpochStartSlot = computeStartSlotAtEpoch(dependentEpoch);
+  const dependentRootSlot = getDependentRootSlot(dependentEpoch);
 
   // [REJECT] The slot of the block with root `preferences.dependent_root` is strictly less than
   // `compute_start_slot_at_epoch(compute_epoch_at_slot(preferences.proposal_slot) - MIN_SEED_LOOKAHEAD)`.
-  if (dependentBlock.slot >= dependentEpochStartSlot) {
+  if (dependentBlock.slot > dependentRootSlot) {
     throw new ProposerPreferencesError(GossipAction.REJECT, {
       code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT_SLOT,
       dependentRoot: dependentRootHex,
@@ -162,7 +162,7 @@ export async function validateGossipProposerPreferences(
  */
 export function isValidDependentRoot(forkChoice: IForkChoice, dependentBlock: ProtoBlock, epoch: Epoch): boolean {
   const epochStartSlot = computeStartSlotAtEpoch(epoch);
-  if (dependentBlock.slot >= epochStartSlot) {
+  if (dependentBlock.slot > getDependentRootSlot(epoch)) {
     return false;
   }
 
@@ -173,4 +173,9 @@ export function isValidDependentRoot(forkChoice: IForkChoice, dependentBlock: Pr
   }
 
   return dependentBlock.blockRoot === forkChoice.getHeadRoot();
+}
+
+/** Return the target slot used to select a dependent root for `epoch`, clamped to genesis. */
+function getDependentRootSlot(epoch: Epoch): Slot {
+  return Math.max(GENESIS_SLOT, computeStartSlotAtEpoch(epoch) - 1);
 }
