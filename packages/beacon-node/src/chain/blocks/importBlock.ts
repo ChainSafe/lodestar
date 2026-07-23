@@ -303,14 +303,19 @@ export async function importBlock(
     this.regen.updateHeadState(newHead, postState);
 
     try {
+      const previousDutyDependentRoot = this.forkChoice.getDependentRoot(newHead, EpochDifference.previous);
+      const currentDutyDependentRoot = this.forkChoice.getDependentRoot(newHead, EpochDifference.current);
+      const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot;
+      const executionOptimistic = isOptimisticBlock(newHead);
+
       this.emitter.emit(routes.events.EventType.head, {
         block: newHead.blockRoot,
-        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
+        epochTransition,
         slot: newHead.slot,
         state: newHead.stateRoot,
-        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-        executionOptimistic: isOptimisticBlock(newHead),
+        previousDutyDependentRoot,
+        currentDutyDependentRoot,
+        executionOptimistic,
       });
       this.emitter.emit(routes.events.EventType.headV2, {
         version: this.config.getForkName(newHead.slot),
@@ -319,10 +324,10 @@ export async function importBlock(
           block: newHead.blockRoot,
           state: newHead.stateRoot,
           payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
-          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-          currentEpochDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-          nextEpochDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-          executionOptimistic: isOptimisticBlock(newHead),
+          epochTransition,
+          currentEpochDependentRoot: previousDutyDependentRoot,
+          nextEpochDependentRoot: currentDutyDependentRoot,
+          executionOptimistic,
         },
       });
     } catch (e) {
