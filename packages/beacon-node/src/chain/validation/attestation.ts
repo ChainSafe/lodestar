@@ -316,15 +316,14 @@ async function validateAttestationNoSignatureCheck(
           });
         }
 
-        // [REJECT] If `attestation.data.index == 1` (payload present for a past
-        //   block), the execution payload for `block` passes validation.
+        // [REJECT] If `attestation.data.index == 1` (payload present for a past block),
+        //   the execution payload for `block` passes validation.
         // [IGNORE] When `attestation.data.index == 1` (payload present for a past block),
-        // the corresponding execution payload for `block` has been fully imported, including its
-        // data -- i.e. `is_payload_verified(store, beacon_block_root)` returns True (consensus-specs
-        // #5355). `forkChoice.hasPayloadHexUnsafe` is the equivalent of `root in store.payloads`:
-        // it is true only once the SignedExecutionPayloadEnvelope has been imported and verified,
-        // not merely seen on gossip. A client MAY queue attestations until the payload is imported
-        // and SHOULD request the payload envelope via `ExecutionPayloadEnvelopesByRoot`.
+        //   the execution payload for `block` has been fully imported, including its data -- i.e.
+        //   `is_payload_verified(store, attestation.data.beacon_block_root)` returns `True`
+        //   (a client MAY queue attestations for processing until the payload is imported and
+        //   SHOULD request the payload envelope via `ExecutionPayloadEnvelopesByRoot` using
+        //   `attestation.data.beacon_block_root`).
         if (
           block !== null &&
           attData.index === 1 &&
