@@ -31,13 +31,14 @@ export type ProposerPreferencesErrorType =
   | {
       code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT_SLOT;
       dependentRoot: RootHex;
-      dependentRootSlot: Slot;
+      dependentBlockSlot: Slot;
+      dependentRootPivotSlot: Slot;
       dependentEpoch: Epoch;
     }
   | {
       code: ProposerPreferencesErrorCode.INVALID_DEPENDENT_ROOT;
       dependentRoot: RootHex;
-      dependentRootSlot: Slot;
+      dependentBlockSlot: Slot;
       dependentEpoch: Epoch;
     }
   | {
