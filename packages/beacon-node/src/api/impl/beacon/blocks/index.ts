@@ -753,8 +753,8 @@ export function getBeaconBlockApi({
               });
             if (blockState === null || !isStatePostGloas(blockState)) {
               throw new ApiError(
-                400,
-                `Unable to regenerate block state for consensus checks blockRoot=${blockRootHex}`
+                500,
+                `Unable to regenerate block state for consensus checks slot=${slot} blockRoot=${blockRootHex}`
               );
             }
             try {
