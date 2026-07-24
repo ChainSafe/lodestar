@@ -55,7 +55,7 @@ describe("ProtoArray.getViableHeads", () => {
 
     // Non-leaf "2" must be excluded; genesis "1" has viable children => excluded
     fc.applyScoreChanges({
-      deltas: [0, 0, 30, 12],
+      attestationDeltas: [0, 0, 30, 12],
       proposerBoost: null,
       justifiedEpoch: 0,
       justifiedRoot: "0",
