@@ -37,3 +37,6 @@ overrides:
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"
   nan: "^2.19.0"
+
+patchedDependencies:
+  sigstore@4.0.0: patches/sigstore@4.0.0.patch
