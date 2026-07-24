@@ -152,6 +152,7 @@ export class ForkChoice implements IForkChoice {
   /** Optional fast confirmation rule implementation */
   private readonly fastConfirmationRule?: IFastConfirmationRule;
   private readonly fastConfirmationContext?: FastConfirmationContext;
+  private fastConfirmationPaused = false;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -180,6 +181,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.fastConfirmation) {
       this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
       this.fastConfirmationContext = this.createFastConfirmationContext();
+      metrics?.fastConfirmation.paused.set(0);
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -228,6 +230,47 @@ export class ForkChoice implements IForkChoice {
 
   getConfirmedBlock(): ProtoBlock | null {
     return this.getBlockHexDefaultStatus(this.getConfirmedRoot());
+  }
+
+  resumeFastConfirmation(): void {
+    this.toggleFastConfirmation(false);
+  }
+
+  pauseFastConfirmation(): void {
+    this.toggleFastConfirmation(true);
+  }
+
+  private toggleFastConfirmation(paused: boolean): void {
+    if (!this.fastConfirmationRule) return;
+    if (paused === this.fastConfirmationPaused) return;
+    this.fastConfirmationPaused = paused;
+    if (paused) {
+      // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Callers run in clock/network handler context with no catch above
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
+    }
+    this.metrics?.fastConfirmation.paused.set(paused ? 1 : 0);
+    this.logger?.info(paused ? "Paused fast confirmation" : "Resumed fast confirmation", {
+      slot: this.fcStore.currentSlot,
+    });
+  }
+
+  private notifyConfirmedRoot(): void {
+    const confirmedRoot = this.fcStore.confirmedRoot;
+    const confirmedBlock = this.getBlockHexDefaultStatus(confirmedRoot);
+    if (confirmedBlock === null) {
+      throw new Error(`Fast confirmation produced root not in protoArray: ${confirmedRoot}`);
+    }
+    this.fcStore.notifyFastConfirmation?.({
+      block: confirmedRoot,
+      slot: confirmedBlock.slot,
+      currentSlot: this.fcStore.currentSlot,
+    });
   }
 
   /**
@@ -1998,9 +2041,23 @@ export class ForkChoice implements IForkChoice {
   }
 
   private runFastConfirmation(): void {
-    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
-      if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
+    const fastConfirmationRule = this.fastConfirmationRule;
+    const fastConfirmationContext = this.fastConfirmationContext;
+    if (!fastConfirmationRule || !fastConfirmationContext) return;
 
+    if (this.fastConfirmationPaused) {
+      // Keep consumers on a safe, available root while the rule is paused
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Runs outside the timed try/catch below; a throw would escape to the clock listener
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
+      return;
+    }
+
+    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
       try {
         withObservedDuration(
           this.metrics?.fastConfirmation.stepsDuration.startTimer({
@@ -2009,18 +2066,9 @@ export class ForkChoice implements IForkChoice {
           () => this.updateHead()
         );
 
-        const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
+        const result = fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext);
         this.fcStore.confirmedRoot = result.confirmedRoot;
-
-        const confirmedBlock = this.getBlockHexDefaultStatus(result.confirmedRoot);
-        if (confirmedBlock === null) {
-          throw new Error(`Fast confirmation produced root not in protoArray: ${result.confirmedRoot}`);
-        }
-        this.fcStore.notifyFastConfirmation?.({
-          block: result.confirmedRoot,
-          slot: confirmedBlock.slot,
-          currentSlot: this.fcStore.currentSlot,
-        });
+        this.notifyConfirmedRoot();
       } catch (err) {
         this.logger?.debug(
           "Fast confirmation failed",
