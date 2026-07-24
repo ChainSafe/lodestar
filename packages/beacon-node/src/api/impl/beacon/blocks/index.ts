@@ -249,7 +249,7 @@ export function getBeaconBlockApi({
               "api_reject_parent_unknown"
             );
             throw new BlockError(signedBlock, {
-              code: BlockErrorCode.PARENT_UNKNOWN,
+              code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
               parentRoot: toRootHex(signedBlock.message.parentRoot),
             });
           }
@@ -334,7 +334,8 @@ export function getBeaconBlockApi({
           .catch((e) => {
             if (
               e instanceof BlockError &&
-              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
             ) {
               chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,

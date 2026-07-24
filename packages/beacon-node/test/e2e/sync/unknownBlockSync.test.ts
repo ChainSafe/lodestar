@@ -205,7 +205,8 @@ describe("sync / unknown block sync thru gloas", () => {
             loggerNodeB.info("Error processing block", {slot: headInput.slot, code: e.type.code});
             if (
               e instanceof BlockError &&
-              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
             ) {
               // Expected
               bn2.chain.emitter.emit(ChainEvent.blockUnknownParent, {

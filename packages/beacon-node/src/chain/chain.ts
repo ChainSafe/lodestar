@@ -1,8 +1,16 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  EpochDifference,
+  ForkChoiceStateGetter,
+  IForkChoice,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -1179,7 +1187,27 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+      const prevHead = this.forkChoice.getHead();
+      const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+
+      if (head.blockRoot !== prevHead.blockRoot) {
+        try {
+          this.emitter.emit(routes.events.EventType.head, {
+            block: head.blockRoot,
+            epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+            slot: head.slot,
+            state: head.stateRoot,
+            previousDutyDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
+            currentDutyDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
+            executionOptimistic: isOptimisticBlock(head),
+          });
+        } catch (e) {
+          // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+          this.logger.debug("Error emitting head event", {slot: head.slot, root: head.blockRoot}, e as Error);
+        }
+      }
+
+      return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
@@ -1209,6 +1237,7 @@ export class BeaconChain implements IBeaconChain {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
+      // Do not emit head event here, when proposing we rely on the one emitted when importing our own block
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
         secFromSlot,

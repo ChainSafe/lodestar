@@ -2,7 +2,6 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
-  EpochDifference,
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
@@ -22,7 +21,6 @@ import {
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   computeTimeAtSlot,
   isStartSlotOfEpoch,
   isStatePostAltair,
@@ -301,39 +299,6 @@ export async function importBlock(
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
-
-    try {
-      const previousDutyDependentRoot = this.forkChoice.getDependentRoot(newHead, EpochDifference.previous);
-      const currentDutyDependentRoot = this.forkChoice.getDependentRoot(newHead, EpochDifference.current);
-      const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot;
-      const executionOptimistic = isOptimisticBlock(newHead);
-
-      this.emitter.emit(routes.events.EventType.head, {
-        block: newHead.blockRoot,
-        epochTransition,
-        slot: newHead.slot,
-        state: newHead.stateRoot,
-        previousDutyDependentRoot,
-        currentDutyDependentRoot,
-        executionOptimistic,
-      });
-      this.emitter.emit(routes.events.EventType.headV2, {
-        version: this.config.getForkName(newHead.slot),
-        data: {
-          slot: newHead.slot,
-          block: newHead.blockRoot,
-          state: newHead.stateRoot,
-          payloadStatus: newHead.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
-          epochTransition,
-          currentEpochDependentRoot: previousDutyDependentRoot,
-          nextEpochDependentRoot: currentDutyDependentRoot,
-          executionOptimistic,
-        },
-      });
-    } catch (e) {
-      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-      this.logger.debug("Error emitting head/head_v2 event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
-    }
 
     const delaySec = this.clock.secFromSlot(newHead.slot);
     this.logger.verbose("New chain head", {
