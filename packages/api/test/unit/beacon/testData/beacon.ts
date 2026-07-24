@@ -81,7 +81,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
   },
   publishExecutionPayloadEnvelope: {
     args: {
-      signedEnvelope: ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue(),
+      signedEnvelopeOrContents: ssz.gloas.SignedExecutionPayloadEnvelopeContents.defaultValue(),
       broadcastValidation: BroadcastValidation.gossip,
     },
     res: undefined,

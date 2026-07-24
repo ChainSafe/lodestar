@@ -662,20 +662,20 @@ export function getBeaconBlockApi({
     publishBlockV2,
     publishBlindedBlockV2,
 
-    async publishExecutionPayloadEnvelope({signedEnvelope, broadcastValidation}) {
+    async publishExecutionPayloadEnvelope({signedEnvelopeOrContents, broadcastValidation}) {
       const seenTimestampSec = Date.now() / 1000;
 
-      const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelope);
+      const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelopeOrContents);
       let signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
       // Blobs and KZG proofs submitted alongside the envelope in the stateless flow
       let submittedContents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null = null;
 
       if (blobDataIncluded) {
-        signedExecutionPayloadEnvelope = signedEnvelope.signedExecutionPayloadEnvelope;
-        submittedContents = {kzgProofs: signedEnvelope.kzgProofs, blobs: signedEnvelope.blobs};
+        signedExecutionPayloadEnvelope = signedEnvelopeOrContents.signedExecutionPayloadEnvelope;
+        submittedContents = {kzgProofs: signedEnvelopeOrContents.kzgProofs, blobs: signedEnvelopeOrContents.blobs};
       } else {
         // Stateful flow, blobs and KZG proofs are attached from the block production cache below
-        signedExecutionPayloadEnvelope = signedEnvelope;
+        signedExecutionPayloadEnvelope = signedEnvelopeOrContents;
       }
 
       const envelope = signedExecutionPayloadEnvelope.message;

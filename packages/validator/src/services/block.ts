@@ -263,7 +263,7 @@ export class BlockProposingService {
         (
           await this.api.beacon
             .publishExecutionPayloadEnvelope({
-              signedEnvelope: {signedExecutionPayloadEnvelope: signedEnvelope, kzgProofs, blobs},
+              signedEnvelopeOrContents: {signedExecutionPayloadEnvelope: signedEnvelope, kzgProofs, blobs},
               broadcastValidation,
             })
             .catch((e: Error) => {
@@ -292,7 +292,7 @@ export class BlockProposingService {
         (
           await this.api.beacon
             .publishExecutionPayloadEnvelope({
-              signedEnvelope,
+              signedEnvelopeOrContents: signedEnvelope,
               broadcastValidation,
             })
             .catch((e: Error) => {
