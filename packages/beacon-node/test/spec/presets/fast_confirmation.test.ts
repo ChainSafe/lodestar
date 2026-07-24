@@ -48,28 +48,28 @@ import {
   BlockInputNoData,
   BlockInputPreData,
   BlockInputSource,
-} from "../../../src/chain/blocks/blockInput/index.ts";
-import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.ts";
+} from "../../../src/chain/blocks/blockInput/index.js";
+import {AttestationImportOpt, BlobSidecarValidation} from "../../../src/chain/blocks/types.js";
 import {
   verifyExecutionPayloadEnvelope,
   verifyExecutionPayloadEnvelopeSignature,
-} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.ts";
-import {BeaconChain, ChainEvent} from "../../../src/chain/index.ts";
-import {defaultChainOptions} from "../../../src/chain/options.ts";
-import {RegenCaller} from "../../../src/chain/regen/index.ts";
-import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.ts";
-import {ZERO_HASH_HEX} from "../../../src/constants/constants.ts";
-import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.ts";
-import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.ts";
-import {getExecutionEngineFromBackend} from "../../../src/execution/index.ts";
-import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.ts";
-import {ClockEvent} from "../../../src/util/clock.ts";
-import {ClockStopped} from "../../mocks/clock.ts";
-import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.ts";
-import {assertCorrectProgressiveBalances} from "../config.ts";
-import {ethereumConsensusSpecsTests} from "../specTestVersioning.ts";
-import {specTestIterator} from "../utils/specTestIterator.ts";
-import {RunnerType, TestRunnerFn} from "../utils/types.ts";
+} from "../../../src/chain/blocks/verifyExecutionPayloadEnvelope.js";
+import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
+import {defaultChainOptions} from "../../../src/chain/options.js";
+import {RegenCaller} from "../../../src/chain/regen/index.js";
+import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
+import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
+import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
+import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js";
+import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
+import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
+import {ClockEvent} from "../../../src/util/clock.js";
+import {ClockStopped} from "../../mocks/clock.js";
+import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
+import {assertCorrectProgressiveBalances} from "../config.js";
+import {ethereumConsensusSpecsTests} from "../specTestVersioning.js";
+import {specTestIterator} from "../utils/specTestIterator.js";
+import {RunnerType, TestRunnerFn} from "../utils/types.js";
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
