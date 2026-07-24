@@ -65,8 +65,8 @@
     "blockchain"
   ],
   "dependencies": {
-    "@chainsafe/as-sha256": "^1.2.0",
-    "@chainsafe/ssz": "^1.4.0",
+    "@chainsafe/as-sha256": "^1.2.4",
+    "@chainsafe/ssz": "^1.6.2",
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^"

@@ -1,12 +1,19 @@
+import {type CompositeTypeAny} from "@chainsafe/ssz";
 import {ForkDigestContext} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
   ForkName,
   ForkSeq,
+  MAX_ATTESTER_SLASHING_SIZE,
+  MAX_DATA_COLUMN_SIDECAR_SIZE,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  MAX_SIGNED_BEACON_BLOCK_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostElectra,
   isForkPostFulu,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {Attestation, SingleAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {GossipAction, GossipActionError, GossipErrorCode} from "../../chain/errors/gossipValidation.js";
@@ -127,6 +134,30 @@ export function getGossipSSZType(topic: GossipTopic) {
       return ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
+  }
+}
+
+/**
+ * Return the maximum uncompressed SSZ byte length accepted for a gossip object.
+ */
+export function getGossipSSZMaxSize(topic: GossipTopic, maxPayloadSize: number, sszType?: CompositeTypeAny): number {
+  const {fork} = topic.boundary;
+  // Gloas progressive containers have broad theoretical SSZ max sizes; use the preset p2p bounds instead.
+  switch (topic.type) {
+    case GossipType.beacon_block:
+      return isForkPostGloas(fork) ? MAX_SIGNED_BEACON_BLOCK_SIZE : maxPayloadSize;
+    case GossipType.beacon_aggregate_and_proof:
+      return isForkPostGloas(fork) ? MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
+    case GossipType.attester_slashing:
+      return isForkPostGloas(fork) ? MAX_ATTESTER_SLASHING_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
+    case GossipType.data_column_sidecar:
+      return isForkPostGloas(fork) ? MAX_DATA_COLUMN_SIDECAR_SIZE : (sszType ?? getGossipSSZType(topic)).maxSize;
+    case GossipType.execution_payload:
+      return maxPayloadSize;
+    case GossipType.execution_payload_bid:
+      return MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE;
+    default:
+      return (sszType ?? getGossipSSZType(topic)).maxSize;
   }
 }
 

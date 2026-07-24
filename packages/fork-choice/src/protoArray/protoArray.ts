@@ -673,6 +673,28 @@ export class ProtoArray {
   }
 
   /**
+   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
+   * payload (FULL variant exists). Used by the builder circuit breaker.
+   */
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
+    let blocksPresent = 0;
+    let payloadsRevealed = 0;
+    // Full scan, nodes are in import order not slot order (an old block can be imported after newer
+    // ones during sync or reorg resolution), so we cannot stop early on an out-of-window slot
+    for (const node of this.nodes) {
+      // Count each gloas block once via its PENDING variant, pre-gloas nodes are FULL only
+      if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
+        continue;
+      }
+      blocksPresent++;
+      if (this.hasPayload(node.blockRoot)) {
+        payloadsRevealed++;
+      }
+    }
+    return {blocksPresent, payloadsRevealed};
+  }
+
+  /**
    * Update PTC votes for multiple validators attesting to a block
    * Spec: gloas/fork-choice.md#new-notify_ptc_messages
    */
@@ -1539,6 +1561,38 @@ export class ProtoArray {
 
     const correctFinalized = this.finalizedEpoch === 0 || this.isFinalizedRootOrDescendant(node);
     return correctJustified && correctFinalized;
+  }
+
+  /** Weights are in EFFECTIVE_BALANCE_INCREMENT units (NOT Gwei); callers scale as needed. */
+  getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
+    // Mirror the spec's `get_filtered_block_tree`, which is rooted at the store's justified
+    // checkpoint: a viable head is a leaf (no viable descendant, i.e. `bestChild === undefined`)
+    // that descends from the justified checkpoint block AND is itself viable for head. Iterating
+    // all nodes without the justified-descendant filter would wrongly include FFG-viable leaves
+    // that hang off the finalized checkpoint on a branch not under the current justified checkpoint.
+    const justifiedVariant = this.getDefaultVariant(this.justifiedRoot);
+    // Gloas payload-status variants of one blockRoot are distinct nodes in the spec's filtered
+    // tree, identified by (root, payload_status, weight) — emit one entry per variant.
+    const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] = [];
+    for (const node of this.nodes) {
+      if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {
+        continue;
+      }
+      if (this.justifiedEpoch !== GENESIS_EPOCH) {
+        // Same-root short-circuit: every payload-status variant of the justified block itself is
+        // in the filtered tree, but `isDescendant` from the default (PENDING) variant does not
+        // reach the sibling EMPTY/FULL variants of the same root.
+        const descendsFromJustified =
+          node.blockRoot === this.justifiedRoot ||
+          (justifiedVariant !== undefined &&
+            this.isDescendant(this.justifiedRoot, justifiedVariant, node.blockRoot, node.payloadStatus));
+        if (!descendsFromJustified) {
+          continue;
+        }
+      }
+      heads.push({root: node.blockRoot, payloadStatus: node.payloadStatus, weight: node.weight});
+    }
+    return heads;
   }
 
   /**

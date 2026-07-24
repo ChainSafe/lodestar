@@ -74,13 +74,13 @@ importers:
         version: 7.0.0-dev.20260303.1
       '@vitest/browser':
         specifier: 'catalog:'
-        version: 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)
+        version: 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
       '@vitest/browser-playwright':
         specifier: 'catalog:'
-        version: 4.0.7(playwright@1.60.0)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)
+        version: 4.0.7(playwright@1.60.0)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
       '@vitest/coverage-v8':
         specifier: 'catalog:'
-        version: 4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)
+        version: 4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)
       axios:
         specifier: ^1.13.2
         version: 1.13.3
@@ -113,22 +113,22 @@ importers:
         version: 7.7.3
       tsx:
         specifier: ^4.23.0
-        version: 4.23.0
+        version: 4.23.1
       typescript:
         specifier: ^6.0.1-rc
         version: 6.0.1-rc
       vite:
         specifier: ^6.0.11
-        version: 6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2)
+        version: 6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2)
       vite-plugin-node-polyfills:
         specifier: ^0.24.0
-        version: 0.24.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))
+        version: 0.24.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))
       vite-plugin-top-level-await:
         specifier: ^1.6.0
-        version: 1.6.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))
+        version: 1.6.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+        version: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
       vitest-when:
         specifier: ^0.9.0
         version: 0.9.0(@vitest/expect@4.0.7)(vitest@4.0.7)
@@ -139,11 +139,11 @@ importers:
   packages/api:
     dependencies:
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -160,7 +160,7 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
       qs:
-        specifier: ^6.11.1
+        specifier: ^6.14.2
         version: 6.15.2
     devDependencies:
       '@types/eventsource':
@@ -179,8 +179,8 @@ importers:
   packages/beacon-node:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/blst':
         specifier: ^2.2.0
         version: 2.2.0
@@ -194,11 +194,11 @@ importers:
         specifier: ^17.0.0
         version: 17.0.0
       '@chainsafe/libp2p-quic':
-        specifier: ^2.0.1
-        version: 2.0.1
+        specifier: ^2.1.1
+        version: 2.1.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/prometheus-gc-stats':
         specifier: ^1.0.0
         version: 1.0.2(prom-client@15.1.3)
@@ -206,8 +206,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -323,14 +323,14 @@ importers:
         specifier: ^15.1.0
         version: 15.1.3
       qs:
-        specifier: ^6.11.1
+        specifier: ^6.14.2
         version: 6.15.2
       strict-event-emitter-types:
         specifier: ^2.0.0
         version: 2.0.0
       systeminformation:
         specifier: ^5.22.9
-        version: 5.31.6
+        version: 5.31.7
       uint8arraylist:
         specifier: ^2.4.7
         version: 2.4.8
@@ -399,11 +399,11 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -481,8 +481,8 @@ importers:
         version: 17.7.2
     devDependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@ethereumjs/rlp':
         specifier: ^4.0.1
         version: 4.0.1
@@ -529,11 +529,11 @@ importers:
   packages/config:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -547,8 +547,8 @@ importers:
   packages/db:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -587,8 +587,8 @@ importers:
   packages/fork-choice:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
@@ -624,8 +624,8 @@ importers:
         version: 4.6.0
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/threads':
         specifier: ^1.11.3
         version: 1.11.3
@@ -682,8 +682,8 @@ importers:
         version: 2.4.8
     devDependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@libp2p/crypto':
         specifier: ^5.1.13
         version: 5.1.19
@@ -703,8 +703,8 @@ importers:
   packages/spec-test-util:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/types':
         specifier: workspace:^
         version: link:../types
@@ -719,25 +719,25 @@ importers:
         version: 0.7.0
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
 
   packages/state-transition:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@chainsafe/blst':
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/persistent-merkle-tree':
-        specifier: ^1.2.5
-        version: 1.2.5
+        specifier: ^1.3.0
+        version: 1.3.0
       '@chainsafe/pubkey-index-map':
         specifier: ^3.0.0
         version: 3.0.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@chainsafe/swap-or-not-shuffle':
         specifier: ^1.2.1
         version: 1.2.1
@@ -783,7 +783,7 @@ importers:
         version: 0.2.7
       vitest:
         specifier: 'catalog:'
-        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+        version: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
     devDependencies:
       '@types/tmp':
         specifier: ^0.2.3
@@ -795,8 +795,8 @@ importers:
   packages/types:
     dependencies:
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
@@ -807,8 +807,8 @@ importers:
   packages/utils:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.2.4
+        version: 1.2.4
       '@vekexasia/bigint-buffer2':
         specifier: ^1.1.1
         version: 1.1.1
@@ -838,8 +838,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/ssz':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.6.2
+        version: 1.6.2
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
@@ -1054,9 +1054,6 @@ packages:
   '@chainsafe/as-chacha20poly1305@0.1.0':
     resolution: {integrity: sha512-BpNcL8/lji/GM3+vZ/bgRWqJ1q5kwvTFmGPk7pxm/QQZDbaMI98waOHjEymTjq2JmdD/INdNBFOVSyJofXg7ew==}
 
-  '@chainsafe/as-sha256@1.2.0':
-    resolution: {integrity: sha512-H2BNHQ5C3RS+H0ZvOdovK6GjFAyq5T6LClad8ivwj9Oaiy28uvdsGVS7gNJKuZmg0FGHAI+n7F0Qju6U0QkKDA==}
-
   '@chainsafe/as-sha256@1.2.4':
     resolution: {integrity: sha512-3GXDysZOKD6cTYbm48lEdXdUbS7cafjXQZfgHOspTByhoGR/JM3KBXyF3vE6bf63ImjNPyoEZwnQcpYPQ6k3bQ==}
 
@@ -1191,61 +1188,61 @@ packages:
   '@chainsafe/libp2p-noise@17.0.0':
     resolution: {integrity: sha512-vwrmY2Y+L1xYhIDiEpl61KHxwrLCZoXzTpwhyk34u+3+6zCAZPL3GxH3i2cs+u5IYNoyLptORdH17RKFXy7upA==}
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.0.1':
-    resolution: {integrity: sha512-IdtYFNixSEhmAMl3oEGWd8S1G5u0Ucy++ML4JTr+fCR+eIaS5cqaTzZ82r3LAcjHPtB9bLbXhjYHprF93MXxaA==}
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.1':
+    resolution: {integrity: sha512-jUxEUbuRTWw2BcuYE6C++gD/vZDeTKjZ5RFIDleLpRFy8vWJKzgh2E/wLjQK4TbcQ8yUWdhJymjGxibtV2DskA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.0.1':
-    resolution: {integrity: sha512-04kRCyN7SNMw7Apr2xhYNzcs/P9gZ8PyXpE2xya3IYgEW9yfEGaRkQx2MqUA/XaLQ6XXxbxQVqXUUNalwYuKZw==}
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.1':
+    resolution: {integrity: sha512-/uz4+fgFUsQu7OSiKp8REPMQi+CgqMcjhG2Db7KNGTtp/+A/ZIatCHCm9vCnvZYYFsxrQsXBZGPQ/DF1puKpPg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.0.1':
-    resolution: {integrity: sha512-QOEprwUHnLBpQajvsvDxUACdOMNWIkNH/aOEDmzrIUJLIuLpu7ZLltXD8M0eIGmuUzx91UJKvHjAAcd0JsKz+A==}
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.1':
+    resolution: {integrity: sha512-dymikFtG3tLkbB3LFseKK15klwt24K11PAjFyq5n8GFaMSEZnQID8m8jZklCXjmn5NcqFeteYPW09Hs+4V+DlQ==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.0.1':
-    resolution: {integrity: sha512-vtIjDUM+ZasuPgQMZQg9tzGGVCv01Rrdb8G+7F7LqzKP3uuhqDnwBKsdcU0Hp8PoL2MKpD8GAyUFqZ8kC95+Mw==}
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.1':
+    resolution: {integrity: sha512-TkcLWClJswvnVhiSYONhC34OwfIfeBLi409aGtJL3mr/6Jx6BKJ7DRdR5bq1EPgUS8XKSVlcw6mSQxZksSlnpw==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.0.1':
-    resolution: {integrity: sha512-3DcKCGF1k071fJ2TyKM8SPMsFeGOVcFdfbYN0ZI7uvQN+zSq6jABvD9b1laMOfdXg6Kt/arjS5hlwJ6URf5/3g==}
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.1':
+    resolution: {integrity: sha512-d//DAkxp+TsWFm4zxoQreyHNutH3aooLLO0sH2CtNgsbxo1VbRZQX/OW8b+LDxYMsb6gXFKp1C8yQ5dRwjFkBA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.0.1':
-    resolution: {integrity: sha512-smklgWlu7GutWUDjnvaIz51i4+3XBweIpczKVtiVJTSu/ZoeAVme5XUBPhYHctp7+nO+M5XGYC0jgCb6ytanbg==}
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.1':
+    resolution: {integrity: sha512-1X26YZY1hmM7x/JcFms4HbbnvAEtHzscc6eXL9z2zUWiAU7eZzA6Sa7K3SnAnF0NHfGZ3B/bgOmIXW1sof8BIw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.0.1':
-    resolution: {integrity: sha512-Zzez2uYoMdHmccLUkJFisTT9w+Hr6LlLtxurHmk9JswuOsT8EbDeHo7GHcLh629X3DHL9anRHuGMR79rqo8fuQ==}
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.1':
+    resolution: {integrity: sha512-8i7IsFFkU67WIJS1U9JsIxhj6VdHmD7cCkoiLOyvduXd2SkWf2zhWVX+Xokjcnmqbx1GmYaW7W1cUNtKXkaeEw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@chainsafe/libp2p-quic@2.0.1':
-    resolution: {integrity: sha512-vXpS0MOC97z019X9Vxjr1pAPaKk97Jc4AC9G1IKnx3fhL+1utZOHeKf6MHd75QXcJgVyUDmL56LSLrUrcrN25g==}
+  '@chainsafe/libp2p-quic@2.1.1':
+    resolution: {integrity: sha512-S+IG3yJNLz/bFfOl4V5iGUBupoQlWYo/n1XiK/iCCX4WdoqIbvSYDbWfUYWKLt5EbXjUexa2jJctwZzXMYmhaw==}
     engines: {node: '>= 22'}
 
   '@chainsafe/netmask@2.0.0':
     resolution: {integrity: sha512-I3Z+6SWUoaljh3TBzCnCxjlUyN8tA+NAk5L6m9IxvCf1BENQTePzPMis97CoN/iMW1St3WN+AWCCRp+TTBRiDg==}
 
-  '@chainsafe/persistent-merkle-tree@1.2.5':
-    resolution: {integrity: sha512-uyv3/nHkD8vNXjdez6q89rhXwGDUp3YX2mBbOwB7/xelgZ9E7hc3HQgOuq1EdfM9Vyh09jiwimXF/hskmymOfQ==}
+  '@chainsafe/persistent-merkle-tree@1.3.0':
+    resolution: {integrity: sha512-xGe95xNkYayC5BYQpo7ft5oHwyf52YtqBip+GJqZ9XgKSzraw93qUMNeqKrOVJbZM5HEOys8xxkt0h7VD1a9cw==}
 
   '@chainsafe/prometheus-gc-stats@1.0.2':
     resolution: {integrity: sha512-h3mFKduSX85XMVbOdWOYvx9jNq99jGcRVNyW5goGOqju1CsI+ZJLhu5z4zBb/G+ksL0R4uLVulu/mIMe7Y0rNg==}
@@ -1312,8 +1309,8 @@ packages:
   '@chainsafe/snappy-wasm@0.5.0':
     resolution: {integrity: sha512-ydXvhr9p+JjvzSSEyi6XExq8pHugFnrk70mk17T6mhDsklPvaXc+8K90G7TJF+u51lxI/fpv7MahrA5ayjFcSA==}
 
-  '@chainsafe/ssz@1.4.0':
-    resolution: {integrity: sha512-DRje073CIU0lvIdNKmW89jAo4UAidoKpgYco5wvQve8WK1DUk/YS/54c5FX/e/iiKiJ1mo44CNCg4xiKWY3/yQ==}
+  '@chainsafe/ssz@1.6.2':
+    resolution: {integrity: sha512-XJELFJBHBstcvyRuXWPmNc/WRWmV5FVV03+iPTpgtCPQaImEHjKU4bc/5me35dRrXpehC04LD4ePYayOUjxFbw==}
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     resolution: {integrity: sha512-kTewLZe1KqMAJ1gHfagOxo0BI4kTcMOAkGJ7pRLFM5ZkL2P7sh3/4ixnjdbtMkO207vMZEZL3fxJSSs14kg9Kg==}
@@ -5244,8 +5241,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.61.0:
-    resolution: {integrity: sha512-caX7TrY3Ml6egyDX0WUcTHDxodl/b51y5wJOdCEA36QviK/s2g081hvmGs8eaE3DWb6NYZQ6BjO/QkNRPenoPA==}
+  playwright-core@1.61.1:
+    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -5254,8 +5251,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.61.0:
-    resolution: {integrity: sha512-Z+7BeeqQPRRzklHsVFP4KTGIyMxKUmfeRA4WisM6G3/XW6nwGeX6fX9qYaDa+CiUqpOkb2f6X3nar05R3kSuJQ==}
+  playwright@1.61.1:
+    resolution: {integrity: sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -5781,8 +5778,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  systeminformation@5.31.6:
-    resolution: {integrity: sha512-Uv2b2uGGM6ns+26czgW2cYRabYdnswM0ddSOOlryHOaelzsmDSet1iM/NT7VOYxW8x/BW+HkY+b1Ve2pLTSGSA==}
+  systeminformation@5.31.7:
+    resolution: {integrity: sha512-/8NC53e5nP9nmhn42/ncdOkyJnOoue/Vy+tJOyUGd1Yv66G069wK4rrziwhrqDETgk78CudTQupw5z19S5uoZw==}
     engines: {node: '>=8.0.0'}
     os: [darwin, linux, win32, freebsd, openbsd, netbsd, sunos, android]
     hasBin: true
@@ -5888,8 +5885,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tsx@4.23.0:
-    resolution: {integrity: sha512-eUdUIaCr963q2h5u3+QwvYp0+eqPvn+egeqZUm0hwERCqqx1E3kK5ehbGCvqSE5MQAULr67ww0cA3jKc3YkM1w==}
+  tsx@4.23.1:
+    resolution: {integrity: sha512-GQHnkIfxyx1wYCOS/wonik5MVRZU9hi1TEZmzGZSCJB1y9YgoZ8H6itNE/u4suE+yLmOzuE4E5S4TZ/ZX2wcWQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -6678,8 +6675,6 @@ snapshots:
 
   '@chainsafe/as-chacha20poly1305@0.1.0': {}
 
-  '@chainsafe/as-sha256@1.2.0': {}
-
   '@chainsafe/as-sha256@1.2.4': {}
 
   '@chainsafe/benchmark@2.0.2(encoding@0.1.13)':
@@ -6823,7 +6818,7 @@ snapshots:
   '@chainsafe/libp2p-noise@17.0.0':
     dependencies:
       '@chainsafe/as-chacha20poly1305': 0.1.0
-      '@chainsafe/as-sha256': 1.2.0
+      '@chainsafe/as-sha256': 1.2.4
       '@libp2p/crypto': 5.1.19
       '@libp2p/interface': 3.2.3
       '@libp2p/peer-id': 6.0.10
@@ -6836,28 +6831,28 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.0.1':
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.0.1':
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.0.1':
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.0.1':
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.0.1':
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.0.1':
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.1':
     optional: true
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.0.1':
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.1':
     optional: true
 
-  '@chainsafe/libp2p-quic@2.0.1':
+  '@chainsafe/libp2p-quic@2.1.1':
     dependencies:
       '@libp2p/crypto': 5.1.19
       '@libp2p/interface': 3.2.3
@@ -6868,19 +6863,19 @@ snapshots:
       race-signal: 1.1.3
       uint8arraylist: 2.4.8
     optionalDependencies:
-      '@chainsafe/libp2p-quic-darwin-arm64': 2.0.1
-      '@chainsafe/libp2p-quic-darwin-x64': 2.0.1
-      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.0.1
-      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.0.1
-      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.0.1
-      '@chainsafe/libp2p-quic-linux-x64-musl': 2.0.1
-      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.0.1
+      '@chainsafe/libp2p-quic-darwin-arm64': 2.1.1
+      '@chainsafe/libp2p-quic-darwin-x64': 2.1.1
+      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.1.1
+      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.1
+      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.1
+      '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.1
+      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.1
 
   '@chainsafe/netmask@2.0.0':
     dependencies:
       '@chainsafe/is-ip': 2.1.0
 
-  '@chainsafe/persistent-merkle-tree@1.2.5':
+  '@chainsafe/persistent-merkle-tree@1.3.0':
     dependencies:
       '@chainsafe/as-sha256': 1.2.4
       '@chainsafe/hashtree': 1.0.2
@@ -6927,10 +6922,10 @@ snapshots:
 
   '@chainsafe/snappy-wasm@0.5.0': {}
 
-  '@chainsafe/ssz@1.4.0':
+  '@chainsafe/ssz@1.6.2':
     dependencies:
-      '@chainsafe/as-sha256': 1.2.0
-      '@chainsafe/persistent-merkle-tree': 1.2.5
+      '@chainsafe/as-sha256': 1.2.4
+      '@chainsafe/persistent-merkle-tree': 1.3.0
 
   '@chainsafe/swap-or-not-shuffle-darwin-arm64@1.2.1':
     optional: true
@@ -8776,26 +8771,26 @@ snapshots:
 
   '@vekexasia/bigint-buffer2@1.1.1': {}
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.60.0)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser-playwright@4.0.7(playwright@1.60.0)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
-      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))
+      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))
       playwright: 1.60.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - bufferutil
       - msw
       - utf-8-validate
       - vite
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.61.0)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser-playwright@4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
-      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))
-      playwright: 1.61.0
+      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))
+      playwright: 1.61.1
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - bufferutil
       - msw
@@ -8803,16 +8798,16 @@ snapshots:
       - vite
     optional: true
 
-  '@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))
       '@vitest/utils': 4.0.7
       magic-string: 0.30.21
       pixelmatch: 7.1.0
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
       ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
@@ -8820,16 +8815,16 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser@4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser@4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))
       '@vitest/utils': 4.0.7
       magic-string: 0.30.21
       pixelmatch: 7.1.0
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
       ws: 8.18.3
     transitivePeerDependencies:
       - bufferutil
@@ -8838,7 +8833,7 @@ snapshots:
       - vite
     optional: true
 
-  '@vitest/coverage-v8@4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)':
+  '@vitest/coverage-v8@4.0.7(@vitest/browser@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7))(vitest@4.0.7)':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.0.7
@@ -8851,9 +8846,9 @@ snapshots:
       magicast: 0.3.5
       std-env: 3.10.0
       tinyrainbow: 3.0.3
-      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
     optionalDependencies:
-      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
     transitivePeerDependencies:
       - supports-color
 
@@ -8866,21 +8861,21 @@ snapshots:
       chai: 6.2.0
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))':
+  '@vitest/mocker@4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))':
     dependencies:
       '@vitest/spy': 4.0.7
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2)
 
-  '@vitest/mocker@4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))':
+  '@vitest/mocker@4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))':
     dependencies:
       '@vitest/spy': 4.0.7
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2)
 
   '@vitest/pretty-format@2.1.8':
     dependencies:
@@ -11425,7 +11420,7 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
-  playwright-core@1.61.0:
+  playwright-core@1.61.1:
     optional: true
 
   playwright@1.60.0:
@@ -11434,9 +11429,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  playwright@1.61.0:
+  playwright@1.61.1:
     dependencies:
-      playwright-core: 1.61.0
+      playwright-core: 1.61.1
     optionalDependencies:
       fsevents: 2.3.2
     optional: true
@@ -11973,7 +11968,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  systeminformation@5.31.6: {}
+  systeminformation@5.31.7: {}
 
   tar-stream@2.2.0:
     dependencies:
@@ -12069,7 +12064,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsx@4.23.0:
+  tsx@4.23.1:
     dependencies:
       esbuild: 0.28.1
     optionalDependencies:
@@ -12220,26 +12215,26 @@ snapshots:
 
   validate-npm-package-name@7.0.0: {}
 
-  vite-plugin-node-polyfills@0.24.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2)):
+  vite-plugin-node-polyfills@0.24.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2)):
     dependencies:
       '@rollup/plugin-inject': 5.0.5(rollup@4.52.5)
       node-stdlib-browser: 1.2.0
-      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - rollup
 
-  vite-plugin-top-level-await@1.6.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2)):
+  vite-plugin-top-level-await@1.6.0(rollup@4.52.5)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2)):
     dependencies:
       '@rollup/plugin-virtual': 3.0.2(rollup@4.52.5)
       '@swc/core': 1.14.0
       '@swc/wasm': 1.14.0
       uuid: 10.0.0
-      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - '@swc/helpers'
       - rollup
 
-  vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2):
+  vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.5.6
@@ -12247,10 +12242,10 @@ snapshots:
     optionalDependencies:
       '@types/node': 24.10.1
       fsevents: 2.3.3
-      tsx: 4.23.0
+      tsx: 4.23.1
       yaml: 2.8.2
 
-  vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2):
+  vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.5.6
@@ -12258,20 +12253,20 @@ snapshots:
     optionalDependencies:
       '@types/node': 25.4.0
       fsevents: 2.3.3
-      tsx: 4.23.0
+      tsx: 4.23.1
       yaml: 2.8.2
 
   vitest-when@0.9.0(@vitest/expect@4.0.7)(vitest@4.0.7):
     dependencies:
       pretty-format: 30.2.0
-      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2)
+      vitest: 4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
     optionalDependencies:
       '@vitest/expect': 4.0.7
 
-  vitest@4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2):
+  vitest@4.0.7(@types/node@24.10.1)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2):
     dependencies:
       '@vitest/expect': 4.0.7
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))
       '@vitest/pretty-format': 4.0.7
       '@vitest/runner': 4.0.7
       '@vitest/snapshot': 4.0.7
@@ -12288,11 +12283,11 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 24.10.1
-      '@vitest/browser-playwright': 4.0.7(playwright@1.60.0)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser-playwright': 4.0.7(playwright@1.60.0)(vite@6.1.6(@types/node@24.10.1)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
     transitivePeerDependencies:
       - jiti
       - less
@@ -12307,10 +12302,10 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.0)(yaml@2.8.2):
+  vitest@4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2):
     dependencies:
       '@vitest/expect': 4.0.7
-      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))
+      '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))
       '@vitest/pretty-format': 4.0.7
       '@vitest/runner': 4.0.7
       '@vitest/snapshot': 4.0.7
@@ -12327,11 +12322,11 @@ snapshots:
       tinyexec: 0.3.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2)
+      vite: 6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.4.0
-      '@vitest/browser-playwright': 4.0.7(playwright@1.61.0)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.0)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser-playwright': 4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
     transitivePeerDependencies:
       - jiti
       - less

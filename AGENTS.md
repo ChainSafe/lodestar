@@ -10,6 +10,7 @@
 - **Follow existing patterns** before introducing new abstractions
 - **Structured logging** with specific error codes (not generic `Error`)
 - **Incremental commits** after review starts — do not force push unless maintainer requests it
+- **Communication style:** DO NOT use `—`. Keep communication succinct and human-friendly. NO AI SLOP VERBOSITY.
 
 ## Project overview
 
@@ -104,6 +105,12 @@ pnpm download-spec-tests latest                                # latest schedule
 pnpm download-spec-tests 2026-04-14                            # latest successful run on that date
 pnpm download-spec-tests latest <owner>/consensus-specs        # fork
 pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
+
+# Fork-choice compliance tests (model-generated vectors, standalone flow;
+# runs nightly in CI, not per-PR). Same version pin as the spec tests.
+pnpm download-comptests
+pnpm test:comptest
+SPEC_FILTER_FORK=deneb pnpm test:comptest   # single fork (from packages/beacon-node)
 
 # Run e2e tests (requires docker environment)
 ./scripts/run_e2e_env.sh start

@@ -30,6 +30,8 @@
     "test:browsers": "vitest run --project browser",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "download-spec-tests": "pnpm -r download-spec-tests",
+    "download-comptests": "pnpm -r download-comptests",
+    "test:comptest": "vitest run --project comptest",
     "test:spec": "vitest run --project spec-minimal --project spec-mainnet",
     "benchmark": "pnpm benchmark:files 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:files": "NODE_OPTIONS='--max-old-space-size=8192 --import tsx' benchmark --config .benchrc.yaml --defaultBranch unstable",

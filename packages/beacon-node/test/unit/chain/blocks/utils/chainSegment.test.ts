@@ -1,6 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
+import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, gloas, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -82,7 +83,7 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment with 
     );
   });
 
-  it("throws PARENT_PAYLOAD_UNKNOWN when FULL envelope's payload hash does not match next block's bid parentBlockHash", () => {
+  it("throws NON_LINEAR_PAYLOAD_ROOTS when a mid-segment block's bid parentBlockHash does not match the previous block's FULL payload hash", () => {
     const firstExecHash = Buffer.alloc(32, 0x11);
     const correctNextExecHash = Buffer.alloc(32, 0x22);
     const mismatchedNextExecHash = Buffer.alloc(32, 0x99);
@@ -96,7 +97,7 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment with 
 
     expectThrowsLodestarError(
       () => assertLinearChainSegment(config, [bi1, bi2], envelopes, null),
-      BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+      BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS
     );
   });
 
@@ -128,5 +129,39 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment with 
 
     const {warnings} = assertLinearChainSegment(config, [bi1, bi2], envelopes, null);
     expect(warnings).toBe(null);
+  });
+});
+
+describe("chain / blocks / utils / chainSegment / assertLinearChainSegment boundary (parentBlock provided)", () => {
+  const config = createChainForkConfig({...chainConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 0});
+  const seenTimestampSec = Date.now() / 1000;
+
+  function gloasBlockInput(slot: Slot, parentRoot: Uint8Array, bidParentBlockHash: Uint8Array): BlockInputNoData {
+    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    block.message.slot = slot;
+    block.message.parentRoot = parentRoot;
+    block.message.body.signedExecutionPayloadBid.message.parentBlockHash = bidParentBlockHash;
+    const blockRootHex = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
+    return BlockInputNoData.createFromBlock({
+      block: block as SignedBeaconBlock<typeof ForkName.gloas>,
+      blockRootHex,
+      forkName: ForkName.gloas,
+      daOutOfRange: false,
+      seenTimestampSec,
+      source: BlockInputSource.byRange,
+      peerIdStr: "peer",
+    });
+  }
+
+  it("throws PARENT_PAYLOAD_UNKNOWN when the first block's bid parentBlockHash mismatches the fork-choice parent (i === 0)", () => {
+    const parentExecHash = Buffer.alloc(32, 0x11);
+    const mismatchedBidHash = Buffer.alloc(32, 0x22);
+    const bi1 = gloasBlockInput(10, Buffer.alloc(32, 0xaa), mismatchedBidHash);
+    const parentBlock = {slot: 9, executionPayloadBlockHash: toRootHex(parentExecHash)} as unknown as ProtoBlock;
+
+    expectThrowsLodestarError(
+      () => assertLinearChainSegment(config, [bi1], null, parentBlock),
+      BlockErrorCode.PARENT_PAYLOAD_UNKNOWN
+    );
   });
 });
