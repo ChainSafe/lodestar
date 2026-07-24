@@ -230,10 +230,10 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] no more than `MAX_BIDS_PER_BUILDER_PER_SLOT` signed bids with a valid signature
+  // [IGNORE] no more than `MAX_BIDS_PER_BUILDER` signed bids with a valid signature
   // have been seen from the given builder for this slot.
   if (
-    chain.seenExecutionPayloadBids.seenCount(bid.slot, bid.builderIndex) >= chain.config.MAX_BIDS_PER_BUILDER_PER_SLOT
+    chain.seenExecutionPayloadBids.seenCount(bid.slot, bid.builderIndex) >= chain.config.MAX_BIDS_PER_BUILDER
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.TOO_MANY_BIDS,
@@ -300,7 +300,7 @@ async function validateExecutionPayloadBid(
     });
   }
   if (
-    chain.seenExecutionPayloadBids.seenCount(bid.slot, bid.builderIndex) >= chain.config.MAX_BIDS_PER_BUILDER_PER_SLOT
+    chain.seenExecutionPayloadBids.seenCount(bid.slot, bid.builderIndex) >= chain.config.MAX_BIDS_PER_BUILDER
   ) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.TOO_MANY_BIDS,

@@ -194,7 +194,7 @@ export const chainConfig: ChainConfig = {
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
   // 3 bids
-  MAX_BIDS_PER_BUILDER_PER_SLOT: 3,
+  MAX_BIDS_PER_BUILDER: 3,
 
   // Blob Scheduling
   // ---------------------------------------------------------------
