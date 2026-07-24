@@ -6,7 +6,6 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
-  PayloadStatus,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {

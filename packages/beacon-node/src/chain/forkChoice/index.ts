@@ -34,7 +34,6 @@ export type ForkChoiceOpts = RawForkChoiceOpts & {
 export enum ForkchoiceCaller {
   prepareNextSlot = "prepare_next_slot",
   importBlock = "import_block",
-  importExecutionPayload = "import_execution_payload",
 }
 
 /**
