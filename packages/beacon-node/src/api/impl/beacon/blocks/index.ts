@@ -813,7 +813,7 @@ export function getBeaconBlockApi({
         // The block is awaited above (queuing if the envelope arrived first), and both the API and
         // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
         // should exist here.
-        throw new ApiError(404, `PayloadEnvelopeInput not found for slot=${slot} block root=${blockRootHex}`);
+        throw new ApiError(404, `PayloadEnvelopeInput not found for slot=${slot} blockRoot=${blockRootHex}`);
       }
 
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
