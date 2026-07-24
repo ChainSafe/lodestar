@@ -204,6 +204,7 @@ describe("Forkchoice", () => {
       bestDescendant: undefined,
       parent: 0,
       weight: 0,
+      attestationScore: 0,
       payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
     });
   });

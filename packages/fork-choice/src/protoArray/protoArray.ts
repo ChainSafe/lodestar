@@ -28,6 +28,12 @@ const PAYLOAD_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
 const DATA_AVAILABILITY_TIMELY_THRESHOLD = Math.floor(PTC_SIZE / 2);
 
 /**
+ * Proposer boost deltas, back-propagated to the boosted node's ancestors in applyScoreChanges().
+ * Reuse the array to avoid memory reallocation and gc, as computeDeltas does for attestation deltas.
+ */
+const boostDeltas = new Array<number>();
+
+/**
  * popcount(attended AND NOT yes) — explicit False-vote count.
  * Excludes PTC members who didn't attest (the None state).
  */
@@ -348,7 +354,7 @@ export class ProtoArray {
    * - If required, update the parents best-descendant with the current node or its best-descendant.
    */
   applyScoreChanges({
-    deltas,
+    attestationDeltas,
     proposerBoost,
     justifiedEpoch,
     justifiedRoot,
@@ -356,7 +362,7 @@ export class ProtoArray {
     finalizedRoot,
     currentSlot,
   }: {
-    deltas: number[];
+    attestationDeltas: number[];
     proposerBoost: ProposerBoost | null;
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
@@ -364,13 +370,16 @@ export class ProtoArray {
     finalizedRoot: RootHex;
     currentSlot: Slot;
   }): void {
-    if (deltas.length !== this.nodes.length) {
+    if (attestationDeltas.length !== this.nodes.length) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_DELTA_LEN,
-        deltas: deltas.length,
+        deltas: attestationDeltas.length,
         indices: this.nodes.length,
       });
     }
+
+    boostDeltas.length = this.nodes.length;
+    boostDeltas.fill(0);
 
     if (
       justifiedEpoch !== this.justifiedEpoch ||
@@ -416,18 +425,22 @@ export class ProtoArray {
       // If this node's execution status has been marked invalid, then the weight of the node
       // needs to be taken out of consideration after which the node weight will become 0
       // for subsequent iterations of applyScoreChanges
-      const nodeDelta =
-        node.executionStatus === ExecutionStatus.Invalid
-          ? -node.weight
-          : deltas[nodeIndex] + currentBoost - previousBoost;
+      const isInvalid = node.executionStatus === ExecutionStatus.Invalid;
+      const attestationDelta = isInvalid ? -node.attestationScore : attestationDeltas[nodeIndex];
+      const boostDelta = isInvalid
+        ? // old boost = weight - attestationScore
+          -(node.weight - node.attestationScore)
+        : boostDeltas[nodeIndex] + currentBoost - previousBoost;
 
-      // Apply the delta to the node
-      node.weight += nodeDelta;
+      // Apply the deltas to the node. Their sum is the node's total delta, so weight is unaffected
+      // by tracking the two scores apart.
+      node.attestationScore += attestationDelta;
+      node.weight += attestationDelta + boostDelta;
 
-      // Update the parent delta (if any)
+      // Update the parent deltas (if any)
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
-        const parentDelta = deltas[parentIndex];
+        const parentDelta = attestationDeltas[parentIndex];
         if (parentDelta === undefined) {
           throw new ProtoArrayError({
             code: ProtoArrayErrorCode.INVALID_PARENT_DELTA,
@@ -435,8 +448,9 @@ export class ProtoArray {
           });
         }
 
-        // back-propagate the nodes delta to its parent
-        deltas[parentIndex] += nodeDelta;
+        // back-propagate the nodes deltas to its parent
+        attestationDeltas[parentIndex] += attestationDelta;
+        boostDeltas[parentIndex] += boostDelta;
       }
     }
 
@@ -514,6 +528,7 @@ export class ProtoArray {
         parent: parentIndex, // Points to parent's EMPTY/FULL or FULL (for transition)
         payloadStatus: PayloadStatus.PENDING,
         weight: 0,
+        attestationScore: 0,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -527,6 +542,7 @@ export class ProtoArray {
         parent: pendingIndex, // Points to own PENDING
         payloadStatus: PayloadStatus.EMPTY,
         weight: 0,
+        attestationScore: 0,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -562,6 +578,7 @@ export class ProtoArray {
         parent: this.getNodeIndexByRootAndStatus(block.parentRoot, PayloadStatus.FULL),
         payloadStatus: PayloadStatus.FULL,
         weight: 0,
+        attestationScore: 0,
         bestChild: undefined,
         bestDescendant: undefined,
       };
@@ -647,6 +664,7 @@ export class ProtoArray {
       parent: pendingIndex, // Points to own PENDING (same as EMPTY)
       payloadStatus: PayloadStatus.FULL,
       weight: 0,
+      attestationScore: 0,
       bestChild: undefined,
       bestDescendant: undefined,
       executionStatus,
@@ -1052,7 +1070,7 @@ export class ProtoArray {
 
     // update the forkchoice as the invalidation can change the entire forkchoice DAG
     this.applyScoreChanges({
-      deltas: Array.from({length: this.nodes.length}, () => 0),
+      attestationDeltas: Array.from({length: this.nodes.length}, () => 0),
       proposerBoost: this.previousProposerBoost,
       justifiedEpoch: this.justifiedEpoch,
       justifiedRoot: this.justifiedRoot,
@@ -1950,6 +1968,19 @@ export class ProtoArray {
       return undefined;
     }
     return this.getNodeByIndex(blockIndex);
+  }
+
+  /**
+   * Return ProtoNode for the default/canonical variant in a single hash lookup
+   * - Pre-Gloas blocks: the FULL variant
+   * - Gloas blocks: the PENDING variant
+   */
+  getNodeDefaultStatus(blockRoot: RootHex): ProtoNode | undefined {
+    const nodeIndex = this.getDefaultNodeIndex(blockRoot);
+    if (nodeIndex === undefined) {
+      return undefined;
+    }
+    return this.getNodeByIndex(nodeIndex);
   }
 
   /**
