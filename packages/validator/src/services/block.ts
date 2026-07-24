@@ -267,7 +267,7 @@ export class BlockProposingService {
               broadcastValidation,
             })
             .catch((e: Error) => {
-              this.metrics?.blockProposingErrors.inc({error: "publish_payload"});
+              this.metrics?.payloadEnvelopeProposingErrors.inc({error: "publish"});
               throw extendError(
                 e,
                 `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} executionPayloadIncluded=${executionPayloadIncluded}`
@@ -276,10 +276,15 @@ export class BlockProposingService {
         ).assertOk();
       } else {
         // Stateful flow: fetch the envelope from the same beacon node that produced the block
-        const envelopeRes = await this.api.validator.getExecutionPayloadEnvelope({
-          slot,
-          beaconBlockRoot,
-        });
+        const envelopeRes = await this.api.validator
+          .getExecutionPayloadEnvelope({
+            slot,
+            beaconBlockRoot,
+          })
+          .catch((e: Error) => {
+            this.metrics?.payloadEnvelopeProposingErrors.inc({error: "produce"});
+            throw extendError(e, `Failed to get execution payload envelope slot=${slot} blockRoot=${blockRootHex}`);
+          });
         const envelope = envelopeRes.value();
 
         this.logger.debug("Retrieved execution payload envelope", debugLogCtx);
@@ -299,7 +304,7 @@ export class BlockProposingService {
               broadcastValidation,
             })
             .catch((e: Error) => {
-              this.metrics?.blockProposingErrors.inc({error: "publish_payload"});
+              this.metrics?.payloadEnvelopeProposingErrors.inc({error: "publish"});
               throw extendError(
                 e,
                 `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} executionPayloadIncluded=${executionPayloadIncluded}`
