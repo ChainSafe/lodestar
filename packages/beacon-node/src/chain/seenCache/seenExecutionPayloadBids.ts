@@ -12,42 +12,42 @@ const SLOTS_RETAINED = 2;
  * bids per slot.
  */
 export class SeenExecutionPayloadBids {
-  private readonly tupleKeysByBuilderBySlot = new MapDef<Slot, MapDef<BuilderIndex, Set<string>>>(
+  private readonly branchesByBuilderBySlot = new MapDef<Slot, MapDef<BuilderIndex, Set<string>>>(
     () => new MapDef<BuilderIndex, Set<string>>(() => new Set<string>())
   );
   private lowestPermissibleSlot: Slot = 0;
 
   isKnown(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): boolean {
     return (
-      this.tupleKeysByBuilderBySlot.get(slot)?.get(builderIndex)?.has(tupleKey(parentBlockHash, parentBlockRoot)) ===
+      this.branchesByBuilderBySlot.get(slot)?.get(builderIndex)?.has(branchKey(parentBlockHash, parentBlockRoot)) ===
       true
     );
   }
 
   seenCount(slot: Slot, builderIndex: BuilderIndex): number {
-    return this.tupleKeysByBuilderBySlot.get(slot)?.get(builderIndex)?.size ?? 0;
+    return this.branchesByBuilderBySlot.get(slot)?.get(builderIndex)?.size ?? 0;
   }
 
   add(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): void {
     if (slot < this.lowestPermissibleSlot) {
       throw Error(`slot ${slot} < lowestPermissibleSlot ${this.lowestPermissibleSlot}`);
     }
-    this.tupleKeysByBuilderBySlot
+    this.branchesByBuilderBySlot
       .getOrDefault(slot)
       .getOrDefault(builderIndex)
-      .add(tupleKey(parentBlockHash, parentBlockRoot));
+      .add(branchKey(parentBlockHash, parentBlockRoot));
   }
 
   prune(currentSlot: Slot): void {
     this.lowestPermissibleSlot = Math.max(currentSlot - SLOTS_RETAINED, 0);
-    for (const slot of this.tupleKeysByBuilderBySlot.keys()) {
+    for (const slot of this.branchesByBuilderBySlot.keys()) {
       if (slot < this.lowestPermissibleSlot) {
-        this.tupleKeysByBuilderBySlot.delete(slot);
+        this.branchesByBuilderBySlot.delete(slot);
       }
     }
   }
 }
 
-function tupleKey(parentBlockHash: RootHex, parentBlockRoot: RootHex): string {
+function branchKey(parentBlockHash: RootHex, parentBlockRoot: RootHex): string {
   return `${parentBlockHash}:${parentBlockRoot}`;
 }
