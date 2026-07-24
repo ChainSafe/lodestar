@@ -15,6 +15,27 @@ import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} fr
 import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
+/**
+ * Minimum relative increment over the current highest bid required to forward a bid,
+ * in basis points. With 3%, laddering from 1 gwei to 1 ETH takes ~700 bids.
+ */
+const MIN_BID_INCREMENT_BPS = 300;
+/**
+ * Minimum absolute increment over the current highest bid required to forward a bid.
+ * Covers low bid values where the relative increment rounds to zero.
+ */
+const MIN_BID_INCREMENT_GWEI = 1000;
+
+/**
+ * Return the minimum value a new bid must have to be forwarded given the current highest bid.
+ * Division before multiplication to stay within safe integer range for max gwei values.
+ */
+export function getMinBidValue(currentHighestBid: number): number {
+  return (
+    currentHighestBid + Math.max(MIN_BID_INCREMENT_GWEI, Math.floor(currentHighestBid / 10_000) * MIN_BID_INCREMENT_BPS)
+  );
+}
+
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
@@ -231,8 +252,11 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] this bid is the highest value bid seen for the tuple
   // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
+  // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
+  // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
+  // from builders submitting numerous bids with minimal value increments.
   const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
-  if (bestBid !== null && bestBid.message.value >= bid.value) {
+  if (bestBid !== null && bid.value < getMinBidValue(bestBid.message.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
       bidValue: bid.value,
