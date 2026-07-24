@@ -26,6 +26,7 @@ import {
   createCachedBeaconState,
   createPubkeyCache,
   isExecutionStateType,
+  isGloasStateType,
   signedBlockToSignedHeader,
   syncPubkeys,
 } from "@lodestar/state-transition";
@@ -57,6 +58,7 @@ import {
 import {BeaconChain, ChainEvent} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {RegenCaller} from "../../../src/chain/regen/index.js";
+import {getShufflingForAttestationVerification} from "../../../src/chain/validation/attestation.js";
 import {validateFuluBlockDataColumnSidecars} from "../../../src/chain/validation/dataColumnSidecar.js";
 import {ZERO_HASH_HEX} from "../../../src/constants/constants.js";
 import {ExecutionPayloadStatus} from "../../../src/execution/engine/interface.js";
@@ -64,6 +66,7 @@ import {ExecutionEngineMockBackend} from "../../../src/execution/engine/mock.js"
 import {getExecutionEngineFromBackend} from "../../../src/execution/index.js";
 import {computePreFuluKzgCommitmentsInclusionProof} from "../../../src/util/blobs.js";
 import {ClockEvent} from "../../../src/util/clock.js";
+import {getShufflingDependentRoot} from "../../../src/util/dependentRoot.js";
 import {ClockStopped} from "../../mocks/clock.js";
 import {getMockedBeaconDb} from "../../mocks/mockedBeaconDb.js";
 import {assertCorrectProgressiveBalances} from "../config.js";
@@ -97,9 +100,11 @@ const fastConfirmationTest =
         const clock = new ClockStopped(currentSlot);
         const executionEngineBackend = new ExecutionEngineMockBackend({
           onlyPredefinedResponses: opts.onlyPredefinedResponses,
-          genesisBlockHash: isExecutionStateType(anchorState)
-            ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
-            : ZERO_HASH_HEX,
+          genesisBlockHash: isGloasStateType(anchorState)
+            ? toHexString(anchorState.latestBlockHash)
+            : isExecutionStateType(anchorState)
+              ? toHexString(anchorState.latestExecutionPayloadHeader.blockHash)
+              : ZERO_HASH_HEX,
         });
 
         const controller = new AbortController();
@@ -181,10 +186,25 @@ const fastConfirmationTest =
               logger.debug(`Step ${i}/${stepsLen} attestation`, {root: step.attestation, valid: Boolean(step.valid)});
               const attestation = testcase.attestations.get(step.attestation);
               if (!attestation) throw Error(`No attestation ${step.attestation}`);
-              const headState = chain.getHeadState();
               const attDataRootHex = toHexString(sszTypesFor(fork).AttestationData.hashTreeRoot(attestation.data));
               const attEpoch = computeEpochAtSlot(attestation.data.slot);
-              const decisionRoot = headState.getShufflingDecisionRoot(attEpoch);
+              const attHeadBlock = chain.forkChoice.getBlockHexDefaultStatus(toHex(attestation.data.beaconBlockRoot));
+              if (attHeadBlock === null) {
+                throw Error(`No attested block ${toHexString(attestation.data.beaconBlockRoot)}`);
+              }
+              const attHeadBlockEpoch = computeEpochAtSlot(attHeadBlock.slot);
+              const decisionRoot = getShufflingDependentRoot(
+                chain.forkChoice,
+                attEpoch,
+                attHeadBlockEpoch,
+                attHeadBlock
+              );
+              await getShufflingForAttestationVerification(
+                chain,
+                attEpoch,
+                attHeadBlock,
+                RegenCaller.validateGossipAttestation
+              );
               chain.forkChoice.onAttestation(
                 chain.shufflingCache.getIndexedAttestation(attEpoch, decisionRoot, ForkSeq[fork], attestation),
                 attDataRootHex
