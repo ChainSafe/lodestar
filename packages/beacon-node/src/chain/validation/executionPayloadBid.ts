@@ -281,28 +281,35 @@ async function validateExecutionPayloadBid(
     signedExecutionPayloadBid.signature
   );
 
-  // Add the bid before the async signature verification to prevent concurrent validations of
-  // bids from the same builder from bypassing the seen checks and the bid limit. Must be
-  // removed again if verification fails, otherwise bids with an invalid signature could
-  // consume the budget of an honest builder.
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
-
-  let validSignature = false;
-  try {
-    validSignature = await chain.bls.verifySignatureSets([signatureSet]);
-  } finally {
-    if (!validSignature) {
-      chain.seenExecutionPayloadBids.delete(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
-    }
-  }
-
-  if (!validSignature) {
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
     });
   }
+
+  // Repeated checks - deals with race condition between bid submissions
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      parentBlockHash: parentBlockHashHex,
+    });
+  }
+  if (
+    chain.seenExecutionPayloadBids.seenCount(bid.slot, bid.builderIndex) >= chain.config.MAX_BIDS_PER_BUILDER_PER_SLOT
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.TOO_MANY_BIDS,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+    });
+  }
+
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }
