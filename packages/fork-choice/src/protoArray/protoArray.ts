@@ -1581,6 +1581,38 @@ export class ProtoArray {
     return correctJustified && correctFinalized;
   }
 
+  /** Weights are in EFFECTIVE_BALANCE_INCREMENT units (NOT Gwei); callers scale as needed. */
+  getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
+    // Mirror the spec's `get_filtered_block_tree`, which is rooted at the store's justified
+    // checkpoint: a viable head is a leaf (no viable descendant, i.e. `bestChild === undefined`)
+    // that descends from the justified checkpoint block AND is itself viable for head. Iterating
+    // all nodes without the justified-descendant filter would wrongly include FFG-viable leaves
+    // that hang off the finalized checkpoint on a branch not under the current justified checkpoint.
+    const justifiedVariant = this.getDefaultVariant(this.justifiedRoot);
+    // Gloas payload-status variants of one blockRoot are distinct nodes in the spec's filtered
+    // tree, identified by (root, payload_status, weight) — emit one entry per variant.
+    const heads: {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] = [];
+    for (const node of this.nodes) {
+      if (node.bestChild !== undefined || !this.nodeIsViableForHead(node, currentSlot)) {
+        continue;
+      }
+      if (this.justifiedEpoch !== GENESIS_EPOCH) {
+        // Same-root short-circuit: every payload-status variant of the justified block itself is
+        // in the filtered tree, but `isDescendant` from the default (PENDING) variant does not
+        // reach the sibling EMPTY/FULL variants of the same root.
+        const descendsFromJustified =
+          node.blockRoot === this.justifiedRoot ||
+          (justifiedVariant !== undefined &&
+            this.isDescendant(this.justifiedRoot, justifiedVariant, node.blockRoot, node.payloadStatus));
+        if (!descendsFromJustified) {
+          continue;
+        }
+      }
+      heads.push({root: node.blockRoot, payloadStatus: node.payloadStatus, weight: node.weight});
+    }
+    return heads;
+  }
+
   /**
    * Return `true` if `node` is equal to or a descendant of the finalized node.
    * This function helps improve performance of nodeIsViableForHead a lot by avoiding
