@@ -808,6 +808,14 @@ export function getBeaconBlockApi({
         }
       }
 
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        // The block is awaited above (queuing if the envelope arrived first), and both the API and
+        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
+        // should exist here.
+        throw new ApiError(404, `PayloadEnvelopeInput not found for slot=${slot} block root=${blockRootHex}`);
+      }
+
       let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
       let cells: fulu.Cell[][] | undefined;
       let kzgProofs: deneb.KZGProofs | undefined;
@@ -815,21 +823,19 @@ export function getBeaconBlockApi({
 
       if (submittedContents !== null) {
         // Validate submitted blob data against bid commitments before computing data column sidecars
-        const expectedBlobCount = chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.getVersionedHashes().length;
-        if (expectedBlobCount !== undefined) {
-          if (submittedContents.blobs.length !== expectedBlobCount) {
-            throw new ApiError(
-              400,
-              `Submitted blob count does not match bid commitments submitted=${submittedContents.blobs.length} expected=${expectedBlobCount}`
-            );
-          }
-          const expectedProofCount = expectedBlobCount * NUMBER_OF_COLUMNS;
-          if (submittedContents.kzgProofs.length !== expectedProofCount) {
-            throw new ApiError(
-              400,
-              `Submitted KZG proof count does not match bid commitments submitted=${submittedContents.kzgProofs.length} expected=${expectedProofCount}`
-            );
-          }
+        const expectedBlobCount = payloadInput.getVersionedHashes().length;
+        if (submittedContents.blobs.length !== expectedBlobCount) {
+          throw new ApiError(
+            400,
+            `Submitted blob count does not match bid commitments submitted=${submittedContents.blobs.length} expected=${expectedBlobCount}`
+          );
+        }
+        const expectedProofCount = expectedBlobCount * NUMBER_OF_COLUMNS;
+        if (submittedContents.kzgProofs.length !== expectedProofCount) {
+          throw new ApiError(
+            400,
+            `Submitted KZG proof count does not match bid commitments submitted=${submittedContents.kzgProofs.length} expected=${expectedProofCount}`
+          );
         }
         if (submittedContents.blobs.length > 0) {
           // If the block was produced by this node, reuse the cached cells and only time the
@@ -849,9 +855,7 @@ export function getBeaconBlockApi({
         }
       } else {
         // An envelope without blob data can only be published via the beacon node that cached them at block production
-        const expectedBlobCount =
-          chain.seenPayloadEnvelopeInputCache.get(blockRootHex)?.getVersionedHashes().length ?? 0;
-        if (expectedBlobCount > 0) {
+        if (payloadInput.getVersionedHashes().length > 0) {
           throw new ApiError(
             400,
             `No cached blob data to attach to execution payload envelope for block root ${blockRootHex}`
@@ -874,14 +878,6 @@ export function getBeaconBlockApi({
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         await sleep(msToBlockSlot);
-      }
-
-      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
-      if (!payloadInput) {
-        // The block is awaited above (queuing if the envelope arrived first), and both the API and
-        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
-        // should exist here.
-        throw new ApiError(404, `PayloadEnvelopeInput not found for block root ${blockRootHex}`);
       }
 
       if (payloadInput.hasPayloadEnvelope()) {
