@@ -188,9 +188,9 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       help: "Total count of blocks published",
     }),
 
-    blockProposingErrors: register.gauge<{error: "produce" | "publish"}>({
+    blockProposingErrors: register.gauge<{error: "produce" | "publish" | "publish_payload"}>({
       name: "vc_block_proposing_errors_total",
-      help: "Total count of errors producing or publishing a block",
+      help: "Total count of errors producing or publishing a block or execution payload envelope",
       labelNames: ["error"],
     }),
 

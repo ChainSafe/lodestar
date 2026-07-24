@@ -267,8 +267,11 @@ export class BlockProposingService {
               broadcastValidation,
             })
             .catch((e: Error) => {
-              this.metrics?.blockProposingErrors.inc({error: "publish"});
-              throw extendError(e, "Failed to publish execution payload envelope");
+              this.metrics?.blockProposingErrors.inc({error: "publish_payload"});
+              throw extendError(
+                e,
+                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} executionPayloadIncluded=${executionPayloadIncluded}`
+              );
             })
         ).assertOk();
       } else {
@@ -296,8 +299,11 @@ export class BlockProposingService {
               broadcastValidation,
             })
             .catch((e: Error) => {
-              this.metrics?.blockProposingErrors.inc({error: "publish"});
-              throw extendError(e, "Failed to publish execution payload envelope");
+              this.metrics?.blockProposingErrors.inc({error: "publish_payload"});
+              throw extendError(
+                e,
+                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} executionPayloadIncluded=${executionPayloadIncluded}`
+              );
             })
         ).assertOk();
       }
