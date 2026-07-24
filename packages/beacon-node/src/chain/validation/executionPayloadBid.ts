@@ -230,8 +230,8 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] fewer than `MAX_BIDS_PER_BUILDER_PER_SLOT` signed bids with a valid signature have
-  // been seen from the given builder for this slot.
+  // [IGNORE] this bid is one of the first `MAX_BIDS_PER_BUILDER_PER_SLOT` signed bids seen with
+  // a valid signature from the given builder for this slot.
   if (
     chain.seenExecutionPayloadBids.seenCount(bid.slot, bid.builderIndex) >= chain.config.MAX_BIDS_PER_BUILDER_PER_SLOT
   ) {
