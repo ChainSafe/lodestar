@@ -1060,7 +1060,7 @@ export function getValidatorApi(
           !isForkPostGloas(produceResult.fork) ||
           produceResult.type !== BlockType.Full
         ) {
-          throw Error(`Missing cached block production result for produced block root=${blockRoot}`);
+          throw Error(`Missing cached block production result for produced block slot=${slot} root=${blockRoot}`);
         }
         const {executionPayload, executionRequests, blobsBundle, parentBlockRoot} = produceResult as ProduceFullGloas;
 
