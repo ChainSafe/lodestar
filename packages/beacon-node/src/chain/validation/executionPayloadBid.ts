@@ -281,16 +281,28 @@ async function validateExecutionPayloadBid(
     signedExecutionPayloadBid.signature
   );
 
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+  // Add the bid before the async signature verification to prevent concurrent validations of
+  // bids from the same builder from bypassing the seen checks and the bid limit. Must be
+  // removed again if verification fails, otherwise bids with an invalid signature could
+  // consume the budget of an honest builder.
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
+
+  let validSignature = false;
+  try {
+    validSignature = await chain.bls.verifySignatureSets([signatureSet]);
+  } finally {
+    if (!validSignature) {
+      chain.seenExecutionPayloadBids.delete(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
+    }
+  }
+
+  if (!validSignature) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.INVALID_SIGNATURE,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
     });
   }
-
-  // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }

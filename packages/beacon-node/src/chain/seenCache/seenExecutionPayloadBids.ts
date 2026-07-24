@@ -38,6 +38,10 @@ export class SeenExecutionPayloadBids {
       .add(branchKey(parentBlockHash, parentBlockRoot));
   }
 
+  delete(slot: Slot, builderIndex: BuilderIndex, parentBlockHash: RootHex, parentBlockRoot: RootHex): void {
+    this.branchesByBuilderBySlot.get(slot)?.get(builderIndex)?.delete(branchKey(parentBlockHash, parentBlockRoot));
+  }
+
   prune(currentSlot: Slot): void {
     this.lowestPermissibleSlot = Math.max(currentSlot - SLOTS_RETAINED, 0);
     for (const slot of this.branchesByBuilderBySlot.keys()) {
