@@ -129,6 +129,7 @@ export type ChainConfig = {
 
   // Gloas
   MAX_REQUEST_PAYLOADS: number;
+  MAX_BIDS_PER_BUILDER_PER_SLOT: number;
 
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
@@ -252,6 +253,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // Gloas
   MAX_REQUEST_PAYLOADS: "number",
+  MAX_BIDS_PER_BUILDER_PER_SLOT: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",

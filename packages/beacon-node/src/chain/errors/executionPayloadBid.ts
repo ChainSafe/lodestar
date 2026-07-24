@@ -11,6 +11,7 @@ export enum ExecutionPayloadBidErrorCode {
   TOO_MANY_KZG_COMMITMENTS = "EXECUTION_PAYLOAD_BID_ERROR_TOO_MANY_KZG_COMMITMENTS",
   UNKNOWN_BLOCK_ROOT = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_BLOCK_ROOT",
   UNKNOWN_PARENT_BLOCK_HASH = "EXECUTION_PAYLOAD_BID_ERROR_UNKNOWN_PARENT_BLOCK_HASH",
+  TOO_MANY_BIDS = "EXECUTION_PAYLOAD_BID_ERROR_TOO_MANY_BIDS",
   INVALID_SLOT = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_SLOT",
   NOT_LATER_THAN_PARENT = "EXECUTION_PAYLOAD_BID_ERROR_NOT_LATER_THAN_PARENT",
   INVALID_PREV_RANDAO = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_PREV_RANDAO",
@@ -49,6 +50,7 @@ export type ExecutionPayloadBidErrorType =
     }
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT; parentBlockRoot: RootHex}
   | {code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH; parentBlockHash: RootHex}
+  | {code: ExecutionPayloadBidErrorCode.TOO_MANY_BIDS; builderIndex: BuilderIndex; slot: Slot}
   | {code: ExecutionPayloadBidErrorCode.INVALID_SLOT; builderIndex: BuilderIndex; slot: Slot}
   | {code: ExecutionPayloadBidErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {

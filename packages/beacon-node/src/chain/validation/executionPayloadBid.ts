@@ -218,14 +218,27 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
+  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for
+  // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
       parentBlockRoot: parentBlockRootHex,
       parentBlockHash: parentBlockHashHex,
+    });
+  }
+
+  // [IGNORE] fewer than `MAX_BIDS_PER_BUILDER_PER_SLOT` signed bids with a valid signature have
+  // been seen from the given builder for this slot.
+  if (
+    chain.seenExecutionPayloadBids.seenCount(bid.slot, bid.builderIndex) >= chain.config.MAX_BIDS_PER_BUILDER_PER_SLOT
+  ) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.TOO_MANY_BIDS,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
     });
   }
 
@@ -277,7 +290,7 @@ async function validateExecutionPayloadBid(
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex);
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }
