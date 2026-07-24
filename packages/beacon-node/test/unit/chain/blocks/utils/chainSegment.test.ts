@@ -54,6 +54,7 @@ describe("chain / blocks / utils / chainSegment / assertLinearChainSegment with 
       source: PayloadEnvelopeInputSource.byRange,
       seenTimestampSec,
       peerIdStr: "peer",
+      verified: false,
     });
     return payloadInput;
   }

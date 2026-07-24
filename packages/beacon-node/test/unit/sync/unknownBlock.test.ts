@@ -1388,6 +1388,7 @@ describe("UnknownBlockSync", () => {
         envelope,
         source: PayloadEnvelopeInputSource.gossip,
         seenTimestampSec: Date.now() / 1000,
+        verified: true,
       });
 
       const processExecutionPayload = vi.fn().mockResolvedValue(undefined);

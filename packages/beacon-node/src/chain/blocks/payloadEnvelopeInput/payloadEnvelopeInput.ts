@@ -29,6 +29,7 @@ export type PayloadEnvelopeInputState =
       hasComputedAllData: false;
       payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
       payloadEnvelopeSource: SourceMeta;
+      payloadEnvelopeVerified: boolean;
     }
   | {
       hasPayload: true;
@@ -36,6 +37,7 @@ export type PayloadEnvelopeInputState =
       hasComputedAllData: boolean;
       payloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
       payloadEnvelopeSource: SourceMeta;
+      payloadEnvelopeVerified: boolean;
       timeCompleteSec: number;
     };
 
@@ -79,7 +81,7 @@ export class PayloadEnvelopeInput {
 
   private timeCreatedSec: number;
 
-  private readonly payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
+  private payloadEnvelopeDataPromise: PromiseParts<gloas.SignedExecutionPayloadEnvelope>;
   private readonly allDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
   private readonly columnsDataPromise: PromiseParts<gloas.DataColumnSidecar[]>;
 
@@ -197,6 +199,7 @@ export class PayloadEnvelopeInput {
         hasComputedAllData: this.state.hasComputedAllData,
         payloadEnvelope: props.envelope,
         payloadEnvelopeSource: source,
+        payloadEnvelopeVerified: props.verified,
         timeCompleteSec: props.seenTimestampSec,
       };
       this.payloadEnvelopeDataPromise.resolve(props.envelope);
@@ -208,8 +211,56 @@ export class PayloadEnvelopeInput {
         hasComputedAllData: false,
         payloadEnvelope: props.envelope,
         payloadEnvelopeSource: source,
+        payloadEnvelopeVerified: props.verified,
       };
     }
+  }
+
+  /**
+   * Detach the payload envelope so a fresh copy can be re-attached, e.g. after signature or
+   * envelope verification failure during import of an optimistically attached envelope.
+   * Verified envelopes are never removed — their signature proves the bytes are canonical, so
+   * re-downloading cannot produce different ones. Reverts only the payload dimension of state;
+   * columns and hasComputedAllData are preserved.
+   *
+   * Returns the removed envelope and its source for serialized-cache cleanup and logging, or
+   * null when there is nothing to remove (no envelope attached, or envelope is verified).
+   */
+  removeUnverifiedPayloadEnvelope(): {envelope: gloas.SignedExecutionPayloadEnvelope; sourceMeta: SourceMeta} | null {
+    if (!this.state.hasPayload || this.state.payloadEnvelopeVerified) {
+      return null;
+    }
+    const {payloadEnvelope, payloadEnvelopeSource} = this.state;
+
+    if (this.state.hasAllData) {
+      // Complete -> data-only (drops timeCompleteSec, preserves hasComputedAllData)
+      this.state = {hasPayload: false, hasAllData: true, hasComputedAllData: this.state.hasComputedAllData};
+    } else {
+      // Envelope-only -> empty
+      this.state = {hasPayload: false, hasAllData: false, hasComputedAllData: false};
+    }
+
+    // The old promise may already be resolved with the removed envelope (see addPayloadEnvelope /
+    // addColumn). Re-create so future waiters observe the replacement envelope; in-flight waiters
+    // on the old promise are bounded by withTimeout in waitForEnvelopeAndAllData.
+    this.payloadEnvelopeDataPromise = createPromise();
+
+    return {envelope: payloadEnvelope, sourceMeta: payloadEnvelopeSource};
+  }
+
+  /**
+   * Mark the attached envelope as verified after its signature has been checked during import.
+   * Verified envelopes are never removed by removeUnverifiedPayloadEnvelope(). No-op if no envelope is
+   * attached or it is already verified.
+   */
+  markPayloadEnvelopeVerified(): void {
+    if (this.state.hasPayload) {
+      this.state.payloadEnvelopeVerified = true;
+    }
+  }
+
+  isPayloadEnvelopeVerified(): boolean {
+    return this.state.hasPayload && this.state.payloadEnvelopeVerified;
   }
 
   addColumn(columnWithSource: ColumnWithSource): boolean {
@@ -255,6 +306,7 @@ export class PayloadEnvelopeInput {
         hasComputedAllData: hasComputedAllData || this.state.hasComputedAllData,
         payloadEnvelope: this.state.payloadEnvelope,
         payloadEnvelopeSource: this.state.payloadEnvelopeSource,
+        payloadEnvelopeVerified: this.state.payloadEnvelopeVerified,
         timeCompleteSec: seenTimestampSec,
       };
       this.payloadEnvelopeDataPromise.resolve(this.state.payloadEnvelope);

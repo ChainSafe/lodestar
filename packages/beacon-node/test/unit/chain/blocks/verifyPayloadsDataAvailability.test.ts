@@ -47,6 +47,7 @@ function buildPayloadEnvelopeInput({
     envelope: signedEnvelope,
     source: PayloadEnvelopeInputSource.gossip,
     seenTimestampSec: Date.now() / 1000,
+    verified: true,
   });
 
   return {payloadInput, signedEnvelope};
@@ -223,6 +224,7 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
       envelope: signedEnvelope,
       source: PayloadEnvelopeInputSource.gossip,
       seenTimestampSec: Date.now() / 1000,
+      verified: true,
     });
     for (const idx of sampled) {
       payloadInput.addColumn({
@@ -260,6 +262,7 @@ describe("PayloadEnvelopeInput.waitForEnvelopeAndAllData", () => {
       envelope: signedEnvelope,
       source: PayloadEnvelopeInputSource.gossip,
       seenTimestampSec: Date.now() / 1000,
+      verified: true,
     });
     expect(payloadInput.hasAllData()).toBe(false);
     expect(payloadInput.isComplete()).toBe(false);
