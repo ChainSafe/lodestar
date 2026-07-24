@@ -5,6 +5,7 @@ import {parse as parseQueryString} from "qs";
 import {addSszContentTypeParser} from "@lodestar/api/server";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ErrorAborted, Gauge, Histogram, Logger} from "@lodestar/utils";
+import {GossipActionError} from "../../chain/errors/gossipValidation.js";
 import {isLocalhostIP} from "../../util/ip.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing} from "../impl/errors.js";
 import {HttpActiveSocketsTracker, SocketMetrics} from "./activeSockets.js";
@@ -121,8 +122,8 @@ export class RestApiServer {
         };
         void res.status(err.statusCode).send(payload);
       } else {
-        // Convert our custom ApiError into status code
-        const statusCode = err instanceof ApiError ? err.statusCode : 500;
+        // Convert known request errors into status codes
+        const statusCode = err instanceof ApiError ? err.statusCode : err instanceof GossipActionError ? 400 : 500;
         const payload: ErrorResponse = {code: statusCode, message: err.message, stacktraces};
         void res.status(statusCode).send(payload);
       }
@@ -170,7 +171,11 @@ export class RestApiServer {
 
       const operationId = getOperationId(req);
 
-      if (err instanceof ApiError || [INVALID_MEDIA_TYPE_CODE, SCHEMA_VALIDATION_ERROR_CODE].includes(err.code)) {
+      if (
+        err instanceof ApiError ||
+        err instanceof GossipActionError ||
+        [INVALID_MEDIA_TYPE_CODE, SCHEMA_VALIDATION_ERROR_CODE].includes(err.code)
+      ) {
         this.logger.warn(`Req ${req.id} ${operationId} failed`, {reason: err.message});
       } else {
         this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);

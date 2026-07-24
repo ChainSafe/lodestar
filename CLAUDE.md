@@ -25,6 +25,10 @@ pnpm vitest run --project unit test/unit/path/to/test.test.ts
 pnpm download-spec-tests
 pnpm test:spec
 
+# Fork-choice compliance tests (standalone, nightly CI; download first)
+pnpm download-comptests
+pnpm test:comptest
+
 # Docs lint (markdown)
 pnpm docs:lint
 pnpm docs:lint:fix

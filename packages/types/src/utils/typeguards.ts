@@ -1,5 +1,6 @@
 import {
   FINALIZED_ROOT_DEPTH_ELECTRA,
+  FINALIZED_ROOT_DEPTH_GLOAS,
   ForkPostBellatrix,
   ForkPostDeneb,
   ForkPostElectra,
@@ -91,7 +92,8 @@ export function isElectraLightClientUpdate(update: LightClientUpdate): update is
   const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
   return (
     updatePostElectra.finalityBranch !== undefined &&
-    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+    (updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA ||
+      updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_GLOAS)
   );
 }
 
@@ -101,7 +103,8 @@ export function isELectraLightClientFinalityUpdate(
   const updatePostElectra = update as LightClientUpdate<ForkPostElectra>;
   return (
     updatePostElectra.finalityBranch !== undefined &&
-    updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA
+    (updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_ELECTRA ||
+      updatePostElectra.finalityBranch.length === FINALIZED_ROOT_DEPTH_GLOAS)
   );
 }
 

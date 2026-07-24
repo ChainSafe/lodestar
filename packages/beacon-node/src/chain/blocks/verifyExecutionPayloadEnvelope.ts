@@ -100,8 +100,8 @@ export function verifyExecutionPayloadEnvelope(
   }
 
   // Verify consistency with expected withdrawals
-  const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
-  const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
+  const payloadWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
   if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
     throw new Error(
       `Withdrawals mismatch between payload and expected payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
