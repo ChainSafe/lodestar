@@ -727,6 +727,7 @@ export function getBeaconBlockApi({
         isSelfBuild,
         blobDataIncluded,
         broadcastValidation,
+        ...(submittedContents !== null ? {submittedBlobs: submittedContents.blobs.length} : {}),
       };
       try {
         switch (broadcastValidation) {
