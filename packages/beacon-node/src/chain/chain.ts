@@ -325,7 +325,7 @@ export class BeaconChain implements IBeaconChain {
     });
 
     this.beaconProposerCache = new BeaconProposerCache(opts);
-    this.checkpointBalancesCache = new CheckpointBalancesCache();
+    this.checkpointBalancesCache = new CheckpointBalancesCache(config);
     this.serializedCache = new SerializedCache();
     this.seenBlockInputCache = new SeenBlockInput({
       config,
