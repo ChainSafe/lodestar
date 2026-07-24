@@ -16,24 +16,30 @@ import {IBeaconChain} from "../index.js";
 import {RegenCaller} from "../regen/index.js";
 
 /**
- * Minimum relative increment over the current highest bid required to forward a bid,
- * in basis points. With 3%, laddering from 1 gwei to 1 ETH takes ~700 bids.
+ * Relative increment over the current highest bid required to forward a bid, in basis points.
+ * With 3%, laddering from 1 gwei to 1 ETH takes ~256 bids given the floor and cap below, see
+ * https://github.com/ethereum/consensus-specs/pull/4792#issuecomment-3714553549.
  */
-const MIN_BID_INCREMENT_BPS = 300;
+const BID_INCREMENT_BPS = 300;
 /**
- * Minimum absolute increment over the current highest bid required to forward a bid.
- * Covers low bid values where the relative increment rounds to zero.
+ * Minimum absolute increment (0.0001 ETH). Covers low bid values where the relative increment
+ * is tiny and provides weak spam protection.
  */
-const MIN_BID_INCREMENT_GWEI = 1000;
+const BID_INCREMENT_FLOOR_GWEI = 100_000;
+/**
+ * Maximum absolute increment (0.01 ETH). Bounds the barrier for legitimate competition on
+ * high value blocks where the relative increment would suppress closely competing bids.
+ */
+const BID_INCREMENT_CAP_GWEI = 10_000_000;
 
 /**
  * Return the minimum value a new bid must have to be forwarded given the current highest bid.
  * Division before multiplication to stay within safe integer range for max gwei values.
  */
 export function getMinBidValue(currentHighestBid: number): number {
-  return (
-    currentHighestBid + Math.max(MIN_BID_INCREMENT_GWEI, Math.floor(currentHighestBid / 10_000) * MIN_BID_INCREMENT_BPS)
-  );
+  const relativeIncrement = Math.floor(currentHighestBid / 10_000) * BID_INCREMENT_BPS;
+  const increment = Math.min(Math.max(BID_INCREMENT_FLOOR_GWEI, relativeIncrement), BID_INCREMENT_CAP_GWEI);
+  return currentHighestBid + increment;
 }
 
 export async function validateApiExecutionPayloadBid(
