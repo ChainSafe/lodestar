@@ -33,9 +33,22 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
 
     case RequestErrorCode.DIAL_TIMEOUT:
     case RequestErrorCode.DIAL_ERROR:
-      return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === ReqRespMethod.Ping
-        ? PeerAction.Fatal
-        : PeerAction.LowToleranceError;
+      if (e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed)) {
+        // Peer does not support the protocol, a real incompatibility rather than a transient
+        // failure, so keep the stronger penalty (Fatal for Ping, as before).
+        return method === ReqRespMethod.Ping ? PeerAction.Fatal : PeerAction.LowToleranceError;
+      }
+      switch (method) {
+        // Ping and Status are liveness probes; their dial timeouts are dominated by transient
+        // network congestion rather than peer misbehavior, so penalize leniently to avoid
+        // self-inflicted peer starvation (https://github.com/ChainSafe/lodestar/issues/9562),
+        // while still applying some penalty so genuinely dead peers eventually free the slot.
+        case ReqRespMethod.Ping:
+        case ReqRespMethod.Status:
+          return PeerAction.HighToleranceError;
+        default:
+          return PeerAction.LowToleranceError;
+      }
     // TODO: Detect SSZDecodeError and return PeerAction.Fatal
 
     case RequestErrorCode.RESP_TIMEOUT:
