@@ -469,8 +469,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqJson: ({signedEnvelopeOrContents, broadcastValidation}) => {
           const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelopeOrContents);
           const fork = config.getForkName(
-            (blobDataIncluded ? signedEnvelopeOrContents.signedExecutionPayloadEnvelope : signedEnvelopeOrContents).message.payload
-              .slotNumber
+            (blobDataIncluded ? signedEnvelopeOrContents.signedExecutionPayloadEnvelope : signedEnvelopeOrContents)
+              .message.payload.slotNumber
           );
           return {
             body: blobDataIncluded
@@ -496,8 +496,8 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         writeReqSsz: ({signedEnvelopeOrContents, broadcastValidation}) => {
           const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelopeOrContents);
           const fork = config.getForkName(
-            (blobDataIncluded ? signedEnvelopeOrContents.signedExecutionPayloadEnvelope : signedEnvelopeOrContents).message.payload
-              .slotNumber
+            (blobDataIncluded ? signedEnvelopeOrContents.signedExecutionPayloadEnvelope : signedEnvelopeOrContents)
+              .message.payload.slotNumber
           );
           return {
             body: blobDataIncluded
