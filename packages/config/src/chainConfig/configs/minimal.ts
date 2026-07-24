@@ -188,7 +188,7 @@ export const chainConfig: ChainConfig = {
   // Gloas
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
-  // 3 bids
+  // 3 bids per slot
   MAX_BIDS_PER_BUILDER: 3,
 
   // Blob Scheduling
