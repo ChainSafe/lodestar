@@ -103,8 +103,8 @@ export async function validateGossipBlock(
     // 2. The parent is unknown to us, we probably want to download it since it might actually
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
-    // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    // against known bad fork blocks, so we throw PARENT_BLOCK_UNKNOWN for cases (1) and (2)
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
   }
 
   // [IGNORE] The block's parent (defined by `block.parent_root`) passes all validation
@@ -241,7 +241,7 @@ export async function validateGossipBlock(
   const blockState = await chain.regen
     .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
     });
 
   // in forky condition, make sure to populate ShufflingCache with regened state

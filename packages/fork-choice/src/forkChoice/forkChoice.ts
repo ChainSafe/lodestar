@@ -598,6 +598,22 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
   }
 
+  /**
+   * weight is in EFFECTIVE_BALANCE_INCREMENTS not gwei.
+   * For compliance test use only
+   */
+  getViableHeads(): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
+    return this.protoArray.getViableHeads(this.fcStore.currentSlot);
+  }
+
+  /**
+   * The cached justified total active balance, in EFFECTIVE_BALANCE_INCREMENT units.
+   * For compliance test use only
+   */
+  getJustifiedTotalActiveBalanceByIncrement(): number {
+    return this.fcStore.justified.totalBalance;
+  }
+
   /** This is for the debug API only */
   getAllNodes(): ProtoNode[] {
     return this.protoArray.nodes;

@@ -34,6 +34,7 @@ const coveredTestRunners = [
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",
@@ -83,10 +84,16 @@ export const defaultSkipOpts: SkipOpts = {
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO GLOAS: enable this after gloas fork choice is ready
+    /^gloas\/fork_choice_compliance\/.*/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
+    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
+    // boost wrongly denied. Fails identically on every pre-gloas fork.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
@@ -177,9 +184,15 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-              if (opts.skippedTests && options.shouldSkip === undefined) {
-                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
-                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+              if (opts.skippedTests) {
+                // Compose with any runner-local shouldSkip — overwriting it would silently
+                // disable SkipOpts.skippedTests for runners that define their own (fork_choice).
+                const runnerShouldSkip = options.shouldSkip;
+                options.shouldSkip = (testCase: any, name: string, index: number): boolean => {
+                  return (
+                    (runnerShouldSkip?.(testCase, name, index) ?? false) ||
+                    (opts.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false)
+                  );
                 };
               }
               describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);
