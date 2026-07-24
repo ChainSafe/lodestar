@@ -683,14 +683,7 @@ function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint
   };
 }
 
-type Step =
-  | OnTick
-  | OnAttestation
-  | OnAttesterSlashing
-  | OnBlock
-  | OnExecutionPayloadEnvelope
-  | OnPayloadInfo
-  | Checks;
+type Step = OnTick | OnAttestation | OnAttesterSlashing | OnBlock | OnExecutionPayloadEnvelope | OnPayloadInfo | Checks;
 
 type SpecTestCheckpoint = {epoch: bigint; root: string};
 
