@@ -313,6 +313,7 @@ export class BlockProposingService {
         graffiti,
         consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
         blockRoot: blockRootHex,
+        executionPayloadIncluded,
       });
     } else {
       // Builder is responsible for broadcasting the execution payload envelope
