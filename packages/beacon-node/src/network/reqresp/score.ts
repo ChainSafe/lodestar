@@ -33,7 +33,13 @@ export function onOutgoingReqRespError(e: RequestError, method: ReqRespMethod): 
 
     case RequestErrorCode.DIAL_TIMEOUT:
     case RequestErrorCode.DIAL_ERROR:
-      if (e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed)) {
+      // `RequestError` renders `e.message` as just the error code (see `renderErrorMessage`), so the
+      // multistream "protocol selection failed" text is only on the wrapped inner error, which is
+      // available on `DIAL_ERROR` via `e.type.error` (`DIAL_TIMEOUT` carries no inner error).
+      if (
+        e.type.code === RequestErrorCode.DIAL_ERROR &&
+        e.type.error.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed)
+      ) {
         // Peer does not support the protocol, a real incompatibility rather than a transient
         // failure, so keep the stronger penalty (Fatal for Ping, as before).
         return method === ReqRespMethod.Ping ? PeerAction.Fatal : PeerAction.LowToleranceError;
