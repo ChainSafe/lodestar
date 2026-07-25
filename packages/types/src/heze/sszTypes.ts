@@ -1,22 +1,27 @@
-import {BitVectorType, ContainerType, ListCompositeType, VectorBasicType} from "@chainsafe/ssz";
-import {INCLUSION_LIST_COMMITTEE_SIZE, MAX_TRANSACTIONS_PER_PAYLOAD} from "@lodestar/params";
-import {ssz as bellatrixSsz} from "../bellatrix/index.js";
+import {
+  BitVectorType,
+  ContainerType,
+  ProgressiveContainerType,
+  ProgressiveListCompositeType,
+  VectorBasicType,
+} from "@chainsafe/ssz";
+import {INCLUSION_LIST_COMMITTEE_SIZE} from "@lodestar/params";
 import {ssz as gloasSsz} from "../gloas/index.js";
 import {ssz as primitiveSsz} from "../primitive/index.js";
 
 const {Slot, Root, BLSSignature, ValidatorIndex} = primitiveSsz;
 
+function activeFields(count: number): boolean[] {
+  return Array.from({length: count}, () => true);
+}
+
 export const InclusionListCommittee = new VectorBasicType(ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE);
 
-// Per InclusionList container; bound is MAX_TRANSACTIONS_PER_PAYLOAD.
-export const InclusionListTransactions = new ListCompositeType(bellatrixSsz.Transaction, MAX_TRANSACTIONS_PER_PAYLOAD);
+export const InclusionListTransactions = new ProgressiveListCompositeType(gloasSsz.Transaction, {
+  typeName: "InclusionListTransactions",
+});
 
-// Aggregated IL transactions surfaced in PayloadAttributes/EL: bounded by total committee output.
-export const AggregatedInclusionListTransactions = new ListCompositeType(
-  bellatrixSsz.Transaction,
-  MAX_TRANSACTIONS_PER_PAYLOAD * INCLUSION_LIST_COMMITTEE_SIZE
-);
-
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/beacon-chain.md#inclusionlist
 export const InclusionList = new ContainerType(
   {
     slot: Slot,
@@ -27,6 +32,7 @@ export const InclusionList = new ContainerType(
   {typeName: "InclusionList", jsonCase: "eth2"}
 );
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/beacon-chain.md#signedinclusionlist
 export const SignedInclusionList = new ContainerType(
   {
     message: InclusionList,
@@ -35,6 +41,7 @@ export const SignedInclusionList = new ContainerType(
   {typeName: "SignedInclusionList", jsonCase: "eth2"}
 );
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/p2p-interface.md#inclusionlistbycommitteeindices-v1
 export const InclusionListByCommitteeIndicesRequest = new ContainerType(
   {
     slot: Slot,
@@ -43,17 +50,20 @@ export const InclusionListByCommitteeIndicesRequest = new ContainerType(
   {typeName: "InclusionListByCommitteeIndicesRequest", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadBid = new ContainerType(
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/beacon-chain.md#executionpayloadbid
+export const ExecutionPayloadBid = new ProgressiveContainerType(
   {
     ...gloasSsz.ExecutionPayloadBid.fields,
     inclusionListBits: new BitVectorType(INCLUSION_LIST_COMMITTEE_SIZE), // [New in Heze:EIP7805]
   },
+  activeFields(13),
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/beacon-chain.md#signedexecutionpayloadbid
 export const SignedExecutionPayloadBid = new ContainerType(
   {
-    message: ExecutionPayloadBid,
+    message: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
     signature: BLSSignature,
   },
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
@@ -62,19 +72,22 @@ export const SignedExecutionPayloadBid = new ContainerType(
 export const DataColumnSidecar = gloasSsz.DataColumnSidecar;
 export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
 
-export const BeaconState = new ContainerType(
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/beacon-chain.md#beaconstate
+export const BeaconState = new ProgressiveContainerType(
   {
     ...gloasSsz.BeaconState.fields,
     latestExecutionPayloadBid: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
   },
+  activeFields(46),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
-export const BeaconBlockBody = new ContainerType(
+export const BeaconBlockBody = new ProgressiveContainerType(
   {
     ...gloasSsz.BeaconBlockBody.fields,
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // [Modified in Heze:EIP7805]
   },
+  activeFields(13),
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
@@ -95,18 +108,19 @@ export const SignedBeaconBlock = new ContainerType(
 );
 
 // PayloadAttributes primarily for SSE event
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/fork-choice.md#modified-payloadattributes
 export const PayloadAttributes = new ContainerType(
   {
     ...gloasSsz.PayloadAttributes.fields,
-    inclusionListTransactions: AggregatedInclusionListTransactions,
+    inclusionListTransactions: InclusionListTransactions, // [New in Heze:EIP7805]
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );
 
 export const SSEPayloadAttributes = new ContainerType(
   {
-    ...bellatrixSsz.SSEPayloadAttributesCommon.fields,
-    payloadAttributes: PayloadAttributes,
+    ...gloasSsz.SSEPayloadAttributes.fields,
+    payloadAttributes: PayloadAttributes, // [Modified in Heze:EIP7805]
   },
   {typeName: "SSEPayloadAttributes", jsonCase: "eth2"}
 );

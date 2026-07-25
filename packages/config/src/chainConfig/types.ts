@@ -141,7 +141,6 @@ export type ChainConfig = {
   // HEZE
   MAX_REQUEST_INCLUSION_LIST: number;
   MAX_BYTES_PER_INCLUSION_LIST: number;
-  INCLUSION_LIST_COMMITTEE_SIZE: number;
 
   // Fast Confirmation Rule
   CONFIRMATION_BYZANTINE_THRESHOLD: number;
@@ -184,7 +183,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // GLOAS
   GLOAS_FORK_VERSION: "bytes",
   GLOAS_FORK_EPOCH: "number",
-  // HEZE (EIP-7805)
+  // HEZE
   HEZE_FORK_VERSION: "bytes",
   HEZE_FORK_EPOCH: "number",
 
@@ -268,7 +267,6 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // HEZE
   MAX_REQUEST_INCLUSION_LIST: "number",
   MAX_BYTES_PER_INCLUSION_LIST: "number",
-  INCLUSION_LIST_COMMITTEE_SIZE: "number",
 
   // Gloas
   MAX_REQUEST_PAYLOADS: "number",

@@ -115,6 +115,13 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
           ? loadYaml(fs.readFileSync(metaFilePath, "utf8"))
           : undefined;
 
+        // Check name-based skips before loading inputs — some skipped vectors (e.g. cross-fork
+        // upgrade tests placed under an earlier fork's directory) cannot be deserialized at all.
+        if (options.shouldSkip?.(null as unknown as TestCase, testName, 0)) {
+          context.skip();
+          return;
+        }
+
         let testCase = loadInputFiles(testSubDirPath, options, meta);
         if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
         if (options.shouldSkip?.(testCase, testName, 0)) {

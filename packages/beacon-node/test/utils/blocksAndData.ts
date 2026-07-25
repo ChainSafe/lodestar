@@ -17,7 +17,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {computeStartSlotAtEpoch, signedBlockToSignedHeader} from "@lodestar/state-transition";
-import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz} from "@lodestar/types";
+import {BeaconBlockBody, SignedBeaconBlock, Slot, deneb, fulu, gloas, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {VersionedHashes} from "../../src/execution/index.js";
 import {computeNodeIdFromPrivateKey} from "../../src/network/subnets/index.js";
@@ -186,7 +186,7 @@ function generateColumnSidecars<F extends ForkPostFulu>(
   if (isForkPostGloas(forkName)) {
     (block.message.body as gloas.BeaconBlockBody).signedExecutionPayloadBid.message.blobKzgCommitments = kzgCommitments;
 
-    const beaconBlockRoot = ssz[forkName as ForkPostGloas].BeaconBlock.hashTreeRoot(
+    const beaconBlockRoot = sszTypesFor(forkName as ForkPostGloas).BeaconBlock.hashTreeRoot(
       block.message as SignedBeaconBlock<ForkPostGloas>["message"]
     );
     columnSidecars = getGloasDataColumnSidecars(

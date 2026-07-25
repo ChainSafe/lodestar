@@ -729,6 +729,7 @@ specTestIterator(
       // presence/timeliness, get_node_for_root with PAYLOAD_STATUS_PENDING). Head/justified/
       // finalized/proposer-head all match; only getConfirmedRoot diverges.
       /^gloas\/fast_confirmation\/.*/,
+      /^heze\/fast_confirmation\/.*/,
     ],
   }
 );
