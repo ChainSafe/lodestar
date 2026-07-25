@@ -415,11 +415,6 @@ exceptions:
     - finalized_root_gindex_at_slot#gloas
     - next_sync_committee_gindex_at_slot#gloas
 
-    # gloas (attestation upgrade helpers; lodestar ssz types are structurally cross-fork compatible)
-    - upgrade_attestation_to_gloas#gloas
-    - upgrade_attester_slashing_to_gloas#gloas
-    - upgrade_indexed_attestation_to_gloas#gloas
-
     # computed helpers replacing config vars (added in alpha.3)
     # the following are hardcoded in config files rather than computed at runtime
     - compute_max_request_blob_sidecars#deneb

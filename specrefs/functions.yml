@@ -12454,7 +12454,7 @@
 - name: upgrade_indexed_attestation_to_gloas#gloas
   sources:
     - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
-      search: export function upgradeIndexedAttestationToGloas(
+      search: 'export function upgradeIndexedAttestationToGloas(pre: electra.IndexedAttestation):'
   spec: |
     <spec fn="upgrade_indexed_attestation_to_gloas" fork="gloas" hash="b13fb8df">
     def upgrade_indexed_attestation_to_gloas(pre: fulu.IndexedAttestation) -> IndexedAttestation:
