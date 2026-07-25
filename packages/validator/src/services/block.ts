@@ -168,14 +168,18 @@ export class BlockProposingService {
 
   /**
    * Gloas block production flow:
-   * 1. Produce beacon block with execution payload bid, with full block contents
-   *    (execution payload envelope, KZG proofs and blobs) if self-building (stateless flow)
-   * 2. Sign and publish the beacon block
-   * 3. If self-building, sign and publish the execution payload envelope
-   *    - Stateless (`payloadLocal=false`): envelope and blobs are available from step 1, publish
-   *      `SignedExecutionPayloadEnvelopeContents` which works via any beacon node
-   *    - Stateful (`payloadLocal=true`): fetch the envelope from the same beacon node that
-   *      produced the block, which attaches cached blobs and KZG proofs on publish
+   * 1. Produce the beacon block, which commits to an execution payload bid. When self-building with
+   *    the stateless flow (`payloadLocal=false`), the response also includes the full block contents
+   *    (execution payload envelope, KZG proofs and blobs).
+   * 2. Sign and publish the beacon block.
+   * 3. Reveal the execution payload envelope:
+   *    - Self-build: the proposer signs and publishes the envelope
+   *      - Stateless (`payloadLocal=false`): envelope and blobs are already available from step 1,
+   *        publish `SignedExecutionPayloadEnvelopeContents` which can be sent via any beacon node
+   *      - Stateful (`payloadLocal=true`): fetch the envelope from the beacon node that produced the
+   *        block, then publish the bare `SignedExecutionPayloadEnvelope` back to it; that node
+   *        attaches the cached blobs and KZG proofs
+   *    - Builder bid: the builder reveals the envelope, so the proposer does nothing further
    */
   private async createAndPublishBlockGloas(pubkey: BLSPubkey, slot: Slot): Promise<void> {
     const pubkeyHex = toPubkeyHex(pubkey);
