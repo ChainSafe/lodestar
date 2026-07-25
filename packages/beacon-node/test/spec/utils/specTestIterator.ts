@@ -92,6 +92,11 @@ export const defaultSkipOpts: SkipOpts = {
     /^heze\/fork_choice_compliance\/.*/,
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
+    // The fork_base_state vector in this suite is a broken eip8148 upgrade vector (post state has
+    // the eip8148-only validator_sweep_thresholds field) that crashes input deserialization before
+    // any per-test skip can apply. It was added by mistake and removed upstream in
+    // https://github.com/ethereum/consensus-specs/pull/5440 — unskip on the next spec-tests bump.
+    /^heze\/fork\/fork\/pyspec_tests$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
