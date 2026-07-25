@@ -53,6 +53,7 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^",
+    "@lodestar/state-transition": "workspace:^",
     "strict-event-emitter-types": "^2.0.0"
   },
   "devDependencies": {
