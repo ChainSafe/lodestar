@@ -18,7 +18,16 @@ export class BuilderSigner {
     this.signer = {
       publicKey: signerSecretKey.toPublicKey().toBytes(),
       secretKey: signerSecretKey,
-    }
+    };
+  }
+
+  signExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): gloas.SignedExecutionPayloadEnvelope {
+    const signingRoot = getExecutionPayloadEnvelopeSigningRoot(this.config, envelope);
+
+    return {
+      message: envelope,
+      signature: this.signer.secretKey.sign(signingRoot).toBytes(),
+    };
   }
 
   signExecutionPayloadBid(
