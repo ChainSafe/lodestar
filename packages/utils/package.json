@@ -42,11 +42,11 @@
     "lint:fix": "pnpm run lint --write",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^1.2.0",
+    "@chainsafe/as-sha256": "^1.2.4",
     "@vekexasia/bigint-buffer2": "^1.1.1",
     "any-signal": "^4.1.1",
     "case": "^1.6.3",

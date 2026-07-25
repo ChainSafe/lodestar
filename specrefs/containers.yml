@@ -40,13 +40,26 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const Attestation =
   spec: |
-    <spec container="Attestation" fork="electra" hash="a27cddfb">
+    <spec container="Attestation" fork="electra" hash="05913162">
     class Attestation(Container):
         # [Modified in Electra:EIP7549]
-        aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]
+        aggregation_bits: AggregationBits
         data: AttestationData
         signature: BLSSignature
         # [New in Electra:EIP7549]
+        committee_bits: Bitvector[MAX_COMMITTEES_PER_SLOT]
+    </spec>
+
+- name: Attestation#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const Attestation =
+  spec: |
+    <spec container="Attestation" fork="gloas" hash="6dcc1383">
+    class Attestation(ProgressiveContainer(active_fields=[1] * 4)):  # type: ignore
+        aggregation_bits: AggregationBits
+        data: AttestationData
+        signature: BLSSignature
         committee_bits: Bitvector[MAX_COMMITTEES_PER_SLOT]
     </spec>
 
@@ -244,20 +257,26 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BeaconBlockBody =
   spec: |
-    <spec container="BeaconBlockBody" fork="gloas" hash="7a5140aa">
-    class BeaconBlockBody(Container):
+    <spec container="BeaconBlockBody" fork="gloas" hash="3e50ab06">
+    class BeaconBlockBody(ProgressiveContainer(active_fields=[1] * 13)):  # type: ignore
         randao_reveal: BLSSignature
         eth1_data: Eth1Data
         graffiti: Bytes32
-        proposer_slashings: List[ProposerSlashing, MAX_PROPOSER_SLASHINGS]
-        attester_slashings: List[AttesterSlashing, MAX_ATTESTER_SLASHINGS_ELECTRA]
-        attestations: List[Attestation, MAX_ATTESTATIONS_ELECTRA]
-        deposits: List[Deposit, MAX_DEPOSITS]
-        voluntary_exits: List[SignedVoluntaryExit, MAX_VOLUNTARY_EXITS]
+        # [Modified in Gloas:EIP7688]
+        proposer_slashings: ProgressiveList[ProposerSlashing]
+        # [Modified in Gloas:EIP7688]
+        attester_slashings: ProgressiveList[AttesterSlashing]
+        # [Modified in Gloas:EIP7688]
+        attestations: ProgressiveList[Attestation]
+        # [Modified in Gloas:EIP7688]
+        deposits: ProgressiveList[Deposit]
+        # [Modified in Gloas:EIP7688]
+        voluntary_exits: ProgressiveList[SignedVoluntaryExit]
         sync_aggregate: SyncAggregate
         # [Modified in Gloas:EIP7732]
         # Removed `execution_payload`
-        bls_to_execution_changes: List[SignedBLSToExecutionChange, MAX_BLS_TO_EXECUTION_CHANGES]
+        # [Modified in Gloas:EIP7688]
+        bls_to_execution_changes: ProgressiveList[SignedBLSToExecutionChange]
         # [Modified in Gloas:EIP7732]
         # Removed `blob_kzg_commitments`
         # [Modified in Gloas:EIP7732]
@@ -265,7 +284,7 @@
         # [New in Gloas:EIP7732]
         signed_execution_payload_bid: SignedExecutionPayloadBid
         # [New in Gloas:EIP7732]
-        payload_attestations: List[PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS]
+        payload_attestations: ProgressiveList[PayloadAttestation]
         # [New in Gloas:EIP7732]
         parent_execution_requests: ExecutionRequests
     </spec>
@@ -574,8 +593,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="gloas" hash="2c32353c">
-    class BeaconState(Container):
+    <spec container="BeaconState" fork="gloas" hash="14b204a8">
+    class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):  # type: ignore
         genesis_time: uint64
         genesis_validators_root: Root
         slot: Slot
@@ -587,17 +606,22 @@
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
         eth1_deposit_index: uint64
-        validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
-        balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
+        # [Modified in Gloas:EIP7688]
+        validators: ProgressiveList[Validator]
+        # [Modified in Gloas:EIP7688]
+        balances: ProgressiveList[Gwei]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
-        previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
+        # [Modified in Gloas:EIP7688]
+        previous_epoch_participation: ProgressiveList[ParticipationFlags]
+        # [Modified in Gloas:EIP7688]
+        current_epoch_participation: ProgressiveList[ParticipationFlags]
         justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        # [Modified in Gloas:EIP7688]
+        inactivity_scores: ProgressiveList[uint64]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         # [Modified in Gloas:EIP7732]
@@ -613,12 +637,15 @@
         earliest_exit_epoch: Epoch
         consolidation_balance_to_consume: Gwei
         earliest_consolidation_epoch: Epoch
-        pending_deposits: List[PendingDeposit, PENDING_DEPOSITS_LIMIT]
-        pending_partial_withdrawals: List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
-        pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]
+        # [Modified in Gloas:EIP7688]
+        pending_deposits: ProgressiveList[PendingDeposit]
+        # [Modified in Gloas:EIP7688]
+        pending_partial_withdrawals: ProgressiveList[PendingPartialWithdrawal]
+        # [Modified in Gloas:EIP7688]
+        pending_consolidations: ProgressiveList[PendingConsolidation]
         proposer_lookahead: Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]
         # [New in Gloas:EIP7732]
-        builders: List[Builder, BUILDER_REGISTRY_LIMIT]
+        builders: ProgressiveList[Builder]
         # [New in Gloas:EIP7732]
         next_withdrawal_builder_index: BuilderIndex
         # [New in Gloas:EIP7732]
@@ -626,11 +653,11 @@
         # [New in Gloas:EIP7732]
         builder_pending_payments: Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]
         # [New in Gloas:EIP7732]
-        builder_pending_withdrawals: List[BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT]
+        builder_pending_withdrawals: ProgressiveList[BuilderPendingWithdrawal]
         # [New in Gloas:EIP7732]
         latest_execution_payload_bid: ExecutionPayloadBid
         # [New in Gloas:EIP7732]
-        payload_expected_withdrawals: List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]
+        payload_expected_withdrawals: ProgressiveList[Withdrawal]
         # [New in Gloas:EIP7732]
         ptc_window: Vector[Vector[ValidatorIndex, PTC_SIZE], (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH]
     </spec>
@@ -640,8 +667,8 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="heze" hash="2c32353c">
-    class BeaconState(Container):
+    <spec container="BeaconState" fork="heze" hash="86ad69e6">
+    class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):  # type: ignore
         genesis_time: uint64
         genesis_validators_root: Root
         slot: Slot
@@ -653,22 +680,19 @@
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
         eth1_deposit_index: uint64
-        validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
-        balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
+        validators: ProgressiveList[Validator]
+        balances: ProgressiveList[Gwei]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
-        previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
+        previous_epoch_participation: ProgressiveList[ParticipationFlags]
+        current_epoch_participation: ProgressiveList[ParticipationFlags]
         justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        inactivity_scores: ProgressiveList[uint64]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
-        # [Modified in Gloas:EIP7732]
-        # Removed `latest_execution_payload_header`
-        # [New in Gloas:EIP7732]
         latest_block_hash: Hash32
         next_withdrawal_index: WithdrawalIndex
         next_withdrawal_validator_index: ValidatorIndex
@@ -679,25 +703,18 @@
         earliest_exit_epoch: Epoch
         consolidation_balance_to_consume: Gwei
         earliest_consolidation_epoch: Epoch
-        pending_deposits: List[PendingDeposit, PENDING_DEPOSITS_LIMIT]
-        pending_partial_withdrawals: List[PendingPartialWithdrawal, PENDING_PARTIAL_WITHDRAWALS_LIMIT]
-        pending_consolidations: List[PendingConsolidation, PENDING_CONSOLIDATIONS_LIMIT]
+        pending_deposits: ProgressiveList[PendingDeposit]
+        pending_partial_withdrawals: ProgressiveList[PendingPartialWithdrawal]
+        pending_consolidations: ProgressiveList[PendingConsolidation]
         proposer_lookahead: Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]
-        # [New in Gloas:EIP7732]
-        builders: List[Builder, BUILDER_REGISTRY_LIMIT]
-        # [New in Gloas:EIP7732]
+        builders: ProgressiveList[Builder]
         next_withdrawal_builder_index: BuilderIndex
-        # [New in Gloas:EIP7732]
         execution_payload_availability: Bitvector[SLOTS_PER_HISTORICAL_ROOT]
-        # [New in Gloas:EIP7732]
         builder_pending_payments: Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]
-        # [New in Gloas:EIP7732]
-        builder_pending_withdrawals: List[BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT]
-        # [New in Gloas:EIP7732]
+        builder_pending_withdrawals: ProgressiveList[BuilderPendingWithdrawal]
+        # [Modified in Heze:EIP7805]
         latest_execution_payload_bid: ExecutionPayloadBid
-        # [New in Gloas:EIP7732]
-        payload_expected_withdrawals: List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]
-        # [New in Gloas:EIP7732]
+        payload_expected_withdrawals: ProgressiveList[Withdrawal]
         ptc_window: Vector[Vector[ValidatorIndex, PTC_SIZE], (2 + MIN_SEED_LOOKAHEAD) * SLOTS_PER_EPOCH]
     </spec>
 
@@ -845,13 +862,15 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const DataColumnSidecar =
   spec: |
-    <spec container="DataColumnSidecar" fork="gloas" hash="332c7cfc">
+    <spec container="DataColumnSidecar" fork="gloas" hash="18cd6bcf">
     class DataColumnSidecar(Container):
         index: ColumnIndex
-        column: List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+        # [Modified in Gloas:EIP7688]
+        column: ProgressiveList[Cell]
         # [Modified in Gloas:EIP7732]
         # Removed `kzg_commitments`
-        kzg_proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+        # [Modified in Gloas:EIP7688]
+        kzg_proofs: ProgressiveList[KZGProof]
         # [Modified in Gloas:EIP7732]
         # Removed `signed_block_header`
         # [Modified in Gloas:EIP7732]
@@ -1028,8 +1047,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayload =
   spec: |
-    <spec container="ExecutionPayload" fork="gloas" hash="d399d858">
-    class ExecutionPayload(Container):
+    <spec container="ExecutionPayload" fork="gloas" hash="0bee8801">
+    class ExecutionPayload(ProgressiveContainer(active_fields=[1] * 19)):  # type: ignore
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
         state_root: Bytes32
@@ -1043,8 +1062,10 @@
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
         base_fee_per_gas: uint256
         block_hash: Hash32
-        transactions: List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]
-        withdrawals: List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]
+        # [Modified in Gloas:EIP7688]
+        transactions: ProgressiveList[Transaction]
+        # [Modified in Gloas:EIP7688]
+        withdrawals: ProgressiveList[Withdrawal]
         blob_gas_used: uint64
         excess_blob_gas: uint64
         # [New in Gloas:EIP7928]
@@ -1058,8 +1079,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadBid =
   spec: |
-    <spec container="ExecutionPayloadBid" fork="gloas" hash="0c77d857">
-    class ExecutionPayloadBid(Container):
+    <spec container="ExecutionPayloadBid" fork="gloas" hash="7465947d">
+    class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 12)):  # type: ignore
         parent_block_hash: Hash32
         parent_block_root: Root
         block_hash: Hash32
@@ -1070,7 +1091,7 @@
         slot: Slot
         value: Gwei
         execution_payment: Gwei
-        blob_kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+        blob_kzg_commitments: ProgressiveList[KZGCommitment]
         execution_requests_root: Root
     </spec>
 
@@ -1079,8 +1100,8 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const ExecutionPayloadBid =
   spec: |
-    <spec container="ExecutionPayloadBid" fork="heze" hash="0c77d857">
-    class ExecutionPayloadBid(Container):
+    <spec container="ExecutionPayloadBid" fork="heze" hash="7d0dbe33">
+    class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 13)):  # type: ignore
         parent_block_hash: Hash32
         parent_block_root: Root
         block_hash: Hash32
@@ -1091,8 +1112,10 @@
         slot: Slot
         value: Gwei
         execution_payment: Gwei
-        blob_kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+        blob_kzg_commitments: ProgressiveList[KZGCommitment]
         execution_requests_root: Root
+        # [New in Heze:EIP7805]
+        inclusion_list_bits: Bitvector[INCLUSION_LIST_COMMITTEE_SIZE]
     </spec>
 
 - name: ExecutionPayloadEnvelope#gloas
@@ -1100,8 +1123,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadEnvelope =
   spec: |
-    <spec container="ExecutionPayloadEnvelope" fork="gloas" hash="3df22cd3">
-    class ExecutionPayloadEnvelope(Container):
+    <spec container="ExecutionPayloadEnvelope" fork="gloas" hash="be1e70fd">
+    class ExecutionPayloadEnvelope(ProgressiveContainer(active_fields=[1] * 5)):  # type: ignore
         payload: ExecutionPayload
         execution_requests: ExecutionRequests
         builder_index: BuilderIndex
@@ -1190,14 +1213,14 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const ExecutionRequests =
   spec: |
-    <spec container="ExecutionRequests" fork="electra" hash="048c4a44">
+    <spec container="ExecutionRequests" fork="electra" hash="957b3c23">
     class ExecutionRequests(Container):
         # [New in Electra:EIP6110]
-        deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
+        deposits: DepositRequests
         # [New in Electra:EIP7002:EIP7251]
-        withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
+        withdrawals: WithdrawalRequests
         # [New in Electra:EIP7251]
-        consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
+        consolidations: ConsolidationRequests
     </spec>
 
 - name: ExecutionRequests#gloas
@@ -1205,15 +1228,15 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionRequests =
   spec: |
-    <spec container="ExecutionRequests" fork="gloas" hash="977acaf4">
-    class ExecutionRequests(Container):
-        deposits: List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD]
-        withdrawals: List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD]
-        consolidations: List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD]
+    <spec container="ExecutionRequests" fork="gloas" hash="70af6a68">
+    class ExecutionRequests(ProgressiveContainer(active_fields=[1] * 5)):  # type: ignore
+        deposits: DepositRequests
+        withdrawals: WithdrawalRequests
+        consolidations: ConsolidationRequests
         # [New in Gloas:EIP8282]
-        builder_deposits: List[BuilderDepositRequest, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD]
+        builder_deposits: BuilderDepositRequests
         # [New in Gloas:EIP8282]
-        builder_exits: List[BuilderExitRequest, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD]
+        builder_exits: BuilderExitRequests
     </spec>
 
 - name: Fork#phase0
@@ -1266,12 +1289,12 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const InclusionList =
   spec: |
-    <spec container="InclusionList" fork="heze" hash="7c3fadd5">
+    <spec container="InclusionList" fork="heze" hash="b6409409">
     class InclusionList(Container):
         slot: Slot
         validator_index: ValidatorIndex
         inclusion_list_committee_root: Root
-        transactions: List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]
+        transactions: ProgressiveList[Transaction]
     </spec>
 
 - name: IndexedAttestation#phase0
@@ -1291,10 +1314,22 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const IndexedAttestation =
   spec: |
-    <spec container="IndexedAttestation" fork="electra" hash="2f924640">
+    <spec container="IndexedAttestation" fork="electra" hash="07f0b3cd">
     class IndexedAttestation(Container):
         # [Modified in Electra:EIP7549]
-        attesting_indices: List[ValidatorIndex, MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]
+        attesting_indices: AttestingIndices
+        data: AttestationData
+        signature: BLSSignature
+    </spec>
+
+- name: IndexedAttestation#gloas
+  sources:
+    - file: packages/types/src/gloas/sszTypes.ts
+      search: export const IndexedAttestation =
+  spec: |
+    <spec container="IndexedAttestation" fork="gloas" hash="8eb640da">
+    class IndexedAttestation(ProgressiveContainer(active_fields=[1] * 3)):  # type: ignore
+        attesting_indices: AttestingIndices
         data: AttestationData
         signature: BLSSignature
     </spec>
@@ -1304,8 +1339,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const IndexedPayloadAttestation =
   spec: |
-    <spec container="IndexedPayloadAttestation" fork="gloas" hash="fa4832c8">
-    class IndexedPayloadAttestation(Container):
+    <spec container="IndexedPayloadAttestation" fork="gloas" hash="c165cb61">
+    class IndexedPayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):  # type: ignore
         attesting_indices: List[ValidatorIndex, PTC_SIZE]
         data: PayloadAttestationData
         signature: BLSSignature
@@ -1490,23 +1525,32 @@
         row_index: RowIndex
     </spec>
 
+- name: PartialDataColumnGroupID#fulu
+  sources: []
+  spec: |
+    <spec container="PartialDataColumnGroupID" fork="fulu" hash="260b9491">
+    class PartialDataColumnGroupID(Container):
+        beacon_block_root: Root
+    </spec>
+
 - name: PartialDataColumnGroupID#gloas
   sources: []
   spec: |
-    <spec container="PartialDataColumnGroupID" fork="gloas" hash="9e8865b1">
+    <spec container="PartialDataColumnGroupID" fork="gloas" hash="ccabab9d">
     class PartialDataColumnGroupID(Container):
-        slot: Slot
         beacon_block_root: Root
+        # [New in Gloas:EIP7732]
+        slot: Slot
     </spec>
 
 - name: PartialDataColumnSidecar#gloas
   sources: []
   spec: |
-    <spec container="PartialDataColumnSidecar" fork="gloas" hash="57b4ad2a">
+    <spec container="PartialDataColumnSidecar" fork="gloas" hash="0b62b015">
     class PartialDataColumnSidecar(Container):
-        cells_present_bitmap: Bitlist[MAX_BLOB_COMMITMENTS_PER_BLOCK]
-        partial_column: List[Cell, MAX_BLOB_COMMITMENTS_PER_BLOCK]
-        kzg_proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
+        cells_present_bitmap: ProgressiveBitlist
+        partial_column: ProgressiveList[Cell]
+        kzg_proofs: ProgressiveList[KZGProof]
     </spec>
 
 - name: PayloadAttestation#gloas
@@ -1514,8 +1558,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttestation =
   spec: |
-    <spec container="PayloadAttestation" fork="gloas" hash="c769473d">
-    class PayloadAttestation(Container):
+    <spec container="PayloadAttestation" fork="gloas" hash="688576d4">
+    class PayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):  # type: ignore
         aggregation_bits: Bitvector[PTC_SIZE]
         data: PayloadAttestationData
         signature: BLSSignature
@@ -1716,8 +1760,9 @@
     - file: packages/types/src/heze/sszTypes.ts
       search: export const SignedExecutionPayloadBid =
   spec: |
-    <spec container="SignedExecutionPayloadBid" fork="heze" hash="6b344341">
+    <spec container="SignedExecutionPayloadBid" fork="heze" hash="ce64ecf2">
     class SignedExecutionPayloadBid(Container):
+        # [Modified in Heze:EIP7805]
         message: ExecutionPayloadBid
         signature: BLSSignature
     </spec>

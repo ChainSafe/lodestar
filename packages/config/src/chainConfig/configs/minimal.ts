@@ -98,8 +98,8 @@ export const chainConfig: ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: 5000,
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
-  // 75% of SLOT_DURATION_MS
-  PAYLOAD_DUE_BPS: 7500,
+  // 50% of SLOT_DURATION_MS
+  PAYLOAD_DUE_BPS: 5000,
 
   // Validator cycle
   // ---------------------------------------------------------------

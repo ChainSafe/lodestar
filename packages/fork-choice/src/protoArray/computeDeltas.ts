@@ -4,10 +4,10 @@ import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 import {NULL_VOTE_INDEX, VoteIndex} from "./interface.js";
 
 // reuse arrays to avoid memory reallocation and gc
-const deltas = new Array<number>();
+const attestationDeltas = new Array<number>();
 
 export type DeltasResult = {
-  deltas: number[];
+  attestationDeltas: number[];
   equivocatingValidators: number;
   // inactive validators before beacon node started
   oldInactiveValidators: number;
@@ -19,9 +19,9 @@ export type DeltasResult = {
 };
 
 /**
- * Returns a list of `deltas`, where there is one delta for each of the indices in `indices`
+ * Returns a list of `attestationDeltas`, where there is one delta for each of the indices in `indices`
  *
- * The deltas are formed by a change between `oldBalances` and `newBalances`, and/or a change of vote in `votes`.
+ * The attestationDeltas are formed by a change between `oldBalances` and `newBalances`, and/or a change of vote in `votes`.
  *
  * ## Errors
  *
@@ -46,8 +46,8 @@ export function computeDeltas(
     throw new Error(`numProtoNodes must be less than NULL_VOTE_INDEX: ${numProtoNodes} >= ${NULL_VOTE_INDEX}`);
   }
 
-  deltas.length = numProtoNodes;
-  deltas.fill(0);
+  attestationDeltas.length = numProtoNodes;
+  attestationDeltas.fill(0);
 
   // avoid creating new variables in the loop to potentially reduce GC pressure
   let oldBalance: number, newBalance: number;
@@ -80,7 +80,7 @@ export function computeDeltas(
           });
         }
         oldBalance = oldBalances[vIndex] ?? 0;
-        deltas[currentIndex] -= oldBalance;
+        attestationDeltas[currentIndex] -= oldBalance;
       }
       voteCurrentIndices[vIndex] = NULL_VOTE_INDEX;
       equivocatingIndex++;
@@ -125,7 +125,7 @@ export function computeDeltas(
           });
         }
 
-        deltas[currentIndex] -= oldBalance;
+        attestationDeltas[currentIndex] -= oldBalance;
       }
 
       // We ignore the vote if it is not known in `indices .
@@ -138,7 +138,7 @@ export function computeDeltas(
           });
         }
 
-        deltas[nextIndex] += newBalance;
+        attestationDeltas[nextIndex] += newBalance;
       }
       voteCurrentIndices[vIndex] = nextIndex;
       newVoteValidators++;
@@ -147,13 +147,13 @@ export function computeDeltas(
     }
   } // end validator loop
 
-  if (deltas.length !== numProtoNodes) {
-    // deltas array could be growed in the loop, especially if we mistakenly set the [NULL_VOTE_INDEX] to it , just to be safe
-    throw new Error(`deltas length mismatch: expected ${numProtoNodes}, got ${deltas.length}`);
+  if (attestationDeltas.length !== numProtoNodes) {
+    // attestationDeltas array could be growed in the loop, especially if we mistakenly set the [NULL_VOTE_INDEX] to it , just to be safe
+    throw new Error(`attestationDeltas length mismatch: expected ${numProtoNodes}, got ${attestationDeltas.length}`);
   }
 
   return {
-    deltas,
+    attestationDeltas,
     equivocatingValidators,
     oldInactiveValidators,
     newInactiveValidators,

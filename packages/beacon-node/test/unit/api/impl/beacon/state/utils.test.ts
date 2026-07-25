@@ -1,7 +1,11 @@
 import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {getStateResponseWithRegen, getStateValidatorIndex} from "../../../../../../src/api/impl/beacon/state/utils.js";
+import {NodeIsSyncing} from "../../../../../../src/api/impl/errors.js";
+import {IBeaconChain} from "../../../../../../src/chain/index.js";
+import {IBeaconSync, SyncState} from "../../../../../../src/sync/index.js";
 import {generateCachedAltairState} from "../../../../../utils/state.js";
 
 describe("beacon state api utils", () => {
@@ -58,6 +62,37 @@ describe("beacon state api utils", () => {
         expect(resp4.validatorIndex).toBe(index);
       } else {
         expect.fail("validator index should be found - Uint8Array input");
+      }
+    });
+  });
+
+  describe("getStateResponseWithRegen", () => {
+    // Node far behind head and syncing. Chain getters return a dummy response so the resolved
+    // "already-available" state ids don't blow up; the regen paths are never reached in these tests.
+    const servedResponse = {state: {}, executionOptimistic: false, finalized: false};
+    const syncingChain = {
+      clock: {currentSlot: 10 * SLOTS_PER_EPOCH},
+      forkChoice: {
+        getHead: () => ({slot: 0, stateRoot: "0x00"}),
+        getFinalizedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
+        getJustifiedCheckpoint: () => ({rootHex: "0x00", epoch: 0}),
+        getFinalizedBlock: () => ({slot: 0}),
+      },
+      getStateByStateRoot: () => Promise.resolve(servedResponse),
+      getStateOrBytesByCheckpoint: () => Promise.resolve(servedResponse),
+      getStateBySlot: () => Promise.resolve(servedResponse),
+      getHistoricalStateBySlot: () => Promise.resolve(servedResponse),
+    } as unknown as IBeaconChain;
+    const sync = {state: SyncState.SyncingFinalized} as unknown as IBeaconSync;
+
+    it("throws NodeIsSyncing for a regen-triggering slot while the node is behind and syncing", async () => {
+      // notWhileSyncing runs before any regen, so a minimal clock/forkChoice/sync mock is enough
+      await expect(getStateResponseWithRegen(syncingChain, sync, 5 * SLOTS_PER_EPOCH)).rejects.toThrow(NodeIsSyncing);
+    });
+
+    it("serves head/finalized/justified/genesis while syncing (no regen wedge risk)", async () => {
+      for (const stateId of ["head", "finalized", "justified", "genesis"] as const) {
+        await expect(getStateResponseWithRegen(syncingChain, sync, stateId), stateId).resolves.toBeDefined();
       }
     });
   });

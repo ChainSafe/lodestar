@@ -1,7 +1,8 @@
 import {beforeEach, describe, expect, it} from "vitest";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ForkName, ForkSeq} from "@lodestar/params";
-import {upgradeLightClientHeader} from "@lodestar/state-transition/light-client";
+import {EXECUTION_BLOCK_HASH_GINDEX_GLOAS, ForkName, ForkSeq} from "@lodestar/params";
+import {normalizeMerkleBranch, upgradeLightClientHeader} from "@lodestar/state-transition/light-client";
 import {LightClientHeader, ssz} from "@lodestar/types";
 
 describe("UpgradeLightClientHeader", () => {
@@ -32,8 +33,8 @@ describe("UpgradeLightClientHeader", () => {
       deneb: ssz.deneb.LightClientHeader.defaultValue(),
       electra: ssz.deneb.LightClientHeader.defaultValue(),
       fulu: ssz.deneb.LightClientHeader.defaultValue(),
-      gloas: ssz.deneb.LightClientHeader.defaultValue(),
-      heze: ssz.deneb.LightClientHeader.defaultValue(),
+      gloas: ssz.gloas.LightClientHeader.defaultValue(),
+      heze: ssz.gloas.LightClientHeader.defaultValue(),
     };
 
     testSlots = {
@@ -58,8 +59,12 @@ describe("UpgradeLightClientHeader", () => {
         lcHeaderByFork[fromFork].beacon.slot = testSlots[fromFork];
         lcHeaderByFork[toFork].beacon.slot = testSlots[fromFork];
 
+        const expectedHeader =
+          ForkSeq[toFork] >= ForkSeq.gloas && ForkSeq[fromFork] < ForkSeq.gloas
+            ? getExpectedGloasHeader(fromFork, lcHeaderByFork[fromFork])
+            : lcHeaderByFork[toFork];
         const updatedHeader = upgradeLightClientHeader(config, toFork, lcHeaderByFork[fromFork]);
-        expect(updatedHeader).toEqual(lcHeaderByFork[toFork]);
+        expect(updatedHeader).toEqual(expectedHeader);
       });
     }
   }
@@ -80,3 +85,44 @@ describe("UpgradeLightClientHeader", () => {
     }
   }
 });
+
+function getExpectedGloasHeader(fromFork: ForkName, header: LightClientHeader): LightClientHeader<ForkName.gloas> {
+  if (ForkSeq[fromFork] < ForkSeq.capella) {
+    return {
+      ...ssz.gloas.LightClientHeader.defaultValue(),
+      beacon: header.beacon,
+    };
+  }
+
+  if (ForkSeq[fromFork] >= ForkSeq.deneb) {
+    const pre = header as LightClientHeader<ForkName.deneb>;
+    const blockHashGindex = ssz.deneb.ExecutionPayloadHeader.getPathInfo(["blockHash"]).gindex;
+    const executionBranch = new Tree(ssz.deneb.ExecutionPayloadHeader.toView(pre.execution).node).getSingleProof(
+      blockHashGindex
+    );
+
+    return {
+      beacon: pre.beacon,
+      executionBlockHash: pre.execution.blockHash,
+      executionBranch: normalizeMerkleBranch(
+        [...executionBranch, ...pre.executionBranch],
+        EXECUTION_BLOCK_HASH_GINDEX_GLOAS
+      ),
+    };
+  }
+
+  const pre = header as LightClientHeader<ForkName.capella>;
+  const blockHashGindex = ssz.capella.ExecutionPayloadHeader.getPathInfo(["blockHash"]).gindex;
+  const executionBranch = new Tree(ssz.capella.ExecutionPayloadHeader.toView(pre.execution).node).getSingleProof(
+    blockHashGindex
+  );
+
+  return {
+    beacon: pre.beacon,
+    executionBlockHash: pre.execution.blockHash,
+    executionBranch: normalizeMerkleBranch(
+      [...executionBranch, ...pre.executionBranch],
+      EXECUTION_BLOCK_HASH_GINDEX_GLOAS
+    ),
+  };
+}

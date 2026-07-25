@@ -241,6 +241,11 @@ export function getBeaconPoolApi({
               payloadAttestationMessage.data.blobDataAvailable
             );
 
+            chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
+              version: chain.config.getForkName(slot),
+              data: payloadAttestationMessage,
+            });
+
             await network.publishPayloadAttestationMessage(payloadAttestationMessage);
           } catch (e) {
             const logCtx = {
