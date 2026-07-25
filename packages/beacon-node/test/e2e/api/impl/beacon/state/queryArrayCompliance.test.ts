@@ -16,7 +16,7 @@ import {getDevBeaconNode} from "../../../../../utils/node/beacon.js";
  * querystring `arrayLimit` was below the spec `maxItems`. The unit coverage in the sibling PR pins the
  * parser at the `RestApiServer` level; this suite exercises the full request path against a running node.
  *
- * Scope — an audit of every query-array param across the beacon-API surface shows only two carry more
+ * Scope: an audit of every query-array param across the beacon-API surface shows only two carry more
  * than ~20 items in normal client usage, and both are validator-id queries covered here:
  *   - `getStateValidators` / `getStateValidatorBalances` `id` (maxItems=64)
  *   - `getDebugDataColumnSidecars` `indices` (maxItems=NUMBER_OF_COLUMNS)
@@ -61,13 +61,13 @@ describe("beacon-api query string array length compliance", () => {
     it(`getStateValidators accepts ${n} validator ids`, async () => {
       const validatorIds = Array.from({length: n}, (_, i) => i);
       const validators = (await client.getStateValidators({stateId: "head", validatorIds})).value();
-      expect(validators).toHaveLength(n);
+      expect(validators, `getStateValidators should return ${n} validators for ${n} requested ids`).toHaveLength(n);
     });
 
     it(`getStateValidatorBalances accepts ${n} validator ids`, async () => {
       const validatorIds = Array.from({length: n}, (_, i) => i);
       const balances = (await client.getStateValidatorBalances({stateId: "head", validatorIds})).value();
-      expect(balances).toHaveLength(n);
+      expect(balances, `getStateValidatorBalances should return ${n} balances for ${n} requested ids`).toHaveLength(n);
     });
   }
 
