@@ -8,9 +8,12 @@ import {ReqRespMethod} from "../../../../src/network/reqresp/types.js";
 
 describe("network / reqresp / rateLimitQuotas", () => {
   it("uses MAX_REQUEST_PAYLOADS for ExecutionPayloadEnvelopesByRange", () => {
-    const config = createBeaconConfig(getConfig(ForkName.gloas), ZERO_HASH);
+    // Override MAX_REQUEST_PAYLOADS to differ from MAX_REQUEST_BLOCKS_DENEB (both default to 128),
+    // otherwise this test cannot distinguish the two limits
+    const config = createBeaconConfig({...getConfig(ForkName.gloas), MAX_REQUEST_PAYLOADS: 64}, ZERO_HASH);
     const quotas = rateLimitQuotas(ForkName.gloas, config);
 
+    expect(config.MAX_REQUEST_PAYLOADS).not.toBe(config.MAX_REQUEST_BLOCKS_DENEB);
     expect(quotas[ReqRespMethod.ExecutionPayloadEnvelopesByRange].byPeer?.quota).toBe(config.MAX_REQUEST_PAYLOADS);
   });
 });
