@@ -13,7 +13,7 @@ import {
   Slot,
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
-import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {GWEI_TO_WEI, extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -238,16 +238,23 @@ export class BlockProposingService {
         })
         .catch((e: Error) => {
           this.metrics?.blockProposingErrors.inc({error: "publish"});
-          throw extendError(e, "Failed to publish block");
+          throw extendError(e, `Failed to publish block slot=${slot} blockRoot=${blockRootHex}`);
         })
     ).assertOk();
 
-    this.logger.debug("Published beacon block", {...debugLogCtx, broadcastValidation});
+    this.logger.info("Published beacon block", {
+      ...logCtx,
+      graffiti,
+      consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+      blockRoot: blockRootHex,
+      broadcastValidation,
+    });
 
     const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
 
     if (isSelfBuild) {
       // Self-build: proposer is responsible for building and publishing the execution payload envelope
+      const flow = executionPayloadIncluded ? "stateless" : "stateful";
       if (executionPayloadIncluded) {
         // Stateless flow: envelope and blobs are already available from block production
         const {executionPayloadEnvelope, kzgProofs, blobs} = blockOrContents as BlockContents<ForkPostGloas>;
@@ -270,7 +277,7 @@ export class BlockProposingService {
               this.metrics?.payloadEnvelopeProposingErrors.inc({error: "publish"});
               throw extendError(
                 e,
-                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} executionPayloadIncluded=${executionPayloadIncluded}`
+                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} flow=${flow}`
               );
             })
         ).assertOk();
@@ -307,26 +314,25 @@ export class BlockProposingService {
               this.metrics?.payloadEnvelopeProposingErrors.inc({error: "publish"});
               throw extendError(
                 e,
-                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} executionPayloadIncluded=${executionPayloadIncluded}`
+                `Failed to publish execution payload envelope slot=${slot} blockRoot=${blockRootHex} flow=${flow}`
               );
             })
         ).assertOk();
       }
 
-      this.logger.info("Published block and execution payload envelope", {
+      this.logger.info("Published execution payload envelope", {
         ...logCtx,
-        graffiti,
-        consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
         blockRoot: blockRootHex,
-        executionPayloadIncluded,
+        flow,
       });
     } else {
-      // Builder is responsible for broadcasting the execution payload envelope
-      this.logger.info("Published block with builder bid, envelope expected from builder", {
+      // Committed to a builder bid, the builder is responsible for revealing the execution payload envelope
+      const bid = block.body.signedExecutionPayloadBid.message;
+      this.logger.info("Execution payload envelope to be revealed by builder", {
         ...logCtx,
-        graffiti,
-        builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
-        consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+        builderIndex: bid.builderIndex,
+        // Payment the builder committed to pay the proposer for the block
+        executionPayloadValue: prettyWeiToEth(BigInt(bid.value) * GWEI_TO_WEI),
         blockRoot: blockRootHex,
       });
     }
