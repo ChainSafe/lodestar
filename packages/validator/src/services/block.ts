@@ -257,6 +257,8 @@ export class BlockProposingService {
       blockRoot: blockRootHex,
       broadcastValidation,
     });
+    this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
+    this.metrics?.blocksPublished.inc();
 
     const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
 
@@ -341,9 +343,6 @@ export class BlockProposingService {
         blockRoot: blockRootHex,
       });
     }
-
-    this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
-    this.metrics?.blocksPublished.inc();
   }
 
   private publishBlockWrapper = async (
