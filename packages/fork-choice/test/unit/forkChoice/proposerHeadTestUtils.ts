@@ -39,7 +39,12 @@ export function getPayloadBlockHash(slot: Slot): RootHex {
  * isGloasBlock() keys off parentBlockHash being non-null, so `isGloas` decides whether the block
  * carries the three payload variants (PENDING/EMPTY/FULL) or just FULL.
  */
-export function toProtoBlock(slot: Slot, parentRoot: RootHex, isGloas: boolean): ProtoBlock {
+export function toProtoBlock(
+  slot: Slot,
+  parentRoot: RootHex,
+  isGloas: boolean,
+  overrides: Partial<ProtoBlock> = {}
+): ProtoBlock {
   return {
     slot,
     blockRoot: getBlockRoot(slot),
@@ -68,7 +73,11 @@ export function toProtoBlock(slot: Slot, parentRoot: RootHex, isGloas: boolean):
 
     parentBlockHash: isGloas ? getPayloadBlockHash(slot - 1) : null,
     payloadStatus: PayloadStatus.FULL,
-  };
+
+    ...overrides,
+    // ProtoBlock is a union over the execution fields; spreading Partial<ProtoBlock> loses the
+    // narrowing even though every base object here is the post-merge shape
+  } as ProtoBlock;
 }
 
 /** A state whose only slot committee is every validator, so equivocators always count */

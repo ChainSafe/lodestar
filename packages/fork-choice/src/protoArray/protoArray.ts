@@ -1984,16 +1984,15 @@ export class ProtoArray {
   }
 
   /**
-   * Find blocks at `slot` proposed by `proposerIndex` that are PTC-timely, excluding `excludeRoot`.
-   * Used by `should_apply_proposer_boost` to detect proposer equivocations.
+   * Return true if a block other than `excludeRoot` at `slot` was proposed by `proposerIndex` and
+   * is PTC-timely. Used by `should_apply_proposer_boost` to detect proposer equivocations.
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
    *
    * Iterates unique block roots (via the canonical variant) since `slot`, `proposerIndex` and
    * `ptcTimeliness` are block-level properties identical across payload-status variants.
    */
-  findEquivocatingBlocks(proposerIndex: ValidatorIndex, slot: Slot, excludeRoot: RootHex): ProtoNode[] {
-    const result: ProtoNode[] = [];
+  hasEquivocatingBlock(proposerIndex: ValidatorIndex, slot: Slot, excludeRoot: RootHex): boolean {
     for (const root of this.indices.keys()) {
       if (root === excludeRoot) {
         continue;
@@ -2004,10 +2003,10 @@ export class ProtoArray {
       }
       const node = this.nodes[nodeIndex];
       if (node !== undefined && node.slot === slot && node.proposerIndex === proposerIndex && node.ptcTimeliness) {
-        result.push(node);
+        return true;
       }
     }
-    return result;
+    return false;
   }
 
   /**

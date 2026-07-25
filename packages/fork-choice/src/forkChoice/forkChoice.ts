@@ -571,32 +571,41 @@ export class ForkChoice implements IForkChoice {
     computeDeltasMetrics?.newVoteValidators.set(newVoteValidators);
 
     this.balances = newBalances;
-    /**
-     * The structure in line with deltas to propagate boost up the branch
-     * starting from the proposerIndex
-     */
-    let proposerBoost: {root: RootHex; score: number} | null = null;
-    if (this.opts?.proposerBoost && this.proposerBoostRoot && this.shouldApplyProposerBoost()) {
-      const proposerBoostScore =
-        this.justifiedProposerBoostScore ??
-        getCommitteeFraction(this.fcStore.justified.totalBalance, {
-          slotsPerEpoch: SLOTS_PER_EPOCH,
-          committeePercent: this.config.PROPOSER_SCORE_BOOST,
-        });
-      proposerBoost = {root: this.proposerBoostRoot, score: proposerBoostScore};
-      this.justifiedProposerBoostScore = proposerBoostScore;
-    }
 
     const currentSlot = this.fcStore.currentSlot;
-    this.protoArray.applyScoreChanges({
-      attestationDeltas,
-      proposerBoost,
+    const checkpoints = {
       justifiedEpoch: this.fcStore.justified.checkpoint.epoch,
       justifiedRoot: this.fcStore.justified.checkpoint.rootHex,
       finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
       finalizedRoot: this.fcStore.finalizedCheckpoint.rootHex,
       currentSlot,
-    });
+    };
+
+    const boostedBlock =
+      this.opts?.proposerBoost && this.proposerBoostRoot ? this.getBlockHexDefaultStatus(this.proposerBoostRoot) : null;
+
+    if (boostedBlock && isGloasBlock(boostedBlock)) {
+      // should_apply_proposer_boost judges the parent against the attestations known to the store,
+      // via is_head_weak (which also assumes equivocators' votes were already discounted before
+      // their balance is added back). Apply the attestation deltas first so the decision reads
+      // post-delta scores, then apply the boost in a second pass.
+      // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
+      this.protoArray.applyScoreChanges({attestationDeltas, proposerBoost: null, ...checkpoints});
+      const proposerBoost = this.shouldApplyProposerBoost() ? this.getProposerBoost() : null;
+      this.protoArray.applyScoreChanges({
+        attestationDeltas: new Array<number>(this.protoArray.nodes.length).fill(0),
+        proposerBoost,
+        ...checkpoints,
+      });
+    } else {
+      // Pre-gloas the boost is unconditional, so attestation deltas and boost deltas can propagate
+      // up the branch in a single pass
+      this.protoArray.applyScoreChanges({
+        attestationDeltas,
+        proposerBoost: boostedBlock ? this.getProposerBoost() : null,
+        ...checkpoints,
+      });
+    }
 
     // findHead returns the ProtoNode representing the head
     const head = this.protoArray.findHead(this.fcStore.justified.checkpoint.rootHex, currentSlot);
@@ -1721,13 +1730,27 @@ export class ForkChoice implements IForkChoice {
 
     // Parent is weak and from the previous slot: apply boost only if there are no early
     // equivocations, ie. no other PTC-timely block at the parent's slot from the same proposer.
-    const equivocations = this.protoArray.findEquivocatingBlocks(
-      parentBlock.proposerIndex,
-      parentBlock.slot,
-      parentBlock.blockRoot
-    );
+    return !this.protoArray.hasEquivocatingBlock(parentBlock.proposerIndex, parentBlock.slot, parentBlock.blockRoot);
+  }
 
-    return equivocations.length === 0;
+  /**
+   * The proposer boost to apply to `proposerBoostRoot`, propagated up the branch by
+   * applyScoreChanges() together with the deltas.
+   */
+  private getProposerBoost(): {root: RootHex; score: number} | null {
+    if (!this.proposerBoostRoot) {
+      return null;
+    }
+
+    const proposerBoostScore =
+      this.justifiedProposerBoostScore ??
+      getCommitteeFraction(this.fcStore.justified.totalBalance, {
+        slotsPerEpoch: SLOTS_PER_EPOCH,
+        committeePercent: this.config.PROPOSER_SCORE_BOOST,
+      });
+    this.justifiedProposerBoostScore = proposerBoostScore;
+
+    return {root: this.proposerBoostRoot, score: proposerBoostScore};
   }
 
   /**
