@@ -86,18 +86,18 @@ describe("RestApiServer query string array parsing", () => {
     for (const n of ACCEPTED_COUNTS) {
       it(`parses ${n} comma-separated ids as an array`, async () => {
         const res = await server.fastify.inject({method: "GET", url: `/validators?${commaQuery("id", n)}`});
-        expect(res.statusCode).toBe(200);
+        expect(res.statusCode, `comma-separated id query with ${n} items should be accepted (200)`).toBe(200);
         const {id} = res.json() as {id: unknown[]};
-        expect(Array.isArray(id)).toBe(true);
-        expect(id).toHaveLength(n);
+        expect(Array.isArray(id), `comma-separated id query with ${n} items should parse as an array`).toBe(true);
+        expect(id, `comma-separated id query should preserve all ${n} parsed items`).toHaveLength(n);
       });
 
       it(`parses ${n} repeated ids as an array`, async () => {
         const res = await server.fastify.inject({method: "GET", url: `/validators?${repeatedQuery("id", n)}`});
-        expect(res.statusCode).toBe(200);
+        expect(res.statusCode, `repeated id query with ${n} items should be accepted (200)`).toBe(200);
         const {id} = res.json() as {id: unknown[]};
-        expect(Array.isArray(id)).toBe(true);
-        expect(id).toHaveLength(n);
+        expect(Array.isArray(id), `repeated id query with ${n} items should parse as an array`).toBe(true);
+        expect(id, `repeated id query should preserve all ${n} parsed items`).toHaveLength(n);
       });
     }
 
