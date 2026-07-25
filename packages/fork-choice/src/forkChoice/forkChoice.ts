@@ -1586,7 +1586,8 @@ export class ForkChoice implements IForkChoice {
     // Only ever called on a block already in fork choice, so a miss is a broken invariant.
     const node = this.protoArray.getNodeDefaultStatus(blockRoot);
     if (node === undefined) {
-      // this is called for head so we should always have this in forkchoice, otherwise we have a serious error
+      // this is called for head or the boosted block's parent, both of which should always be
+      // in forkchoice, otherwise we have a serious error
       throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: blockRoot});
     }
 
@@ -1606,7 +1607,7 @@ export class ForkChoice implements IForkChoice {
     // always 0. Return before fetching the state and walking the block's committees.
     if (equivocatingIndices.size > 0) {
       const state = this.fcStore.stateGetter({stateRoot: node.stateRoot});
-      // Only ever called on the head, so the state is always cached.
+      // Only ever called on the head or the boosted block's parent, so the state is always cached.
       // A miss is a broken invariant, not a recoverable state.
       if (state === null) {
         throw new ForkChoiceError({
@@ -1671,18 +1672,26 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Check if block arrived before the PTC deadline.
+   * Return true if the block arrived before the PTC (payload-timeliness committee) deadline,
+   * ie. block_timeliness[PTC_TIMELINESS_INDEX].
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-record_block_timeliness
+   *
+   * Child class can overwrite this for testing purpose.
    */
-  private isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
-    const isCurrentSlot = this.fcStore.currentSlot === block.slot;
+  protected isBlockPtcTimely(block: BeaconBlock, blockDelaySec: number): boolean {
     const ptcThresholdMs = this.config.getSlotComponentDurationMs(this.config.PAYLOAD_ATTESTATION_DUE_BPS);
-    return isCurrentSlot && blockDelaySec * 1000 < ptcThresholdMs;
+    return this.fcStore.currentSlot === block.slot && blockDelaySec * 1000 < ptcThresholdMs;
   }
 
   /**
-   * Spec: gloas/fork-choice.md#new-should_apply_proposer_boost
-   * Determines whether proposer boost should apply for gloas blocks.
-   * Returns true for pre-gloas blocks (unconditional boost).
+   * Determine whether proposer boost should be applied to `proposerBoostRoot`.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
+   *
+   * Pre-gloas blocks always receive the boost (unconditional, backward compatible). For gloas
+   * blocks the boost is withheld when the parent is a weak block from the previous slot and the
+   * proposer of that parent equivocated (published another PTC-timely block at the same slot).
    */
   private shouldApplyProposerBoost(): boolean {
     if (!this.proposerBoostRoot) {
@@ -1690,8 +1699,8 @@ export class ForkChoice implements IForkChoice {
     }
 
     const boostedBlock = this.getBlockHexDefaultStatus(this.proposerBoostRoot);
+    // Pre-gloas blocks always get boost
     if (!boostedBlock || !isGloasBlock(boostedBlock)) {
-      // Pre-gloas blocks always get boost
       return true;
     }
 
@@ -1700,26 +1709,18 @@ export class ForkChoice implements IForkChoice {
       return true;
     }
 
-    const slot = boostedBlock.slot;
-
     // Apply proposer boost if parent is not from the previous slot
-    if (parentBlock.slot + 1 < slot) {
+    if (parentBlock.slot + 1 < boostedBlock.slot) {
       return true;
     }
 
     // Apply proposer boost if parent is not weak
-    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
-      slotsPerEpoch: SLOTS_PER_EPOCH,
-      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
-    });
-    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentBlock.payloadStatus);
-    if (parentNode === undefined || parentNode.weight >= reorgThreshold) {
-      // Parent is not weak
+    if (!this.isHeadWeak(parentBlock.blockRoot)) {
       return true;
     }
 
-    // Parent is weak and from the previous slot: apply boost if there are no equivocations
-    // Look for other PTC-timely blocks at the same slot from the same proposer
+    // Parent is weak and from the previous slot: apply boost only if there are no early
+    // equivocations, ie. no other PTC-timely block at the parent's slot from the same proposer.
     const equivocations = this.protoArray.findEquivocatingBlocks(
       parentBlock.proposerIndex,
       parentBlock.slot,

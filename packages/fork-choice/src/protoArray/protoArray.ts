@@ -1,7 +1,7 @@
 import {BitArray} from "@chainsafe/ssz";
 import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot} from "@lodestar/types";
+import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
 import {ForkChoiceError, ForkChoiceErrorCode} from "../forkChoice/errors.js";
 import {LVHExecError, LVHExecErrorCode, ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
@@ -1984,6 +1984,33 @@ export class ProtoArray {
   }
 
   /**
+   * Find blocks at `slot` proposed by `proposerIndex` that are PTC-timely, excluding `excludeRoot`.
+   * Used by `should_apply_proposer_boost` to detect proposer equivocations.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#new-should_apply_proposer_boost
+   *
+   * Iterates unique block roots (via the canonical variant) since `slot`, `proposerIndex` and
+   * `ptcTimeliness` are block-level properties identical across payload-status variants.
+   */
+  findEquivocatingBlocks(proposerIndex: ValidatorIndex, slot: Slot, excludeRoot: RootHex): ProtoNode[] {
+    const result: ProtoNode[] = [];
+    for (const root of this.indices.keys()) {
+      if (root === excludeRoot) {
+        continue;
+      }
+      const nodeIndex = this.getDefaultNodeIndex(root);
+      if (nodeIndex === undefined) {
+        continue;
+      }
+      const node = this.nodes[nodeIndex];
+      if (node !== undefined && node.slot === slot && node.proposerIndex === proposerIndex && node.ptcTimeliness) {
+        result.push(node);
+      }
+    }
+    return result;
+  }
+
+  /**
    * Return MUTABLE ProtoBlock for blockRoot with explicit payload status
    *
    * @param blockRoot - The block root to look up
@@ -2122,25 +2149,6 @@ export class ProtoArray {
     }
 
     return node;
-  }
-
-  /**
-   * Find blocks at the given slot from the same proposer that are PTC-timely,
-   * excluding the given block root.
-   * Spec: gloas/fork-choice.md#new-should_apply_proposer_boost (equivocations check)
-   */
-  findEquivocatingBlocks(proposerIndex: number, slot: Slot, excludeRoot: RootHex): ProtoNode[] {
-    const result: ProtoNode[] = [];
-    for (const [root, variantOrArr] of this.indices.entries()) {
-      if (root === excludeRoot) continue;
-      const nodeIndex = Array.isArray(variantOrArr) ? variantOrArr[0] : variantOrArr;
-      if (nodeIndex === undefined) continue;
-      const node = this.nodes[nodeIndex];
-      if (node !== undefined && node.slot === slot && node.proposerIndex === proposerIndex && node.ptcTimeliness) {
-        result.push(node);
-      }
-    }
-    return result;
   }
 
   private getNodesBetween(upperIndex: number, lowerIndex: number): ProtoNode[] {

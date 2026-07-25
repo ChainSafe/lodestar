@@ -57,6 +57,8 @@ export function toProtoBlock(slot: Slot, parentRoot: RootHex, isGloas: boolean):
     unrealizedFinalizedRoot: getBlockRoot(genesisSlot),
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
 
     executionPayloadBlockHash: getPayloadBlockHash(slot),
     executionPayloadNumber: slot,

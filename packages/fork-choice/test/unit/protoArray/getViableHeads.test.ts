@@ -26,6 +26,8 @@ function blockFields(overrides: {
     unrealizedFinalizedRoot: "0",
 
     timeliness: false,
+    ptcTimeliness: false,
+    proposerIndex: 0,
 
     ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     dataAvailabilityStatus: DataAvailabilityStatus.PreData,

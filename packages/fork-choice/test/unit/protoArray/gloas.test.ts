@@ -49,7 +49,7 @@ describe("Gloas Fork Choice", () => {
       unrealizedFinalizedEpoch: genesisEpoch,
       unrealizedFinalizedRoot: genesisRoot,
       timeliness: true,
-      ptcTimeliness: false,
+      ptcTimeliness: true,
       proposerIndex: 0,
       executionPayloadBlockHash: blockRoot, // Use blockRoot as execution hash
       executionPayloadNumber: slot,

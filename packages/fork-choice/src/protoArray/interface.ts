@@ -1,5 +1,5 @@
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
+import {Epoch, RootHex, Slot, UintNum64, ValidatorIndex} from "@lodestar/types";
 
 // RootHex is a root as a hex string
 // Used for lightweight and easy comparison
@@ -142,15 +142,14 @@ export type ProtoBlock = BlockExtraMeta & {
   unrealizedFinalizedRoot: RootHex;
 
   // Indicate whether block arrives in a timely manner ie. before the 4 second mark
-  // Spec: Store.block_timeliness[ATTESTATION_TIMELINESS_INDEX]
   timeliness: boolean;
 
   // Indicate whether block arrives before the PTC deadline
-  // Spec: Store.block_timeliness[PTC_TIMELINESS_INDEX]
+  // Spec: gloas/fork-choice.md#modified-record_block_timeliness (block_timeliness[PTC_TIMELINESS_INDEX])
   ptcTimeliness: boolean;
 
-  // The index of the block proposer
-  proposerIndex: number;
+  // The index of the block proposer. Used by should_apply_proposer_boost to detect proposer equivocations
+  proposerIndex: ValidatorIndex;
 
   /** Payload status for this node (Gloas fork). Always FULL in pre-gloas */
   payloadStatus: PayloadStatus;
