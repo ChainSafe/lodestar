@@ -1,8 +1,7 @@
-import { SecretKey } from "@chainsafe/blst";
-import { BeaconConfig } from "@lodestar/config";
-import { BLSPubkey, gloas } from "@lodestar/types";
-import {getExecutionPayloadBidSigningRoot} from "@lodestar/state-transition";
-
+import {SecretKey} from "@chainsafe/blst";
+import {BeaconConfig} from "@lodestar/config";
+import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
+import {BLSPubkey, gloas} from "@lodestar/types";
 
 type Signer = {
   publicKey: BLSPubkey;
@@ -30,9 +29,7 @@ export class BuilderSigner {
     };
   }
 
-  signExecutionPayloadBid(
-    bid: gloas.ExecutionPayloadBid
-  ): gloas.SignedExecutionPayloadBid {
+  signExecutionPayloadBid(bid: gloas.ExecutionPayloadBid): gloas.SignedExecutionPayloadBid {
     const signingRoot = getExecutionPayloadBidSigningRoot(this.config, bid.slot, bid);
 
     return {
