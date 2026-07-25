@@ -41,7 +41,7 @@
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",
@@ -56,7 +56,7 @@
     "uint8arraylist": "^2.4.7"
   },
   "devDependencies": {
-    "@chainsafe/ssz": "^1.4.0",
+    "@chainsafe/ssz": "^1.6.2",
     "@libp2p/crypto": "^5.1.13",
     "@libp2p/peer-id": "^6.0.4",
     "@lodestar/logger": "workspace:^",

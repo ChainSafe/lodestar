@@ -249,7 +249,7 @@ export function getBeaconBlockApi({
               "api_reject_parent_unknown"
             );
             throw new BlockError(signedBlock, {
-              code: BlockErrorCode.PARENT_UNKNOWN,
+              code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
               parentRoot: toRootHex(signedBlock.message.parentRoot),
             });
           }
@@ -334,7 +334,8 @@ export function getBeaconBlockApi({
           .catch((e) => {
             if (
               e instanceof BlockError &&
-              (e.type.code === BlockErrorCode.PARENT_UNKNOWN || e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
             ) {
               chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,
@@ -345,7 +346,9 @@ export function getBeaconBlockApi({
             throw e;
           }),
     ];
-    const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
+    const sentPeersArr = await promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
+      publishPromises
+    );
 
     if (isForkPostGloas(fork)) {
       // After gloas, data columns are not published with the block but when publishing the execution payload envelope
@@ -356,10 +359,13 @@ export function getBeaconBlockApi({
       // + 1 because we publish to beacon_block first
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         // + 1 because we publish to beacon_block first
-        const sentPeers = sentPeersArr[i + 1] as number;
-        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar() api
+        const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
+        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar()
         metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
-        if (sentPeers === 0) {
+        // A duplicate publish (alreadyPublished=true) means the column is already propagating on the network —
+        // expected in self-build flows where peers gossip columns back to us before we publish the envelope.
+        // Only warn when we genuinely failed to reach any peer. See https://github.com/ChainSafe/lodestar/issues/9527.
+        if (sentPeers === 0 && !alreadyPublished) {
           columnsPublishedWithZeroPeers++;
         }
       }
@@ -774,7 +780,9 @@ export function getBeaconBlockApi({
         () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
-      const publishPromise = promiseAllMaybeAsync<number | void>(publishPromises);
+      const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
+        publishPromises
+      );
 
       chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
         slot,
@@ -790,9 +798,11 @@ export function getBeaconBlockApi({
         let columnsPublishedWithZeroPeers = 0;
         // Skip first entry (envelope); the final entry is processExecutionPayload(), which returns void.
         for (let i = 0; i < dataColumnSidecars.length; i++) {
-          const sentPeers = sentPeersArr[i + 1] as number;
+          const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
-          if (sentPeers === 0) {
+          // A duplicate publish means the column is already propagating — expected in self-build flows.
+          // Only warn when we genuinely failed to reach any peer. See https://github.com/ChainSafe/lodestar/issues/9527.
+          if (sentPeers === 0 && !alreadyPublished) {
             columnsPublishedWithZeroPeers++;
           }
         }

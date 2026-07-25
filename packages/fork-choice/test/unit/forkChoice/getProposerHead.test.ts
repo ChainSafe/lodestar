@@ -282,7 +282,7 @@ describe("Forkchoice / GetProposerHead", () => {
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
       const currentSecFromSlot = secFromSlot ?? 0;
       protoArr.applyScoreChanges({
-        deltas: [0, parentBlock.weight, headBlock.weight],
+        attestationDeltas: [0, parentBlock.weight, headBlock.weight],
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,

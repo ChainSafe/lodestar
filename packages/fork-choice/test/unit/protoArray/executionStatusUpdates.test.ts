@@ -135,7 +135,7 @@ function setupForkChoice(): ProtoArray {
 
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas,
+    attestationDeltas: deltas,
     proposerBoost: null,
     justifiedEpoch: 0,
     justifiedRoot: "-",

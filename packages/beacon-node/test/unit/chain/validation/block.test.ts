@@ -106,7 +106,7 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("PARENT_UNKNOWN (fork-choice)", async () => {
+  it("PARENT_BLOCK_UNKNOWN (fork-choice)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Return not known for parent block too
@@ -114,7 +114,7 @@ describe("gossip block validation", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
-      BlockErrorCode.PARENT_UNKNOWN
+      BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
 
@@ -130,7 +130,7 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("PARENT_UNKNOWN (regen)", async () => {
+  it("PARENT_BLOCK_UNKNOWN (regen)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -140,7 +140,7 @@ describe("gossip block validation", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
-      BlockErrorCode.PARENT_UNKNOWN
+      BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
 

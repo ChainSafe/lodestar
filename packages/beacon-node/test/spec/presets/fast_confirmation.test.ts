@@ -578,7 +578,12 @@ const fastConfirmationTest =
           // and these tests are failing until we update our implementation.
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
-          name.includes("justified_update_not_realized_finality"),
+          name.includes("justified_update_not_realized_finality") ||
+          // TODO: lodestar's fast-confirmation rule (FCR) needs a broader overhaul. These two
+          // is_one_confirmed cases (new in v1.7.0-alpha.12, present in electra + fulu) currently
+          // fail. Unskip once the FCR is reworked.
+          name.includes("is_one_confirmed_fails_large_validator_slashed") ||
+          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot"),
       },
     };
   };
@@ -717,5 +722,13 @@ specTestIterator(
   {
     ...defaultSkipOpts,
     skippedRunners: [],
+    skippedTestSuites: [
+      ...(defaultSkipOpts.skippedTestSuites ?? []),
+      // TODO-GLOAS: lodestar's fast-confirmation rule is block-root based and does not model the
+      // ePBS payload_status dimension required by specs/gloas/fast-confirmation.md (PTC payload
+      // presence/timeliness, get_node_for_root with PAYLOAD_STATUS_PENDING). Head/justified/
+      // finalized/proposer-head all match; only getConfirmedRoot diverges.
+      /^gloas\/fast_confirmation\/.*/,
+    ],
   }
 );

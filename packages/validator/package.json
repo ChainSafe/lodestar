@@ -34,8 +34,8 @@
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:spec": "vitest run --project spec-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "download-spec-tests": "node --import tsx test/spec/downloadTests.ts",
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",
@@ -49,7 +49,7 @@
   ],
   "dependencies": {
     "@chainsafe/blst": "^2.2.0",
-    "@chainsafe/ssz": "^1.4.0",
+    "@chainsafe/ssz": "^1.6.2",
     "@lodestar/api": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",
