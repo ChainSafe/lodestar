@@ -13,7 +13,7 @@ import {
   Slot,
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
-import {GWEI_TO_WEI, extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -218,7 +218,9 @@ export class BlockProposingService {
 
     this.logger.debug("Produced block", {
       ...debugLogCtx,
+      executionPayloadValue: prettyWeiToEth(blockMeta.executionPayloadValue),
       consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+      totalBlockValue: prettyWeiToEth(blockMeta.executionPayloadValue + blockMeta.consensusBlockValue),
       executionPayloadIncluded,
       blockRoot: blockRootHex,
     });
@@ -245,7 +247,9 @@ export class BlockProposingService {
     this.logger.info("Published beacon block", {
       ...logCtx,
       graffiti,
+      executionPayloadValue: prettyWeiToEth(blockMeta.executionPayloadValue),
       consensusBlockValue: prettyWeiToEth(blockMeta.consensusBlockValue),
+      totalBlockValue: prettyWeiToEth(blockMeta.executionPayloadValue + blockMeta.consensusBlockValue),
       blockRoot: blockRootHex,
       broadcastValidation,
     });
@@ -327,12 +331,9 @@ export class BlockProposingService {
       });
     } else {
       // Committed to a builder bid, the builder is responsible for revealing the execution payload envelope
-      const bid = block.body.signedExecutionPayloadBid.message;
       this.logger.info("Execution payload envelope to be revealed by builder", {
         ...logCtx,
-        builderIndex: bid.builderIndex,
-        // Payment the builder committed to pay the proposer for the block
-        executionPayloadValue: prettyWeiToEth(BigInt(bid.value) * GWEI_TO_WEI),
+        builderIndex: block.body.signedExecutionPayloadBid.message.builderIndex,
         blockRoot: blockRootHex,
       });
     }

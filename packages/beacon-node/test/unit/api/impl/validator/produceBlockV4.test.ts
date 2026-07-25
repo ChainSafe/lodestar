@@ -104,10 +104,17 @@ describe("api/validator - produceBlockV4", () => {
       consensusBlockValue: BigInt(0),
     }));
 
-    const {data: block} = await api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload: false});
+    const {data: block, meta} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+    });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(engineBlock);
+    expect(meta.executionPayloadValue).toBe(BigInt(2e9));
   });
 
   it("skips builder bids with executiononly selection", async () => {

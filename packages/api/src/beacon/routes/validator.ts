@@ -99,6 +99,8 @@ export const ProduceBlockV4MetaType = new ContainerType(
     ...VersionType.fields,
     /** Consensus rewards paid to the proposer for this block, in Wei */
     consensusBlockValue: ssz.UintBn64,
+    /** Local execution payload value when self-building, or builder bid value when committing to a bid, in Wei */
+    executionPayloadValue: ssz.UintBn64,
     /** Specifies whether the response contains full block contents or only the beacon block */
     executionPayloadIncluded: ssz.Boolean,
   },
@@ -973,11 +975,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           toHeadersObject: (meta) => ({
             [MetaHeader.Version]: meta.version,
             [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+            [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
             [MetaHeader.ExecutionPayloadIncluded]: meta.executionPayloadIncluded.toString(),
           }),
           fromHeaders: (headers) => ({
             version: toForkName(headers.getRequired(MetaHeader.Version)),
             consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
+            executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
             executionPayloadIncluded: toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadIncluded)),
           }),
         },

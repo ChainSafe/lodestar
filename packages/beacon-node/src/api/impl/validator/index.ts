@@ -1079,13 +1079,13 @@ export function getValidatorApi(
 
         return {
           data: blockContents,
-          meta: {version: fork, consensusBlockValue, executionPayloadIncluded: true},
+          meta: {version: fork, consensusBlockValue, executionPayloadValue, executionPayloadIncluded: true},
         };
       }
 
       return {
         data: block as gloas.BeaconBlock,
-        meta: {version: fork, consensusBlockValue, executionPayloadIncluded: false},
+        meta: {version: fork, consensusBlockValue, executionPayloadValue, executionPayloadIncluded: false},
       };
     },
 
