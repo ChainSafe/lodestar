@@ -1,7 +1,9 @@
+import {defaultOptions} from "@lodestar/builder";
 import {CliCommandOptions} from "@lodestar/utils";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
 
 export type IBuilderCliArgs = LogArgs & {
+  beaconNodeUrl: string;
   keystore: string;
   keystorePassword: string;
   builderPubkey?: string;
@@ -9,6 +11,12 @@ export type IBuilderCliArgs = LogArgs & {
 
 export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   ...logOptions,
+
+  beaconNodeUrl: {
+    description: "Url to a trusted beacon node",
+    type: "string",
+    default: defaultOptions.beaconNodeUrl,
+  },
 
   keystore: {
     description: "Path to a keystore file",

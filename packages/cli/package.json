@@ -70,6 +70,7 @@
     "@libp2p/peer-id": "^6.0.4",
     "@lodestar/api": "workspace:^",
     "@lodestar/beacon-node": "workspace:^",
+    "@lodestar/builder": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",
     "@lodestar/logger": "workspace:^",
