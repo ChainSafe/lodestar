@@ -3,10 +3,7 @@ import {SecretKey, Signature, verify} from "@chainsafe/blst";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName} from "@lodestar/params";
-import {
-  getExecutionPayloadBidSigningRoot,
-  getExecutionPayloadEnvelopeSigningRoot,
-} from "@lodestar/state-transition";
+import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {BuilderSigner} from "../../../src/services/builderSigner.js";
 
