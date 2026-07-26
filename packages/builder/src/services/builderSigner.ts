@@ -38,7 +38,7 @@ export class BuilderSigner {
     };
   }
 
-  getPubKey(): BLSPubkey {
+  getPubkey(): BLSPubkey {
     return this.signer.publicKey;
   }
 }
