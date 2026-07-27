@@ -3,7 +3,7 @@ import path from "node:path";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
-import {loadBuilderSigner} from "../../../../src/cmds/builder/signer.js";
+import {loadBuilderKeypair} from "../../../../src/cmds/builder/loadKeypair.js";
 import {testFilesDir} from "../../../utils.js";
 
 describe("Keystore loading", () => {
@@ -30,22 +30,22 @@ describe("Keystore loading", () => {
   });
 
   it("Successful keystore load", async () => {
-    const secretKey = await loadBuilderSigner(keystorePath, passwordPath);
+    const {secretKey} = await loadBuilderKeypair(keystorePath, passwordPath);
     expect(secretKey.toBytes()).toEqual(Uint8Array.from(secretKeyBytes));
   });
 
   it("Successful keystore load with matching pubkey", async () => {
-    const secretKey = await loadBuilderSigner(keystorePath, passwordPath, publicKey.toHex());
+    const {secretKey} = await loadBuilderKeypair(keystorePath, passwordPath, publicKey.toHex());
     expect(secretKey.toBytes()).toEqual(Uint8Array.from(secretKeyBytes));
   });
 
   it("Successful keystore load with matching uppercase pubkey", async () => {
-    const secretKey = await loadBuilderSigner(keystorePath, passwordPath, publicKey.toHex().toUpperCase());
+    const {secretKey} = await loadBuilderKeypair(keystorePath, passwordPath, publicKey.toHex().toUpperCase());
     expect(secretKey.toBytes()).toEqual(Uint8Array.from(secretKeyBytes));
   });
 
   it("Shouldn't load with improper password", async () => {
-    await expect(loadBuilderSigner(keystorePath, wrongPasswordPath)).rejects.toThrow(
+    await expect(loadBuilderKeypair(keystorePath, wrongPasswordPath)).rejects.toThrow(
       `Invalid password for keystore ${keystorePath}`
     );
   });
@@ -54,7 +54,7 @@ describe("Keystore loading", () => {
     const wrongSecretKey = SecretKey.fromBytes(Buffer.alloc(32, 2));
     const wrongPublicKey = wrongSecretKey.toPublicKey().toHex();
 
-    await expect(loadBuilderSigner(keystorePath, passwordPath, wrongPublicKey)).rejects.toThrow(
+    await expect(loadBuilderKeypair(keystorePath, passwordPath, wrongPublicKey)).rejects.toThrow(
       `Pubkey mismatch: keystore ${publicKey.toHex()}, expected ${wrongPublicKey}`
     );
   });

@@ -7,8 +7,8 @@ import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {cleanOldLogFiles, onGracefulShutdown, parseLoggerArgs} from "../../util/index.js";
+import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs} from "./options.js";
-import {loadBuilderSigner} from "./signer.js";
 
 export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promise<void> {
   const abortController = new AbortController();
@@ -25,7 +25,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     logger.debug("Not able to delete log files", {}, e as Error);
   }
 
-  const secretKey = await loadBuilderSigner(args.keystore, args.keystorePassword, args.builderPubkey);
+  const keypair = await loadBuilderKeypair(args.keystore, args.keystorePassword, args.builderPubkey);
 
   onGracefulShutdown(async () => {
     abortController.abort();
@@ -37,7 +37,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   const _builder = Builder.init(
     {
-      secretKey,
+      keypair,
       logger,
       config,
       abortController,

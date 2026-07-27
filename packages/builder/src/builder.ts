@@ -1,10 +1,9 @@
-import {SecretKey} from "@chainsafe/blst";
 import {ApiClient} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "./metrics.js";
-import {BuilderSigner} from "./services/builderSigner.js";
+import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
@@ -17,7 +16,7 @@ export type BuilderModules = {
 export type BuilderOptions = {
   logger: Logger;
   config: ChainForkConfig;
-  secretKey: SecretKey;
+  keypair: Keypair;
   abortController: AbortController;
   api: ApiClient;
 };
@@ -40,7 +39,7 @@ export class Builder {
 
   static init(opts: BuilderOptions, genesis: Genesis, metrics: Metrics | null = null): Builder {
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
-    const builderSigner = new BuilderSigner(config, opts.secretKey);
+    const builderSigner = new BuilderSigner(config, opts.keypair);
 
     return new Builder({opts, builderSigner, config, logger: opts.logger, metrics});
   }

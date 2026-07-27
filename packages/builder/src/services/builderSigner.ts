@@ -1,20 +1,17 @@
-import {SecretKey} from "@chainsafe/blst";
+import {PublicKey, SecretKey} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
-import {BLSPubkey, gloas} from "@lodestar/types";
+import {gloas} from "@lodestar/types";
 
-type BLSKeypair = {publicKey: BLSPubkey; secretKey: SecretKey};
+export type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
 
 export class BuilderSigner {
   private readonly config: BeaconConfig;
-  private readonly keypair: BLSKeypair;
+  private readonly keypair: Keypair;
 
-  constructor(config: BeaconConfig, signerSecretKey: SecretKey) {
+  constructor(config: BeaconConfig, keypair: Keypair) {
     this.config = config;
-    this.keypair = {
-      publicKey: signerSecretKey.toPublicKey().toBytes(),
-      secretKey: signerSecretKey,
-    };
+    this.keypair = keypair;
   }
 
   signExecutionPayloadEnvelope(envelope: gloas.ExecutionPayloadEnvelope): gloas.SignedExecutionPayloadEnvelope {
@@ -35,7 +32,7 @@ export class BuilderSigner {
     };
   }
 
-  getPubkey(): BLSPubkey {
-    return this.keypair.publicKey;
+  getPubkeyHex(): string {
+    return this.keypair.publicKey.toHex();
   }
 }

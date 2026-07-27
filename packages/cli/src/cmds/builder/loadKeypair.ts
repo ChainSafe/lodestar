@@ -1,15 +1,15 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
-import {toPubkeyHex} from "@lodestar/utils";
+import {Keypair} from "@lodestar/builder";
 import {ensure0xPrefix} from "../../util/format.js";
 import {readPassphraseFile} from "../../util/passphrase.js";
 
-export async function loadBuilderSigner(
+export async function loadBuilderKeypair(
   keystorePath: string,
   passwordPath: string,
   expectedPubkey?: string
-): Promise<SecretKey> {
+): Promise<Keypair> {
   const password = readPassphraseFile(passwordPath);
   const keystoreStr = fs.readFileSync(keystorePath, "utf8");
   const keystore = Keystore.parse(keystoreStr);
@@ -21,12 +21,12 @@ export async function loadBuilderSigner(
   const secretKeyBytes = await keystore.decrypt(password);
   const secretKey = SecretKey.fromBytes(secretKeyBytes);
 
-  if (expectedPubkey) {
-    const pubkey = toPubkeyHex(secretKey.toPublicKey().toBytes());
-    if (pubkey !== ensure0xPrefix(expectedPubkey.toLowerCase())) {
-      throw Error(`Pubkey mismatch: keystore ${pubkey}, expected ${expectedPubkey}`);
-    }
+  const publicKey = secretKey.toPublicKey();
+  const publicKeyHex = publicKey.toHex();
+
+  if (expectedPubkey && publicKeyHex !== ensure0xPrefix(expectedPubkey.toLowerCase())) {
+    throw Error(`Pubkey mismatch: keystore ${publicKeyHex}, expected ${expectedPubkey}`);
   }
 
-  return secretKey;
+  return {secretKey, publicKey};
 }
