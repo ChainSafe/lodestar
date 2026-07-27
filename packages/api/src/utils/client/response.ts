@@ -5,10 +5,6 @@ import {WireFormat, getWireFormat} from "../wireFormat.js";
 import {ApiError} from "./error.js";
 import {RouteDefinitionExtra} from "./request.js";
 
-// TODO: Workaround for tsc import-elision bug: ensure this is treated as a runtime value.
-// https://github.com/microsoft/typescript-go/issues/2212
-void HttpStatusCode;
-
 export type RawBody =
   | {type: WireFormat.json; value: unknown}
   | {type: WireFormat.ssz; value: Uint8Array}
