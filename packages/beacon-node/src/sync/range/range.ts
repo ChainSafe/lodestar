@@ -343,7 +343,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         } catch (e) {
           this.logger.warn(
             "Skipping gloas empty-block detection for new sync chain, head state unavailable",
-            {syncType},
+            {syncType, code: "HEAD_STATE_UNAVAILABLE", headSlot: head.slot, headRoot: head.blockRoot},
             e as Error
           );
         }
