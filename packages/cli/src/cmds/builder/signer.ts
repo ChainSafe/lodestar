@@ -21,11 +21,11 @@ export async function loadBuilderSigner(
   const secretKeyBytes = await keystore.decrypt(password);
   const secretKey = SecretKey.fromBytes(secretKeyBytes);
 
-  if (
-    expectedPubkey &&
-    toPubkeyHex(secretKey.toPublicKey().toBytes()) !== ensure0xPrefix(expectedPubkey.toLowerCase())
-  ) {
-    throw Error("Pubkey mismatch");
+  if (expectedPubkey) {
+    const pubkey = toPubkeyHex(secretKey.toPublicKey().toBytes());
+    if (pubkey !== ensure0xPrefix(expectedPubkey.toLowerCase())) {
+      throw Error(`Pubkey mismatch: keystore ${pubkey}, expected ${expectedPubkey}`);
+    }
   }
 
   return secretKey;
