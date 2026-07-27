@@ -31,7 +31,7 @@ export const eventTestData: EventData = {
     executionOptimistic: false,
   },
   [EventType.headV2]: {
-    version: ForkName.bellatrix,
+    version: ForkName.gloas,
     data: {
       slot: 10,
       block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",

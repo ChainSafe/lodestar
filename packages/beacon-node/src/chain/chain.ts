@@ -1225,8 +1225,11 @@ export class BeaconChain implements IBeaconChain {
           // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
           this.logger.debug("Error emitting head/head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
         }
-      } else if (prevHead.payloadStatus !== PayloadStatus.FULL && head.payloadStatus === PayloadStatus.FULL) {
-        // Implies that block root is the same, emits on payload status change empty -> full.
+      } else if (
+        (prevHead.payloadStatus !== PayloadStatus.FULL && head.payloadStatus === PayloadStatus.FULL) ||
+        (prevHead.payloadStatus !== PayloadStatus.EMPTY && head.payloadStatus === PayloadStatus.EMPTY)
+      ) {
+        // Implies that block root is the same, emits on payload status change empty -> full or full -> empty.
         try {
           this.emitter.emit(routes.events.EventType.headV2, {
             version: this.config.getForkName(head.slot),
@@ -1234,7 +1237,7 @@ export class BeaconChain implements IBeaconChain {
               slot: head.slot,
               block: head.blockRoot,
               state: head.stateRoot,
-              payloadStatus: "full",
+              payloadStatus: head.payloadStatus === PayloadStatus.EMPTY ? "empty" : "full",
               epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
               currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
               nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),

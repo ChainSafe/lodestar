@@ -2,7 +2,7 @@ import {ApiClient, routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
 import {GENESIS_SLOT} from "@lodestar/params";
 import {Root, RootHex, Slot} from "@lodestar/types";
-import {Logger, fromHex, toRootHex} from "@lodestar/utils";
+import {Logger, fromHex} from "@lodestar/utils";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 
 const {EventType} = routes.events;
@@ -39,14 +39,12 @@ export class ChainHeaderTracker {
   start(signal: AbortSignal): void {
     this.logger.verbose("Subscribing to validator events");
 
+    const topics = [EventType.head];
     // We wait until the gloas fork is configured to avoid breaking
     // connections with pre-gloas beacon nodes
-    // Post-gloas BNs are required to support head_v2 per beacon-APIs#590,
-    // so we assume any gloas-configured BN will accept this topic.
-    const topics =
-      this.config.GLOAS_FORK_EPOCH === Infinity
-        ? [EventType.head]
-        : [EventType.headV2, EventType.executionPayloadAvailable];
+    if (this.config.GLOAS_FORK_EPOCH !== Infinity) {
+      topics.push(EventType.executionPayloadAvailable);
+    }
 
     this.api.events
       .eventstream({
@@ -100,42 +98,6 @@ export class ChainHeaderTracker {
         head: block,
         previousDuty: previousDutyDependentRoot,
         currentDuty: currentDutyDependentRoot,
-      });
-    }
-
-    if (event.type === EventType.headV2) {
-      const {data} = event.message;
-      const {slot, block, currentEpochDependentRoot, nextEpochDependentRoot} = data;
-
-      // head_v2 is emitted for the second time when the payload status transitions EMPTY -> FULL.
-      // The VC only tracks head root/slot and duty dependent roots, which are identical
-      // across a block's payload variants so we can skip the second emission (payload
-      // availability is delivered via `execution_payload_available` event).
-      if (this.headBlockRoot !== null && block === toRootHex(this.headBlockRoot)) {
-        return;
-      }
-
-      this.headBlockSlot = slot;
-      this.headBlockRoot = fromHex(block);
-
-      const headEventData = {
-        slot: this.headBlockSlot,
-        head: block,
-        previousDutyDependentRoot: currentEpochDependentRoot,
-        currentDutyDependentRoot: nextEpochDependentRoot,
-      };
-
-      for (const fn of this.fns) {
-        fn(headEventData).catch((e) => this.logger.error("Error calling head event handler", e));
-      }
-
-      this.emitter.emit(ValidatorEvent.chainHead, headEventData);
-
-      this.logger.verbose("Found new chain head", {
-        slot: slot,
-        head: block,
-        previousDuty: currentEpochDependentRoot,
-        currentDuty: nextEpochDependentRoot,
       });
     }
 
