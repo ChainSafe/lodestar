@@ -128,8 +128,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private readonly _getBeaconCommitteeCountPerSlot = new Map<Epoch, number>();
   private readonly _getShufflingDecisionRoot = new Map<Epoch, RootHex>();
   private readonly _getBeaconProposer = new Map<Slot, ValidatorIndex>();
-  // getBeaconProposerOrNull can return null, so use .has() to distinguish "not cached" from "cached null"
-  private readonly _getBeaconProposerOrNull = new Map<Slot, ValidatorIndex | null>();
   private readonly _getValidator = new Map<ValidatorIndex, phase0.Validator>();
   private readonly _getBalance = new Map<number, number>();
   private readonly _getIndexedSyncCommitteeAtEpoch = new Map<Epoch, SyncCommitteeCache>();
@@ -144,6 +142,7 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
   private _getNextShuffling: EpochShuffling | null = null;
   private _getEffectiveBalanceIncrementsZeroInactive: EffectiveBalanceIncrements | null = null;
   private _getAllValidators: phase0.Validator[] | null = null;
+  private _getBuildersLength: number | null = null;
   private _getAllBalances: number[] | null = null;
   private _getLatestWeakSubjectivityCheckpointEpoch: Epoch | null = null;
   private _getFinalizedRootProof: Uint8Array[] | null = null;
@@ -408,14 +407,6 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._getBeaconProposer.set(slot, cached);
     }
     return cached;
-  }
-
-  getBeaconProposerOrNull(slot: Slot): ValidatorIndex | null {
-    if (!this._getBeaconProposerOrNull.has(slot)) {
-      this._getBeaconProposerOrNull.set(slot, this.binding.getBeaconProposerOrNull(slot));
-    }
-    // biome-ignore lint/style/noNonNullAssertion: has() check guarantees a value
-    return this._getBeaconProposerOrNull.get(slot)!;
   }
 
   // Validators and balances
@@ -886,6 +877,13 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
       this._getBuilder.set(index, cached);
     }
     return cached;
+  }
+
+  getBuildersLength(): number {
+    if (this._getBuildersLength === null) {
+      this._getBuildersLength = this.binding.getBuildersLength();
+    }
+    return this._getBuildersLength;
   }
 
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {

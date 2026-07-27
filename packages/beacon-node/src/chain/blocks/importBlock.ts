@@ -9,7 +9,14 @@ import {
   NotReorgedReason,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
-import {ForkPostAltair, ForkPostElectra, ForkSeq, MAX_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  ForkPostAltair,
+  ForkPostElectra,
+  ForkSeq,
+  GENESIS_EPOCH,
+  MAX_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   RootCache,
@@ -117,18 +124,13 @@ export async function importBlock(
     executionStatus = parentBlock.executionStatus;
   }
 
-  // getBeaconProposerOrNull will return null if head state is more than one epoch away
-  // from block slot. We skip proposer boost canonical check as we cannot determine the canonical proposer
-  const expectedProposerIndex: number | null = this.getHeadState().getBeaconProposerOrNull(blockSlot);
-
   const blockSummary = this.forkChoice.onBlock(
     block.message,
     postState,
     blockDelaySec,
     currentSlot,
     executionStatus,
-    dataAvailabilityStatus,
-    expectedProposerIndex
+    dataAvailabilityStatus
   );
 
   // This adds the state necessary to process the next block
@@ -419,7 +421,7 @@ export async function importBlock(
       }
     } catch (e) {
       if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.NotShufflingStable;
+        notOverrideFcuReason = NotReorgedReason.AtEpochBoundary;
       } else {
         this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
       }
@@ -483,8 +485,15 @@ export async function importBlock(
   // Cache shufflings when crossing an epoch boundary
   const parentEpoch = computeEpochAtSlot(parentBlockSlot);
   if (parentEpoch < blockEpoch) {
-    this.shufflingCache.processState(postState);
-    this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    const previousEpoch = blockEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : blockEpoch - 1;
+    if (
+      !this.shufflingCache.has(previousEpoch, postState.previousDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch, postState.currentDecisionRoot) ||
+      !this.shufflingCache.has(blockEpoch + 1, postState.nextDecisionRoot)
+    ) {
+      this.shufflingCache.processState(postState);
+      this.logger.verbose("Processed shuffling for next epoch", {parentEpoch, blockEpoch, slot: blockSlot});
+    }
   }
 
   if (blockSlot % SLOTS_PER_EPOCH === 0) {

@@ -6,7 +6,6 @@ import {
   ForkPreElectra,
   MAX_PAYLOAD_ATTESTATIONS,
   PTC_SIZE,
-  SLOTS_PER_EPOCH,
   isForkPostElectra,
 } from "@lodestar/params";
 import {
@@ -47,12 +46,6 @@ const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecut
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
 const PayloadAttestationListType = ArrayOf(ssz.gloas.PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS);
 const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
-// 2 * SLOTS_PER_EPOCH max normally; getAll() may return up to 3 * SLOTS_PER_EPOCH during non-finality
-const MAX_PROPOSER_PREFERENCES_PER_REQUEST = 3 * SLOTS_PER_EPOCH;
-const SignedProposerPreferencesListType = ArrayOf(
-  ssz.gloas.SignedProposerPreferences,
-  MAX_PROPOSER_PREFERENCES_PER_REQUEST
-);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
 type AttestationListElectra = ValueOf<typeof AttestationListTypeElectra>;
@@ -68,7 +61,6 @@ type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeL
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
 type PayloadAttestationList = ValueOf<typeof PayloadAttestationListType>;
 type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
-type SignedProposerPreferencesList = ValueOf<typeof SignedProposerPreferencesListType>;
 
 export type Endpoints = {
   /**
@@ -92,18 +84,6 @@ export type Endpoints = {
     {slot?: Slot},
     {query: {slot?: number}},
     PayloadAttestationList,
-    VersionMeta
-  >;
-
-  /**
-   * Get signed proposer preferences from operations pool
-   * Retrieves proposer preferences known by the node but not necessarily incorporated into any block.
-   */
-  getPoolProposerPreferences: Endpoint<
-    "GET",
-    {slot?: Slot},
-    {query: {slot?: number}},
-    SignedProposerPreferencesList,
     VersionMeta
   >;
 
@@ -246,18 +226,6 @@ export type Endpoints = {
     EmptyResponseData,
     EmptyMeta
   >;
-
-  /**
-   * Submit signed proposer preferences
-   * Submits signed proposer preferences to the beacon node.
-   */
-  submitSignedProposerPreferences: Endpoint<
-    "POST",
-    {signedProposerPreferences: SignedProposerPreferencesList},
-    {body: unknown; headers: {[MetaHeader.Version]: string}},
-    EmptyResponseData,
-    EmptyMeta
-  >;
 };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -285,19 +253,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
       resp: {
         data: PayloadAttestationListType,
-        meta: VersionCodec,
-      },
-    },
-    getPoolProposerPreferences: {
-      url: "/eth/v1/beacon/pool/proposer_preferences",
-      method: "GET",
-      req: {
-        writeReq: ({slot}) => ({query: {slot}}),
-        parseReq: ({query}) => ({slot: query.slot}),
-        schema: {query: {slot: Schema.Uint}},
-      },
-      resp: {
-        data: SignedProposerPreferencesListType,
         meta: VersionCodec,
       },
     },
@@ -508,33 +463,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         parseReqSsz: ({body, headers}) => {
           toForkName(fromHeaders(headers, MetaHeader.Version));
           return {payloadAttestationMessages: PayloadAttestationMessageListType.deserialize(body)};
-        },
-        schema: {
-          body: Schema.ObjectArray,
-          headers: {[MetaHeader.Version]: Schema.String},
-        },
-      },
-      resp: EmptyResponseCodec,
-    },
-    submitSignedProposerPreferences: {
-      url: "/eth/v1/beacon/pool/proposer_preferences",
-      method: "POST",
-      req: {
-        writeReqJson: ({signedProposerPreferences}) => ({
-          body: SignedProposerPreferencesListType.toJson(signedProposerPreferences),
-          headers: {[MetaHeader.Version]: ForkName.gloas},
-        }),
-        parseReqJson: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {signedProposerPreferences: SignedProposerPreferencesListType.fromJson(body)};
-        },
-        writeReqSsz: ({signedProposerPreferences}) => ({
-          body: SignedProposerPreferencesListType.serialize(signedProposerPreferences),
-          headers: {[MetaHeader.Version]: ForkName.gloas},
-        }),
-        parseReqSsz: ({body, headers}) => {
-          toForkName(fromHeaders(headers, MetaHeader.Version));
-          return {signedProposerPreferences: SignedProposerPreferencesListType.deserialize(body)};
         },
         schema: {
           body: Schema.ObjectArray,

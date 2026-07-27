@@ -35,6 +35,7 @@ export type IChainOptions = BlockProcessOpts &
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
+    graffitiAppend?: boolean;
     maxSkipSlots?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
@@ -48,6 +49,10 @@ export type IChainOptions = BlockProcessOpts &
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
     nativeStateView?: boolean;
+    /** Builder circuit breaker fault inspection window in slots */
+    faultInspectionWindow?: number;
+    /** Allowed unrevealed payloads within the fault inspection window */
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {
@@ -107,6 +112,7 @@ export const defaultChainOptions: IChainOptions = {
   computeUnrealized: true,
   fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  graffitiAppend: true,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,

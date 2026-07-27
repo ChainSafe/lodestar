@@ -75,6 +75,7 @@ import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -107,7 +108,6 @@ import {
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
   SeenPayloadEnvelopeInput,
-  SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -152,6 +152,7 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
+  readonly builderCircuitBreaker: BuilderCircuitBreaker;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -189,7 +190,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
-  readonly seenProposerPreferences = new SeenProposerPreferences();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -426,6 +426,11 @@ export class BeaconChain implements IBeaconChain {
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
+
+    this.builderCircuitBreaker = new BuilderCircuitBreaker(
+      {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
+      {forkChoice, logger, metrics}
+    );
 
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
@@ -1473,7 +1478,6 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
-    this.seenProposerPreferences.prune(slot);
     this.proposerPreferencesPool.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);

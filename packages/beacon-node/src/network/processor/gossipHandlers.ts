@@ -165,6 +165,7 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     // tracked in https://github.com/ChainSafe/lodestar/issues/7957
 
     const logCtx = {
+      slot,
       currentSlot: chain.clock.currentSlot,
       peerId: peerIdStr,
       delaySec,
@@ -184,19 +185,23 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       seenTimestampSec,
       peerIdStr,
     });
+
+    // Optimistically seed the payload-envelope cache too, mirroring seenBlockInputCache above.
+    // This ensures we have PayloadEnvelopeInput, even through "PARENT_UNKNOWN" error
+    // see https://github.com/ChainSafe/lodestar/issues/9475
+    if (isForkPostGloas(fork)) {
+      chain.seenPayloadEnvelopeInputCache.add({
+        blockRootHex,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+        sampledColumns: chain.custodyConfig.sampledColumns,
+        custodyColumns: chain.custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
+    }
+
     try {
       const {skippedSlots} = await validateGossipBlock(config, chain, signedBlock, fork);
-
-      if (isForkPostGloas(fork)) {
-        chain.seenPayloadEnvelopeInputCache.add({
-          blockRootHex,
-          block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
-          forkName: fork,
-          sampledColumns: chain.custodyConfig.sampledColumns,
-          custodyColumns: chain.custodyConfig.custodyColumns,
-          timeCreatedSec: seenTimestampSec,
-        });
-      }
 
       const blockInputMeta = blockInput.getLogMeta();
 
@@ -234,12 +239,22 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           throw e;
         }
 
-        if (e.action === GossipAction.REJECT) {
-          chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
+        // IGNORE means the block is acceptable (e.g. FUTURE_SLOT, ALREADY_KNOWN), just not propagated.
+        // Keep the optimistically-added cache entries; they are pruned on finalization. Only REJECT
+        // (provably invalid) and unexpected errors prune below.
+        if (e.action === GossipAction.IGNORE) {
+          throw e;
         }
+
+        chain.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `gossip_reject_slot_${slot}`);
       }
 
+      // REJECT or unexpected (non-BlockGossipError) error: drop the optimistically-added entries from
+      // both caches, keeping them consistent.
       chain.seenBlockInputCache.prune(blockRootHex);
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
+      }
       throw e;
     }
   }
@@ -1127,9 +1142,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
 
       logger.debug("Received gossip payload envelope", {
+        slot,
         currentSlot: chain.clock.currentSlot,
         peerId: peerIdStr,
-        slot,
         blockRoot: toRootHex(envelope.beaconBlockRoot),
         delaySec,
       });
@@ -1226,6 +1241,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         payloadAttestationMessage.data.payloadPresent,
         payloadAttestationMessage.data.blobDataAvailable
       );
+
+      chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
+        version: config.getForkName(payloadAttestationMessage.data.slot),
+        data: payloadAttestationMessage,
+      });
     },
     [GossipType.execution_payload_bid]: async ({
       gossipData,
@@ -1258,9 +1278,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
 
-      chain.proposerPreferencesPool.add(signedProposerPreferences);
       chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-        version: ForkName.gloas,
+        version: config.getForkName(signedProposerPreferences.message.proposalSlot),
         data: signedProposerPreferences,
       });
     },

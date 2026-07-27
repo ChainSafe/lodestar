@@ -65,6 +65,8 @@ import {
   AttestationError,
   AttestationErrorCode,
   GossipAction,
+  ProposerPreferencesError,
+  ProposerPreferencesErrorCode,
   SyncCommitteeError,
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
@@ -74,36 +76,22 @@ import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/prod
 import {RegenCaller} from "../../../chain/regen/index.js";
 import {CheckpointHex} from "../../../chain/stateCache/types.js";
 import {validateApiAggregateAndProof} from "../../../chain/validation/index.js";
+import {validateGossipProposerPreferences} from "../../../chain/validation/proposerPreferences.js";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof.js";
 import {ZERO_HASH} from "../../../constants/index.js";
 import {BuilderStatus, NoBidReceived} from "../../../execution/builder/http.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../network/processor/gossipHandlers.js";
 import {CommitteeSubscription} from "../../../network/subnets/index.js";
-import {SyncState} from "../../../sync/index.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../../util/forkChoice.js";
-import {getDefaultGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
+import {getBlockGraffiti, toGraffitiBytes} from "../../../util/graffiti.js";
 import {getLodestarClientVersion} from "../../../util/metadata.js";
 import {ApiOptions} from "../../options.js";
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
+import {notWhileSyncing} from "../utils.js";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
-
-/**
- * If the node is within this many epochs from the head, we declare it to be synced regardless of
- * the network sync state.
- *
- * This helps prevent attacks where nodes can convince us that we're syncing some non-existent
- * finalized head.
- *
- * TODO: Lighthouse uses 8 for the attack described above. However, 8 kills Lodestar since validators
- * can trigger regen to fast-forward head state 8 epochs to be immediately invalidated as sync sets
- * a new head. Then the checkpoint state cache grows unbounded with very different states (because
- * they are 8 epochs apart) and causes an OOM. Research a proper solution once regen and the state
- * caches are better.
- */
-export const SYNC_TOLERANCE_EPOCHS = 1;
 
 /**
  * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve.
@@ -339,36 +327,6 @@ export function getValidatorApi(
   }
 
   /**
-   * Reject any request while the node is syncing
-   */
-  function notWhileSyncing(): void {
-    // Consider node synced before or close to genesis
-    if (chain.clock.currentSlot < SLOTS_PER_EPOCH) {
-      return;
-    }
-
-    const syncState = sync.state;
-    switch (syncState) {
-      case SyncState.SyncingFinalized:
-      case SyncState.SyncingHead: {
-        const currentSlot = chain.clock.currentSlot;
-        const headSlot = chain.forkChoice.getHead().slot;
-        if (currentSlot - headSlot > SYNC_TOLERANCE_EPOCHS * SLOTS_PER_EPOCH) {
-          throw new NodeIsSyncing(`headSlot ${headSlot} currentSlot ${currentSlot}`);
-        }
-
-        return;
-      }
-
-      case SyncState.Synced:
-        return;
-
-      case SyncState.Stalled:
-        throw new NodeIsSyncing("waiting for peers");
-    }
-  }
-
-  /**
    * Post merge, the CL and EL could be out of step in the sync, and could result in
    * Syncing status of the chain head. To be precise:
    * 1. CL could be ahead of the EL, with the validity of head payload not yet verified
@@ -570,7 +528,7 @@ export function getValidatorApi(
     builderBoostFactor?: bigint,
     {feeRecipient, builderSelection, strictFeeRecipientCheck}: routes.validator.ExtraProduceBlockOpts = {}
   ): Promise<ProduceBlindedBlockOrBlockContentsRes> {
-    notWhileSyncing();
+    notWhileSyncing(chain, sync.state);
     await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
     const parentBlock = chain.getProposerHead(slot);
@@ -611,7 +569,10 @@ export function getValidatorApi(
     }
 
     const graffitiBytes = toGraffitiBytes(
-      graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+      getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
+        private: opts.private,
+        graffitiAppend: chain.opts.graffitiAppend,
+      })
     );
 
     const loggerContext = {
@@ -911,7 +872,7 @@ export function getValidatorApi(
         throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const parentBlock = chain.getProposerHead(slot);
@@ -921,7 +882,10 @@ export function getValidatorApi(
       metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
       const graffitiBytes = toGraffitiBytes(
-        graffiti ?? getDefaultGraffiti(getLodestarClientVersion(opts), chain.executionEngine.clientVersion, opts)
+        getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
+          private: opts.private,
+          graffitiAppend: chain.opts.graffitiAppend,
+        })
       );
 
       // TODO GLOAS: respect builderSelection (MaxProfit, BuilderAlways, ExecutionAlways, etc.) to let
@@ -929,7 +893,10 @@ export function getValidatorApi(
       // support when it is implemented.
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      const builderBid = chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
+      const builderBid = circuitBreakerActive
+        ? null
+        : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       const logCtx = {
         slot,
@@ -937,6 +904,7 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
+        circuitBreakerActive,
         ...(builderBid !== null
           ? {
               bidValue: builderBid.message.value,
@@ -1026,7 +994,7 @@ export function getValidatorApi(
     },
 
     async produceAttestationData({committeeIndex, slot}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -1107,13 +1075,13 @@ export function getValidatorApi(
         throw new ApiError(400, `producePayloadAttestationData is not supported before Gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const block = chain.forkChoice.getCanonicalBlockAtSlot(slot);
       if (!block) {
-        // No block is seen at slot. Return 404 so vc can skip casting payload attestation.
-        throw new ApiError(404, `No canonical block found at slot=${slot}`);
+        // No canonical block is seen at slot. Return 204 so vc can skip casting payload attestation.
+        return {data: undefined, meta: {version: fork}, status: 204};
       }
 
       const payloadInput = chain.seenPayloadEnvelopeInputCache.get(block.blockRoot);
@@ -1192,7 +1160,7 @@ export function getValidatorApi(
     },
 
     async getProposerDuties({epoch}, _context, opts?: {v2?: boolean}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const currentEpoch = currentEpochWithDisparity();
       const nextEpoch = currentEpoch + 1;
@@ -1239,7 +1207,7 @@ export function getValidatorApi(
           // requested epoch is within that range, we can use the head state at current epoch
           state = await chain.getHeadStateAtCurrentEpoch(RegenCaller.getDuties);
         } else {
-          const res = await getStateResponseWithRegen(chain, startSlot);
+          const res = await getStateResponseWithRegen(chain, sync, startSlot);
 
           state = res.state instanceof Uint8Array ? chain.getHeadState().loadOtherState(res.state) : res.state;
 
@@ -1333,7 +1301,7 @@ export function getValidatorApi(
     },
 
     async getAttesterDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -1393,7 +1361,7 @@ export function getValidatorApi(
     },
 
     async getPtcDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get PTC duties");
@@ -1455,7 +1423,7 @@ export function getValidatorApi(
      * @param validatorIndices an array of the validator indices for which to obtain the duties.
      */
     async getSyncCommitteeDuties({epoch, indices}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       if (indices.length === 0) {
         throw new ApiError(400, "No validator to get attester duties");
@@ -1502,7 +1470,7 @@ export function getValidatorApi(
     },
 
     async getAggregatedAttestationV2({attestationDataRoot, slot, committeeIndex}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
@@ -1525,7 +1493,7 @@ export function getValidatorApi(
     },
 
     async publishAggregateAndProofsV2({signedAggregateAndProofs}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
@@ -1586,7 +1554,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/137
      */
     async publishContributionAndProofs({contributionAndProofs}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       const failures: FailureList = [];
 
@@ -1635,7 +1603,7 @@ export function getValidatorApi(
     },
 
     async prepareBeaconCommitteeSubnet({subscriptions}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       await network.prepareBeaconCommitteeSubnets(
         subscriptions.map(({validatorIndex, slot, isAggregator, committeesAtSlot, committeeIndex}) => ({
@@ -1668,7 +1636,7 @@ export function getValidatorApi(
      * https://github.com/ethereum/beacon-APIs/pull/136
      */
     async prepareSyncCommitteeSubnets({subscriptions}) {
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
       const subs: CommitteeSubscription[] = [];
@@ -1765,6 +1733,46 @@ export function getValidatorApi(
       });
     },
 
+    async submitProposerPreferences({signedProposerPreferences}) {
+      const failures: FailureList = [];
+
+      await Promise.all(
+        signedProposerPreferences.map(async (signed, i) => {
+          try {
+            await validateGossipProposerPreferences(chain, signed);
+
+            chain.proposerPreferencesPool.add(signed);
+            await network.publishProposerPreferences(signed);
+            chain.emitter.emit(routes.events.EventType.proposerPreferences, {
+              version: config.getForkName(signed.message.proposalSlot),
+              data: signed,
+            });
+          } catch (e) {
+            const logCtx = {
+              slot: signed.message.proposalSlot,
+              validatorIndex: signed.message.validatorIndex,
+              dependentRoot: toRootHex(signed.message.dependentRoot),
+            };
+
+            if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+              logger.debug("Ignoring known signed proposer preferences", logCtx);
+              return;
+            }
+
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitProposerPreferences [${i}]`, logCtx, e as Error);
+            if (e instanceof ProposerPreferencesError && e.action === GossipAction.REJECT) {
+              chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
+            }
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing signed proposer preferences", failures);
+      }
+    },
+
     async getExecutionPayloadEnvelope({slot, beaconBlockRoot}) {
       const fork = config.getForkName(slot);
 
@@ -1772,7 +1780,7 @@ export function getValidatorApi(
         throw new ApiError(400, `getExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      notWhileSyncing();
+      notWhileSyncing(chain, sync.state);
       await waitForSlot(slot);
 
       const blockRootHex = toRootHex(beaconBlockRoot);
