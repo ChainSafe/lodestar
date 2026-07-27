@@ -1,5 +1,4 @@
 import path from "node:path";
-import {SecretKey} from "@chainsafe/blst";
 import {getClient} from "@lodestar/api";
 import {Builder} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
@@ -26,7 +25,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     logger.debug("Not able to delete log files", {}, e as Error);
   }
 
-  const secretKey: SecretKey = await loadBuilderSigner(args.keystore, args.keystorePassword, args.builderPubkey);
+  const secretKey = await loadBuilderSigner(args.keystore, args.keystorePassword, args.builderPubkey);
 
   onGracefulShutdown(async () => {
     abortController.abort();

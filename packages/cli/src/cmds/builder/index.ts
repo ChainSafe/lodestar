@@ -5,7 +5,7 @@ import {IBuilderCliArgs, builderOptions} from "./options.js";
 
 export const builder: CliCommand<IBuilderCliArgs, GlobalArgs> = {
   command: "builder",
-  describe: "Run one or multiple builder clients",
+  describe: "Run a builder client",
   docsFolder: "run/builder-management",
   examples: [
     {
