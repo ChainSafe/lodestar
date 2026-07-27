@@ -35,6 +35,9 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   const genesis = await waitForGenesis(api, logger, abortController.signal);
 
+  // TODO: Verify chain config matches the source BN. `assertEqualParams` in @lodestar/validator
+  // does this but is package-private. Best fix is moving it somewhere shared.
+
   const _builder = Builder.init(
     {
       keypair,
