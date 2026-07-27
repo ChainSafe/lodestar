@@ -13,7 +13,7 @@ describe("BuilderSigner", () => {
   const beaconConfig = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
-  const pubKey = secretKey.toPublicKey();
+  const pubkey = secretKey.toPublicKey();
 
   const builderSigner = new BuilderSigner(beaconConfig, secretKey);
 
@@ -25,7 +25,7 @@ describe("BuilderSigner", () => {
     expect(
       verify(
         getExecutionPayloadEnvelopeSigningRoot(beaconConfig, envelope),
-        pubKey,
+        pubkey,
         Signature.fromBytes(signedEnvelope.signature, true)
       )
     ).toEqual(true);
@@ -40,7 +40,7 @@ describe("BuilderSigner", () => {
     expect(
       verify(
         getExecutionPayloadBidSigningRoot(beaconConfig, bid.slot, bid),
-        pubKey,
+        pubkey,
         Signature.fromBytes(signedBid.signature, true)
       )
     ).toEqual(true);
@@ -58,7 +58,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadEnvelopeSigningRoot(beaconConfigOtherNetwork, envelope),
-          pubKey,
+          pubkey,
           Signature.fromBytes(signedEnvelope.signature, true)
         )
       ).toEqual(false);
@@ -73,7 +73,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadBidSigningRoot(beaconConfigOtherNetwork, bid.slot, bid),
-          pubKey,
+          pubkey,
           Signature.fromBytes(signedBid.signature, true)
         )
       ).toEqual(false);
@@ -92,7 +92,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadEnvelopeSigningRoot(beaconConfigOtherFork, envelope),
-          pubKey,
+          pubkey,
           Signature.fromBytes(signedEnvelope.signature, true)
         )
       ).toEqual(false);
@@ -107,7 +107,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadBidSigningRoot(beaconConfigOtherFork, bid.slot, bid),
-          pubKey,
+          pubkey,
           Signature.fromBytes(signedBid.signature, true)
         )
       ).toEqual(false);

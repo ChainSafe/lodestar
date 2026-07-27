@@ -3,18 +3,15 @@ import {BeaconConfig} from "@lodestar/config";
 import {getExecutionPayloadBidSigningRoot, getExecutionPayloadEnvelopeSigningRoot} from "@lodestar/state-transition";
 import {BLSPubkey, gloas} from "@lodestar/types";
 
-type Signer = {
-  publicKey: BLSPubkey;
-  secretKey: SecretKey;
-};
+type BLSKeypair = {publicKey: BLSPubkey; secretKey: SecretKey};
 
 export class BuilderSigner {
   private readonly config: BeaconConfig;
-  private readonly signer: Signer;
+  private readonly keypair: BLSKeypair;
 
   constructor(config: BeaconConfig, signerSecretKey: SecretKey) {
     this.config = config;
-    this.signer = {
+    this.keypair = {
       publicKey: signerSecretKey.toPublicKey().toBytes(),
       secretKey: signerSecretKey,
     };
@@ -25,7 +22,7 @@ export class BuilderSigner {
 
     return {
       message: envelope,
-      signature: this.signer.secretKey.sign(signingRoot).toBytes(),
+      signature: this.keypair.secretKey.sign(signingRoot).toBytes(),
     };
   }
 
@@ -34,11 +31,11 @@ export class BuilderSigner {
 
     return {
       message: bid,
-      signature: this.signer.secretKey.sign(signingRoot).toBytes(),
+      signature: this.keypair.secretKey.sign(signingRoot).toBytes(),
     };
   }
 
   getPubkey(): BLSPubkey {
-    return this.signer.publicKey;
+    return this.keypair.publicKey;
   }
 }
