@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.78a93a4a.css">
-<script src="/lodestar/assets/js/runtime~main.0ec47288.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.c94f41de.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.486fa7dd.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -53,7 +53,6 @@
 <li><code>executionalways</code>: An alias of <code>--builder.boostFactor=0</code>, which will select the local execution block, unless it fails to produce due to an error or a delay in the response from the execution client.</li>
 <li><code>executiononly</code>: Beacon node will be requested to produce local execution block even if builder relays are configured. This option will always select the local execution block and will error if it couldn&#x27;t produce one.</li>
 <li><code>builderalways</code>: An alias of <code>--builder.boostFactor=18446744073709551615</code> (2**64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it&#x27;s not available, not timely or there is an indication of censorship via <code>shouldOverrideBuilder</code> from the execution payload response.</li>
-<li><code>builderonly</code>: Generally used for distributed validators (DVs). No execution block production will be triggered. Therefore, if a builder block is not produced, the API will fail and <em>no block will be produced</em>.</li>
 </ul>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="calculating-builder-boost-factor-with-examples">Calculating builder boost factor with examples<a href="#calculating-builder-boost-factor-with-examples" class="hash-link" aria-label="Direct link to Calculating builder boost factor with examples" title="Direct link to Calculating builder boost factor with examples">​</a></h4>
 <p>To calculate the builder boost factor setting, you need to know what percentage you will accept a builder block for against a local execution block using the following formula: <code>100*100/(100+percentage)</code>. The value passed to <a href="/lodestar/next/run/validator-management/validator-cli#--builderboostfactor"><code>--builder.boostFactor</code></a> must be a valid number without decimals.</p>
