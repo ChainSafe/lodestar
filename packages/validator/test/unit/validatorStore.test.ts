@@ -70,6 +70,47 @@ describe("ValidatorStore", () => {
     expect(validatorStore.getGasLimit(toHexString(pubkeys[1]))).toBe(valProposerConfig.defaultConfig.builder?.gasLimit);
   });
 
+  it("getBuilderSelectionParams honors explicit selection and resolves fork-aware default", async () => {
+    const preGloasSlot = 0;
+    // pubkeys[0] explicitly configured executiononly, honored regardless of fork
+    expect(validatorStore.getBuilderSelectionParams(toHexString(pubkeys[0]), preGloasSlot)).toEqual({
+      selection: routes.validator.BuilderSelection.ExecutionOnly,
+      boostFactor: BigInt(0),
+    });
+    // pubkeys[1] has no selection configured, pre-gloas default is executiononly
+    expect(validatorStore.getBuilderSelectionParams(toHexString(pubkeys[1]), preGloasSlot)).toEqual({
+      selection: routes.validator.BuilderSelection.ExecutionOnly,
+      boostFactor: BigInt(0),
+    });
+
+    // Post-gloas the unconfigured default becomes `default` (as if `--builder` was set)
+    const gloasStore = await initValidatorStore(
+      secretKeys,
+      api,
+      {
+        ...chainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+      },
+      valProposerConfig
+    );
+    const gloasSlot = 0;
+    expect(gloasStore.getBuilderSelectionParams(toHexString(pubkeys[1]), gloasSlot)).toEqual({
+      selection: routes.validator.BuilderSelection.Default,
+      boostFactor: BigInt(90),
+    });
+    // Explicit executiononly is still honored post-gloas
+    expect(gloasStore.getBuilderSelectionParams(toHexString(pubkeys[0]), gloasSlot)).toEqual({
+      selection: routes.validator.BuilderSelection.ExecutionOnly,
+      boostFactor: BigInt(0),
+    });
+  });
+
   it("Should create/update builder data and return from cache next time", async () => {
     let slot = 0;
     const testCases: [bellatrix.SignedValidatorRegistrationV1, string, number][] = [
