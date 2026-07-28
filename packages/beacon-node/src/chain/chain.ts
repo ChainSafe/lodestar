@@ -8,6 +8,7 @@ import {
   EpochDifference,
   ForkChoiceStateGetter,
   IForkChoice,
+  PayloadStatus,
   ProtoBlock,
   UpdateHeadOpt,
 } from "@lodestar/fork-choice";
@@ -1192,18 +1193,63 @@ export class BeaconChain implements IBeaconChain {
 
       if (head.blockRoot !== prevHead.blockRoot) {
         try {
+          const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
+          const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
+          const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
+          const executionOptimistic = isOptimisticBlock(head);
+
           this.emitter.emit(routes.events.EventType.head, {
             block: head.blockRoot,
-            epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+            epochTransition,
             slot: head.slot,
             state: head.stateRoot,
-            previousDutyDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
-            currentDutyDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
-            executionOptimistic: isOptimisticBlock(head),
+            previousDutyDependentRoot,
+            currentDutyDependentRoot,
+            executionOptimistic,
+          });
+
+          this.emitter.emit(routes.events.EventType.headV2, {
+            version: this.config.getForkName(head.slot),
+            data: {
+              slot: head.slot,
+              block: head.blockRoot,
+              state: head.stateRoot,
+              payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+              epochTransition,
+              currentEpochDependentRoot: previousDutyDependentRoot,
+              nextEpochDependentRoot: currentDutyDependentRoot,
+              executionOptimistic,
+            },
           });
         } catch (e) {
           // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-          this.logger.debug("Error emitting head event", {slot: head.slot, root: head.blockRoot}, e as Error);
+          this.logger.debug("Error emitting head/head_v2 event", {slot: head.slot, root: head.blockRoot}, e as Error);
+        }
+      } else if (
+        (prevHead.payloadStatus !== PayloadStatus.FULL && head.payloadStatus === PayloadStatus.FULL) ||
+        (prevHead.payloadStatus !== PayloadStatus.EMPTY && head.payloadStatus === PayloadStatus.EMPTY)
+      ) {
+        // Implies that block root is the same, emits on payload status change empty -> full or full -> empty.
+        try {
+          this.emitter.emit(routes.events.EventType.headV2, {
+            version: this.config.getForkName(head.slot),
+            data: {
+              slot: head.slot,
+              block: head.blockRoot,
+              state: head.stateRoot,
+              payloadStatus: head.payloadStatus === PayloadStatus.EMPTY ? "empty" : "full",
+              epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+              currentEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.previous),
+              nextEpochDependentRoot: this.forkChoice.getDependentRoot(head, EpochDifference.current),
+              executionOptimistic: isOptimisticBlock(head),
+            },
+          });
+        } catch (e) {
+          this.logger.debug(
+            "Error emitting head_v2 event on payload status change",
+            {slot: head.slot, root: head.blockRoot},
+            e as Error
+          );
         }
       }
 

@@ -179,6 +179,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       distributed: args.distributed,
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
       blindedLocal: args.blindedLocal,
+      payloadLocal: args.payloadLocal,
       externalSigner: {
         urls: args["externalSigner.urls"],
         fetch: args["externalSigner.fetch"],

@@ -310,7 +310,7 @@ type TypesByFork = {
     BuilderBid: electra.BuilderBid;
     SignedBuilderBid: electra.SignedBuilderBid;
     SSEPayloadAttributes: gloas.SSEPayloadAttributes;
-    BlockContents: fulu.BlockContents;
+    BlockContents: gloas.BlockContents;
     SignedBlockContents: fulu.SignedBlockContents;
     ExecutionPayloadAndBlobsBundle: fulu.ExecutionPayloadAndBlobsBundle;
     BlobsBundle: fulu.BlobsBundle;
