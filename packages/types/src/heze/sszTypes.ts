@@ -107,6 +107,14 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
+export const BlockContents = new ContainerType(
+  {
+    ...gloasSsz.BlockContents.fields,
+    block: BeaconBlock,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
+
 // PayloadAttributes primarily for SSE event
 // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/heze/fork-choice.md#modified-payloadattributes
 export const PayloadAttributes = new ContainerType(
