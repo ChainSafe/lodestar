@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
@@ -10,6 +11,7 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
+  INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -354,6 +356,10 @@ export async function produceBlockBody<T extends BlockType>(
       blobKzgCommitments: blobsBundle.commitments,
       executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
+    if (ForkSeq[fork] >= ForkSeq.heze) {
+      // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+    }
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
       signature: G2_POINT_AT_INFINITY,
