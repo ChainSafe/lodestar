@@ -16,6 +16,11 @@ import {toRootHex} from "@lodestar/utils";
  */
 export class ProposerPreferencesPool {
   private readonly bySlot = new Map<Slot, Map<RootHex, gloas.SignedProposerPreferences>>();
+  private readonly localKeys = new Set<string>();
+
+  private getKey(slot: Slot, dependentRootHex: RootHex): string {
+    return `${slot}-${dependentRootHex}`;
+  }
 
   /** Lookup for bid validation: matches `(bid.slot, get_shuffling_dependent_root(store, bid.parent_block_root, epoch))`. */
   get(slot: Slot, dependentRootHex: RootHex): gloas.SignedProposerPreferences | null {
@@ -26,7 +31,22 @@ export class ProposerPreferencesPool {
     return this.get(proposalSlot, dependentRoot)?.message.validatorIndex === validatorIndex;
   }
 
-  add(signed: gloas.SignedProposerPreferences): void {
+  isKnownLocal(proposalSlot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): boolean {
+    return (
+      this.isKnown(proposalSlot, dependentRoot, validatorIndex) &&
+      this.localKeys.has(this.getKey(proposalSlot, dependentRoot))
+    );
+  }
+
+  markLocal(proposalSlot: Slot, dependentRoot: RootHex, validatorIndex: ValidatorIndex): boolean {
+    if (!this.isKnown(proposalSlot, dependentRoot, validatorIndex)) {
+      return false;
+    }
+    this.localKeys.add(this.getKey(proposalSlot, dependentRoot));
+    return true;
+  }
+
+  add(signed: gloas.SignedProposerPreferences, opts?: {local?: boolean}): void {
     const {proposalSlot, dependentRoot} = signed.message;
     const rootHex = toRootHex(dependentRoot);
     let byRoot = this.bySlot.get(proposalSlot);
@@ -35,6 +55,9 @@ export class ProposerPreferencesPool {
       this.bySlot.set(proposalSlot, byRoot);
     }
     byRoot.set(rootHex, signed);
+    if (opts?.local === true) {
+      this.localKeys.add(this.getKey(proposalSlot, rootHex));
+    }
   }
 
   /** API read-out: flatten across branches, optionally filtered by slot. */
@@ -57,7 +80,15 @@ export class ProposerPreferencesPool {
    */
   prune(currentSlot: Slot): void {
     for (const slot of this.bySlot.keys()) {
-      if (slot < currentSlot) this.bySlot.delete(slot);
+      if (slot < currentSlot) {
+        const byRoot = this.bySlot.get(slot);
+        if (byRoot) {
+          for (const dependentRootHex of byRoot.keys()) {
+            this.localKeys.delete(this.getKey(slot, dependentRootHex));
+          }
+        }
+        this.bySlot.delete(slot);
+      }
     }
   }
 }
