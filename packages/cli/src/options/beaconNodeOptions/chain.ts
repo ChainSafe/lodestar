@@ -1,6 +1,7 @@
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
+import {AdversarialArgs} from "./adversarial.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
@@ -19,8 +20,6 @@ export type ChainArgs = {
   "chain.persistOrphanedBlocks"?: boolean;
   "chain.proposerBoost"?: boolean;
   "chain.proposerBoostReorg"?: boolean;
-  "chain.chaosAlwaysBuildOnEmpty"?: boolean;
-  "chain.chaosOmitPtcOnEmptyBuild"?: boolean;
   "chain.disableImportExecutionFcU"?: boolean;
   "chain.preaggregateSlotDistance"?: number;
   "chain.attDataCacheSlotDistance"?: number;
@@ -44,7 +43,7 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
+export function parseArgs(args: ChainArgs & CircuitBreakerArgs & AdversarialArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
@@ -62,8 +61,8 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     persistOrphanedBlocksDir: undefined as any,
     proposerBoost: args["chain.proposerBoost"],
     proposerBoostReorg: args["chain.proposerBoostReorg"],
-    chaosAlwaysBuildOnEmpty: args["chain.chaosAlwaysBuildOnEmpty"],
-    chaosOmitPtcOnEmptyBuild: args["chain.chaosOmitPtcOnEmptyBuild"],
+    adversarialReorgBuildOnEmpty: args["adversarial.reorg.buildOnEmpty"],
+    adversarialReorgOmitPtcAttestations: args["adversarial.reorg.omitPtcAttestations"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],
@@ -200,24 +199,6 @@ Will double processing times. Use only for debugging purposes.",
     type: "boolean",
     description: "Enable proposer boost reorg to reorg out a late block",
     defaultDescription: String(defaultOptions.chain.proposerBoostReorg),
-    group: "chain",
-  },
-
-  "chain.chaosAlwaysBuildOnEmpty": {
-    hidden: true,
-    type: "boolean",
-    description:
-      "CHAOS (devnet test only): always build blocks on the EMPTY parent variant, orphaning the parent execution payload regardless of PTC votes",
-    defaultDescription: String(defaultOptions.chain.chaosAlwaysBuildOnEmpty),
-    group: "chain",
-  },
-
-  "chain.chaosOmitPtcOnEmptyBuild": {
-    hidden: true,
-    type: "boolean",
-    description:
-      "CHAOS (devnet test only): when building on the EMPTY parent variant (reorging its payload), omit that slot's PTC attestations from the block, so consumers that count on-chain aggregate bits without self-expanding (e.g. Prysm) tally below PTC quorum and follow the reorg",
-    defaultDescription: String(defaultOptions.chain.chaosOmitPtcOnEmptyBuild),
     group: "chain",
   },
 

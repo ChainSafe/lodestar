@@ -1,6 +1,7 @@
 import {IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
 import {removeUndefinedRecursive} from "../../util/index.js";
+import * as adversarial from "./adversarial.js";
 import * as api from "./api.js";
 import * as builder from "./builder.js";
 import * as chain from "./chain.js";
@@ -11,7 +12,8 @@ import * as monitoring from "./monitoring.js";
 import * as network from "./network.js";
 import * as sync from "./sync.js";
 
-export type BeaconNodeArgs = api.ApiArgs &
+export type BeaconNodeArgs = adversarial.AdversarialArgs &
+  api.ApiArgs &
   chain.ChainArgs &
   eth1.Eth1Args &
   execution.ExecutionEngineArgs &
@@ -37,6 +39,7 @@ export function parseBeaconNodeArgs(args: BeaconNodeArgs): RecursivePartial<IBea
 }
 
 export const beaconNodeOptions = {
+  ...adversarial.options,
   ...api.options,
   ...chain.options,
   ...eth1.options,

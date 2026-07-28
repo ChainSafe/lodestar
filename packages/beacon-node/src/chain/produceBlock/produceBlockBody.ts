@@ -235,13 +235,13 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = builderBid;
-    // CHAOS (devnet test only): when the bid does NOT extend the parent payload (building on the
-    // EMPTY parent variant, i.e. reorging it), withhold the parent slot's PTC attestations — the
+    // ADVERSARIAL (devnet test only): when the bid does NOT extend the parent payload (building on the
+    // EMPTY parent variant, i.e. reorging it), withhold the parent slot's PTC attestations, the
     // very votes proving the orphaned payload was timely. Consumers that tally timeliness from the
     // on-chain aggregate bits (e.g. Prysm) then fall back to their gossip-only count (< quorum) and
     // follow the reorg instead of rejecting it.
     gloasBody.payloadAttestations =
-      this.opts?.chaosOmitPtcOnEmptyBuild && !isExtendingPayload
+      this.opts?.adversarialReorgOmitPtcAttestations && !isExtendingPayload
         ? []
         : this.payloadAttestationPool.getPayloadAttestationsForBlock(parentBlock.blockRoot, blockSlot - 1);
     gloasBody.parentExecutionRequests = parentExecutionRequests;
@@ -366,10 +366,10 @@ export async function produceBlockBody<T extends BlockType>(
     const commonBlockBody = await commonBlockBodyPromise;
     const gloasBody = Object.assign({}, commonBlockBody) as gloas.BeaconBlockBody;
     gloasBody.signedExecutionPayloadBid = signedBid;
-    // CHAOS (devnet test only): withhold the reorged slot's PTC attestations when building on the
+    // ADVERSARIAL (devnet test only): withhold the reorged slot's PTC attestations when building on the
     // EMPTY parent variant (see note in the builder-bid branch above).
     gloasBody.payloadAttestations =
-      this.opts?.chaosOmitPtcOnEmptyBuild && !isBuildingOnFull
+      this.opts?.adversarialReorgOmitPtcAttestations && !isBuildingOnFull
         ? []
         : this.payloadAttestationPool.getPayloadAttestationsForBlock(parentBlock.blockRoot, blockSlot - 1);
     gloasBody.parentExecutionRequests = parentExecutionRequests;

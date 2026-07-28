@@ -1,8 +1,9 @@
-# ePBS (gloas) Chaos Node: Potential Features
+# ePBS (gloas) Adversarial Node: Potential Features
 
-Status: planning / catalog. Nothing here is implemented yet.
+Status: catalog. Two features shipped so far (Tier 1 #4 and #4b, see Conventions);
+the rest are planned.
 
-Purpose: a list of adversarial behaviors we could build into a test-only "chaos"
+Purpose: a list of adversarial behaviors we could build into a test-only "deathstar"
 Lodestar build to stress the gloas (ePBS) fork on a devnet, find consensus
 safety/liveness weaknesses, and harden the spec before mainnet. This is the same
 category of work as attacknet, beacon-fuzz, and the equivocation/fork-choice
@@ -11,30 +12,37 @@ devnets (Kurtosis / local), never against a public network.
 
 ## Conventions (apply to every feature here)
 
-Every chaos behavior MUST be:
+Every adversarial behavior MUST be:
 
 1. Individually toggleable via a CLI flag, and DEFAULT ON for now (this is a
-   dedicated chaos build, so all features run out of the box; disable a single
-   one with `--chain.<flag>=false`). Use the existing `chain.*` option plumbing
-   (`packages/cli/src/options/beaconNodeOptions/chain.ts` ->
-   `IChainOptions` -> injection site), mark the option `hidden: true`, and
-   prefix the description with "CHAOS (devnet test only)".
+   dedicated adversarial "deathstar" build, so all features run out of the box;
+   disable a single one with `--adversarial.<topic>.<behavior>=false`). Flags are
+   grouped by attack topic under a dedicated `adversarial.*` namespace, defined in
+   `packages/cli/src/options/beaconNodeOptions/adversarial.ts` and consumed into the
+   chain options bag by `chain.parseArgs` (the same cross-group pattern the
+   `builder.*` circuit-breaker flags use). Mark the option `hidden: true`, and
+   prefix the description with "ADVERSARIAL (devnet test only)".
 2. Parameterized via CLI thresholds wherever the behavior has a tunable knob
    (probability, delay or timing offset, value cutoff, count, target subset),
    each with a sensible default. Never hardcode the knob.
 
+Naming: `adversarial.<topic>.<behavior>`, one sub-namespace per attack topic
+(`reorg`, `withhold`, `ptc`, `equivocate`, `censor`, `bid`, ...). The internal
+`IChainOptions` field is the flattened topic-prefixed camelCase name, e.g.
+`adversarial.reorg.buildOnEmpty` -> `adversarialReorgBuildOnEmpty`.
+
 Default-ON wiring (mirror `proposerBoost`): set the default `true` in
 `defaultChainOptions` (`packages/beacon-node/src/chain/options.ts`); in
-`parseArgs` map plain `args["chain.<flag>"]` so an unset flag is stripped by
-`removeUndefinedRecursive` and the default survives the merge, while `=false`
-disables it. Keep the lib consumer a plain truthy check (`if (this.opts?.<flag>)`)
-so shared-lib unit tests built with no opts stay OFF and do not break. Do NOT
-make the lib consumer default-on via `!== false`.
+`chain.parseArgs` map plain `args["adversarial.<topic>.<behavior>"]` so an unset
+flag is stripped by `removeUndefinedRecursive` and the default survives the merge,
+while `=false` disables it. Keep the lib consumer a plain truthy check
+(`if (this.opts?.<field>)`) so shared-lib unit tests built with no opts stay OFF
+and do not break. Do NOT make the lib consumer default-on via `!== false`.
 
-First feature shipped this way: `--chain.chaosAlwaysBuildOnEmpty` (Tier 1 #4,
+First feature shipped this way: `--adversarial.reorg.buildOnEmpty` (Tier 1 #4,
 always build on the EMPTY parent variant; default true). It is binary, so it has
-no threshold. Second: `--chain.chaosOmitPtcOnEmptyBuild` (Tier 1 #4b, omit the
-reorged slot's PTC attestations when building on empty; default true, also binary).
+no threshold. Second: `--adversarial.reorg.omitPtcAttestations` (Tier 1 #4b, omit
+the reorged slot's PTC attestations when building on empty; default true, also binary).
 
 ## How ePBS changes the threat model
 
@@ -56,7 +64,7 @@ are genuinely new attack surfaces:
 2. The Payload Timeliness Committee (PTC) vote feeds directly into the
    EMPTY-vs-FULL fork-choice decision, gated at exactly 50 percent
    (`PAYLOAD_TIMELY_THRESHOLD = PTC_SIZE / 2`). A threshold pinned at half the
-   committee is the single richest chaos lever in the fork.
+   committee is the single richest adversarial lever in the fork.
 3. The builder bid / payment / balance market is new economic state
    (`builders`, `builderPendingPayments`, `builderPendingWithdrawals`) that can
    be manipulated.
@@ -74,7 +82,7 @@ are genuinely new attack surfaces:
 
 ---
 
-## Tier 1: Core ePBS safety / liveness (highest chaos, most spec-relevant)
+## Tier 1: Core ePBS safety / liveness (highest impact, most spec-relevant)
 
 ### 1. Payload withholding (the canonical ePBS attack)
 
@@ -245,9 +253,9 @@ then builder sweep, then validator sweep), the EMPTY early-exit in
 
 ## Suggested architecture (for when we build)
 
-A single `chaos` options object plumbed into `BeaconChain` and the validator
-client, gated behind an obvious test-only flag (for example `LODESTAR_CHAOS=1` or
-a `--chaos.*` CLI namespace) so it can never ship. Most behaviors require
+A single `adversarial` options namespace plumbed into `BeaconChain` and the
+validator client, gated behind an obvious test-only, hidden `--adversarial.*` CLI
+namespace so it can never ship. Most behaviors require
 bypassing Lodestar's own outbound correctness (the node will not normally sign an
 invalid envelope or skip a duty), so the clean injection layer is production plus
 publish, not the inbound validation functions:
@@ -268,7 +276,7 @@ compose (for example #1 plus #4 gives the collusion reorg).
 ## Suggested priority
 
 Start with Tier 1. It is the smallest amount of code (mostly skip / delay / flip
-at three sites) for the largest, most spec-relevant chaos. Features #1 and #3
+at three sites) for the largest, most spec-relevant impact. Features #1 and #3
 together already reproduce the headline ePBS failure modes on a Kurtosis devnet.
 
 ## Reference: key files

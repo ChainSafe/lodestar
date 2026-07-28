@@ -53,8 +53,8 @@ export type IChainOptions = BlockProcessOpts &
     faultInspectionWindow?: number;
     /** Allowed unrevealed payloads within the fault inspection window */
     allowedFaults?: number;
-    /** CHAOS (devnet test only): omit the parent slot's PTC attestations when building on the EMPTY parent variant */
-    chaosOmitPtcOnEmptyBuild?: boolean;
+    /** ADVERSARIAL (devnet test only): omit the parent slot's PTC attestations when building on the EMPTY parent variant */
+    adversarialReorgOmitPtcAttestations?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -113,10 +113,10 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoostReorg: true,
   computeUnrealized: true,
   fastConfirmation: false,
-  // CHAOS (devnet test only): deathstar features default ON, disable with --chain.chaosAlwaysBuildOnEmpty=false
-  chaosAlwaysBuildOnEmpty: true,
-  // CHAOS (devnet test only): withhold reorged slot's PTC attestations when building on empty, disable with --chain.chaosOmitPtcOnEmptyBuild=false
-  chaosOmitPtcOnEmptyBuild: true,
+  // ADVERSARIAL (devnet test only): deathstar features default ON, disable with --adversarial.reorg.buildOnEmpty=false
+  adversarialReorgBuildOnEmpty: true,
+  // ADVERSARIAL (devnet test only): withhold reorged slot's PTC attestations when building on empty, disable with --adversarial.reorg.omitPtcAttestations=false
+  adversarialReorgOmitPtcAttestations: true,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,
