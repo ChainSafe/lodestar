@@ -868,10 +868,12 @@ export function getValidatorApi(
       await waitForSlot(slot);
 
       const parentBlock = chain.getProposerHead(slot);
+      const canonicalHead = chain.forkChoice.getHead();
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);
       notOnOutOfRangeData(parentBlockRoot);
       metrics?.blockProductionSlotDelta.set(slot - parentSlot);
+      let selectedParentBlock = parentBlock;
 
       const graffitiBytes = toGraffitiBytes(
         getBlockGraffiti(graffiti, getLodestarClientVersion(opts), chain.executionEngine.clientVersion, {
@@ -967,6 +969,7 @@ export function getValidatorApi(
         raceTimeoutMs: BLOCK_PRODUCTION_RACE_TIMEOUT_MS,
         signal: controller.signal,
       });
+      const bidResultPending = bidResult.status === "pending";
 
       let bestResult: typeof engineResult | null = null;
       let source: ProducedBlockSource = ProducedBlockSource.engine;
@@ -1022,6 +1025,68 @@ export function getValidatorApi(
         });
       }
 
+      if (bestResult === null && engineResult.status === "rejected" && !bidResultPending) {
+        const canRetryCanonicalHead =
+          canonicalHead.blockRoot !== parentBlock.blockRoot && canonicalHead.slot + 1 === slot;
+        if (canRetryCanonicalHead) {
+          const reason =
+            builderBid === null ? EngineBlockSelectionReason.BuilderNoBid : EngineBlockSelectionReason.BuilderError;
+
+          logger.warn("Retrying local block production on canonical head after proposer reorg production failed", {
+            ...logCtx,
+            canonicalHeadSlot: canonicalHead.slot,
+            canonicalHeadRoot: canonicalHead.blockRoot,
+            canonicalHeadBlockHash: canonicalHead.executionPayloadBlockHash,
+            engineReason: String(engineResult.reason),
+            bidReason: bidResult.status === "rejected" ? String(bidResult.reason) : bidResult.status,
+          });
+
+          const canonicalCommonBlockBodyPromise = chain.produceCommonBlockBody({
+            slot,
+            parentBlock: canonicalHead,
+            randaoReveal,
+            graffiti: graffitiBytes,
+          });
+
+          try {
+            const retryStartedAt = Date.now();
+            const engineBlockPromise = timed(ProducedBlockSource.engine, () =>
+              chain.produceBlock({
+                ...baseAttrs,
+                parentBlock: canonicalHead,
+                commonBlockBodyPromise: canonicalCommonBlockBodyPromise,
+              })
+            );
+            const engineBlock = await engineBlockPromise;
+            const durationMs = Date.now() - retryStartedAt;
+            bestResult = {promise: engineBlockPromise, status: "fulfilled", value: engineBlock, durationMs};
+            source = ProducedBlockSource.engine;
+            selectedParentBlock = canonicalHead;
+            metrics?.blockProductionSlotDelta.set(slot - canonicalHead.slot);
+            metrics?.blockProductionSelectionResults.inc({source: ProducedBlockSource.engine, reason});
+            logger.info("Selected local block: canonical head retry after proposer reorg production failed", {
+              reason,
+              ...logCtx,
+              durationMs,
+              canonicalHeadSlot: canonicalHead.slot,
+              canonicalHeadRoot: canonicalHead.blockRoot,
+              canonicalHeadBlockHash: canonicalHead.executionPayloadBlockHash,
+            });
+          } catch (e) {
+            logger.warn(
+              "Canonical head local block production retry failed",
+              {
+                ...logCtx,
+                canonicalHeadSlot: canonicalHead.slot,
+                canonicalHeadRoot: canonicalHead.blockRoot,
+                canonicalHeadBlockHash: canonicalHead.executionPayloadBlockHash,
+              },
+              e as Error
+            );
+          }
+        }
+      }
+
       if (bestResult === null || bestResult.status !== "fulfilled") {
         const engineReason = engineResult.status === "rejected" ? engineResult.reason : engineResult.status;
         const bidReason = bidResult.status === "rejected" ? bidResult.reason : bidResult.status;
@@ -1043,6 +1108,9 @@ export function getValidatorApi(
       const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block));
       logger.verbose("Produced block", {
         ...logCtx,
+        parentSlot: selectedParentBlock.slot,
+        parentBlockRoot: selectedParentBlock.blockRoot,
+        parentBlockHash: selectedParentBlock.executionPayloadBlockHash,
         executionPayloadValue,
         consensusBlockValue,
         root: blockRoot,

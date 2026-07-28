@@ -27,7 +27,7 @@ describe("api/validator - produceBlockV4", () => {
   const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
   const config = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
-  const slot = 1;
+  const slot = 2;
   const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
   const graffiti = "a".repeat(32);
 
@@ -59,6 +59,7 @@ describe("api/validator - produceBlockV4", () => {
     vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
     vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
     modules.chain.getProposerHead.mockReturnValue(parentBlock);
+    modules.chain.forkChoice.getHead.mockReturnValue(parentBlock);
     modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
     modules.chain.forkChoice.shouldBuildOnFull.mockReturnValue(true);
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
@@ -143,6 +144,60 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);
+  });
+
+  it("retries local production on the canonical head if proposer reorg local production fails", async () => {
+    const reorgParentBlock = {
+      ...parentBlock,
+      slot: slot - 2,
+      blockRoot: "0x2222222222222222222222222222222222222222222222222222222222222222",
+      executionPayloadBlockHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    } as ProtoBlock;
+
+    modules.chain.getProposerHead.mockReturnValue(reorgParentBlock);
+    modules.chain.forkChoice.getHead.mockReturnValue(parentBlock);
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    modules.chain.produceBlock
+      .mockRejectedValueOnce(new Error("Received invalid payloadId=null"))
+      .mockResolvedValueOnce({
+        block: engineBlock,
+        executionPayloadValue: BigInt(0),
+        consensusBlockValue: BigInt(0),
+      });
+
+    const {data: block} = await api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload: false});
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(modules.chain.produceBlock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({parentBlock: reorgParentBlock})
+    );
+    expect(modules.chain.produceBlock).toHaveBeenNthCalledWith(2, expect.objectContaining({parentBlock}));
+    expect(block).toEqual(engineBlock);
+  });
+
+  it("does not retry local production if canonical head cannot directly parent the block", async () => {
+    const reorgParentBlock = {
+      ...parentBlock,
+      slot: slot - 2,
+      blockRoot: "0x2222222222222222222222222222222222222222222222222222222222222222",
+      executionPayloadBlockHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    } as ProtoBlock;
+    const oldCanonicalHead = {...parentBlock, slot: slot - 2} as ProtoBlock;
+
+    modules.chain.getProposerHead.mockReturnValue(reorgParentBlock);
+    modules.chain.forkChoice.getHead.mockReturnValue(oldCanonicalHead);
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+    modules.chain.produceBlock.mockRejectedValueOnce(new Error("Received invalid payloadId=null"));
+
+    await expect(
+      api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload: false})
+    ).rejects.toThrow("Received invalid payloadId=null");
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({parentBlock: reorgParentBlock}));
   });
 
   it("ignores builder bids when the builder circuit breaker is active", async () => {
