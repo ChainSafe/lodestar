@@ -113,10 +113,10 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoostReorg: true,
   computeUnrealized: true,
   fastConfirmation: false,
-  // ADVERSARIAL (devnet test only): deathstar features default ON, disable with --adversarial.reorg.buildOnEmpty=false
-  adversarialReorgBuildOnEmpty: true,
-  // ADVERSARIAL (devnet test only): withhold reorged slot's PTC attestations when building on empty, disable with --adversarial.reorg.omitPtcAttestations=false
-  adversarialReorgOmitPtcAttestations: true,
+  // ADVERSARIAL (devnet test only): enable with --adversarial.reorg.buildOnEmpty=true
+  adversarialReorgBuildOnEmpty: false,
+  // ADVERSARIAL (devnet test only): enable with --adversarial.reorg.omitPtcAttestations=true
+  adversarialReorgOmitPtcAttestations: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,

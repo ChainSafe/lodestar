@@ -2,7 +2,7 @@ import {defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 
 // ADVERSARIAL (devnet test only): malicious ePBS behaviors for the deathstar build, grouped by
-// attack topic (adversarial.<topic>.<behavior>). Flags are hidden, default ON via defaultChainOptions,
+// attack topic (adversarial.<topic>.<behavior>). Flags are hidden, default OFF via defaultChainOptions,
 // and consumed into the chain options bag by chain.parseArgs. This build must never touch a real network.
 export type AdversarialArgs = {
   "adversarial.reorg.buildOnEmpty"?: boolean;

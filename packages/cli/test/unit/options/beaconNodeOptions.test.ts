@@ -221,6 +221,18 @@ describe("options / beaconNodeOptions", () => {
   });
 });
 
+describe("options / adversarial", () => {
+  it("should enable adversarial behaviors independently", () => {
+    const options = parseBeaconNodeArgs({
+      "adversarial.reorg.buildOnEmpty": true,
+      "adversarial.reorg.omitPtcAttestations": false,
+    } as BeaconNodeArgs);
+
+    expect(options.chain?.adversarialReorgBuildOnEmpty).toBe(true);
+    expect(options.chain?.adversarialReorgOmitPtcAttestations).toBe(false);
+  });
+});
+
 describe("options / network / tcp and quic flags", () => {
   it("should include both tcp and quic multiaddrs by default", () => {
     const result = parseNetworkArgs({listenAddress: "0.0.0.0", port: 9000} as NetworkArgs);

@@ -14,9 +14,9 @@ devnets (Kurtosis / local), never against a public network.
 
 Every adversarial behavior MUST be:
 
-1. Individually toggleable via a CLI flag, and DEFAULT ON for now (this is a
-   dedicated adversarial "deathstar" build, so all features run out of the box;
-   disable a single one with `--adversarial.<topic>.<behavior>=false`). Flags are
+1. Individually toggleable via a CLI flag, and DEFAULT OFF so focused tests can
+   enable only the behavior under test with
+   `--adversarial.<topic>.<behavior>=true`. Flags are
    grouped by attack topic under a dedicated `adversarial.*` namespace, defined in
    `packages/cli/src/options/beaconNodeOptions/adversarial.ts` and consumed into the
    chain options bag by `chain.parseArgs` (the same cross-group pattern the
@@ -31,18 +31,18 @@ Naming: `adversarial.<topic>.<behavior>`, one sub-namespace per attack topic
 `IChainOptions` field is the flattened topic-prefixed camelCase name, e.g.
 `adversarial.reorg.buildOnEmpty` -> `adversarialReorgBuildOnEmpty`.
 
-Default-ON wiring (mirror `proposerBoost`): set the default `true` in
+Default-OFF wiring: set the default `false` in
 `defaultChainOptions` (`packages/beacon-node/src/chain/options.ts`); in
 `chain.parseArgs` map plain `args["adversarial.<topic>.<behavior>"]` so an unset
 flag is stripped by `removeUndefinedRecursive` and the default survives the merge,
-while `=false` disables it. Keep the lib consumer a plain truthy check
+while `=true` enables it. Keep the lib consumer a plain truthy check
 (`if (this.opts?.<field>)`) so shared-lib unit tests built with no opts stay OFF
-and do not break. Do NOT make the lib consumer default-on via `!== false`.
+and do not break.
 
 First feature shipped this way: `--adversarial.reorg.buildOnEmpty` (Tier 1 #4,
-always build on the EMPTY parent variant; default true). It is binary, so it has
+always build on the EMPTY parent variant; default false). It is binary, so it has
 no threshold. Second: `--adversarial.reorg.omitPtcAttestations` (Tier 1 #4b, omit
-the reorged slot's PTC attestations when building on empty; default true, also binary).
+the reorged slot's PTC attestations when building on empty; default false, also binary).
 
 ## How ePBS changes the threat model
 
