@@ -1193,7 +1193,9 @@ export class BeaconChain implements IBeaconChain {
 
       const headRootChanged = head.blockRoot !== prevHead.blockRoot;
 
-      if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) return head;
+      if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
+        return head;
+      }
 
       try {
         const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
