@@ -67,6 +67,8 @@ export type ForkChoiceOpts = {
   fastConfirmation?: boolean;
   /** ADVERSARIAL (devnet test only): always build on the EMPTY parent variant, orphaning the parent payload regardless of PTC votes */
   adversarialReorgBuildOnEmpty?: boolean;
+  /** ADVERSARIAL (devnet test only): in the epoch's last slot, build on the current head's parent */
+  adversarialReorgBuildOnParentInLastSlot?: boolean;
 };
 
 export enum UpdateHeadOpt {
@@ -455,6 +457,25 @@ export class ForkChoice implements IForkChoice {
   ): {proposerHead: ProtoBlock; isHeadTimely: boolean; notReorgedReason?: NotReorgedReason} {
     const isHeadTimely = headBlock.timeliness;
     let proposerHead = headBlock;
+
+    if (
+      this.opts?.adversarialReorgBuildOnParentInLastSlot &&
+      computeSlotsSinceEpochStart(slot) === SLOTS_PER_EPOCH - 1 &&
+      headBlock.slot === slot - 1
+    ) {
+      const parentBlock = this.protoArray.getBlock(
+        headBlock.parentRoot,
+        this.protoArray.getParentPayloadStatus(headBlock)
+      );
+      if (parentBlock !== undefined) {
+        this.logger?.warn("ADVERSARIAL: Building the epoch's last-slot block on the current head's parent", {
+          slot,
+          proposerHead: parentBlock.blockRoot,
+          orphanedHead: headBlock.blockRoot,
+        });
+        return {proposerHead: parentBlock, isHeadTimely};
+      }
+    }
 
     // Skip re-org attempt if proposer boost (reorg) are disabled
     const {proposerBoost, proposerBoostReorg} = this.opts ?? {};

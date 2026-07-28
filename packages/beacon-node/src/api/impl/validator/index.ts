@@ -57,6 +57,7 @@ import {
   fromHex,
   prettyWeiToEth,
   resolveOrRacePromises,
+  sleep,
   toHex,
   toRootHex,
 } from "@lodestar/utils";
@@ -72,6 +73,7 @@ import {
   SyncCommitteeErrorCode,
 } from "../../../chain/errors/index.js";
 import {ChainEvent, CommonBlockBody} from "../../../chain/index.js";
+import {DEFAULT_ADVERSARIAL_REORG_LAST_SLOT_PROPOSAL_DELAY_BPS} from "../../../chain/options.js";
 import {PREPARE_NEXT_SLOT_BPS} from "../../../chain/prepareNextSlot.js";
 import {BlockType, ProduceFullDeneb, ProduceFullGloas} from "../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../chain/regen/index.js";
@@ -223,6 +225,22 @@ export function getValidatorApi(
     }
 
     // else, clock already in slot or slot is in the past
+  }
+
+  async function delayAdversarialLastSlotProposal<T>(slot: Slot, response: T): Promise<T> {
+    if (!chain.opts.adversarialReorgDelayLastSlotProposal || slot % SLOTS_PER_EPOCH !== SLOTS_PER_EPOCH - 1) {
+      return response;
+    }
+
+    const delayBps =
+      chain.opts.adversarialReorgLastSlotProposalDelayBps ?? DEFAULT_ADVERSARIAL_REORG_LAST_SLOT_PROPOSAL_DELAY_BPS;
+    const delay = config.getSlotComponentDurationMs(delayBps) - chain.clock.msFromSlot(slot);
+    if (delay > 0) {
+      logger.warn("ADVERSARIAL: Delaying last-slot block proposal", {slot, delayBps, delayMs: delay});
+      await sleep(delay);
+    }
+
+    return response;
   }
 
   /**
@@ -1077,16 +1095,16 @@ export function getValidatorApi(
           blobs: blobsBundle.blobs,
         };
 
-        return {
+        return delayAdversarialLastSlotProposal(slot, {
           data: blockContents,
           meta: {version: fork, consensusBlockValue, executionPayloadValue, executionPayloadIncluded: true},
-        };
+        });
       }
 
-      return {
+      return delayAdversarialLastSlotProposal(slot, {
         data: block as gloas.BeaconBlock,
         meta: {version: fork, consensusBlockValue, executionPayloadValue, executionPayloadIncluded: false},
-      };
+      });
     },
 
     async produceAttestationData({committeeIndex, slot}) {

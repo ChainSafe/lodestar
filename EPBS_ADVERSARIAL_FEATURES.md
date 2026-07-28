@@ -1,7 +1,7 @@
 # ePBS (gloas) Adversarial Node: Potential Features
 
-Status: catalog. Two features shipped so far (Tier 1 #4 and #4b, see Conventions);
-the rest are planned.
+Status: catalog. Four features shipped so far (Tier 1 #4, #4b, #4c, and #4d,
+see Conventions); the rest are planned.
 
 Purpose: a list of adversarial behaviors we could build into a test-only "deathstar"
 Lodestar build to stress the gloas (ePBS) fork on a devnet, find consensus
@@ -43,6 +43,12 @@ First feature shipped this way: `--adversarial.reorg.buildOnEmpty` (Tier 1 #4,
 always build on the EMPTY parent variant; default false). It is binary, so it has
 no threshold. Second: `--adversarial.reorg.omitPtcAttestations` (Tier 1 #4b, omit
 the reorged slot's PTC attestations when building on empty; default false, also binary).
+Third: `--adversarial.reorg.delayLastSlotProposal` (Tier 1 #4c, delay the final
+slot's block until `--adversarial.reorg.lastSlotProposalDelayBps`, default 4000
+basis points into the slot). Fourth:
+`--adversarial.reorg.buildOnParentInLastSlot` (Tier 1 #4d, make the final-slot
+proposer build on the current head's parent even when the head is strong; default
+false).
 
 ## How ePBS changes the threat model
 
@@ -156,6 +162,37 @@ evidence against its own reorg.
   self-expand from gossip (Lodestar #5222) still reject it. Composes with #4: it
   turns #4 from a self-defeating "dumb" reorg (the reorg block ships the proof
   against itself) into one that flips non-self-expanding clients.
+
+### 4c. Delayed final-slot proposal (epoch-boundary late head)
+
+When proposing the final slot of an epoch, produce the block normally but delay
+returning it to the validator until late in the slot. This lets the block become
+head shortly before the next epoch begins and gives the slot 0 proposer a chance
+to orphan it.
+
+- Injection point: delay the `produceBlockV4` response in
+  `packages/beacon-node/src/api/impl/validator/index.ts`.
+- Timing: `--adversarial.reorg.lastSlotProposalDelayBps` selects the target time
+  as a fraction of the slot duration. It defaults to 4000 basis points, after
+  Gloas's 2500-basis-point attestation deadline and Lighthouse's observed
+  one-third-slot late-block threshold, leaving 60% of the slot for the late
+  block to become the network head before the epoch boundary.
+- Effect: exercises late-head handling and dependent-root changes at an epoch
+  boundary. Payload-only withholding is insufficient because it does not remove
+  the beacon block that supplies the dependent root.
+
+### 4d. Build the final-slot block on the current head's parent
+
+When proposing the final slot of an epoch and the current head is from the
+previous slot, deliberately use that head's parent as the proposer head even when
+the current head is strong.
+
+- Injection point: adversarial override at the start of `getProposerHead` in
+  `packages/fork-choice/src/forkChoice/forkChoice.ts`.
+- Effect: the final-slot block is built beside the current head instead of on
+  top of it, forcing a single-slot reorg immediately before the epoch boundary.
+- Modes: use this independently from #4c. The delayed-proposal mode lets another
+  client's slot 0 proposer decide whether to reorg the weak final-slot head.
 
 ---
 

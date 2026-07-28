@@ -4,6 +4,12 @@ import {ensure0xPrefix} from "../../util/format.js";
 import {AdversarialArgs} from "./adversarial.js";
 import {CircuitBreakerArgs} from "./builder.js";
 
+type AdversarialChainOptions = IBeaconNodeOptions["chain"] & {
+  adversarialReorgDelayLastSlotProposal?: boolean;
+  adversarialReorgLastSlotProposalDelayBps?: number;
+  adversarialReorgBuildOnParentInLastSlot?: boolean;
+};
+
 export type ChainArgs = {
   suggestedFeeRecipient: string;
   graffitiAppend?: boolean;
@@ -43,7 +49,7 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-export function parseArgs(args: ChainArgs & CircuitBreakerArgs & AdversarialArgs): IBeaconNodeOptions["chain"] {
+export function parseArgs(args: ChainArgs & CircuitBreakerArgs & AdversarialArgs): AdversarialChainOptions {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
@@ -63,6 +69,9 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs & AdversarialArgs
     proposerBoostReorg: args["chain.proposerBoostReorg"],
     adversarialReorgBuildOnEmpty: args["adversarial.reorg.buildOnEmpty"],
     adversarialReorgOmitPtcAttestations: args["adversarial.reorg.omitPtcAttestations"],
+    adversarialReorgDelayLastSlotProposal: args["adversarial.reorg.delayLastSlotProposal"],
+    adversarialReorgLastSlotProposalDelayBps: args["adversarial.reorg.lastSlotProposalDelayBps"],
+    adversarialReorgBuildOnParentInLastSlot: args["adversarial.reorg.buildOnParentInLastSlot"],
     disableImportExecutionFcU: args["chain.disableImportExecutionFcU"],
     preaggregateSlotDistance: args["chain.preaggregateSlotDistance"],
     attDataCacheSlotDistance: args["chain.attDataCacheSlotDistance"],

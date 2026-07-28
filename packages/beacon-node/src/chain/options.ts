@@ -14,6 +14,8 @@ import {ValidatorMonitorOpts} from "./validatorMonitor.js";
 
 export {ArchiveMode, DEFAULT_ARCHIVE_MODE};
 
+export const DEFAULT_ADVERSARIAL_REORG_LAST_SLOT_PROPOSAL_DELAY_BPS = 4_000;
+
 export type IChainOptions = BlockProcessOpts &
   PoolOpts &
   SeenCacheOpts &
@@ -55,6 +57,12 @@ export type IChainOptions = BlockProcessOpts &
     allowedFaults?: number;
     /** ADVERSARIAL (devnet test only): omit the parent slot's PTC attestations when building on the EMPTY parent variant */
     adversarialReorgOmitPtcAttestations?: boolean;
+    /** ADVERSARIAL (devnet test only): delay returning a produced last-slot block until late in the slot */
+    adversarialReorgDelayLastSlotProposal?: boolean;
+    /** Target time within the last slot to return the delayed block, in basis points */
+    adversarialReorgLastSlotProposalDelayBps?: number;
+    /** ADVERSARIAL (devnet test only): in the epoch's last slot, build on the current head's parent */
+    adversarialReorgBuildOnParentInLastSlot?: boolean;
   };
 
 export type BlockProcessOpts = {
@@ -117,6 +125,11 @@ export const defaultChainOptions: IChainOptions = {
   adversarialReorgBuildOnEmpty: false,
   // ADVERSARIAL (devnet test only): enable with --adversarial.reorg.omitPtcAttestations=true
   adversarialReorgOmitPtcAttestations: false,
+  // ADVERSARIAL (devnet test only): enable with --adversarial.reorg.delayLastSlotProposal=true
+  adversarialReorgDelayLastSlotProposal: false,
+  adversarialReorgLastSlotProposalDelayBps: DEFAULT_ADVERSARIAL_REORG_LAST_SLOT_PROPOSAL_DELAY_BPS,
+  // ADVERSARIAL (devnet test only): enable with --adversarial.reorg.buildOnParentInLastSlot=true
+  adversarialReorgBuildOnParentInLastSlot: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
   graffitiAppend: true,
   serveHistoricalState: false,

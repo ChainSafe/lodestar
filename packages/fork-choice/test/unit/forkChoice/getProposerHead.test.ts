@@ -301,4 +301,41 @@ describe("Forkchoice / GetProposerHead", () => {
       expect(proposerHead.blockRoot).toBe(expectReorg ? parentBlock.blockRoot : headBlock.blockRoot);
     });
   }
+
+  it("forces the epoch's last-slot proposer to build on the current head's parent", () => {
+    const proposalSlot = SLOTS_PER_EPOCH - 1;
+    const parentBlock = {
+      ...baseParentHeadBlock,
+      slot: proposalSlot - 2,
+      parentRoot: genesisBlock.blockRoot,
+      blockRoot: getBlockRoot(proposalSlot - 2),
+      targetRoot: getBlockRoot(proposalSlot - 2),
+    };
+    const headBlock = {
+      ...baseHeadBlock,
+      slot: proposalSlot - 1,
+      parentRoot: parentBlock.blockRoot,
+      blockRoot: getBlockRoot(proposalSlot - 1),
+      targetRoot: getBlockRoot(proposalSlot - 1),
+      timeliness: true,
+      weight: validatorCount,
+    };
+    protoArr.onBlock(parentBlock, parentBlock.slot, null);
+    protoArr.onBlock(headBlock, headBlock.slot, null);
+
+    const forkChoice = new ForkChoice(config, {...fcStore, currentSlot: proposalSlot}, protoArr, validatorCount, null, {
+      proposerBoost: false,
+      proposerBoostReorg: false,
+      adversarialReorgBuildOnParentInLastSlot: true,
+    });
+
+    const {proposerHead, isHeadTimely, notReorgedReason} = forkChoice.getProposerHead(headBlock, 0, proposalSlot);
+
+    expect(proposerHead.blockRoot).toBe(parentBlock.blockRoot);
+    expect(isHeadTimely).toBe(true);
+    expect(notReorgedReason).toBeUndefined();
+
+    const {proposerHead: nonLastSlotProposerHead} = forkChoice.getProposerHead(headBlock, 0, proposalSlot - 1);
+    expect(nonLastSlotProposerHead.blockRoot).toBe(headBlock.blockRoot);
+  });
 });

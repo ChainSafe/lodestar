@@ -2,7 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ProtoBlock} from "@lodestar/fork-choice";
-import {ForkName} from "@lodestar/params";
+import {ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
@@ -69,6 +69,7 @@ describe("api/validator - produceBlockV4", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -181,5 +182,45 @@ describe("api/validator - produceBlockV4", () => {
     );
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(bidBlock);
+  });
+
+  it("delays a final-slot proposal until the configured point in the slot", async () => {
+    vi.useFakeTimers();
+    const proposalSlot = SLOTS_PER_EPOCH - 1;
+    const delayBps = 100;
+    const delay = config.getSlotComponentDurationMs(delayBps);
+    Object.assign(modules.chain.opts, {
+      adversarialReorgDelayLastSlotProposal: true,
+      adversarialReorgLastSlotProposalDelayBps: delayBps,
+    });
+    vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(proposalSlot);
+    vi.mocked(modules.chain.clock.msFromSlot).mockReturnValue(0);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
+
+    let resolved = false;
+    const producePromise = api
+      .produceBlockV4({
+        slot: proposalSlot,
+        randaoReveal,
+        graffiti,
+        feeRecipient,
+        includePayload: false,
+      })
+      .then((result) => {
+        resolved = true;
+        return result;
+      });
+
+    await vi.advanceTimersByTimeAsync(delay - 1);
+    expect(resolved).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await producePromise;
+
+    expect(modules.logger.warn).toHaveBeenCalledWith("ADVERSARIAL: Delaying last-slot block proposal", {
+      slot: proposalSlot,
+      delayBps,
+      delayMs: delay,
+    });
   });
 });

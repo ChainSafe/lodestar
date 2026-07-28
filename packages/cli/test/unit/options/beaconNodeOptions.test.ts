@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {ArchiveMode, IBeaconNodeOptions} from "@lodestar/beacon-node";
 import {RecursivePartial} from "@lodestar/utils";
-import {BeaconNodeArgs, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
+import {BeaconNodeArgs, beaconNodeOptions, parseBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 import {NetworkArgs, parseArgs as parseNetworkArgs} from "../../../src/options/beaconNodeOptions/network.js";
 
 describe("options / beaconNodeOptions", () => {
@@ -222,14 +222,35 @@ describe("options / beaconNodeOptions", () => {
 });
 
 describe("options / adversarial", () => {
+  it("should default the last-slot proposal delay to 4000 basis points", () => {
+    expect(beaconNodeOptions["adversarial.reorg.lastSlotProposalDelayBps"].defaultDescription).toBe("4000");
+  });
+
   it("should enable adversarial behaviors independently", () => {
     const options = parseBeaconNodeArgs({
       "adversarial.reorg.buildOnEmpty": true,
       "adversarial.reorg.omitPtcAttestations": false,
+      "adversarial.reorg.delayLastSlotProposal": true,
+      "adversarial.reorg.lastSlotProposalDelayBps": 8_000,
+      "adversarial.reorg.buildOnParentInLastSlot": false,
     } as BeaconNodeArgs);
 
-    expect(options.chain?.adversarialReorgBuildOnEmpty).toBe(true);
-    expect(options.chain?.adversarialReorgOmitPtcAttestations).toBe(false);
+    expect(options.chain).toMatchObject({
+      adversarialReorgBuildOnEmpty: true,
+      adversarialReorgOmitPtcAttestations: false,
+      adversarialReorgDelayLastSlotProposal: true,
+      adversarialReorgLastSlotProposalDelayBps: 8_000,
+      adversarialReorgBuildOnParentInLastSlot: false,
+    });
+  });
+
+  it("should reject a last-slot proposal delay outside the slot", () => {
+    const coerce = beaconNodeOptions["adversarial.reorg.lastSlotProposalDelayBps"].coerce;
+
+    expect(coerce?.(3_000)).toBe(3_000);
+    expect(() => coerce?.(10_000)).toThrow(
+      "adversarial.reorg.lastSlotProposalDelayBps must be an integer from 0 to 9999"
+    );
   });
 });
 
