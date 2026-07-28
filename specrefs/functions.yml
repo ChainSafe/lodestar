@@ -6536,7 +6536,7 @@
 - name: is_attestation_same_slot#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
-      search: export function isAttestationSameSlot(
+      search: export function isAttestationSameSlotRootCache(
   spec: |
     <spec fn="is_attestation_same_slot" fork="gloas" hash="0a194ce7">
     def is_attestation_same_slot(state: BeaconState, data: AttestationData) -> bool:
@@ -6982,7 +6982,7 @@
 - name: is_head_weak#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak"
   spec: |
     <spec fn="is_head_weak" fork="phase0" hash="ac0fb917">
     def is_head_weak(store: Store, head_root: Root) -> bool:
@@ -6993,7 +6993,9 @@
     </spec>
 
 - name: is_head_weak#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak"
   spec: |
     <spec fn="is_head_weak" fork="gloas" hash="a763a3db">
     def is_head_weak(store: Store, head_root: Root) -> bool:
@@ -7162,7 +7164,7 @@
 - name: is_parent_strong#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_parent_strong"
   spec: |
     <spec fn="is_parent_strong" fork="phase0" hash="a23d498f">
     def is_parent_strong(store: Store, root: Root) -> bool:
@@ -7177,7 +7179,7 @@
 - name: is_parent_strong#gloas
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-is_parent_strong"
   spec: |
     <spec fn="is_parent_strong" fork="gloas" hash="3177c56c">
     def is_parent_strong(store: Store, root: Root) -> bool:

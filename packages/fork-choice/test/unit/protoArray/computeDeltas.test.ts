@@ -21,7 +21,7 @@ describe("computeDeltas", () => {
       newBalances[i] = 0;
     }
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -55,7 +55,7 @@ describe("computeDeltas", () => {
       newBalances[i] = balance;
     }
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -93,7 +93,7 @@ describe("computeDeltas", () => {
       newBalances[i] = balance;
     }
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -127,7 +127,7 @@ describe("computeDeltas", () => {
       newBalances[i] = balance;
     }
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -170,7 +170,7 @@ describe("computeDeltas", () => {
       newBalances[i] = newBalance;
     }
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -212,7 +212,7 @@ describe("computeDeltas", () => {
     newBalances[0] = balance;
     newBalances[1] = balance;
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -250,7 +250,7 @@ describe("computeDeltas", () => {
     const newBalances = getEffectiveBalanceIncrementsZeroed(1);
     newBalances[0] = balance;
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -285,7 +285,7 @@ describe("computeDeltas", () => {
     const balances = new Uint16Array([firstBalance, secondBalance]);
     // 1st validator is part of an attester slashing
     const equivocatingIndices = new Set([0]);
-    let {deltas} = computeDeltas(
+    let {attestationDeltas: deltas} = computeDeltas(
       indices.size,
       voteCurrentIndices,
       voteNextIndices,
@@ -305,7 +305,7 @@ describe("computeDeltas", () => {
       balances,
       balances,
       equivocatingIndices
-    ).deltas;
+    ).attestationDeltas;
     expect(deltas).toEqualWithMessage([0, 0], "calling computeDeltas again should not have any affect on the weight");
   });
 
@@ -324,7 +324,7 @@ describe("computeDeltas", () => {
     // Both V0 and V1 are in the (add-only) equivocating set
     const equivocatingIndices = new Set([0, 1]);
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       numProtoNodes,
       voteCurrentIndices,
       voteNextIndices,
@@ -355,7 +355,7 @@ describe("computeDeltas", () => {
 
     const equivocatingIndices = new Set([0, 1, 2]);
 
-    const {deltas} = computeDeltas(
+    const {attestationDeltas: deltas} = computeDeltas(
       numProtoNodes,
       voteCurrentIndices,
       voteNextIndices,

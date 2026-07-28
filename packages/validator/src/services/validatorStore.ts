@@ -81,7 +81,8 @@ type DefaultProposerConfig = {
   feeRecipient: ExecutionAddress;
   builder: {
     gasLimit: number;
-    selection: routes.validator.BuilderSelection;
+    // Left undefined when not configured so the fork-appropriate default can be resolved per slot
+    selection?: routes.validator.BuilderSelection;
     boostFactor: bigint;
   };
 };
@@ -182,7 +183,7 @@ export class ValidatorStore {
       feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
-        selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
+        selection: defaultConfig.builder?.selection,
         boostFactor: builderBoostFactor,
       },
     };
@@ -278,9 +279,21 @@ export class ValidatorStore {
     delete validatorData.graffiti;
   }
 
-  getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+  getBuilderSelectionParams(
+    pubkeyHex: PubkeyHex,
+    slot?: Slot
+  ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+    // Builder bids post-gloas are in-protocol over p2p, so the default strategy uses them
+    // (as if `--builder` was set), unless the validator explicitly opted out. Pre-gloas
+    // there is no in-protocol builder, so the default remains local-only (executiononly).
+    const defaultSelection =
+      slot !== undefined && this.config.getForkSeq(slot) >= ForkSeq.gloas
+        ? defaultOptions.builderAliasSelection
+        : defaultOptions.builderSelection;
     const selection =
-      this.validators.get(pubkeyHex)?.builder?.selection ?? this.defaultProposerConfig.builder.selection;
+      this.validators.get(pubkeyHex)?.builder?.selection ??
+      this.defaultProposerConfig.builder.selection ??
+      defaultSelection;
 
     let boostFactor: bigint;
     switch (selection) {

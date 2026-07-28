@@ -66,9 +66,7 @@ describe("api/validator - produceBlockV3", () => {
     [routes.validator.BuilderSelection.ExecutionAlways, null, 0, 1, false, "engine"],
     [routes.validator.BuilderSelection.ExecutionAlways, 1, 1, 1, true, "engine"],
 
-    [routes.validator.BuilderSelection.BuilderOnly, 0, 2, 0, false, "builder"],
     [routes.validator.BuilderSelection.ExecutionOnly, 2, 0, 1, false, "engine"],
-    [routes.validator.BuilderSelection.BuilderOnly, 1, 1, 0, true, "builder"],
     [routes.validator.BuilderSelection.ExecutionOnly, 1, 1, 1, true, "engine"],
   ];
 
@@ -158,13 +156,59 @@ describe("api/validator - produceBlockV3", () => {
         expect(modules.chain.produceBlindedBlock).toBeCalledTimes(1);
       }
 
-      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        expect(modules.chain.produceBlock).toBeCalledTimes(0);
-      } else {
-        expect(modules.chain.produceBlock).toBeCalledTimes(1);
-      }
+      expect(modules.chain.produceBlock).toBeCalledTimes(1);
     });
   }
+
+  it("treats deprecated builderonly selection as builderalways", async () => {
+    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+    const blindedBlock = ssz.bellatrix.BlindedBeaconBlock.defaultValue();
+    const slot = 1 * SLOTS_PER_EPOCH;
+
+    vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
+    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+    modules.chain.recomputeForkChoiceHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
+    modules.chain.getProposerHead.mockReturnValue({blockRoot: toRootHex(fullBlock.parentRoot)} as ProtoBlock);
+    modules.chain.forkChoice.getBlockDefaultStatus.mockReturnValue(zeroProtoBlock);
+    modules.chain.produceCommonBlockBody.mockResolvedValue({
+      attestations: fullBlock.body.attestations,
+      attesterSlashings: fullBlock.body.attesterSlashings,
+      deposits: fullBlock.body.deposits,
+      proposerSlashings: fullBlock.body.proposerSlashings,
+      eth1Data: fullBlock.body.eth1Data,
+      graffiti: fullBlock.body.graffiti,
+      randaoReveal: fullBlock.body.randaoReveal,
+      voluntaryExits: fullBlock.body.voluntaryExits,
+      blsToExecutionChanges: [],
+      syncAggregate: fullBlock.body.syncAggregate,
+    });
+    // Local payload value (2) exceeds the builder value (1), builderalways still selects the builder block
+    modules.chain.produceBlock.mockResolvedValue({
+      block: fullBlock,
+      executionPayloadValue: BigInt(2),
+      consensusBlockValue: BigInt(0),
+      shouldOverrideBuilder: false,
+    });
+    modules.chain.produceBlindedBlock.mockResolvedValue({
+      block: blindedBlock,
+      executionPayloadValue: BigInt(1),
+      consensusBlockValue: BigInt(0),
+    });
+
+    const {data: block, meta} = await api.produceBlockV3({
+      slot,
+      randaoReveal: fullBlock.body.randaoReveal,
+      graffiti: "a".repeat(32),
+      skipRandaoVerification: false,
+      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+    });
+
+    expect(modules.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Builder selection builderonly is no longer supported")
+    );
+    expect(block).toEqual(blindedBlock);
+    expect(meta.executionPayloadBlinded).toBe(true);
+  });
 
   it("correctly pass feeRecipient to produceBlock", async () => {
     const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
