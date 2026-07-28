@@ -1,7 +1,7 @@
 import {ApiClient} from "@lodestar/api";
 import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {Genesis} from "@lodestar/types/phase0";
 import {Logger} from "@lodestar/utils";
+import {waitForGenesis} from "./genesis.js";
 import {Metrics} from "./metrics.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 
@@ -37,7 +37,13 @@ export class Builder {
     this.api = opts.api;
   }
 
-  static init(opts: BuilderOptions, genesis: Genesis, metrics: Metrics | null = null): Builder {
+  static async init(opts: BuilderOptions, metrics: Metrics | null = null): Promise<Builder> {
+    const genesis = await waitForGenesis(opts.api, opts.logger, opts.abortController.signal);
+    opts.logger.info("Genesis fetched from the beacon node");
+
+    // TODO: Verify chain config matches the source BN. `assertEqualParams` in @lodestar/validator
+    // does this but is package-private. Best fix is moving it somewhere shared.
+
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
     const builderSigner = new BuilderSigner(config, opts.keypair);
 

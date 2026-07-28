@@ -2,7 +2,6 @@ import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {Builder} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {waitForGenesis} from "@lodestar/validator";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
@@ -33,19 +32,11 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   const api = getClient({urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal}}, {config, logger});
 
-  const genesis = await waitForGenesis(api, logger, abortController.signal);
-
-  // TODO: Verify chain config matches the source BN. `assertEqualParams` in @lodestar/validator
-  // does this but is package-private. Best fix is moving it somewhere shared.
-
-  const _builder = Builder.init(
-    {
-      keypair,
-      logger,
-      config,
-      abortController,
-      api,
-    },
-    genesis
-  );
+  const _builder = await Builder.init({
+    keypair,
+    logger,
+    config,
+    abortController,
+    api,
+  });
 }
