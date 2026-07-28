@@ -1952,13 +1952,6 @@ export class ForkChoice implements IForkChoice {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.HeadBlockIsTimely};
     }
 
-    // No reorg if we are at an epoch boundary
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_not_epoch_boundary
-    const isAtEpochBoundary = slot % SLOTS_PER_EPOCH === 0;
-    if (isAtEpochBoundary) {
-      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.AtEpochBoundary};
-    }
-
     // No reorg if headBlock and parentBlock are not ffg competitive
     // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_ffg_competitive
     const {unrealizedJustifiedEpoch: headBlockCpEpoch, unrealizedJustifiedRoot: headBlockCpRoot} = headBlock;
