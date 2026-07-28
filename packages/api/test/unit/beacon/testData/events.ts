@@ -30,6 +30,19 @@ export const eventTestData: EventData = {
     currentDutyDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
     executionOptimistic: false,
   },
+  [EventType.headV2]: {
+    version: ForkName.gloas,
+    data: {
+      slot: 10,
+      block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+      state: "0x600e852a08c1200654ddf11025f1ceacb3c2e74bdd5c630cde0838b2591b69f9",
+      payloadStatus: "empty",
+      epochTransition: false,
+      currentEpochDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
+      nextEpochDependentRoot: "0x5e0043f107cb57913498fbf2f99ff55e730bf1e151f02f221e977c91a90a0e91",
+      executionOptimistic: false,
+    },
+  },
   [EventType.block]: {
     slot: 10,
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
