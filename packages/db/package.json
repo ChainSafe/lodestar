@@ -14,12 +14,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./controller/level": {
-      "bun": "./src/controller/level.ts",
+      "typescript": "./src/controller/level.ts",
       "import": "./lib/controller/level.js"
     }
   },

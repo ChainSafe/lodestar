@@ -15,69 +15,59 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./api": {
-      "bun": "./src/api/index.ts",
+      "typescript": "./src/api/index.ts",
       "types": "./lib/api/index.d.ts",
       "import": "./lib/api/index.js"
     },
     "./chain": {
-      "bun": "./src/chain/index.ts",
+      "typescript": "./src/chain/index.ts",
       "types": "./lib/chain/index.d.ts",
       "import": "./lib/chain/index.js"
     },
     "./constants": {
-      "bun": "./src/constants/index.ts",
+      "typescript": "./src/constants/index.ts",
       "types": "./lib/constants/index.d.ts",
       "import": "./lib/constants/index.js"
     },
     "./db": {
-      "bun": "./src/db/index.ts",
+      "typescript": "./src/db/index.ts",
       "types": "./lib/db/index.d.ts",
       "import": "./lib/db/index.js"
     },
     "./metrics": {
-      "bun": "./src/metrics/index.ts",
+      "typescript": "./src/metrics/index.ts",
       "types": "./lib/metrics/index.d.ts",
       "import": "./lib/metrics/index.js"
     },
     "./monitoring": {
-      "bun": "./src/monitoring/index.ts",
+      "typescript": "./src/monitoring/index.ts",
       "types": "./lib/monitoring/index.d.ts",
       "import": "./lib/monitoring/index.js"
     },
     "./network": {
-      "bun": "./src/network/index.ts",
+      "typescript": "./src/network/index.ts",
       "types": "./lib/network/index.d.ts",
       "import": "./lib/network/index.js"
     },
     "./node": {
-      "bun": "./src/node/index.ts",
+      "typescript": "./src/node/index.ts",
       "types": "./lib/node/index.d.ts",
       "import": "./lib/node/index.js"
     },
     "./sync": {
-      "bun": "./src/sync/index.ts",
+      "typescript": "./src/sync/index.ts",
       "types": "./lib/sync/index.d.ts",
       "import": "./lib/sync/index.js"
     },
     "./util": {
-      "bun": "./src/util/index.ts",
+      "typescript": "./src/util/index.ts",
       "types": "./lib/util/index.d.ts",
       "import": "./lib/util/index.js"
-    }
-  },
-  "imports": {
-    "#prometheus-gc-stats-wrapper": {
-      "bun": "./src/bun-wrappers/prometheus-gc-stats.ts",
-      "default": "@chainsafe/prometheus-gc-stats"
-    },
-    "#datastore-wrapper": {
-      "bun": "./src/network/peers/datastore_bun.ts",
-      "default": "datastore-level"
     }
   },
   "files": [
@@ -149,7 +139,6 @@
     "@lodestar/validator": "workspace:^",
     "@multiformats/multiaddr": "^13.0.1",
     "datastore-core": "^11.0.2",
-    "datastore-fs": "^11.0.2",
     "datastore-level": "^12.0.2",
     "deepmerge": "^4.3.1",
     "fastify": "^5.8.1",
