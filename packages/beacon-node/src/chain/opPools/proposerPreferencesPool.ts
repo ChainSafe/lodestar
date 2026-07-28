@@ -46,6 +46,22 @@ export class ProposerPreferencesPool {
     return true;
   }
 
+  remove(signed: gloas.SignedProposerPreferences): boolean {
+    const {proposalSlot, dependentRoot} = signed.message;
+    const rootHex = toRootHex(dependentRoot);
+    const byRoot = this.bySlot.get(proposalSlot);
+    if (byRoot?.get(rootHex) !== signed) {
+      return false;
+    }
+
+    byRoot.delete(rootHex);
+    this.localKeys.delete(this.getKey(proposalSlot, rootHex));
+    if (byRoot.size === 0) {
+      this.bySlot.delete(proposalSlot);
+    }
+    return true;
+  }
+
   add(signed: gloas.SignedProposerPreferences, opts?: {local?: boolean}): void {
     const {proposalSlot, dependentRoot} = signed.message;
     const rootHex = toRootHex(dependentRoot);

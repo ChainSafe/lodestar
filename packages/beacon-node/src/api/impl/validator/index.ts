@@ -1837,8 +1837,17 @@ export function getValidatorApi(
           try {
             await validateGossipProposerPreferences(chain, signed);
 
-            chain.proposerPreferencesPool.add(signed, {local: true});
-            await network.publishProposerPreferences(signed);
+            try {
+              await network.publishProposerPreferences(signed);
+            } catch (e) {
+              chain.proposerPreferencesPool.remove(signed);
+              throw e;
+            }
+            chain.proposerPreferencesPool.markLocal(
+              signed.message.proposalSlot,
+              toRootHex(signed.message.dependentRoot),
+              signed.message.validatorIndex
+            );
             chain.emitter.emit(routes.events.EventType.proposerPreferences, {
               version: config.getForkName(signed.message.proposalSlot),
               data: signed,

@@ -62,6 +62,20 @@ describe("chain / opPools / ProposerPreferencesPool", () => {
     expect(pool.isKnownLocal(10, rootAHex, 1)).toBe(false);
   });
 
+  it("removes only the exact stored entry and clears the local marker", () => {
+    const prefs = makePrefs(10, 1, rootA);
+    const replacement = makePrefs(10, 1, rootA);
+    pool.add(prefs, {local: true});
+
+    expect(pool.remove(replacement)).toBe(false);
+    expect(pool.get(10, rootAHex)).toBe(prefs);
+    expect(pool.isKnownLocal(10, rootAHex, 1)).toBe(true);
+
+    expect(pool.remove(prefs)).toBe(true);
+    expect(pool.get(10, rootAHex)).toBeNull();
+    expect(pool.isKnownLocal(10, rootAHex, 1)).toBe(false);
+  });
+
   it("returns null for unknown dependent_root at a known slot", () => {
     pool.add(makePrefs(10, 1, rootA));
     expect(pool.get(10, rootBHex)).toBeNull();
