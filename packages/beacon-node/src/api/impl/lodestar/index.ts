@@ -217,7 +217,7 @@ export function getLodestarApi({
     },
 
     async getHistoricalSummaries({stateId}) {
-      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
 
       const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
 
@@ -332,7 +332,7 @@ export function getLodestarApi({
 
       for (const [epoch, attestationsPerEpoch] of attestations) {
         const slot = computeStartSlotAtEpoch(epoch);
-        const {state} = await getStateResponseWithRegen(chain, slot);
+        const {state} = await getStateResponseWithRegen(chain, sync, slot);
         const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
         const shuffling = stateView.getShufflingAtEpoch(epoch);
         for (const attestation of attestationsPerEpoch) {

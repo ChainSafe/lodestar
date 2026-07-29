@@ -53,6 +53,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     useProduceBlockV3?: boolean;
     broadcastValidation?: string;
     blindedLocal?: boolean;
+    payloadLocal?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -261,7 +262,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description:
-      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `builderonly`, `executionalways`, or `executiononly`",
+      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
@@ -290,6 +291,13 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     type: "boolean",
     description: "Request fetching local block in blinded format for produceBlockV3",
     defaultDescription: `${defaultOptions.blindedLocal}`,
+  },
+
+  payloadLocal: {
+    type: "boolean",
+    description:
+      "Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth but the envelope must be published via the same beacon node that produced the block",
+    defaultDescription: "true if a single beacon node is configured, otherwise false",
   },
 
   importKeystores: {

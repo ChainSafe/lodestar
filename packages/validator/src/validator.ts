@@ -66,6 +66,7 @@ export type ValidatorOptions = {
   distributed?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
+  payloadLocal?: boolean;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -256,6 +257,9 @@ export class Validator {
       {
         broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
         blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
+        // Default to keeping the payload local to the beacon node if only a single node is
+        // configured, with multiple nodes the stateless flow allows publishing via any of them
+        payloadLocal: opts.payloadLocal ?? api.httpClient.urlsInits.length <= 1,
       }
     );
 

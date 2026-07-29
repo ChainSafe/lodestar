@@ -145,6 +145,8 @@ describe("options / beaconNodeOptions", () => {
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
+        faultInspectionWindow: 32,
+        allowedFaults: 8,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],

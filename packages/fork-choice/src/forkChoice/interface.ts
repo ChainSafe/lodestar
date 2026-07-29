@@ -100,6 +100,10 @@ export interface IForkChoice {
   getHead(): ProtoBlock;
   getConfirmedRoot(): RootHex;
   getConfirmedBlock(): ProtoBlock | null;
+  /** Resume the fast confirmation rule; restarts from the finalized root on the next slot tick */
+  resumeFastConfirmation(): void;
+  /** Pause the fast confirmation rule (e.g. while syncing); pins the confirmed root to the finalized root */
+  pauseFastConfirmation(): void;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
@@ -242,6 +246,11 @@ export interface IForkChoice {
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
+  /**
+   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
+   * payload (FULL variant exists). Used by the builder circuit breaker.
+   */
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number};
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
   getPTCVoteCounts(blockRootHex: RootHex): {
