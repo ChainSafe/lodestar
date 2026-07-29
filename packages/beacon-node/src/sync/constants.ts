@@ -15,7 +15,9 @@ export const MAX_BATCH_DOWNLOAD_ATTEMPTS = 5;
 export const RATE_LIMITED_PEER_BACKOFF_MS = 5_000;
 
 /**
- * Consider a batch faulty after downloading and processing this number of times.
+ * Consider a batch faulty once its failed processing attempts EXCEED this number, i.e. the batch is
+ * processed up to `MAX_BATCH_PROCESSING_ATTEMPTS + 1` times before teardown (the check is `>`, same
+ * convention as `MAX_BATCH_DOWNLOAD_ATTEMPTS`).
  * Some processing failures can be caused by a different batch, so range sync classifies the fault
  * before deciding which batch to redownload.
  **/
