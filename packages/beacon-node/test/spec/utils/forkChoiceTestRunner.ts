@@ -875,8 +875,9 @@ export const forkChoiceTestRunner =
             payloadAttestationMessages,
           };
         },
-        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails
-        timeout: 15000,
+        // timeout needs to be set longer than BLOB_AVAILABILITY_TIMEOUT so that on_block_peerdas__not_available fails.
+        // The gloas compliance vectors are the slowest cases at ~13s, so keep plenty of headroom above them.
+        timeout: 60000,
         expectFunc: () => {},
         // Do not manually skip tests here, do it in packages/beacon-node/test/spec/presets/index.test.ts
         // EXCEPTION : this test skipped here because prefix match can't be don't for this particular test

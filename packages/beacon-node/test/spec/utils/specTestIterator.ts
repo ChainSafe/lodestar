@@ -49,6 +49,184 @@ const coveredTestRunners = [
   "transition",
 ];
 
+/**
+ * Build a `skippedTests` matcher for the listed gloas `fork_choice_compliance` test cases.
+ */
+function gloasComptestCases(testCases: string[]): RegExp {
+  return new RegExp(`^gloas/fork_choice_compliance/[^/]+/pyspec_tests/(${testCases.join("|")})$`);
+}
+
+// TODO-GLOAS: re-enable once https://github.com/ethereum/consensus-specs/issues/5496 is resolved.
+// The `viable_for_head_roots_and_weights` check walks `get_node_children()` over
+// `get_filtered_block_tree()` from the justified checkpoint and collects every childless node.
+// `filter_block_tree` only applies the FFG viability test to blocks that have no children, so a
+// block kept in the tree because one of its descendant branches is viable still contributes its
+// EMPTY/FULL variants as leaves. Lodestar instead applies `nodeIsViableForHead` to every candidate
+// leaf and drops those variants.
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#filter_block_tree
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-get_node_children
+const gloasComptestViableHeadLeaves = [
+  "attester_slashing_test_0_226588189_1",
+  "attester_slashing_test_0_226588189_2",
+  "attester_slashing_test_0_226588189_3",
+  "attester_slashing_test_2_421093739_2",
+  "attester_slashing_test_2_421093739_3",
+  "block_tree_test_0_352637865_1",
+  "block_tree_test_0_845778111_1",
+  "block_tree_test_106_185181652_1",
+  "block_tree_test_10_66748590_0",
+  "block_tree_test_10_66748590_1",
+  "block_tree_test_113_104835152_1",
+  "block_tree_test_114_556894271_1",
+  "block_tree_test_115_240136365_1",
+  "block_tree_test_11_871030299_1",
+  "block_tree_test_11_928674675_0",
+  "block_tree_test_11_928674675_1",
+  "block_tree_test_120_210881607_1",
+  "block_tree_test_12_261128873_1",
+  "block_tree_test_13_840768473_1",
+  "block_tree_test_13_955768526_0",
+  "block_tree_test_13_955768526_1",
+  "block_tree_test_14_184936772_1",
+  "block_tree_test_14_351319602_0",
+  "block_tree_test_14_351319602_1",
+  "block_tree_test_15_541038344_0",
+  "block_tree_test_15_541038344_1",
+  "block_tree_test_15_800019884_1",
+  "block_tree_test_16_992154782_1",
+  "block_tree_test_17_297549237_0",
+  "block_tree_test_17_297549237_1",
+  "block_tree_test_17_833975407_1",
+  "block_tree_test_18_653198546_1",
+  "block_tree_test_19_59463747_1",
+  "block_tree_test_19_94131960_0",
+  "block_tree_test_19_94131960_1",
+  "block_tree_test_1_27790366_1",
+  "block_tree_test_1_319877891_1",
+  "block_tree_test_20_214924340_0",
+  "block_tree_test_20_214924340_1",
+  "block_tree_test_20_745066523_0",
+  "block_tree_test_20_745066523_1",
+  "block_tree_test_21_172273850_0",
+  "block_tree_test_21_172273850_1",
+  "block_tree_test_21_922545239_0",
+  "block_tree_test_21_922545239_1",
+  "block_tree_test_22_25875870_1",
+  "block_tree_test_23_389844694_0",
+  "block_tree_test_23_389844694_1",
+  "block_tree_test_23_596961007_1",
+  "block_tree_test_24_354496613_1",
+  "block_tree_test_24_880236990_1",
+  "block_tree_test_25_107974445_0",
+  "block_tree_test_25_107974445_1",
+  "block_tree_test_25_627240016_1",
+  "block_tree_test_26_142042261_1",
+  "block_tree_test_26_173072614_1",
+  "block_tree_test_27_913292592_0",
+  "block_tree_test_27_913292592_1",
+  "block_tree_test_28_381675110_0",
+  "block_tree_test_28_381675110_1",
+  "block_tree_test_28_807978456_1",
+  "block_tree_test_29_814589308_0",
+  "block_tree_test_29_814589308_1",
+  "block_tree_test_29_983211062_1",
+  "block_tree_test_2_157312094_1",
+  "block_tree_test_2_936376354_1",
+  "block_tree_test_30_436259754_1",
+  "block_tree_test_30_644382087_0",
+  "block_tree_test_30_644382087_1",
+  "block_tree_test_31_546039503_1",
+  "block_tree_test_3_232637041_1",
+  "block_tree_test_3_747971273_1",
+  "block_tree_test_4_159122318_0",
+  "block_tree_test_4_159122318_1",
+  "block_tree_test_4_291003728_1",
+  "block_tree_test_59_780026018_1",
+  "block_tree_test_5_775147857_1",
+  "block_tree_test_69_476868810_1",
+  "block_tree_test_6_209849067_0",
+  "block_tree_test_6_209849067_1",
+  "block_tree_test_6_541786653_1",
+  "block_tree_test_7_202782845_1",
+  "block_tree_test_7_493637508_1",
+  "block_tree_test_83_14604737_1",
+  "block_tree_test_84_422061595_1",
+  "block_tree_test_85_960869476_1",
+  "block_tree_test_8_873901914_1",
+  "block_tree_test_8_932531002_1",
+  "block_tree_test_92_398510864_1",
+  "block_tree_test_93_111283980_1",
+  "block_tree_test_9_292085981_1",
+  "block_tree_test_9_30034874_1",
+  "block_weight_test_0_166333364_1",
+  "block_weight_test_0_532005829_1",
+  "block_weight_test_1_488626664_1",
+  "block_weight_test_1_911829335_1",
+  "block_weight_test_2_631708459_1",
+  "block_weight_test_3_182495513_1",
+  "shuffling_test_0_666671982_10",
+  "shuffling_test_0_666671982_12",
+  "shuffling_test_0_666671982_14",
+  "shuffling_test_0_666671982_15",
+  "shuffling_test_0_666671982_16",
+  "shuffling_test_0_666671982_17",
+  "shuffling_test_0_666671982_2",
+  "shuffling_test_0_666671982_21",
+  "shuffling_test_0_666671982_22",
+  "shuffling_test_0_666671982_24",
+  "shuffling_test_0_666671982_25",
+  "shuffling_test_0_666671982_3",
+  "shuffling_test_0_666671982_30",
+  "shuffling_test_0_666671982_31",
+  "shuffling_test_0_666671982_4",
+  "shuffling_test_0_666671982_5",
+  "shuffling_test_0_666671982_8",
+  "shuffling_test_2_356827824_1",
+  "shuffling_test_2_356827824_11",
+  "shuffling_test_2_356827824_14",
+  "shuffling_test_2_356827824_15",
+  "shuffling_test_2_356827824_16",
+  "shuffling_test_2_356827824_18",
+  "shuffling_test_2_356827824_19",
+  "shuffling_test_2_356827824_2",
+  "shuffling_test_2_356827824_20",
+  "shuffling_test_2_356827824_21",
+  "shuffling_test_2_356827824_22",
+  "shuffling_test_2_356827824_24",
+  "shuffling_test_2_356827824_26",
+  "shuffling_test_2_356827824_28",
+  "shuffling_test_2_356827824_29",
+  "shuffling_test_2_356827824_3",
+  "shuffling_test_2_356827824_6",
+  "shuffling_test_2_356827824_7",
+  "shuffling_test_2_356827824_8",
+];
+
+// TODO-GLOAS: re-enable after https://github.com/ChainSafe/lodestar/issues/9694 is resolved.
+// Proposer boost weight is quantized to EFFECTIVE_BALANCE_INCREMENT units twice, losing 0.4 ETH.
+const gloasComptestProposerBoostWeight = [
+  "block_cover_test_10_10847276_0",
+  "block_cover_test_10_285816524_0",
+  "block_cover_test_11_777526595_0",
+  "block_cover_test_11_781015092_0",
+  "block_cover_test_1_580012143_0",
+  "block_cover_test_1_986683414_0",
+  "block_cover_test_2_753766902_0",
+  "block_cover_test_2_84743119_0",
+  "block_cover_test_3_52660823_0",
+  "block_cover_test_3_886497517_0",
+  "block_cover_test_9_137066894_0",
+  "block_cover_test_9_863436416_0",
+];
+
+// TODO-GLOAS: re-enable once https://github.com/ethereum/consensus-specs/pull/5495 lands and the
+// spec pin includes it. The vector imports the same block twice. `on_block` unconditionally resets
+// `payload_timeliness_vote` / `payload_data_availability_vote` for the block root, which flips
+// `should_extend_payload` and moves the head; Lodestar rejects the second import as ALREADY_KNOWN
+// and keeps the PTC votes.
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-on_block
+const gloasComptestDuplicateBlockImport = ["block_tree_test_80_27150368_1"];
+
 // NOTE: You MUST always provide a detailed reason of why a spec test is skipped plus link
 // to an issue marking it as pending to re-enable and an aproximate timeline of when it will
 // be fixed.
@@ -84,8 +262,6 @@ export const defaultSkipOpts: SkipOpts = {
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
-    // TODO GLOAS: enable this after gloas fork choice is ready
-    /^gloas\/fork_choice_compliance\/.*/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
@@ -94,6 +270,9 @@ export const defaultSkipOpts: SkipOpts = {
     // boost wrongly denied. Fails identically on every pre-gloas fork.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
     /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
+    gloasComptestCases(gloasComptestViableHeadLeaves),
+    gloasComptestCases(gloasComptestProposerBoostWeight),
+    gloasComptestCases(gloasComptestDuplicateBlockImport),
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
