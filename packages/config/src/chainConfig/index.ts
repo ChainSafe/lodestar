@@ -4,6 +4,7 @@ import {ChainConfig} from "./types.js";
 
 export * from "./default.js";
 export {chainConfigFromJson, chainConfigToJson, deserializeBlobSchedule, specValuesToJson} from "./json.js";
+export {NotEqualParamsError, assertEqualParams} from "./params.js";
 export * from "./types.js";
 
 /**
