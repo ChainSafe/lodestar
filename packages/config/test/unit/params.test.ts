@@ -1,8 +1,7 @@
 import {describe, expect, it} from "vitest";
-import {ChainConfig, SpecJson, chainConfigToJson} from "@lodestar/config";
-import {chainConfig} from "@lodestar/config/default";
-import {networksChainConfig} from "@lodestar/config/networks";
-import {NotEqualParamsError, assertEqualParams} from "../../../src/util/params.js";
+import {chainConfig} from "../../src/default.js";
+import {ChainConfig, NotEqualParamsError, SpecJson, assertEqualParams, chainConfigToJson} from "../../src/index.js";
+import {networksChainConfig} from "../../src/networks.js";
 import {
   grandineHoodiConfig,
   lighthouseHoodiConfig,
