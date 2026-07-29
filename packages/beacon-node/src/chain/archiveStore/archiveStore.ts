@@ -4,6 +4,7 @@ import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
@@ -166,9 +167,17 @@ export class ArchiveStore {
   // Event handlers
   //-------------------------------------------------------------------------
   private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
-    this.jobQueue.push(finalized).catch((e) => {
-      if (!isQueueErrorAborted(e)) {
-        this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+    callInNextEventLoop(() => {
+      try {
+        this.jobQueue.push(finalized).catch((e) => {
+          if (!isQueueErrorAborted(e)) {
+            this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+          }
+        });
+      } catch (e) {
+        if (!isQueueErrorAborted(e)) {
+          this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+        }
       }
     });
   };
