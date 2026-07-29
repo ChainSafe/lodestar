@@ -1,6 +1,6 @@
 import {PublicKey, Signature, aggregatePublicKeys, fastAggregateVerify, verify} from "@chainsafe/lodestar-z/blst";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Root} from "@lodestar/types";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 
 export enum SignatureSetType {
   single = "single",

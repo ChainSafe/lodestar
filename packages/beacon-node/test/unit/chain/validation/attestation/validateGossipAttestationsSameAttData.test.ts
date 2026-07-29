@@ -1,7 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ForkName} from "@lodestar/params";
-import {SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
+import {SignatureSetType} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {BlsSingleThreadVerifier} from "../../../../../src/chain/bls/singleThread.js";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../../src/chain/errors/index.js";
@@ -57,12 +58,10 @@ describe("validateGossipAttestationsSameAttData", () => {
   }
 
   // Build pubkeyCache for test
-  const pubkeyCache = createPubkeyCache();
   for (let i = 0; i < 10; i++) {
-    pubkeyCache.set(i, getKeypair(i).publicKey.toBytes());
+    pubkeyCache.append(i, getKeypair(i).publicKey.toBytes());
   }
-  // Add a special keypair for invalid signatures
-  pubkeyCache.set(2023, getKeypair(2023).publicKey.toBytes());
+  // Note: keypair 2023 is only used to produce invalid signatures, it is never added to the cache
 
   let chain: IBeaconChain;
   const signingRoot = Buffer.alloc(32, 1);

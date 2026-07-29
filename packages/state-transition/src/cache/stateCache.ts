@@ -184,7 +184,7 @@ export function loadCachedBeaconState<T extends CachedBeaconStateAllForks>(
   const validators = migratedState.validators;
   for (const validatorIndex of modifiedValidators) {
     const validator = validators.getReadonly(validatorIndex);
-    pubkeyCache.set(validatorIndex, validator.pubkey);
+    pubkeyCache.append(validatorIndex, validator.pubkey);
   }
 
   return createCachedBeaconState(

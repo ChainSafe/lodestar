@@ -1,5 +1,6 @@
 import {PublicKey, Signature, aggregatePublicKeys, aggregateSignatures, verify} from "@chainsafe/lodestar-z/blst";
-import {ISignatureSet, PubkeyCache} from "@lodestar/state-transition";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier} from "./interface.js";
 import {verifySignatureSetsMaybeBatch} from "./maybeBatch.js";
