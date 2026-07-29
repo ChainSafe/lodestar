@@ -31,7 +31,7 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   },
 
   builderPubkey: {
-    description: "Builder's expected pubkey based on the keystore from 'keystore' option",
+    description: "Builder's expected public key based on the keystore from 'keystore' option",
     type: "string",
   },
 };
