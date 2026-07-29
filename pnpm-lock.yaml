@@ -381,6 +381,49 @@ importers:
         specifier: ^0.2.1
         version: 0.2.7
 
+  packages/builder:
+    dependencies:
+      '@chainsafe/blst':
+        specifier: ^2.2.0
+        version: 2.2.0
+      '@chainsafe/ssz':
+        specifier: ^1.6.2
+        version: 1.6.2
+      '@lodestar/api':
+        specifier: workspace:^
+        version: link:../api
+      '@lodestar/config':
+        specifier: workspace:^
+        version: link:../config
+      '@lodestar/params':
+        specifier: workspace:^
+        version: link:../params
+      '@lodestar/state-transition':
+        specifier: workspace:^
+        version: link:../state-transition
+      '@lodestar/types':
+        specifier: workspace:^
+        version: link:../types
+      '@lodestar/utils':
+        specifier: workspace:^
+        version: link:../utils
+      strict-event-emitter-types:
+        specifier: ^2.0.0
+        version: 2.0.0
+    devDependencies:
+      '@lodestar/logger':
+        specifier: workspace:^
+        version: link:../logger
+      '@lodestar/test-utils':
+        specifier: workspace:^
+        version: link:../test-utils
+      '@vekexasia/bigint-buffer2':
+        specifier: ^1.1.1
+        version: 1.1.1
+      rimraf:
+        specifier: ^4.4.1
+        version: 4.4.1
+
   packages/cli:
     dependencies:
       '@chainsafe/bls-keygen':
@@ -422,6 +465,9 @@ importers:
       '@lodestar/beacon-node':
         specifier: workspace:^
         version: link:../beacon-node
+      '@lodestar/builder':
+        specifier: workspace:^
+        version: link:../builder
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config
