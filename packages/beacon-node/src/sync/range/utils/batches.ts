@@ -124,7 +124,7 @@ export function isSyncChainDone(batches: Batch[], lastEpochWithProcessBlocks: Ep
  */
 export enum ProcessingFaultKind {
   /** This batch's own blocks are bad or incomplete, so redownload this batch. */
-  ThisBatch = "ThisBatch",
+  CurrentBatch = "CurrentBatch",
   /** This batch is valid, but a previous batch did not deliver the parent. */
   PreviousBatch = "PreviousBatch",
   /** The fault could be in this batch or a previous batch, so hedge both ways. */
@@ -139,17 +139,17 @@ export enum ProcessingFaultKind {
  */
 export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Batch | undefined): ProcessingFaultKind {
   if (!(err instanceof BlockError)) {
-    return ProcessingFaultKind.ThisBatch;
+    return ProcessingFaultKind.CurrentBatch;
   }
 
   const {code} = err.type;
   if (code !== BlockErrorCode.PARENT_BLOCK_UNKNOWN && code !== BlockErrorCode.PARENT_PAYLOAD_UNKNOWN) {
-    return ProcessingFaultKind.ThisBatch;
+    return ProcessingFaultKind.CurrentBatch;
   }
 
   const firstBlockSlot = err.signedBlock.message.slot;
   if (firstBlockSlot === batch.startSlot) {
-    return prevBatch === undefined ? ProcessingFaultKind.ThisBatch : ProcessingFaultKind.PreviousBatch;
+    return prevBatch === undefined ? ProcessingFaultKind.CurrentBatch : ProcessingFaultKind.PreviousBatch;
   }
 
   const prevTailSlot = batch.startSlot - 1;
@@ -158,5 +158,5 @@ export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Bat
       ? (prevBatch?.getPayloadEnvelopes()?.get(prevTailSlot)?.hasPayloadEnvelope() ?? false)
       : (prevBatch?.getBlocks().some((b) => b.slot === prevTailSlot) ?? false);
 
-  return prevHasFullTail ? ProcessingFaultKind.ThisBatch : ProcessingFaultKind.Ambiguous;
+  return prevHasFullTail ? ProcessingFaultKind.CurrentBatch : ProcessingFaultKind.Ambiguous;
 }

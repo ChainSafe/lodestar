@@ -728,7 +728,7 @@ export class SyncChain {
 
       const prevBatch = this.batches.get(batch.startEpoch - EPOCHS_PER_BATCH);
       switch (classifyProcessingFault(res.err, batch, prevBatch)) {
-        case ProcessingFaultKind.ThisBatch:
+        case ProcessingFaultKind.CurrentBatch:
           batch.processingError(res.err);
           break;
 
