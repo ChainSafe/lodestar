@@ -147,8 +147,9 @@ export function classifyProcessingFault(err: Error, batch: Batch, prevBatch: Bat
     return ProcessingFaultKind.CurrentBatch;
   }
 
-  const firstBlockSlot = err.signedBlock.message.slot;
-  if (firstBlockSlot === batch.startSlot) {
+  const firstErrorSlot = err.signedBlock.message.slot;
+  if (firstErrorSlot === batch.startSlot) {
+    // note that range sync is for linear chain, so this is clearly an issue of the previous batch
     return prevBatch === undefined ? ProcessingFaultKind.CurrentBatch : ProcessingFaultKind.PreviousBatch;
   }
 
