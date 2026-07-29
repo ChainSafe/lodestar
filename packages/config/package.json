@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/config",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "Chain configuration required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -52,7 +52,7 @@
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "pnpm vitest run --project unit --project unit-minimal",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",

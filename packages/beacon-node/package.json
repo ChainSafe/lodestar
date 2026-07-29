@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.44.0",
+  "version": "1.45.0",
   "type": "module",
   "exports": {
     ".": {
@@ -99,13 +99,15 @@
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
     "test:sim": "vitest run test/sim/**/*.test.ts",
     "test:sim:blobs": "vitest run test/sim/4844-interop.test.ts",
-    "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
+    "download-spec-tests": "node --import tsx test/spec/downloadTests.ts",
+    "download-comptests": "node --import tsx test/spec/downloadComptests.ts",
+    "test:comptest": "vitest run --project comptest",
     "test:spec:bls": "vitest run --project spec-minimal test/spec/bls/",
     "test:spec:general": "vitest run --project spec-minimal test/spec/general/",
     "test:spec:minimal": "vitest run --project spec-minimal test/spec/presets/",
     "test:spec:mainnet": "vitest run --project spec-mainnet test/spec/presets/",
     "test:spec": "pnpm test:spec:bls && pnpm test:spec:general && pnpm test:spec:minimal && pnpm test:spec:mainnet",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.4",

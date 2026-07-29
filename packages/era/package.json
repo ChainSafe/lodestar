@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.44.0",
+  "version": "1.45.0",
   "type": "module",
   "exports": {
     ".": {
@@ -36,7 +36,7 @@
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/blst": "^2.2.0",

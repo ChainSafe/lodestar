@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/validator",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "A Typescript implementation of the validator client",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -34,8 +34,8 @@
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:spec": "vitest run --project spec-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "download-spec-tests": "node --loader=ts-node/esm test/spec/downloadTests.ts",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "download-spec-tests": "node --import tsx test/spec/downloadTests.ts",
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",
