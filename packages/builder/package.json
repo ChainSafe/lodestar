@@ -33,7 +33,7 @@
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",
