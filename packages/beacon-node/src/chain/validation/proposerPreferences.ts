@@ -24,17 +24,6 @@ export async function validateGossipProposerPreferences(
   const dependentRootHex = toRootHex(dependentRoot);
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
-  // [IGNORE] `preferences.proposal_slot` is at or after the current epoch,
-  // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  const nextProposalEpochStartSlot = computeStartSlotAtEpoch(proposalEpoch + 1);
-  if (chain.clock.msFromSlot(nextProposalEpochStartSlot) > chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
-    throw new ProposerPreferencesError(GossipAction.IGNORE, {
-      code: ProposerPreferencesErrorCode.INVALID_EPOCH,
-      proposalSlot,
-      currentEpoch: chain.clock.currentEpoch,
-    });
-  }
-
   // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   const currentSlot = chain.clock.currentSlotWithGossipDisparity;
