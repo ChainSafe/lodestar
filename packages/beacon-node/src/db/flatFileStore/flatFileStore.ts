@@ -93,10 +93,6 @@ export class FlatFileStore implements IFlatFileStore {
     return this.blobStore.has(slot, blockRoot);
   }
 
-  async *blobSidecarsBinaryEntriesStream(opts: {gte: Slot; lt: Slot}): AsyncIterable<{slot: Slot; data: Uint8Array}> {
-    yield* this.blobStore.streamBinaryEntries(opts.gte, opts.lt);
-  }
-
   // --- Columns ---
 
   async getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]> {

@@ -448,15 +448,13 @@ Step 1 replaces the current "delete non-canonical blocks from hot" LevelDB opera
 
 ### Phase 1a: New Data to Filesystem
 
-Add a `--chain.flatFileStorage` CLI flag (default: `true`).
+Flat-file storage is the only runtime backend for blob sidecars and data columns:
 
-When enabled:
+- New sidecars are written to the filesystem
+- All runtime reads use the filesystem
+- Finalization cleanup and retention pruning operate on the filesystem
 
-- Blob sidecars and data columns are written to the filesystem
-- Reads go to the filesystem
-- Pruning operates on the filesystem
-
-The flag supports internal testing before flat-file storage becomes the only backend. The transition is one-way once archived data has been migrated and removed from LevelDB.
+There is no backend CLI switch. The transition becomes one-way as soon as archived entries are migrated and removed from LevelDB.
 
 ### Phase 1b: Boot-Time Migration of Existing Archives
 
@@ -481,13 +479,12 @@ Hot repositories are not migrated. Lodestar already refetches hot sidecars after
 
 Flat-file slot directories newer than the anchor state's finalized checkpoint boundary are also deleted at startup. The boundary directory is retained, then the existence cache is rebuilt only from the surviving finalized archive. This prevents unfinalized roots from a previous run from escaping canonical cleanup after fork choice is reconstructed.
 
-### Phase 1c: Remove LevelDB Blob/Column Storage
+### Phase 1c: Remove the Legacy LevelDB Schema
 
-Once migration is verified:
+Once compatibility migration is no longer required:
 
-1. Remove the `--flatFileStorage` flag
-2. Remove `BlobSidecarsRepository`, `BlobSidecarsArchiveRepository`, `DataColumnSidecarRepository`, `DataColumnSidecarArchiveRepository`
-3. Remove bucket IDs 27, 28, 57, 58
+1. Remove `BlobSidecarsRepository`, `BlobSidecarsArchiveRepository`, `DataColumnSidecarRepository`, and `DataColumnSidecarArchiveRepository`
+2. Remove bucket IDs 27, 28, 57, and 58
 
 ### Phase 2: Separate DB for Blocks (Future)
 
@@ -517,7 +514,6 @@ interface IFlatFileStore {
   putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
   deleteBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<void>;
   hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean; // sync, from cache
-  blobSidecarsBinaryEntriesStream(opts: {gte: Slot; lt: Slot}): AsyncIterable<{slot: Slot; data: Uint8Array}>;
 
   // Data columns
   getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;
@@ -540,7 +536,6 @@ Key differences from the original proposal:
 - By-slot lookups (`getBlobSidecarsBinaryBySlot`, `getDataColumnsBinaryBySlot`) for finalized reqresp handlers that only know the slot
 - Separate `pruneBlobsBeforeSlot`/`pruneColumnsBeforeSlot` (blobs and columns may have different retention windows)
 - `deleteNonCanonical` for batch cleanup of orphaned blocks on finalization
-- `blobSidecarsBinaryEntriesStream` for the `blobSidecarsByRange` reqresp handler
 
 ### Changes to IBeaconDb
 
@@ -548,19 +543,12 @@ Key differences from the original proposal:
 export interface IBeaconDb {
   // ... existing fields ...
 
-  // Flat file store for blobs and columns (null when --chain.flatFileStorage is disabled)
-  flatFileStore: IFlatFileStore | null;
-  initFlatFileStore?(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void>;
-
-  // Coexists with flat file store during transition (Phase 1c: removed)
-  blobSidecars: BlobSidecarsRepository;
-  blobSidecarsArchive: BlobSidecarsArchiveRepository;
-  dataColumnSidecar: DataColumnSidecarRepository;
-  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
+  flatFileStore: IFlatFileStore;
+  initFlatFileStore(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void>;
 }
 ```
 
-Callers check `if (db.flatFileStore)` before using flat file APIs, falling back to the LevelDB repositories otherwise.
+Flat-file initialization is mandatory during node startup. Access before initialization throws instead of silently falling back to a partially migrated LevelDB backend. Legacy archive repositories are private to `BeaconDb` and exist only to perform the boot-time migration.
 
 ### Changes to Archive Pipeline
 
@@ -710,7 +698,7 @@ packages/beacon-node/src/db/
 
 **Mitigation:**
 
-- Internal testing validates the flat-file backend before the one-way migration becomes the default
+- Internal testing validates the flat-file backend before release
 - Write batching: group column writes for the same block into a single file write
 - OS page cache handles read caching automatically (no need for application-level read cache)
 
@@ -726,7 +714,7 @@ packages/beacon-node/src/db/
 
 ### Rollback Strategy
 
-The migration is intentionally one-way. Successfully migrated archive entries are deleted from LevelDB, and new data is written only to flat files. Internal testing must complete before enabling the migration by default; reverting afterward requires a reverse migration.
+The migration is intentionally one-way. Successfully migrated archive entries are deleted from LevelDB, and new data is written only to flat files. Reverting afterward requires a reverse migration; there is no runtime backend flag.
 
 ---
 

@@ -3,7 +3,6 @@ import {BLOB_SIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, deneb} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
@@ -17,36 +16,22 @@ export async function* onBlobSidecarsByRange(
   const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);
   const endSlot = startSlot + count;
 
-  const finalized = db.blobSidecarsArchive;
-  const unfinalized = db.blobSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
-  // Blobs are available from flat-file storage immediately. With LevelDB they are migrated to
-  // blobSidecarsArchive at finalization, including the finalized block itself.
   const archiveMaxSlot = finalizedSlot;
 
   // Finalized range of blobs
   if (startSlot <= archiveMaxSlot) {
-    if (db.flatFileStore) {
-      for (let slot = startSlot; slot < Math.min(endSlot, archiveMaxSlot + 1); slot++) {
-        // Fork choice publishes finality before the async archive job removes losing-fork files.
-        // While the slot is still in fork choice, use its canonical root instead of a slot-only lookup.
-        const canonicalBlock = chain.forkChoice.getCanonicalBlockAtSlot(slot);
-        const blobSideCarsBytesWrapped = canonicalBlock
-          ? await db.flatFileStore.getBlobSidecarsBinary(slot, canonicalBlock.blockRoot)
-          : await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
-        if (!blobSideCarsBytesWrapped) {
-          continue;
-        }
-        yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, slot);
+    for (let slot = startSlot; slot < Math.min(endSlot, archiveMaxSlot + 1); slot++) {
+      // Fork choice publishes finality before the async archive job removes losing-fork files.
+      // While the slot is still in fork choice, use its canonical root instead of a slot-only lookup.
+      const canonicalBlock = chain.forkChoice.getCanonicalBlockAtSlot(slot);
+      const blobSideCarsBytesWrapped = canonicalBlock
+        ? await db.flatFileStore.getBlobSidecarsBinary(slot, canonicalBlock.blockRoot)
+        : await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
+      if (!blobSideCarsBytesWrapped) {
+        continue;
       }
-    } else {
-      // Chain of blobs won't change
-      for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
-        gte: startSlot,
-        lt: Math.min(endSlot, archiveMaxSlot + 1),
-      })) {
-        yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
-      }
+      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, slot);
     }
   }
 
@@ -70,12 +55,7 @@ export async function* onBlobSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        let blobSideCarsBytesWrapped: Uint8Array | null | undefined;
-        if (db.flatFileStore) {
-          blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinary(block.slot, block.blockRoot);
-        } else {
-          blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
-        }
+        const blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinary(block.slot, block.blockRoot);
         if (!blobSideCarsBytesWrapped) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);

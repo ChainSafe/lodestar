@@ -14,12 +14,10 @@ import {
   BackfilledRanges,
   BestLightClientUpdateRepository,
   BlobSidecarsArchiveRepository,
-  BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
   DataColumnSidecarArchiveRepository,
-  DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
   ProposerSlashingRepository,
@@ -37,11 +35,6 @@ export type BeaconDbModules = {
 export class BeaconDb implements IBeaconDb {
   block: BlockRepository;
   blockArchive: BlockArchiveRepository;
-
-  blobSidecars: BlobSidecarsRepository;
-  blobSidecarsArchive: BlobSidecarsArchiveRepository;
-  dataColumnSidecar: DataColumnSidecarRepository;
-  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
   executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
@@ -62,7 +55,9 @@ export class BeaconDb implements IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  flatFileStore: IFlatFileStore | null = null;
+  private flatFileStoreInstance: IFlatFileStore | null = null;
+  private readonly legacyBlobSidecarsArchive: BlobSidecarsArchiveRepository;
+  private readonly legacyDataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -72,10 +67,8 @@ export class BeaconDb implements IBeaconDb {
     this.block = new BlockRepository(config, db);
     this.blockArchive = new BlockArchiveRepository(config, db);
 
-    this.blobSidecars = new BlobSidecarsRepository(config, db);
-    this.blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
-    this.dataColumnSidecar = new DataColumnSidecarRepository(config, db);
-    this.dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
+    this.legacyBlobSidecarsArchive = new BlobSidecarsArchiveRepository(config, db);
+    this.legacyDataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, db);
 
     this.executionPayloadEnvelope = new ExecutionPayloadEnvelopeRepository(config, db);
     this.executionPayloadEnvelopeArchive = new ExecutionPayloadEnvelopeArchiveRepository(config, db);
@@ -99,14 +92,25 @@ export class BeaconDb implements IBeaconDb {
   async initFlatFileStore(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void> {
     const store = new FlatFileStore(dataDir, this.config, logger);
     await store.init(finalizedCheckpointSlot);
-    await migrateArchivedSidecars(this.config, this.blobSidecarsArchive, this.dataColumnSidecarArchive, store, logger);
-    this.flatFileStore = store;
+    await migrateArchivedSidecars(
+      this.config,
+      this.legacyBlobSidecarsArchive,
+      this.legacyDataColumnSidecarArchive,
+      store,
+      logger
+    );
+    this.flatFileStoreInstance = store;
+  }
+
+  get flatFileStore(): IFlatFileStore {
+    if (!this.flatFileStoreInstance) {
+      throw new Error("Flat file store is not initialized");
+    }
+    return this.flatFileStoreInstance;
   }
 
   async close(): Promise<void> {
-    if (this.flatFileStore) {
-      await this.flatFileStore.close();
-    }
+    await this.flatFileStoreInstance?.close();
     return this.db.close();
   }
 
@@ -115,15 +119,10 @@ export class BeaconDb implements IBeaconDb {
   }
 
   async pruneHotDb(): Promise<void> {
-    if (this.flatFileStore) {
-      await Promise.all([
-        this.deleteBucketData(Bucket.deneb_blobSidecars),
-        this.deleteBucketData(Bucket.allForks_dataColumnSidecars),
-      ]);
-    } else {
-      // Prune all hot blobs
-      await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
-    }
+    await Promise.all([
+      this.deleteBucketData(Bucket.deneb_blobSidecars),
+      this.deleteBucketData(Bucket.allForks_dataColumnSidecars),
+    ]);
     // Prune all hot blocks
     // TODO: Enable once it's deemed safe
     // await this.block.batchDelete(await this.block.keys());

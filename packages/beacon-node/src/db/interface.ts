@@ -8,13 +8,9 @@ import {
   BLSToExecutionChangeRepository,
   BackfilledRanges,
   BestLightClientUpdateRepository,
-  BlobSidecarsArchiveRepository,
-  BlobSidecarsRepository,
   BlockArchiveRepository,
   BlockRepository,
   CheckpointHeaderRepository,
-  DataColumnSidecarArchiveRepository,
-  DataColumnSidecarRepository,
   ExecutionPayloadEnvelopeArchiveRepository,
   ExecutionPayloadEnvelopeRepository,
   ProposerSlashingRepository,
@@ -34,11 +30,6 @@ export interface IBeaconDb {
   block: BlockRepository;
   // finalized blocks
   blockArchive: BlockArchiveRepository;
-
-  blobSidecars: BlobSidecarsRepository;
-  blobSidecarsArchive: BlobSidecarsArchiveRepository;
-  dataColumnSidecar: DataColumnSidecarRepository;
-  dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   executionPayloadEnvelope: ExecutionPayloadEnvelopeRepository;
   executionPayloadEnvelopeArchive: ExecutionPayloadEnvelopeArchiveRepository;
@@ -62,8 +53,8 @@ export interface IBeaconDb {
 
   backfilledRanges: BackfilledRanges;
 
-  flatFileStore: IFlatFileStore | null;
-  initFlatFileStore?(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void>;
+  flatFileStore: IFlatFileStore;
+  initFlatFileStore(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void>;
 
   pruneHotDb(): Promise<void>;
 

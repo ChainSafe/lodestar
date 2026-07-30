@@ -872,15 +872,8 @@ export class BeaconChain implements IBeaconChain {
       }
       return blockInput.getBlobs();
     }
-    if (this.db.flatFileStore) {
-      const wrapper = await this.db.flatFileStore.getBlobSidecars(blockSlot, blockRootHex);
-      return wrapper?.blobSidecars ?? null;
-    }
-    const unfinalizedBlobSidecars = (await this.db.blobSidecars.get(fromHex(blockRootHex)))?.blobSidecars ?? null;
-    if (unfinalizedBlobSidecars) {
-      return unfinalizedBlobSidecars;
-    }
-    return (await this.db.blobSidecarsArchive.get(blockSlot))?.blobSidecars ?? null;
+    const wrapper = await this.db.flatFileStore.getBlobSidecars(blockSlot, blockRootHex);
+    return wrapper?.blobSidecars ?? null;
   }
 
   async getSerializedBlobSidecars(blockSlot: Slot, blockRootHex: string): Promise<Uint8Array | null> {
@@ -894,20 +887,9 @@ export class BeaconChain implements IBeaconChain {
       }
       return ssz.deneb.BlobSidecars.serialize(blockInput.getBlobs());
     }
-    if (this.db.flatFileStore) {
-      const wrapper = await this.db.flatFileStore.getBlobSidecarsBinary(blockSlot, blockRootHex);
-      if (wrapper) {
-        return wrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-      }
-      return null;
-    }
-    const unfinalizedBlobSidecarsWrapper = await this.db.blobSidecars.getBinary(fromHex(blockRootHex));
-    if (unfinalizedBlobSidecarsWrapper) {
-      return unfinalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
-    }
-    const finalizedBlobSidecarsWrapper = await this.db.blobSidecarsArchive.getBinary(blockSlot);
-    if (finalizedBlobSidecarsWrapper) {
-      return finalizedBlobSidecarsWrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
+    const wrapper = await this.db.flatFileStore.getBlobSidecarsBinary(blockSlot, blockRootHex);
+    if (wrapper) {
+      return wrapper.slice(BLOB_SIDECARS_IN_WRAPPER_INDEX);
     }
     return null;
   }
@@ -981,15 +963,7 @@ export class BeaconChain implements IBeaconChain {
       }
     }
 
-    if (this.db.flatFileStore) {
-      return this.db.flatFileStore.getDataColumns(blockSlot, blockRootHex);
-    }
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.values(fromHex(blockRootHex));
-    if (sidecarsUnfinalized.length > 0) {
-      return sidecarsUnfinalized;
-    }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.values(blockSlot);
-    return sidecarsFinalized;
+    return this.db.flatFileStore.getDataColumns(blockSlot, blockRootHex);
   }
 
   async getSerializedDataColumnSidecars(
@@ -1035,15 +1009,7 @@ export class BeaconChain implements IBeaconChain {
         });
       }
     }
-    if (this.db.flatFileStore) {
-      return this.db.flatFileStore.getDataColumnsBinary(blockSlot, blockRootHex, indices);
-    }
-    const sidecarsUnfinalized = await this.db.dataColumnSidecar.getManyBinary(fromHex(blockRootHex), indices);
-    if (sidecarsUnfinalized.some((sidecar) => sidecar != null)) {
-      return sidecarsUnfinalized;
-    }
-    const sidecarsFinalized = await this.db.dataColumnSidecarArchive.getManyBinary(blockSlot, indices);
-    return sidecarsFinalized;
+    return this.db.flatFileStore.getDataColumnsBinary(blockSlot, blockRootHex, indices);
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {

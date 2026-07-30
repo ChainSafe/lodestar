@@ -106,7 +106,6 @@ export type MissingColumnMeta = {
  * Used by `writeDataColumnsToDb` and designed to be reusable across forks (e.g. Fulu, Gloas).
  */
 export interface IDataColumnsInput {
-  readonly forkName: ForkName;
   readonly slot: Slot;
   readonly blockRootHex: string;
   getCustodyColumns(): DataColumnSidecar[];

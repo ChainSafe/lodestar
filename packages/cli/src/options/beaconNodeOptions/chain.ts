@@ -40,7 +40,6 @@ export type ChainArgs = {
   "chain.maxCPStateEpochsOnDisk"?: number;
 
   "chain.pruneHistory"?: boolean;
-  "chain.flatFileStorage"?: boolean;
 };
 
 export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
@@ -86,7 +85,6 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     faultInspectionWindow: args["builder.faultInspectionWindow"],
     allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
-    flatFileStorage: args["chain.flatFileStorage"] ?? defaultOptions.chain.flatFileStorage,
   };
 }
 
@@ -347,13 +345,6 @@ This is useful to minimize disk usage when the node does not need to serve histo
 Initial pruning may be slow on first startup with an existing large database.",
     type: "boolean",
     default: defaultOptions.chain.pruneHistory,
-    group: "chain",
-  },
-
-  "chain.flatFileStorage": {
-    description: "Use flat file storage for blobs and data columns instead of LevelDB",
-    type: "boolean",
-    default: defaultOptions.chain.flatFileStorage,
     group: "chain",
   },
 };

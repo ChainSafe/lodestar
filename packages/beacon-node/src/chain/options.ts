@@ -48,8 +48,6 @@ export type IChainOptions = BlockProcessOpts &
     minSameMessageSignatureSetsToBatch: number;
     archiveDateEpochs?: number;
     nHistoricalStatesFileDataStore?: boolean;
-    /** Use flat file storage for blobs and data columns instead of LevelDB */
-    flatFileStorage?: boolean;
     nativeStateView?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
@@ -134,7 +132,6 @@ export const defaultChainOptions: IChainOptions = {
   //   - users can prune the persisted checkpoint state files manually to save disc space
   //   - it helps debug easier when network is unfinalized
   nHistoricalStatesFileDataStore: true,
-  flatFileStorage: true,
   nativeStateView: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,

@@ -106,21 +106,6 @@ describe("FlatFileStore", () => {
       }
     });
 
-    it("should stream binary entries in slot range", async () => {
-      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
-      await store.putBlobSidecars(200, ROOT_B, new Uint8Array([2]));
-      await store.putBlobSidecars(300, ROOT_C, new Uint8Array([3]));
-
-      const entries: {slot: number; data: Uint8Array}[] = [];
-      for await (const entry of store.blobSidecarsBinaryEntriesStream({gte: 100, lt: 300})) {
-        entries.push(entry);
-      }
-
-      expect(entries.length).toBe(2);
-      expect(entries[0].slot).toBe(100);
-      expect(entries[1].slot).toBe(200);
-    });
-
     it("should prune blobs before slot", async () => {
       await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
       await store.putBlobSidecars(200, ROOT_B, new Uint8Array([2]));

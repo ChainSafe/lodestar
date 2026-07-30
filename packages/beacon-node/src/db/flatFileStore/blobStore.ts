@@ -90,40 +90,6 @@ export class BlobStore {
   }
 
   /**
-   * Stream binary entries for a slot range [gte, lt).
-   * Reads slot directories in order.
-   */
-  async *streamBinaryEntries(gte: Slot, lt: Slot): AsyncIterable<{slot: Slot; data: Uint8Array}> {
-    let slotDirs: string[];
-    try {
-      slotDirs = await fs.promises.readdir(this.dir);
-    } catch (e) {
-      if (!isFsNotFoundError(e)) throw e;
-      return;
-    }
-
-    // Sort lexicographically (padded slots sort correctly)
-    slotDirs.sort();
-
-    for (const slotStr of slotDirs) {
-      const slot = Number.parseInt(slotStr, 10);
-      if (Number.isNaN(slot)) continue;
-      if (slot < gte) continue;
-      if (slot >= lt) break;
-
-      const slotDir = path.join(this.dir, slotStr);
-      const files = await fs.promises.readdir(slotDir);
-      for (const file of files) {
-        if (file.endsWith(".ssz") && file.startsWith("0x")) {
-          const filePath = path.join(slotDir, file);
-          const data = await fs.promises.readFile(filePath);
-          yield {slot, data};
-        }
-      }
-    }
-  }
-
-  /**
    * Delete all slot directories with slot < minSlot.
    */
   async pruneBeforeSlot(minSlot: Slot): Promise<void> {

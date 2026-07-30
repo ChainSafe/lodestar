@@ -1,6 +1,6 @@
 import {ForkPostDeneb, ForkPostFulu, isForkPostDeneb} from "@lodestar/params";
-import {SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
-import {fromHex, toRootHex} from "@lodestar/utils";
+import {SignedBeaconBlock} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {blobSidecarsWrapperSsz} from "../../db/repositories/blobSidecars.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BeaconChain} from "../chain.js";
@@ -56,13 +56,9 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
           await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
         }
         const blobSidecars = blockInput.getBlobs();
-        if (this.db.flatFileStore) {
-          const wrapperBytes = blobSidecarsWrapperSsz.serialize({blockRoot, slot, blobSidecars});
-          await this.db.flatFileStore.putBlobSidecars(slot, blockRootHex, wrapperBytes);
-        } else {
-          await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
-        }
-        this.logger.debug("Persisted blobSidecars to hot DB", {
+        const wrapperBytes = blobSidecarsWrapperSsz.serialize({blockRoot, slot, blobSidecars});
+        await this.db.flatFileStore.putBlobSidecars(slot, blockRootHex, wrapperBytes);
+        this.logger.debug("Persisted blobSidecars", {
           slot,
           root: blockRootHex,
           numBlobs: blobSidecars.length,
@@ -82,7 +78,6 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
  */
 export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataColumnsInput): Promise<void> {
   const {slot, blockRootHex} = blockInput;
-  const blockRoot = fromHex(blockRootHex);
 
   if (!blockInput.hasComputedAllData()) {
     // Supernodes may only have a subset of the data columns by the time the block begins to be imported
@@ -95,38 +90,19 @@ export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataC
 
   const {custodyColumns} = this.custodyConfig;
   const dataColumnSidecars = blockInput.getCustodyColumns();
+  const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
 
-  if (this.db.flatFileStore) {
-    const binaryColumns: {index: number; data: Uint8Array}[] = [];
-    for (const dataColumnSidecar of dataColumnSidecars) {
-      const serialized = this.serializedCache.get(dataColumnSidecar);
-      binaryColumns.push({
-        index: dataColumnSidecar.index,
-        data:
-          serialized ?? sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(dataColumnSidecar),
-      });
-    }
-    await this.db.flatFileStore.putDataColumnsBinary(slot, blockRootHex, binaryColumns);
-  } else {
-    const binaryPuts: {key: number; value: Uint8Array}[] = [];
-    const nonbinaryPuts = [];
-    for (const dataColumnSidecar of dataColumnSidecars) {
-      // skip reserializing column if we already have it
-      const serialized = this.serializedCache.get(dataColumnSidecar);
-      if (serialized) {
-        binaryPuts.push({key: dataColumnSidecar.index, value: serialized});
-      } else {
-        nonbinaryPuts.push(dataColumnSidecar);
-      }
-    }
-
-    await Promise.all([
-      this.db.dataColumnSidecar.putManyBinary(blockRoot, binaryPuts),
-      this.db.dataColumnSidecar.putMany(blockRoot, nonbinaryPuts),
-    ]);
+  const binaryColumns: {index: number; data: Uint8Array}[] = [];
+  for (const dataColumnSidecar of dataColumnSidecars) {
+    const serialized = this.serializedCache.get(dataColumnSidecar);
+    binaryColumns.push({
+      index: dataColumnSidecar.index,
+      data: serialized ?? dataColumnSidecarType.serialize(dataColumnSidecar),
+    });
   }
+  await this.db.flatFileStore.putDataColumnsBinary(slot, blockRootHex, binaryColumns);
 
-  this.logger.debug("Persisted dataColumnSidecars to hot DB", {
+  this.logger.debug("Persisted dataColumnSidecars", {
     slot,
     root: blockRootHex,
     dataColumnSidecars: dataColumnSidecars.length,

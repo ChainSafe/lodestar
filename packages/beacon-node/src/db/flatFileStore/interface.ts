@@ -25,9 +25,6 @@ export interface IFlatFileStore {
   /** Sync check from in-memory cache */
   hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean;
 
-  /** Stream binary blob sidecar entries for finalized range (for reqresp blobSidecarsByRange) */
-  blobSidecarsBinaryEntriesStream(opts: {gte: Slot; lt: Slot}): AsyncIterable<{slot: Slot; data: Uint8Array}>;
-
   // --- Columns ---
 
   getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;

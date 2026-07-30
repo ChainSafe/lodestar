@@ -11,6 +11,12 @@ import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {migrateArchivedSidecars} from "../../../../src/db/flatFileStore/migrate.js";
+import {
+  BlobSidecarsArchiveRepository,
+  BlobSidecarsRepository,
+  DataColumnSidecarArchiveRepository,
+  DataColumnSidecarRepository,
+} from "../../../../src/db/repositories/index.js";
 
 const config = createChainForkConfig({
   ...defaultConfig,
@@ -21,6 +27,10 @@ const config = createChainForkConfig({
 describe("archived sidecar migration", () => {
   let tmpDir: string;
   let db: BeaconDb;
+  let blobSidecars: BlobSidecarsRepository;
+  let blobSidecarsArchive: BlobSidecarsArchiveRepository;
+  let dataColumnSidecar: DataColumnSidecarRepository;
+  let dataColumnSidecarArchive: DataColumnSidecarArchiveRepository;
 
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-migration-"));
@@ -29,6 +39,10 @@ describe("archived sidecar migration", () => {
       {logger: testLogger("flat-file-migration")}
     );
     db = new BeaconDb(config, controller);
+    blobSidecars = new BlobSidecarsRepository(config, controller);
+    blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, controller);
+    dataColumnSidecar = new DataColumnSidecarRepository(config, controller);
+    dataColumnSidecarArchive = new DataColumnSidecarArchiveRepository(config, controller);
   });
 
   afterEach(async () => {
@@ -39,7 +53,7 @@ describe("archived sidecar migration", () => {
   it("moves archived sidecars to flat files and clears legacy hot sidecars", async () => {
     const archivedBlobSlot = 10;
     const archivedBlobRoot = new Uint8Array(32).fill(0xaa);
-    await db.blobSidecarsArchive.add({
+    await blobSidecarsArchive.add({
       blockRoot: archivedBlobRoot,
       slot: archivedBlobSlot,
       blobSidecars: [],
@@ -50,11 +64,11 @@ describe("archived sidecar migration", () => {
     archivedColumn.index = 3;
     archivedColumn.signedBlockHeader.message.slot = archivedColumnSlot;
     const archivedColumnRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(archivedColumn.signedBlockHeader.message);
-    await db.dataColumnSidecarArchive.put(archivedColumnSlot, archivedColumn);
+    await dataColumnSidecarArchive.put(archivedColumnSlot, archivedColumn);
     const secondArchivedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     secondArchivedColumn.index = 4;
     secondArchivedColumn.signedBlockHeader.message.slot = archivedColumnSlot;
-    await db.dataColumnSidecarArchive.put(archivedColumnSlot, secondArchivedColumn);
+    await dataColumnSidecarArchive.put(archivedColumnSlot, secondArchivedColumn);
 
     const archivedGloasColumnSlot = SLOTS_PER_EPOCH;
     const archivedGloasColumnRoot = new Uint8Array(32).fill(0xab);
@@ -62,11 +76,11 @@ describe("archived sidecar migration", () => {
     archivedGloasColumn.index = 6;
     archivedGloasColumn.slot = archivedGloasColumnSlot;
     archivedGloasColumn.beaconBlockRoot = archivedGloasColumnRoot;
-    await db.dataColumnSidecarArchive.put(archivedGloasColumnSlot, archivedGloasColumn);
+    await dataColumnSidecarArchive.put(archivedGloasColumnSlot, archivedGloasColumn);
 
     const hotBlobSlot = 12;
     const hotBlobRoot = new Uint8Array(32).fill(0xbb);
-    await db.blobSidecars.add({
+    await blobSidecars.add({
       blockRoot: hotBlobRoot,
       slot: hotBlobSlot,
       blobSidecars: [],
@@ -77,19 +91,18 @@ describe("archived sidecar migration", () => {
     const hotColumn = ssz.fulu.DataColumnSidecar.defaultValue();
     hotColumn.index = 4;
     hotColumn.signedBlockHeader.message.slot = hotColumnSlot;
-    await db.dataColumnSidecar.put(hotColumnRoot, hotColumn);
+    await dataColumnSidecar.put(hotColumnRoot, hotColumn);
 
     await db.initFlatFileStore(tmpDir, 0, testLogger("flat-file-migration"));
 
-    expect(await db.blobSidecarsArchive.get(archivedBlobSlot)).toBeNull();
-    expect(await db.dataColumnSidecarArchive.values(archivedColumnSlot)).toEqual([]);
-    expect(await db.dataColumnSidecarArchive.values(archivedGloasColumnSlot)).toEqual([]);
+    expect(await blobSidecarsArchive.get(archivedBlobSlot)).toBeNull();
+    expect(await dataColumnSidecarArchive.values(archivedColumnSlot)).toEqual([]);
+    expect(await dataColumnSidecarArchive.values(archivedGloasColumnSlot)).toEqual([]);
 
     const store = db.flatFileStore;
-    expect(store).not.toBeNull();
-    expect(await store?.getBlobSidecarsBinary(archivedBlobSlot, toRootHex(archivedBlobRoot))).not.toBeNull();
+    expect(await store.getBlobSidecarsBinary(archivedBlobSlot, toRootHex(archivedBlobRoot))).not.toBeNull();
     expect(
-      await store?.getDataColumnsBinary(archivedColumnSlot, toRootHex(archivedColumnRoot), [
+      await store.getDataColumnsBinary(archivedColumnSlot, toRootHex(archivedColumnRoot), [
         archivedColumn.index,
         secondArchivedColumn.index,
       ])
@@ -98,34 +111,38 @@ describe("archived sidecar migration", () => {
       ssz.fulu.DataColumnSidecar.serialize(secondArchivedColumn),
     ]);
     expect(
-      await store?.getDataColumnsBinary(archivedGloasColumnSlot, toRootHex(archivedGloasColumnRoot), [
+      await store.getDataColumnsBinary(archivedGloasColumnSlot, toRootHex(archivedGloasColumnRoot), [
         archivedGloasColumn.index,
       ])
     ).toEqual([ssz.gloas.DataColumnSidecar.serialize(archivedGloasColumn)]);
 
-    expect(await db.blobSidecars.get(hotBlobRoot)).not.toBeNull();
-    expect(await db.dataColumnSidecar.values(hotColumnRoot)).toHaveLength(1);
+    expect(await blobSidecars.get(hotBlobRoot)).not.toBeNull();
+    expect(await dataColumnSidecar.values(hotColumnRoot)).toHaveLength(1);
 
     await db.pruneHotDb();
 
-    expect(await db.blobSidecars.get(hotBlobRoot)).toBeNull();
-    expect(await db.dataColumnSidecar.values(hotColumnRoot)).toEqual([]);
-    expect(await store?.getBlobSidecarsBinary(hotBlobSlot, toRootHex(hotBlobRoot))).toBeNull();
-    expect(await store?.getDataColumnsBinary(hotColumnSlot, toRootHex(hotColumnRoot), [hotColumn.index])).toEqual([
+    expect(await blobSidecars.get(hotBlobRoot)).toBeNull();
+    expect(await dataColumnSidecar.values(hotColumnRoot)).toEqual([]);
+    expect(await store.getBlobSidecarsBinary(hotBlobSlot, toRootHex(hotBlobRoot))).toBeNull();
+    expect(await store.getDataColumnsBinary(hotColumnSlot, toRootHex(hotColumnRoot), [hotColumn.index])).toEqual([
       undefined,
     ]);
+  });
+
+  it("rejects flat file access before initialization", () => {
+    expect(() => db.flatFileStore).toThrow("Flat file store is not initialized");
   });
 
   it("keeps failed entries in LevelDB for a later retry", async () => {
     const blobSlot = 20;
     const blobRoot = new Uint8Array(32).fill(0xdd);
-    await db.blobSidecarsArchive.add({blockRoot: blobRoot, slot: blobSlot, blobSidecars: []});
+    await blobSidecarsArchive.add({blockRoot: blobRoot, slot: blobSlot, blobSidecars: []});
 
     const columnSlot = 21;
     const column = ssz.fulu.DataColumnSidecar.defaultValue();
     column.index = 5;
     column.signedBlockHeader.message.slot = columnSlot;
-    await db.dataColumnSidecarArchive.put(columnSlot, column);
+    await dataColumnSidecarArchive.put(columnSlot, column);
 
     const failingStore = {
       putBlobSidecars: vi.fn().mockRejectedValue(new Error("write failed")),
@@ -134,16 +151,16 @@ describe("archived sidecar migration", () => {
 
     const failedStats = await migrateArchivedSidecars(
       config,
-      db.blobSidecarsArchive,
-      db.dataColumnSidecarArchive,
+      blobSidecarsArchive,
+      dataColumnSidecarArchive,
       failingStore,
       testLogger("flat-file-migration")
     );
 
     expect(failedStats.blobFailures).toBe(1);
     expect(failedStats.columnFailures).toBe(1);
-    expect(await db.blobSidecarsArchive.get(blobSlot)).not.toBeNull();
-    expect(await db.dataColumnSidecarArchive.values(columnSlot)).toHaveLength(1);
+    expect(await blobSidecarsArchive.get(blobSlot)).not.toBeNull();
+    expect(await dataColumnSidecarArchive.values(columnSlot)).toHaveLength(1);
 
     const succeedingStore = {
       putBlobSidecars: vi.fn().mockResolvedValue(undefined),
@@ -152,15 +169,15 @@ describe("archived sidecar migration", () => {
 
     const retriedStats = await migrateArchivedSidecars(
       config,
-      db.blobSidecarsArchive,
-      db.dataColumnSidecarArchive,
+      blobSidecarsArchive,
+      dataColumnSidecarArchive,
       succeedingStore,
       testLogger("flat-file-migration")
     );
 
     expect(retriedStats.blobs).toBe(1);
     expect(retriedStats.columns).toBe(1);
-    expect(await db.blobSidecarsArchive.get(blobSlot)).toBeNull();
-    expect(await db.dataColumnSidecarArchive.values(columnSlot)).toEqual([]);
+    expect(await blobSidecarsArchive.get(blobSlot)).toBeNull();
+    expect(await dataColumnSidecarArchive.values(columnSlot)).toEqual([]);
   });
 });
