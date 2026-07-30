@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {RootHex, Slot} from "@lodestar/types";
-import {padSlot} from "./atomicWrite.js";
 import {isFsNotFoundError} from "./errors.js";
+import {isValidRootHex, padSlot} from "./path.js";
 
 export type ExistenceCacheRebuildStats = {
   blobFiles: number;
@@ -181,7 +181,7 @@ async function scanStoreDirectory(
       const slotEntries = await fs.promises.readdir(path.join(dir, entry.name), {withFileTypes: true});
       for (const file of slotEntries) {
         const rootHex = file.name.slice(0, -extension.length);
-        if (!file.isFile() || !file.name.endsWith(extension) || !/^0x[0-9a-f]{64}$/.test(rootHex)) {
+        if (!file.isFile() || !file.name.endsWith(extension) || !isValidRootHex(rootHex)) {
           ignoredEntries++;
           continue;
         }

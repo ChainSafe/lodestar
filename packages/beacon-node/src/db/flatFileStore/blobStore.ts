@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {RootHex, Slot} from "@lodestar/types";
-import {atomicWrite, padSlot} from "./atomicWrite.js";
+import {atomicWrite} from "./atomicWrite.js";
 import {isFsNotFoundError} from "./errors.js";
 import {ExistenceCache} from "./existenceCache.js";
 import {
@@ -10,6 +10,7 @@ import {
   FlatFileStoreType,
   observeFlatFileStoreOperation,
 } from "./metrics.js";
+import {assertValidRootHex, padSlot} from "./path.js";
 
 /**
  * Filesystem blob store.
@@ -32,6 +33,7 @@ export class BlobStore {
   }
 
   private filePath(slot: Slot, rootHex: RootHex): string {
+    assertValidRootHex(rootHex);
     return path.join(this.dir, padSlot(slot), `${rootHex}.ssz`);
   }
 

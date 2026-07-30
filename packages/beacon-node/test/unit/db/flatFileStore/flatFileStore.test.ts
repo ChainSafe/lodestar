@@ -314,6 +314,20 @@ describe("FlatFileStore", () => {
 
       await expect(store.getDataColumnsBinary(1000, ROOT_B, [0])).rejects.toThrow("Dcol block root mismatch");
     });
+
+    it("should reject traversal-shaped roots before deleting files", async () => {
+      const blobSiblingPath = path.join(tmpDir, "blob_sidecars", "escape.ssz");
+      const columnSiblingPath = path.join(tmpDir, "data_columns", "escape.dcol");
+      const sentinel = new Uint8Array([1, 2, 3]);
+      await fs.promises.writeFile(blobSiblingPath, sentinel);
+      await fs.promises.writeFile(columnSiblingPath, sentinel);
+
+      await expect(store.deleteBlobSidecars(100, "../escape")).rejects.toThrow("Invalid flat file root");
+      await expect(store.deleteDataColumns(100, "../escape")).rejects.toThrow("Invalid flat file root");
+
+      expect(new Uint8Array(await fs.promises.readFile(blobSiblingPath))).toEqual(sentinel);
+      expect(new Uint8Array(await fs.promises.readFile(columnSiblingPath))).toEqual(sentinel);
+    });
   });
 
   describe("deleteNonCanonical", () => {

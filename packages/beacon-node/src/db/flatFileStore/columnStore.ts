@@ -5,7 +5,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu} from "@lodestar/params";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {atomicWrite, padSlot} from "./atomicWrite.js";
+import {atomicWrite} from "./atomicWrite.js";
 import {
   DCOL_HEADER_SIZE,
   type DcolHeader,
@@ -25,6 +25,7 @@ import {
   FlatFileStoreType,
   observeFlatFileStoreOperation,
 } from "./metrics.js";
+import {assertValidRootHex, padSlot} from "./path.js";
 
 /**
  * Filesystem data column store using `.dcol` format.
@@ -48,6 +49,7 @@ export class ColumnStore {
   }
 
   private filePath(slot: Slot, rootHex: RootHex): string {
+    assertValidRootHex(rootHex);
     return path.join(this.dir, padSlot(slot), `${rootHex}.dcol`);
   }
 

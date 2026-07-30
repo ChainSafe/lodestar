@@ -34,11 +34,3 @@ export async function atomicWrite(targetPath: string, data: Uint8Array): Promise
     throw e;
   }
 }
-
-/**
- * Zero-pad a slot number to 12 digits for lexicographic ordering in directory names.
- * Max slot ~2^63 fits in 19 digits, 12 is enough for many centuries of Ethereum.
- */
-export function padSlot(slot: number): string {
-  return String(slot).padStart(12, "0");
-}

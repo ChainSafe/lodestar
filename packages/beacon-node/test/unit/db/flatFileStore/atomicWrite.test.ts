@@ -2,7 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {atomicWrite, padSlot} from "../../../../src/db/flatFileStore/atomicWrite.js";
+import {atomicWrite} from "../../../../src/db/flatFileStore/atomicWrite.js";
+import {assertValidRootHex, isValidRootHex, padSlot} from "../../../../src/db/flatFileStore/path.js";
 
 describe("atomicWrite", () => {
   let tmpDir: string;
@@ -43,4 +44,28 @@ describe("padSlot", () => {
     expect(padSlot(1)).toBe("000000000001");
     expect(padSlot(123456789012)).toBe("123456789012");
   });
+
+  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+    "should reject invalid slot %s",
+    (slot) => {
+      expect(() => padSlot(slot)).toThrow("Invalid flat file slot");
+    }
+  );
+});
+
+describe("root validation", () => {
+  const validRoot = `0x${"ab".repeat(32)}`;
+
+  it("should accept an exact lowercase 32-byte root", () => {
+    expect(isValidRootHex(validRoot)).toBe(true);
+    expect(() => assertValidRootHex(validRoot)).not.toThrow();
+  });
+
+  it.each(["../escape", `0x${"ab".repeat(31)}`, `0x${"ab".repeat(33)}`, `0x${"AB".repeat(32)}`, "ab".repeat(32)])(
+    "should reject invalid root %s",
+    (rootHex) => {
+      expect(isValidRootHex(rootHex)).toBe(false);
+      expect(() => assertValidRootHex(rootHex)).toThrow("Invalid flat file root");
+    }
+  );
 });

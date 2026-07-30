@@ -612,6 +612,7 @@ packages/beacon-node/src/db/
     dcolFormat.ts               # .dcol binary format encode/decode
     existenceCache.ts           # In-memory slot/root presence cache
     atomicWrite.ts              # Atomic write utility
+    path.ts                     # Canonical root validation and slot formatting
 ```
 
 ### Implementation Order
