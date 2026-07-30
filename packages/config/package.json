@@ -11,27 +11,27 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./default": {
-      "bun": "./src/default.ts",
+      "typescript": "./src/default.ts",
       "types": "./lib/default.d.ts",
       "import": "./lib/default.js"
     },
     "./networks": {
-      "bun": "./src/networks.ts",
+      "typescript": "./src/networks.ts",
       "types": "./lib/networks.d.ts",
       "import": "./lib/networks.js"
     },
     "./configs": {
-      "bun": "./src/configs.ts",
+      "typescript": "./src/configs.ts",
       "types": "./lib/configs.d.ts",
       "import": "./lib/configs.js"
     },
     "./test-utils": {
-      "bun": "./src/testUtils/index.ts",
+      "typescript": "./src/testUtils/index.ts",
       "types": "./lib/testUtils/index.d.ts",
       "import": "./lib/testUtils/index.js"
     }
