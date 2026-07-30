@@ -1,0 +1,56 @@
+name: Project board
+
+# Keeps the ChainSafe org project's Status lanes in sync with PR state.
+# Spec: .github/specs/project-automation.md
+# Safe with pull_request_target: this workflow never checks out or executes PR code —
+# it only checks out ChainSafe/lodestar@unstable for the reconciler script.
+on:
+  pull_request_target:
+    types:
+      - opened
+      - ready_for_review
+      - converted_to_draft
+      - review_requested
+      - review_request_removed
+      - reopened
+  # No secrets on fork PRs for this event; main.ts exits 0 and the sweep reconciles instead.
+  pull_request_review:
+    types:
+      - submitted
+      - dismissed
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "owner/repo#number to reconcile (empty = sweep the whole board)"
+        required: false
+  # Entry point for accessory repos (thin callers; see .github/specs/project-board-caller.yml)
+  workflow_call:
+
+permissions: {}
+
+concurrency:
+  group: project-board-${{ github.event.pull_request.number || github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout reconciler (lodestar@unstable, never PR code)
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: ChainSafe/lodestar
+          ref: unstable
+          sparse-checkout: .github/scripts/project-board
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24
+
+      - name: Reconcile
+        run: node .github/scripts/project-board/main.ts ${{ inputs.pr && format('--pr {0}', inputs.pr) || '' }}
+        env:
+          PROJECT_BOARD_TOKEN: ${{ secrets.PROJECT_BOARD_TOKEN }}
+          DRY_RUN: ${{ vars.PROJECT_BOARD_DRY_RUN }}
