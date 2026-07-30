@@ -28,7 +28,12 @@ export async function* onBlobSidecarsByRange(
   if (startSlot <= archiveMaxSlot) {
     if (db.flatFileStore) {
       for (let slot = startSlot; slot < Math.min(endSlot, archiveMaxSlot + 1); slot++) {
-        const blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
+        // Fork choice publishes finality before the async archive job removes losing-fork files.
+        // While the slot is still in fork choice, use its canonical root instead of a slot-only lookup.
+        const canonicalBlock = chain.forkChoice.getCanonicalBlockAtSlot(slot);
+        const blobSideCarsBytesWrapped = canonicalBlock
+          ? await db.flatFileStore.getBlobSidecarsBinary(slot, canonicalBlock.blockRoot)
+          : await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
         if (!blobSideCarsBytesWrapped) {
           continue;
         }

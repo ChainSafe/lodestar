@@ -146,25 +146,20 @@ export class BlobStore {
   }
 
   /**
-   * Find and return the first file for a given slot (canonical lookup by slot only).
+   * Return data only when exactly one blob root exists for the slot.
    * Checks the existence cache first to avoid a readdir syscall.
    */
   async getBinaryBySlot(slot: Slot): Promise<Uint8Array | null> {
-    // Fast path: existence cache knows which root lives at this slot
-    const cachedRoot = this.cache.getAnyRootForSlot(slot);
+    const cachedRoot = this.cache.getUniqueBlobRootForSlot(slot);
     if (cachedRoot) {
       return this.getBinary(slot, cachedRoot);
     }
 
-    // Slow path: readdir the slot directory
     const slotDir = path.join(this.dir, padSlot(slot));
     try {
       const files = await fs.promises.readdir(slotDir);
-      for (const file of files) {
-        if (file.endsWith(".ssz") && file.startsWith("0x")) {
-          return await fs.promises.readFile(path.join(slotDir, file));
-        }
-      }
+      const blobFiles = files.filter((file) => file.endsWith(".ssz") && file.startsWith("0x"));
+      if (blobFiles.length === 1) return await fs.promises.readFile(path.join(slotDir, blobFiles[0]));
     } catch (_e) {
       // Directory doesn't exist
     }

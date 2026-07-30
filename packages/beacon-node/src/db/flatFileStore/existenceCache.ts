@@ -18,23 +18,19 @@ export class ExistenceCache {
   // --- Slot → Root resolution (for finalized canonical lookups) ---
 
   /**
-   * Return any root known at this slot (from blobs or columns).
-   * For finalized slots there is exactly one canonical root per slot,
-   * so this is equivalent to the old CanonicalSlotRootIndex lookup
-   * but derived from data we already track.
+   * Return the blob root only when exactly one root is known at this slot.
+   * Multiple roots can coexist until finalization cleanup completes, so choosing
+   * an arbitrary root could return sidecars from a non-canonical block.
    */
-  getAnyRootForSlot(slot: Slot): RootHex | null {
-    // Try blobs first
-    const blobRoots = this.blobPresence.get(slot);
-    if (blobRoots) {
-      for (const root of blobRoots) return root;
-    }
-    // Try columns
-    const colRoots = this.columnBitmaps.get(slot);
-    if (colRoots) {
-      for (const root of colRoots.keys()) return root;
-    }
-    return null;
+  getUniqueBlobRootForSlot(slot: Slot): RootHex | null {
+    return getOnlyValue(this.blobPresence.get(slot)?.values());
+  }
+
+  /**
+   * Return the column root only when exactly one root is known at this slot.
+   */
+  getUniqueColumnRootForSlot(slot: Slot): RootHex | null {
+    return getOnlyValue(this.columnBitmaps.get(slot)?.keys());
   }
 
   // --- Blobs ---
@@ -180,4 +176,13 @@ export class ExistenceCache {
 
     return {blobs: blobCount, columns: columnCount};
   }
+}
+
+function getOnlyValue(values: IterableIterator<RootHex> | undefined): RootHex | null {
+  if (!values) return null;
+
+  const first = values.next();
+  if (first.done || !values.next().done) return null;
+
+  return first.value;
 }

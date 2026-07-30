@@ -60,6 +60,13 @@ describe("FlatFileStore", () => {
       expect(result).toBeNull();
     });
 
+    it("should not choose an arbitrary blob root for a slot", async () => {
+      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecars(1000, ROOT_B, new Uint8Array([2]));
+
+      expect(await store.getBlobSidecarsBinaryBySlot(1000)).toBeNull();
+    });
+
     it("should check existence via cache (sync)", async () => {
       expect(store.hasBlobSidecars(1000, ROOT_A)).toBe(false);
 
@@ -192,6 +199,22 @@ describe("FlatFileStore", () => {
       const result = await store.getDataColumnsBinaryBySlot(1000, [0, 1]);
       expect(new Uint8Array(result[0]!)).toEqual(col0);
       expect(result[1]).toBeUndefined();
+    });
+
+    it("should not choose an arbitrary column root for a slot", async () => {
+      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array([1])}]);
+      await store.putDataColumnsBinary(1000, ROOT_B, [{index: 0, data: new Uint8Array([2])}]);
+
+      expect(await store.getDataColumnsBinaryBySlot(1000, [0])).toEqual([undefined]);
+    });
+
+    it("should resolve column roots independently from blob roots", async () => {
+      const column = new Uint8Array([2]);
+      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array([1]));
+      await store.putDataColumnsBinary(1000, ROOT_B, [{index: 0, data: column}]);
+
+      const [result] = await store.getDataColumnsBinaryBySlot(1000, [0]);
+      expect(result).toEqual(column);
     });
 
     it("should prune columns before slot", async () => {

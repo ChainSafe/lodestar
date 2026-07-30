@@ -8,7 +8,7 @@ import {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
  * All filesystem operations are crash-safe via atomic writes.
  *
  * For finalized canonical lookups by slot only, the existence cache resolves
- * slot → root from data it already tracks (no separate index needed).
+ * slot → root when exactly one root exists (no separate index needed).
  */
 export interface IFlatFileStore {
   init(): Promise<void>;
@@ -18,7 +18,7 @@ export interface IFlatFileStore {
 
   getBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<BlobSidecarsWrapper | null>;
   getBlobSidecarsBinary(slot: Slot, blockRoot: RootHex): Promise<Uint8Array | null>;
-  /** Lookup by slot only (for finalized reqresp — single canonical file per slot) */
+  /** Lookup by slot only when a single blob root exists */
   getBlobSidecarsBinaryBySlot(slot: Slot): Promise<Uint8Array | null>;
   putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
   deleteBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<void>;
@@ -39,7 +39,7 @@ export interface IFlatFileStore {
   hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean;
   getColumnBitmap(slot: Slot, blockRoot: RootHex): bigint | null;
 
-  /** Lookup by slot only (for finalized reqresp — single canonical file per slot) */
+  /** Lookup by slot only when a single column root exists */
   getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]>;
 
   // --- Pruning ---

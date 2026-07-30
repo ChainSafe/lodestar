@@ -67,12 +67,17 @@ describe("FlatFileStore reqresp handler integration", () => {
       DENEB_FORK_EPOCH: 0,
     });
 
-    function makeMockChainAndDb(opts: {finalizedSlot: number; headChain?: {slot: number; blockRoot: string}[]}) {
+    function makeMockChainAndDb(opts: {
+      finalizedSlot: number;
+      headChain?: {slot: number; blockRoot: string}[];
+      canonicalBlocks?: {slot: number; blockRoot: string}[];
+    }) {
       const chain = {
         config: denebConfig,
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
+          getCanonicalBlockAtSlot: (slot: number) => opts.canonicalBlocks?.find((block) => block.slot === slot) ?? null,
           getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
           getAllAncestorBlocks: () =>
             (opts.headChain ?? []).map((block) => ({...block, payloadStatus: PayloadStatus.FULL})),
@@ -163,6 +168,20 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(responses.length).toBe(1);
       expect(responses[0].data[0]).toBe(0x70);
     });
+
+    it("should use the canonical root while finalization cleanup is pending", async () => {
+      await store.putBlobSidecars(100, ROOT_A, buildBlobWrapper(1, 0x80));
+      await store.putBlobSidecars(100, ROOT_B, buildBlobWrapper(1, 0x90));
+
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        canonicalBlocks: [{slot: 100, blockRoot: ROOT_B}],
+      });
+      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
+
+      expect(responses).toHaveLength(1);
+      expect(responses[0].data[0]).toBe(0x90);
+    });
   });
 
   describe("onDataColumnSidecarsByRange with flatFileStore", () => {
@@ -178,6 +197,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       custodyColumns: number[];
       earliestAvailableSlot?: number;
       headChain?: {slot: number; blockRoot: string}[];
+      canonicalBlocks?: {slot: number; blockRoot: string}[];
       getSerializedDataColumnSidecars?: (
         slot: number,
         root: string,
@@ -194,6 +214,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
+          getCanonicalBlockAtSlot: (slot: number) => opts.canonicalBlocks?.find((block) => block.slot === slot) ?? null,
           getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
           getAllAncestorBlocks: () =>
             (opts.headChain ?? []).map((block) => ({...block, payloadStatus: PayloadStatus.FULL})),
@@ -339,6 +360,25 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       // Column 5 is not in custody, so it's filtered out
       expect(responses.length).toBe(0);
+    });
+
+    it("should use the canonical root while finalization cleanup is pending", async () => {
+      const nonCanonicalData = new Uint8Array(32).fill(0x55);
+      const canonicalData = new Uint8Array(32).fill(0x66);
+      await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: nonCanonicalData}]);
+      await store.putDataColumnsBinary(10, ROOT_B, [{index: 0, data: canonicalData}]);
+
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        canonicalBlocks: [{slot: 10, blockRoot: ROOT_B}],
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(1);
+      expect(new Uint8Array(responses[0].data)).toEqual(canonicalData);
     });
   });
 });

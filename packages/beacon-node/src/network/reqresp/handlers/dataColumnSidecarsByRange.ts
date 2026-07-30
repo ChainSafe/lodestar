@@ -66,8 +66,13 @@ export async function* onDataColumnSidecarsByRange(
   if (startSlot <= archiveMaxSlot) {
     const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
     for (let slot = startSlot; slot < archiveEnd; slot++) {
+      // Fork choice publishes finality before the async archive job removes losing-fork files.
+      // While the slot is still in fork choice, use its canonical root instead of a slot-only lookup.
+      const canonicalBlock = db.flatFileStore ? chain.forkChoice.getCanonicalBlockAtSlot(slot) : null;
       const dataColumnSidecars = db.flatFileStore
-        ? await db.flatFileStore.getDataColumnsBinaryBySlot(slot, availableColumns)
+        ? canonicalBlock
+          ? await db.flatFileStore.getDataColumnsBinary(slot, canonicalBlock.blockRoot, availableColumns)
+          : await db.flatFileStore.getDataColumnsBinaryBySlot(slot, availableColumns)
         : await finalized.getManyBinary(slot, availableColumns);
 
       const unavailableColumnIndices: ColumnIndex[] = [];
@@ -93,6 +98,7 @@ export async function* onDataColumnSidecarsByRange(
           db,
           metrics: chain.metrics,
           unavailableColumnIndices,
+          blockRoot: canonicalBlock ? fromHex(canonicalBlock.blockRoot) : undefined,
           slot,
           requestedColumns,
           availableColumns,

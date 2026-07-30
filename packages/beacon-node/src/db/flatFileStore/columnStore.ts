@@ -200,25 +200,21 @@ export class ColumnStore {
   }
 
   /**
-   * Get binary columns by slot only (for finalized canonical lookups).
+   * Get binary columns only when exactly one column root exists for the slot.
    * Checks the existence cache first to avoid a readdir syscall.
    */
   async getColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]> {
-    // Fast path: existence cache knows which root lives at this slot
-    const cachedRoot = this.cache.getAnyRootForSlot(slot);
+    const cachedRoot = this.cache.getUniqueColumnRootForSlot(slot);
     if (cachedRoot) {
       return this.getColumnsBinary(slot, cachedRoot, indices);
     }
 
-    // Slow path: readdir the slot directory
     const slotDir = path.join(this.dir, padSlot(slot));
     try {
       const files = await fs.promises.readdir(slotDir);
-      for (const file of files) {
-        if (file.endsWith(".dcol") && file.startsWith("0x")) {
-          const rootHex = file.slice(0, -5);
-          return this.getColumnsBinary(slot, rootHex, indices);
-        }
+      const columnFiles = files.filter((file) => file.endsWith(".dcol") && file.startsWith("0x"));
+      if (columnFiles.length === 1) {
+        return this.getColumnsBinary(slot, columnFiles[0].slice(0, -5), indices);
       }
     } catch (_e) {
       // Directory doesn't exist
