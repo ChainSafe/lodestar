@@ -310,7 +310,13 @@ export function mergeDcolColumns(existing: Uint8Array, newColumns: {index: numbe
     allColumns.set(col.index, col.data);
   }
 
+  // Defensively reject ambiguous batches while still allowing a new column to overwrite its previously stored value.
+  const newIndices = new Set<number>();
   for (const col of newColumns) {
+    if (newIndices.has(col.index)) {
+      throw new Error(`Duplicate dcol column index: ${col.index}`);
+    }
+    newIndices.add(col.index);
     allColumns.set(col.index, col.data);
   }
 

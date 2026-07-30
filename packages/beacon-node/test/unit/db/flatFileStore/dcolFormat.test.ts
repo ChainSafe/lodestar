@@ -294,5 +294,16 @@ describe("dcolFormat", () => {
       expect(totalBits(header.bitmap)).toBe(1);
       expect(readColumn(merged, header, 3)).toEqual(colNew);
     });
+
+    it("should defensively reject duplicate indices within a merge batch", () => {
+      const existing = encodeDcolFile(new Uint8Array(32), 200, [{index: 0, data: new Uint8Array([1])}]);
+
+      expect(() =>
+        mergeDcolColumns(existing, [
+          {index: 3, data: new Uint8Array([2])},
+          {index: 3, data: new Uint8Array([3])},
+        ])
+      ).toThrow("Duplicate dcol column index");
+    });
   });
 });
