@@ -8,6 +8,11 @@ on:
     paths:
       - ".github/scripts/project-board/**"
       - ".github/workflows/project-board-ci.yml"
+  push:
+    branches: [unstable]
+    paths:
+      - ".github/scripts/project-board/**"
+      - ".github/workflows/project-board-ci.yml"
 
 permissions: {}
 
