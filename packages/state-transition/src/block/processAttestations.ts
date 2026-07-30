@@ -12,9 +12,9 @@ export function processAttestations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   attestations: Attestation[],
+  parentSlot: Slot | null,
   verifySignatures = true,
-  metrics?: BeaconStateTransitionMetrics | null,
-  parentSlot: Slot | null = null
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   if (fork === ForkSeq.phase0) {
     for (const attestation of attestations) {
@@ -25,9 +25,9 @@ export function processAttestations(
       fork,
       state as CachedBeaconStateAltair,
       attestations,
+      parentSlot,
       verifySignatures,
-      metrics,
-      parentSlot
+      metrics
     );
   }
 }

@@ -96,7 +96,7 @@ export function processBlock(
 
   processRandao(state, block, verifySignatures);
   processEth1Data(state, block.body.eth1Data);
-  processOperations(fork, state, block.body, opts, metrics, parentSlot);
+  processOperations(fork, state, block.body, parentSlot, opts, metrics);
   if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
   }

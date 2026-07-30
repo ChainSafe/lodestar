@@ -37,9 +37,9 @@ export function processAttestationsAltair(
   fork: ForkSeq,
   state: CachedBeaconStateAltair | CachedBeaconStateGloas,
   attestations: Attestation[],
+  parentSlot: Slot | null,
   verifySignature = true,
-  metrics?: BeaconStateTransitionMetrics | null,
-  parentSlot: Slot | null = null
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;

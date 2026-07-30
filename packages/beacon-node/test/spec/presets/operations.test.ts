@@ -42,8 +42,6 @@ const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = 
       fork,
       state,
       [testCase.attestation],
-      true,
-      undefined,
       fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.slot : null
     );
   },

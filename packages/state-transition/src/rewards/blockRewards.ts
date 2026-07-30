@@ -99,7 +99,7 @@ function computeBlockAttestationRewardAltair(
   const fork = config.getForkSeq(block.slot);
   const {attestations} = block.body;
 
-  processAttestationsAltair(fork, preState, attestations, false, undefined, parentSlot);
+  processAttestationsAltair(fork, preState, attestations, parentSlot, false);
 
   return preState.proposerRewards.attestations;
 }

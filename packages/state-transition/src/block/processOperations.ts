@@ -44,9 +44,9 @@ export function processOperations(
   fork: ForkSeq,
   state: CachedBeaconStateAllForks,
   body: BeaconBlockBody,
+  parentSlot: Slot | null,
   opts: ProcessBlockOpts = {verifySignatures: true},
-  metrics?: BeaconStateTransitionMetrics | null,
-  parentSlot: Slot | null = null
+  metrics?: BeaconStateTransitionMetrics | null
 ): void {
   if (fork >= ForkSeq.gloas) {
     assertGloasOperationLimits(body as gloas.BeaconBlockBody);
@@ -68,7 +68,7 @@ export function processOperations(
     processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
   }
 
-  processAttestations(fork, state, body.attestations, opts.verifySignatures, metrics, parentSlot);
+  processAttestations(fork, state, body.attestations, parentSlot, opts.verifySignatures, metrics);
 
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
