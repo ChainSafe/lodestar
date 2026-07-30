@@ -92,8 +92,9 @@ export const STATUS_TO_LANE: Record<Status, string> = {
 
 /**
  * Lanes the SWEEP processes (event runs reassert status regardless of lane).
- * Cards with no status and cards parked in other lanes (Backlog, Ready, Done)
- * are skipped by the sweep; initial placement comes from the PR-opened event.
+ * Statusless cards are also swept: the built-in auto-add workflow can land a
+ * card after the PR-opened event already ran, so the sweep does initial
+ * placement. Cards parked in other lanes (Backlog, Ready, Done) are skipped.
  */
 export const SWEEP_LANES: ReadonlySet<string> = new Set(Object.values(STATUS_TO_LANE));
 
@@ -641,8 +642,9 @@ export interface BoardPr {
 }
 
 /**
- * All OPEN pull requests whose card sits in one of the sweep lanes. Cards with
- * no status and cards parked in Backlog/Ready/Done are dropped here, so the
+ * All OPEN pull requests whose card sits in one of the sweep lanes OR has no
+ * status yet (auto-added cards whose opened event raced the built-in auto-add
+ * get placed here). Cards parked in Backlog/Ready/Done are dropped, so the
  * sweep never even fetches their PR detail. Event runs bypass this listing
  * entirely and reassert status regardless of lane.
  */
@@ -669,7 +671,7 @@ export async function listOpenBoardPrs(token: string, org: string, projectNumber
     for (const item of page.nodes) {
       const c = item.content;
       const lane = item.fieldValueByName?.name ?? null;
-      const owned = lane !== null && SWEEP_LANES.has(lane);
+      const owned = lane === null || SWEEP_LANES.has(lane);
       if (owned && c?.__typename === "PullRequest" && c.state === "OPEN" && c.repository && c.number !== undefined) {
         prs.push({owner: c.repository.owner.login, repo: c.repository.name, number: c.number});
       }
