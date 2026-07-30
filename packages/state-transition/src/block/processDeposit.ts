@@ -225,15 +225,14 @@ export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.
       results[depositIndex] = true;
     }
   } else {
-    // Batch failed: at least one signature is invalid - verify each individually
     for (let s = 0; s < signatureSets.length; s++) {
-      results[signatureSetDepositIndices[s]] = verify(
-        signatureSets[s].msg,
-        signatureSets[s].pk,
-        signatureSets[s].sig,
-        true,
-        true
-      );
+      try {
+        if (verify(signatureSets[s].msg, signatureSets[s].pk, signatureSets[s].sig, true, true)) {
+          results[signatureSetDepositIndices[s]] = true;
+        }
+      } catch (_) {
+        // invalid point / malformed → invalid signature, results[i] stays false
+      }
     }
   }
 
