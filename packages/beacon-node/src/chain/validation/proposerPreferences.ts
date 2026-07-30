@@ -26,8 +26,7 @@ export async function validateGossipProposerPreferences(
 
   // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  const currentSlot = chain.clock.currentSlotWithGossipDisparity;
-  const currentEpoch = computeEpochAtSlot(currentSlot);
+  const currentEpoch = computeEpochAtSlot(chain.clock.currentSlotWithGossipDisparity);
   if (proposalEpoch > currentEpoch + MIN_SEED_LOOKAHEAD) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH,
@@ -38,6 +37,7 @@ export async function validateGossipProposerPreferences(
 
   // [IGNORE] `preferences.proposal_slot` has not already passed, i.e. `proposal_slot > current_slot`,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  const currentSlot = chain.clock.slotWithPastTolerance(chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY / 1000);
   if (proposalSlot <= currentSlot) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED,
