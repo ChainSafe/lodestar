@@ -1481,12 +1481,8 @@ export class BeaconChain implements IBeaconChain {
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
 
-    // Best-effort: when far behind, the head can advance past the retained post-state, so the
-    // cached head state may be momentarily unavailable. Use the non-throwing cache lookup and skip
-    // these post-Electra gauges rather than throwing and failing the entire /metrics scrape (500).
-    // See https://github.com/ChainSafe/lodestar/issues/9716
-    const headState = this.regen.getClosestHeadState(this.forkChoice.getHead());
-    if (headState && isStatePostElectra(headState)) {
+    const headState = this.getHeadState();
+    if (isStatePostElectra(headState)) {
       metrics.pendingDeposits.set(headState.pendingDepositsCount);
       metrics.pendingPartialWithdrawals.set(headState.pendingPartialWithdrawalsCount);
       metrics.pendingConsolidations.set(headState.pendingConsolidationsCount);

@@ -1,9 +1,8 @@
 import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
 import {IBeaconStateViewGloas, computeStartSlotAtEpoch, isStatePostGloas} from "@lodestar/state-transition";
-import {Epoch, Status, fulu, gloas} from "@lodestar/types";
+import {Epoch, Status, fulu} from "@lodestar/types";
 import {Logger, prettyPrintIndices, toRootHex} from "@lodestar/utils";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {AttestationImportOpt, ImportBlockOpts} from "../../chain/blocks/index.js";
@@ -323,31 +322,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerIdStr, syncType: RangeSyncType): void {
     let syncChain = this.chains.get(syncType);
     if (!syncChain) {
-      // The first batch of a new sync chain may need to detect whether the parent block was a
+      // The first batch of a new sync chain may need to detect whether the parent block was an
       // gloas "empty" block (no envelope produced). It does so by comparing the first
       // downloaded block's `bid.parentBlockHash` against the head state's `latestExecutionPayloadBid.blockHash`.
-      //
-      // This is only relevant post-gloas, so avoid reading the head state entirely before then.
-      // Even post-gloas the read is best-effort: when far behind, the head can advance past the
-      // retained post-state and `getHeadState()` throws. Degrade to `undefined` (skip empty-block
-      // detection for the first batch) instead of throwing here, which would prevent the SyncChain
-      // from ever being created and permanently wedge range sync. See https://github.com/ChainSafe/lodestar/issues/9716
-      let latestBid: gloas.ExecutionPayloadBid | undefined;
-      const head = this.chain.forkChoice.getHead();
-      if (this.config.getForkSeq(head.slot) >= ForkSeq.gloas) {
-        try {
-          const headState = this.chain.getHeadState();
-          latestBid = isStatePostGloas(headState)
-            ? (headState as IBeaconStateViewGloas).latestExecutionPayloadBid
-            : undefined;
-        } catch (e) {
-          this.logger.warn(
-            "Skipping gloas empty-block detection for new sync chain, head state unavailable",
-            {syncType, code: "HEAD_STATE_UNAVAILABLE", headSlot: head.slot, headRoot: head.blockRoot},
-            e as Error
-          );
-        }
-      }
+      const headState = this.chain.getHeadState();
+      const latestBid = isStatePostGloas(headState)
+        ? (headState as IBeaconStateViewGloas).latestExecutionPayloadBid
+        : undefined;
 
       syncChain = new SyncChain(
         startEpoch,
