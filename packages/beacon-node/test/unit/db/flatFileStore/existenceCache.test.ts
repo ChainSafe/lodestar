@@ -20,6 +20,10 @@ describe("ExistenceCache", () => {
       cache.setBlobPresent(100, "0xabc");
       cache.removeBlobPresent(100, "0xabc");
       expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.getBlobSlotsBefore(101)).toEqual([100]);
+
+      cache.removeBlobSlot(100);
+      expect(cache.getBlobSlotsBefore(101)).toEqual([]);
     });
   });
 
@@ -49,11 +53,15 @@ describe("ExistenceCache", () => {
       cache.setColumnPresent(100, "0xabc");
       cache.removeColumns(100, "0xabc");
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
+      expect(cache.getColumnSlotsBefore(101)).toEqual([100]);
+
+      cache.removeColumnSlot(100);
+      expect(cache.getColumnSlotsBefore(101)).toEqual([]);
     });
   });
 
-  describe("evict below", () => {
-    it("should evict blob and column entries independently", () => {
+  describe("slots before", () => {
+    it("should enumerate blob and column slots independently", () => {
       const cache = new ExistenceCache();
 
       cache.setBlobPresent(100, "0xabc");
@@ -63,17 +71,18 @@ describe("ExistenceCache", () => {
       cache.setColumnPresent(100, "0xabc");
       cache.setColumnPresent(300, "0xghi");
 
-      cache.evictBlobsBelow(200);
-
-      expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.getBlobSlotsBefore(200)).toEqual([100]);
+      expect(cache.getColumnSlotsBefore(200)).toEqual([100]);
       expect(cache.hasBlobPresent(200, "0xdef")).toBe(true);
       expect(cache.hasBlobPresent(300, "0xghi")).toBe(true);
-
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
       expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
 
-      cache.evictColumnsBelow(200);
+      cache.removeBlobSlot(100);
+      expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
 
+      cache.removeColumnSlot(100);
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
       expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
     });

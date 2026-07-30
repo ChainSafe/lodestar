@@ -19,7 +19,6 @@ import {
 } from "./dcolFormat.js";
 import {isFsNotFoundError} from "./errors.js";
 import {ExistenceCache} from "./existenceCache.js";
-import {removeSlotDirectories} from "./slotDirectory.js";
 
 /**
  * Filesystem data column store using `.dcol` format.
@@ -221,8 +220,10 @@ export class ColumnStore {
    * Delete all slot directories with slot < minSlot.
    */
   async pruneBeforeSlot(minSlot: Slot): Promise<void> {
-    await removeSlotDirectories(this.dir, (slot) => slot < minSlot);
-    this.cache.evictColumnsBelow(minSlot);
+    for (const slot of this.cache.getColumnSlotsBefore(minSlot)) {
+      await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
+      this.cache.removeColumnSlot(slot);
+    }
   }
 }
 

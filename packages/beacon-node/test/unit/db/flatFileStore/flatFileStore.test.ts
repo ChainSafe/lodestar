@@ -117,6 +117,29 @@ describe("FlatFileStore", () => {
       expect(await store.getBlobSidecarsBinary(200, ROOT_B)).not.toBeNull();
       expect(await store.getBlobSidecarsBinary(300, ROOT_C)).not.toBeNull();
     });
+
+    it("should prune empty blob slot directories retained in the cache", async () => {
+      const slotDir = path.join(tmpDir, "blob_sidecars", "000000000100");
+      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
+      await store.deleteBlobSidecars(100, ROOT_A);
+
+      await store.pruneBlobsBeforeSlot(200);
+
+      await expect(fs.promises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
+    });
+
+    it("should retain a blob slot in the cache when pruning fails", async () => {
+      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
+      const pruneError = new Error("prune failed");
+      const rmSpy = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(pruneError);
+
+      try {
+        await expect(store.pruneBlobsBeforeSlot(200)).rejects.toBe(pruneError);
+        expect(store.hasBlobSidecars(100, ROOT_A)).toBe(true);
+      } finally {
+        rmSpy.mockRestore();
+      }
+    });
   });
 
   describe("columns", () => {
@@ -250,6 +273,16 @@ describe("FlatFileStore", () => {
       expect(await store.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
       expect(await store.getDataColumnsBinary(200, ROOT_B, [0])).not.toEqual([undefined]);
     });
+
+    it("should prune empty column slot directories retained in the cache", async () => {
+      const slotDir = path.join(tmpDir, "data_columns", "000000000100");
+      await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
+      await store.deleteDataColumns(100, ROOT_A);
+
+      await store.pruneColumnsBeforeSlot(200);
+
+      await expect(fs.promises.access(slotDir)).rejects.toMatchObject({code: "ENOENT"});
+    });
   });
 
   describe("on-disk format", () => {
@@ -322,6 +355,35 @@ describe("FlatFileStore", () => {
       expect(columns[0]).toBeDefined();
       expect(columns[1]).toBeDefined();
       expect(columns[2]).toBeUndefined();
+    });
+
+    it("should rebuild empty slot entries for cache-driven pruning", async () => {
+      const blobSlotDir = path.join(tmpDir, "blob_sidecars", "000000000100");
+      const columnSlotDir = path.join(tmpDir, "data_columns", "000000000100");
+      await fs.promises.mkdir(blobSlotDir, {recursive: true});
+      await fs.promises.mkdir(columnSlotDir, {recursive: true});
+
+      const store2 = new FlatFileStore(tmpDir, config, testLogger);
+      await store2.init(Number.MAX_SAFE_INTEGER);
+      await store2.pruneBlobsBeforeSlot(200);
+      await store2.pruneColumnsBeforeSlot(200);
+
+      await expect(fs.promises.access(blobSlotDir)).rejects.toMatchObject({code: "ENOENT"});
+      await expect(fs.promises.access(columnSlotDir)).rejects.toMatchObject({code: "ENOENT"});
+    });
+
+    it("should not scan storage directories while pruning", async () => {
+      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
+      await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
+      const readdirSpy = vi.spyOn(fs.promises, "readdir");
+
+      try {
+        await store.pruneBlobsBeforeSlot(200);
+        await store.pruneColumnsBeforeSlot(200);
+        expect(readdirSpy).not.toHaveBeenCalled();
+      } finally {
+        readdirSpy.mockRestore();
+      }
     });
 
     it("should remove hot data after restart", async () => {

@@ -13,6 +13,40 @@ export class ExistenceCache {
   private blobPresence = new Map<Slot, Set<RootHex>>();
   private columnPresence = new Map<Slot, Set<RootHex>>();
 
+  private trackBlobSlot(slot: Slot): Set<RootHex> {
+    let roots = this.blobPresence.get(slot);
+    if (!roots) {
+      roots = new Set();
+      this.blobPresence.set(slot, roots);
+    }
+    return roots;
+  }
+
+  private trackColumnSlot(slot: Slot): Set<RootHex> {
+    let roots = this.columnPresence.get(slot);
+    if (!roots) {
+      roots = new Set();
+      this.columnPresence.set(slot, roots);
+    }
+    return roots;
+  }
+
+  getBlobSlotsBefore(minSlot: Slot): Slot[] {
+    return getSlotsBefore(this.blobPresence, minSlot);
+  }
+
+  getColumnSlotsBefore(minSlot: Slot): Slot[] {
+    return getSlotsBefore(this.columnPresence, minSlot);
+  }
+
+  removeBlobSlot(slot: Slot): void {
+    this.blobPresence.delete(slot);
+  }
+
+  removeColumnSlot(slot: Slot): void {
+    this.columnPresence.delete(slot);
+  }
+
   // --- Slot → Root resolution (for finalized canonical lookups) ---
 
   /**
@@ -34,12 +68,7 @@ export class ExistenceCache {
   // --- Blobs ---
 
   setBlobPresent(slot: Slot, rootHex: RootHex): void {
-    let roots = this.blobPresence.get(slot);
-    if (!roots) {
-      roots = new Set();
-      this.blobPresence.set(slot, roots);
-    }
-    roots.add(rootHex);
+    this.trackBlobSlot(slot).add(rootHex);
   }
 
   hasBlobPresent(slot: Slot, rootHex: RootHex): boolean {
@@ -47,22 +76,13 @@ export class ExistenceCache {
   }
 
   removeBlobPresent(slot: Slot, rootHex: RootHex): void {
-    const roots = this.blobPresence.get(slot);
-    if (roots) {
-      roots.delete(rootHex);
-      if (roots.size === 0) this.blobPresence.delete(slot);
-    }
+    this.blobPresence.get(slot)?.delete(rootHex);
   }
 
   // --- Column files ---
 
   setColumnPresent(slot: Slot, rootHex: RootHex): void {
-    let roots = this.columnPresence.get(slot);
-    if (!roots) {
-      roots = new Set();
-      this.columnPresence.set(slot, roots);
-    }
-    roots.add(rootHex);
+    this.trackColumnSlot(slot).add(rootHex);
   }
 
   hasColumnPresent(slot: Slot, rootHex: RootHex): boolean {
@@ -70,23 +90,7 @@ export class ExistenceCache {
   }
 
   removeColumns(slot: Slot, rootHex: RootHex): void {
-    const roots = this.columnPresence.get(slot);
-    if (roots) {
-      roots.delete(rootHex);
-      if (roots.size === 0) this.columnPresence.delete(slot);
-    }
-  }
-
-  evictBlobsBelow(minSlot: Slot): void {
-    for (const [slot] of this.blobPresence) {
-      if (slot < minSlot) this.blobPresence.delete(slot);
-    }
-  }
-
-  evictColumnsBelow(minSlot: Slot): void {
-    for (const [slot] of this.columnPresence) {
-      if (slot < minSlot) this.columnPresence.delete(slot);
-    }
+    this.columnPresence.get(slot)?.delete(rootHex);
   }
 
   /**
@@ -99,11 +103,13 @@ export class ExistenceCache {
 
     // Scan blobs directory
     try {
-      const slotDirs = await fs.promises.readdir(blobsDir);
-      for (const slotStr of slotDirs) {
-        const slot = Number.parseInt(slotStr, 10);
-        if (Number.isNaN(slot)) continue;
-        const slotDir = path.join(blobsDir, slotStr);
+      const slotDirs = await fs.promises.readdir(blobsDir, {withFileTypes: true});
+      for (const entry of slotDirs) {
+        const slot = Number(entry.name);
+        if (!entry.isDirectory() || !Number.isSafeInteger(slot) || slot < 0) continue;
+
+        this.trackBlobSlot(slot);
+        const slotDir = path.join(blobsDir, entry.name);
         const files = await fs.promises.readdir(slotDir);
         for (const file of files) {
           if (file.endsWith(".part")) continue;
@@ -120,11 +126,13 @@ export class ExistenceCache {
 
     // Scan columns directory
     try {
-      const slotDirs = await fs.promises.readdir(columnsDir);
-      for (const slotStr of slotDirs) {
-        const slot = Number.parseInt(slotStr, 10);
-        if (Number.isNaN(slot)) continue;
-        const slotDir = path.join(columnsDir, slotStr);
+      const slotDirs = await fs.promises.readdir(columnsDir, {withFileTypes: true});
+      for (const entry of slotDirs) {
+        const slot = Number(entry.name);
+        if (!entry.isDirectory() || !Number.isSafeInteger(slot) || slot < 0) continue;
+
+        this.trackColumnSlot(slot);
+        const slotDir = path.join(columnsDir, entry.name);
         const files = await fs.promises.readdir(slotDir);
         for (const file of files) {
           if (file.endsWith(".part")) continue;
@@ -141,6 +149,14 @@ export class ExistenceCache {
 
     return {blobFiles: blobCount, columnFiles: columnCount};
   }
+}
+
+function getSlotsBefore(presence: Map<Slot, Set<RootHex>>, minSlot: Slot): Slot[] {
+  const slots: Slot[] = [];
+  for (const slot of presence.keys()) {
+    if (slot < minSlot) slots.push(slot);
+  }
+  return slots;
 }
 
 function getOnlyValue(values: IterableIterator<RootHex> | undefined): RootHex | null {
