@@ -4,7 +4,7 @@ export type Status = "In Progress" | "Review Requested" | "Awaiting Author";
 /** Internal status -> exact single-select option name on the board. */
 export const STATUS_TO_LANE: Record<Status, string> = {
   "In Progress": "In Progress",
-  "Review Requested": "Review Ready/Requested",
+  "Review Requested": "Review Requested",
   "Awaiting Author": "Awaiting Author",
 };
 

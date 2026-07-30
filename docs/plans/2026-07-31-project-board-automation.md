@@ -14,7 +14,7 @@
 - Node 24, type stripping: no `enum`, no runtime `namespace`, no parameter properties; relative imports use the literal `.ts` extension (Node does not remap extensions).
 - Zero npm dependencies for the script; only `node:` built-ins and global `fetch`.
 - The automation only writes the Status field of PR cards on project #75. It never modifies PRs, never adds cards to the board.
-- Board lane names (exact): `In Progress`, `Review Ready/Requested`, `Awaiting Author`. Resolve field/option IDs at runtime by name; fail loudly if a name is missing.
+- Board lane names (exact): `In Progress`, `Review Requested`, `Awaiting Author`. Resolve field/option IDs at runtime by name; fail loudly if a name is missing.
 - Only **user-level** review requests count; team requests are ignored. Only reviews from **User-type** authors count; Bot-type (GitHub App) reviews are ignored. Deleted-author reviews are ignored.
 - Token: `PROJECT_BOARD_TOKEN` secret (fine-grained PAT, org Projects read/write + public repo read). Missing token must exit 0 with a warning (fork-PR `pull_request_review` runs have no secrets).
 - Commit style: Conventional Commits, no Co-Authored-By lines.
@@ -86,7 +86,7 @@ export type Status = "In Progress" | "Review Requested" | "Awaiting Author";
 /** Internal status -> exact single-select option name on the board. */
 export const STATUS_TO_LANE: Record<Status, string> = {
   "In Progress": "In Progress",
-  "Review Requested": "Review Ready/Requested",
+  "Review Requested": "Review Requested",
   "Awaiting Author": "Awaiting Author",
 };
 
