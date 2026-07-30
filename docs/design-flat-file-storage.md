@@ -367,9 +367,9 @@ For 18-day retention window (~130,000 slots):
 
 ### Cache Lifecycle
 
-1. **Startup:** `rebuildFromDisk()` walks the blob and column directories and records roots from filenames. It does not open sidecar files. `.part` files are ignored.
-2. **Runtime:** Updated on every write and delete.
-3. **Pruning:** `evictBelow(minSlot)` batch-evicts entries for pruned slots.
+1. **Startup:** `rebuildFromDisk()` walks the blob and column directories and records every slot directory and its roots. It does not open sidecar files. `.part` files are ignored.
+2. **Runtime:** Writes add roots and deletes remove roots. Empty slot entries remain cached so their directories can be pruned later.
+3. **Pruning:** Expired slots are selected from the cache, then removed from the cache after their directories are successfully deleted.
 
 ### Warm-up Optimization (Future)
 
@@ -386,33 +386,14 @@ async function pruneExpiredData(currentEpoch: Epoch): Promise<void> {
   const blobCutoffSlot = computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS);
   const columnCutoffSlot = computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS);
 
-  // Prune blobs
-  await pruneDirectoriesBelowSlot(this.blobsDir, blobCutoffSlot);
-
-  // Prune columns
-  await pruneDirectoriesBelowSlot(this.columnsDir, columnCutoffSlot);
-
-  // Evict cache entries
-  this.existenceCache.evictBelow(Math.min(blobCutoffSlot, columnCutoffSlot));
-}
-
-async function pruneDirectoriesBelowSlot(baseDir: string, cutoffSlot: Slot): Promise<void> {
-  const entries = await fs.readdir(baseDir);
-  const prunePromises: Promise<void>[] = [];
-
-  for (const entry of entries) {
-    const slot = parseInt(entry, 10);
-    if (Number.isNaN(slot) || slot >= cutoffSlot) continue;
-    prunePromises.push(fs.rm(path.join(baseDir, entry), {recursive: true, force: true}));
-  }
-
-  // Prune in parallel batches to avoid overwhelming the filesystem
-  const BATCH_SIZE = 1000;
-  for (let i = 0; i < prunePromises.length; i += BATCH_SIZE) {
-    await Promise.all(prunePromises.slice(i, i + BATCH_SIZE));
-  }
+  await this.blobStore.pruneBeforeSlot(blobCutoffSlot);
+  await this.columnStore.pruneBeforeSlot(columnCutoffSlot);
 }
 ```
+
+Each store filters the in-memory slot map, constructs the exact paths for expired slots, and removes only those
+directories. A slot is removed from the cache after its directory deletion succeeds. Normal pruning therefore does not
+scan the storage directories.
 
 ### Pruning Performance
 
@@ -424,7 +405,7 @@ async function pruneDirectoriesBelowSlot(baseDir: string, cutoffSlot: Slot): Pro
 
 **Proposed (filesystem):** Deleting expired blobs/columns requires:
 
-1. `readdir` to list slot directories
+1. Scan numeric slot keys in the in-memory existence cache
 2. `rm -rf` for each expired slot directory
 3. Space is reclaimed immediately by the filesystem
 
