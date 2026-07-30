@@ -3,13 +3,15 @@
 ## Critical rules
 
 - **Target branch:** `unstable` (never `stable`)
-- **Pre-push:** run `pnpm lint`, `pnpm check-types`, `pnpm test:unit` before every push
+- **Pre-push:** run only checks relevant to the change; prefer targeted tests and do not run the full
+  `pnpm test:unit` suite by default
 - **Relative imports:** use `.js` extension in TypeScript ESM imports
 - **No `any`:** avoid `any` / `as any`; use proper types or justified `biome-ignore`
 - **No `lib/` edits:** never edit `packages/*/lib/` — these are build outputs
 - **Follow existing patterns** before introducing new abstractions
 - **Structured logging** with specific error codes (not generic `Error`)
 - **Incremental commits** after review starts — do not force push unless maintainer requests it
+- **Communication style:** DO NOT use `—`. Keep communication succinct and human-friendly. NO AI SLOP VERBOSITY.
 
 ## Project overview
 
@@ -104,6 +106,12 @@ pnpm download-spec-tests latest                                # latest schedule
 pnpm download-spec-tests 2026-04-14                            # latest successful run on that date
 pnpm download-spec-tests latest <owner>/consensus-specs        # fork
 pnpm download-spec-tests latest <owner>/consensus-specs <ref>  # fork + branch
+
+# Fork-choice compliance tests (model-generated vectors, standalone flow;
+# runs nightly in CI, not per-PR). Same version pin as the spec tests.
+pnpm download-comptests
+pnpm test:comptest
+SPEC_FILTER_FORK=deneb pnpm test:comptest   # single fork (from packages/beacon-node)
 
 # Run e2e tests (requires docker environment)
 ./scripts/run_e2e_env.sh start
@@ -346,12 +354,15 @@ refactor(reqresp)!: support byte based handlers
 
 ## Pre-push checklist
 
-Before pushing any commit, verify:
+Before pushing any commit, run only the checks relevant to the changed files and behavior:
 
-1. `pnpm lint` — Biome enforces formatting; CI catches failures but wastes a round-trip
-2. `pnpm check-types` — catch type errors before CI
-3. `pnpm docs:lint` — if you edited any `.md` files, check Prettier formatting
-4. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
+1. `pnpm lint` — when changing files covered by Biome
+2. `pnpm check-types` — when changing TypeScript, public APIs, or types
+3. Targeted tests for the changed behavior, when applicable. Do not run the full `pnpm test:unit` suite
+   by default; reserve it for broad changes that cannot be covered adequately by targeted tests or when
+   explicitly requested
+4. `pnpm docs:lint` — if you edited any `.md` files, check Prettier formatting
+5. No edits in `packages/*/lib/` — these are build outputs; edit `src/` instead
 
 ## Common tasks
 
@@ -359,8 +370,8 @@ Before pushing any commit, verify:
 
 1. Create a feature branch from `unstable`
 2. Implement the feature with tests
-3. Run `pnpm lint` and `pnpm check-types`
-4. Run `pnpm test:unit` to verify tests pass
+3. Run `pnpm lint` and `pnpm check-types` when applicable
+4. Run the targeted tests for the feature
 5. Open PR with clear description and any AI disclosure
 
 ### Fixing a bug
@@ -368,7 +379,7 @@ Before pushing any commit, verify:
 1. Write a failing test that reproduces the bug
 2. Fix the bug
 3. Verify the test passes
-4. Run checks: `pnpm lint`, `pnpm check-types`, `pnpm test:unit`
+4. Run targeted tests for the affected area, plus `pnpm lint` and `pnpm check-types` when applicable
 
 ### Adding a new SSZ type
 

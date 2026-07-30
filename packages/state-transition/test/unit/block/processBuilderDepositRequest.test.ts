@@ -2,7 +2,13 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {BUILDER_WITHDRAWAL_PREFIX, FAR_FUTURE_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  BUILDER_WITHDRAWAL_PREFIX,
+  FAR_FUTURE_EPOCH,
+  ForkName,
+  PAYLOAD_BUILDER_VERSION,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 
 const isValidBuilderDepositSignatureMock = vi.hoisted(() =>
@@ -50,9 +56,12 @@ function buildGloasState(slot = 0) {
   );
 }
 
-function makeBuilderWithdrawalCredentials(executionAddress: Uint8Array): Uint8Array {
+function makeBuilderWithdrawalCredentials(
+  executionAddress: Uint8Array,
+  prefix = BUILDER_WITHDRAWAL_PREFIX
+): Uint8Array {
   const creds = new Uint8Array(32);
-  creds[0] = BUILDER_WITHDRAWAL_PREFIX;
+  creds[0] = prefix;
   creds.set(executionAddress, 12);
   return creds;
 }
@@ -62,17 +71,21 @@ function makeBuilderDepositRequest({
   executionAddress = Uint8Array.from({length: 20}, (_, i) => i + 1),
   amount = 1_000_000_000,
   signatureFirstByte = 1, // 1 => valid via mock, anything else => invalid
+  withdrawalCredentials,
+  prefix = BUILDER_WITHDRAWAL_PREFIX,
 }: {
   pubkey?: Uint8Array;
   executionAddress?: Uint8Array;
   amount?: number;
   signatureFirstByte?: number;
+  withdrawalCredentials?: Uint8Array;
+  prefix?: number;
 } = {}) {
   const signature = new Uint8Array(96);
   signature[0] = signatureFirstByte;
   return {
     pubkey,
-    withdrawalCredentials: makeBuilderWithdrawalCredentials(executionAddress),
+    withdrawalCredentials: withdrawalCredentials ?? makeBuilderWithdrawalCredentials(executionAddress, prefix),
     amount,
     signature,
   };
@@ -96,8 +109,18 @@ describe("processBuilderDepositRequest", () => {
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(32_000_000_000);
     expect(builder.executionAddress).toEqual(request.withdrawalCredentials.subarray(12));
-    expect(builder.version).toBe(BUILDER_WITHDRAWAL_PREFIX);
+    expect(builder.version).toBe(PAYLOAD_BUILDER_VERSION);
     expect(builder.withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
+  });
+
+  it("drops a new builder request when the withdrawal credentials prefix is not the builder prefix", () => {
+    const state = buildGloasState(1);
+    const request = makeBuilderDepositRequest({prefix: 0x01});
+
+    processBuilderDepositRequest(state, request);
+
+    expect(isValidBuilderDepositSignatureMock).not.toHaveBeenCalled();
+    expect(state.builders.length).toBe(0);
   });
 
   it("drops the request when PoP is invalid", () => {
@@ -114,12 +137,11 @@ describe("processBuilderDepositRequest", () => {
     const state = buildGloasState(SLOTS_PER_EPOCH);
     const pubkey = Uint8Array.from({length: 48}, (_, i) => i + 1);
     const originalAddress = Uint8Array.from({length: 20}, (_, i) => i + 1);
-    const originalCreds = makeBuilderWithdrawalCredentials(originalAddress);
 
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: originalCreds[0],
+        version: PAYLOAD_BUILDER_VERSION,
         executionAddress: originalAddress,
         balance: 32_000_000_000,
         depositEpoch: 0,
@@ -127,8 +149,8 @@ describe("processBuilderDepositRequest", () => {
       })
     );
 
-    // Attacker-shaped top-up: same pubkey but different (would-be) execution address. Top-ups
-    // must ignore the request's withdrawal credentials and signature entirely.
+    // Attacker-shaped top-up: same pubkey but different (would-be) execution address. Valid
+    // top-ups must ignore the request's execution address and signature.
     const attackerAddress = Uint8Array.from({length: 20}, () => 0xff);
     const request = makeBuilderDepositRequest({
       pubkey,
@@ -144,20 +166,81 @@ describe("processBuilderDepositRequest", () => {
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(33_000_000_000);
     expect(builder.executionAddress).toEqual(originalAddress);
-    expect(builder.version).toBe(BUILDER_WITHDRAWAL_PREFIX);
+    expect(builder.version).toBe(PAYLOAD_BUILDER_VERSION);
   });
 
-  it("resets the withdrawable epoch when topping up an exited builder", () => {
+  it("drops a top-up when the withdrawal credentials prefix is not the builder prefix", () => {
+    const state = buildGloasState(SLOTS_PER_EPOCH);
+    const pubkey = Uint8Array.from({length: 48}, (_, i) => i + 1);
+    const executionAddress = Uint8Array.from({length: 20}, (_, i) => i + 1);
+
+    state.builders.push(
+      ssz.gloas.Builder.toViewDU({
+        pubkey,
+        version: PAYLOAD_BUILDER_VERSION,
+        executionAddress,
+        balance: 32_000_000_000,
+        depositEpoch: 0,
+        withdrawableEpoch: FAR_FUTURE_EPOCH,
+      })
+    );
+
+    const request = makeBuilderDepositRequest({
+      pubkey,
+      amount: 1_000_000_000,
+      prefix: 0x01,
+    });
+
+    processBuilderDepositRequest(state, request);
+
+    expect(isValidBuilderDepositSignatureMock).not.toHaveBeenCalled();
+    expect(state.builders.length).toBe(1);
+    const builder = state.builders.get(0);
+    expect(builder.balance).toBe(32_000_000_000);
+    expect(builder.executionAddress).toEqual(executionAddress);
+    expect(builder.version).toBe(PAYLOAD_BUILDER_VERSION);
+  });
+
+  it("resets the withdrawable epoch when topping up an exited, fully-swept builder", () => {
     const slot = SLOTS_PER_EPOCH * 2;
     const state = buildGloasState(slot);
     const pubkey = Uint8Array.from({length: 48}, (_, i) => i + 1);
     const executionAddress = Uint8Array.from({length: 20}, (_, i) => i + 1);
 
-    // Exited builder: finite withdrawableEpoch
+    // Exited and fully swept builder: finite withdrawableEpoch, zero balance
     state.builders.push(
       ssz.gloas.Builder.toViewDU({
         pubkey,
-        version: BUILDER_WITHDRAWAL_PREFIX,
+        version: PAYLOAD_BUILDER_VERSION,
+        executionAddress,
+        balance: 0,
+        depositEpoch: 0,
+        withdrawableEpoch: 1,
+      })
+    );
+
+    const request = makeBuilderDepositRequest({pubkey, executionAddress, amount: 1_000_000_000});
+
+    processBuilderDepositRequest(state, request);
+
+    const builder = state.builders.get(0);
+    expect(builder.balance).toBe(1_000_000_000);
+    const currentEpoch = Math.floor(slot / SLOTS_PER_EPOCH);
+    expect(builder.withdrawableEpoch).toBe(currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY);
+  });
+
+  it("does not reset the withdrawable epoch when topping up an exited builder with nonzero balance", () => {
+    const slot = SLOTS_PER_EPOCH * 2;
+    const state = buildGloasState(slot);
+    const pubkey = Uint8Array.from({length: 48}, (_, i) => i + 1);
+    const executionAddress = Uint8Array.from({length: 20}, (_, i) => i + 1);
+
+    // Exited builder that has NOT been swept: finite withdrawableEpoch, nonzero balance.
+    // Per spec, the reset is gated on balance == 0, so the withdrawableEpoch must be preserved.
+    state.builders.push(
+      ssz.gloas.Builder.toViewDU({
+        pubkey,
+        version: PAYLOAD_BUILDER_VERSION,
         executionAddress,
         balance: 1_000_000_000,
         depositEpoch: 0,
@@ -171,7 +254,6 @@ describe("processBuilderDepositRequest", () => {
 
     const builder = state.builders.get(0);
     expect(builder.balance).toBe(2_000_000_000);
-    const currentEpoch = Math.floor(slot / SLOTS_PER_EPOCH);
-    expect(builder.withdrawableEpoch).toBe(currentEpoch + state.config.MIN_BUILDER_WITHDRAWABILITY_DELAY);
+    expect(builder.withdrawableEpoch).toBe(1);
   });
 });

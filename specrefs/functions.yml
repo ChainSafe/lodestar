@@ -195,7 +195,7 @@
     - file: packages/state-transition/src/block/processParentExecutionPayload.ts
       search: export function applyParentExecutionPayload(
   spec: |
-    <spec fn="apply_parent_execution_payload" fork="gloas" hash="64e168db">
+    <spec fn="apply_parent_execution_payload" fork="gloas" hash="fd5aac1d">
     def apply_parent_execution_payload(
         state: BeaconState,
         requests: ExecutionRequests,
@@ -203,6 +203,11 @@
         parent_bid = state.latest_execution_payload_bid
         parent_slot = parent_bid.slot
         parent_epoch = compute_epoch_at_slot(parent_slot)
+
+        assert len(requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD
+        assert len(requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD
+        assert len(requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
+        assert len(requests.builder_exits) <= MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD
 
         # Process execution requests from parent's payload. The execution
         # requests are processed at state.slot (child's slot), not the parent's slot.
@@ -213,9 +218,7 @@
         for_ops(requests.deposits, process_deposit_request)
         for_ops(requests.withdrawals, process_withdrawal_request)
         for_ops(requests.consolidations, process_consolidation_request)
-        # [New in Gloas:EIP8282]
         for_ops(requests.builder_deposits, process_builder_deposit_request)
-        # [New in Gloas:EIP8282]
         for_ops(requests.builder_exits, process_builder_exit_request)
 
         # Settle the builder payment
@@ -1212,14 +1215,14 @@
 - name: compute_on_chain_aggregate#electra
   sources: []
   spec: |
-    <spec fn="compute_on_chain_aggregate" fork="electra" hash="3aa56e8f">
+    <spec fn="compute_on_chain_aggregate" fork="electra" hash="70c27acf">
     def compute_on_chain_aggregate(network_aggregates: Sequence[Attestation]) -> Attestation:
         aggregates = sorted(
             network_aggregates, key=lambda a: get_committee_indices(a.committee_bits)[0]
         )
 
         data = aggregates[0].data
-        aggregation_bits = Bitlist[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]()
+        aggregation_bits = AggregationBits()
         for a in aggregates:
             for b in a.aggregation_bits:
                 aggregation_bits.append(b)
@@ -1885,6 +1888,21 @@
         return CURRENT_SYNC_COMMITTEE_GINDEX
     </spec>
 
+- name: current_sync_committee_gindex_at_slot#gloas
+  sources: []
+  spec: |
+    <spec fn="current_sync_committee_gindex_at_slot" fork="gloas" hash="f4f08e55">
+    def current_sync_committee_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
+        epoch = compute_epoch_at_slot(slot)
+
+        # [Modified in Gloas:EIP7688]
+        if epoch >= GLOAS_FORK_EPOCH:
+            return CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS
+        if epoch >= ELECTRA_FORK_EPOCH:
+            return CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA
+        return CURRENT_SYNC_COMMITTEE_GINDEX
+    </spec>
+
 - name: decrease_balance#phase0
   sources:
     - file: packages/state-transition/src/util/balance.ts
@@ -2051,6 +2069,21 @@
         epoch = compute_epoch_at_slot(slot)
 
         # [Modified in Electra]
+        if epoch >= ELECTRA_FORK_EPOCH:
+            return FINALIZED_ROOT_GINDEX_ELECTRA
+        return FINALIZED_ROOT_GINDEX
+    </spec>
+
+- name: finalized_root_gindex_at_slot#gloas
+  sources: []
+  spec: |
+    <spec fn="finalized_root_gindex_at_slot" fork="gloas" hash="16378123">
+    def finalized_root_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
+        epoch = compute_epoch_at_slot(slot)
+
+        # [Modified in Gloas:EIP7688]
+        if epoch >= GLOAS_FORK_EPOCH:
+            return FINALIZED_ROOT_GINDEX_GLOAS
         if epoch >= ELECTRA_FORK_EPOCH:
             return FINALIZED_ROOT_GINDEX_ELECTRA
         return FINALIZED_ROOT_GINDEX
@@ -3556,40 +3589,6 @@
         )
     </spec>
 
-- name: get_dependent_root#phase0
-  sources: []
-  spec: |
-    <spec fn="get_dependent_root" fork="phase0" hash="6c7301b5">
-    def get_dependent_root(store: Store, root: Root) -> Root:
-        epoch = get_current_store_epoch(store)
-        if epoch <= MIN_SEED_LOOKAHEAD:
-            # Genesis block parent
-            return Root()
-
-        node = ForkChoiceNode(root=root)
-        dependent_slot = Slot(compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1)
-        return get_ancestor(store, node, dependent_slot).root
-    </spec>
-
-- name: get_dependent_root#gloas
-  sources: []
-  spec: |
-    <spec fn="get_dependent_root" fork="gloas" hash="4e1d4042">
-    def get_dependent_root(store: Store, root: Root) -> Root:
-        epoch = get_current_store_epoch(store)
-        if epoch <= MIN_SEED_LOOKAHEAD:
-            # Genesis block parent
-            return Root()
-
-        # [Modified in Gloas:EIP7732]
-        node = ForkChoiceNode(
-            root=root,
-            payload_status=PAYLOAD_STATUS_PENDING,
-        )
-        dependent_slot = Slot(compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1)
-        return get_ancestor(store, node, dependent_slot).root
-    </spec>
-
 - name: get_domain#phase0
   sources:
     - file: packages/config/src/genesisConfig/index.ts
@@ -3803,7 +3802,7 @@
     - file: packages/beacon-node/src/execution/engine/types.ts
       search: export function deserializeExecutionRequests(
   spec: |
-    <spec fn="get_execution_requests" fork="electra" hash="2c0fb728">
+    <spec fn="get_execution_requests" fork="electra" hash="29513408">
     def get_execution_requests(execution_requests_list: Sequence[bytes]) -> ExecutionRequests:
         deposits = []
         withdrawals = []
@@ -3829,17 +3828,11 @@
             prev_request_type = request_type
 
             if request_type == DEPOSIT_REQUEST_TYPE:
-                deposits = ssz_deserialize(
-                    List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD], request_data
-                )
+                deposits = ssz_deserialize(DepositRequests, request_data)
             elif request_type == WITHDRAWAL_REQUEST_TYPE:
-                withdrawals = ssz_deserialize(
-                    List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD], request_data
-                )
+                withdrawals = ssz_deserialize(WithdrawalRequests, request_data)
             elif request_type == CONSOLIDATION_REQUEST_TYPE:
-                consolidations = ssz_deserialize(
-                    List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD], request_data
-                )
+                consolidations = ssz_deserialize(ConsolidationRequests, request_data)
 
         return ExecutionRequests(
             deposits=deposits,
@@ -3853,7 +3846,7 @@
     - file: packages/beacon-node/src/execution/engine/types.ts
       search: export function deserializeExecutionRequests(
   spec: |
-    <spec fn="get_execution_requests" fork="gloas" hash="7b351e91">
+    <spec fn="get_execution_requests" fork="gloas" hash="31ff6b3d">
     def get_execution_requests(execution_requests_list: Sequence[bytes]) -> ExecutionRequests:
         deposits = []
         withdrawals = []
@@ -3887,28 +3880,17 @@
             prev_request_type = request_type
 
             if request_type == DEPOSIT_REQUEST_TYPE:
-                deposits = ssz_deserialize(
-                    List[DepositRequest, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD], request_data
-                )
+                deposits = ssz_deserialize(DepositRequests, request_data)
             elif request_type == WITHDRAWAL_REQUEST_TYPE:
-                withdrawals = ssz_deserialize(
-                    List[WithdrawalRequest, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD], request_data
-                )
+                withdrawals = ssz_deserialize(WithdrawalRequests, request_data)
             elif request_type == CONSOLIDATION_REQUEST_TYPE:
-                consolidations = ssz_deserialize(
-                    List[ConsolidationRequest, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD], request_data
-                )
+                consolidations = ssz_deserialize(ConsolidationRequests, request_data)
             # [New in Gloas:EIP8282]
             elif request_type == BUILDER_DEPOSIT_REQUEST_TYPE:
-                builder_deposits = ssz_deserialize(
-                    List[BuilderDepositRequest, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD],
-                    request_data,
-                )
+                builder_deposits = ssz_deserialize(BuilderDepositRequests, request_data)
             # [New in Gloas:EIP8282]
             elif request_type == BUILDER_EXIT_REQUEST_TYPE:
-                builder_exits = ssz_deserialize(
-                    List[BuilderExitRequest, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD], request_data
-                )
+                builder_exits = ssz_deserialize(BuilderExitRequests, request_data)
 
         return ExecutionRequests(
             deposits=deposits,
@@ -3926,9 +3908,9 @@
     - file: packages/beacon-node/src/execution/engine/types.ts
       search: export function serializeExecutionRequests(
   spec: |
-    <spec fn="get_execution_requests_list" fork="electra" hash="0a0be93f">
+    <spec fn="get_execution_requests_list" fork="electra" hash="7fecfd3a">
     def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequence[bytes]:
-        requests = [
+        requests: Sequence[Tuple[Bytes1, List]] = [
             (DEPOSIT_REQUEST_TYPE, execution_requests.deposits),
             (WITHDRAWAL_REQUEST_TYPE, execution_requests.withdrawals),
             (CONSOLIDATION_REQUEST_TYPE, execution_requests.consolidations),
@@ -3946,9 +3928,9 @@
     - file: packages/beacon-node/src/execution/engine/types.ts
       search: export function serializeExecutionRequests(
   spec: |
-    <spec fn="get_execution_requests_list" fork="gloas" hash="a9021134">
+    <spec fn="get_execution_requests_list" fork="gloas" hash="a2274ff3">
     def get_execution_requests_list(execution_requests: ExecutionRequests) -> Sequence[bytes]:
-        requests = [
+        requests: Sequence[Tuple[Bytes1, ProgressiveList]] = [
             (DEPOSIT_REQUEST_TYPE, execution_requests.deposits),
             (WITHDRAWAL_REQUEST_TYPE, execution_requests.withdrawals),
             (CONSOLIDATION_REQUEST_TYPE, execution_requests.consolidations),
@@ -4429,6 +4411,36 @@
         # No penalties associated with inclusion delay
         penalties = [Gwei(0) for _ in range(len(state.validators))]
         return rewards, penalties
+    </spec>
+
+- name: get_inclusion_list_bits#heze
+  sources: []
+  spec: |
+    <spec fn="get_inclusion_list_bits" fork="heze" hash="b044f014">
+    def get_inclusion_list_bits(
+        store: InclusionListStore, state: BeaconState, slot: Slot, only_timely: bool = True
+    ) -> Bitvector[INCLUSION_LIST_COMMITTEE_SIZE]:
+        """
+        Return a ``Bitvector`` over inclusion list committee indices with bits set
+        for those who provided valid, non-equivocating inclusion lists for the given ``slot``.
+        """
+        committee = get_inclusion_list_committee(state, slot)
+        key = hash_tree_root(committee)
+
+        inclusion_lists = store.inclusion_lists[key]
+        equivocators = store.equivocators[key]
+        timeliness = store.inclusion_list_timeliness
+
+        validator_indices = [
+            inclusion_lists[inclusion_list_root].validator_index
+            for inclusion_list_root in inclusion_lists
+            if inclusion_lists[inclusion_list_root].validator_index not in equivocators
+            if not only_timely or timeliness[inclusion_list_root]
+        ]
+
+        return Bitvector[INCLUSION_LIST_COMMITTEE_SIZE](
+            validator_index in validator_indices for validator_index in committee
+        )
     </spec>
 
 - name: get_inclusion_list_committee#heze
@@ -5202,25 +5214,12 @@
         return GENESIS_EPOCH if current_epoch == GENESIS_EPOCH else Epoch(current_epoch - 1)
     </spec>
 
-- name: get_proposer_dependent_root#gloas
-  sources: []
-  spec: |
-    <spec fn="get_proposer_dependent_root" fork="gloas" hash="9a7daf1b">
-    def get_proposer_dependent_root(state: BeaconState, epoch: Epoch) -> Root:
-        """
-        Return the dependent root for the proposer lookahead at ``epoch``.
-        """
-        return get_block_root_at_slot(
-            state, Slot(compute_start_slot_at_epoch(Epoch(epoch - MIN_SEED_LOOKAHEAD)) - 1)
-        )
-    </spec>
-
 - name: get_proposer_head#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "* Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head"
   spec: |
-    <spec fn="get_proposer_head" fork="phase0" hash="3558f2cc">
+    <spec fn="get_proposer_head" fork="phase0" hash="6868d4f2">
     def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> ForkChoiceNode:
         head_block = store.blocks[head_node.root]
         parent_root = head_block.parent_root
@@ -5231,7 +5230,7 @@
         head_late = is_head_late(store, head_node.root)
 
         # Do not re-org on an epoch boundary.
-        epoch_boundary = is_epoch_boundary(slot)
+        not_epoch_boundary = is_not_epoch_boundary(slot)
 
         # Ensure that the FFG information of the new head will be competitive with the current head.
         ffg_competitive = is_ffg_competitive(store, head_node.root, parent_root)
@@ -5259,7 +5258,7 @@
 
         if all([
             head_late,
-            epoch_boundary,
+            not_epoch_boundary,
             ffg_competitive,
             finalization_ok,
             proposing_on_time,
@@ -5280,7 +5279,7 @@
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
       search: "* Same as https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#get_proposer_head"
   spec: |
-    <spec fn="get_proposer_head" fork="gloas" hash="52ed6595">
+    <spec fn="get_proposer_head" fork="gloas" hash="121a187d">
     def get_proposer_head(store: Store, head_node: ForkChoiceNode, slot: Slot) -> ForkChoiceNode:
         head_block = store.blocks[head_node.root]
         parent_root = head_block.parent_root
@@ -5293,7 +5292,7 @@
         head_late = is_head_late(store, head_node.root)
 
         # Do not re-org on an epoch boundary.
-        epoch_boundary = is_epoch_boundary(slot)
+        not_epoch_boundary = is_not_epoch_boundary(slot)
 
         # Ensure that the FFG information of the new head will be competitive with the current head.
         ffg_competitive = is_ffg_competitive(store, head_node.root, parent_root)
@@ -5321,7 +5320,7 @@
 
         if all([
             head_late,
-            epoch_boundary,
+            not_epoch_boundary,
             ffg_competitive,
             finalization_ok,
             proposing_on_time,
@@ -5335,20 +5334,6 @@
             return parent_node
         else:
             return head_node
-    </spec>
-
-- name: get_proposer_preferences_signature#gloas
-  sources: []
-  spec: |
-    <spec fn="get_proposer_preferences_signature" fork="gloas" hash="6a34cb73">
-    def get_proposer_preferences_signature(
-        state: BeaconState, preferences: ProposerPreferences, privkey: int
-    ) -> BLSSignature:
-        domain = get_domain(
-            state, DOMAIN_PROPOSER_PREFERENCES, compute_epoch_at_slot(preferences.proposal_slot)
-        )
-        signing_root = compute_signing_root(preferences, domain)
-        return bls.Sign(privkey, signing_root)
     </spec>
 
 - name: get_proposer_reorg_cutoff_ms#phase0
@@ -5501,6 +5486,73 @@
             state, Epoch(epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1)
         )  # Avoid underflow
         return hash(domain_type + uint_to_bytes(epoch) + mix)
+    </spec>
+
+- name: get_shuffling_dependent_root#phase0
+  sources:
+    - file: packages/beacon-node/src/util/dependentRoot.ts
+      search: export function getShufflingDependentRoot(
+  spec: |
+    <spec fn="get_shuffling_dependent_root" fork="phase0" hash="bb6205ed">
+    def get_shuffling_dependent_root(store: Store, root: Root, epoch: Epoch) -> Root:
+        if epoch <= MIN_SEED_LOOKAHEAD:
+            # Genesis block parent
+            return Root()
+
+        node = ForkChoiceNode(root=root)
+        dependent_slot = Slot(compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1)
+        return get_ancestor(store, node, dependent_slot).root
+    </spec>
+
+- name: get_shuffling_dependent_root#gloas
+  sources:
+    - file: packages/beacon-node/src/util/dependentRoot.ts
+      search: export function getShufflingDependentRoot(
+  spec: |
+    <spec fn="get_shuffling_dependent_root" fork="gloas" hash="57c2e2d6">
+    def get_shuffling_dependent_root(store: Store, root: Root, epoch: Epoch) -> Root:
+        if epoch <= MIN_SEED_LOOKAHEAD:
+            # Genesis block parent
+            return Root()
+
+        # [Modified in Gloas:EIP7732]
+        node = ForkChoiceNode(
+            root=root,
+            payload_status=PAYLOAD_STATUS_PENDING,
+        )
+        dependent_slot = Slot(compute_start_slot_at_epoch(epoch - MIN_SEED_LOOKAHEAD) - 1)
+        return get_ancestor(store, node, dependent_slot).root
+    </spec>
+
+- name: get_signed_proposer_preferences#gloas
+  sources:
+    - file: packages/state-transition/src/signatureSets/proposerPreferences.ts
+      search: export function getProposerPreferencesSigningRoot(
+  spec: |
+    <spec fn="get_signed_proposer_preferences" fork="gloas" hash="7298817d">
+    def get_signed_proposer_preferences(
+        store: Store,
+        state: BeaconState,
+        head_root: Root,
+        proposal_slot: Slot,
+        validator_index: ValidatorIndex,
+        fee_recipient: ExecutionAddress,
+        target_gas_limit: uint64,
+        privkey: int,
+    ) -> SignedProposerPreferences:
+        proposal_epoch = compute_epoch_at_slot(proposal_slot)
+        dependent_root = get_shuffling_dependent_root(store, head_root, proposal_epoch)
+        preferences = ProposerPreferences(
+            dependent_root=dependent_root,
+            proposal_slot=proposal_slot,
+            validator_index=validator_index,
+            fee_recipient=fee_recipient,
+            target_gas_limit=target_gas_limit,
+        )
+        domain = get_domain(state, DOMAIN_PROPOSER_PREFERENCES, proposal_epoch)
+        signing_root = compute_signing_root(preferences, domain)
+        signature = bls.Sign(privkey, signing_root)
+        return SignedProposerPreferences(message=preferences, signature=signature)
     </spec>
 
 - name: get_slot_committee#phase0
@@ -6484,7 +6536,7 @@
 - name: is_attestation_same_slot#gloas
   sources:
     - file: packages/state-transition/src/util/gloas.ts
-      search: export function isAttestationSameSlot(
+      search: export function isAttestationSameSlotRootCache(
   spec: |
     <spec fn="is_attestation_same_slot" fork="gloas" hash="0a194ce7">
     def is_attestation_same_slot(state: BeaconState, data: AttestationData) -> bool:
@@ -6790,16 +6842,6 @@
         )
     </spec>
 
-- name: is_epoch_boundary#phase0
-  sources:
-    - file: packages/state-transition/src/util/epoch.ts
-      search: export function isStartSlotOfEpoch(
-  spec: |
-    <spec fn="is_epoch_boundary" fork="phase0" hash="8900b82d">
-    def is_epoch_boundary(slot: Slot) -> bool:
-        return slot % SLOTS_PER_EPOCH != 0
-    </spec>
-
 - name: is_execution_block#bellatrix
   sources: []
   spec: |
@@ -6940,7 +6982,7 @@
 - name: is_head_weak#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "// https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak"
   spec: |
     <spec fn="is_head_weak" fork="phase0" hash="ac0fb917">
     def is_head_weak(store: Store, head_root: Root) -> bool:
@@ -6951,7 +6993,9 @@
     </spec>
 
 - name: is_head_weak#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/forkChoice/forkChoice.ts
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak"
   spec: |
     <spec fn="is_head_weak" fork="gloas" hash="a763a3db">
     def is_head_weak(store: Store, head_root: Root) -> bool:
@@ -6986,6 +7030,31 @@
     <spec fn="is_in_inactivity_leak" fork="phase0" hash="e95b1146">
     def is_in_inactivity_leak(state: BeaconState) -> bool:
         return get_finality_delay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY
+    </spec>
+
+- name: is_inclusion_list_bits_inclusive#heze
+  sources: []
+  spec: |
+    <spec fn="is_inclusion_list_bits_inclusive" fork="heze" hash="f8e537b8">
+    def is_inclusion_list_bits_inclusive(
+        store: InclusionListStore,
+        state: BeaconState,
+        slot: Slot,
+        inclusion_list_bits: Bitvector[INCLUSION_LIST_COMMITTEE_SIZE],
+        only_timely: bool = True,
+    ) -> bool:
+        """
+        Return ``True`` if and only if ``inclusion_list_bits`` has a bit set for
+        every bit set in the local inclusion list bits for the given ``slot``.
+        """
+        local_inclusion_list_bits = get_inclusion_list_bits(store, state, slot, only_timely)
+
+        return not any(
+            local_inclusion_bit and not inclusion_bit
+            for inclusion_bit, local_inclusion_bit in zip(
+                inclusion_list_bits, local_inclusion_list_bits, strict=True
+            )
+        )
     </spec>
 
 - name: is_merge_transition_block#bellatrix
@@ -7037,6 +7106,16 @@
         return False
     </spec>
 
+- name: is_not_epoch_boundary#phase0
+  sources:
+    - file: packages/state-transition/src/util/epoch.ts
+      search: export function isStartSlotOfEpoch(
+  spec: |
+    <spec fn="is_not_epoch_boundary" fork="phase0" hash="cad390e0">
+    def is_not_epoch_boundary(slot: Slot) -> bool:
+        return slot % SLOTS_PER_EPOCH != 0
+    </spec>
+
 - name: is_one_confirmed#phase0
   sources: []
   spec: |
@@ -7085,7 +7164,7 @@
 - name: is_parent_strong#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_parent_strong"
   spec: |
     <spec fn="is_parent_strong" fork="phase0" hash="a23d498f">
     def is_parent_strong(store: Store, root: Root) -> bool:
@@ -7100,7 +7179,7 @@
 - name: is_parent_strong#gloas
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: "const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;"
+      search: "* https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-is_parent_strong"
   spec: |
     <spec fn="is_parent_strong" fork="gloas" hash="3177c56c">
     def is_parent_strong(store: Store, root: Root) -> bool:
@@ -7410,6 +7489,34 @@
         # Verify indices are sorted and unique
         indices = indexed_attestation.attesting_indices
         if len(indices) == 0 or indices != sorted(set(indices)):
+            return False
+        # Verify aggregate signature
+        pubkeys = [state.validators[i].pubkey for i in indices]
+        domain = get_domain(state, DOMAIN_BEACON_ATTESTER, indexed_attestation.data.target.epoch)
+        signing_root = compute_signing_root(indexed_attestation.data, domain)
+        return bls.FastAggregateVerify(pubkeys, signing_root, indexed_attestation.signature)
+    </spec>
+
+- name: is_valid_indexed_attestation#gloas
+  sources:
+    - file: packages/state-transition/src/block/isValidIndexedAttestation.ts
+      search: export function isValidIndexedAttestation(
+  spec: |
+    <spec fn="is_valid_indexed_attestation" fork="gloas" hash="556495e6">
+    def is_valid_indexed_attestation(
+        state: BeaconState, indexed_attestation: IndexedAttestation
+    ) -> bool:
+        """
+        Check if ``indexed_attestation`` is not empty, has sorted and unique indices and has a valid aggregate signature.
+        """
+        # Verify indices are sorted and unique
+        indices = indexed_attestation.attesting_indices
+        if (
+            len(indices) == 0
+            # [New in Gloas:EIP7688]
+            or len(indices) > MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT
+            or indices != sorted(set(indices))
+        ):
             return False
         # Verify aggregate signature
         pubkeys = [state.validators[i].pubkey for i in indices]
@@ -7745,6 +7852,21 @@
         epoch = compute_epoch_at_slot(slot)
 
         # [Modified in Electra]
+        if epoch >= ELECTRA_FORK_EPOCH:
+            return NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA
+        return NEXT_SYNC_COMMITTEE_GINDEX
+    </spec>
+
+- name: next_sync_committee_gindex_at_slot#gloas
+  sources: []
+  spec: |
+    <spec fn="next_sync_committee_gindex_at_slot" fork="gloas" hash="ada8aa30">
+    def next_sync_committee_gindex_at_slot(slot: Slot) -> GeneralizedIndex:
+        epoch = compute_epoch_at_slot(slot)
+
+        # [Modified in Gloas:EIP7688]
+        if epoch >= GLOAS_FORK_EPOCH:
+            return NEXT_SYNC_COMMITTEE_GINDEX_GLOAS
         if epoch >= ELECTRA_FORK_EPOCH:
             return NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA
         return NEXT_SYNC_COMMITTEE_GINDEX
@@ -9201,15 +9323,19 @@
     - file: packages/state-transition/src/block/processBuilderDepositRequest.ts
       search: export function processBuilderDepositRequest(
   spec: |
-    <spec fn="process_builder_deposit_request" fork="gloas" hash="c3ba5adf">
+    <spec fn="process_builder_deposit_request" fork="gloas" hash="1d458f9c">
     def process_builder_deposit_request(state: BeaconState, request: BuilderDepositRequest) -> None:
+        # Ignore deposits with unexpected withdrawal credential prefixes
+        if not is_builder_withdrawal_credential(request.withdrawal_credentials):
+            return
+
         builder_pubkeys = [b.pubkey for b in state.builders]
         if request.pubkey not in builder_pubkeys:
             if is_valid_builder_deposit_signature(request):
                 add_builder_to_registry(
                     state,
                     request.pubkey,
-                    uint8(request.withdrawal_credentials[0]),
+                    PAYLOAD_BUILDER_VERSION,
                     ExecutionAddress(request.withdrawal_credentials[12:]),
                     request.amount,
                     state.slot,
@@ -9218,13 +9344,13 @@
             builder_index = BuilderIndex(builder_pubkeys.index(request.pubkey))
             builder = state.builders[builder_index]
 
-            # Increase balance by deposit amount
-            builder.balance += request.amount
-
-            # If exited, reset the withdrawable epoch
-            if builder.withdrawable_epoch != FAR_FUTURE_EPOCH:
+            # If exited and swept, reset the withdrawable epoch
+            if builder.withdrawable_epoch != FAR_FUTURE_EPOCH and builder.balance == 0:
                 epoch = get_current_epoch(state)
                 builder.withdrawable_epoch = epoch + MIN_BUILDER_WITHDRAWABILITY_DELAY
+
+            # Increase balance by deposit amount
+            builder.balance += request.amount
     </spec>
 
 - name: process_builder_exit_request#gloas
@@ -10452,13 +10578,21 @@
 - name: process_operations#gloas
   sources: []
   spec: |
-    <spec fn="process_operations" fork="gloas" hash="4864d8ef">
+    <spec fn="process_operations" fork="gloas" hash="5009f53b">
     def process_operations(state: BeaconState, body: BeaconBlockBody) -> None:
         assert len(body.deposits) == 0
 
         def for_ops(operations: Sequence[Any], fn: Callable[[BeaconState, Any], None]) -> None:
             for operation in operations:
                 fn(state, operation)
+
+        # [New in Gloas:EIP7688]
+        assert len(body.proposer_slashings) <= MAX_PROPOSER_SLASHINGS
+        assert len(body.attester_slashings) <= MAX_ATTESTER_SLASHINGS_ELECTRA
+        assert len(body.attestations) <= MAX_ATTESTATIONS_ELECTRA
+        assert len(body.voluntary_exits) <= MAX_VOLUNTARY_EXITS
+        assert len(body.bls_to_execution_changes) <= MAX_BLS_TO_EXECUTION_CHANGES
+        assert len(body.payload_attestations) <= MAX_PAYLOAD_ATTESTATIONS
 
         # [Modified in Gloas:EIP7732]
         for_ops(body.proposer_slashings, process_proposer_slashing)
@@ -12209,11 +12343,11 @@
 - name: update_payload_expected_withdrawals#gloas
   sources: []
   spec: |
-    <spec fn="update_payload_expected_withdrawals" fork="gloas" hash="6a3810b9">
+    <spec fn="update_payload_expected_withdrawals" fork="gloas" hash="55907aeb">
     def update_payload_expected_withdrawals(
         state: BeaconState, withdrawals: Sequence[Withdrawal]
     ) -> None:
-        state.payload_expected_withdrawals = List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD](withdrawals)
+        state.payload_expected_withdrawals = ProgressiveList[Withdrawal](withdrawals)
     </spec>
 
 - name: update_pending_partial_withdrawals#electra
@@ -12231,11 +12365,14 @@
 - name: update_proposer_boost_root#phase0
   sources: []
   spec: |
-    <spec fn="update_proposer_boost_root" fork="phase0" hash="3278de09">
+    <spec fn="update_proposer_boost_root" fork="phase0" hash="c5182f16">
     def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
         is_first_block = store.proposer_boost_root == Root()
         is_timely = store.block_timeliness[root]
-        is_same_dependent_root = get_dependent_root(store, root) == get_dependent_root(store, head)
+        epoch = get_current_store_epoch(store)
+        head_dependent_root = get_shuffling_dependent_root(store, head, epoch)
+        block_dependent_root = get_shuffling_dependent_root(store, root, epoch)
+        is_same_dependent_root = head_dependent_root == block_dependent_root
 
         # Add proposer score boost if the block is timely, not conflicting with an
         # existing block, with the same dependent root as the canonical chain head.
@@ -12246,12 +12383,15 @@
 - name: update_proposer_boost_root#gloas
   sources: []
   spec: |
-    <spec fn="update_proposer_boost_root" fork="gloas" hash="75ff4ddf">
+    <spec fn="update_proposer_boost_root" fork="gloas" hash="18e43e0c">
     def update_proposer_boost_root(store: Store, head: Root, root: Root) -> None:
         is_first_block = store.proposer_boost_root == Root()
         # [Modified in Gloas:EIP7732]
         is_timely = store.block_timeliness[root][ATTESTATION_TIMELINESS_INDEX]
-        is_same_dependent_root = get_dependent_root(store, root) == get_dependent_root(store, head)
+        epoch = get_current_store_epoch(store)
+        head_dependent_root = get_shuffling_dependent_root(store, head, epoch)
+        block_dependent_root = get_shuffling_dependent_root(store, root, epoch)
+        is_same_dependent_root = head_dependent_root == block_dependent_root
 
         # Add proposer score boost if the block is timely, not conflicting with an
         # existing block, with the same dependent root as the canonical chain head.
@@ -12281,6 +12421,42 @@
         # Update unrealized finalized checkpoint
         if unrealized_finalized_checkpoint.epoch > store.unrealized_finalized_checkpoint.epoch:
             store.unrealized_finalized_checkpoint = unrealized_finalized_checkpoint
+    </spec>
+
+- name: upgrade_attestation_to_gloas#gloas
+  sources: []
+  spec: |
+    <spec fn="upgrade_attestation_to_gloas" fork="gloas" hash="efd969bf">
+    def upgrade_attestation_to_gloas(pre: fulu.Attestation) -> Attestation:
+        return Attestation(
+            aggregation_bits=AggregationBits(list(pre.aggregation_bits)),
+            data=pre.data,
+            signature=pre.signature,
+            committee_bits=pre.committee_bits,
+        )
+    </spec>
+
+- name: upgrade_attester_slashing_to_gloas#gloas
+  sources: []
+  spec: |
+    <spec fn="upgrade_attester_slashing_to_gloas" fork="gloas" hash="35f9184f">
+    def upgrade_attester_slashing_to_gloas(pre: fulu.AttesterSlashing) -> AttesterSlashing:
+        return AttesterSlashing(
+            attestation_1=upgrade_indexed_attestation_to_gloas(pre.attestation_1),
+            attestation_2=upgrade_indexed_attestation_to_gloas(pre.attestation_2),
+        )
+    </spec>
+
+- name: upgrade_indexed_attestation_to_gloas#gloas
+  sources: []
+  spec: |
+    <spec fn="upgrade_indexed_attestation_to_gloas" fork="gloas" hash="b13fb8df">
+    def upgrade_indexed_attestation_to_gloas(pre: fulu.IndexedAttestation) -> IndexedAttestation:
+        return IndexedAttestation(
+            attesting_indices=AttestingIndices(list(pre.attesting_indices)),
+            data=pre.data,
+            signature=pre.signature,
+        )
     </spec>
 
 - name: upgrade_lc_bootstrap_to_capella#capella
@@ -12330,12 +12506,14 @@
 - name: upgrade_lc_bootstrap_to_gloas#gloas
   sources: []
   spec: |
-    <spec fn="upgrade_lc_bootstrap_to_gloas" fork="gloas" hash="d7fb2b11">
+    <spec fn="upgrade_lc_bootstrap_to_gloas" fork="gloas" hash="eae6aac6">
     def upgrade_lc_bootstrap_to_gloas(pre: electra.LightClientBootstrap) -> LightClientBootstrap:
         return LightClientBootstrap(
             header=upgrade_lc_header_to_gloas(pre.header),
             current_sync_committee=pre.current_sync_committee,
-            current_sync_committee_branch=pre.current_sync_committee_branch,
+            current_sync_committee_branch=normalize_merkle_branch(
+                pre.current_sync_committee_branch, CURRENT_SYNC_COMMITTEE_GINDEX_GLOAS
+            ),
         )
     </spec>
 
@@ -12396,14 +12574,14 @@
 - name: upgrade_lc_finality_update_to_gloas#gloas
   sources: []
   spec: |
-    <spec fn="upgrade_lc_finality_update_to_gloas" fork="gloas" hash="b0e9270b">
+    <spec fn="upgrade_lc_finality_update_to_gloas" fork="gloas" hash="e918e2d2">
     def upgrade_lc_finality_update_to_gloas(
         pre: electra.LightClientFinalityUpdate,
     ) -> LightClientFinalityUpdate:
         return LightClientFinalityUpdate(
             attested_header=upgrade_lc_header_to_gloas(pre.attested_header),
             finalized_header=upgrade_lc_header_to_gloas(pre.finalized_header),
-            finality_branch=pre.finality_branch,
+            finality_branch=normalize_merkle_branch(pre.finality_branch, FINALIZED_ROOT_GINDEX_GLOAS),
             sync_aggregate=pre.sync_aggregate,
             signature_slot=pre.signature_slot,
         )
@@ -12736,14 +12914,16 @@
 - name: upgrade_lc_update_to_gloas#gloas
   sources: []
   spec: |
-    <spec fn="upgrade_lc_update_to_gloas" fork="gloas" hash="bf716977">
+    <spec fn="upgrade_lc_update_to_gloas" fork="gloas" hash="b9cf5ed0">
     def upgrade_lc_update_to_gloas(pre: electra.LightClientUpdate) -> LightClientUpdate:
         return LightClientUpdate(
             attested_header=upgrade_lc_header_to_gloas(pre.attested_header),
             next_sync_committee=pre.next_sync_committee,
-            next_sync_committee_branch=pre.next_sync_committee_branch,
+            next_sync_committee_branch=normalize_merkle_branch(
+                pre.next_sync_committee_branch, NEXT_SYNC_COMMITTEE_GINDEX_GLOAS
+            ),
             finalized_header=upgrade_lc_header_to_gloas(pre.finalized_header),
-            finality_branch=pre.finality_branch,
+            finality_branch=normalize_merkle_branch(pre.finality_branch, FINALIZED_ROOT_GINDEX_GLOAS),
             sync_aggregate=pre.sync_aggregate,
             signature_slot=pre.signature_slot,
         )
@@ -13154,7 +13334,7 @@
     - file: packages/state-transition/src/slot/upgradeStateToGloas.ts
       search: export function upgradeStateToGloas(
   spec: |
-    <spec fn="upgrade_to_gloas" fork="gloas" hash="c769e40a">
+    <spec fn="upgrade_to_gloas" fork="gloas" hash="571abe9a">
     def upgrade_to_gloas(pre: fulu.BeaconState) -> BeaconState:
         epoch = fulu.get_current_epoch(pre)
 
@@ -13175,17 +13355,26 @@
             eth1_data=pre.eth1_data,
             eth1_data_votes=pre.eth1_data_votes,
             eth1_deposit_index=pre.eth1_deposit_index,
-            validators=pre.validators,
-            balances=pre.balances,
+            # [Modified in Gloas:EIP7688]
+            validators=ProgressiveList[Validator](list(pre.validators)),
+            # [Modified in Gloas:EIP7688]
+            balances=ProgressiveList[Gwei](list(pre.balances)),
             randao_mixes=pre.randao_mixes,
             slashings=pre.slashings,
-            previous_epoch_participation=pre.previous_epoch_participation,
-            current_epoch_participation=pre.current_epoch_participation,
+            # [Modified in Gloas:EIP7688]
+            previous_epoch_participation=ProgressiveList[ParticipationFlags](
+                list(pre.previous_epoch_participation)
+            ),
+            # [Modified in Gloas:EIP7688]
+            current_epoch_participation=ProgressiveList[ParticipationFlags](
+                list(pre.current_epoch_participation)
+            ),
             justification_bits=pre.justification_bits,
             previous_justified_checkpoint=pre.previous_justified_checkpoint,
             current_justified_checkpoint=pre.current_justified_checkpoint,
             finalized_checkpoint=pre.finalized_checkpoint,
-            inactivity_scores=pre.inactivity_scores,
+            # [Modified in Gloas:EIP7688]
+            inactivity_scores=ProgressiveList[uint64](list(pre.inactivity_scores)),
             current_sync_committee=pre.current_sync_committee,
             next_sync_committee=pre.next_sync_committee,
             # [Modified in Gloas:EIP7732]
@@ -13201,9 +13390,16 @@
             earliest_exit_epoch=pre.earliest_exit_epoch,
             consolidation_balance_to_consume=pre.consolidation_balance_to_consume,
             earliest_consolidation_epoch=pre.earliest_consolidation_epoch,
-            pending_deposits=pre.pending_deposits,
-            pending_partial_withdrawals=pre.pending_partial_withdrawals,
-            pending_consolidations=pre.pending_consolidations,
+            # [Modified in Gloas:EIP7688]
+            pending_deposits=ProgressiveList[PendingDeposit](list(pre.pending_deposits)),
+            # [Modified in Gloas:EIP7688]
+            pending_partial_withdrawals=ProgressiveList[PendingPartialWithdrawal](
+                list(pre.pending_partial_withdrawals)
+            ),
+            # [Modified in Gloas:EIP7688]
+            pending_consolidations=ProgressiveList[PendingConsolidation](
+                list(pre.pending_consolidations)
+            ),
             proposer_lookahead=pre.proposer_lookahead,
             # [New in Gloas:EIP7732]
             builders=[],
@@ -13236,9 +13432,25 @@
 - name: upgrade_to_heze#heze
   sources: []
   spec: |
-    <spec fn="upgrade_to_heze" fork="heze" hash="c7ab4b39">
+    <spec fn="upgrade_to_heze" fork="heze" hash="390f5e3c">
     def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:
         epoch = gloas.get_current_epoch(pre)
+        latest_execution_payload_bid = ExecutionPayloadBid(
+            parent_block_hash=pre.latest_execution_payload_bid.parent_block_hash,
+            parent_block_root=pre.latest_execution_payload_bid.parent_block_root,
+            block_hash=pre.latest_execution_payload_bid.block_hash,
+            prev_randao=pre.latest_execution_payload_bid.prev_randao,
+            fee_recipient=pre.latest_execution_payload_bid.fee_recipient,
+            gas_limit=pre.latest_execution_payload_bid.gas_limit,
+            builder_index=pre.latest_execution_payload_bid.builder_index,
+            slot=pre.latest_execution_payload_bid.slot,
+            value=pre.latest_execution_payload_bid.value,
+            execution_payment=pre.latest_execution_payload_bid.execution_payment,
+            blob_kzg_commitments=pre.latest_execution_payload_bid.blob_kzg_commitments,
+            execution_requests_root=pre.latest_execution_payload_bid.execution_requests_root,
+            # [New in Heze:EIP7805]
+            inclusion_list_bits=Bitvector[INCLUSION_LIST_COMMITTEE_SIZE](),
+        )
 
         post = BeaconState(
             genesis_time=pre.genesis_time,
@@ -13289,7 +13501,8 @@
             execution_payload_availability=pre.execution_payload_availability,
             builder_pending_payments=pre.builder_pending_payments,
             builder_pending_withdrawals=pre.builder_pending_withdrawals,
-            latest_execution_payload_bid=pre.latest_execution_payload_bid,
+            # [Modified in Heze:EIP7805]
+            latest_execution_payload_bid=latest_execution_payload_bid,
             payload_expected_withdrawals=pre.payload_expected_withdrawals,
             ptc_window=pre.ptc_window,
         )
@@ -14858,15 +15071,15 @@
 - name: validate_partial_data_column_sidecar_gossip#fulu
   sources: []
   spec: |
-    <spec fn="validate_partial_data_column_sidecar_gossip" fork="fulu" hash="a5f4b021">
+    <spec fn="validate_partial_data_column_sidecar_gossip" fork="fulu" hash="aaad7df2">
     def validate_partial_data_column_sidecar_gossip(
         seen: Seen,
         store: Store,
         state: BeaconState,
         sidecar: PartialDataColumnSidecar,
-        block_root: Root,
-        column_index: ColumnIndex,
         current_time_ms: uint64,
+        group_id: PartialDataColumnGroupID,
+        column_index: ColumnIndex,
     ) -> None:
         """
         Validate a PartialDataColumnSidecar for gossip propagation on a subnet.
@@ -14880,11 +15093,11 @@
         if not (has_header or has_cells):
             raise GossipReject("partial message is semantically empty")
 
-        # [REJECT] The cell count equals the number of bits set in cells_present_bitmap
+        # [REJECT] The cell count equals the number of set bits in the bitmap
         if len(sidecar.partial_column) != num_cells_present:
             raise GossipReject("number of cells does not match number of set bits")
 
-        # [REJECT] The proof count equals the number of bits set in cells_present_bitmap
+        # [REJECT] The proof count equals the number of set bits in the bitmap
         if len(sidecar.kzg_proofs) != num_cells_present:
             raise GossipReject("number of proofs does not match number of set bits")
 
@@ -14893,13 +15106,13 @@
             block_header = header.signed_block_header.message
 
             # [REJECT] The received header MUST equal any previously validated header for this block
-            prior_header = seen.partial_data_column_headers.get(block_root)
+            prior_header = seen.partial_data_column_headers.get(group_id.beacon_block_root)
             if prior_header is not None and prior_header != header:
                 raise GossipReject("header differs from previously validated header")
 
             # [REJECT] The signed_block_header hash matches the partial message's group id
-            if hash_tree_root(block_header) != block_root:
-                raise GossipReject("header's block root does not match partial message group id")
+            if hash_tree_root(block_header) != group_id.beacon_block_root:
+                raise GossipReject("header's block root does not match group id's block root")
 
             # [REJECT] The header's kzg_commitments list is non-empty
             if len(header.kzg_commitments) == 0:
@@ -14959,11 +15172,11 @@
                 raise GossipReject("header proposer_index does not match expected proposer")
 
             # Mark this header as seen
-            seen.partial_data_column_headers[block_root] = header
+            seen.partial_data_column_headers[group_id.beacon_block_root] = header
 
         if has_cells:
             # [IGNORE] A valid corresponding PartialDataColumnHeader has been seen
-            header = seen.partial_data_column_headers.get(block_root)
+            header = seen.partial_data_column_headers.get(group_id.beacon_block_root)
             if header is None:
                 raise GossipIgnore("valid corresponding header has not been seen")
 
@@ -14981,11 +15194,11 @@
                     "corresponding header is not from a slot greater than the latest finalized slot"
                 )
 
-            # [REJECT] The cells_present_bitmap length equals the number of header kzg_commitments
+            # [REJECT] The cells present bitmap length equals the number of header commitments
             if len(sidecar.cells_present_bitmap) != len(header.kzg_commitments):
                 raise GossipReject("bitmap length does not match commitments length")
 
-            # [REJECT] The sidecar's cell and proof data is valid
+            # [REJECT] The sidecar's cell and proof data passes KZG verification
             if not verify_partial_data_column_sidecar_kzg_proofs(
                 sidecar, header.kzg_commitments, column_index
             ):
@@ -15295,11 +15508,11 @@
     - file: packages/beacon-node/src/chain/validation/dataColumnSidecar.ts
       search: function verifyGloasDataColumnSidecar(
   spec: |
-    <spec fn="verify_data_column_sidecar" fork="gloas" hash="71548b68">
+    <spec fn="verify_data_column_sidecar" fork="gloas" hash="52204844">
     def verify_data_column_sidecar(
         sidecar: DataColumnSidecar,
         # [New in Gloas:EIP7732]
-        kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK],
+        kzg_commitments: ProgressiveList[KZGCommitment],
     ) -> bool:
         """
         Verify if the data column sidecar is valid.
@@ -15369,11 +15582,11 @@
     - file: packages/beacon-node/src/chain/validation/dataColumnSidecar.ts
       search: export async function verifyDataColumnSidecarKzgProofs(
   spec: |
-    <spec fn="verify_data_column_sidecar_kzg_proofs" fork="gloas" hash="1c4cf857">
+    <spec fn="verify_data_column_sidecar_kzg_proofs" fork="gloas" hash="19a51c0d">
     def verify_data_column_sidecar_kzg_proofs(
         sidecar: DataColumnSidecar,
         # [New in Gloas:EIP7732]
-        kzg_commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK],
+        kzg_commitments: ProgressiveList[KZGCommitment],
     ) -> bool:
         """
         Verify if the KZG proofs are correct.

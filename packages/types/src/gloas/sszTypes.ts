@@ -1,21 +1,24 @@
 import {
   BitVectorType,
-  ByteListType,
   ContainerType,
   ListBasicType,
   ListCompositeType,
+  ProgressiveBitListType,
+  ProgressiveByteListType,
+  ProgressiveContainerType,
+  ProgressiveListBasicType,
+  ProgressiveListCompositeType,
   VectorBasicType,
   VectorCompositeType,
 } from "@chainsafe/ssz";
 import {
-  BUILDER_PENDING_WITHDRAWALS_LIMIT,
-  BUILDER_REGISTRY_LIMIT,
+  CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  EXECUTION_BLOCK_HASH_DEPTH_GLOAS,
+  FINALIZED_ROOT_DEPTH_GLOAS,
   HISTORICAL_ROOTS_LIMIT,
-  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
-  MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
-  MAX_BYTES_PER_TRANSACTION,
-  MAX_PAYLOAD_ATTESTATIONS,
   MIN_SEED_LOOKAHEAD,
+  NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
   PTC_SIZE,
   SLOTS_PER_EPOCH,
@@ -47,7 +50,168 @@ const {
   Uint8,
   BuilderIndex,
   EpochInf,
+  ParticipationFlags,
 } = primitiveSsz;
+
+function activeFields(count: number): boolean[] {
+  return Array.from({length: count}, () => true);
+}
+
+export const ExecutionBranch = new VectorCompositeType(Bytes32, EXECUTION_BLOCK_HASH_DEPTH_GLOAS);
+
+export const CurrentSyncCommitteeBranch = new VectorCompositeType(Bytes32, CURRENT_SYNC_COMMITTEE_DEPTH_GLOAS);
+
+export const FinalityBranch = new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH_GLOAS);
+
+export const NextSyncCommitteeBranch = new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH_GLOAS);
+
+export const AggregationBits = new ProgressiveBitListType({typeName: "AggregationBits"});
+export const AttestingIndices = new ProgressiveListBasicType(ValidatorIndex, {typeName: "AttestingIndices"});
+export const Transaction = new ProgressiveByteListType({typeName: "Transaction"});
+export const Transactions = new ProgressiveListCompositeType(Transaction, {typeName: "Transactions"});
+export const Withdrawals = new ProgressiveListCompositeType(capellaSsz.Withdrawal, {typeName: "Withdrawals"});
+export const BlobKzgCommitments = new ProgressiveListCompositeType(denebSsz.KZGCommitment, {
+  typeName: "BlobKzgCommitments",
+});
+export const KZGProofs = new ProgressiveListCompositeType(denebSsz.KZGProof, {typeName: "KZGProofs"});
+export const DataColumn = new ProgressiveListCompositeType(fuluSsz.Cell, {typeName: "DataColumn"});
+
+export const Attestation = new ProgressiveContainerType(
+  {
+    aggregationBits: AggregationBits,
+    data: phase0Ssz.AttestationData,
+    signature: BLSSignature,
+    committeeBits: electraSsz.CommitteeBits,
+  },
+  activeFields(4),
+  {typeName: "Attestation", jsonCase: "eth2"}
+);
+
+export const IndexedAttestation = new ProgressiveContainerType(
+  {
+    attestingIndices: AttestingIndices,
+    data: phase0Ssz.AttestationData,
+    signature: BLSSignature,
+  },
+  activeFields(3),
+  {typeName: "IndexedAttestation", jsonCase: "eth2"}
+);
+
+/** Same as `IndexedAttestation` but epoch, slot and index are not bounded and must be a bigint */
+export const IndexedAttestationBigint = new ProgressiveContainerType(
+  {
+    attestingIndices: AttestingIndices,
+    data: phase0Ssz.AttestationDataBigint,
+    signature: BLSSignature,
+  },
+  activeFields(3),
+  {typeName: "IndexedAttestation", jsonCase: "eth2"}
+);
+
+export const AttesterSlashing = new ContainerType(
+  {
+    attestation1: IndexedAttestationBigint,
+    attestation2: IndexedAttestationBigint,
+  },
+  {typeName: "AttesterSlashing", jsonCase: "eth2"}
+);
+
+export const AggregateAndProof = new ContainerType(
+  {
+    aggregatorIndex: ValidatorIndex,
+    aggregate: Attestation,
+    selectionProof: BLSSignature,
+  },
+  {typeName: "AggregateAndProof", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
+export const SignedAggregateAndProof = new ContainerType(
+  {
+    message: AggregateAndProof,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedAggregateAndProof", jsonCase: "eth2"}
+);
+
+export const DepositRequest = electraSsz.DepositRequest;
+export const DepositRequests = new ProgressiveListCompositeType(DepositRequest, {typeName: "DepositRequests"});
+export const WithdrawalRequest = electraSsz.WithdrawalRequest;
+export const WithdrawalRequests = new ProgressiveListCompositeType(WithdrawalRequest, {
+  typeName: "WithdrawalRequests",
+});
+export const ConsolidationRequest = electraSsz.ConsolidationRequest;
+export const ConsolidationRequests = new ProgressiveListCompositeType(ConsolidationRequest, {
+  typeName: "ConsolidationRequests",
+});
+
+// New in GLOAS:EIP8282
+export const BuilderDepositRequest = new ContainerType(
+  {
+    pubkey: BLSPubkey,
+    withdrawalCredentials: Bytes32,
+    amount: UintNum64,
+    signature: BLSSignature,
+  },
+  {typeName: "BuilderDepositRequest", jsonCase: "eth2"}
+);
+export const BuilderDepositRequests = new ProgressiveListCompositeType(BuilderDepositRequest, {
+  typeName: "BuilderDepositRequests",
+});
+
+// New in GLOAS:EIP8282
+export const BuilderExitRequest = new ContainerType(
+  {
+    sourceAddress: ExecutionAddress,
+    pubkey: BLSPubkey,
+  },
+  {typeName: "BuilderExitRequest", jsonCase: "eth2"}
+);
+export const BuilderExitRequests = new ProgressiveListCompositeType(BuilderExitRequest, {
+  typeName: "BuilderExitRequests",
+});
+
+export const ExecutionRequests = new ProgressiveContainerType(
+  {
+    deposits: DepositRequests,
+    withdrawals: WithdrawalRequests,
+    consolidations: ConsolidationRequests,
+    builderDeposits: BuilderDepositRequests, // New in GLOAS:EIP8282
+    builderExits: BuilderExitRequests, // New in GLOAS:EIP8282
+  },
+  activeFields(5),
+  {typeName: "ExecutionRequests", jsonCase: "eth2"}
+);
+
+export const ProposerSlashings = new ProgressiveListCompositeType(phase0Ssz.ProposerSlashing, {
+  typeName: "ProposerSlashings",
+});
+export const AttesterSlashings = new ProgressiveListCompositeType(AttesterSlashing, {
+  typeName: "AttesterSlashings",
+});
+export const Attestations = new ProgressiveListCompositeType(Attestation, {typeName: "Attestations"});
+export const Deposits = new ProgressiveListCompositeType(phase0Ssz.Deposit, {typeName: "Deposits"});
+export const VoluntaryExits = new ProgressiveListCompositeType(phase0Ssz.SignedVoluntaryExit, {
+  typeName: "VoluntaryExits",
+});
+export const BlsToExecutionChanges = new ProgressiveListCompositeType(capellaSsz.SignedBLSToExecutionChange, {
+  typeName: "BLSToExecutionChanges",
+});
+
+export const Validators = new ProgressiveListCompositeType(phase0Ssz.Validator, {typeName: "Validators"});
+export const Balances = new ProgressiveListBasicType(UintNum64, {typeName: "Balances"});
+export const EpochParticipation = new ProgressiveListBasicType(ParticipationFlags, {
+  typeName: "EpochParticipation",
+});
+export const InactivityScores = new ProgressiveListBasicType(UintNum64, {typeName: "InactivityScores"});
+export const PendingDeposits = new ProgressiveListCompositeType(electraSsz.PendingDeposit, {
+  typeName: "PendingDeposits",
+});
+export const PendingPartialWithdrawals = new ProgressiveListCompositeType(electraSsz.PendingPartialWithdrawal, {
+  typeName: "PendingPartialWithdrawals",
+});
+export const PendingConsolidations = new ProgressiveListCompositeType(electraSsz.PendingConsolidation, {
+  typeName: "PendingConsolidations",
+});
 
 export const Builder = new ContainerType(
   {
@@ -79,42 +243,10 @@ export const BuilderPendingPayment = new ContainerType(
   {typeName: "BuilderPendingPayment", jsonCase: "eth2"}
 );
 
-export const BuilderDepositRequest = new ContainerType(
-  {
-    pubkey: BLSPubkey,
-    withdrawalCredentials: Bytes32,
-    amount: UintNum64,
-    signature: BLSSignature,
-  },
-  {typeName: "BuilderDepositRequest", jsonCase: "eth2"}
-);
-
-export const BuilderDepositRequests = new ListCompositeType(
-  BuilderDepositRequest,
-  MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD
-);
-
-export const BuilderExitRequest = new ContainerType(
-  {
-    sourceAddress: ExecutionAddress,
-    pubkey: BLSPubkey,
-  },
-  {typeName: "BuilderExitRequest", jsonCase: "eth2"}
-);
-
-export const BuilderExitRequests = new ListCompositeType(BuilderExitRequest, MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD);
-
-// New in GLOAS:EIP8282 — extends electra ExecutionRequests with builder deposits and exits
-export const ExecutionRequests = new ContainerType(
-  {
-    deposits: electraSsz.DepositRequests,
-    withdrawals: electraSsz.WithdrawalRequests,
-    consolidations: electraSsz.ConsolidationRequests,
-    builderDeposits: BuilderDepositRequests,
-    builderExits: BuilderExitRequests,
-  },
-  {typeName: "ExecutionRequests", jsonCase: "eth2"}
-);
+export const Builders = new ProgressiveListCompositeType(Builder, {typeName: "Builders"});
+export const BuilderPendingWithdrawals = new ProgressiveListCompositeType(BuilderPendingWithdrawal, {
+  typeName: "BuilderPendingWithdrawals",
+});
 
 export const PayloadTimelinessCommittee = new VectorBasicType(ValidatorIndex, PTC_SIZE);
 export const PtcWindow = new VectorCompositeType(
@@ -132,14 +264,19 @@ export const PayloadAttestationData = new ContainerType(
   {typeName: "PayloadAttestationData", jsonCase: "eth2"}
 );
 
-export const PayloadAttestation = new ContainerType(
+export const PayloadAttestation = new ProgressiveContainerType(
   {
     aggregationBits: new BitVectorType(PTC_SIZE),
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
+  activeFields(3),
   {typeName: "PayloadAttestation", jsonCase: "eth2"}
 );
+
+export const PayloadAttestations = new ProgressiveListCompositeType(PayloadAttestation, {
+  typeName: "PayloadAttestations",
+});
 
 export const PayloadAttestationMessage = new ContainerType(
   {
@@ -150,12 +287,13 @@ export const PayloadAttestationMessage = new ContainerType(
   {typeName: "PayloadAttestationMessage", jsonCase: "eth2"}
 );
 
-export const IndexedPayloadAttestation = new ContainerType(
+export const IndexedPayloadAttestation = new ProgressiveContainerType(
   {
     attestingIndices: new ListBasicType(ValidatorIndex, PTC_SIZE),
     data: PayloadAttestationData,
     signature: BLSSignature,
   },
+  activeFields(3),
   {typeName: "IndexedPayloadAttestation", jsonCase: "eth2"}
 );
 
@@ -178,7 +316,7 @@ export const SignedProposerPreferences = new ContainerType(
   {typeName: "SignedProposerPreferences", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadBid = new ContainerType(
+export const ExecutionPayloadBid = new ProgressiveContainerType(
   {
     parentBlockHash: Bytes32,
     parentBlockRoot: Root,
@@ -190,9 +328,10 @@ export const ExecutionPayloadBid = new ContainerType(
     slot: Slot,
     value: UintNum64,
     executionPayment: UintNum64,
-    blobKzgCommitments: denebSsz.BlobKzgCommitments,
+    blobKzgCommitments: BlobKzgCommitments,
     executionRequestsRoot: Root,
   },
+  activeFields(12),
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 
@@ -204,18 +343,21 @@ export const SignedExecutionPayloadBid = new ContainerType(
   {typeName: "SignedExecutionPayloadBid", jsonCase: "eth2"}
 );
 
-export const BlockAccessList = new ByteListType(MAX_BYTES_PER_TRANSACTION);
+export const BlockAccessList = new ProgressiveByteListType({typeName: "BlockAccessList"});
 
-export const ExecutionPayload = new ContainerType(
+export const ExecutionPayload = new ProgressiveContainerType(
   {
     ...electraSsz.ExecutionPayload.fields,
+    transactions: Transactions,
+    withdrawals: Withdrawals,
     blockAccessList: BlockAccessList, // New in GLOAS:EIP-7928
     slotNumber: Slot, // New in GLOAS:EIP-7843
   },
+  activeFields(19),
   {typeName: "ExecutionPayload", jsonCase: "eth2"}
 );
 
-export const ExecutionPayloadEnvelope = new ContainerType(
+export const ExecutionPayloadEnvelope = new ProgressiveContainerType(
   {
     payload: ExecutionPayload,
     executionRequests: ExecutionRequests,
@@ -223,6 +365,7 @@ export const ExecutionPayloadEnvelope = new ContainerType(
     beaconBlockRoot: Root,
     parentBeaconBlockRoot: Root,
   },
+  activeFields(5),
   {typeName: "ExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
@@ -234,25 +377,35 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
-export const BeaconBlockBody = new ContainerType(
+export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
+  {
+    signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "SignedExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
+);
+
+export const BeaconBlockBody = new ProgressiveContainerType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
     eth1Data: phase0Ssz.BeaconBlockBody.fields.eth1Data,
     graffiti: phase0Ssz.BeaconBlockBody.fields.graffiti,
-    proposerSlashings: phase0Ssz.BeaconBlockBody.fields.proposerSlashings,
-    attesterSlashings: electraSsz.BeaconBlockBody.fields.attesterSlashings,
-    attestations: electraSsz.BeaconBlockBody.fields.attestations,
-    deposits: phase0Ssz.BeaconBlockBody.fields.deposits,
-    voluntaryExits: phase0Ssz.BeaconBlockBody.fields.voluntaryExits,
+    proposerSlashings: ProposerSlashings,
+    attesterSlashings: AttesterSlashings,
+    attestations: Attestations,
+    deposits: Deposits,
+    voluntaryExits: VoluntaryExits,
     syncAggregate: altairSsz.BeaconBlockBody.fields.syncAggregate,
     // executionPayload: ExecutionPayload, // Removed in GLOAS:EIP7732
-    blsToExecutionChanges: capellaSsz.BeaconBlockBody.fields.blsToExecutionChanges,
+    blsToExecutionChanges: BlsToExecutionChanges,
     // blobKzgCommitments: denebSsz.BeaconBlockBody.fields.blobKzgCommitments, // Removed in GLOAS:EIP7732
     // executionRequests: ExecutionRequests, // Removed in GLOAS:EIP7732
     signedExecutionPayloadBid: SignedExecutionPayloadBid, // New in GLOAS:EIP7732
-    payloadAttestations: new ListCompositeType(PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS), // New in GLOAS:EIP7732
+    payloadAttestations: PayloadAttestations, // New in GLOAS:EIP7732
     parentExecutionRequests: ExecutionRequests, // New in GLOAS:EIP7732
   },
+  activeFields(13),
   {typeName: "BeaconBlockBody", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
@@ -272,7 +425,77 @@ export const SignedBeaconBlock = new ContainerType(
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
 );
 
-export const BeaconState = new ContainerType(
+// Full block production response for self-builds, enables stateless envelope publishing
+export const BlockContents = new ContainerType(
+  {
+    block: BeaconBlock,
+    executionPayloadEnvelope: ExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
+);
+
+export const LightClientHeader = new ContainerType(
+  {
+    beacon: phase0Ssz.BeaconBlockHeader,
+    executionBlockHash: Bytes32,
+    executionBranch: ExecutionBranch,
+  },
+  {typeName: "LightClientHeader", jsonCase: "eth2"}
+);
+
+export const LightClientBootstrap = new ContainerType(
+  {
+    header: LightClientHeader,
+    currentSyncCommittee: altairSsz.SyncCommittee,
+    currentSyncCommitteeBranch: CurrentSyncCommitteeBranch,
+  },
+  {typeName: "LightClientBootstrap", jsonCase: "eth2"}
+);
+
+export const LightClientUpdate = new ContainerType(
+  {
+    attestedHeader: LightClientHeader,
+    nextSyncCommittee: altairSsz.SyncCommittee,
+    nextSyncCommitteeBranch: NextSyncCommitteeBranch,
+    finalizedHeader: LightClientHeader,
+    finalityBranch: FinalityBranch,
+    syncAggregate: altairSsz.SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientFinalityUpdate = new ContainerType(
+  {
+    attestedHeader: LightClientHeader,
+    finalizedHeader: LightClientHeader,
+    finalityBranch: FinalityBranch,
+    syncAggregate: altairSsz.SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientFinalityUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientOptimisticUpdate = new ContainerType(
+  {
+    attestedHeader: LightClientHeader,
+    syncAggregate: altairSsz.SyncAggregate,
+    signatureSlot: Slot,
+  },
+  {typeName: "LightClientOptimisticUpdate", jsonCase: "eth2"}
+);
+
+export const LightClientStore = new ContainerType(
+  {
+    snapshot: LightClientBootstrap,
+    validUpdates: new ListCompositeType(LightClientUpdate, EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH),
+  },
+  {typeName: "LightClientStore", jsonCase: "eth2"}
+);
+
+export const BeaconState = new ProgressiveContainerType(
   {
     genesisTime: UintNum64,
     genesisValidatorsRoot: Root,
@@ -289,21 +512,21 @@ export const BeaconState = new ContainerType(
     eth1DataVotes: phase0Ssz.Eth1DataVotes,
     eth1DepositIndex: UintNum64,
     // Registry
-    validators: phase0Ssz.Validators,
-    balances: phase0Ssz.Balances,
+    validators: Validators,
+    balances: Balances,
     randaoMixes: phase0Ssz.RandaoMixes,
     // Slashings
     slashings: phase0Ssz.Slashings,
     // Participation
-    previousEpochParticipation: altairSsz.EpochParticipation,
-    currentEpochParticipation: altairSsz.EpochParticipation,
+    previousEpochParticipation: EpochParticipation,
+    currentEpochParticipation: EpochParticipation,
     // Finality
     justificationBits: phase0Ssz.JustificationBits,
     previousJustifiedCheckpoint: phase0Ssz.Checkpoint,
     currentJustifiedCheckpoint: phase0Ssz.Checkpoint,
     finalizedCheckpoint: phase0Ssz.Checkpoint,
     // Inactivity
-    inactivityScores: altairSsz.InactivityScores,
+    inactivityScores: InactivityScores,
     // Sync
     currentSyncCommittee: altairSsz.SyncCommittee,
     nextSyncCommittee: altairSsz.SyncCommittee,
@@ -321,28 +544,29 @@ export const BeaconState = new ContainerType(
     earliestExitEpoch: Epoch,
     consolidationBalanceToConsume: Gwei,
     earliestConsolidationEpoch: Epoch,
-    pendingDeposits: electraSsz.BeaconState.fields.pendingDeposits,
-    pendingPartialWithdrawals: electraSsz.BeaconState.fields.pendingPartialWithdrawals,
-    pendingConsolidations: electraSsz.BeaconState.fields.pendingConsolidations,
+    pendingDeposits: PendingDeposits,
+    pendingPartialWithdrawals: PendingPartialWithdrawals,
+    pendingConsolidations: PendingConsolidations,
     proposerLookahead: fuluSsz.BeaconState.fields.proposerLookahead,
-    builders: new ListCompositeType(Builder, BUILDER_REGISTRY_LIMIT), // New in GLOAS:EIP7732
+    builders: Builders, // New in GLOAS:EIP7732
     nextWithdrawalBuilderIndex: BuilderIndex, // New in GLOAS:EIP7732
     executionPayloadAvailability: new BitVectorType(SLOTS_PER_HISTORICAL_ROOT), // New in GLOAS:EIP7732
     builderPendingPayments: new VectorCompositeType(BuilderPendingPayment, 2 * SLOTS_PER_EPOCH), // New in GLOAS:EIP7732
-    builderPendingWithdrawals: new ListCompositeType(BuilderPendingWithdrawal, BUILDER_PENDING_WITHDRAWALS_LIMIT), // New in GLOAS:EIP7732
+    builderPendingWithdrawals: BuilderPendingWithdrawals, // New in GLOAS:EIP7732
     latestExecutionPayloadBid: ExecutionPayloadBid, // New in GLOAS:EIP7732
-    payloadExpectedWithdrawals: capellaSsz.Withdrawals, // New in GLOAS:EIP7732
+    payloadExpectedWithdrawals: Withdrawals, // New in GLOAS:EIP7732
     ptcWindow: PtcWindow, // New in GLOAS:EIP7732
   },
+  activeFields(46),
   {typeName: "BeaconState", jsonCase: "eth2"}
 );
 
 export const DataColumnSidecar = new ContainerType(
   {
     index: fuluSsz.DataColumnSidecar.fields.index,
-    column: fuluSsz.DataColumnSidecar.fields.column,
+    column: DataColumn,
     // kzgCommitments: denebSsz.BlobKzgCommitments, // Removed in GLOAS:EIP7732
-    kzgProofs: fuluSsz.DataColumnSidecar.fields.kzgProofs,
+    kzgProofs: KZGProofs,
     // signedBlockHeader: phase0Ssz.SignedBeaconBlockHeader, // Removed in GLOAS:EIP7732
     // kzgCommitmentsInclusionProof: KzgCommitmentsInclusionProof, // Removed in GLOAS:EIP7732
     slot: Slot, // New in GLOAS:EIP7732

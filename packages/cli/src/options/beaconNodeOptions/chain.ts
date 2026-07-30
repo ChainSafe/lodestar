@@ -1,6 +1,7 @@
 import {ArchiveMode, DEFAULT_ARCHIVE_MODE, IBeaconNodeOptions, defaultOptions} from "@lodestar/beacon-node";
 import {CliCommandOptions} from "@lodestar/utils";
 import {ensure0xPrefix} from "../../util/format.js";
+import {CircuitBreakerArgs} from "./builder.js";
 
 export type ChainArgs = {
   suggestedFeeRecipient: string;
@@ -41,7 +42,7 @@ export type ChainArgs = {
   "chain.pruneHistory"?: boolean;
 };
 
-export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
+export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOptions["chain"] {
   return {
     suggestedFeeRecipient: args.suggestedFeeRecipient,
     graffitiAppend: args.graffitiAppend,
@@ -80,6 +81,9 @@ export function parseArgs(args: ChainArgs): IBeaconNodeOptions["chain"] {
     maxBlockStates: args["chain.maxBlockStates"] ?? defaultOptions.chain.maxBlockStates,
     maxCPStateEpochsInMemory: args["chain.maxCPStateEpochsInMemory"] ?? defaultOptions.chain.maxCPStateEpochsInMemory,
     maxCPStateEpochsOnDisk: args["chain.maxCPStateEpochsOnDisk"] ?? defaultOptions.chain.maxCPStateEpochsOnDisk,
+    // Circuit breaker thresholds are shared with the pre-gloas builder flow
+    faultInspectionWindow: args["builder.faultInspectionWindow"],
+    allowedFaults: args["builder.allowedFaults"],
     pruneHistory: args["chain.pruneHistory"],
   };
 }

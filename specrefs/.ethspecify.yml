@@ -1,4 +1,4 @@
-version: v1.7.0-alpha.11
+version: v1.7.0-alpha.12
 style: full
 
 specrefs:
@@ -68,6 +68,7 @@ exceptions:
     - PartialDataColumnSidecar#gloas
 
     # fulu (not implemented yet)
+    - PartialDataColumnGroupID#fulu
     - PartialDataColumnHeader#fulu
     - PartialDataColumnPartsMetadata#fulu
     - PartialDataColumnSidecar#fulu
@@ -128,6 +129,8 @@ exceptions:
   presets:
     # heze (not implemented)
     - INCLUSION_LIST_COMMITTEE_SIZE#heze
+    - MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE#heze
+    - MAX_SIGNED_INCLUSION_LIST_SIZE#heze
 
   functions:
     # phase0
@@ -152,7 +155,6 @@ exceptions:
     - get_base_reward#phase0
     - get_checkpoint_block#phase0
     - get_current_store_epoch#phase0
-    - get_dependent_root#phase0
     - get_eligible_validator_indices#phase0
     - get_eth1_vote#phase0
     - get_filtered_block_tree#phase0
@@ -346,7 +348,6 @@ exceptions:
     - get_builder_withdrawals#gloas
     - get_builders_sweep_withdrawals#gloas
     - get_checkpoint_block#gloas
-    - get_dependent_root#gloas
     - get_execution_payload_bid_signature#gloas
     - get_execution_payload_envelope_signature#gloas
     - get_forkchoice_store#gloas
@@ -360,7 +361,6 @@ exceptions:
     - get_payload_attestation_message_signature#gloas
     - get_payload_status_tiebreaker#gloas
     - get_pending_balance_to_withdraw#gloas
-    - get_proposer_preferences_signature#gloas
     - get_ptc_assignment#gloas
     - get_safe_execution_block_hash#gloas
     - get_supported_node#gloas
@@ -369,7 +369,6 @@ exceptions:
     - has_compounding_withdrawal_credential#gloas
     - is_ancestor#gloas
     - is_head_late#gloas
-    - is_head_weak#gloas
     - is_parent_node_full#gloas
     - is_previous_slot_payload_decision#gloas
     - is_valid_proposal_slot#gloas
@@ -398,7 +397,6 @@ exceptions:
     - update_proposer_boost_root#gloas
     - validate_merge_block#gloas
     - validate_on_attestation#gloas
-    - get_proposer_dependent_root#gloas
 
     # gloas (new in alpha.3, not yet implemented)
     - compute_weak_subjectivity_period#gloas
@@ -412,6 +410,16 @@ exceptions:
     - upgrade_lc_store_to_gloas#gloas
     - upgrade_lc_update_to_gloas#gloas
 
+    # gloas (slot-based gindex helpers; lodestar uses fork-based currentSyncCommitteeGindexAtFork)
+    - current_sync_committee_gindex_at_slot#gloas
+    - finalized_root_gindex_at_slot#gloas
+    - next_sync_committee_gindex_at_slot#gloas
+
+    # gloas (attestation upgrade helpers; lodestar ssz types are structurally cross-fork compatible)
+    - upgrade_attestation_to_gloas#gloas
+    - upgrade_attester_slashing_to_gloas#gloas
+    - upgrade_indexed_attestation_to_gloas#gloas
+
     # computed helpers replacing config vars (added in alpha.3)
     # the following are hardcoded in config files rather than computed at runtime
     - compute_max_request_blob_sidecars#deneb
@@ -422,12 +430,14 @@ exceptions:
     # heze (not implemented)
     - compute_fork_version#heze
     - get_forkchoice_store#heze
+    - get_inclusion_list_bits#heze
     - get_inclusion_list_committee#heze
     - get_inclusion_list_committee_assignment#heze
     - get_inclusion_list_due_ms#heze
     - get_inclusion_list_signature#heze
     - get_inclusion_list_store#heze
     - get_inclusion_list_transactions#heze
+    - is_inclusion_list_bits_inclusive#heze
     - is_payload_inclusion_list_satisfied#heze
     - is_valid_inclusion_list_signature#heze
     - on_inclusion_list#heze

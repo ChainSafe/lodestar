@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -152,6 +152,7 @@ export class ForkChoice implements IForkChoice {
   /** Optional fast confirmation rule implementation */
   private readonly fastConfirmationRule?: IFastConfirmationRule;
   private readonly fastConfirmationContext?: FastConfirmationContext;
+  private fastConfirmationPaused = false;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -180,6 +181,7 @@ export class ForkChoice implements IForkChoice {
     if (this.opts?.fastConfirmation) {
       this.fastConfirmationRule = new FastConfirmationRule(this.fcStore, metrics, this.logger);
       this.fastConfirmationContext = this.createFastConfirmationContext();
+      metrics?.fastConfirmation.paused.set(0);
     }
 
     metrics?.forkChoice.votes.addCollect(() => {
@@ -228,6 +230,47 @@ export class ForkChoice implements IForkChoice {
 
   getConfirmedBlock(): ProtoBlock | null {
     return this.getBlockHexDefaultStatus(this.getConfirmedRoot());
+  }
+
+  resumeFastConfirmation(): void {
+    this.toggleFastConfirmation(false);
+  }
+
+  pauseFastConfirmation(): void {
+    this.toggleFastConfirmation(true);
+  }
+
+  private toggleFastConfirmation(paused: boolean): void {
+    if (!this.fastConfirmationRule) return;
+    if (paused === this.fastConfirmationPaused) return;
+    this.fastConfirmationPaused = paused;
+    if (paused) {
+      // Pin immediately: block imports report the safe block hash to the EL before the next slot tick
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Callers run in clock/network handler context with no catch above
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
+    }
+    this.metrics?.fastConfirmation.paused.set(paused ? 1 : 0);
+    this.logger?.info(paused ? "Paused fast confirmation" : "Resumed fast confirmation", {
+      slot: this.fcStore.currentSlot,
+    });
+  }
+
+  private notifyConfirmedRoot(): void {
+    const confirmedRoot = this.fcStore.confirmedRoot;
+    const confirmedBlock = this.getBlockHexDefaultStatus(confirmedRoot);
+    if (confirmedBlock === null) {
+      throw new Error(`Fast confirmation produced root not in protoArray: ${confirmedRoot}`);
+    }
+    this.fcStore.notifyFastConfirmation?.({
+      block: confirmedRoot,
+      slot: confirmedBlock.slot,
+      currentSlot: this.fcStore.currentSlot,
+    });
   }
 
   /**
@@ -455,30 +498,12 @@ export class ForkChoice implements IForkChoice {
     }
 
     // No reorg if headBlock is "not weak" ie. headBlock's weight exceeds (REORG_HEAD_WEIGHT_THRESHOLD = 20)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/v1.4.0-beta.4/specs/phase0/fork-choice.md#is_head_weak
-    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
-      slotsPerEpoch: SLOTS_PER_EPOCH,
-      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
-    });
-    const headNode = this.protoArray.getNode(headBlock.blockRoot, headBlock.payloadStatus);
-    // If headNode is unavailable, give up reorg
-    if (headNode === undefined || headNode.weight >= reorgThreshold) {
+    if (!this.isHeadWeak(headBlock.blockRoot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.HeadBlockNotWeak};
     }
 
     // No reorg if parentBlock is "not strong" ie. parentBlock's weight is less than or equal to (REORG_PARENT_WEIGHT_THRESHOLD = 160)% of total attester weight
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_parent_strong
-    // For Gloas: measure support for the parent beacon block root regardless of its payload status by
-    // looking up the PENDING variant.
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_parent_strong
-    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
-      slotsPerEpoch: SLOTS_PER_EPOCH,
-      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
-    });
-    const parentStrongVariant = isGloasBlock(parentBlock) ? PayloadStatus.PENDING : PayloadStatus.FULL;
-    const parentNode = this.protoArray.getNode(parentBlock.blockRoot, parentStrongVariant);
-    // If parentNode is unavailable, give up reorg
-    if (parentNode === undefined || parentNode.weight <= parentThreshold) {
+    if (!this.isParentStrong(parentBlock.blockRoot)) {
       return {proposerHead, isHeadTimely, notReorgedReason: NotReorgedReason.ParentBlockNotStrong};
     }
 
@@ -521,7 +546,7 @@ export class ForkChoice implements IForkChoice {
 
     const timer = computeDeltasMetrics?.duration.startTimer();
     const {
-      deltas,
+      attestationDeltas,
       equivocatingValidators,
       oldInactiveValidators,
       newInactiveValidators,
@@ -537,8 +562,8 @@ export class ForkChoice implements IForkChoice {
     );
     timer?.();
 
-    computeDeltasMetrics?.deltasCount.set(deltas.length);
-    computeDeltasMetrics?.zeroDeltasCount.set(deltas.filter((d) => d === 0).length);
+    computeDeltasMetrics?.deltasCount.set(attestationDeltas.length);
+    computeDeltasMetrics?.zeroDeltasCount.set(attestationDeltas.filter((d) => d === 0).length);
     computeDeltasMetrics?.equivocatingValidators.set(equivocatingValidators);
     computeDeltasMetrics?.oldInactiveValidators.set(oldInactiveValidators);
     computeDeltasMetrics?.newInactiveValidators.set(newInactiveValidators);
@@ -564,7 +589,7 @@ export class ForkChoice implements IForkChoice {
 
     const currentSlot = this.fcStore.currentSlot;
     this.protoArray.applyScoreChanges({
-      deltas,
+      attestationDeltas,
       proposerBoost,
       justifiedEpoch: this.fcStore.justified.checkpoint.epoch,
       justifiedRoot: this.fcStore.justified.checkpoint.rootHex,
@@ -589,9 +614,29 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.slot > windowStart).length;
   }
 
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
+    return this.protoArray.getPayloadRevealCounts(fromSlot, toSlot);
+  }
+
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
   getHeads(): ProtoBlock[] {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
+  }
+
+  /**
+   * weight is in EFFECTIVE_BALANCE_INCREMENTS not gwei.
+   * For compliance test use only
+   */
+  getViableHeads(): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
+    return this.protoArray.getViableHeads(this.fcStore.currentSlot);
+  }
+
+  /**
+   * The cached justified total active balance, in EFFECTIVE_BALANCE_INCREMENT units.
+   * For compliance test use only
+   */
+  getJustifiedTotalActiveBalanceByIncrement(): number {
+    return this.fcStore.justified.totalBalance;
   }
 
   /** This is for the debug API only */
@@ -1527,6 +1572,93 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Return true if the block is "weak" ie. its weight is below REORG_HEAD_WEIGHT_THRESHOLD of the
+   * total attester weight per slot.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/phase0/fork-choice.md#is_head_weak
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-is_head_weak
+   */
+  private isHeadWeak(blockRoot: RootHex): boolean {
+    // The default variant is PENDING for gloas, FULL pre-gloas. PENDING is the variant gloas measures
+    // support on, ie. support for the beacon block root regardless of its payload status.
+    // Only ever called on a block already in fork choice, so a miss is a broken invariant.
+    const node = this.protoArray.getNodeDefaultStatus(blockRoot);
+    if (node === undefined) {
+      // this is called for head so we should always have this in forkchoice, otherwise we have a serious error
+      throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: blockRoot});
+    }
+
+    const reorgThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_HEAD_WEIGHT_THRESHOLD,
+    });
+
+    if (!isForkPostGloas(this.config.getForkName(node.slot))) {
+      return node.weight < reorgThreshold;
+    }
+
+    let headWeight = node.attestationScore;
+
+    const {equivocatingIndices} = this.fcStore;
+    // Equivocators are extremely rare (none in normal operation), and with none the added weight is
+    // always 0. Return before fetching the state and walking the block's committees.
+    if (equivocatingIndices.size > 0) {
+      const state = this.fcStore.stateGetter({stateRoot: node.stateRoot});
+      // Only ever called on the head, so the state is always cached.
+      // A miss is a broken invariant, not a recoverable state.
+      if (state === null) {
+        throw new ForkChoiceError({
+          code: ForkChoiceErrorCode.BEACON_STATE_ERROR,
+          error: new Error(`Missing state for isHeadWeak, blockRoot=${blockRoot} stateRoot=${node.stateRoot}`),
+        });
+      }
+
+      const epoch = computeEpochAtSlot(node.slot);
+      for (let index = 0; index < state.getBeaconCommitteeCountPerSlot(epoch); index++) {
+        for (const validatorIndex of state.getBeaconCommittee(node.slot, index)) {
+          if (equivocatingIndices.has(validatorIndex)) {
+            // the spec specifies to use effective_balance of the justified state
+            let balance = this.fcStore.justified.balances[validatorIndex];
+            if (!balance) {
+              // 0 (zeroed by getEffectiveBalanceIncrementsZeroInactive) or undefined (validator not in
+              // the justified state) - fall back to the head state's effective balance
+              balance = state.effectiveBalanceIncrements[validatorIndex];
+            }
+            headWeight += balance;
+          }
+        }
+      }
+    }
+
+    return headWeight < reorgThreshold;
+  }
+
+  /**
+   * Return true if the parent block is "strong" ie. its weight exceeds REORG_PARENT_WEIGHT_THRESHOLD
+   * of the total attester weight per slot.
+   *
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_parent_strong
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/gloas/fork-choice.md#modified-is_parent_strong
+   */
+  private isParentStrong(parentRoot: RootHex): boolean {
+    const node = this.protoArray.getNodeDefaultStatus(parentRoot);
+    // If parentNode is unavailable, give up reorg
+    if (node === undefined) {
+      return false;
+    }
+
+    const parentThreshold = getCommitteeFraction(this.fcStore.justified.totalBalance, {
+      slotsPerEpoch: SLOTS_PER_EPOCH,
+      committeePercent: this.config.REORG_PARENT_WEIGHT_THRESHOLD,
+    });
+
+    // pre-gloas uses get_weight() (boost-inclusive), gloas uses get_attestation_score() (boost-excluded)
+    const parentWeight = isForkPostGloas(this.config.getForkName(node.slot)) ? node.attestationScore : node.weight;
+
+    return parentWeight > parentThreshold;
+  }
+
+  /**
    * Return true if the block is timely for the current slot.
    * Child class can overwrite this for testing purpose.
    */
@@ -1978,9 +2110,23 @@ export class ForkChoice implements IForkChoice {
   }
 
   private runFastConfirmation(): void {
-    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
-      if (!this.fastConfirmationRule || !this.fastConfirmationContext) return;
+    const fastConfirmationRule = this.fastConfirmationRule;
+    const fastConfirmationContext = this.fastConfirmationContext;
+    if (!fastConfirmationRule || !fastConfirmationContext) return;
 
+    if (this.fastConfirmationPaused) {
+      // Keep consumers on a safe, available root while the rule is paused
+      this.fcStore.confirmedRoot = this.fcStore.finalizedCheckpoint.rootHex;
+      try {
+        this.notifyConfirmedRoot();
+      } catch (err) {
+        // Runs outside the timed try/catch below; a throw would escape to the clock listener
+        this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
+      }
+      return;
+    }
+
+    withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
       try {
         withObservedDuration(
           this.metrics?.fastConfirmation.stepsDuration.startTimer({
@@ -1989,18 +2135,9 @@ export class ForkChoice implements IForkChoice {
           () => this.updateHead()
         );
 
-        const result = this.fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(this.fastConfirmationContext);
+        const result = fastConfirmationRule.onSlotStartAfterPastAttestationsApplied(fastConfirmationContext);
         this.fcStore.confirmedRoot = result.confirmedRoot;
-
-        const confirmedBlock = this.getBlockHexDefaultStatus(result.confirmedRoot);
-        if (confirmedBlock === null) {
-          throw new Error(`Fast confirmation produced root not in protoArray: ${result.confirmedRoot}`);
-        }
-        this.fcStore.notifyFastConfirmation?.({
-          block: result.confirmedRoot,
-          slot: confirmedBlock.slot,
-          currentSlot: this.fcStore.currentSlot,
-        });
+        this.notifyConfirmedRoot();
       } catch (err) {
         this.logger?.debug(
           "Fast confirmation failed",

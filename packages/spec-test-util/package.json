@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/spec-test-util",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -46,7 +46,7 @@
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",

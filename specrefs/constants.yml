@@ -98,8 +98,8 @@
     - file: packages/params/src/index.ts
       search: export const BUILDER_WITHDRAWAL_PREFIX =
   spec: |
-    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX" fork="gloas" hash="1094ce21">
-    BUILDER_WITHDRAWAL_PREFIX: Bytes1 = '0x03'
+    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX" fork="gloas" hash="d3243a75">
+    BUILDER_WITHDRAWAL_PREFIX: Bytes1 = '0xB0'
     </spec>
 
 - name: BYTES_PER_COMMITMENT#deneb
@@ -427,8 +427,8 @@
 - name: KZG_SETUP_G2_LENGTH#deneb
   sources: []
   spec: |
-    <spec constant_var="KZG_SETUP_G2_LENGTH" fork="deneb" hash="6cb8d5fd">
-    KZG_SETUP_G2_LENGTH = 65
+    <spec constant_var="KZG_SETUP_G2_LENGTH" fork="deneb" hash="6435c362">
+    KZG_SETUP_G2_LENGTH: uint64 = 65
     </spec>
 
 - name: KZG_SETUP_G2_MONOMIAL#deneb
@@ -590,8 +590,8 @@
     - file: packages/params/src/index.ts
       search: export const SYNC_COMMITTEE_SUBNET_COUNT =
   spec: |
-    <spec constant_var="SYNC_COMMITTEE_SUBNET_COUNT" fork="altair" hash="58794943">
-    SYNC_COMMITTEE_SUBNET_COUNT = 4
+    <spec constant_var="SYNC_COMMITTEE_SUBNET_COUNT" fork="altair" hash="9b41920c">
+    SYNC_COMMITTEE_SUBNET_COUNT: uint64 = 2**2
     </spec>
 
 - name: SYNC_REWARD_WEIGHT#altair
@@ -617,8 +617,8 @@
     - file: packages/params/src/index.ts
       search: export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE =
   spec: |
-    <spec constant_var="TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE" fork="altair" hash="af3f6c9e">
-    TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 2**4
+    <spec constant_var="TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE" fork="altair" hash="76404bd9">
+    TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: uint64 = 2**4
     </spec>
 
 - name: TIMELY_HEAD_FLAG_INDEX#altair

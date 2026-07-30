@@ -26,11 +26,12 @@ import {
 export function getBeaconStateApi({
   chain,
   config,
-}: Pick<ApiModules, "chain" | "config">): ApplicationMethods<routes.beacon.state.Endpoints> {
+  sync,
+}: Pick<ApiModules, "chain" | "config" | "sync">): ApplicationMethods<routes.beacon.state.Endpoints> {
   async function getState(
     stateId: routes.beacon.StateId
   ): Promise<{state: IBeaconStateView; executionOptimistic: boolean; finalized: boolean}> {
-    const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+    const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
 
     return {
       state: state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state,

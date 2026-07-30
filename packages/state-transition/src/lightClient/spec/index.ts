@@ -14,7 +14,7 @@ import {
   processLightClientUpdate,
 } from "./processLightClientUpdate.js";
 import {type ILightClientStore, LightClientStore, type LightClientStoreEvents} from "./store.js";
-import {ZERO_HEADER, ZERO_SYNC_COMMITTEE, getZeroFinalityBranch, getZeroSyncCommitteeBranch} from "./utils.js";
+import {ZERO_SYNC_COMMITTEE, getZeroFinalityBranch, getZeroSyncCommitteeBranch} from "./utils.js";
 
 export type {LightClientUpdateSummary} from "./isBetterUpdate.js";
 export {isBetterUpdate, toLightClientUpdateSummary} from "./isBetterUpdate.js";
@@ -76,12 +76,16 @@ export class LightclientSpec {
   }
 
   onOptimisticUpdate(currentSlot: Slot, optimisticUpdate: LightClientOptimisticUpdate): void {
+    const fork = this.config.getForkName(optimisticUpdate.signatureSlot);
+
     this.onUpdate(currentSlot, {
       attestedHeader: optimisticUpdate.attestedHeader,
       nextSyncCommittee: ZERO_SYNC_COMMITTEE,
-      nextSyncCommitteeBranch: getZeroSyncCommitteeBranch(this.config.getForkName(optimisticUpdate.signatureSlot)),
-      finalizedHeader: {beacon: ZERO_HEADER},
-      finalityBranch: getZeroFinalityBranch(this.config.getForkName(optimisticUpdate.signatureSlot)),
+      nextSyncCommitteeBranch: getZeroSyncCommitteeBranch(fork),
+      finalizedHeader: this.config
+        .getPostAltairForkTypes(optimisticUpdate.signatureSlot)
+        .LightClientHeader.defaultValue(),
+      finalityBranch: getZeroFinalityBranch(fork),
       syncAggregate: optimisticUpdate.syncAggregate,
       signatureSlot: optimisticUpdate.signatureSlot,
     });

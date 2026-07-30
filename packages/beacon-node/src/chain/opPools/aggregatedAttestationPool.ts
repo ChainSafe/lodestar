@@ -355,7 +355,7 @@ export class AggregatedAttestationPool {
         // after all committees are processed, we have a list of sameAttDataCons
         for (const consolidation of sameAttDataCons) {
           // Score attestations by profitability to maximize proposer reward
-          const flags = getAttestationParticipationStatus(
+          const {flags} = getAttestationParticipationStatus(
             ForkSeq[fork],
             consolidation.attData,
             inclusionDistance,
