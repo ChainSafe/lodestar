@@ -343,6 +343,30 @@ describe("FlatFileStore", () => {
       // Canonical should remain
       expect(store.hasBlobSidecars(100, ROOT_CANONICAL)).toBe(true);
     });
+
+    it("should attempt column deletion when blob deletion fails", async () => {
+      await store.putBlobSidecars(100, ROOT_ORPHAN, new Uint8Array(10));
+      await store.putDataColumnsBinary(100, ROOT_ORPHAN, [{index: 0, data: new Uint8Array(20)}]);
+      const deleteError = new Error("blob delete failed");
+      const originalRm = fs.promises.rm.bind(fs.promises);
+      const rmSpy = vi.spyOn(fs.promises, "rm").mockImplementation(async (filePath, options) => {
+        if (String(filePath).includes("blob_sidecars")) {
+          throw deleteError;
+        }
+        return originalRm(filePath, options);
+      });
+
+      try {
+        await expect(store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_ORPHAN}])).rejects.toMatchObject({
+          errors: [deleteError],
+        });
+      } finally {
+        rmSpy.mockRestore();
+      }
+
+      expect(store.hasBlobSidecars(100, ROOT_ORPHAN)).toBe(true);
+      expect(await store.getDataColumnsBinary(100, ROOT_ORPHAN, [0])).toEqual([undefined]);
+    });
   });
 
   describe("cache rebuild", () => {

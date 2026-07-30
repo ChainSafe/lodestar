@@ -143,12 +143,18 @@ export class FlatFileStore implements IFlatFileStore {
   // --- Pruning ---
 
   async deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void> {
-    await Promise.all(
-      items.map(async ({slot, blockRoot}) => {
-        await this.blobStore.delete(slot, blockRoot);
-        await this.columnStore.delete(slot, blockRoot);
-      })
+    const results = await Promise.allSettled(
+      items.flatMap(({slot, blockRoot}) => [
+        this.blobStore.delete(slot, blockRoot),
+        this.columnStore.delete(slot, blockRoot),
+      ])
     );
+    const errors = results
+      .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+      .map((result) => result.reason);
+    if (errors.length > 0) {
+      throw new AggregateError(errors, "Failed to delete non-canonical flat file data");
+    }
   }
 
   async pruneBlobsBeforeSlot(slot: Slot): Promise<void> {
