@@ -411,7 +411,7 @@ export class EpochCache {
     let proposers: ValidatorIndex[];
     let proposersNextEpoch: ProposersDeferred;
     if (currentEpoch >= config.FULU_FORK_EPOCH) {
-      // After fulu, use state.proposerLookahead for current and next epoch proposers when available.
+      // After fulu, use state.proposerLookahead for current and next epoch proposers.
       // Computing from the unfiltered active shuffling would include slashed validators in gloas.
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
