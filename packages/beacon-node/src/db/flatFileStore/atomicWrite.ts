@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import {isFsNotFoundError} from "./errors.js";
 
 /**
  * Atomic write: write to `.part` temp file -> datasync -> rename to target.
@@ -63,8 +64,8 @@ export async function cleanupPartFiles(dir: string): Promise<number> {
         }
       }
     }
-  } catch (_e) {
-    // Directory may not exist yet
+  } catch (e) {
+    if (!isFsNotFoundError(e)) throw e;
   }
   return cleaned;
 }

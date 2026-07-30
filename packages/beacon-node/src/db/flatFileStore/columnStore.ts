@@ -15,6 +15,7 @@ import {
   readAllColumns,
   totalBits,
 } from "./dcolFormat.js";
+import {isFsNotFoundError} from "./errors.js";
 import {ExistenceCache} from "./existenceCache.js";
 
 /**
@@ -78,7 +79,8 @@ export class ColumnStore {
   private async readFile(slot: Slot, rootHex: RootHex): Promise<Uint8Array | null> {
     try {
       return await fs.promises.readFile(this.filePath(slot, rootHex));
-    } catch (_e) {
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
       return null;
     }
   }
@@ -105,7 +107,8 @@ export class ColumnStore {
     let fd: fs.promises.FileHandle;
     try {
       fd = await fs.promises.open(this.filePath(slot, rootHex), "r");
-    } catch (_e) {
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
       return indices.map(() => undefined);
     }
 
@@ -212,8 +215,8 @@ export class ColumnStore {
       if (columnFiles.length === 1) {
         return this.getColumnsBinary(slot, columnFiles[0].slice(0, -5), indices);
       }
-    } catch (_e) {
-      // Directory doesn't exist
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
     }
     return indices.map(() => undefined);
   }
@@ -225,7 +228,8 @@ export class ColumnStore {
     let slotDirs: string[];
     try {
       slotDirs = await fs.promises.readdir(this.dir);
-    } catch (_e) {
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
       return;
     }
 

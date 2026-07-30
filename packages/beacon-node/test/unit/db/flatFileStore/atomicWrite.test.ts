@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {atomicWrite, cleanupPartFiles, padSlot} from "../../../../src/db/flatFileStore/atomicWrite.js";
 
 describe("atomicWrite", () => {
@@ -80,6 +80,17 @@ describe("cleanupPartFiles", () => {
   it("should handle non-existent directory", async () => {
     const cleaned = await cleanupPartFiles("/nonexistent/path");
     expect(cleaned).toBe(0);
+  });
+
+  it("should propagate directory read errors", async () => {
+    const readError = Object.assign(new Error("read failed"), {code: "EIO"});
+    const readdirSpy = vi.spyOn(fs.promises, "readdir").mockRejectedValueOnce(readError);
+
+    try {
+      await expect(cleanupPartFiles(tmpDir)).rejects.toBe(readError);
+    } finally {
+      readdirSpy.mockRestore();
+    }
   });
 });
 

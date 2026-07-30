@@ -60,6 +60,17 @@ describe("FlatFileStore", () => {
       expect(result).toBeNull();
     });
 
+    it("should propagate blob read errors", async () => {
+      const readError = Object.assign(new Error("read failed"), {code: "EIO"});
+      const readSpy = vi.spyOn(fs.promises, "readFile").mockRejectedValueOnce(readError);
+
+      try {
+        await expect(store.getBlobSidecarsBinary(1000, ROOT_A)).rejects.toBe(readError);
+      } finally {
+        readSpy.mockRestore();
+      }
+    });
+
     it("should not choose an arbitrary blob root for a slot", async () => {
       await store.putBlobSidecars(1000, ROOT_A, new Uint8Array([1]));
       await store.putBlobSidecars(1000, ROOT_B, new Uint8Array([2]));
@@ -194,6 +205,25 @@ describe("FlatFileStore", () => {
       expect(new Uint8Array(result[0]!)).toEqual(col0);
       expect(new Uint8Array(result[1]!)).toEqual(col1);
       expect(new Uint8Array(result[2]!)).toEqual(col2);
+    });
+
+    it("should not overwrite existing columns when the merge read fails", async () => {
+      const col0 = new Uint8Array(40).fill(0x01);
+      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: col0}]);
+
+      const readError = Object.assign(new Error("read failed"), {code: "EIO"});
+      const readSpy = vi.spyOn(fs.promises, "readFile").mockRejectedValueOnce(readError);
+      try {
+        await expect(
+          store.putDataColumnsBinary(1000, ROOT_A, [{index: 1, data: new Uint8Array(40).fill(0x02)}])
+        ).rejects.toBe(readError);
+      } finally {
+        readSpy.mockRestore();
+      }
+
+      const [storedCol0, storedCol1] = await store.getDataColumnsBinary(1000, ROOT_A, [0, 1]);
+      expect(storedCol0).toEqual(col0);
+      expect(storedCol1).toBeUndefined();
     });
 
     it("should delete columns", async () => {

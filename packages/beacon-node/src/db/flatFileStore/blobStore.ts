@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {RootHex, Slot} from "@lodestar/types";
 import {atomicWrite, padSlot} from "./atomicWrite.js";
+import {isFsNotFoundError} from "./errors.js";
 import {ExistenceCache} from "./existenceCache.js";
 
 /**
@@ -57,7 +58,8 @@ export class BlobStore {
   async getBinary(slot: Slot, rootHex: RootHex): Promise<Uint8Array | null> {
     try {
       return await fs.promises.readFile(this.filePath(slot, rootHex));
-    } catch (_e) {
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
       return null;
     }
   }
@@ -94,7 +96,8 @@ export class BlobStore {
     let slotDirs: string[];
     try {
       slotDirs = await fs.promises.readdir(this.dir);
-    } catch (_e) {
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
       return;
     }
 
@@ -126,7 +129,8 @@ export class BlobStore {
     let slotDirs: string[];
     try {
       slotDirs = await fs.promises.readdir(this.dir);
-    } catch (_e) {
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
       return;
     }
 
@@ -156,8 +160,8 @@ export class BlobStore {
       const files = await fs.promises.readdir(slotDir);
       const blobFiles = files.filter((file) => file.endsWith(".ssz") && file.startsWith("0x"));
       if (blobFiles.length === 1) return await fs.promises.readFile(path.join(slotDir, blobFiles[0]));
-    } catch (_e) {
-      // Directory doesn't exist
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
     }
     return null;
   }
