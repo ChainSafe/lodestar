@@ -659,9 +659,10 @@ packages/beacon-node/src/db/
 
 **Mitigation:**
 
-- On startup, scan for and delete `.part` files
 - The rename-based atomic write ensures that a complete file is either fully present or absent
-- The existence cache is rebuilt from actual files, ignoring `.part` files
+- Atomic-write errors remove their own temporary files; only a hard crash can leave one behind
+- Reads and cache reconstruction ignore uniquely named `.part-*` files
+- Hot-slot cleanup on restart or normal retention pruning removes remnants with their slot directory
 
 ### Risk: Clock Skew / Slot Reorgs
 

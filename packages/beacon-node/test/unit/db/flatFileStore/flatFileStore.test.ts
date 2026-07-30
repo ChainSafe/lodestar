@@ -357,14 +357,23 @@ describe("FlatFileStore", () => {
       expect(columns[2]).toBeUndefined();
     });
 
-    it("should rebuild empty slot entries for cache-driven pruning", async () => {
+    it("should ignore partial files and retain their slot directories for pruning", async () => {
       const blobSlotDir = path.join(tmpDir, "blob_sidecars", "000000000100");
       const columnSlotDir = path.join(tmpDir, "data_columns", "000000000100");
       await fs.promises.mkdir(blobSlotDir, {recursive: true});
       await fs.promises.mkdir(columnSlotDir, {recursive: true});
+      const blobPartPath = path.join(blobSlotDir, `${ROOT_A}.ssz.part-crash`);
+      const columnPartPath = path.join(columnSlotDir, `${ROOT_A}.dcol.part-crash`);
+      await fs.promises.writeFile(blobPartPath, new Uint8Array([1]));
+      await fs.promises.writeFile(columnPartPath, new Uint8Array([2]));
 
       const store2 = new FlatFileStore(tmpDir, config, testLogger);
       await store2.init(Number.MAX_SAFE_INTEGER);
+      expect(store2.hasBlobSidecars(100, ROOT_A)).toBe(false);
+      expect(await store2.getDataColumnsBinaryBySlot(100, [0])).toEqual([undefined]);
+      await expect(fs.promises.access(blobPartPath)).resolves.toBeUndefined();
+      await expect(fs.promises.access(columnPartPath)).resolves.toBeUndefined();
+
       await store2.pruneBlobsBeforeSlot(200);
       await store2.pruneColumnsBeforeSlot(200);
 

@@ -5,7 +5,6 @@ import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import type {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
 import {blobSidecarsWrapperSsz} from "../repositories/blobSidecars.js";
-import {cleanupPartFiles} from "./atomicWrite.js";
 import {BlobStore} from "./blobStore.js";
 import {ColumnStore} from "./columnStore.js";
 import {ExistenceCache} from "./existenceCache.js";
@@ -44,13 +43,6 @@ export class FlatFileStore implements IFlatFileStore {
         blobSlots: hotBlobSlots,
         columnSlots: hotColumnSlots,
       });
-    }
-
-    // Clean up partial writes from previous crashes
-    const blobsCleaned = await cleanupPartFiles(this.blobStore.dir);
-    const colsCleaned = await cleanupPartFiles(this.columnStore.dir);
-    if (blobsCleaned > 0 || colsCleaned > 0) {
-      this.logger.info("Cleaned up partial flat file writes", {blobs: blobsCleaned, columns: colsCleaned});
     }
 
     // Rebuild existence cache from disk

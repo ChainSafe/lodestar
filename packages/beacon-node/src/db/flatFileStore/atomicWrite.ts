@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import {isFsNotFoundError} from "./errors.js";
 
 /**
  * Atomic write: write to `.part` temp file -> datasync -> rename to target.
@@ -42,30 +41,4 @@ export async function atomicWrite(targetPath: string, data: Uint8Array): Promise
  */
 export function padSlot(slot: number): string {
   return String(slot).padStart(12, "0");
-}
-
-/**
- * Clean up any `.part` files in a directory tree (non-recursive single level).
- */
-export async function cleanupPartFiles(dir: string): Promise<number> {
-  let cleaned = 0;
-  try {
-    const entries = await fs.promises.readdir(dir, {withFileTypes: true});
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        // Recurse into slot directories
-        const subdir = path.join(dir, entry.name);
-        const subEntries = await fs.promises.readdir(subdir);
-        for (const subEntry of subEntries) {
-          if (subEntry.endsWith(".part") || subEntry.includes(".part-")) {
-            await fs.promises.rm(path.join(subdir, subEntry), {force: true});
-            cleaned++;
-          }
-        }
-      }
-    }
-  } catch (e) {
-    if (!isFsNotFoundError(e)) throw e;
-  }
-  return cleaned;
 }

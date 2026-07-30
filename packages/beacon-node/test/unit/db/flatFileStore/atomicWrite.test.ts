@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {atomicWrite, cleanupPartFiles, padSlot} from "../../../../src/db/flatFileStore/atomicWrite.js";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {atomicWrite, padSlot} from "../../../../src/db/flatFileStore/atomicWrite.js";
 
 describe("atomicWrite", () => {
   let tmpDir: string;
@@ -24,12 +24,7 @@ describe("atomicWrite", () => {
     const result = await fs.promises.readFile(target);
     expect(new Uint8Array(result)).toEqual(data);
 
-    // .part file should not exist
-    const partExists = await fs.promises
-      .access(`${target}.part`)
-      .then(() => true)
-      .catch(() => false);
-    expect(partExists).toBe(false);
+    expect(await fs.promises.readdir(path.dirname(target))).toEqual([path.basename(target)]);
   });
 
   it("should overwrite existing file", async () => {
@@ -39,58 +34,6 @@ describe("atomicWrite", () => {
 
     const result = await fs.promises.readFile(target);
     expect(new Uint8Array(result)).toEqual(new Uint8Array([2, 3]));
-  });
-});
-
-describe("cleanupPartFiles", () => {
-  let tmpDir: string;
-
-  beforeEach(async () => {
-    tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-cleanup-"));
-  });
-
-  afterEach(async () => {
-    await fs.promises.rm(tmpDir, {recursive: true, force: true});
-  });
-
-  it("should clean up .part files in subdirectories", async () => {
-    const subDir = path.join(tmpDir, "000000000100");
-    await fs.promises.mkdir(subDir, {recursive: true});
-    await fs.promises.writeFile(path.join(subDir, "0xabc.ssz.part"), "partial");
-    await fs.promises.writeFile(path.join(subDir, "0xdef.ssz"), "complete");
-
-    const cleaned = await cleanupPartFiles(tmpDir);
-    expect(cleaned).toBe(1);
-
-    // Part file should be removed
-    const partExists = await fs.promises
-      .access(path.join(subDir, "0xabc.ssz.part"))
-      .then(() => true)
-      .catch(() => false);
-    expect(partExists).toBe(false);
-
-    // Complete file should remain
-    const completeExists = await fs.promises
-      .access(path.join(subDir, "0xdef.ssz"))
-      .then(() => true)
-      .catch(() => false);
-    expect(completeExists).toBe(true);
-  });
-
-  it("should handle non-existent directory", async () => {
-    const cleaned = await cleanupPartFiles("/nonexistent/path");
-    expect(cleaned).toBe(0);
-  });
-
-  it("should propagate directory read errors", async () => {
-    const readError = Object.assign(new Error("read failed"), {code: "EIO"});
-    const readdirSpy = vi.spyOn(fs.promises, "readdir").mockRejectedValueOnce(readError);
-
-    try {
-      await expect(cleanupPartFiles(tmpDir)).rejects.toBe(readError);
-    } finally {
-      readdirSpy.mockRestore();
-    }
   });
 });
 
