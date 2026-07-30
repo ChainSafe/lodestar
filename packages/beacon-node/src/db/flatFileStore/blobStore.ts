@@ -141,29 +141,11 @@ export class BlobStore {
 
   /**
    * Return data only when exactly one blob root exists for the slot.
-   * Checks the existence cache first to avoid a readdir syscall.
+   * The cache is authoritative so malformed or externally added files cannot
+   * bypass startup validation.
    */
   async getBinaryBySlot(slot: Slot): Promise<Uint8Array | null> {
     const cachedRoot = this.cache.getUniqueBlobRootForSlot(slot);
-    if (cachedRoot) {
-      return this.getBinary(slot, cachedRoot);
-    }
-
-    return observeFlatFileStoreOperation(
-      this.metrics,
-      FlatFileStoreType.blob,
-      FlatFileStoreOperation.read,
-      async () => {
-        const slotDir = path.join(this.dir, padSlot(slot));
-        try {
-          const files = await fs.promises.readdir(slotDir);
-          const blobFiles = files.filter((file) => file.endsWith(".ssz") && file.startsWith("0x"));
-          if (blobFiles.length === 1) return this.readPath(path.join(slotDir, blobFiles[0]));
-        } catch (e) {
-          if (!isFsNotFoundError(e)) throw e;
-        }
-        return null;
-      }
-    );
+    return cachedRoot ? this.getBinary(slot, cachedRoot) : null;
   }
 }

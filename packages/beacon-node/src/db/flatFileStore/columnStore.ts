@@ -241,32 +241,12 @@ export class ColumnStore {
 
   /**
    * Get binary columns only when exactly one column root exists for the slot.
-   * Checks the existence cache first to avoid a readdir syscall.
+   * The cache is authoritative so malformed or externally added files cannot
+   * bypass startup validation.
    */
   async getColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]> {
     const cachedRoot = this.cache.getUniqueColumnRootForSlot(slot);
-    if (cachedRoot) {
-      return this.getColumnsBinary(slot, cachedRoot, indices);
-    }
-
-    return observeFlatFileStoreOperation(
-      this.metrics,
-      FlatFileStoreType.column,
-      FlatFileStoreOperation.read,
-      async () => {
-        const slotDir = path.join(this.dir, padSlot(slot));
-        try {
-          const files = await fs.promises.readdir(slotDir);
-          const columnFiles = files.filter((file) => file.endsWith(".dcol") && file.startsWith("0x"));
-          if (columnFiles.length === 1) {
-            return this.getColumnsBinaryUninstrumented(slot, columnFiles[0].slice(0, -5), indices);
-          }
-        } catch (e) {
-          if (!isFsNotFoundError(e)) throw e;
-        }
-        return indices.map(() => undefined);
-      }
-    );
+    return cachedRoot ? this.getColumnsBinary(slot, cachedRoot, indices) : indices.map(() => undefined);
   }
 
   /**

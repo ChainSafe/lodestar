@@ -385,7 +385,8 @@ describe("FlatFileStore", () => {
       const validData = new Uint8Array([1, 2, 3]);
       await store.putBlobSidecars(100, ROOT_A, validData);
 
-      const blobSlotDir = path.join(tmpDir, "blob_sidecars", "000000000100");
+      const blobSlotDir = path.join(tmpDir, "blob_sidecars", "000000000102");
+      await fs.promises.mkdir(blobSlotDir, {recursive: true});
       const malformedBlobPath = path.join(blobSlotDir, "0xabc.ssz");
       await fs.promises.writeFile(malformedBlobPath, new Uint8Array([4]));
 
@@ -394,8 +395,8 @@ describe("FlatFileStore", () => {
       await fs.promises.mkdir(nonCanonicalBlobDir, {recursive: true});
       await fs.promises.writeFile(nonCanonicalBlobPath, new Uint8Array([5]));
 
-      const columnSlotDir = path.join(tmpDir, "data_columns", "000000000100");
-      const malformedColumnPath = path.join(columnSlotDir, `${ROOT_B.toUpperCase()}.dcol`);
+      const columnSlotDir = path.join(tmpDir, "data_columns", "000000000103");
+      const malformedColumnPath = path.join(columnSlotDir, "0xabc.dcol");
       await fs.promises.mkdir(columnSlotDir, {recursive: true});
       await fs.promises.writeFile(malformedColumnPath, new Uint8Array([6]));
 
@@ -403,9 +404,16 @@ describe("FlatFileStore", () => {
       const store2 = new FlatFileStore(tmpDir, config, {...testLogger, warn});
       await store2.init(Number.MAX_SAFE_INTEGER);
 
-      expect(new Uint8Array((await store2.getBlobSidecarsBinaryBySlot(100)) ?? [])).toEqual(validData);
-      expect(store2.hasBlobSidecars(101, ROOT_B)).toBe(false);
-      expect(await store2.getDataColumnsBinaryBySlot(100, [0])).toEqual([undefined]);
+      const readdirSpy = vi.spyOn(fs.promises, "readdir");
+      try {
+        expect(new Uint8Array((await store2.getBlobSidecarsBinaryBySlot(100)) ?? [])).toEqual(validData);
+        expect(await store2.getBlobSidecarsBinaryBySlot(102)).toBeNull();
+        expect(store2.hasBlobSidecars(101, ROOT_B)).toBe(false);
+        expect(await store2.getDataColumnsBinaryBySlot(103, [0])).toEqual([undefined]);
+        expect(readdirSpy).not.toHaveBeenCalled();
+      } finally {
+        readdirSpy.mockRestore();
+      }
       expect(warn).toHaveBeenCalledOnce();
       expect(warn).toHaveBeenCalledWith("Ignored non-canonical flat file store entries", {
         blobEntries: 2,
