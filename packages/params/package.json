@@ -11,27 +11,27 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./presets/mainnet": {
-      "bun": "./src/presets/mainnet.ts",
+      "typescript": "./src/presets/mainnet.ts",
       "types": "./lib/presets/mainnet.d.ts",
       "import": "./lib/presets/mainnet.js"
     },
     "./presets/minimal": {
-      "bun": "./src/presets/minimal.ts",
+      "typescript": "./src/presets/minimal.ts",
       "types": "./lib/presets/minimal.d.ts",
       "import": "./lib/presets/minimal.js"
     },
     "./presets/gnosis": {
-      "bun": "./src/presets/gnosis.ts",
+      "typescript": "./src/presets/gnosis.ts",
       "types": "./lib/presets/gnosis.d.ts",
       "import": "./lib/presets/gnosis.js"
     },
     "./setPreset": {
-      "bun": "./src/setPreset.ts",
+      "typescript": "./src/setPreset.ts",
       "types": "./lib/setPreset.d.ts",
       "import": "./lib/setPreset.js"
     }

@@ -1,5 +1,6 @@
-import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
 import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
+import {chainConfigToJson, deserializeBlobSchedule} from "./json.js";
+import {BlobScheduleEntry, ChainConfig, SpecJson} from "./types.js";
 
 export class NotEqualParamsError extends Error {}
 
