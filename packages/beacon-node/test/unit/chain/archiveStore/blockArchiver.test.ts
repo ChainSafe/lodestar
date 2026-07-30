@@ -106,6 +106,33 @@ describe("block archiver task", () => {
     expect(dbStub.blockArchive.batchPutBinary).not.toHaveBeenCalled();
   });
 
+  it("should retain non-canonical blocks when flat file cleanup fails", async () => {
+    const block = generateProtoBlock({slot: 3, blockRoot: toHexString(Buffer.alloc(32, 3))});
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: [],
+      nonAncestors: [block],
+    });
+    const deleteError = new Error("flat file cleanup failed");
+    vi.mocked(dbStub.flatFileStore.deleteNonCanonical).mockRejectedValueOnce(deleteError);
+
+    await expect(
+      archiveBlocks(
+        defaultConfig,
+        dbStub,
+        forkChoiceStub,
+        lightclientServer,
+        logger,
+        {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+        8
+      )
+    ).rejects.toBe(deleteError);
+
+    expect(dbStub.flatFileStore.deleteNonCanonical).toHaveBeenCalledWith([
+      {slot: block.slot, blockRoot: block.blockRoot},
+    ]);
+    expect(dbStub.block.batchDelete).not.toHaveBeenCalled();
+  });
+
   it("should prune flat file store blobs and columns by retained sidecar window", async () => {
     const config = createChainForkConfig({
       ...defaultConfig,

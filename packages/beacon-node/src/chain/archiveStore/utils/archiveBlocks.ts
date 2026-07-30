@@ -134,15 +134,16 @@ export async function archiveBlocks(
       slotRange: prettyPrintIndices(nonCanonicalSlots),
     };
 
-    await db.block.batchDelete(nonCanonicalBlockRoots);
-    logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);
-
     const items = finalizedNonCanonicalBlocks.map((summary) => ({
       slot: summary.slot,
       blockRoot: summary.blockRoot,
     }));
+    // Delete sidecars first so their block roots remain available to retry cleanup after a failure or crash.
     await flatFileStore.deleteNonCanonical(items);
     logger.verbose("Deleted non canonical blobs/columns from flat file store", nonCanonicalLogCtx);
+
+    await db.block.batchDelete(nonCanonicalBlockRoots);
+    logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);
 
     if (finalizedPostGloas) {
       await db.executionPayloadEnvelope.batchDelete(nonCanonicalBlockRoots);
