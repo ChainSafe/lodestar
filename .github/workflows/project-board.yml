@@ -25,6 +25,7 @@ on:
       pr:
         description: "owner/repo#number to reconcile (empty = sweep the whole board)"
         required: false
+        type: string
   # Entry point for accessory repos (thin callers; see .github/specs/project-board-caller.yml)
   workflow_call:
 
@@ -37,6 +38,7 @@ concurrency:
 jobs:
   reconcile:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout reconciler (lodestar@unstable, never PR code)
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -50,7 +52,8 @@ jobs:
           node-version: 24
 
       - name: Reconcile
-        run: node .github/scripts/project-board/main.ts ${{ inputs.pr && format('--pr {0}', inputs.pr) || '' }}
+        run: node .github/scripts/project-board/main.ts ${PR:+--pr "$PR"}
         env:
+          PR: ${{ inputs.pr }}
           PROJECT_BOARD_TOKEN: ${{ secrets.PROJECT_BOARD_TOKEN }}
           DRY_RUN: ${{ vars.PROJECT_BOARD_DRY_RUN }}

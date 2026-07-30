@@ -45,7 +45,7 @@ Events do not map directly to moves. Every relevant event (and the sweep) trigge
 
 1. Merged or closed → **Done** (built-in workflow; reconciler skips)
 2. Draft → **In Progress**
-3. **Latest signal wins:** compare the newest pending user-level review request against the newest non-dismissed comment/changes-requested counted review. Request is newer → **Review Requested**; review is newer → **Awaiting Author**
+3. **Latest signal wins:** compare the newest pending user-level review request against the newest non-dismissed comment/changes-requested counted review. Request is newer (or tied) → **Review Requested**; review is newer → **Awaiting Author** — a timestamp tie goes to the request, since a re-request is an explicit signal
 4. No pending requests and no comment/changes reviews: any approval → **Awaiting Author**; no reviews at all → **In Progress**
 
 Request timestamps are not exposed on pending requests; they are reconstructed from `timelineItems(itemTypes: [REVIEW_REQUESTED_EVENT])` (verified live) — the newest request event per currently-pending reviewer. Removed requests need no events: they simply vanish from the pending list.

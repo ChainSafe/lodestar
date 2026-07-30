@@ -44,9 +44,10 @@ export async function resolveProjectConfig(token: string, org: string, number: n
         id: string;
         fields: {nodes: Array<{id?: string; name?: string; options?: Array<{id: string; name: string}>}>};
       } | null;
-    };
+    } | null;
   };
   const data = await gql<Res>(token, PROJECT_QUERY, {org, number});
+  if (!data.organization) throw new Error(`organization "${org}" not found or token lacks access`);
   const project = data.organization.projectV2;
   if (!project) throw new Error(`project ${org}#${number} not found or token lacks Projects access`);
   const status = project.fields.nodes.find((f) => f.name === "Status");
