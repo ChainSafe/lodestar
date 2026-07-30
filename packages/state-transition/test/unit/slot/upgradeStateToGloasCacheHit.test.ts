@@ -57,7 +57,11 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
   // fallback in onboardBuildersFromPendingDeposits is skipped entirely).
   const cases = [
     {name: "falls back to isValidDepositSignature for an uncached deposit", cachedCount: 3, expectedFallbackCalls: 1},
-    {name: "never calls isValidDepositSignature when every deposit is cached", cachedCount: 4, expectedFallbackCalls: 0},
+    {
+      name: "never calls isValidDepositSignature when every deposit is cached",
+      cachedCount: 4,
+      expectedFallbackCalls: 0,
+    },
   ];
 
   for (const {name, cachedCount, expectedFallbackCalls} of cases) {
