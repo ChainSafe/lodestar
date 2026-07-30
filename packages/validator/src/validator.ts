@@ -1,5 +1,11 @@
 import {ApiClient, ApiRequestInit, defaultInit, getClient, routes} from "@lodestar/api";
-import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {
+  BeaconConfig,
+  ChainForkConfig,
+  NotEqualParamsError,
+  assertEqualParams,
+  createBeaconConfig,
+} from "@lodestar/config";
 import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
@@ -24,7 +30,7 @@ import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from ".
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
 import {Clock, ClockOptions, IClock} from "./util/clock.js";
-import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
+import {getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
   opts: ValidatorOptions;
