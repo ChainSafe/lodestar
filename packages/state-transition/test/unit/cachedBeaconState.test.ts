@@ -1,7 +1,8 @@
 import {describe, expect, it, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
-import {createBeaconConfig} from "@lodestar/config";
+import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
+import {FAR_FUTURE_EPOCH, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
@@ -78,6 +79,64 @@ describe("CachedBeaconState", () => {
     // Only commit state1 beforehand
     cp1.commit();
     expect(toHexString(cp1.serialize())).toBe(toHexString(cp2.serialize()));
+  });
+
+  it("reconstructs Gloas next proposers from the state lookahead", () => {
+    const chainConfig = createChainForkConfig({
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const state = ssz.gloas.BeaconState.defaultViewDU();
+    state.slot = 2 * SLOTS_PER_EPOCH;
+
+    for (let i = 0; i < 16; i++) {
+      const validator = ssz.phase0.Validator.defaultViewDU();
+      validator.pubkey = Buffer.alloc(48, i + 1);
+      validator.effectiveBalance = 32e9;
+      validator.activationEligibilityEpoch = 0;
+      validator.activationEpoch = 0;
+      validator.exitEpoch = FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      validator.slashed = i !== 0;
+      state.validators.push(validator);
+      state.balances.push(32e9);
+      state.previousEpochParticipation.push(0);
+      state.currentEpochParticipation.push(0);
+      state.inactivityScores.push(0);
+    }
+
+    // Only validator 0 is eligible under Gloas proposer selection because the other active validators are slashed.
+    // Recomputing next proposers from the active shuffling would reintroduce those slashed validators.
+    const proposerLookahead = Array.from({length: (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH}, () => 0);
+    state.proposerLookahead = ssz.fulu.ProposerLookahead.toViewDU(proposerLookahead);
+    state.commit();
+
+    const cachedState = createCachedBeaconState(
+      state,
+      {
+        config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+        pubkeyCache: createPubkeyCache(),
+      },
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    );
+
+    const expectedNextProposers = proposerLookahead.slice(SLOTS_PER_EPOCH, 2 * SLOTS_PER_EPOCH);
+    const nextProposers = cachedState.epochCtx.getBeaconProposersNextEpoch();
+    expect(nextProposers).toEqual(expectedNextProposers);
+    expect(nextProposers.every((index) => !state.validators.getReadonly(index).slashed)).toBe(true);
+
+    const loadedState = loadCachedBeaconState(cachedState, state.serialize(), {
+      skipSyncCommitteeCache: true,
+      skipSyncPubkeys: true,
+    });
+    const loadedNextProposers = loadedState.epochCtx.getBeaconProposersNextEpoch();
+    expect(loadedNextProposers).toEqual(expectedNextProposers);
+    expect(loadedNextProposers.every((index) => !loadedState.validators.getReadonly(index).slashed)).toBe(true);
   });
 
   describe("loadCachedBeaconState", () => {
