@@ -2,8 +2,8 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, BeaconStateView} from "@lodestar/state-transition";
-import {Slot} from "@lodestar/types";
+import {BeaconStateAllForks, BeaconStateFulu, BeaconStateView} from "@lodestar/state-transition";
+import {Slot, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {SYNC_TOLERANCE_EPOCHS} from "../../../../../../src/api/impl/utils.js";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator/index.js";
@@ -55,6 +55,10 @@ describe("get proposers api impl", () => {
       },
       config
     );
+    (state as BeaconStateFulu).proposerLookahead = ssz.fulu.ProposerLookahead.toViewDU([
+      ...Array.from({length: SLOTS_PER_EPOCH}, () => 0),
+      ...Array.from({length: SLOTS_PER_EPOCH}, () => 1),
+    ]);
     cachedState = createCachedBeaconStateTest(state, config);
 
     vi.spyOn(cachedState.epochCtx, "getBeaconProposersNextEpoch");
@@ -172,7 +176,7 @@ describe("get proposers api impl", () => {
     expect(currentProposers.map((p) => p.pubkey)).toEqual(nextProposers.map((p) => p.pubkey));
   });
 
-  it("should have different proposer validator indexes for current and next epoch", async () => {
+  it("should get proposer validator indexes from the state lookahead", async () => {
     const {data: currentProposers} = (await api.getProposerDutiesV2({epoch: currentEpoch})) as {
       data: routes.validator.ProposerDutyList;
     };
@@ -180,7 +184,8 @@ describe("get proposers api impl", () => {
       data: routes.validator.ProposerDutyList;
     };
 
-    expect(currentProposers.map((p) => p.validatorIndex)).not.toEqual(nextProposers.map((p) => p.validatorIndex));
+    expect(currentProposers.map((p) => p.validatorIndex)).toEqual(Array.from({length: SLOTS_PER_EPOCH}, () => 0));
+    expect(nextProposers.map((p) => p.validatorIndex)).toEqual(Array.from({length: SLOTS_PER_EPOCH}, () => 1));
   });
 
   it("should have different proposer slots for current and next epoch", async () => {
