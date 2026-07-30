@@ -213,15 +213,20 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
 
     // Verify the deposit signature (proof of possession). If invalid the deposit is silently
     // dropped — stake is forfeited, matching the validator deposit contract behavior.
-    if (
-      !isValidDepositSignature(
+    //
+    // The prepareNextSlot scheduler pre-verifies these signatures in the epochs before the fork
+    // A cache miss falls back to verifying this one deposit — no worse than pre-cache.
+    const cached = state.epochCtx.builderDepositSignatureCache.getSignatureValidity(deposit.toValue());
+    const isValid =
+      cached ??
+      isValidDepositSignature(
         state.config,
         deposit.pubkey,
         deposit.withdrawalCredentials,
         deposit.amount,
         deposit.signature
-      )
-    ) {
+      );
+    if (!isValid) {
       continue;
     }
 

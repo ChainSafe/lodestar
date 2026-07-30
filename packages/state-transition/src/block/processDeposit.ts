@@ -1,4 +1,4 @@
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
@@ -138,6 +138,10 @@ export function addValidatorToRegistry(
   state.balances.push(amount);
 }
 
+/**
+ * Verify a single deposit signature (proof of possession). See {@link verifyDepositSignatures} for
+ * the batch equivalent — the two MUST stay consistent (same domain, signing root, and checks).
+ */
 export function isValidDepositSignature(
   config: BeaconConfig,
   pubkey: Uint8Array,
@@ -163,4 +167,75 @@ export function isValidDepositSignature(
   } catch (_e) {
     return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }
+}
+
+/**
+ * Batch equivalent of {@link isValidDepositSignature} — verify many deposit signatures at once.
+ * MUST stay consistent with `isValidDepositSignature`: same fork-agnostic deposit domain, same
+ * `DepositMessage` signing root, same group + infinity checks. Tries a single aggregate verify and,
+ * on failure, falls back to verifying each deposit individually so the valid deposits in a batch
+ * containing an invalid one are still identified. Returns a boolean per input deposit; `slot` is not
+ * part of the signature check.
+ *
+ * Used by the pre-Gloas builder-deposit pre-verify scanner (see `preVerifyBuilderDeposits.ts`).
+ */
+export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.PendingDeposit[]): boolean[] {
+  const results = new Array<boolean>(deposits.length).fill(false);
+  // fork-agnostic domain since deposits are valid across forks, matching isValidDepositSignature
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+
+  const signatureSets: {pk: PublicKey; msg: Uint8Array; sig: Signature}[] = [];
+  const signatureSetDepositIndices: number[] = [];
+  for (let i = 0; i < deposits.length; i++) {
+    const {pubkey, withdrawalCredentials, amount, signature} = deposits[i];
+    let pk: PublicKey;
+    let sig: Signature;
+    try {
+      // Parse without group/infinity checks; deferred to the verify call below so it can be
+      // batched across all sets.
+      pk = PublicKey.fromBytes(pubkey);
+      sig = Signature.fromBytes(signature);
+    } catch (_) {
+      // Malformed pubkey or signature bytes - invalid deposit, results[i] stays false
+      continue;
+    }
+    const msg = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+    signatureSets.push({pk, msg, sig});
+    signatureSetDepositIndices.push(i);
+  }
+
+  if (signatureSets.length === 0) {
+    return results;
+  }
+
+  // Deposit pubkeys and signatures are untrusted, so group + infinity checks are required.
+  // The trailing (true, true) args delegate those checks to blst, amortized across the batch.
+  let batchValid: boolean;
+  try {
+    batchValid =
+      signatureSets.length >= 2
+        ? verifyMultipleAggregateSignatures(signatureSets, true, true)
+        : verify(signatureSets[0].msg, signatureSets[0].pk, signatureSets[0].sig, true, true);
+  } catch (_) {
+    batchValid = false;
+  }
+
+  if (batchValid) {
+    for (const depositIndex of signatureSetDepositIndices) {
+      results[depositIndex] = true;
+    }
+  } else {
+    // Batch failed: at least one signature is invalid - verify each individually
+    for (let s = 0; s < signatureSets.length; s++) {
+      results[signatureSetDepositIndices[s]] = verify(
+        signatureSets[s].msg,
+        signatureSets[s].pk,
+        signatureSets[s].sig,
+        true,
+        true
+      );
+    }
+  }
+
+  return results;
 }

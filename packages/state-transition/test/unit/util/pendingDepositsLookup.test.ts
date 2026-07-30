@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {electra, ssz} from "@lodestar/types";
+import {electra} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 
 const isValidDepositSignatureMock = vi.hoisted(() =>
@@ -24,7 +24,6 @@ vi.mock("../../../src/block/processDeposit.js", async (importOriginal) => {
   };
 });
 
-const {createCachedBeaconStateTest} = await import("../../../src/testUtils/state.js");
 const {PendingDepositsLookup} = await import("../../../src/util/pendingDepositsLookup.js");
 
 describe("PendingDepositsLookup", () => {
@@ -58,8 +57,8 @@ describe("PendingDepositsLookup", () => {
     const deposit1 = createPendingDeposit(1, 0);
     const pubkeyHex = toPubkeyHex(deposit0.pubkey);
 
-    lookup.add(deposit0);
-    lookup.add(deposit1);
+    lookup.add(deposit0, pubkeyHex);
+    lookup.add(deposit1, pubkeyHex);
 
     expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
@@ -75,12 +74,12 @@ describe("PendingDepositsLookup", () => {
     const deposit2 = createPendingDeposit(1, 1);
     const pubkeyHex = toPubkeyHex(deposit0.pubkey);
 
-    lookup.add(deposit0);
-    lookup.add(deposit1);
+    lookup.add(deposit0, pubkeyHex);
+    lookup.add(deposit1, pubkeyHex);
     expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
 
-    lookup.add(deposit2);
+    lookup.add(deposit2, pubkeyHex);
     expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(true);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(3);
     expect(isValidDepositSignatureMock).toHaveBeenLastCalledWith(
@@ -99,12 +98,12 @@ describe("PendingDepositsLookup", () => {
     const deposit2 = createPendingDeposit(1, 0);
     const pubkeyHex = toPubkeyHex(deposit0.pubkey);
 
-    lookup.add(deposit0);
-    lookup.add(deposit1);
+    lookup.add(deposit0, pubkeyHex);
+    lookup.add(deposit1, pubkeyHex);
     expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(true);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
 
-    lookup.add(deposit2);
+    lookup.add(deposit2, pubkeyHex);
     expect(lookup.hasPendingValidator(config, pubkeyHex)).toBe(true);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
   });
@@ -116,8 +115,8 @@ describe("PendingDepositsLookup", () => {
     const pubkeyHexA = toPubkeyHex(depositA.pubkey);
     const pubkeyHexB = toPubkeyHex(depositB.pubkey);
 
-    lookup.add(depositA);
-    lookup.add(depositB);
+    lookup.add(depositA, pubkeyHexA);
+    lookup.add(depositB, pubkeyHexB);
 
     expect(lookup.hasPendingValidator(config, pubkeyHexA)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(1);
@@ -127,20 +126,5 @@ describe("PendingDepositsLookup", () => {
 
     expect(lookup.hasPendingValidator(config, pubkeyHexA)).toBe(false);
     expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(2);
-  });
-
-  it("builds from state.pendingDeposits without checking signatures", () => {
-    const state = createCachedBeaconStateTest(ssz.gloas.BeaconState.defaultViewDU(), chainConfig, {
-      skipSyncCommitteeCache: true,
-      skipSyncPubkeys: true,
-    });
-    const deposit = createPendingDeposit(1, 1);
-    state.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
-
-    const lookup = PendingDepositsLookup.build(state);
-
-    expect(isValidDepositSignatureMock).not.toHaveBeenCalled();
-    expect(lookup.hasPendingValidator(state.config, toPubkeyHex(deposit.pubkey))).toBe(true);
-    expect(isValidDepositSignatureMock).toHaveBeenCalledTimes(1);
   });
 });

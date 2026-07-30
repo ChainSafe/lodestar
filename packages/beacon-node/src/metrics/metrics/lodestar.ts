@@ -1708,6 +1708,34 @@ export function createLodestarMetrics(
       }),
     },
 
+    // Pre-verify builder-deposit signatures in the epochs before the Gloas fork (prepareNextSlot).
+    // These are for tuning MAX_BUILDER_DEPOSITS_PER_SLOT on devnets: watch `duration` vs the spare
+    // slot budget and whether `cached_deposits` drains `pending_deposits` before the fork.
+    builderDepositPreVerify: {
+      duration: register.histogram({
+        name: "lodestar_builder_deposit_preverify_duration_seconds",
+        help: "Duration of one preVerifyBuilderDepositsPreGloas call (BLS batch verify + scan)",
+        // cap is ~2.7s for 10k signatures; buckets span cheap rescans up to the spare-time budget
+        buckets: [0.05, 0.1, 0.25, 0.5, 1, 1.5, 2, 2.7, 3, 4],
+      }),
+      pendingDeposits: register.gauge({
+        name: "lodestar_builder_deposit_preverify_pending_deposits",
+        help: "Current state.pendingDeposits length (backlog to drain before the fork)",
+      }),
+      cachedDeposits: register.gauge({
+        name: "lodestar_builder_deposit_preverify_cached_deposits",
+        help: "Builder deposits verified & cached so far this pre-fork window (valid + invalid)",
+      }),
+      scannedDeposits: register.gauge({
+        name: "lodestar_builder_deposit_preverify_scanned_deposits",
+        help: "Pending deposits examined by the last pre-verify call (< pending_deposits ⇒ cap hit)",
+      }),
+      invalidSignatures: register.counter({
+        name: "lodestar_builder_deposit_preverify_invalid_signatures_total",
+        help: "Cumulative builder-deposit signatures pre-verified as invalid (abuse/anomaly signal)",
+      }),
+    },
+
     // reprocess attestations
     reprocessApiAttestations: {
       total: register.gauge({

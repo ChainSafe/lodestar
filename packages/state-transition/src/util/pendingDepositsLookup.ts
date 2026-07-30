@@ -1,8 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {PubkeyHex, electra} from "@lodestar/types";
-import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
-import {CachedBeaconStateGloas} from "../types.js";
 
 type PendingDepositsValidation = {
   hasValidSignature: boolean;
@@ -34,28 +32,14 @@ export class PendingDepositsLookup {
   }
 
   /**
-   * Build a pubkey -> pending-deposits lookup from `state.pendingDeposits`.
-   * No BLS work is done here; signature verification happens lazily in `hasPendingValidator`.
+   * Append a pending deposit to the represented sequence, keyed by its (precomputed) `pubkeyHex`.
    */
-  static build(state: CachedBeaconStateGloas): PendingDepositsLookup {
-    const lookup = PendingDepositsLookup.buildEmpty();
-    for (const pendingDeposit of state.pendingDeposits.getAllReadonly()) {
-      lookup.add(pendingDeposit);
-    }
-    return lookup;
-  }
-
-  /**
-   * Append a pending deposit to the represented sequence.
-   * Pass `pubkeyHex` if the caller has already computed it.
-   */
-  add(pendingDeposit: electra.PendingDeposit, pubkeyHex?: PubkeyHex): void {
-    const key = pubkeyHex ?? toPubkeyHex(pendingDeposit.pubkey);
-    const existing = this.depositsByPubkey.get(key);
+  add(pendingDeposit: electra.PendingDeposit, pubkeyHex: PubkeyHex): void {
+    const existing = this.depositsByPubkey.get(pubkeyHex);
     if (existing) {
       existing.push(pendingDeposit);
     } else {
-      this.depositsByPubkey.set(key, [pendingDeposit]);
+      this.depositsByPubkey.set(pubkeyHex, [pendingDeposit]);
     }
   }
 

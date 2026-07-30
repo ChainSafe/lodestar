@@ -19,6 +19,7 @@ export * from "./gloas.js";
 export * from "./interop.js";
 export * from "./loadState/index.js";
 export * from "./pendingDepositsLookup.js";
+export * from "./preVerifyBuilderDeposits.js";
 export * from "./rootCache.js";
 export * from "./seed.js";
 export * from "./shuffling.js";

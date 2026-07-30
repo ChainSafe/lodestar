@@ -3,12 +3,15 @@ import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
 import {
+  GLOAS_PREVERIFY_WINDOW_EPOCHS,
   IBeaconStateView,
   IBeaconStateViewBellatrix,
+  MAX_BUILDER_DEPOSITS_PER_SLOT,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
   isStatePostBellatrix,
+  isStatePostFulu,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, Slot} from "@lodestar/types";
@@ -262,6 +265,58 @@ export class PrepareNextSlotScheduler {
         });
 
         precomputeEpochTransitionTimer?.();
+
+        // Nothing more to do on an epoch-transition slot: that precompute already ran a full (>1s)
+        // epoch transition, so we don't pile the builder-deposit pre-verify (below) on top of it.
+        return;
+      }
+
+      // Pre-verify builder-deposit signatures in the GLOAS_PREVERIFY_WINDOW_EPOCHS epochs leading
+      // up to the Gloas fork, off the block-import hot path, so onboardBuildersFromPendingDeposits
+      // at the transition is mostly cache hits. Reached only on non-epoch-transition slots (the
+      // epoch-transition branch returned above). The scan runs on prepareState (a spare-time,
+      // proposer-prep state); results are stashed on the shared builderDepositSignatureCache.
+      if (isStatePostFulu(prepareState)) {
+        const gloasEpoch = this.config.GLOAS_FORK_EPOCH;
+        const finalizedEpoch = this.chain.forkChoice.getFinalizedCheckpoint().epoch;
+        if (finalizedEpoch >= gloasEpoch) {
+          // Gloas is finalized — the pre-verify cache has served its purpose; release its memory.
+          prepareState.clearPreGloasBuilderDepositCache();
+        } else {
+          const clockEpoch = computeEpochAtSlot(clockSlot);
+          if (
+            ForkSeq[fork] < ForkSeq.gloas && // pins prepareState (at prepareSlot) to Fulu, not Gloas
+            clockEpoch >= gloasEpoch - GLOAS_PREVERIFY_WINDOW_EPOCHS && // Infinity when Gloas unscheduled → skip
+            clockEpoch < gloasEpoch &&
+            // avoid the risk of missing block proposal when this task may expand to the next epoch on some low resource node
+            this.chain.beaconProposerCache.get(prepareState.getBeaconProposer(prepareSlot)) === undefined
+          ) {
+            const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
+            const result = prepareState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT);
+            preVerifyTimer?.();
+
+            const preVerifyMetrics = this.metrics?.builderDepositPreVerify;
+            if (preVerifyMetrics) {
+              preVerifyMetrics.pendingDeposits.set(result.pendingDepositsCount);
+              preVerifyMetrics.cachedDeposits.set(result.totalBuildersVerified);
+              preVerifyMetrics.scannedDeposits.set(result.scannedPendingDeposits);
+              if (result.invalidBuildersCount > 0) {
+                preVerifyMetrics.invalidSignatures.inc(result.invalidBuildersCount);
+              }
+            }
+
+            if (result.verifiedBuildersCount > 0 || result.invalidBuildersCount > 0) {
+              this.logger.verbose("PrepareNextSlotScheduler pre-verified builder deposit signatures", {
+                clockSlot,
+                verifiedBuildersCount: result.verifiedBuildersCount,
+                invalidBuildersCount: result.invalidBuildersCount,
+                scannedPendingDeposits: result.scannedPendingDeposits,
+                totalBuildersVerified: result.totalBuildersVerified,
+                pendingDepositsCount: result.pendingDepositsCount,
+              });
+            }
+          }
+        }
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
