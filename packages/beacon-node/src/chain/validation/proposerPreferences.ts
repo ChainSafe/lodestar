@@ -1,5 +1,5 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -24,24 +24,36 @@ export async function validateGossipProposerPreferences(
   const dependentRootHex = toRootHex(dependentRoot);
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
-  // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead.
-  const currentEpoch = chain.clock.currentEpoch;
-  if (proposalEpoch < currentEpoch || proposalEpoch > currentEpoch + MIN_SEED_LOOKAHEAD) {
+  // [IGNORE] `preferences.proposal_slot` is at or after the current epoch,
+  // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  const nextProposalEpochStartSlot = computeStartSlotAtEpoch(proposalEpoch + 1);
+  if (chain.clock.msFromSlot(nextProposalEpochStartSlot) > chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH,
       proposalSlot,
-      currentEpoch,
+      currentEpoch: chain.clock.currentEpoch,
+    });
+  }
+
+  // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
+  // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  const latestCurrentSlot = chain.clock.currentSlotWithGossipDisparity;
+  const latestCurrentEpoch = computeEpochAtSlot(latestCurrentSlot);
+  if (proposalEpoch > latestCurrentEpoch + MIN_SEED_LOOKAHEAD) {
+    throw new ProposerPreferencesError(GossipAction.IGNORE, {
+      code: ProposerPreferencesErrorCode.INVALID_EPOCH,
+      proposalSlot,
+      currentEpoch: latestCurrentEpoch,
     });
   }
 
   // [IGNORE] `preferences.proposal_slot` has not already passed, i.e. `proposal_slot > current_slot`,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  const currentSlot = chain.clock.currentSlotWithGossipDisparity;
-  if (proposalSlot <= currentSlot) {
+  if (proposalSlot <= latestCurrentSlot) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED,
       proposalSlot,
-      currentSlot,
+      currentSlot: latestCurrentSlot,
     });
   }
 
@@ -55,7 +67,7 @@ export async function validateGossipProposerPreferences(
     });
   }
 
-  const dependentEpoch = proposalEpoch - MIN_SEED_LOOKAHEAD;
+  const dependentEpoch = Math.max(GENESIS_EPOCH, proposalEpoch - MIN_SEED_LOOKAHEAD);
   const dependentRootSlot = getDependentRootSlot(dependentEpoch);
 
   // [REJECT] The slot of the block with root `preferences.dependent_root` is strictly less than
