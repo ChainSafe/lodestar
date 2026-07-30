@@ -415,17 +415,10 @@ export class EpochCache {
       // Computing from the unfiltered active shuffling would include slashed validators in gloas.
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
-      if (proposerLookahead.length >= SLOTS_PER_EPOCH * 2) {
-        proposersNextEpoch = {
-          computed: true,
-          indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
-        };
-      } else {
-        proposersNextEpoch = {
-          computed: false,
-          seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
-        };
-      }
+      proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // We need to calculate Pre-fulu
       // Allow to create CachedBeaconState for empty states, or no active validators
@@ -724,17 +717,10 @@ export class EpochCache {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       this.proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
-
-      if (proposerLookahead.length >= SLOTS_PER_EPOCH * 2) {
-        this.proposersNextEpoch = {
-          computed: true,
-          indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
-        };
-      } else {
-        // This should not happen unless MIN_SEED_LOOKAHEAD is set to 0
-        // this ensures things don't break if the proposer lookahead is not long enough
-        this.proposersNextEpoch = {computed: false, seed: getSeed(state, epochAfterUpcoming, DOMAIN_BEACON_PROPOSER)};
-      }
+      this.proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // Need to calculate proposers pre-fulu
       const upcomingProposerSeed = getSeed(state, upcomingEpoch, DOMAIN_BEACON_PROPOSER);
