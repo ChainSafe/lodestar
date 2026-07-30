@@ -1715,8 +1715,7 @@ export function createLodestarMetrics(
       duration: register.histogram({
         name: "lodestar_builder_deposit_preverify_duration_seconds",
         help: "Duration of one preVerifyBuilderDepositsPreGloas call (BLS batch verify + scan)",
-        // cap is ~2.7s for 10k signatures; buckets span cheap rescans up to the spare-time budget
-        buckets: [0.05, 0.1, 0.25, 0.5, 1, 1.5, 2, 2.7, 3, 4],
+        buckets: [1, 2, 3, 4],
       }),
       pendingDeposits: register.gauge({
         name: "lodestar_builder_deposit_preverify_pending_deposits",
