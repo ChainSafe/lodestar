@@ -1,7 +1,14 @@
 import {readFileSync} from "node:fs";
 import {parseArgs} from "node:util";
 import {computeStatus} from "./compute-status.ts";
-import {fetchPr, listOpenBoardPrs, resolveProjectConfig, updateItemLane, type ProjectConfig} from "./github.ts";
+import {
+  addPrToBoard,
+  fetchPr,
+  listOpenBoardPrs,
+  resolveProjectConfig,
+  updateItemLane,
+  type ProjectConfig,
+} from "./github.ts";
 import {buildSnapshot, pickProjectItem} from "./snapshot.ts";
 import {STATUS_TO_LANE} from "./types.ts";
 
@@ -13,16 +20,17 @@ interface Ctx {
   cfg: ProjectConfig;
 }
 
-async function reconcilePr(ctx: Ctx, owner: string, repo: string, number: number): Promise<void> {
+async function reconcilePr(
+  ctx: Ctx,
+  owner: string,
+  repo: string,
+  number: number,
+  addIfMissing: boolean,
+): Promise<void> {
   const label = `${owner}/${repo}#${number}`;
   const prNode = await fetchPr(ctx.token, owner, repo, number);
   if (!prNode) {
     console.log(`${label}: PR not found; skipping`);
-    return;
-  }
-  const item = pickProjectItem(prNode, ctx.projectNumber);
-  if (!item) {
-    console.log(`${label}: not on project #${ctx.projectNumber}; skipping`);
     return;
   }
   const status = computeStatus(buildSnapshot(prNode));
@@ -31,6 +39,20 @@ async function reconcilePr(ctx: Ctx, owner: string, repo: string, number: number
     return;
   }
   const lane = STATUS_TO_LANE[status];
+  let item = pickProjectItem(prNode, ctx.projectNumber);
+  if (!item) {
+    if (!addIfMissing) {
+      console.log(`${label}: not on project #${ctx.projectNumber}; skipping`);
+      return;
+    }
+    if (ctx.dryRun) {
+      console.log(`${label}: DRY RUN — would add card to board and set "(none)" -> "${lane}"`);
+      return;
+    }
+    const itemId = await addPrToBoard(ctx.token, ctx.cfg.projectId, prNode.id);
+    item = {itemId, currentLane: null};
+    console.log(`${label}: added card to board`);
+  }
   if (item.currentLane === lane) {
     console.log(`${label}: already "${lane}"; no-op`);
     return;
@@ -80,7 +102,7 @@ async function main(): Promise<void> {
   if (values.pr) {
     const match = /^([^/]+)\/([^#]+)#(\d+)$/.exec(values.pr);
     if (!match) throw new Error(`--pr expects owner/repo#number, got: ${values.pr}`);
-    await reconcilePr(ctx, match[1], match[2], Number(match[3]));
+    await reconcilePr(ctx, match[1], match[2], Number(match[3]), true);
     return;
   }
 
@@ -89,14 +111,14 @@ async function main(): Promise<void> {
     const prs = await listOpenBoardPrs(token, org, projectNumber);
     console.log(`sweep: ${prs.length} open PR card(s) on project #${projectNumber}`);
     for (const pr of prs) {
-      await reconcilePr(ctx, pr.owner, pr.repo, pr.number);
+      await reconcilePr(ctx, pr.owner, pr.repo, pr.number, false);
     }
     return;
   }
 
   const pr = prFromEventPayload();
   if (!pr) throw new Error(`event ${eventName} has no pull_request payload and no --pr/--sweep flag given`);
-  await reconcilePr(ctx, pr.owner, pr.repo, pr.number);
+  await reconcilePr(ctx, pr.owner, pr.repo, pr.number, true);
 }
 
 await main();

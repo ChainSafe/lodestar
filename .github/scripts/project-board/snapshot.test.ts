@@ -4,6 +4,7 @@ import {buildSnapshot, pickProjectItem, type PrNode} from "./snapshot.ts";
 
 function prNode(overrides: Partial<PrNode>): PrNode {
   return {
+    id: "PR_test",
     state: "OPEN",
     isDraft: false,
     reviewRequests: {nodes: []},

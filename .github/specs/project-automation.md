@@ -39,7 +39,7 @@ Automates the Status field for PR cards on [Lodestar Team Coordination](https://
 
 ## Model: reconciler, not event rules
 
-Events do not map directly to moves. Every relevant event (and the sweep) triggers a recompute of the correct lane from the PR's **current full state** — draft flag, pending user-level review requests, non-dismissed counted reviews — and writes it. This makes the automation idempotent, self-healing (missed webhooks, coalesced events, and manual drags get corrected), and handles removed requests / dismissed reviews with no special cases. An event run reconciles only the PR that triggered it — it never touches the rest of the board; the sweep reconciles open PR cards sitting in the three automated lanes or with no status yet.
+Events do not map directly to moves. Every relevant event (and the sweep) triggers a recompute of the correct lane from the PR's **current full state** — draft flag, pending user-level review requests, non-dismissed counted reviews — and writes it. This makes the automation idempotent, self-healing (missed webhooks, coalesced events, and manual drags get corrected), and handles removed requests / dismissed reviews with no special cases. An event run reconciles only the PR that triggered it — it never touches the rest of the board. If that PR has no card yet (the built-in auto-add can lag the event), the event run adds the card itself — `addProjectV2ItemById` is idempotent with auto-add — and then places it. The sweep reconciles only open PR cards already sitting in the three automated lanes.
 
 `computeStatus(pr)` precedence:
 
@@ -56,7 +56,7 @@ Request timestamps are not exposed on pending requests; they are reconstructed f
 - Triggers:
   - `pull_request_target` (opened, ready_for_review, converted_to_draft, review_requested, review_request_removed, reopened) — runs with secrets even for fork PRs; safe because the workflow never checks out or executes PR code.
   - `pull_request_review` (submitted, dismissed) — **no secrets for fork PRs** (documented GitHub restriction), so review-driven moves on fork PRs are picked up by the sweep instead (≤15 min latency). Same-repo PRs move instantly.
-  - `schedule` — sweep every 15 minutes: recompute open PR cards in the three automated lanes or with no status; self-heals fork-PR reviews, missed events, manual drags, and auto-added cards that raced the opened event.
+  - `schedule` — sweep every 15 minutes: recompute open PR cards in the three automated lanes; self-heals fork-PR reviews, missed events, and manual drags.
 - Concurrency: one group per PR, `cancel-in-progress: false`. GitHub keeps only the newest pending run per group; coalescing is safe because the reconciler recomputes from full state.
 - Auth: the default `GITHUB_TOKEN` cannot access org projects (documented). Interim: fine-grained PAT (resource owner ChainSafe; org **Projects: read/write**, repo **Pull requests: read** + **Metadata: read**) stored as an Actions secret. Target: an org-owned GitHub App — swapping replaces the secret with an `actions/create-github-app-token` step; logic unchanged.
 - **To verify empirically before rollout:** that re-requesting review from someone who already reviewed fires `review_requested` — universally observed, but not documented by GitHub.
@@ -65,7 +65,7 @@ Request timestamps are not exposed on pending requests; they are reconstructed f
 
 PR cards on project #75 only. Status field only. Issues and PRs not on the board are ignored.
 
-- **Event runs are idempotent and unconditional:** a PR event reasserts the computed status no matter which lane the card is in — e.g. a review requested on a PR parked in Backlog moves it to Review Requested.
-- **The sweep is scoped:** it processes open PR cards whose Status is one of the three automated lanes, **plus open PR cards with no status** — the built-in auto-add workflow can land a card on the board after the PR-opened event already ran, and no event fires on card-add, so the sweep guarantees initial placement (≤15 min; e.g. a draft PR lands in In Progress). Cards parked in Backlog/Ready/Done are left alone, since a sweep carries no new signal.
+- **Event runs are idempotent and unconditional:** a PR event reasserts the computed status no matter which lane the card is in — e.g. a review requested on a PR parked in Backlog moves it to Review Requested. **Event runs also own initial placement:** if the PR's card is missing (auto-add race) the run adds it, and a card with no status gets its lane set — a PR opened as draft lands in In Progress without the author touching the board.
+- **The sweep is scoped:** it only processes open PR cards whose Status is already one of the three automated lanes. Cards with no status (old/stale PRs are triaged manually) and cards parked in Backlog/Ready/Done are left alone by the sweep, since a sweep carries no new signal. The sweep never adds cards.
 
 The lanes **In Progress ↔ Review Requested ↔ Awaiting Author** are 100% automation-owned for PR cards: cards must not be moved between them manually, and the automation reasserts the computed status on every relevant event. The same workflow will be deployed identically to every ChainSafe repo managed by this board.

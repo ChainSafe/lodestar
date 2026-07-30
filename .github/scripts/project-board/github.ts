@@ -67,6 +67,7 @@ const PR_QUERY = `
 query ($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
+      id
       state
       isDraft
       reviewRequests(first: 100) {
@@ -117,6 +118,18 @@ export async function updateItemLane(token: string, cfg: ProjectConfig, itemId: 
   await gql(token, UPDATE_MUTATION, {projectId: cfg.projectId, itemId, fieldId: cfg.statusFieldId, optionId});
 }
 
+const ADD_ITEM_MUTATION = `
+mutation ($projectId: ID!, $contentId: ID!) {
+  addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) { item { id } }
+}`;
+
+/** Idempotent with the board's built-in auto-add: returns the existing item if already on the board. */
+export async function addPrToBoard(token: string, projectId: string, contentId: string): Promise<string> {
+  type Res = {addProjectV2ItemById: {item: {id: string}}};
+  const data = await gql<Res>(token, ADD_ITEM_MUTATION, {projectId, contentId});
+  return data.addProjectV2ItemById.item.id;
+}
+
 const SWEEP_QUERY = `
 query ($org: String!, $number: Int!, $cursor: String) {
   organization(login: $org) {
@@ -144,11 +157,11 @@ export interface BoardPr {
 }
 
 /**
- * All OPEN pull requests whose card sits in one of the sweep lanes OR has no
- * status yet (auto-added cards whose opened event raced the built-in auto-add
- * get placed here). Cards parked in Backlog/Ready/Done are dropped, so the
- * sweep never even fetches their PR detail. Event runs bypass this listing
- * entirely and reassert status regardless of lane.
+ * All OPEN pull requests whose card sits in one of the sweep lanes. Statusless
+ * cards and cards parked in Backlog/Ready/Done are never touched by the sweep
+ * and are dropped here, so the sweep never even fetches their PR detail. Event
+ * runs own initial placement (adding the card if needed) and card-adding —
+ * they bypass this listing entirely and reassert status regardless of lane.
  */
 export async function listOpenBoardPrs(token: string, org: string, projectNumber: number): Promise<BoardPr[]> {
   type Item = {
@@ -173,7 +186,7 @@ export async function listOpenBoardPrs(token: string, org: string, projectNumber
     for (const item of page.nodes) {
       const c = item.content;
       const lane = item.fieldValueByName?.name ?? null;
-      const owned = lane === null || SWEEP_LANES.has(lane);
+      const owned = lane !== null && SWEEP_LANES.has(lane);
       if (owned && c?.__typename === "PullRequest" && c.state === "OPEN" && c.repository && c.number !== undefined) {
         prs.push({owner: c.repository.owner.login, repo: c.repository.name, number: c.number});
       }

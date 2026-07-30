@@ -9,10 +9,10 @@ export const STATUS_TO_LANE: Record<Status, string> = {
 };
 
 /**
- * Lanes the SWEEP processes (event runs reassert status regardless of lane).
- * Statusless cards are also swept: the built-in auto-add workflow can land a
- * card after the PR-opened event already ran, so the sweep does initial
- * placement. Cards parked in other lanes (Backlog, Ready, Done) are skipped.
+ * Lanes the SWEEP processes; statusless cards and Backlog/Ready/Done parked
+ * cards are skipped by the sweep — event runs own initial placement (adding
+ * the card if the built-in auto-add hasn't landed it yet) and reassert status
+ * regardless of lane.
  */
 export const SWEEP_LANES: ReadonlySet<string> = new Set(Object.values(STATUS_TO_LANE));
 
