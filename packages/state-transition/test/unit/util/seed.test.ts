@@ -3,18 +3,16 @@ import {describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bytesToInt} from "@lodestar/utils";
+import {generateState} from "../../../src/testUtils/state.js";
 import {
   computePayloadTimelinessCommitteeIndices,
   computeProposerIndex,
-  computeShuffledIndex,
-  getComputeShuffledIndexFn,
   getNextSyncCommitteeIndices,
   getRandaoMix,
   naiveComputePayloadTimelinessCommitteeIndices,
   naiveComputeProposerIndex,
   naiveGetNextSyncCommitteeIndices,
 } from "../../../src/util/index.js";
-import {generateState} from "../../utils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 describe("getRandaoMix", () => {
@@ -56,18 +54,6 @@ describe("computeProposerIndex", () => {
       expect(result).toBe(expected);
     });
   }
-});
-
-describe("computeShuffledIndex", () => {
-  const seed = crypto.randomBytes(32);
-  const vc = 1000;
-  const shuffledIndexFn = getComputeShuffledIndexFn(vc, seed);
-  it("should be the same to the naive version", () => {
-    for (let i = 0; i < vc; i++) {
-      const expectedIndex = computeShuffledIndex(i, vc, seed);
-      expect(shuffledIndexFn(i)).toBe(expectedIndex);
-    }
-  });
 });
 
 describe("electra getNextSyncCommitteeIndices", () => {

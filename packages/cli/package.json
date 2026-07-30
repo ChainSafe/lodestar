@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar",
-  "version": "1.40.0",
+  "version": "1.45.0",
   "description": "Command line interface for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -11,7 +11,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     }
@@ -28,23 +28,23 @@
   },
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsc -p tsconfig.build.json && pnpm write-git-data",
+    "build": "tsgo -p tsconfig.build.json && pnpm write-git-data",
     "build:release": "pnpm clean && pnpm run build",
-    "build:watch": "tsc -p tsconfig.build.json --watch",
+    "build:watch": "tsgo -p tsconfig.build.json --watch",
     "write-git-data": "node lib/util/gitData/writeGitData.js",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\" lodestar --help",
-    "check-types": "tsc",
-    "docs:build": "node --loader ts-node/esm ./docsgen/index.ts",
+    "check-types": "tsgo",
+    "docs:build": "node --import tsx ./docsgen/index.ts",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "test:sim:multifork": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/multiFork.test.ts",
-    "test:sim:mixedclient": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/mixedClient.test.ts",
-    "test:sim:endpoints": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/endpoints.test.ts",
-    "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --loader ts-node/esm test/sim/backupEthProvider.test.ts",
+    "test:sim:multifork": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --import tsx test/sim/multiFork.test.ts",
+    "test:sim:mixedclient": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --import tsx test/sim/mixedClient.test.ts",
+    "test:sim:endpoints": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --import tsx test/sim/endpoints.test.ts",
+    "test:sim:backup_eth_provider": "LODESTAR_PRESET=minimal DOTENV_CONFIG_PATH=../../.env.test node -r dotenv/config --import tsx test/sim/backupEthProvider.test.ts",
     "test": "pnpm test:unit && pnpm test:e2e",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",
@@ -60,11 +60,10 @@
     "@chainsafe/bls-keygen": "^0.4.0",
     "@chainsafe/bls-keystore": "^3.1.0",
     "@chainsafe/blst": "^2.2.0",
-    "@chainsafe/discv5": "^12.0.0",
-    "@chainsafe/enr": "^6.0.0",
-    "@chainsafe/persistent-merkle-tree": "^1.2.1",
-    "@chainsafe/pubkey-index-map": "^3.0.0",
-    "@chainsafe/ssz": "^1.2.2",
+    "@chainsafe/discv5": "^12.0.1",
+    "@chainsafe/enr": "^6.0.1",
+    "@chainsafe/persistent-merkle-tree": "^1.3.0",
+    "@chainsafe/ssz": "^1.6.2",
     "@chainsafe/threads": "^1.11.3",
     "@libp2p/crypto": "^5.1.13",
     "@libp2p/interface": "^3.1.0",
@@ -73,7 +72,6 @@
     "@lodestar/beacon-node": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",
-    "@lodestar/light-client": "workspace:^",
     "@lodestar/logger": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/state-transition": "workspace:^",
@@ -86,7 +84,6 @@
     "find-up": "^6.3.0",
     "inquirer": "^9.1.5",
     "js-yaml": "^4.1.0",
-    "prom-client": "^15.1.0",
     "proper-lockfile": "^4.1.2",
     "rimraf": "^4.4.1",
     "source-map-support": "^0.5.21",
@@ -94,7 +91,7 @@
     "yargs": "^17.7.1"
   },
   "devDependencies": {
-    "@chainsafe/as-sha256": "^1.2.0",
+    "@chainsafe/as-sha256": "^1.2.4",
     "@ethereumjs/rlp": "^4.0.1",
     "@lodestar/test-utils": "workspace:^",
     "@types/debug": "^4.1.7",
@@ -103,6 +100,7 @@
     "@types/proper-lockfile": "^4.1.4",
     "@types/tmp": "^0.2.3",
     "@types/yargs": "^17.0.24",
+    "debug": "^4.4.3",
     "ethereum-cryptography": "^2.2.1",
     "fastify": "^5.8.1",
     "tmp": "^0.2.4",

@@ -42,7 +42,7 @@ export function parseSszValidTestcase(dirpath: string, metaFilename: string): Va
  *     | vec_bool_0
  *       | serialized.ssz_snappy
  *
- * Docs: https://github.com/ethereum/eth2.0-specs/blob/master/tests/formats/ssz_generic/README.md
+ * Docs: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/ssz_generic/README.md
  */
 export function parseSszGenericInvalidTestcase(dirpath: string) {
   // The serialized value is stored in serialized.ssz_snappy

@@ -7,16 +7,22 @@ export {
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
 export {
-  ForkChoice,
-  type ForkChoiceOpts,
-  UpdateHeadOpt,
-  getCheckpointPayloadStatus,
-} from "./forkChoice/forkChoice.js";
+  type FastConfirmationBalanceSource,
+  type FastConfirmationContext,
+  type FastConfirmationMetrics,
+  type FastConfirmationResult,
+  FastConfirmationRule,
+  type ForkChoiceStateGetter,
+  type IFastConfirmationRule,
+  type IFastConfirmationStore,
+  getFastConfirmationMetrics,
+} from "./forkChoice/fastConfirmation/fastConfirmationRule.ts";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, getCommitteeFraction} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,
-  type CheckpointWithPayloadAndBalance,
-  type CheckpointWithPayloadAndTotalBalance,
+  type CheckpointWithBalance,
+  type CheckpointWithTotalBalance,
   EpochDifference,
   type IForkChoice,
   NotReorgedReason,
@@ -24,19 +30,19 @@ export {
 export * from "./forkChoice/safeBlocks.js";
 export {
   type CheckpointWithHex,
-  type CheckpointWithPayloadStatus,
   ForkChoiceStore,
   type IForkChoiceStore,
   type JustifiedBalancesGetter,
 } from "./forkChoice/store.js";
 export {type ForkChoiceMetrics, getForkChoiceMetrics} from "./metrics.js";
 export type {
+  BlockExecutionStatus,
   BlockExtraMeta,
   LVHInvalidResponse,
   LVHValidResponse,
-  MaybeValidExecutionStatus,
+  PayloadExecutionStatus,
   ProtoBlock,
   ProtoNode,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, PayloadStatus} from "./protoArray/interface.js";
+export {ExecutionStatus, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

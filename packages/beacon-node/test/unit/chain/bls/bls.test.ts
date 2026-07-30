@@ -1,9 +1,9 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {PublicKey, SecretKey, Signature} from "@chainsafe/blst";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
-import {testLogger} from "../../../utils/logger.js";
 
 describe("BlsVerifier ", () => {
   // take time for creating thread pool

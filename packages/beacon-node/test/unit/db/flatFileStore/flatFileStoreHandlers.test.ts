@@ -1,10 +1,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {PeerId} from "@libp2p/interface";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {BLOB_SIDECAR_FIXED_SIZE} from "@lodestar/params";
+import {PayloadStatus} from "@lodestar/fork-choice";
+import {BLOB_SIDECAR_FIXED_SIZE, NUMBER_OF_COLUMNS} from "@lodestar/params";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 import type {IBeaconDb} from "../../../../src/db/interface.js";
@@ -50,7 +52,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
-    store = new FlatFileStore(tmpDir, testLogger);
+    store = new FlatFileStore(tmpDir, defaultConfig, testLogger);
     await store.init();
   });
 
@@ -60,13 +62,20 @@ describe("FlatFileStore reqresp handler integration", () => {
   });
 
   describe("onBlobSidecarsByRange with flatFileStore", () => {
+    const denebConfig = createChainForkConfig({
+      ...defaultConfig,
+      DENEB_FORK_EPOCH: 0,
+    });
+
     function makeMockChainAndDb(opts: {finalizedSlot: number; headChain?: {slot: number; blockRoot: string}[]}) {
       const chain = {
-        config: defaultConfig,
+        config: denebConfig,
+        clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHead: () => ({blockRoot: ROOT_A, payloadStatus: "FULL"}),
-          getAllAncestorBlocks: () => opts.headChain ?? [],
+          getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
+          getAllAncestorBlocks: () =>
+            (opts.headChain ?? []).map((block) => ({...block, payloadStatus: PayloadStatus.FULL})),
         },
       } as unknown as IBeaconChain;
 
@@ -160,6 +169,7 @@ describe("FlatFileStore reqresp handler integration", () => {
     // Use a config with fulu enabled at epoch 0 to avoid fork-related filtering
     const fuluConfig = createChainForkConfig({
       ...defaultConfig,
+      DENEB_FORK_EPOCH: 0,
       FULU_FORK_EPOCH: 0,
     });
 
@@ -174,15 +184,23 @@ describe("FlatFileStore reqresp handler integration", () => {
         indices: number[]
       ) => Promise<(Uint8Array | undefined)[]>;
     }) {
+      const custodyColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
+      for (const column of opts.custodyColumns) {
+        custodyColumnsIndex[column] = 1;
+      }
+
       const chain = {
         config: fuluConfig,
+        clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHead: () => ({blockRoot: ROOT_A, payloadStatus: "FULL"}),
-          getAllAncestorBlocks: () => opts.headChain ?? [],
+          getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
+          getAllAncestorBlocks: () =>
+            (opts.headChain ?? []).map((block) => ({...block, payloadStatus: PayloadStatus.FULL})),
         },
         custodyConfig: {
           custodyColumns: opts.custodyColumns,
+          custodyColumnsIndex,
         },
         earliestAvailableSlot: opts.earliestAvailableSlot ?? 0,
         logger: testLogger,
@@ -201,7 +219,7 @@ describe("FlatFileStore reqresp handler integration", () => {
     }
 
     // Minimal mock peerId
-    const mockPeerId = {toString: () => "mock-peer"} as any;
+    const mockPeerId = {toString: () => "mock-peer"} as unknown as PeerId;
 
     it("should serve finalized columns from flat file store", async () => {
       const col0Data = new Uint8Array(100).fill(0x01);

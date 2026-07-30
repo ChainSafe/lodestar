@@ -1,6 +1,7 @@
 import {afterEach, beforeEach, describe, it, vi} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {BeaconStateView} from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError.js";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing.js";
@@ -17,7 +18,7 @@ describe("GossipMessageValidator", () => {
     chainStub = getMockedBeaconChain({config});
     opPool = chainStub.opPool;
 
-    const state = generateCachedState();
+    const state = new BeaconStateView(generateCachedState());
     vi.spyOn(chainStub, "getHeadState").mockReturnValue(state);
     vi.spyOn(opPool, "hasSeenAttesterSlashing");
   });

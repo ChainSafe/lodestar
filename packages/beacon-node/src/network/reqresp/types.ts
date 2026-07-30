@@ -1,8 +1,9 @@
 import {Type} from "@chainsafe/ssz";
 import {BeaconConfig} from "@lodestar/config";
-import {ForkName, ForkPostAltair, isForkPostAltair} from "@lodestar/params";
+import {ForkName, ForkPostAltair, ForkPostFulu, isForkPostAltair, isForkPostFulu} from "@lodestar/params";
 import {Protocol, ProtocolHandler, ReqRespRequest} from "@lodestar/reqresp";
 import {
+  DataColumnSidecar,
   LightClientBootstrap,
   LightClientFinalityUpdate,
   LightClientOptimisticUpdate,
@@ -14,6 +15,7 @@ import {
   altair,
   deneb,
   fulu,
+  gloas,
   phase0,
   ssz,
   sszTypesFor,
@@ -25,6 +27,8 @@ import {
   BlobSidecarsByRootRequestType,
   DataColumnSidecarsByRootRequest,
   DataColumnSidecarsByRootRequestType,
+  ExecutionPayloadEnvelopesByRootRequest,
+  ExecutionPayloadEnvelopesByRootRequestType,
 } from "../../util/types.js";
 
 export type ProtocolNoHandler = Omit<Protocol, "handler">;
@@ -38,10 +42,13 @@ export enum ReqRespMethod {
   Metadata = "metadata",
   BeaconBlocksByRange = "beacon_blocks_by_range",
   BeaconBlocksByRoot = "beacon_blocks_by_root",
+  BeaconBlocksByHead = "beacon_blocks_by_head",
   BlobSidecarsByRange = "blob_sidecars_by_range",
   BlobSidecarsByRoot = "blob_sidecars_by_root",
   DataColumnSidecarsByRange = "data_column_sidecars_by_range",
   DataColumnSidecarsByRoot = "data_column_sidecars_by_root",
+  ExecutionPayloadEnvelopesByRoot = "execution_payload_envelopes_by_root",
+  ExecutionPayloadEnvelopesByRange = "execution_payload_envelopes_by_range",
   LightClientBootstrap = "light_client_bootstrap",
   LightClientUpdatesByRange = "light_client_updates_by_range",
   LightClientFinalityUpdate = "light_client_finality_update",
@@ -56,10 +63,13 @@ export type RequestBodyByMethod = {
   [ReqRespMethod.Metadata]: null;
   [ReqRespMethod.BeaconBlocksByRange]: phase0.BeaconBlocksByRangeRequest;
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequest;
+  [ReqRespMethod.BeaconBlocksByHead]: fulu.BeaconBlocksByHeadRequest;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecarsByRangeRequest;
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequest;
   [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecarsByRangeRequest;
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequest;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequest;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.ExecutionPayloadEnvelopesByRangeRequest;
   [ReqRespMethod.LightClientBootstrap]: Root;
   [ReqRespMethod.LightClientUpdatesByRange]: altair.LightClientUpdatesByRange;
   [ReqRespMethod.LightClientFinalityUpdate]: null;
@@ -74,10 +84,13 @@ type ResponseBodyByMethod = {
   // Do not matter
   [ReqRespMethod.BeaconBlocksByRange]: SignedBeaconBlock;
   [ReqRespMethod.BeaconBlocksByRoot]: SignedBeaconBlock;
+  [ReqRespMethod.BeaconBlocksByHead]: SignedBeaconBlock;
   [ReqRespMethod.BlobSidecarsByRange]: deneb.BlobSidecar;
   [ReqRespMethod.BlobSidecarsByRoot]: deneb.BlobSidecar;
-  [ReqRespMethod.DataColumnSidecarsByRange]: fulu.DataColumnSidecar;
-  [ReqRespMethod.DataColumnSidecarsByRoot]: fulu.DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRange]: DataColumnSidecar;
+  [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecar;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: gloas.SignedExecutionPayloadEnvelope;
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: gloas.SignedExecutionPayloadEnvelope;
 
   [ReqRespMethod.LightClientBootstrap]: LightClientBootstrap;
   [ReqRespMethod.LightClientUpdatesByRange]: LightClientUpdate;
@@ -101,10 +114,13 @@ export const requestSszTypeByMethod: (
 
   [ReqRespMethod.BeaconBlocksByRange]: ssz.phase0.BeaconBlocksByRangeRequest,
   [ReqRespMethod.BeaconBlocksByRoot]: BeaconBlocksByRootRequestType(fork, config),
+  [ReqRespMethod.BeaconBlocksByHead]: ssz.fulu.BeaconBlocksByHeadRequest,
   [ReqRespMethod.BlobSidecarsByRange]: ssz.deneb.BlobSidecarsByRangeRequest,
   [ReqRespMethod.BlobSidecarsByRoot]: BlobSidecarsByRootRequestType(fork, config),
   [ReqRespMethod.DataColumnSidecarsByRange]: ssz.fulu.DataColumnSidecarsByRangeRequest,
   [ReqRespMethod.DataColumnSidecarsByRoot]: DataColumnSidecarsByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: ExecutionPayloadEnvelopesByRootRequestType(config),
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: ssz.gloas.ExecutionPayloadEnvelopesByRangeRequest,
 
   [ReqRespMethod.LightClientBootstrap]: ssz.Root,
   [ReqRespMethod.LightClientUpdatesByRange]: ssz.altair.LightClientUpdatesByRange,
@@ -130,13 +146,16 @@ export const responseSszTypeByMethod: {[K in ReqRespMethod]: ResponseTypeGetter<
     version === Version.V1 ? ssz.phase0.Metadata : version === Version.V2 ? ssz.altair.Metadata : ssz.fulu.Metadata,
   [ReqRespMethod.BeaconBlocksByRange]: blocksResponseType,
   [ReqRespMethod.BeaconBlocksByRoot]: blocksResponseType,
+  [ReqRespMethod.BeaconBlocksByHead]: (fork) => ssz[fork].SignedBeaconBlock,
   [ReqRespMethod.BlobSidecarsByRange]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.BlobSidecarsByRoot]: () => ssz.deneb.BlobSidecar,
   [ReqRespMethod.LightClientBootstrap]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientBootstrap,
   [ReqRespMethod.LightClientUpdatesByRange]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientUpdate,
   [ReqRespMethod.LightClientFinalityUpdate]: (fork) => sszTypesFor(onlyPostAltairFork(fork)).LightClientFinalityUpdate,
-  [ReqRespMethod.DataColumnSidecarsByRange]: () => ssz.fulu.DataColumnSidecar,
-  [ReqRespMethod.DataColumnSidecarsByRoot]: () => ssz.fulu.DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRange]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
+  [ReqRespMethod.DataColumnSidecarsByRoot]: (fork) => sszTypesFor(onlyPostFuluFork(fork)).DataColumnSidecar,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: () => ssz.gloas.SignedExecutionPayloadEnvelope,
   [ReqRespMethod.LightClientOptimisticUpdate]: (fork) =>
     sszTypesFor(onlyPostAltairFork(fork)).LightClientOptimisticUpdate,
 };
@@ -146,6 +165,13 @@ function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
     return fork;
   }
   throw Error(`Not a post-altair fork ${fork}`);
+}
+
+function onlyPostFuluFork(fork: ForkName): ForkPostFulu {
+  if (isForkPostFulu(fork)) {
+    return fork;
+  }
+  throw Error(`Not a post-fulu fork ${fork}`);
 }
 
 export type RequestTypedContainer = {

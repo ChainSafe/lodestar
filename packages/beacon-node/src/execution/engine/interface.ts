@@ -1,5 +1,7 @@
 import {routes} from "@lodestar/api";
 import {
+  BUILDER_DEPOSIT_REQUEST_TYPE,
+  BUILDER_EXIT_REQUEST_TYPE,
   CONSOLIDATION_REQUEST_TYPE,
   DEPOSIT_REQUEST_TYPE,
   ForkName,
@@ -51,10 +53,18 @@ export enum ExecutionEngineState {
 export type ExecutionRequestType =
   | typeof DEPOSIT_REQUEST_TYPE
   | typeof WITHDRAWAL_REQUEST_TYPE
-  | typeof CONSOLIDATION_REQUEST_TYPE;
+  | typeof CONSOLIDATION_REQUEST_TYPE
+  | typeof BUILDER_DEPOSIT_REQUEST_TYPE
+  | typeof BUILDER_EXIT_REQUEST_TYPE;
 
 export function isExecutionRequestType(type: number): type is ExecutionRequestType {
-  return type === DEPOSIT_REQUEST_TYPE || type === WITHDRAWAL_REQUEST_TYPE || type === CONSOLIDATION_REQUEST_TYPE;
+  return (
+    type === DEPOSIT_REQUEST_TYPE ||
+    type === WITHDRAWAL_REQUEST_TYPE ||
+    type === CONSOLIDATION_REQUEST_TYPE ||
+    type === BUILDER_DEPOSIT_REQUEST_TYPE ||
+    type === BUILDER_EXIT_REQUEST_TYPE
+  );
 }
 
 export type ExecutePayloadResponse =
@@ -87,6 +97,8 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: string;
   withdrawals?: capella.Withdrawal[];
   parentBeaconBlockRoot?: Uint8Array;
+  slotNumber?: number; // EIP-7843
+  targetGasLimit?: number; // GLOAS (PayloadAttributesV4, execution-apis#796)
 };
 
 export type VersionedHashes = Uint8Array[];
@@ -128,7 +140,7 @@ export interface IExecutionEngine {
    *   corresponding state, up to and including finalized_block_hash.
    *
    * The call of the notify_forkchoice_updated function maps on the POS_FORKCHOICE_UPDATED event defined in the EIP-3675.
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/fork-choice.md#notify_forkchoice_updated
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.7/specs/merge/fork-choice.md#notify_forkchoice_updated
    *
    * Should be called in response to fork-choice head and finalized events
    */
@@ -145,7 +157,7 @@ export interface IExecutionEngine {
    * since the corresponding call to prepare_payload method.
    *
    * Required for block producing
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.7/specs/merge/validator.md#get_payload
    */
   getPayload(
     fork: ForkName,

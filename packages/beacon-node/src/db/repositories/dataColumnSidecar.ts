@@ -18,8 +18,10 @@ type BlockRoot = Root;
  */
 export class DataColumnSidecarRepository extends PrefixedRepository<BlockRoot, ColumnIndex, DataColumnSidecar> {
   constructor(config: ChainForkConfig, db: Db) {
-    const bucket = Bucket.fulu_dataColumnSidecars;
-    super(config, db, bucket, ssz.fulu.DataColumnSidecar, getBucketNameByValue(bucket));
+    const bucket = Bucket.allForks_dataColumnSidecars;
+    // Type won't be used since we select it dynamically based on fork
+    const type = ssz.fulu.DataColumnSidecar;
+    super(config, db, bucket, type, getBucketNameByValue(bucket));
   }
 
   /**

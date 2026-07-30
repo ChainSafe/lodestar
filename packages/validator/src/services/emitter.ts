@@ -8,10 +8,20 @@ export enum ValidatorEvent {
    * This event signals that the node chain has a new head.
    */
   chainHead = "chainHead",
+  /**
+   * This event signals that an execution payload and blobs are available for payload attestation.
+   */
+  executionPayloadAvailable = "executionPayloadAvailable",
 }
+
+export type ExecutionPayloadAvailableEventData = {
+  slot: Slot;
+  blockRoot: string;
+};
 
 export type ValidatorEvents = {
   [ValidatorEvent.chainHead]: (head: HeadEventData) => void;
+  [ValidatorEvent.executionPayloadAvailable]: (payload: ExecutionPayloadAvailableEventData) => void;
 };
 
 /**

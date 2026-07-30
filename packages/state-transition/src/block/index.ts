@@ -13,10 +13,10 @@ import {processBlobKzgCommitments} from "./processBlobKzgCommitments.js";
 import {processBlockHeader} from "./processBlockHeader.js";
 import {processEth1Data} from "./processEth1Data.js";
 import {processExecutionPayload} from "./processExecutionPayload.js";
-import {processExecutionPayloadBid} from "./processExecutionPayloadBid.ts";
-import {processExecutionPayloadEnvelope} from "./processExecutionPayloadEnvelope.ts";
+import {processExecutionPayloadBid} from "./processExecutionPayloadBid.js";
 import {processOperations} from "./processOperations.js";
-import {processPayloadAttestation} from "./processPayloadAttestation.ts";
+import {processParentExecutionPayload} from "./processParentExecutionPayload.js";
+import {processPayloadAttestation} from "./processPayloadAttestation.js";
 import {processRandao} from "./processRandao.js";
 import {processSyncAggregate} from "./processSyncCommittee.js";
 import {processWithdrawals} from "./processWithdrawals.js";
@@ -32,12 +32,14 @@ export {
   processWithdrawals,
   processExecutionPayloadBid,
   processPayloadAttestation,
-  processExecutionPayloadEnvelope,
+  processParentExecutionPayload,
 };
 
 export * from "./externalData.js";
 export * from "./initiateValidatorExit.js";
 export * from "./isValidIndexedAttestation.js";
+export * from "./processBuilderDepositRequest.js";
+export * from "./processBuilderExitRequest.js";
 export * from "./processDepositRequest.js";
 export * from "./processOperations.js";
 
@@ -51,10 +53,16 @@ export function processBlock(
 ): void {
   const {verifySignatures = true} = opts ?? {};
 
+  // Apply the parent's deferred payload effects before everything else. Must run before
+  // processBlockHeader and processExecutionPayloadBid so subsequent steps see the updated state.
+  if (fork >= ForkSeq.gloas) {
+    processParentExecutionPayload(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
+  }
+
   processBlockHeader(state, block);
 
   if (fork >= ForkSeq.gloas) {
-    // After gloas, processWithdrawals does not take a payload parameter
+    // Parent payload's execution requests were already applied by processParentExecutionPayload above
     processWithdrawals(fork, state as CachedBeaconStateGloas);
   } else if (fork >= ForkSeq.capella) {
     const fullOrBlindedPayload = getFullOrBlindedPayload(block);
@@ -67,7 +75,9 @@ export function processBlock(
 
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
-  // TODO GLOAS: We call processExecutionPayload somewhere else post-gloas
+  // Post-gloas: process_execution_payload is not part of block processing. The parent's payload
+  // effects are applied earlier via processParentExecutionPayload, and each execution payload is
+  // verified out-of-band via verifyExecutionPayloadEnvelope when it arrives.
   if (
     fork < ForkSeq.gloas &&
     fork >= ForkSeq.bellatrix &&
@@ -77,7 +87,10 @@ export function processBlock(
   }
 
   if (fork >= ForkSeq.gloas) {
-    processExecutionPayloadBid(state as CachedBeaconStateGloas, block as BeaconBlock<ForkPostGloas>);
+    processExecutionPayloadBid(
+      state as CachedBeaconStateGloas,
+      (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
+    );
   }
 
   processRandao(state, block, verifySignatures);

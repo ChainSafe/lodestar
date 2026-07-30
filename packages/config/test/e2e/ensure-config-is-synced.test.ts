@@ -1,9 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
 import {fetch, fromHex} from "@lodestar/utils";
-import {ethereumConsensusSpecsTests} from "../../../beacon-node/test/spec/specTestVersioning.js";
 import {chainConfig as mainnetChainConfig} from "../../src/chainConfig/configs/mainnet.js";
 import {chainConfig as minimalChainConfig} from "../../src/chainConfig/configs/minimal.js";
 import {ChainConfig} from "../../src/chainConfig/types.js";
+import specTestsVersions from "../spec-tests-version.json" with {type: "json"};
 
 // Not e2e, but slow. Run with e2e tests
 
@@ -18,6 +18,7 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // EIP-7805 (Inclusion Lists) - not yet implemented in Lodestar
   "VIEW_FREEZE_CUTOFF_BPS" as keyof ChainConfig,
   "INCLUSION_LIST_SUBMISSION_DUE_BPS" as keyof ChainConfig,
+  "INCLUSION_LIST_DUE_BPS" as keyof ChainConfig,
   "PROPOSER_INCLUSION_LIST_CUTOFF_BPS" as keyof ChainConfig,
   "MAX_REQUEST_INCLUSION_LIST" as keyof ChainConfig,
   "MAX_BYTES_PER_INCLUSION_LIST" as keyof ChainConfig,
@@ -28,6 +29,13 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // Future spec params not yet in Lodestar
   "EPOCHS_PER_SHUFFLING_PHASE" as keyof ChainConfig,
   "PROPOSER_SELECTION_GAP" as keyof ChainConfig,
+  // Future forks not yet implemented in Lodestar
+  "HEZE_FORK_VERSION" as keyof ChainConfig,
+  "HEZE_FORK_EPOCH" as keyof ChainConfig,
+  "EIP7928_FORK_VERSION" as keyof ChainConfig,
+  "EIP7928_FORK_EPOCH" as keyof ChainConfig,
+  "EIP8025_FORK_VERSION" as keyof ChainConfig,
+  "EIP8025_FORK_EPOCH" as keyof ChainConfig,
   // Network-specific fork epochs and versions - these vary per network deployment
   // and are not meant to be synced from the spec defaults
   "ALTAIR_FORK_EPOCH",
@@ -61,12 +69,18 @@ describe("Ensure chainConfig is synced", () => {
   vi.setConfig({testTimeout: 60 * 1000});
 
   it("mainnet chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig("mainnet", ethereumConsensusSpecsTests.specVersion);
+    const remoteConfig = await downloadRemoteConfig(
+      "mainnet",
+      specTestsVersions.ethereumConsensusSpecsTests.specVersion
+    );
     assertCorrectConfig({...mainnetChainConfig}, remoteConfig);
   });
 
   it("minimal chainConfig values match spec", async () => {
-    const remoteConfig = await downloadRemoteConfig("minimal", ethereumConsensusSpecsTests.specVersion);
+    const remoteConfig = await downloadRemoteConfig(
+      "minimal",
+      specTestsVersions.ethereumConsensusSpecsTests.specVersion
+    );
     assertCorrectConfig({...minimalChainConfig}, remoteConfig);
   });
 });

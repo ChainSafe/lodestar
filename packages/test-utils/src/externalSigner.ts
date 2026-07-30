@@ -3,7 +3,7 @@ import path from "node:path";
 import {dirSync as tmpDirSync} from "tmp";
 import {ForkSeq} from "@lodestar/params";
 import {fetch, retry, withTimeout} from "@lodestar/utils";
-import {runDockerContainer} from "./dockercontainer.ts";
+import {runDockerContainer} from "./dockercontainer.js";
 
 const web3signerVersion = "25.11.0";
 const web3signerImage = `consensys/web3signer:${web3signerVersion}`;

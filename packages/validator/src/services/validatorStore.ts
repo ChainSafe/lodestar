@@ -9,6 +9,8 @@ import {
   DOMAIN_BEACON_BUILDER,
   DOMAIN_BEACON_PROPOSER,
   DOMAIN_CONTRIBUTION_AND_PROOF,
+  DOMAIN_PROPOSER_PREFERENCES,
+  DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
@@ -79,7 +81,8 @@ type DefaultProposerConfig = {
   feeRecipient: ExecutionAddress;
   builder: {
     gasLimit: number;
-    selection: routes.validator.BuilderSelection;
+    // Left undefined when not configured so the fork-appropriate default can be resolved per slot
+    selection?: routes.validator.BuilderSelection;
     boostFactor: bigint;
   };
 };
@@ -180,7 +183,7 @@ export class ValidatorStore {
       feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
         gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
-        selection: defaultConfig.builder?.selection ?? defaultOptions.builderSelection,
+        selection: defaultConfig.builder?.selection,
         boostFactor: builderBoostFactor,
       },
     };
@@ -276,9 +279,21 @@ export class ValidatorStore {
     delete validatorData.graffiti;
   }
 
-  getBuilderSelectionParams(pubkeyHex: PubkeyHex): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+  getBuilderSelectionParams(
+    pubkeyHex: PubkeyHex,
+    slot?: Slot
+  ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+    // Builder bids post-gloas are in-protocol over p2p, so the default strategy uses them
+    // (as if `--builder` was set), unless the validator explicitly opted out. Pre-gloas
+    // there is no in-protocol builder, so the default remains local-only (executiononly).
+    const defaultSelection =
+      slot !== undefined && this.config.getForkSeq(slot) >= ForkSeq.gloas
+        ? defaultOptions.builderAliasSelection
+        : defaultOptions.builderSelection;
     const selection =
-      this.validators.get(pubkeyHex)?.builder?.selection ?? this.defaultProposerConfig.builder.selection;
+      this.validators.get(pubkeyHex)?.builder?.selection ??
+      this.defaultProposerConfig.builder.selection ??
+      defaultSelection;
 
     let boostFactor: bigint;
     switch (selection) {
@@ -496,11 +511,13 @@ export class ValidatorStore {
     logger?: LoggerVc
   ): Promise<gloas.SignedExecutionPayloadEnvelope> {
     // Make sure the envelope slot is not higher than the current slot to avoid potential attacks.
-    if (envelope.slot > currentSlot) {
-      throw Error(`Not signing envelope with slot ${envelope.slot} greater than current slot ${currentSlot}`);
+    if (envelope.payload.slotNumber > currentSlot) {
+      throw Error(
+        `Not signing envelope with slot ${envelope.payload.slotNumber} greater than current slot ${currentSlot}`
+      );
     }
 
-    const signingSlot = envelope.slot;
+    const signingSlot = envelope.payload.slotNumber;
     const domain = this.config.getDomain(signingSlot, DOMAIN_BEACON_BUILDER);
     const signingRoot = computeSigningRoot(ssz.gloas.ExecutionPayloadEnvelope, envelope, domain);
 
@@ -603,9 +620,11 @@ export class ValidatorStore {
     const signingSlot = aggregate.data.slot;
     const domain = this.config.getDomain(signingSlot, DOMAIN_AGGREGATE_AND_PROOF);
     const isPostElectra = this.config.getForkSeq(signingSlot) >= ForkSeq.electra;
-    const signingRoot = isPostElectra
-      ? computeSigningRoot(ssz.electra.AggregateAndProof, aggregateAndProof, domain)
-      : computeSigningRoot(ssz.phase0.AggregateAndProof, aggregateAndProof, domain);
+    const signingRoot = computeSigningRoot(
+      this.config.getForkTypes(signingSlot).AggregateAndProof,
+      aggregateAndProof,
+      domain
+    );
 
     const signableMessage: SignableMessage = {
       type: isPostElectra ? SignableMessageType.AGGREGATE_AND_PROOF_V2 : SignableMessageType.AGGREGATE_AND_PROOF,
@@ -662,6 +681,77 @@ export class ValidatorStore {
 
     return {
       message: contributionAndProof,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signPayloadAttestation(
+    duty: routes.validator.PtcDuty,
+    data: gloas.PayloadAttestationData,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<gloas.PayloadAttestationMessage> {
+    if (data.slot > currentSlot) {
+      throw Error(`Not signing payload attestation with slot ${data.slot} greater than current slot ${currentSlot}`);
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+    this.validatePtcDuty(duty, data);
+
+    const signingSlot = data.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_PTC_ATTESTER);
+    const signingRoot = computeSigningRoot(ssz.gloas.PayloadAttestationData, data, domain);
+
+    logger?.debug("Signing payload attestation message", {
+      slot: signingSlot,
+      beaconBlockRoot: toRootHex(data.beaconBlockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.PAYLOAD_ATTESTATION,
+      data,
+    };
+
+    return {
+      validatorIndex: duty.validatorIndex,
+      data,
+      signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  async signProposerPreferences(
+    duty: routes.validator.ProposerDuty,
+    dependentRoot: Uint8Array,
+    feeRecipient: ExecutionAddress,
+    gasLimit: number,
+    currentSlot: Slot
+  ): Promise<gloas.SignedProposerPreferences> {
+    if (duty.slot <= currentSlot) {
+      throw Error(`Not signing proposer preferences for past slot ${duty.slot} (current ${currentSlot})`);
+    }
+
+    this.assertDoppelgangerSafe(duty.pubkey);
+
+    const message: gloas.ProposerPreferences = {
+      dependentRoot,
+      proposalSlot: duty.slot,
+      validatorIndex: duty.validatorIndex,
+      feeRecipient: fromHex(feeRecipient),
+      targetGasLimit: gasLimit,
+    };
+
+    const signingSlot = duty.slot;
+    const domain = this.config.getDomain(signingSlot, DOMAIN_PROPOSER_PREFERENCES);
+    const signingRoot = computeSigningRoot(ssz.gloas.ProposerPreferences, message, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.PROPOSER_PREFERENCES,
+      data: message,
+    };
+
+    return {
+      message,
       signature: await this.getSignature(duty.pubkey, signingRoot, signingSlot, signableMessage),
     };
   }
@@ -847,6 +937,12 @@ export class ValidatorStore {
       }
     } else if (isPostElectra && data.index !== 0) {
       throw Error(`Non-zero committee index post-electra during signing: att.committeeIndex ${data.index}`);
+    }
+  }
+
+  private validatePtcDuty(duty: routes.validator.PtcDuty, data: gloas.PayloadAttestationData): void {
+    if (duty.slot !== data.slot) {
+      throw Error(`Inconsistent PTC duties during signing: duty.slot ${duty.slot} != data.slot ${data.slot}`);
     }
   }
 

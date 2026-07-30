@@ -5,18 +5,19 @@ import {
   BUILDER_INDEX_SELF_BUILD,
   ForkPostBellatrix,
   ForkPostFulu,
+  ForkPostGloas,
   ForkPreGloas,
   NUMBER_OF_COLUMNS,
   SLOTS_PER_HISTORICAL_ROOT,
   isForkPostBellatrix,
   isForkPostDeneb,
-  isForkPostElectra,
   isForkPostFulu,
   isForkPostGloas,
 } from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeTimeAtSlot,
+  isStatePostGloas,
   reconstructSignedBlockContents,
   signedBeaconBlockToBlinded,
   signedBlockToSignedHeader,
@@ -31,15 +32,24 @@ import {
   fulu,
   gloas,
   isDenebBlockContents,
+  isSignedExecutionPayloadEnvelopeContents,
   sszTypesFor,
 } from "@lodestar/types";
 import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
+import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
 import {verifyBlocksInEpoch} from "../../../../chain/blocks/verifyBlock.js";
+import {verifyExecutionPayloadEnvelope} from "../../../../chain/blocks/verifyExecutionPayloadEnvelope.js";
 import {BeaconChain} from "../../../../chain/chain.js";
 import {ChainEvent} from "../../../../chain/emitter.js";
-import {BlockError, BlockErrorCode, BlockGossipError} from "../../../../chain/errors/index.js";
+import {
+  BlockError,
+  BlockErrorCode,
+  BlockGossipError,
+  ExecutionPayloadEnvelopeError,
+  ExecutionPayloadEnvelopeErrorCode,
+} from "../../../../chain/errors/index.js";
 import {
   BlockType,
   ProduceFullBellatrix,
@@ -47,7 +57,10 @@ import {
   ProduceFullFulu,
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
+import {RegenCaller} from "../../../../chain/regen/index.js";
 import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
+import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {
   computePreFuluKzgCommitmentsInclusionProof,
@@ -55,7 +68,11 @@ import {
   kzgCommitmentToVersionedHash,
   reconstructBlobs,
 } from "../../../../util/blobs.js";
-import {getDataColumnSidecarsForGloas, getDataColumnSidecarsFromBlock} from "../../../../util/dataColumns.js";
+import {
+  getBlobKzgCommitments,
+  getDataColumnSidecarsFromBlock,
+  getGloasDataColumnSidecars,
+} from "../../../../util/dataColumns.js";
 import {isOptimisticBlock} from "../../../../util/forkChoice.js";
 import {kzg} from "../../../../util/kzg.js";
 import {promiseAllMaybeAsync} from "../../../../util/promises.js";
@@ -86,7 +103,7 @@ export function getBeaconBlockApi({
   ApiModules,
   "chain" | "config" | "metrics" | "network" | "db"
 >): ApplicationMethods<routes.beacon.block.Endpoints> {
-  const publishBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
+  const publishBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlockV2"] = async (
     {signedBlockContents, broadcastValidation},
     _context,
     opts: PublishBlockOpts = {}
@@ -97,17 +114,32 @@ export function getBeaconBlockApi({
     const fork = config.getForkName(slot);
     const blockRoot = toRootHex(chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
 
-    // TODO GLOAS: handle new BlockInput type
     const blockForImport = chain.seenBlockInputCache.getByBlock({
       block: signedBlock,
       source: BlockInputSource.api,
       seenTimestampSec,
       blockRootHex: blockRoot,
     });
-    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecars;
+
+    if (isForkPostGloas(fork)) {
+      chain.seenPayloadEnvelopeInputCache.add({
+        blockRootHex: blockRoot,
+        block: signedBlock as SignedBeaconBlock<ForkPostGloas>,
+        forkName: fork,
+        sampledColumns: chain.custodyConfig.sampledColumns,
+        custodyColumns: chain.custodyConfig.custodyColumns,
+        timeCreatedSec: seenTimestampSec,
+      });
+    }
+
+    let blobSidecars: deneb.BlobSidecars, dataColumnSidecars: fulu.DataColumnSidecar[];
 
     if (isDenebBlockContents(signedBlockContents)) {
-      if (isForkPostFulu(fork)) {
+      if (isForkPostGloas(fork)) {
+        // After gloas, data columns are not published with the block but when publishing the execution payload envelope
+        blobSidecars = [];
+        dataColumnSidecars = [];
+      } else if (isForkPostFulu(fork)) {
         const timer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
         // If the block was produced by this node, we will already have computed cells
         // Otherwise, we will compute them from the blobs in this function
@@ -122,7 +154,7 @@ export function getBeaconBlockApi({
           config,
           signedBlock as SignedBeaconBlock<ForkPostFulu>,
           cellsAndProofs
-        );
+        ) as fulu.DataColumnSidecar[];
         timer?.();
         blobSidecars = [];
       } else if (isForkPostDeneb(fork)) {
@@ -182,11 +214,19 @@ export function getBeaconBlockApi({
           try {
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
-            if (error instanceof BlockGossipError && error.type.code === BlockErrorCode.ALREADY_KNOWN) {
-              chain.logger.debug("Ignoring known block during publishing", valLogMeta);
-              // Blocks might already be published by another node as part of a fallback setup or DVT cluster
-              // and can reach our node by gossip before the api. The error can be ignored and should not result in a 500 response.
-              return;
+            if (error instanceof BlockGossipError) {
+              switch (error.type.code) {
+                case BlockErrorCode.ALREADY_KNOWN:
+                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                  return;
+                case BlockErrorCode.REPEAT_PROPOSAL:
+                  // The proposer already produced a block for this slot. For a solo setup this is a
+                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
+                  // expected on every block where another node published first.
+                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
+                  return;
+              }
             }
 
             chain.logger.error("Gossip validations failed while publishing the block", valLogMeta, error as Error);
@@ -208,7 +248,7 @@ export function getBeaconBlockApi({
         if (!blockLocallyProduced) {
           const parentBlock = chain.forkChoice.getBlockDefaultStatus(signedBlock.message.parentRoot);
           if (parentBlock === null) {
-            chain.emitter.emit(ChainEvent.unknownParent, {
+            chain.emitter.emit(ChainEvent.blockUnknownParent, {
               blockInput: blockForImport,
               peer: IDENTITY_PEER_ID,
               source: BlockInputSource.api,
@@ -219,13 +259,13 @@ export function getBeaconBlockApi({
               "api_reject_parent_unknown"
             );
             throw new BlockError(signedBlock, {
-              code: BlockErrorCode.PARENT_UNKNOWN,
+              code: BlockErrorCode.PARENT_BLOCK_UNKNOWN,
               parentRoot: toRootHex(signedBlock.message.parentRoot),
             });
           }
 
           try {
-            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], {
+            await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], null, {
               ...opts,
               verifyOnly: true,
               skipVerifyBlockSignatures: true,
@@ -302,8 +342,12 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-              chain.emitter.emit(ChainEvent.unknownParent, {
+            if (
+              e instanceof BlockError &&
+              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
+                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
+            ) {
+              chain.emitter.emit(ChainEvent.blockUnknownParent, {
                 blockInput: blockForImport,
                 peer: IDENTITY_PEER_ID,
                 source: BlockInputSource.api,
@@ -312,7 +356,9 @@ export function getBeaconBlockApi({
             throw e;
           }),
     ];
-    const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
+    const sentPeersArr = await promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
+      publishPromises
+    );
 
     if (isForkPostGloas(fork)) {
       // After gloas, data columns are not published with the block but when publishing the execution payload envelope
@@ -323,10 +369,13 @@ export function getBeaconBlockApi({
       // + 1 because we publish to beacon_block first
       for (let i = 0; i < dataColumnSidecars.length; i++) {
         // + 1 because we publish to beacon_block first
-        const sentPeers = sentPeersArr[i + 1] as number;
-        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar() api
+        const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
+        // sent peers could be 0 as we set `allowPublishToZeroTopicPeers=true` in network.publishDataColumnSidecar()
         metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
-        if (sentPeers === 0) {
+        // A duplicate publish (alreadyPublished=true) means the column is already propagating on the network —
+        // expected in self-build flows where peers gossip columns back to us before we publish the envelope.
+        // Only warn when we genuinely failed to reach any peer. See https://github.com/ChainSafe/lodestar/issues/9527.
+        if (sentPeers === 0 && !alreadyPublished) {
           columnsPublishedWithZeroPeers++;
         }
       }
@@ -372,8 +421,8 @@ export function getBeaconBlockApi({
     }
   };
 
-  const publishBlindedBlock: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlock"] = async (
-    {signedBlindedBlock},
+  const publishBlindedBlockV2: ApplicationMethods<routes.beacon.block.Endpoints>["publishBlindedBlockV2"] = async (
+    {signedBlindedBlock, broadcastValidation},
     context,
     opts: PublishBlockOpts = {}
   ) => {
@@ -403,7 +452,7 @@ export function getBeaconBlockApi({
       );
 
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, opts);
+      return publishBlockV2({signedBlockContents, broadcastValidation}, {...context, sszBytes: null}, opts);
     }
 
     const source = ProducedBlockSource.builder;
@@ -429,7 +478,11 @@ export function getBeaconBlockApi({
       //
       // see: https://github.com/ChainSafe/lodestar/issues/5404
       chain.logger.info("Publishing assembled block", {slot, blockRoot, source});
-      return publishBlock({signedBlockContents}, {...context, sszBytes: null}, {...opts, ignoreIfKnown: true});
+      return publishBlockV2(
+        {signedBlockContents, broadcastValidation},
+        {...context, sszBytes: null},
+        {...opts, ignoreIfKnown: true}
+      );
     }
   };
 
@@ -564,23 +617,6 @@ export function getBeaconBlockApi({
       };
     },
 
-    async getBlockAttestations({blockId}) {
-      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
-      const fork = config.getForkName(block.message.slot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getBlockAttestationsV2 to retrieve block attestations for post-electra fork=${fork}`
-        );
-      }
-
-      return {
-        data: block.message.body.attestations,
-        meta: {executionOptimistic, finalized},
-      };
-    },
-
     async getBlockAttestationsV2({blockId}) {
       const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
       return {
@@ -605,7 +641,7 @@ export function getBeaconBlockApi({
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
           return {
-            data: {root: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)},
+            data: {root: state.getBlockRootAtSlot(slot)},
             meta: {
               executionOptimistic: isOptimisticBlock(head),
               finalized: computeEpochAtSlot(slot) <= chain.forkChoice.getFinalizedCheckpoint().epoch,
@@ -628,89 +664,221 @@ export function getBeaconBlockApi({
       };
     },
 
-    publishBlock,
-    publishBlindedBlock,
+    publishBlockV2,
+    publishBlindedBlockV2,
 
-    async publishBlindedBlockV2(args, context, opts) {
-      await publishBlindedBlock(args, context, opts);
-    },
-
-    async publishBlockV2(args, context, opts) {
-      await publishBlock(args, context, opts);
-    },
-
-    async publishExecutionPayloadEnvelope({signedExecutionPayloadEnvelope}) {
+    async publishExecutionPayloadEnvelope({signedEnvelopeOrContents, broadcastValidation}) {
       const seenTimestampSec = Date.now() / 1000;
+
+      const blobDataIncluded = isSignedExecutionPayloadEnvelopeContents(signedEnvelopeOrContents);
+      let signedExecutionPayloadEnvelope: gloas.SignedExecutionPayloadEnvelope;
+      // Blobs and KZG proofs submitted alongside the envelope in the stateless flow
+      let submittedContents: {kzgProofs: deneb.KZGProofs; blobs: deneb.Blobs} | null = null;
+
+      if (blobDataIncluded) {
+        signedExecutionPayloadEnvelope = signedEnvelopeOrContents.signedExecutionPayloadEnvelope;
+        submittedContents = {kzgProofs: signedEnvelopeOrContents.kzgProofs, blobs: signedEnvelopeOrContents.blobs};
+      } else {
+        // Stateful flow, blobs and KZG proofs are attached from the block production cache below
+        signedExecutionPayloadEnvelope = signedEnvelopeOrContents;
+      }
+
       const envelope = signedExecutionPayloadEnvelope.message;
-      const slot = envelope.slot;
+      const slot = envelope.payload.slotNumber;
       const fork = config.getForkName(slot);
       const blockRootHex = toRootHex(envelope.beaconBlockRoot);
+      const blockHashHex = toRootHex(envelope.payload.blockHash);
 
       if (!isForkPostGloas(fork)) {
         throw new ApiError(400, `publishExecutionPayloadEnvelope not supported for pre-gloas fork=${fork}`);
       }
 
-      // TODO GLOAS: review checks, do we want to implement `broadcast_validation`?
-      const block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+      let block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
       if (block === null) {
-        throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+        // Only wait if the envelope is for the current slot
+        if (chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
+          chain.logger.debug("Execution payload envelope received before block, waiting for block to be imported", {
+            blockRoot: blockRootHex,
+            slot,
+          });
+          await chain.waitForBlock(slot, blockRootHex);
+          block = chain.forkChoice.getBlockHex(blockRootHex, PayloadStatus.EMPTY);
+        }
+        if (block === null) {
+          throw new ApiError(404, `Block not found for beacon block root ${blockRootHex}`);
+        }
       }
       if (block.slot !== slot) {
         throw new ApiError(400, `Envelope slot ${slot} does not match block slot ${block.slot}`);
       }
 
       const isSelfBuild = envelope.builderIndex === BUILDER_INDEX_SELF_BUILD;
-      let dataColumnSidecars: gloas.DataColumnSidecars = [];
+      const cachedResult = chain.blockProductionCache.get(blockRootHex);
+      // Only use the cached result if it contains payload data, blocks committing to a bid are cached without it
+      const cachedGloasResult =
+        cachedResult !== undefined &&
+        isForkPostGloas(cachedResult.fork) &&
+        cachedResult.type === BlockType.Full &&
+        (cachedResult as ProduceFullGloas).executionPayload !== undefined
+          ? (cachedResult as ProduceFullGloas)
+          : undefined;
 
-      if (isSelfBuild) {
-        // For self-builds, construct and publish data column sidecars from cached block production data
-        const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
-        if (cachedResult === undefined) {
-          throw new ApiError(404, `No cached block production result found for block root ${blockRootHex}`);
-        }
-        if (!isForkPostGloas(cachedResult.fork)) {
-          throw new ApiError(400, `Cached block production result is for pre-gloas fork=${cachedResult.fork}`);
-        }
-        if (cachedResult.type !== BlockType.Full) {
-          throw new ApiError(400, "Cached block production result is not full block");
-        }
-
-        if (cachedResult.cells && cachedResult.blobsBundle.commitments.length > 0) {
-          const cellsAndProofs = cachedResult.cells.map((rowCells, rowIndex) => ({
-            cells: rowCells,
-            proofs: cachedResult.blobsBundle.proofs.slice(
-              rowIndex * NUMBER_OF_COLUMNS,
-              (rowIndex + 1) * NUMBER_OF_COLUMNS
-            ),
-          }));
-
-          dataColumnSidecars = getDataColumnSidecarsForGloas(slot, envelope.beaconBlockRoot, cellsAndProofs);
-        }
-      } else {
-        // TODO GLOAS: will this api be used by builders or only for self-building?
-      }
-
-      // TODO GLOAS: Verify execution payload envelope signature
-      // For self-builds, the proposer signs with their own validator key
-      // For external builders, verify using the builder's registered pubkey
-      // Use verify_execution_payload_envelope_signature(state, signed_envelope)
-
-      // TODO GLOAS: Process execution payload via state transition
-      // Call process_execution_payload(state, signed_envelope, execution_engine)
-
-      // TODO GLOAS: Update fork choice with the execution payload
-      // Call on_execution_payload(store, signed_envelope) to update fork choice state
-
-      // TODO GLOAS: Add envelope and data columns to block input via seenBlockInputCache
-      // and trigger block import (Gloas block import requires both beacon block and envelope)
-
+      broadcastValidation = broadcastValidation ?? routes.beacon.BroadcastValidation.gossip;
       const valLogMeta = {
         slot,
         blockRoot: blockRootHex,
+        blockHash: blockHashHex,
         builderIndex: envelope.builderIndex,
         isSelfBuild,
-        dataColumns: dataColumnSidecars.length,
+        blobDataIncluded,
+        broadcastValidation,
+        ...(submittedContents !== null ? {submittedBlobs: submittedContents.blobs.length} : {}),
       };
+      try {
+        switch (broadcastValidation) {
+          case routes.beacon.BroadcastValidation.none: {
+            chain.logger.debug("Skipping broadcast validation of execution payload envelope", valLogMeta);
+            break;
+          }
+
+          case routes.beacon.BroadcastValidation.gossip: {
+            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+            break;
+          }
+
+          case routes.beacon.BroadcastValidation.consensusAndEquivocation:
+          case routes.beacon.BroadcastValidation.consensus: {
+            await validateApiExecutionPayloadEnvelope(chain, signedExecutionPayloadEnvelope);
+
+            // Verify the envelope against the post-block state
+            const blockState = await chain.regen
+              .getBlockSlotState(block, block.slot, {dontTransferCache: true}, RegenCaller.restApi)
+              .catch((e) => {
+                chain.logger.debug("Failed to regenerate block state for consensus checks", valLogMeta, e as Error);
+                return null;
+              });
+            if (blockState === null || !isStatePostGloas(blockState)) {
+              throw new ApiError(
+                500,
+                `Unable to regenerate block state for consensus checks slot=${slot} blockRoot=${blockRootHex}`
+              );
+            }
+            try {
+              // Signature and executionRequestsRoot are already verified by gossip validation above
+              verifyExecutionPayloadEnvelope(chain.config, blockState, envelope, {verifyExecutionRequestsRoot: false});
+            } catch (error) {
+              chain.logger.error(
+                "Consensus checks failed while publishing execution payload envelope",
+                valLogMeta,
+                error as Error
+              );
+              throw new ApiError(400, (error as Error).message);
+            }
+            chain.logger.debug("Consensus validated while publishing execution payload envelope", valLogMeta);
+
+            // TODO GLOAS: check the block is not a proposer equivocation before publishing the envelope
+            if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+              const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
+              if (chain.opts.broadcastValidationStrictness === "error") {
+                throw Error(message);
+              }
+              chain.logger.warn(message, valLogMeta);
+            }
+            break;
+          }
+
+          default: {
+            const message = `Broadcast validation of ${broadcastValidation} type not implemented yet`;
+            if (chain.opts.broadcastValidationStrictness === "error") {
+              throw Error(message);
+            }
+            chain.logger.warn(message, valLogMeta);
+          }
+        }
+      } catch (error) {
+        if (
+          error instanceof ExecutionPayloadEnvelopeError &&
+          error.type.code === ExecutionPayloadEnvelopeErrorCode.ENVELOPE_ALREADY_KNOWN
+        ) {
+          // The envelope may already be known, e.g. received via gossip from another node in a
+          // multi node setup, this is benign and treated as a successful publish (same as blocks)
+          if (submittedContents === null) {
+            chain.logger.debug("Ignoring already-known execution payload envelope during publishing", valLogMeta);
+            return;
+          }
+          // The envelope may have been gossiped without its data columns being published, e.g. if
+          // another beacon node failed mid-publish, still publish columns from the submitted blobs
+          chain.logger.debug("Publishing data columns of already-known execution payload envelope", valLogMeta);
+        } else {
+          throw error;
+        }
+      }
+
+      const payloadInput = chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+      if (!payloadInput) {
+        // The block is awaited above (queuing if the envelope arrived first), and both the API and
+        // gossip import paths seed the PayloadEnvelopeInput before importing the block, so the input
+        // should exist here.
+        throw new ApiError(404, `PayloadEnvelopeInput not found for slot=${slot} blockRoot=${blockRootHex}`);
+      }
+
+      let dataColumnSidecars: gloas.DataColumnSidecar[] = [];
+      let cells: fulu.Cell[][] | undefined;
+      let kzgProofs: deneb.KZGProofs | undefined;
+      let dataColumnTimer: (() => number) | undefined;
+
+      if (submittedContents !== null) {
+        // Validate submitted blob data against bid commitments before computing data column sidecars
+        const expectedBlobCount = payloadInput.getVersionedHashes().length;
+        if (submittedContents.blobs.length !== expectedBlobCount) {
+          throw new ApiError(
+            400,
+            `Submitted blob count does not match bid commitments submitted=${submittedContents.blobs.length} expected=${expectedBlobCount}`
+          );
+        }
+        const expectedProofCount = expectedBlobCount * NUMBER_OF_COLUMNS;
+        if (submittedContents.kzgProofs.length !== expectedProofCount) {
+          throw new ApiError(
+            400,
+            `Submitted KZG proof count does not match bid commitments submitted=${submittedContents.kzgProofs.length} expected=${expectedProofCount}`
+          );
+        }
+        if (submittedContents.blobs.length > 0) {
+          // If the block was produced by this node, reuse the cached cells and only time the
+          // metric when cells are actually computed from the submitted blobs
+          if (cachedGloasResult?.cells) {
+            cells = cachedGloasResult.cells;
+          } else {
+            dataColumnTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
+            cells = submittedContents.blobs.map((blob) => kzg.computeCells(blob));
+          }
+          kzgProofs = submittedContents.kzgProofs;
+        }
+      } else if (cachedGloasResult !== undefined) {
+        if (cachedGloasResult.cells && cachedGloasResult.blobsBundle.commitments.length > 0) {
+          cells = cachedGloasResult.cells;
+          kzgProofs = cachedGloasResult.blobsBundle.proofs;
+        }
+      } else {
+        // An envelope without blob data can only be published via the beacon node that cached them at block production
+        if (payloadInput.getVersionedHashes().length > 0) {
+          throw new ApiError(
+            400,
+            `No cached blob data to attach to execution payload envelope for block root ${blockRootHex}`
+          );
+        }
+      }
+
+      if (cells !== undefined && kzgProofs !== undefined && cells.length > 0) {
+        const proofs = kzgProofs;
+        const cellsAndProofs = cells.map((rowCells, rowIndex) => ({
+          cells: rowCells,
+          proofs: proofs.slice(rowIndex * NUMBER_OF_COLUMNS, (rowIndex + 1) * NUMBER_OF_COLUMNS),
+        }));
+
+        dataColumnSidecars = getGloasDataColumnSidecars(slot, envelope.beaconBlockRoot, cellsAndProofs);
+        dataColumnTimer?.();
+      }
 
       // If called near a slot boundary (e.g. late in slot N-1), hold briefly so gossip aligns with slot N.
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
@@ -718,29 +886,71 @@ export function getBeaconBlockApi({
         await sleep(msToBlockSlot);
       }
 
+      if (payloadInput.hasPayloadEnvelope()) {
+        // The envelope may have been added while this request was being validated, e.g. via gossip
+        chain.logger.debug("Execution payload envelope already added during publishing", valLogMeta);
+      } else {
+        payloadInput.addPayloadEnvelope({
+          envelope: signedExecutionPayloadEnvelope,
+          source: PayloadEnvelopeInputSource.api,
+          seenTimestampSec,
+          peerIdStr: undefined,
+        });
+      }
+
+      if (dataColumnSidecars.length > 0) {
+        for (const columnSidecar of dataColumnSidecars) {
+          payloadInput.addColumn({
+            columnSidecar,
+            source: PayloadEnvelopeInputSource.api,
+            seenTimestampSec,
+            peerIdStr: undefined,
+          });
+        }
+      }
+
       const delaySec = seenTimestampSec - computeTimeAtSlot(config, slot, chain.genesisTime);
       metrics?.gossipExecutionPayloadEnvelope.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
+      chain.validatorMonitor?.registerExecutionPayloadEnvelope(OpSource.api, delaySec, signedExecutionPayloadEnvelope);
 
-      chain.logger.info("Publishing execution payload envelope", valLogMeta);
+      chain.logger.info("Publishing execution payload envelope", {
+        ...valLogMeta,
+        dataColumns: dataColumnSidecars.length,
+      });
 
-      // Publish envelope and data columns
       const publishPromises = [
         // Gossip the signed execution payload envelope first
         () => network.publishSignedExecutionPayloadEnvelope(signedExecutionPayloadEnvelope),
-        // For self-builds, publish all data column sidecars
+        // Publish all data column sidecars
         ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+        // Import execution payload. Signature is verified during broadcast validation, an already
+        // known envelope was verified by its original source and `none` deliberately skips validation
+        () => chain.processExecutionPayload(payloadInput, {validSignature: true}),
       ];
 
-      const sentPeersArr = await promiseAllMaybeAsync<number | void>(publishPromises);
+      const publishPromise = promiseAllMaybeAsync<{sentPeers: number; alreadyPublished: boolean} | number | void>(
+        publishPromises
+      );
+
+      chain.emitter.emit(routes.events.EventType.executionPayloadGossip, {
+        slot,
+        builderIndex: envelope.builderIndex,
+        blockHash: blockHashHex,
+        blockRoot: blockRootHex,
+      });
+
+      const sentPeersArr = await publishPromise;
 
       // Track metrics for data column publishing
       if (dataColumnSidecars.length > 0) {
         let columnsPublishedWithZeroPeers = 0;
-        // Skip first entry (envelope), track data columns
-        for (let i = 1; i < sentPeersArr.length; i++) {
-          const sentPeers = sentPeersArr[i] as number;
+        // Skip first entry (envelope); the final entry is processExecutionPayload(), which returns void.
+        for (let i = 0; i < dataColumnSidecars.length; i++) {
+          const {sentPeers, alreadyPublished} = sentPeersArr[i + 1] as {sentPeers: number; alreadyPublished: boolean};
           metrics?.dataColumns.sentPeersPerSubnet.observe(sentPeers);
-          if (sentPeers === 0) {
+          // A duplicate publish means the column is already propagating — expected in self-build flows.
+          // Only warn when we genuinely failed to reach any peer. See https://github.com/ChainSafe/lodestar/issues/9527.
+          if (sentPeers === 0 && !alreadyPublished) {
             columnsPublishedWithZeroPeers++;
           }
         }
@@ -755,15 +965,11 @@ export function getBeaconBlockApi({
         metrics?.dataColumns.bySource.inc({source: BlockInputSource.api}, dataColumnSidecars.length);
 
         if (chain.emitter.listenerCount(routes.events.EventType.dataColumnSidecar)) {
-          // TODO GLOAS: revisit this, we likely don't wanna emit KZG commitments anymore
-          const cachedResult = chain.blockProductionCache.get(blockRootHex) as ProduceFullGloas | undefined;
-          const kzgCommitments = cachedResult?.blobsBundle.commitments.map(toHex) ?? [];
           for (const dataColumnSidecar of dataColumnSidecars) {
             chain.emitter.emit(routes.events.EventType.dataColumnSidecar, {
               blockRoot: blockRootHex,
               slot,
               index: dataColumnSidecar.index,
-              kzgCommitments,
             });
           }
         }
@@ -774,6 +980,70 @@ export function getBeaconBlockApi({
         delaySec,
         sentPeers: (sentPeersArr[0] as number) ?? 0,
       });
+    },
+
+    async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const bid = signedExecutionPayloadBid.message;
+      const slot = bid.slot;
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `publishExecutionPayloadBid not supported for pre-gloas fork=${fork}`);
+      }
+
+      await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+      try {
+        const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
+        metrics?.opPool.executionPayloadBidPool.apiInsertOutcome.inc({insertOutcome});
+      } catch (e) {
+        chain.logger.error("Error adding to executionPayloadBid pool", {}, e as Error);
+      }
+
+      const sentPeers = await network.publishSignedExecutionPayloadBid(signedExecutionPayloadBid);
+
+      chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
+        version: fork,
+        data: signedExecutionPayloadBid,
+      });
+
+      chain.logger.info("Published execution payload bid", {
+        slot,
+        builderIndex: bid.builderIndex,
+        blockHash: toRootHex(bid.blockHash),
+        parentBlockHash: toRootHex(bid.parentBlockHash),
+        value: bid.value,
+        sentPeers,
+      });
+    },
+
+    async getSignedExecutionPayloadEnvelope({blockId}, context) {
+      const {block, executionOptimistic, finalized} = await getBlockResponse(chain, blockId);
+      const slot = block.message.slot;
+      const fork = config.getForkName(slot);
+
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(
+          400,
+          `Execution payload envelopes are not available for pre-gloas fork=${fork}, slot=${slot}`
+        );
+      }
+
+      const blockRoot = config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message);
+      const blockRootHex = toRootHex(blockRoot);
+
+      const data = context?.returnBytes
+        ? await chain.getSerializedExecutionPayloadEnvelope(slot, blockRootHex)
+        : await chain.getExecutionPayloadEnvelope(slot, blockRootHex);
+
+      if (!data) {
+        throw new ApiError(404, `Execution payload envelope not found for slot=${slot}, blockRoot=${blockRootHex}`);
+      }
+
+      return {
+        data,
+        meta: {executionOptimistic, finalized, version: fork},
+      };
     },
 
     async getBlobSidecars({blockId, indices}) {
@@ -815,11 +1085,18 @@ export function getBeaconBlockApi({
           }
 
           const indicesToReconstruct = indices ?? Array.from({length: blobCount}, (_, i) => i);
+
+          const timer = metrics?.recoverBlobSidecars.reconstructionTime.startTimer();
           const blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
+          timer?.();
+          metrics?.recoverBlobSidecars.blobsReconstructed.inc(indicesToReconstruct.length);
+
           const signedBlockHeader = signedBlockToSignedHeader(config, block);
 
           data = await Promise.all(
             indicesToReconstruct.map(async (index, i) => {
+              // record per column computation time
+              const compTimer = metrics?.peerDas.dataColumnSidecarComputationTime.startTimer();
               // Reconstruct blob sidecar from blob
               const kzgCommitment = blobKzgCommitments[index];
               const blob = blobs[i]; // Use i since blobs only contains requested indices
@@ -829,6 +1106,7 @@ export function getBeaconBlockApi({
                 block.message.body,
                 index
               );
+              compTimer?.();
               return {index, blob, kzgCommitment, kzgProof, signedBlockHeader, kzgCommitmentInclusionProof};
             })
           );
@@ -879,7 +1157,7 @@ export function getBeaconBlockApi({
           );
         }
 
-        const blobKzgCommitments = (block.message.body as deneb.BeaconBlockBody).blobKzgCommitments;
+        const blobKzgCommitments = getBlobKzgCommitments(fork, block as SignedBeaconBlock<ForkPostFulu>);
         const blobCount = blobKzgCommitments.length;
 
         if (blobCount > 0) {
@@ -910,7 +1188,10 @@ export function getBeaconBlockApi({
             indicesToReconstruct = Array.from({length: blobCount}, (_, i) => i);
           }
 
+          const timer = metrics?.peerDas.dataColumnsReconstructionTime.startTimer();
           blobs = await reconstructBlobs(dataColumnSidecars, indicesToReconstruct);
+          timer?.();
+          metrics?.peerDas.reconstructedColumns.inc(indicesToReconstruct.length);
         } else {
           blobs = [];
         }

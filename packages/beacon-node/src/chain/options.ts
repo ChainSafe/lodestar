@@ -35,6 +35,7 @@ export type IChainOptions = BlockProcessOpts &
     persistOrphanedBlocksDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     suggestedFeeRecipient: string;
+    graffitiAppend?: boolean;
     maxSkipSlots?: number;
     /** Ensure blobs returned by the execution engine are valid */
     sanityCheckExecutionEngineBlobs?: boolean;
@@ -49,6 +50,11 @@ export type IChainOptions = BlockProcessOpts &
     nHistoricalStatesFileDataStore?: boolean;
     /** Use flat file storage for blobs and data columns instead of LevelDB */
     flatFileStorage?: boolean;
+    nativeStateView?: boolean;
+    /** Builder circuit breaker fault inspection window in slots */
+    faultInspectionWindow?: number;
+    /** Allowed unrevealed payloads within the fault inspection window */
+    allowedFaults?: number;
   };
 
 export type BlockProcessOpts = {
@@ -106,7 +112,9 @@ export const defaultChainOptions: IChainOptions = {
   proposerBoost: true,
   proposerBoostReorg: true,
   computeUnrealized: true,
+  fastConfirmation: false,
   suggestedFeeRecipient: defaultValidatorOptions.suggestedFeeRecipient,
+  graffitiAppend: true,
   serveHistoricalState: false,
   assertCorrectProgressiveBalances: false,
   archiveStateEpochFrequency: 1024,
@@ -127,6 +135,7 @@ export const defaultChainOptions: IChainOptions = {
   //   - it helps debug easier when network is unfinalized
   nHistoricalStatesFileDataStore: true,
   flatFileStorage: true,
+  nativeStateView: false,
   maxBlockStates: DEFAULT_MAX_BLOCK_STATES,
   maxCPStateEpochsInMemory: DEFAULT_MAX_CP_STATE_EPOCHS_IN_MEMORY,
   maxCPStateEpochsOnDisk: DEFAULT_MAX_CP_STATE_ON_DISK,

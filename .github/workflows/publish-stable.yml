@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
 
@@ -65,26 +65,30 @@ jobs:
     needs: [tag, binaries]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0 # Needs full depth for changelog generation
 
       - uses: "./.github/actions/setup-and-build"
         with:
           node: 24
+          # Required for OIDC publish under pnpm v11 — without registry-url
+          # setup-node skips writing the registry to .npmrc and the npm OIDC
+          # auth flow rejects the token. Matches publish-dev.yml's setup.
+          registry-url: "https://registry.npmjs.org"
 
       - name: Generate changelog
         run: node scripts/generate_changelog.mjs ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
 
       - name: Get binaries
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: dist/
           merge-multiple: true
 
       - name: Create Release
         id: create_release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -94,9 +98,15 @@ jobs:
           body_path: "CHANGELOG.md"
           name: Release ${{ needs.tag.outputs.tag }}
           prerelease: false
+          draft: true
 
       - name: Publish to npm registry (release)
         run: pnpm run release:publish
+
+      - name: Publish release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit ${{ needs.tag.outputs.tag }} --draft=false
 
       # In case of failure
       - name: Rollback on failure
@@ -125,7 +135,7 @@ jobs:
     needs: [tag, npm]
     if: needs.tag.outputs.is_stable == 'true'
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} latest 900
 
   docker:

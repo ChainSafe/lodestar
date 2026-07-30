@@ -39,12 +39,12 @@ async function validateBlsToExecutionChange(
   const state = chain.getHeadState();
   const {config} = chain;
   const addressChange = blsToExecutionChange.message;
-  if (addressChange.validatorIndex >= state.validators.length) {
+  if (addressChange.validatorIndex >= state.validatorCount) {
     throw new BlsToExecutionChangeError(GossipAction.REJECT, {
       code: BlsToExecutionChangeErrorCode.INVALID,
     });
   }
-  const validator = state.validators.getReadonly(addressChange.validatorIndex);
+  const validator = state.getValidator(addressChange.validatorIndex);
   // [REJECT] All of the conditions within process_bls_to_execution_change pass validation.
   // verifySignature = false, verified in batch below
   const {valid} = isValidBlsToExecutionChange(config, validator, blsToExecutionChange, false);

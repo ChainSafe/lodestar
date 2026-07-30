@@ -1,5 +1,6 @@
-import {beforeEach, describe, expect, it} from "vitest";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../state-transition/test/perf/util.js";
+import {beforeEach, describe, expect, it, vi} from "vitest";
+import {BeaconStateView} from "@lodestar/state-transition";
+import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ShufflingCache} from "../../../src/chain/shufflingCache.js";
 
 describe("ShufflingCache", () => {
@@ -21,6 +22,34 @@ describe("ShufflingCache", () => {
 
   it("should get shuffling from cache", async () => {
     expect(await shufflingCache.get(currentEpoch, currentDecisionRoot)).toEqual(state.epochCtx.currentShuffling);
+  });
+
+  it("processState should not materialize already cached shufflings", () => {
+    const stateView = new BeaconStateView(state);
+    shufflingCache = new ShufflingCache(null, null, {maxShufflingCacheEpochs: 4}, [
+      {
+        shuffling: state.epochCtx.previousShuffling,
+        decisionRoot: state.epochCtx.previousDecisionRoot,
+      },
+      {
+        shuffling: state.epochCtx.currentShuffling,
+        decisionRoot: state.epochCtx.currentDecisionRoot,
+      },
+      {
+        shuffling: state.epochCtx.nextShuffling,
+        decisionRoot: state.epochCtx.nextDecisionRoot,
+      },
+    ]);
+
+    const previousSpy = vi.spyOn(stateView, "getPreviousShuffling");
+    const currentSpy = vi.spyOn(stateView, "getCurrentShuffling");
+    const nextSpy = vi.spyOn(stateView, "getNextShuffling");
+
+    shufflingCache.processState(stateView);
+
+    expect(previousSpy).not.toHaveBeenCalled();
+    expect(currentSpy).not.toHaveBeenCalled();
+    expect(nextSpy).not.toHaveBeenCalled();
   });
 
   it("should bound by maxSize(=1)", async () => {

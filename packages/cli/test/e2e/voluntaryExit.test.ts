@@ -1,9 +1,11 @@
+import fs from "node:fs";
 import path from "node:path";
-import {describe, it, onTestFinished, vi} from "vitest";
+import {describe, expect, it, onTestFinished, vi} from "vitest";
 import {getClient} from "@lodestar/api";
 import {config} from "@lodestar/config/default";
 import {interopSecretKey} from "@lodestar/state-transition";
 import {execCliCommand, spawnCliCommand, stopChildProcess} from "@lodestar/test-utils";
+import {ssz} from "@lodestar/types";
 import {retry} from "@lodestar/utils";
 import {testFilesDir} from "../utils.js";
 
@@ -86,6 +88,89 @@ describe("voluntaryExit cmd", () => {
     }
 
     // Disconnect the event stream for the client
+    httpClientController.abort();
+  });
+
+  it("Perform a voluntary exit and save to folder", async () => {
+    const restPort = 9596;
+    const saveExitsPath = path.join(testFilesDir, "saveExitsPath");
+
+    const devBnProc = await spawnCliCommand(
+      "packages/cli/bin/lodestar.js",
+      [
+        "dev",
+        `--dataDir=${path.join(testFilesDir, "dev-voluntary-exit-file")}`,
+        "--genesisValidators=8",
+        "--startValidators=0..7",
+        "--rest",
+        `--rest.port=${restPort}`,
+        "--params.SLOT_DURATION_MS=2000",
+        "--params.SHARD_COMMITTEE_PERIOD=0",
+      ],
+      {pipeStdioToParent: true, logPrefix: "dev"}
+    );
+    onTestFinished(async () => {
+      await stopChildProcess(devBnProc, "SIGINT");
+    });
+
+    const baseUrl = `http://127.0.0.1:${restPort}`;
+    const httpClientController = new AbortController();
+    const client = getClient({baseUrl, globalInit: {signal: httpClientController.signal}}, {config});
+
+    await retry(
+      async () => {
+        const head = (await client.beacon.getBlockHeader({blockId: "head"})).value();
+        if (head.header.message.slot < 1) throw Error("pre-genesis");
+      },
+      {retryDelay: 1000, retries: 20}
+    );
+
+    const indexesToExit = [0, 1];
+    const pubkeysToExit = indexesToExit.map((i) => interopSecretKey(i).toPublicKey().toHex());
+
+    await execCliCommand(
+      "packages/cli/bin/lodestar.js",
+      [
+        "validator",
+        "voluntary-exit",
+        "--network=dev",
+        "--interopIndexes=0..3",
+        `--server=${baseUrl}`,
+        `--pubkeys=${pubkeysToExit.join(",")}`,
+        `--saveExitsPath=${saveExitsPath}`,
+      ],
+      {pipeStdioToParent: false, logPrefix: "voluntary-exit-file"}
+    );
+
+    // Verify file was written with valid content
+    const files = fs.readdirSync(saveExitsPath).sort();
+    expect(files).toHaveLength(indexesToExit.length);
+    expect(files).toEqual(indexesToExit.map((index) => `validator_${index}_exit.json`));
+
+    for (const file of files) {
+      const exit = JSON.parse(fs.readFileSync(path.join(saveExitsPath, file), "utf-8"));
+      expect(exit).toHaveProperty("message");
+      expect(exit).toHaveProperty("signature");
+      expect(exit.message).toHaveProperty("epoch");
+      expect(exit.message).toHaveProperty("validator_index");
+
+      const signedVoluntaryExit = ssz.phase0.SignedVoluntaryExit.fromJson(exit);
+      (await client.beacon.submitPoolVoluntaryExit({signedVoluntaryExit})).assertOk();
+    }
+
+    // Verify validators are exiting
+    for (const pubkey of pubkeysToExit) {
+      await retry(
+        async () => {
+          const validator = (await client.beacon.getStateValidator({stateId: "head", validatorId: pubkey})).value();
+          if (validator.status !== "active_exiting") {
+            throw Error("Validator not exiting");
+          }
+        },
+        {retryDelay: 1000, retries: 20}
+      );
+    }
+
     httpClientController.abort();
   });
 });

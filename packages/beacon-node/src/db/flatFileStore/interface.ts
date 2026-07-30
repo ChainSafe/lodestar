@@ -1,4 +1,4 @@
-import {RootHex, Slot, fulu} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
 
 /**
@@ -30,10 +30,10 @@ export interface IFlatFileStore {
 
   // --- Columns ---
 
-  getDataColumns(slot: Slot, blockRoot: RootHex): Promise<fulu.DataColumnSidecar[]>;
+  getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;
   getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]>;
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
-  putDataColumns(slot: Slot, blockRoot: RootHex, columns: fulu.DataColumnSidecar[]): Promise<void>;
+  putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void>;
   deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void>;
   /** Sync check from in-memory cache */
   hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean;

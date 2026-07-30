@@ -70,6 +70,12 @@ export const BeaconBlocksByRootV2 = toProtocol({
   contextBytesType: ContextBytesType.ForkDigest,
 });
 
+export const BeaconBlocksByHead = toProtocol({
+  method: ReqRespMethod.BeaconBlocksByHead,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
 export const BlobSidecarsByRange = toProtocol({
   method: ReqRespMethod.BlobSidecarsByRange,
   version: Version.V1,
@@ -90,6 +96,18 @@ export const DataColumnSidecarsByRange = toProtocol({
 
 export const DataColumnSidecarsByRoot = toProtocol({
   method: ReqRespMethod.DataColumnSidecarsByRoot,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
+export const ExecutionPayloadEnvelopesByRoot = toProtocol({
+  method: ReqRespMethod.ExecutionPayloadEnvelopesByRoot,
+  version: Version.V1,
+  contextBytesType: ContextBytesType.ForkDigest,
+});
+
+export const ExecutionPayloadEnvelopesByRange = toProtocol({
+  method: ReqRespMethod.ExecutionPayloadEnvelopesByRange,
   version: Version.V1,
   contextBytesType: ContextBytesType.ForkDigest,
 });

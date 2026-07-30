@@ -63,7 +63,7 @@ export class BeaconDb implements IBeaconDb {
   flatFileStore: IFlatFileStore | null = null;
 
   constructor(
-    config: ChainForkConfig,
+    private readonly config: ChainForkConfig,
     protected readonly db: Db
   ) {
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/beacon-node/test/utils/stub/beaconDb.ts' -
@@ -95,7 +95,7 @@ export class BeaconDb implements IBeaconDb {
   }
 
   async initFlatFileStore(dataDir: string, logger: Logger): Promise<void> {
-    const store = new FlatFileStore(dataDir, logger);
+    const store = new FlatFileStore(dataDir, this.config, logger);
     await store.init();
     this.flatFileStore = store;
   }

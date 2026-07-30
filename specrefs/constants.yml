@@ -39,6 +39,24 @@
     BLS_WITHDRAWAL_PREFIX: Bytes1 = '0x00'
     </spec>
 
+- name: BUILDER_DEPOSIT_REQUEST_TYPE#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_DEPOSIT_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="BUILDER_DEPOSIT_REQUEST_TYPE" fork="gloas" hash="08333b0e">
+    BUILDER_DEPOSIT_REQUEST_TYPE: Bytes1 = '0x03'
+    </spec>
+
+- name: BUILDER_EXIT_REQUEST_TYPE#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const BUILDER_EXIT_REQUEST_TYPE =
+  spec: |
+    <spec constant_var="BUILDER_EXIT_REQUEST_TYPE" fork="gloas" hash="cf4cdfb6">
+    BUILDER_EXIT_REQUEST_TYPE: Bytes1 = '0x04'
+    </spec>
+
 - name: BUILDER_INDEX_FLAG#gloas
   sources:
     - file: packages/params/src/index.ts
@@ -80,8 +98,8 @@
     - file: packages/params/src/index.ts
       search: export const BUILDER_WITHDRAWAL_PREFIX =
   spec: |
-    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX" fork="gloas" hash="1094ce21">
-    BUILDER_WITHDRAWAL_PREFIX: Bytes1 = '0x03'
+    <spec constant_var="BUILDER_WITHDRAWAL_PREFIX" fork="gloas" hash="d3243a75">
+    BUILDER_WITHDRAWAL_PREFIX: Bytes1 = '0xB0'
     </spec>
 
 - name: BYTES_PER_COMMITMENT#deneb
@@ -105,6 +123,13 @@
   spec: |
     <spec constant_var="BYTES_PER_PROOF" fork="deneb" hash="7fec794e">
     BYTES_PER_PROOF: uint64 = 48
+    </spec>
+
+- name: COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
+  sources: []
+  spec: |
+    <spec constant_var="COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR" fork="phase0" hash="e8e1efcf">
+    COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR: uint64 = 5
     </spec>
 
 - name: COMPOUNDING_WITHDRAWAL_PREFIX#electra
@@ -197,6 +222,15 @@
     DOMAIN_BLS_TO_EXECUTION_CHANGE: DomainType = '0x0A000000'
     </spec>
 
+- name: DOMAIN_BUILDER_DEPOSIT#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const DOMAIN_BUILDER_DEPOSIT =
+  spec: |
+    <spec constant_var="DOMAIN_BUILDER_DEPOSIT" fork="gloas" hash="e0a71135">
+    DOMAIN_BUILDER_DEPOSIT: DomainType = '0x0E000000'
+    </spec>
+
 - name: DOMAIN_CONTRIBUTION_AND_PROOF#altair
   sources:
     - file: packages/params/src/index.ts
@@ -213,6 +247,13 @@
   spec: |
     <spec constant_var="DOMAIN_DEPOSIT" fork="phase0" hash="eab99f9f">
     DOMAIN_DEPOSIT: DomainType = '0x03000000'
+    </spec>
+
+- name: DOMAIN_INCLUSION_LIST_COMMITTEE#heze
+  sources: []
+  spec: |
+    <spec constant_var="DOMAIN_INCLUSION_LIST_COMMITTEE" fork="heze" hash="01403930">
+    DOMAIN_INCLUSION_LIST_COMMITTEE: DomainType = '0x10000000'
     </spec>
 
 - name: DOMAIN_PROPOSER_PREFERENCES#gloas
@@ -276,6 +317,13 @@
   spec: |
     <spec constant_var="DOMAIN_VOLUNTARY_EXIT" fork="phase0" hash="6abf51b5">
     DOMAIN_VOLUNTARY_EXIT: DomainType = '0x04000000'
+    </spec>
+
+- name: EMPTY_BLOCK_HASH#bellatrix
+  sources: []
+  spec: |
+    <spec constant_var="EMPTY_BLOCK_HASH" fork="bellatrix" hash="23cdf402">
+    EMPTY_BLOCK_HASH: Hash32 =
     </spec>
 
 - name: ENDIANNESS#phase0
@@ -379,8 +427,8 @@
 - name: KZG_SETUP_G2_LENGTH#deneb
   sources: []
   spec: |
-    <spec constant_var="KZG_SETUP_G2_LENGTH" fork="deneb" hash="6cb8d5fd">
-    KZG_SETUP_G2_LENGTH = 65
+    <spec constant_var="KZG_SETUP_G2_LENGTH" fork="deneb" hash="6435c362">
+    KZG_SETUP_G2_LENGTH: uint64 = 65
     </spec>
 
 - name: KZG_SETUP_G2_MONOMIAL#deneb
@@ -433,25 +481,55 @@
     PARTICIPATION_FLAG_WEIGHTS = [TIMELY_SOURCE_WEIGHT, TIMELY_TARGET_WEIGHT, TIMELY_HEAD_WEIGHT]
     </spec>
 
+- name: PAYLOAD_BUILDER_VERSION#gloas
+  sources:
+    - file: packages/params/src/index.ts
+      search: export const PAYLOAD_BUILDER_VERSION =
+  spec: |
+    <spec constant_var="PAYLOAD_BUILDER_VERSION" fork="gloas" hash="96275869">
+    PAYLOAD_BUILDER_VERSION: uint8 = 0
+    </spec>
+
 - name: PAYLOAD_STATUS_EMPTY#gloas
   sources: []
   spec: |
-    <spec constant_var="PAYLOAD_STATUS_EMPTY" fork="gloas" hash="b78dfbcf">
-    PAYLOAD_STATUS_EMPTY: PayloadStatus = 1
+    <spec constant_var="PAYLOAD_STATUS_EMPTY" fork="gloas" hash="84265c9b">
+    PAYLOAD_STATUS_EMPTY: PayloadStatus = 0
     </spec>
 
 - name: PAYLOAD_STATUS_FULL#gloas
   sources: []
   spec: |
-    <spec constant_var="PAYLOAD_STATUS_FULL" fork="gloas" hash="82f773dc">
-    PAYLOAD_STATUS_FULL: PayloadStatus = 2
+    <spec constant_var="PAYLOAD_STATUS_FULL" fork="gloas" hash="357ae377">
+    PAYLOAD_STATUS_FULL: PayloadStatus = 1
+    </spec>
+
+- name: PAYLOAD_STATUS_INVALIDATED#bellatrix
+  sources: []
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_INVALIDATED" fork="bellatrix" hash="573428af">
+    PAYLOAD_STATUS_INVALIDATED: PayloadValidationStatus = 1
+    </spec>
+
+- name: PAYLOAD_STATUS_NOT_VALIDATED#bellatrix
+  sources: []
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_NOT_VALIDATED" fork="bellatrix" hash="d15db48c">
+    PAYLOAD_STATUS_NOT_VALIDATED: PayloadValidationStatus = 2
     </spec>
 
 - name: PAYLOAD_STATUS_PENDING#gloas
   sources: []
   spec: |
-    <spec constant_var="PAYLOAD_STATUS_PENDING" fork="gloas" hash="640761d7">
-    PAYLOAD_STATUS_PENDING: PayloadStatus = 0
+    <spec constant_var="PAYLOAD_STATUS_PENDING" fork="gloas" hash="6a0d6cbf">
+    PAYLOAD_STATUS_PENDING: PayloadStatus = 2
+    </spec>
+
+- name: PAYLOAD_STATUS_VALID#bellatrix
+  sources: []
+  spec: |
+    <spec constant_var="PAYLOAD_STATUS_VALID" fork="bellatrix" hash="1e190907">
+    PAYLOAD_STATUS_VALID: PayloadValidationStatus = 0
     </spec>
 
 - name: PRIMITIVE_ROOT_OF_UNITY#deneb
@@ -512,8 +590,8 @@
     - file: packages/params/src/index.ts
       search: export const SYNC_COMMITTEE_SUBNET_COUNT =
   spec: |
-    <spec constant_var="SYNC_COMMITTEE_SUBNET_COUNT" fork="altair" hash="58794943">
-    SYNC_COMMITTEE_SUBNET_COUNT = 4
+    <spec constant_var="SYNC_COMMITTEE_SUBNET_COUNT" fork="altair" hash="9b41920c">
+    SYNC_COMMITTEE_SUBNET_COUNT: uint64 = 2**2
     </spec>
 
 - name: SYNC_REWARD_WEIGHT#altair
@@ -539,8 +617,8 @@
     - file: packages/params/src/index.ts
       search: export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE =
   spec: |
-    <spec constant_var="TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE" fork="altair" hash="af3f6c9e">
-    TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 2**4
+    <spec constant_var="TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE" fork="altair" hash="76404bd9">
+    TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE: uint64 = 2**4
     </spec>
 
 - name: TIMELY_HEAD_FLAG_INDEX#altair

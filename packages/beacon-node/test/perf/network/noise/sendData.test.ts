@@ -40,21 +40,39 @@ describe("network / noise / sendData", () => {
         return {connA: outbound.connection, connB: inbound.connection, data: new Uint8Array(messageLength)};
       },
       fn: async ({connA, connB, data}) => {
-        await Promise.all([
-          (async () => {
-            for (let i = 0; i < numberOfMessages; i++) {
-              if (!connA.send(data)) {
-                await connA.onDrain();
-              }
+        const expectedBytes = numberOfMessages * messageLength;
+
+        // Receiver: drain decrypted plaintext until every expected byte has arrived, then stop
+        // reading. Breaking out *before* teardown is what keeps this race-free: @libp2p/utils@7.2.x
+        // surfaces connA.close() to the peer as a reset (StreamResetError) and discards in-flight
+        // data, so the consumer must finish reading before the stream is closed, not race it.
+        const received = (async () => {
+          let bytesReceived = 0;
+          for await (const chunk of connB) {
+            bytesReceived += chunk.byteLength;
+            if (bytesReceived >= expectedBytes) {
+              break;
             }
-            await connA.close();
-          })(),
-          (async () => {
-            for await (const _chunk of connB) {
-              // Drain inbound messages
-            }
-          })(),
-        ]);
+          }
+          return bytesReceived;
+        })();
+
+        // Sender: the work being measured.
+        for (let i = 0; i < numberOfMessages; i++) {
+          if (!connA.send(data)) {
+            await connA.onDrain();
+          }
+        }
+
+        // Assert full delivery before tearing down. This preserves a real correctness signal
+        // (a send-path regression that drops data fails here) without suppressing any error, and
+        // only then closes — so the close-as-reset can no longer race the reader.
+        const bytesReceived = await received;
+        if (bytesReceived !== expectedBytes) {
+          throw new Error(`noise sendData: expected ${expectedBytes} bytes, received ${bytesReceived}`);
+        }
+
+        await connA.close();
       },
     });
   }

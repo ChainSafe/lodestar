@@ -11,7 +11,7 @@ import {
   ForkName,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {computeSigningRoot} from "@lodestar/state-transition";
+import {BeaconStateView, computeSigningRoot} from "@lodestar/state-transition";
 import {capella, ssz} from "@lodestar/types";
 import {BlsToExecutionChangeErrorCode} from "../../../../src/chain/errors/blsToExecutionChangeError.js";
 import {validateGossipBlsToExecutionChange} from "../../../../src/chain/validation/blsToExecutionChange.js";
@@ -69,7 +69,7 @@ describe("validate bls to execution change", () => {
   // Generate the state
   const _state = generateState(stateEmpty, defaultConfig);
   const config = createBeaconConfig(defaultConfig, _state.genesisValidatorsRoot);
-  const state = createCachedBeaconStateTest(_state, config);
+  const state = new BeaconStateView(createCachedBeaconStateTest(_state, config));
 
   // Gen a valid blsToExecutionChange for first val
   const blsToExecutionChange = {

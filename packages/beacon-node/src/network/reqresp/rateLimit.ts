@@ -40,6 +40,10 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     },
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BeaconBlocksByRoot, (req) => req.length),
   },
+  [ReqRespMethod.BeaconBlocksByHead]: {
+    byPeer: {quota: config.MAX_REQUEST_BLOCKS_DENEB, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.BeaconBlocksByHead, (req) => req.count),
+  },
   [ReqRespMethod.BlobSidecarsByRange]: {
     // Rationale: MAX_REQUEST_BLOCKS_DENEB * MAX_BLOBS_PER_BLOCK
     byPeer: {
@@ -71,6 +75,24 @@ export const rateLimitQuotas: (fork: ForkName, config: BeaconConfig) => Record<R
     byPeer: {quota: config.MAX_REQUEST_DATA_COLUMN_SIDECARS, quotaTimeMs: 10_000},
     getRequestCount: getRequestCountFn(fork, config, ReqRespMethod.DataColumnSidecarsByRoot, (req) =>
       req.reduce((total, item) => total + item.columns.length, 0)
+    ),
+  },
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRoot]: {
+    byPeer: {quota: config.MAX_REQUEST_PAYLOADS, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(
+      fork,
+      config,
+      ReqRespMethod.ExecutionPayloadEnvelopesByRoot,
+      (req) => req.length
+    ),
+  },
+  [ReqRespMethod.ExecutionPayloadEnvelopesByRange]: {
+    byPeer: {quota: config.MAX_REQUEST_BLOCKS_DENEB, quotaTimeMs: 10_000},
+    getRequestCount: getRequestCountFn(
+      fork,
+      config,
+      ReqRespMethod.ExecutionPayloadEnvelopesByRange,
+      (req) => req.count
     ),
   },
   [ReqRespMethod.LightClientBootstrap]: {

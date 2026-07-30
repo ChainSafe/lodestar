@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import {bench, describe} from "@chainsafe/benchmark";
 import {byteArrayEquals} from "@lodestar/utils";
-import {generateState} from "../../utils/state.js";
+import {generateState} from "../../../src/testUtils/state.js";
 import {generateValidators} from "../../utils/validator.js";
 
 /**

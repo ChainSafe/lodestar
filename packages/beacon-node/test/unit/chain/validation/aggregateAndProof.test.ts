@@ -1,11 +1,15 @@
-import {describe, it} from "vitest";
+import {describe, expect, it} from "vitest";
 import {BitArray, toHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {createBeaconConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {DOMAIN_AGGREGATE_AND_PROOF, ForkName, SLOTS_PER_EPOCH, ZERO_HASH} from "@lodestar/params";
+import {computeSigningRoot} from "@lodestar/state-transition";
+import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {phase0, ssz} from "@lodestar/types";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {AttestationErrorCode} from "../../../../src/chain/errors/index.js";
 import {IBeaconChain} from "../../../../src/chain/index.js";
 import {validateApiAggregateAndProof, validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
+import {getAggregateAndProofSigningRoot} from "../../../../src/chain/validation/signatureSets/index.js";
 import {memoOnce} from "../../../utils/cache.js";
 import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 import {
@@ -175,6 +179,25 @@ describe("chain / validation / aggregateAndProof", () => {
     signedAggregateAndProof.message.aggregate.aggregationBits.set(bitIndex + 1, true);
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
+  });
+
+  it("uses the fork-specific AggregateAndProof signing root", () => {
+    const config = createBeaconConfig({...defaultConfig, FULU_FORK_EPOCH: 0, GLOAS_FORK_EPOCH: 1}, ZERO_HASH);
+    const slot = SLOTS_PER_EPOCH;
+    const signedAggregateAndProof = ssz.gloas.SignedAggregateAndProof.defaultValue();
+    signedAggregateAndProof.message.aggregatorIndex = 1;
+    signedAggregateAndProof.message.selectionProof[0] = 1;
+    signedAggregateAndProof.message.aggregate.data.slot = slot;
+    signedAggregateAndProof.message.aggregate.data.target.epoch = 1;
+    signedAggregateAndProof.message.aggregate.signature[0] = 2;
+    signedAggregateAndProof.message.aggregate.aggregationBits = BitArray.fromSingleBit(4, 0);
+    signedAggregateAndProof.message.aggregate.committeeBits.set(0, true);
+
+    const domain = config.getDomainAtFork(ForkName.gloas, DOMAIN_AGGREGATE_AND_PROOF);
+    const expectedRoot = computeSigningRoot(ssz.gloas.AggregateAndProof, signedAggregateAndProof.message, domain);
+
+    expect(config.getForkTypes(slot).AggregateAndProof).toBe(ssz.gloas.AggregateAndProof);
+    expect(getAggregateAndProofSigningRoot(config, 1, signedAggregateAndProof)).toEqual(expectedRoot);
   });
 
   /** Alias to reduce code duplication */

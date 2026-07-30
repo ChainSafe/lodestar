@@ -1,16 +1,10 @@
-import {ForkPostDeneb, isForkPostDeneb} from "@lodestar/params";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {ForkPostDeneb, ForkPostFulu, isForkPostDeneb} from "@lodestar/params";
+import {SignedBeaconBlock, sszTypesFor} from "@lodestar/types";
 import {fromHex, toRootHex} from "@lodestar/utils";
 import {blobSidecarsWrapperSsz} from "../../db/repositories/blobSidecars.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BeaconChain} from "../chain.js";
-import {
-  IBlockInput,
-  IDataColumnsInput,
-  isBlockInputBlobs,
-  isBlockInputColumns,
-  isBlockInputNoData,
-} from "./blockInput/index.js";
+import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
 import {BLOB_AVAILABILITY_TIMEOUT} from "./verifyBlocksDataAvailability.js";
 
 /**
@@ -108,7 +102,8 @@ export async function writeDataColumnsToDb(this: BeaconChain, blockInput: IDataC
       const serialized = this.serializedCache.get(dataColumnSidecar);
       binaryColumns.push({
         index: dataColumnSidecar.index,
-        data: serialized ?? ssz.fulu.DataColumnSidecar.serialize(dataColumnSidecar),
+        data:
+          serialized ?? sszTypesFor(blockInput.forkName as ForkPostFulu).DataColumnSidecar.serialize(dataColumnSidecar),
       });
     }
     await this.db.flatFileStore.putDataColumnsBinary(slot, blockRootHex, binaryColumns);
@@ -155,17 +150,6 @@ export async function persistBlockInput(this: BeaconChain, blockInput: IBlockInp
     })
     .finally(() => {
       this.seenBlockInputCache.prune(blockInput.blockRootHex);
-      // Without forcefully clearing this cache, we would rely on WeakMap to evict memory which is not reliable.
-      // Clear here (after the DB write) so that writeBlockInputToDb can still use the cached serialized bytes.
-      //
-      // For Gloas (BlockInputNoData), the execution payload and columns arrive separately after the beacon block.
-      // Do NOT clear the cache here — it must remain available for writeDataColumnsToDb when the payload arrives.
-      // The cache is cleared in the Gloas payload persistence path instead.
-      if (!isBlockInputNoData(blockInput)) {
-        // TODO: enhance this SerializedCache for Gloas because payload may not come
-        // see https://github.com/ChainSafe/lodestar/pull/8974#discussion_r2885598229
-        this.serializedCache.clear();
-      }
       this.logger.debug("Pruned block input", {
         slot: blockInput.slot,
         root: blockInput.blockRootHex,

@@ -107,7 +107,8 @@ export class FrequencyStateArchiveStrategy implements StateArchiveStrategy {
   async archiveState(finalized: CheckpointWithHex, metrics?: Metrics | null): Promise<void> {
     // starting from Mar 2024, the finalized state could be from disk or in memory
     let timer = metrics?.processFinalizedCheckpoint.frequencyStateArchive.startTimer();
-    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalized);
+    const finalizedHex = {epoch: finalized.epoch, rootHex: finalized.rootHex};
+    const finalizedStateOrBytes = await this.regen.getCheckpointStateOrBytes(finalizedHex);
     timer?.({step: FrequencyStateArchiveStep.GetFinalizedState});
 
     const {rootHex} = finalized;

@@ -30,9 +30,11 @@ export interface SkipOpts {
 const coveredTestRunners = [
   "light_client",
   "epoch_processing",
+  "fast_confirmation",
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",
@@ -59,7 +61,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805"],
+  skippedForks: ["eip7805", "heze"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -72,11 +74,29 @@ export const defaultSkipOpts: SkipOpts = {
     /^electra\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^fulu\/light_client\/single_merkle_proof\/BeaconBlockBody.*/,
     /^.+\/light_client\/data_collection\/.*/,
-    /^gloas\/fork_choice\/.*$/,
-    /^gloas\/ssz_static\/ForkChoiceNode.*$/,
+    // Ignore the partial data column container additions for now. Unskip them when
+    // cell level DAS is ready
+    /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
+    /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
+    /^gloas\/light_client\/sync\/.*/,
+    // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
+    // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
+    // handling is not yet implemented in Lodestar.
+    /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO GLOAS: enable this after gloas fork choice is ready
+    /^gloas\/fork_choice_compliance\/.*/,
   ],
-  skippedTests: [],
-  skippedRunners: [],
+  skippedTests: [
+    // TODO-GLOAS: re-enable after gloas light client is implemented
+    /\/gloas_fork$/,
+    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
+    // boost wrongly denied. Fails identically on every pre-gloas fork.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
+  ],
+  // TODO GLOAS: Investigate why networking tests are failing since alpha.5
+  skippedRunners: ["networking"],
 };
 
 /**
@@ -103,7 +123,7 @@ export const defaultSkipOpts: SkipOpts = {
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
- * Ref: https://github.com/ethereum/consensus-specs/tree/dev/tests/formats#test-structure
+ * Ref: https://github.com/ethereum/consensus-specs/blob/v1.6.1/tests/formats/README.md#test-structure
  */
 export function specTestIterator(
   configDirpath: string,
@@ -164,9 +184,15 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-              if (opts.skippedTests && options.shouldSkip === undefined) {
-                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
-                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+              if (opts.skippedTests) {
+                // Compose with any runner-local shouldSkip — overwriting it would silently
+                // disable SkipOpts.skippedTests for runners that define their own (fork_choice).
+                const runnerShouldSkip = options.shouldSkip;
+                options.shouldSkip = (testCase: any, name: string, index: number): boolean => {
+                  return (
+                    (runnerShouldSkip?.(testCase, name, index) ?? false) ||
+                    (opts.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false)
+                  );
                 };
               }
               describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);

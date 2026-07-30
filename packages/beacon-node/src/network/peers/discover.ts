@@ -59,6 +59,7 @@ export enum DiscoveredPeerStatus {
   cached = "cached",
   dropped = "dropped",
   no_multiaddrs = "no_multiaddrs",
+  transport_incompatible = "transport_incompatible",
   peer_cooling_down = "peer_cooling_down",
 }
 
@@ -88,7 +89,8 @@ export type SubnetDiscvQueryMs = {
 
 type CachedENR = {
   peerId: PeerId;
-  multiaddrTCP: Multiaddr;
+  multiaddrTCP?: Multiaddr;
+  multiaddrQUIC?: Multiaddr;
   subnets: Record<SubnetType, boolean[]>;
   addedUnixMs: number;
   // custodyGroups is null for pre-fulu
@@ -114,6 +116,7 @@ export class PeerDiscovery {
     attnets: new Map(),
     syncnets: new Map(),
   };
+  private transports: string[];
 
   private custodyGroupQueries: CustodyGroupQueries;
 
@@ -137,6 +140,22 @@ export class PeerDiscovery {
     this.discv5StartMs = Date.now();
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
     this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
+
+    // Transport tags vary by library: @libp2p/tcp uses '@libp2p/tcp', @chainsafe/libp2p-quic uses 'quic'
+    // Normalize to simple 'tcp' / 'quic' strings for matching.
+    // Must be initialized before the discovery listeners are registered and the bootENRs are processed
+    // below, since handleDiscoveredPeer() reads this.transports. Previously this was assigned at the end
+    // of the constructor, so when network.connectToDiscv5Bootnodes is enabled every bootENR was processed
+    // while this.transports was still undefined, throwing "Cannot read properties of undefined (reading
+    // 'includes')" and preventing the node from dialing its bootnodes on startup.
+    this.transports = libp2p.services.components.transportManager
+      .getTransports()
+      .map((t) => t[Symbol.toStringTag])
+      .map((tag) => {
+        if (tag?.includes("tcp")) return "tcp";
+        if (tag?.includes("quic")) return "quic";
+        return tag;
+      });
 
     this.libp2p.addEventListener("peer:discovery", this.onDiscoveredPeer);
     this.discv5.on("discovered", this.onDiscoveredENR);
@@ -372,10 +391,15 @@ export class PeerDiscovery {
       return;
     }
 
+    // Select multiaddrs by protocol rather than index — libp2p discovery events
+    // don't guarantee ordering or number of addresses
+    const multiaddrTCP = multiaddrs.find((ma) => ma.toString().includes("/tcp/"));
+    const multiaddrQUIC = multiaddrs.find((ma) => ma.toString().includes("/quic-v1"));
+
     const attnets = zeroAttnets;
     const syncnets = zeroSyncnets;
 
-    const status = this.handleDiscoveredPeer(id, multiaddrs[0], attnets, syncnets, undefined);
+    const status = this.handleDiscoveredPeer(id, multiaddrTCP, multiaddrQUIC, attnets, syncnets, undefined);
     this.logger.debug("Discovered peer via libp2p", {peer: prettyPrintPeerId(id), status});
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
@@ -388,13 +412,15 @@ export class PeerDiscovery {
       this.randomNodeQuery.count++;
     }
     const peerId = enr.peerId;
-    // tcp multiaddr is known to be be present, checked inside the worker
+    // At least one transport is known to be present, checked inside the worker
     const multiaddrTCP = enr.getLocationMultiaddr(ENRKey.tcp);
-    if (!multiaddrTCP) {
-      this.logger.warn("Discv5 worker sent enr without tcp multiaddr", {enr: enr.encodeTxt()});
+    const multiaddrQUIC = enr.getLocationMultiaddr(ENRKey.quic);
+    if (!multiaddrTCP && !multiaddrQUIC) {
+      this.logger.warn("Discv5 worker sent enr without any transport multiaddr", {enr: enr.encodeTxt()});
       this.metrics?.discovery.discoveredStatus.inc({status: DiscoveredPeerStatus.no_multiaddrs});
       return;
     }
+
     // Are this fields mandatory?
     const attnetsBytes = enr.kvs.get(ENRKey.attnets); // 64 bits
     const syncnetsBytes = enr.kvs.get(ENRKey.syncnets); // 4 bits
@@ -414,7 +440,7 @@ export class PeerDiscovery {
     const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
     const custodyGroupCount = custodyGroupCountBytes ? bytesToInt(custodyGroupCountBytes, "be") : undefined;
 
-    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, attnets, syncnets, custodyGroupCount);
+    const status = this.handleDiscoveredPeer(peerId, multiaddrTCP, multiaddrQUIC, attnets, syncnets, custodyGroupCount);
     this.logger.debug("Discovered peer via discv5", {
       peer: prettyPrintPeerId(peerId),
       status,
@@ -428,7 +454,8 @@ export class PeerDiscovery {
    */
   private handleDiscoveredPeer(
     peerId: PeerId,
-    multiaddrTCP: Multiaddr,
+    multiaddrTCP: Multiaddr | undefined,
+    multiaddrQUIC: Multiaddr | undefined,
     attnets: boolean[],
     syncnets: boolean[],
     custodySubnetCount?: number
@@ -454,6 +481,13 @@ export class PeerDiscovery {
         return DiscoveredPeerStatus.already_connected;
       }
 
+      // ignore peers if they don't share any transport with us
+      const hasTcpMatch = this.transports.includes("tcp") && multiaddrTCP;
+      const hasQuicMatch = this.transports.includes("quic") && multiaddrQUIC;
+      if (!hasTcpMatch && !hasQuicMatch) {
+        return DiscoveredPeerStatus.transport_incompatible;
+      }
+
       // Ignore dialing peers
       if (
         this.libp2p.services.components.connectionManager
@@ -469,6 +503,7 @@ export class PeerDiscovery {
       const cachedPeer: CachedENR = {
         peerId,
         multiaddrTCP,
+        multiaddrQUIC,
         subnets: {attnets, syncnets},
         addedUnixMs: Date.now(),
         // for pre-fulu, custodyGroups is null
@@ -566,19 +601,24 @@ export class PeerDiscovery {
     // are not successful.
     this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
 
-    const {peerId, multiaddrTCP} = cachedPeer;
+    const {peerId, multiaddrTCP, multiaddrQUIC} = cachedPeer;
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
-    const peer = await this.libp2p.peerStore.merge(peerId, {multiaddrs: [multiaddrTCP]});
+    const peer = await this.libp2p.peerStore.merge(peerId, {
+      multiaddrs: [multiaddrQUIC, multiaddrTCP].filter(Boolean) as Multiaddr[],
+    });
     if (peer.addresses.length === 0) {
       this.metrics?.discovery.notDialReason.inc({reason: NotDialReason.no_multiaddrs});
       return;
     }
 
-    // Note: PeerDiscovery adds the multiaddrTCP beforehand
+    // Note: PeerDiscovery adds the multiaddrs beforehand
     const peerIdShort = prettyPrintPeerId(peerId);
-    this.logger.debug("Dialing discovered peer", {peer: peerIdShort});
+    this.logger.debug("Dialing discovered peer", {
+      peer: peerIdShort,
+      addresses: peer.addresses.map((a) => a.multiaddr.toString()).join(", "),
+    });
 
     this.metrics?.discovery.dialAttempts.inc();
     const timer = this.metrics?.discovery.dialTime.startTimer();

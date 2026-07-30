@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
+import {Mocked, afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/blst";
 import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
@@ -8,6 +8,8 @@ import {ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";
+import {BlockDutiesService} from "../../../src/services/blockDuties.js";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker.js";
 import {ValidatorStore} from "../../../src/services/validatorStore.js";
 import {getApiClientStub, mockApiResponse} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
@@ -15,6 +17,7 @@ import {loggerVc} from "../../utils/logger.js";
 import {ZERO_HASH_HEX} from "../../utils/types.js";
 
 vi.mock("../../../src/services/validatorStore.js");
+vi.mock("../../../src/services/chainHeaderTracker.js");
 
 describe("BlockDutiesService", () => {
   const api = getApiClientStub();
@@ -23,6 +26,8 @@ describe("BlockDutiesService", () => {
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   const config = createChainForkConfig(mainnetConfig);
+  // @ts-expect-error - Mocked class don't need parameters
+  const chainHeaderTracker = new ChainHeaderTracker() as Mocked<ChainHeaderTracker>;
 
   let controller: AbortController; // To stop clock
   beforeEach(() => {
@@ -30,7 +35,6 @@ describe("BlockDutiesService", () => {
     const secretKeys = Array.from({length: 2}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
 
-    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
     vi.spyOn(validatorStore, "votingPubkeys");
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
@@ -54,9 +58,19 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
+    const dutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: false,
+      payloadLocal: false,
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -127,9 +141,19 @@ describe("BlockDutiesService", () => {
     );
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null, {
+    const dutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: true,
+      payloadLocal: false,
     });
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();

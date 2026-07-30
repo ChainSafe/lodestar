@@ -2,8 +2,8 @@ import {describe, expect, it} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {MAX_DEPOSITS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {createCachedBeaconStateTest} from "../../../src/testUtils/state.js";
 import {getEth1DepositCount} from "../../../src/util/deposit.js";
-import {createCachedBeaconStateTest} from "../../utils/state.js";
 
 describe("getEth1DepositCount", () => {
   it("Pre Electra", () => {

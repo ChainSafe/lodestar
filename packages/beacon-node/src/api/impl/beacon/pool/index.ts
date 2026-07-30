@@ -1,16 +1,27 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
-import {ForkPostElectra, ForkPreElectra, SYNC_COMMITTEE_SUBNET_SIZE, isForkPostElectra} from "@lodestar/params";
-import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {
+  ForkPostElectra,
+  ForkPreElectra,
+  SYNC_COMMITTEE_SUBNET_SIZE,
+  isForkPostElectra,
+  isForkPostGloas,
+} from "@lodestar/params";
+import {isStatePostAltair} from "@lodestar/state-transition";
+import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
   AttestationErrorCode,
   GossipAction,
+  PayloadAttestationError,
+  PayloadAttestationErrorCode,
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
+import {validateApiPayloadAttestationMessage} from "../../../../chain/validation/payloadAttestationMessage.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
@@ -25,25 +36,6 @@ export function getBeaconPoolApi({
   network,
 }: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ApplicationMethods<routes.beacon.pool.Endpoints> {
   return {
-    async getPoolAttestations({slot, committeeIndex}) {
-      // Already filtered by slot
-      let attestations: Attestation[] = chain.aggregatedAttestationPool.getAll(slot);
-      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getPoolAttestationsV2 to retrieve pool attestations for post-electra fork=${fork}`
-        );
-      }
-
-      if (committeeIndex !== undefined) {
-        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
-      }
-
-      return {data: attestations};
-    },
-
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
@@ -61,17 +53,13 @@ export function getBeaconPoolApi({
       return {data: attestations, meta: {version: fork}};
     },
 
-    async getPoolAttesterSlashings() {
-      const fork = chain.config.getForkName(chain.clock.currentSlot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getPoolAttesterSlashingsV2 to retrieve pool attester slashings for post-electra fork=${fork}`
-        );
+    async getPoolPayloadAttestations({slot}) {
+      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
+      if (!isForkPostGloas(fork)) {
+        throw new ApiError(400, `Payload attestation pool is not supported before Gloas fork=${fork}`);
       }
 
-      return {data: chain.opPool.getAllAttesterSlashings()};
+      return {data: chain.payloadAttestationPool.getAll(slot), meta: {version: fork}};
     },
 
     async getPoolAttesterSlashingsV2() {
@@ -89,10 +77,6 @@ export function getBeaconPoolApi({
 
     async getPoolBLSToExecutionChanges() {
       return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
-    },
-
-    async submitPoolAttestations({signedAttestations}) {
-      await this.submitPoolAttestationsV2({signedAttestations});
     },
 
     async submitPoolAttestationsV2({signedAttestations}) {
@@ -174,10 +158,6 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashings({attesterSlashing}) {
-      await this.submitPoolAttesterSlashingsV2({attesterSlashing});
-    },
-
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
       await validateApiAttesterSlashing(chain, attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
@@ -230,6 +210,76 @@ export function getBeaconPoolApi({
       }
     },
 
+    async submitPayloadAttestationMessages({payloadAttestationMessages}) {
+      const failures: FailureList = [];
+
+      await Promise.all(
+        payloadAttestationMessages.map(async (payloadAttestationMessage, i) => {
+          try {
+            const validateFn = () => validateApiPayloadAttestationMessage(chain, payloadAttestationMessage);
+            const {slot, beaconBlockRoot} = payloadAttestationMessage.data;
+            const {attDataRootHex, validatorCommitteeIndices} = await validateGossipFnRetryUnknownRoot(
+              validateFn,
+              network,
+              chain,
+              slot,
+              beaconBlockRoot
+            );
+
+            const insertOutcome = chain.payloadAttestationPool.add(
+              payloadAttestationMessage,
+              attDataRootHex,
+              validatorCommitteeIndices
+            );
+            metrics?.opPool.payloadAttestationPool.apiInsertOutcome.inc({insertOutcome});
+
+            chain.forkChoice.notifyPtcMessages(
+              toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+              payloadAttestationMessage.data.slot,
+              validatorCommitteeIndices,
+              payloadAttestationMessage.data.payloadPresent,
+              payloadAttestationMessage.data.blobDataAvailable
+            );
+
+            chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
+              version: chain.config.getForkName(slot),
+              data: payloadAttestationMessage,
+            });
+
+            await network.publishPayloadAttestationMessage(payloadAttestationMessage);
+          } catch (e) {
+            const logCtx = {
+              slot: payloadAttestationMessage.data.slot,
+              validatorIndex: payloadAttestationMessage.validatorIndex,
+              beaconBlockRoot: toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+            };
+
+            if (
+              e instanceof PayloadAttestationError &&
+              e.type.code === PayloadAttestationErrorCode.PAYLOAD_ATTESTATION_ALREADY_KNOWN
+            ) {
+              logger.debug("Ignoring known payload attestation message", logCtx);
+              return;
+            }
+
+            failures.push({index: i, message: (e as Error).message});
+            logger.verbose(`Error on submitPayloadAttestationMessages [${i}]`, logCtx, e as Error);
+            if (e instanceof PayloadAttestationError && e.action === GossipAction.REJECT) {
+              chain.persistInvalidSszValue(
+                ssz.gloas.PayloadAttestationMessage,
+                payloadAttestationMessage,
+                "api_reject"
+              );
+            }
+          }
+        })
+      );
+
+      if (failures.length > 0) {
+        throw new IndexedError("Error processing payload attestation messages", failures);
+      }
+    },
+
     /**
      * POST `/eth/v1/beacon/pool/sync_committees`
      *
@@ -249,13 +299,16 @@ export function getBeaconPoolApi({
 
       // TODO: Fetch states at signature slots
       const state = chain.getHeadState();
+      if (!isStatePostAltair(state)) {
+        throw new ApiError(400, "Sync committee pool is not supported before Altair");
+      }
 
       const failures: FailureList = [];
 
       await Promise.all(
         signatures.map(async (signature, i) => {
           try {
-            const synCommittee = state.epochCtx.getIndexedSyncCommittee(signature.slot);
+            const synCommittee = state.getIndexedSyncCommittee(signature.slot);
             const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
             if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
               return; // Not a sync committee member

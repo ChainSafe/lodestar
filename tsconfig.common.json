@@ -1,0 +1,51 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": [
+      "es2023",
+      // Array.fromAsync is supported by Node.js >= 22 but not yet part of an es20xx lib
+      "esnext.array",
+      "dom"
+    ],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "pretty": true,
+    "strict": true,
+    "sourceMap": true,
+    "alwaysStrict": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "useUnknownInCatchVariables": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "noImplicitReturns": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "declaration": true,
+    "declarationMap": true,
+    "incremental": true,
+    "preserveWatchOutput": true,
+    "noUncheckedSideEffectImports": true,
+    "rewriteRelativeImportExtensions": true,
+    // TODO: Investigate following errors:
+    // - Cannot find module 'rollup/parseAst' or its corresponding type declarations
+    "skipLibCheck": true,
+    "types": [
+      "node",
+      "snappyjs",
+      "mitt",
+      "vitest"
+    ],
+    // Required to run benchmark command from root directory
+    "typeRoots": [
+      "node_modules/@types",
+      "./types",
+      "${configDir}/node_modules/@types",
+      "${configDir}/types",
+      "../../node_modules/@types",
+      "../../types",
+    ]
+  }
+}

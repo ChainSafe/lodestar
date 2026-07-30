@@ -11,6 +11,7 @@ import {afterEach, describe, expect, it} from "vitest";
 import {noise} from "@chainsafe/libp2p-noise";
 import {createBeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName, GENESIS_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {fromHex, sleep, toHex} from "@lodestar/utils";
@@ -28,7 +29,6 @@ import {GetReqRespHandlerFn} from "../../../src/network/reqresp/types.js";
 import {LocalStatusCache} from "../../../src/network/statusCache.js";
 import {computeNodeId} from "../../../src/network/subnets/index.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
-import {testLogger} from "../../utils/logger.js";
 
 describe("reqresp encoder", () => {
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];

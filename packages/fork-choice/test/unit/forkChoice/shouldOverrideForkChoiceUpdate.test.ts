@@ -52,8 +52,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const baseHeadBlock: ProtoBlockWithWeight = {
@@ -82,8 +80,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const baseParentHeadBlock: ProtoBlockWithWeight = {
@@ -111,8 +107,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
     parentBlockHash: null,
     payloadStatus: PayloadStatus.FULL,
-    builderIndex: null,
-    blockHashFromBid: null,
   };
 
   const fcStore: IForkChoiceStore = {
@@ -122,7 +116,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         epoch: genesisEpoch,
         root: fromHexString(genesisBlock.blockRoot),
         rootHex: genesisBlock.blockRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances: new Uint16Array(Array(32).fill(150)),
       totalBalance: 32 * 150,
@@ -132,7 +125,6 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
         epoch: genesisEpoch,
         root: fromHexString(genesisBlock.blockRoot),
         rootHex: genesisBlock.blockRoot,
-        payloadStatus: PayloadStatus.FULL,
       },
       balances: new Uint16Array(Array(32).fill(150)),
     },
@@ -140,16 +132,36 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     unrealizedFinalizedCheckpoint: {
       epoch: genesisEpoch,
       root: fromHexString(genesisBlock.blockRoot),
       rootHex: genesisBlock.blockRoot,
-      payloadStatus: PayloadStatus.FULL,
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    confirmedRoot: genesisBlock.blockRoot,
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    previousEpochGreatestUnrealizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(genesisBlock.blockRoot),
+      rootHex: genesisBlock.blockRoot,
+    },
+    previousEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    currentEpochObservedJustifiedBalances: new Uint16Array(Array(32).fill(150)),
+    previousEpochGreatestUnrealizedBalances: new Uint16Array(Array(32).fill(150)),
+    previousSlotHead: genesisBlock.blockRoot,
+    currentSlotHead: genesisBlock.blockRoot,
+    stateGetter: () => null,
   };
 
   const testCases: {
@@ -178,7 +190,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       parentBlock: {...baseParentHeadBlock},
       headBlock: {...baseHeadBlock, slot: SLOTS_PER_EPOCH * 2 - 1}, // Proposal slot = block slot + 1
       expectReorg: false,
-      expectedNotReorgedReason: NotReorgedReason.NotShufflingStable,
+      expectedNotReorgedReason: NotReorgedReason.AtEpochBoundary,
     },
     {
       id: "No reorg when the blocks are not ffg competitive",

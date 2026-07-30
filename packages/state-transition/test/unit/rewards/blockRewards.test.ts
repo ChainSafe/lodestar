@@ -6,9 +6,9 @@ import {ssz} from "@lodestar/types";
 import {DataAvailabilityStatus, ExecutionPayloadStatus} from "../../../src/block/externalData.js";
 import {computeBlockRewards} from "../../../src/rewards/blockRewards.js";
 import {stateTransition} from "../../../src/stateTransition.js";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../../src/testUtils/util.js";
 import {CachedBeaconStateAllForks} from "../../../src/types.js";
 import {BlockAltairOpts, getBlockAltair} from "../../perf/block/util.js";
-import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair} from "../../perf/util.js";
 
 describe("chain / rewards / blockRewards", () => {
   const config = createBeaconConfig({...chainConfigDef, ALTAIR_FORK_EPOCH: 0}, Buffer.alloc(32, 0xaa));

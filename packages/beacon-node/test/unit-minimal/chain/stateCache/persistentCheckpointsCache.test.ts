@@ -1,9 +1,15 @@
 import {beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
+import {testLogger} from "@lodestar/logger/test-utils";
 import {ACTIVE_PRESET, PresetName, SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {CachedBeaconStateAllForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {RootHex, phase0} from "@lodestar/types";
+import {
+  BeaconStateView,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@lodestar/state-transition";
+import {RootHex, phase0, ssz} from "@lodestar/types";
 import {mapValues, toHexString} from "@lodestar/utils";
 import {FIFOBlockStateCache} from "../../../../src/chain/index.js";
 import {checkpointToDatastoreKey} from "../../../../src/chain/stateCache/datastore/index.js";
@@ -13,7 +19,6 @@ import {
 } from "../../../../src/chain/stateCache/persistentCheckpointsCache.js";
 import {CheckpointHex} from "../../../../src/chain/stateCache/types.js";
 import {getTestDatastore} from "../../../utils/chain/stateCache/datastore.js";
-import {testLogger} from "../../../utils/logger.js";
 import {generateCachedState} from "../../../utils/state.js";
 
 describe("PersistentCheckpointStateCache", () => {
@@ -30,7 +35,7 @@ describe("PersistentCheckpointStateCache", () => {
   const startSlotEpoch22 = computeStartSlotAtEpoch(22);
   let cache: PersistentCheckpointStateCache;
   let fileApisBuffer: Map<string, Uint8Array>;
-  let states: Record<"cp0a" | "cp0b" | "cp1" | "cp2", CachedBeaconStateAllForks>;
+  let states: Record<"cp0a" | "cp0b" | "cp1" | "cp2", BeaconStateView>;
   let stateBytes: Record<"cp0a" | "cp0b" | "cp1" | "cp2", Uint8Array>;
   const config = createBeaconConfig(chainConfigDef, Buffer.alloc(32, 0xaa));
 
@@ -63,7 +68,7 @@ describe("PersistentCheckpointStateCache", () => {
           // cp0a
           state.blockRoots.set((startSlotEpoch20 - 1) % SLOTS_PER_HISTORICAL_ROOT, root0a);
           state.blockRoots.set(startSlotEpoch20 % SLOTS_PER_HISTORICAL_ROOT, root0a);
-          return state;
+          return new BeaconStateView(state);
         }
 
         // other states based on cp0b
@@ -76,7 +81,7 @@ describe("PersistentCheckpointStateCache", () => {
         if (stateEpoch >= 22) {
           state.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root2);
         }
-        return state;
+        return new BeaconStateView(state);
       });
 
     states = {
@@ -146,7 +151,7 @@ describe("PersistentCheckpointStateCache", () => {
 
   it("pruneFinalized and getStateOrBytes", async () => {
     cache.add(cp2, states["cp2"]);
-    expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+    expect(((await cache.getStateOrBytes(cp0bHex)) as IBeaconStateView).hashTreeRoot()).toEqual(
       states["cp0b"].hashTreeRoot()
     );
     expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
@@ -158,11 +163,47 @@ describe("PersistentCheckpointStateCache", () => {
     expect(cache.get(cp1Hex)).not.toBeNull();
     // cp2 is in memory
     expect(cache.get(cp2Hex)).not.toBeNull();
-    // finalize epoch cp2
-    cache.pruneFinalized(cp2.epoch);
+    // finalize epoch 22 via processState: prune is driven by state.finalizedCheckpoint.epoch
+    expect(await cache.processState(toHexString(cp2.root), stateWithFinalizedEpoch(22))).toEqual(0);
     expect(fileApisBuffer.size).toEqual(0);
     expect(cache.get(cp1Hex)).toBeNull();
     expect(cache.get(cp2Hex)).not.toBeNull();
+    expect(await cache.getStateOrBytes(cp0bHex)).toBeNull();
+  });
+
+  // regression: a finalized checkpoint state must be pruned, never persisted (no orphan on disk)
+  it("does not persist a finalized checkpoint state", async () => {
+    cache.add(cp2, states["cp2"]);
+    // state at epoch 22 that finalizes epoch 21 -> epoch 20 must be pruned before any persist
+    expect(await cache.processState(toHexString(cp2.root), stateWithFinalizedEpoch(21))).toEqual(0);
+    // epoch 20 (cp0a, cp0b) is gone from memory and was never written to disk
+    expect(fileApisBuffer.size).toEqual(0);
+    expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();
+    expect(await cache.getStateOrBytes(cp0bHex)).toBeNull();
+    // epoch 21 and 22 are kept
+    expect(cache.get(cp1Hex)).not.toBeNull();
+    expect(cache.get(cp2Hex)).not.toBeNull();
+  });
+
+  // regression: re-add()ing a checkpoint that is already in memory with a persistedKey (e.g. one that
+  // was reloaded from disk) must keep that persistedKey. Otherwise its on-disk copy is orphaned, since
+  // prune/finalize removes files by the stored persistedKey.
+  it("re-adding a reloaded checkpoint keeps its persistedKey (no orphan on disk)", async () => {
+    cache.add(cp2, states["cp2"]);
+    // persist cp0b to disk
+    expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
+    expect(Array.from(fileApisBuffer.keys())).toEqual([persistent0bKey]);
+
+    // reload cp0b back into memory -> {inMemory, state, persistedKey}
+    expect((await cache.getOrReload(cp0bHex))?.serialize()).toEqual(stateBytes["cp0b"]);
+
+    // re-add the same checkpoint while it is in memory with a persistedKey
+    cache.add(cp0b, states["cp0b"]);
+
+    // finalize epoch 21 -> epoch 20 (cp0b) is pruned; its on-disk copy must be removed, not orphaned
+    expect(await cache.processState(toHexString(cp2.root), stateWithFinalizedEpoch(21))).toEqual(0);
+    expect(fileApisBuffer.has(persistent0bKey)).toBe(false);
+    expect(fileApisBuffer.size).toEqual(0);
     expect(await cache.getStateOrBytes(cp0bHex)).toBeNull();
   });
 
@@ -212,24 +253,24 @@ describe("PersistentCheckpointStateCache", () => {
       expect(await cache.processState(toHexString(cp2.root), states["cp2"])).toEqual(1);
 
       const cp1a = {epoch: 21, root: root0a};
-      const cp1aState = states["cp0a"].clone();
+      const cp1aState = states["cp0a"].cachedState.clone();
       cp1aState.slot = 21 * SLOTS_PER_EPOCH;
       cp1aState.blockRoots.set(startSlotEpoch21 % SLOTS_PER_HISTORICAL_ROOT, root0a);
       cp1aState.commit();
-      cache.add(cp1a, cp1aState);
+      cache.add(cp1a, new BeaconStateView(cp1aState));
 
       const cp2a = {epoch: 22, root: root0a};
       const cp2aState = cp1aState.clone();
       cp2aState.slot = 22 * SLOTS_PER_EPOCH;
       cp2aState.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root0a);
       cp2aState.commit();
-      cache.add(cp2a, cp2aState);
+      cache.add(cp2a, new BeaconStateView(cp2aState));
 
       const root3 = Buffer.alloc(32, 100);
       const state3 = cp2aState.clone();
       state3.slot = 22 * SLOTS_PER_EPOCH + 3;
       state3.commit();
-      await cache.processState(toHexString(root3), state3);
+      await cache.processState(toHexString(root3), new BeaconStateView(state3));
 
       // state of {0a, 21} is choosen because it was built from cp0a
       expect(cache.findSeedStateToReload(cp0aHex)?.hashTreeRoot()).toEqual(cp1aState.hashTreeRoot());
@@ -276,11 +317,11 @@ describe("PersistentCheckpointStateCache", () => {
       expect(fileApisBuffer.size).toEqual(1);
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
-      const blockStateRoot3 = states["cp2"].clone();
+      const blockStateRoot3 = states["cp2"].cachedState.clone();
       blockStateRoot3.slot = 22 * SLOTS_PER_EPOCH + 3;
       const root3 = Buffer.alloc(32, 100);
       // process state of root3
-      await cache.processState(toHexString(root3), blockStateRoot3);
+      await cache.processState(toHexString(root3), new BeaconStateView(blockStateRoot3));
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
       // epoch 22 has 1 checkpoint state
@@ -311,18 +352,18 @@ describe("PersistentCheckpointStateCache", () => {
       expect(fileApisBuffer.size).toEqual(1);
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
-      const blockStateRoot3 = states["cp2"].clone();
+      const blockStateRoot3 = states["cp2"].cachedState.clone();
       blockStateRoot3.slot = 22 * SLOTS_PER_EPOCH + 3;
       const root3 = Buffer.alloc(32, 100);
       // process state of root3
-      await cache.processState(toHexString(root3), blockStateRoot3);
+      await cache.processState(toHexString(root3), new BeaconStateView(blockStateRoot3));
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
-      const blockStateRoot4 = states["cp2"].clone();
+      const blockStateRoot4 = states["cp2"].cachedState.clone();
       blockStateRoot4.slot = 22 * SLOTS_PER_EPOCH + 4;
       const root4 = Buffer.alloc(32, 101);
       // process state of root4
-      await cache.processState(toHexString(root4), blockStateRoot4);
+      await cache.processState(toHexString(root4), new BeaconStateView(blockStateRoot4));
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
       // epoch 22 has 1 checkpoint state
@@ -356,12 +397,12 @@ describe("PersistentCheckpointStateCache", () => {
       // regen generates cp2a
       const root1a = Buffer.alloc(32, 100);
       const cp2a = {epoch: 22, root: root1a};
-      const cp2aState = states["cp1"].clone();
+      const cp2aState = states["cp1"].cachedState.clone();
       cp2aState.slot = 22 * SLOTS_PER_EPOCH;
       // assuming reorg block is at slot 5 of epoch 21
       cp2aState.blockRoots.set((startSlotEpoch21 + 5) % SLOTS_PER_HISTORICAL_ROOT, root1a);
       cp2aState.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root1a);
-      cache.add(cp2a, cp2aState);
+      cache.add(cp2a, new BeaconStateView(cp2aState));
 
       // block state of root3 in epoch 22 is built on cp2a
       const blockStateRoot3 = cp2aState.clone();
@@ -369,7 +410,7 @@ describe("PersistentCheckpointStateCache", () => {
 
       const root3 = Buffer.alloc(32, 101);
       // process state of root3
-      await cache.processState(toHexString(root3), blockStateRoot3);
+      await cache.processState(toHexString(root3), new BeaconStateView(blockStateRoot3));
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
       // epoch 22 has 2 checkpoint states
       expect(cache.get(cp2Hex)).not.toBeNull();
@@ -403,18 +444,18 @@ describe("PersistentCheckpointStateCache", () => {
       // regen generates cp1a
       const root0a = Buffer.alloc(32, 100);
       const cp1a = {epoch: 21, root: root0a};
-      const cp1aState = states["cp0b"].clone();
+      const cp1aState = states["cp0b"].cachedState.clone();
       cp1aState.slot = 21 * SLOTS_PER_EPOCH;
       // assuming reorg block is at slot 5 of epoch 20
       cp1aState.blockRoots.set((startSlotEpoch20 + 5) % SLOTS_PER_HISTORICAL_ROOT, root0a);
-      cache.add(cp1a, cp1aState);
+      cache.add(cp1a, new BeaconStateView(cp1aState));
 
       // regen generates cp2a
       const cp2a = {epoch: 22, root: root0a};
       const cp2aState = cp1aState.clone();
       cp2aState.slot = 22 * SLOTS_PER_EPOCH;
       cp2aState.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root0a);
-      cache.add(cp2a, cp2aState);
+      cache.add(cp2a, new BeaconStateView(cp2aState));
 
       // block state of root3 in epoch 22 is built on cp2a
       const blockStateRoot3 = cp2aState.clone();
@@ -422,7 +463,7 @@ describe("PersistentCheckpointStateCache", () => {
 
       const root3 = Buffer.alloc(32, 101);
       // process state of root3
-      await cache.processState(toHexString(root3), blockStateRoot3);
+      await cache.processState(toHexString(root3), new BeaconStateView(blockStateRoot3));
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
       // epoch 21 and 22 have 2 checkpoint states
       expect(cache.get(cp1Hex)).not.toBeNull();
@@ -460,14 +501,14 @@ describe("PersistentCheckpointStateCache", () => {
       const cp1aState = generateCachedState({slot: 21 * SLOTS_PER_EPOCH});
       cp1aState.blockRoots.set((startSlotEpoch20 - 1) % SLOTS_PER_HISTORICAL_ROOT, root0a);
       cp1aState.blockRoots.set(startSlotEpoch20 % SLOTS_PER_HISTORICAL_ROOT, root0a);
-      cache.add(cp1a, cp1aState);
+      cache.add(cp1a, new BeaconStateView(cp1aState));
 
       // regen generates cp2a
       const cp2a = {epoch: 22, root: root0a};
       const cp2aState = cp1aState.clone();
       cp2aState.slot = 22 * SLOTS_PER_EPOCH;
       cp2aState.blockRoots.set(startSlotEpoch21 % SLOTS_PER_HISTORICAL_ROOT, root0a);
-      cache.add(cp2a, cp2aState);
+      cache.add(cp2a, new BeaconStateView(cp2aState));
 
       // block state of root3 in epoch 22 is built on cp2a
       const blockStateRoot3 = cp2aState.clone();
@@ -478,7 +519,7 @@ describe("PersistentCheckpointStateCache", () => {
 
       const root3 = Buffer.alloc(32, 100);
       // process state of root3
-      expect(await cache.processState(toHexString(root3), blockStateRoot3)).toEqual(1);
+      expect(await cache.processState(toHexString(root3), new BeaconStateView(blockStateRoot3))).toEqual(1);
       await assertPersistedCheckpointState([cp0b, cp0a], [stateBytes["cp0b"], stateBytes["cp0a"]]);
       // epoch 21 and 22 have 2 checkpoint states
       expect(cache.get(cp1Hex)).not.toBeNull();
@@ -510,30 +551,30 @@ describe("PersistentCheckpointStateCache", () => {
 
       // regen needs to reload cp0b
       cache.add(cp0b, states["cp0b"]);
-      expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+      expect(((await cache.getStateOrBytes(cp0bHex)) as IBeaconStateView).hashTreeRoot()).toEqual(
         states["cp0b"].hashTreeRoot()
       );
 
       // regen generates cp1b
       const cp1b = {epoch: 21, root: root0b};
-      const cp1bState = states["cp0b"].clone();
+      const cp1bState = states["cp0b"].cachedState.clone();
       cp1bState.slot = 21 * SLOTS_PER_EPOCH;
       cp1bState.blockRoots.set(startSlotEpoch21 % SLOTS_PER_HISTORICAL_ROOT, root0b);
-      cache.add(cp1b, cp1bState);
+      cache.add(cp1b, new BeaconStateView(cp1bState));
 
       // regen generates cp2b
       const cp2b = {epoch: 22, root: root0b};
       const cp2bState = cp1bState.clone();
       cp2bState.slot = 22 * SLOTS_PER_EPOCH;
       cp2bState.blockRoots.set(startSlotEpoch22 % SLOTS_PER_HISTORICAL_ROOT, root0b);
-      cache.add(cp2b, cp2bState);
+      cache.add(cp2b, new BeaconStateView(cp2bState));
 
       // block state of root3 in epoch 22 is built on cp2a
       const blockStateRoot3 = cp2bState.clone();
       blockStateRoot3.slot = 22 * SLOTS_PER_EPOCH + 3;
       const root3 = Buffer.alloc(32, 100);
       // process state of root3, nothing is persisted
-      expect(await cache.processState(toHexString(root3), blockStateRoot3)).toEqual(0);
+      expect(await cache.processState(toHexString(root3), new BeaconStateView(blockStateRoot3))).toEqual(0);
       // but state of cp0b is pruned from memory
       expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
@@ -581,11 +622,11 @@ describe("PersistentCheckpointStateCache", () => {
       expect(fileApisBuffer.size).toEqual(1);
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
-      const blockStateRoot2 = states["cp1"].clone();
+      const blockStateRoot2 = states["cp1"].cachedState.clone();
       blockStateRoot2.slot = 21 * SLOTS_PER_EPOCH + 3;
       const root2 = Buffer.alloc(32, 100);
       // process state of root2
-      await cache.processState(toHexString(root2), blockStateRoot2);
+      await cache.processState(toHexString(root2), new BeaconStateView(blockStateRoot2));
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
       expect(cache.get(cp1Hex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
 
@@ -616,18 +657,18 @@ describe("PersistentCheckpointStateCache", () => {
       expect(fileApisBuffer.size).toEqual(1);
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
-      const blockStateRoot2 = states["cp1"].clone();
+      const blockStateRoot2 = states["cp1"].cachedState.clone();
       blockStateRoot2.slot = 21 * SLOTS_PER_EPOCH + 3;
       const root2 = Buffer.alloc(32, 100);
       // process state of root2
-      await cache.processState(toHexString(root2), blockStateRoot2);
+      await cache.processState(toHexString(root2), new BeaconStateView(blockStateRoot2));
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
 
-      const blockStateRoot3 = states["cp1"].clone();
+      const blockStateRoot3 = states["cp1"].cachedState.clone();
       blockStateRoot3.slot = 21 * SLOTS_PER_EPOCH + 4;
       const root3 = Buffer.alloc(32, 101);
       // process state of root3
-      await cache.processState(toHexString(root3), blockStateRoot3);
+      await cache.processState(toHexString(root3), new BeaconStateView(blockStateRoot3));
 
       // epoch 21 has 1 checkpoint state
       expect(cache.get(cp1Hex)).not.toBeNull();
@@ -652,7 +693,7 @@ describe("PersistentCheckpointStateCache", () => {
       // root 1a
       expect(fileApisBuffer.size).toEqual(0);
       const root1a = Buffer.alloc(32, 100);
-      const state1a = states["cp0b"].clone();
+      const state1a = states["cp0b"].cachedState.clone();
       state1a.slot = 20 * SLOTS_PER_EPOCH + SLOTS_PER_EPOCH - 1;
       state1a.blockRoots.set(state1a.slot % SLOTS_PER_HISTORICAL_ROOT, root1a);
       expect(await cache.processState(toHexString(cp1.root), states["cp1"])).toEqual(0);
@@ -671,12 +712,12 @@ describe("PersistentCheckpointStateCache", () => {
       const cp1aState = state1a.clone();
       cp1aState.slot = 21 * SLOTS_PER_EPOCH;
       const cp1a = {epoch: 21, root: root1a};
-      cache.add(cp1a, cp1aState);
+      cache.add(cp1a, new BeaconStateView(cp1aState));
       const blockStateRoot2 = cp1aState.clone();
       blockStateRoot2.slot = 21 * SLOTS_PER_EPOCH + 3;
       const root2 = Buffer.alloc(32, 100);
       // process state of root2
-      expect(await cache.processState(toHexString(root2), blockStateRoot2)).toEqual(0);
+      expect(await cache.processState(toHexString(root2), new BeaconStateView(blockStateRoot2))).toEqual(0);
       await assertPersistedCheckpointState([cp0b], [stateBytes["cp0b"]]);
       expect(cache.get(cp1Hex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
       // keep these 2 cp states at epoch 21
@@ -703,19 +744,19 @@ describe("PersistentCheckpointStateCache", () => {
 
       // simulate regen
       cache.add(cp0b, states["cp0b"]);
-      expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+      expect(((await cache.getStateOrBytes(cp0bHex)) as IBeaconStateView).hashTreeRoot()).toEqual(
         states["cp0b"].hashTreeRoot()
       );
       // root2, regen cp0b
-      const cp1bState = states["cp0b"].clone();
+      const cp1bState = states["cp0b"].cachedState.clone();
       cp1bState.slot = 21 * SLOTS_PER_EPOCH;
       const cp1b = {epoch: 21, root: root0b};
-      cache.add(cp1b, cp1bState);
+      cache.add(cp1b, new BeaconStateView(cp1bState));
       const blockStateRoot2 = cp1bState.clone();
       blockStateRoot2.slot = 21 * SLOTS_PER_EPOCH + 3;
       const root2 = Buffer.alloc(32, 100);
       // process state of root2, nothing is persisted
-      expect(await cache.processState(toHexString(root2), blockStateRoot2)).toEqual(0);
+      expect(await cache.processState(toHexString(root2), new BeaconStateView(blockStateRoot2))).toEqual(0);
 
       // but cp0b in-memory state is pruned
       expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
@@ -737,7 +778,7 @@ describe("PersistentCheckpointStateCache", () => {
       // root 1a
       expect(fileApisBuffer.size).toEqual(0);
       const root1a = Buffer.alloc(32, 100);
-      const state1a = states["cp0a"].clone();
+      const state1a = states["cp0a"].cachedState.clone();
       state1a.slot = 20 * SLOTS_PER_EPOCH + SLOTS_PER_EPOCH - 1;
       state1a.blockRoots.set(state1a.slot % SLOTS_PER_HISTORICAL_ROOT, root1a);
       expect(await cache.processState(toHexString(cp1.root), states["cp1"])).toEqual(0);
@@ -766,12 +807,12 @@ describe("PersistentCheckpointStateCache", () => {
       const cp1aState = state1a.clone();
       cp1aState.slot = 21 * SLOTS_PER_EPOCH;
       const cp1a = {epoch: 21, root: root1a};
-      cache.add(cp1a, cp1aState);
+      cache.add(cp1a, new BeaconStateView(cp1aState));
       const blockStateRoot2 = cp1aState.clone();
       blockStateRoot2.slot = 21 * SLOTS_PER_EPOCH + 3;
       const root2 = Buffer.alloc(32, 100);
       // process state of root2, persist cp0a
-      expect(await cache.processState(toHexString(root2), blockStateRoot2)).toEqual(1);
+      expect(await cache.processState(toHexString(root2), new BeaconStateView(blockStateRoot2))).toEqual(1);
       await assertPersistedCheckpointState([cp0b, cp0a], [stateBytes["cp0b"], stateBytes["cp0a"]]);
       expect(cache.get(cp1Hex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
       // keep these 2 cp states at epoch 21
@@ -805,15 +846,15 @@ describe("PersistentCheckpointStateCache", () => {
 
       // root2, regen cp0a
       cache.add(cp0a, states["cp0a"]);
-      const cp1aState = states["cp0a"].clone();
+      const cp1aState = states["cp0a"].cachedState.clone();
       cp1aState.slot = 21 * SLOTS_PER_EPOCH;
       const cp1a = {epoch: 21, root: root0a};
-      cache.add(cp1a, cp1aState);
+      cache.add(cp1a, new BeaconStateView(cp1aState));
       const blockStateRoot2 = cp1aState.clone();
       blockStateRoot2.slot = 21 * SLOTS_PER_EPOCH + 3;
       const root2 = Buffer.alloc(32, 100);
       // process state of root2, persist cp0a
-      expect(await cache.processState(toHexString(root2), blockStateRoot2)).toEqual(1);
+      expect(await cache.processState(toHexString(root2), new BeaconStateView(blockStateRoot2))).toEqual(1);
       await assertPersistedCheckpointState([cp0b, cp0a], [stateBytes["cp0b"], stateBytes["cp0a"]]);
       expect(cache.get(cp1Hex)?.hashTreeRoot()).toEqual(states["cp1"].hashTreeRoot());
       // keep these 2 cp states at epoch 21
@@ -852,10 +893,10 @@ describe("PersistentCheckpointStateCache", () => {
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
 
         const root1a = Buffer.alloc(32, 100);
-        const state1a = states["cp0b"].clone();
+        const state1a = states["cp0b"].cachedState.clone();
         state1a.slot = 20 * SLOTS_PER_EPOCH + SLOTS_PER_EPOCH + 3;
         state1a.blockRoots.set(state1a.slot % SLOTS_PER_HISTORICAL_ROOT, root1a);
-        expect(await cache.processState(toHexString(root1a), state1a)).toEqual(0);
+        expect(await cache.processState(toHexString(root1a), new BeaconStateView(state1a))).toEqual(0);
 
         // nothing change
         expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();
@@ -876,10 +917,10 @@ describe("PersistentCheckpointStateCache", () => {
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
 
         const root1a = Buffer.alloc(32, 100);
-        const state1a = states["cp0b"].clone();
+        const state1a = states["cp0b"].cachedState.clone();
         state1a.slot = 20 * SLOTS_PER_EPOCH + SLOTS_PER_EPOCH + 3;
         state1a.blockRoots.set(state1a.slot % SLOTS_PER_HISTORICAL_ROOT, root1a);
-        expect(await cache.processState(toHexString(root1a), state1a)).toEqual(0);
+        expect(await cache.processState(toHexString(root1a), new BeaconStateView(state1a))).toEqual(0);
 
         // nothing change
         expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();
@@ -887,15 +928,15 @@ describe("PersistentCheckpointStateCache", () => {
 
         // simulate reload cp1b
         cache.add(cp0b, states["cp0b"]);
-        expect(((await cache.getStateOrBytes(cp0bHex)) as CachedBeaconStateAllForks).hashTreeRoot()).toEqual(
+        expect(((await cache.getStateOrBytes(cp0bHex)) as IBeaconStateView).hashTreeRoot()).toEqual(
           states["cp0b"].hashTreeRoot()
         );
         const root1b = Buffer.alloc(32, 101);
-        const state1b = states["cp0b"].clone();
+        const state1b = states["cp0b"].cachedState.clone();
         state1b.slot = state1a.slot + 1;
         state1b.blockRoots.set(state1b.slot % SLOTS_PER_HISTORICAL_ROOT, root1b);
         // but no need to persist cp1b
-        expect(await cache.processState(toHexString(root1b), state1b)).toEqual(0);
+        expect(await cache.processState(toHexString(root1b), new BeaconStateView(state1b))).toEqual(0);
         // although states["cp0b"] is pruned
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
         expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();
@@ -927,7 +968,7 @@ describe("PersistentCheckpointStateCache", () => {
         );
 
         const root1a = Buffer.alloc(32, 100);
-        const state1a = states["cp0b"].clone();
+        const state1a = states["cp0b"].cachedState.clone();
         state1a.slot = 20 * SLOTS_PER_EPOCH + SLOTS_PER_EPOCH + 3;
         state1a.blockRoots.set(state1a.slot % SLOTS_PER_HISTORICAL_ROOT, root1a);
         // state transition add to cache
@@ -936,14 +977,14 @@ describe("PersistentCheckpointStateCache", () => {
 
         // no need to reload cp0b because it's available in block state
         const root1b = Buffer.alloc(32, 101);
-        const state1b = states["cp0a"].clone();
+        const state1b = states["cp0a"].cachedState.clone();
         state1b.slot = state1a.slot + 1;
         state1b.blockRoots.set(state1b.slot % SLOTS_PER_HISTORICAL_ROOT, root1b);
         // state transition add to cache
         cache.add(cp0a, states["cp0a"]);
 
         // need to persist 2 checkpoint states
-        expect(await cache.processState(toHexString(root1b), state1b)).toEqual(2);
+        expect(await cache.processState(toHexString(root1b), new BeaconStateView(state1b))).toEqual(2);
         // both are persisited
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
         expect(await cache.getStateOrBytes(cp0aHex)).toEqual(stateBytes["cp0a"]);
@@ -964,22 +1005,22 @@ describe("PersistentCheckpointStateCache", () => {
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
 
         const root1a = Buffer.alloc(32, 100);
-        const state1a = states["cp0b"].clone();
+        const state1a = states["cp0b"].cachedState.clone();
         state1a.slot = 20 * SLOTS_PER_EPOCH + SLOTS_PER_EPOCH + 3;
         state1a.blockRoots.set(state1a.slot % SLOTS_PER_HISTORICAL_ROOT, root1a);
-        expect(await cache.processState(toHexString(root1a), state1a)).toEqual(0);
+        expect(await cache.processState(toHexString(root1a), new BeaconStateView(state1a))).toEqual(0);
 
         // nothing change
         expect(await cache.getStateOrBytes(cp0aHex)).toBeNull();
         expect(await cache.getStateOrBytes(cp0bHex)).toEqual(stateBytes["cp0b"]);
 
         const root1b = Buffer.alloc(32, 101);
-        const state1b = states["cp0a"].clone();
+        const state1b = states["cp0a"].cachedState.clone();
         state1b.slot = state1a.slot + 1;
         state1b.blockRoots.set(state1b.slot % SLOTS_PER_HISTORICAL_ROOT, root1b);
         // regen should reload cp0a from disk
         cache.add(cp0a, states["cp0a"]);
-        expect(await cache.processState(toHexString(root1b), state1b)).toEqual(1);
+        expect(await cache.processState(toHexString(root1b), new BeaconStateView(state1b))).toEqual(1);
         await assertPersistedCheckpointState([cp0b, cp0a], [stateBytes["cp0b"], stateBytes["cp0a"]]);
 
         // both cp0a and cp0b are persisted
@@ -1009,17 +1050,17 @@ describe("PersistentCheckpointStateCache", () => {
         // regen should populate cp0a and cp1a checkpoint states
         cache.add(cp0a, states["cp0a"]);
         const cp1a = {epoch: 21, root: root0a};
-        const cp1aState = states["cp0a"].clone();
+        const cp1aState = states["cp0a"].cachedState.clone();
         cp1aState.blockRoots.set((20 * SLOTS_PER_EPOCH) % SLOTS_PER_HISTORICAL_ROOT, root0a);
         cp1aState.blockRoots.set((21 * SLOTS_PER_EPOCH) % SLOTS_PER_HISTORICAL_ROOT, root0a);
         cp1aState.slot = 21 * SLOTS_PER_EPOCH;
-        cache.add(cp1a, cp1aState);
+        cache.add(cp1a, new BeaconStateView(cp1aState));
 
         const root2 = Buffer.alloc(32, 100);
         const state2 = cp1aState.clone();
         state2.slot = 21 * SLOTS_PER_EPOCH + 3;
         state2.blockRoots.set(state2.slot % SLOTS_PER_HISTORICAL_ROOT, root2);
-        expect(await cache.processState(toHexString(root2), state2)).toEqual(2);
+        expect(await cache.processState(toHexString(root2), new BeaconStateView(state2))).toEqual(2);
         // expect 4 cp states are persisted
         await assertPersistedCheckpointState(
           [cp0b, cp1, cp0a, cp1a],
@@ -1028,6 +1069,15 @@ describe("PersistentCheckpointStateCache", () => {
       });
     });
   });
+
+  // clone the epoch-22 state and set its finalized checkpoint so processState() drives the prune
+  function stateWithFinalizedEpoch(finalizedEpoch: number): BeaconStateView {
+    const cachedState = states["cp2"].cachedState.clone();
+    cachedState.slot = 22 * SLOTS_PER_EPOCH + 3;
+    cachedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({epoch: finalizedEpoch, root: root2});
+    cachedState.commit();
+    return new BeaconStateView(cachedState);
+  }
 
   async function assertPersistedCheckpointState(cps: phase0.Checkpoint[], stateBytesArr: Uint8Array[]): Promise<void> {
     const persistedKeys = cps.map((cp) => toHexString(checkpointToDatastoreKey(cp)));

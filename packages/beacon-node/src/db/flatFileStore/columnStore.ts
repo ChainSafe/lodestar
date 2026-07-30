@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import {uncompress} from "snappyjs";
-import {RootHex, Slot, fulu, ssz} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkPostFulu} from "@lodestar/params";
+import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {atomicWrite, padSlot} from "./atomicWrite.js";
 import {
   DCOL_HEADER_SIZE,
@@ -29,6 +31,7 @@ export class ColumnStore {
 
   constructor(
     baseDir: string,
+    private readonly config: ChainForkConfig,
     private readonly cache: ExistenceCache
   ) {
     this.dir = path.join(baseDir, "data_columns");
@@ -83,14 +86,15 @@ export class ColumnStore {
   /**
    * Get deserialized data column sidecars.
    */
-  async getColumns(slot: Slot, rootHex: RootHex): Promise<fulu.DataColumnSidecar[]> {
+  async getColumns(slot: Slot, rootHex: RootHex): Promise<DataColumnSidecar[]> {
     const data = await this.readFile(slot, rootHex);
     if (!data) return [];
 
     const header = parseDcolHeader(data);
     const columns = readAllColumns(data, header);
+    const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
 
-    return columns.map((col) => ssz.fulu.DataColumnSidecar.deserialize(col.data));
+    return columns.map((col) => dataColumnSidecarType.deserialize(col.data));
   }
 
   /**

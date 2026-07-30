@@ -1,12 +1,6 @@
-import {BitArray, CompositeViewDU} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  LightClientUpdateSummary,
-  isBetterUpdate,
-  toLightClientUpdateSummary,
-  upgradeLightClientHeader,
-} from "@lodestar/light-client/spec";
 import {
   ForkName,
   ForkPostAltair,
@@ -16,17 +10,22 @@ import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
-  forkPostAltair,
-  highestFork,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
-  CachedBeaconStateAltair,
+  type IBeaconStateViewAltair,
   computeStartSlotAtEpoch,
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
   executionPayloadToPayloadHeader,
 } from "@lodestar/state-transition";
+import {
+  LightClientUpdateSummary,
+  isBetterUpdate,
+  toLightClientUpdateSummary,
+  upgradeLightClientHeader,
+} from "@lodestar/state-transition/light-client";
 import {
   BeaconBlock,
   BeaconBlockBody,
@@ -44,7 +43,6 @@ import {
   electra,
   phase0,
   ssz,
-  sszTypesFor,
 } from "@lodestar/types";
 import {Logger, MapDef, byteArrayEquals, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../../constants/index.js";
@@ -54,13 +52,7 @@ import {Metrics} from "../../metrics/index.js";
 import {IClock} from "../../util/clock.js";
 import {ChainEventEmitter} from "../emitter.js";
 import {LightClientServerError, LightClientServerErrorCode} from "../errors/lightClientError.js";
-import {
-  getBlockBodyExecutionHeaderProof,
-  getCurrentSyncCommitteeBranch,
-  getFinalizedRootProof,
-  getNextSyncCommitteeBranch,
-  getSyncCommitteesWitness,
-} from "./proofs.js";
+import {getBlockBodyExecutionHeaderProof, getCurrentSyncCommitteeBranch, getNextSyncCommitteeBranch} from "./proofs.js";
 
 export type LightClientServerOpts = {
   disableLightClientServerOnImportBlockHead?: boolean;
@@ -236,8 +228,8 @@ export class LightClientServer {
     this.signal = signal;
 
     this.zero = {
-      // Assign the hightest fork's default value because it can always be typecasted down to correct fork
-      finalizedHeader: sszTypesFor(highestFork(forkPostAltair)).LightClientHeader.defaultValue(),
+      // Assign the highest pre-Gloas light-client header because post-Gloas light-client updates are skipped for now.
+      finalizedHeader: ssz.electra.LightClientHeader.defaultValue(),
       // Electra finalityBranch has fixed length of 5 whereas altair has 4. The fifth element will be ignored
       // when serializing as altair LightClientUpdate
       finalityBranch: ssz.electra.LightClientUpdate.fields.finalityBranch.defaultValue(),
@@ -268,13 +260,21 @@ export class LightClientServer {
    */
   onImportBlockHead(
     block: BeaconBlock<ForkPostAltair>,
-    postState: CachedBeaconStateAltair,
+    postState: IBeaconStateViewAltair,
     parentBlockSlot: Slot
   ): void {
     // TEMP: To disable this functionality for fork_choice spec tests.
     // Since the tests have deep-reorgs attested data is not available often printing lots of error logs.
     // While this function is only called for head blocks, best to disable.
     if (this.opts.disableLightClientServerOnImportBlockHead) {
+      return;
+    }
+
+    // TODO GLOAS: Light client updates for gloas are not yet updated in the spec.
+    // The block body no longer contains execution payload, so `blockToLightClientHeader`
+    // cannot construct a header from a gloas block. Skip all light client processing
+    // for post-gloas blocks, revisit once there is a spec for it.
+    if (this.config.getForkSeq(block.slot) >= ForkSeq.gloas) {
       return;
     }
 
@@ -406,7 +406,7 @@ export class LightClientServer {
 
   private async persistPostBlockImportData(
     block: BeaconBlock<ForkPostAltair>,
-    postState: CachedBeaconStateAltair,
+    postState: IBeaconStateViewAltair,
     parentBlockSlot: Slot
   ): Promise<void> {
     const blockSlot = block.slot;
@@ -416,7 +416,7 @@ export class LightClientServer {
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.beacon);
     const blockRootHex = toRootHex(blockRoot);
 
-    const syncCommitteeWitness = getSyncCommitteesWitness(fork, postState);
+    const syncCommitteeWitness = postState.getSyncCommitteesWitness();
 
     // Only store current sync committee once per run
     if (!this.storedCurrentSyncCommittee) {
@@ -466,7 +466,7 @@ export class LightClientServer {
             isFinalized: true,
             attestedHeader: header,
             blockRoot,
-            finalityBranch: getFinalizedRootProof(postState),
+            finalityBranch: postState.getFinalizedRootProof(),
             finalizedCheckpoint,
           }
         : {
@@ -656,10 +656,17 @@ export class LightClientServer {
 
     const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
     const numWitness = syncCommitteeWitness.witness.length;
-    if (isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS_ELECTRA) {
+    if (
+      isForkPostGloas(attestedFork) &&
+      (syncCommitteeWitness.currentSyncCommitteeBranch === undefined ||
+        syncCommitteeWitness.nextSyncCommitteeBranch === undefined)
+    ) {
+      throw Error("Expected post-Gloas sync committee branches");
+    }
+    if (!isForkPostGloas(attestedFork) && isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS_ELECTRA) {
       throw Error(`Expected ${NUM_WITNESS_ELECTRA} witnesses in post-Electra numWitness=${numWitness}`);
     }
-    if (!isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS) {
+    if (!isForkPostGloas(attestedFork) && !isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS) {
       throw Error(`Expected ${NUM_WITNESS} witnesses in pre-Electra numWitness=${numWitness}`);
     }
 
@@ -724,13 +731,10 @@ export class LightClientServer {
     );
   }
 
-  private async storeSyncCommittee(
-    syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
-    syncCommitteeRoot: Uint8Array
-  ): Promise<void> {
+  private async storeSyncCommittee(syncCommittee: altair.SyncCommittee, syncCommitteeRoot: Uint8Array): Promise<void> {
     const isKnown = await this.db.syncCommittee.has(syncCommitteeRoot);
     if (!isKnown) {
-      await this.db.syncCommittee.putBinary(syncCommitteeRoot, syncCommittee.serialize());
+      await this.db.syncCommittee.putBinary(syncCommitteeRoot, ssz.altair.SyncCommittee.serialize(syncCommittee));
     }
   }
 

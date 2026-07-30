@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import {bench, describe} from "@chainsafe/benchmark";
+import {generateTestCachedBeaconStateOnlyValidators} from "@lodestar/state-transition/test-utils";
 import {ssz} from "@lodestar/types";
-import {generateTestCachedBeaconStateOnlyValidators} from "../../../../../state-transition/test/perf/util.js";
 import {validateGossipAttestationsSameAttData} from "../../../../src/chain/validation/index.js";
 import {getAttDataFromAttestationSerialized} from "../../../../src/util/sszBytes.js";
 import {getAttestationValidData} from "../../../utils/validationData/attestation.js";

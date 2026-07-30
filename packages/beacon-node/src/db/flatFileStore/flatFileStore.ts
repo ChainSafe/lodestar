@@ -1,5 +1,7 @@
 import fs from "node:fs";
-import {RootHex, Slot, fulu, ssz} from "@lodestar/types";
+import {ChainForkConfig} from "@lodestar/config";
+import {ForkPostFulu} from "@lodestar/params";
+import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import type {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
 import {blobSidecarsWrapperSsz} from "../repositories/blobSidecars.js";
@@ -16,11 +18,12 @@ export class FlatFileStore implements IFlatFileStore {
 
   constructor(
     dataDir: string,
+    private readonly config: ChainForkConfig,
     private readonly logger: Logger
   ) {
     this.cache = new ExistenceCache();
     this.blobStore = new BlobStore(dataDir, this.cache);
-    this.columnStore = new ColumnStore(dataDir, this.cache);
+    this.columnStore = new ColumnStore(dataDir, config, this.cache);
   }
 
   async init(): Promise<void> {
@@ -81,7 +84,7 @@ export class FlatFileStore implements IFlatFileStore {
 
   // --- Columns ---
 
-  async getDataColumns(slot: Slot, blockRoot: RootHex): Promise<fulu.DataColumnSidecar[]> {
+  async getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]> {
     return this.columnStore.getColumns(slot, blockRoot);
   }
 
@@ -97,10 +100,11 @@ export class FlatFileStore implements IFlatFileStore {
     await this.columnStore.putColumnsBinary(slot, blockRoot, fromHex(blockRoot), columns);
   }
 
-  async putDataColumns(slot: Slot, blockRoot: RootHex, columns: fulu.DataColumnSidecar[]): Promise<void> {
+  async putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void> {
+    const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
     const binaryColumns = columns.map((col) => ({
       index: col.index,
-      data: ssz.fulu.DataColumnSidecar.serialize(col),
+      data: dataColumnSidecarType.serialize(col),
     }));
     await this.columnStore.putColumnsBinary(slot, blockRoot, fromHex(blockRoot), binaryColumns);
   }

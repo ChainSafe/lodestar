@@ -15,14 +15,14 @@ on:
 jobs:
   build:
     name: Build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
@@ -44,13 +44,16 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       - name: Assert pnpm prints no warnings
         run: scripts/assert_no_pnpm_warnings.sh
+
+      - name: Assert @chainsafe/persistent-merkle-tree is not duplicated
+        run: scripts/assert_persistent_merkle_tree_dedup.sh
 
       - name: Lint Code
         run: pnpm lint
@@ -70,7 +73,7 @@ jobs:
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: "./.github/actions/setup-and-build"
         with:
@@ -85,20 +88,20 @@ jobs:
   unit-tests:
     name: Unit Tests
     needs: type-checks
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Cache validator slashing protection data tests
       - name: Restore spec tests cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
@@ -114,7 +117,7 @@ jobs:
       #   if: ${{ failure() && steps.unit_tests.conclusion == 'failure' }}
 
       - name: Upload coverage data
-        uses: codecov/codecov-action@b9fd7d16f6d7d1b5d2bec1a2887e65ceed900238 # v4.6.0
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
@@ -123,7 +126,7 @@ jobs:
 
   e2e-tests:
     name: E2E Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     needs: build
     strategy:
       fail-fast: false
@@ -131,7 +134,7 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - uses: "./.github/actions/setup-and-build"
         with:
@@ -153,14 +156,14 @@ jobs:
 
       - name: Upload debug log test for test env
         if: ${{ always() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: debug-e2e-test-logs-node-${{matrix.node}}
           path: test-logs/e2e-test-env
 
   browser-tests:
     name: Browser Tests
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     needs: build
     strategy:
       fail-fast: false
@@ -168,12 +171,18 @@ jobs:
         node: [24]
     steps:
       # <common-build> - Uses YAML anchors in the future
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install
-        run: pnpm playwright install
+        run: pnpm playwright install chromium chromium-headless-shell firefox
+        timeout-minutes: 15
       - name: Browser tests
         run: |
           export DISPLAY=':99.0'
@@ -183,23 +192,23 @@ jobs:
   spec-tests:
     name: Spec tests
     needs: build
-    runs-on: buildjet-4vcpu-ubuntu-2204
+    runs-on: warp-ubuntu-2204-x64-4x
     strategy:
       fail-fast: false
       matrix:
         node: [24]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: "./.github/actions/setup-and-build"
         with:
           node: ${{ matrix.node }}
 
       # Download spec tests with cache
       - name: Restore spec tests cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: packages/beacon-node/spec-tests
-          key: spec-test-data-${{ hashFiles('packages/beacon-node/test/spec/specTestVersioning.ts') }}
+          key: spec-test-data-${{ hashFiles('spec-tests-version.json') }}
       - name: Download spec tests
         run: pnpm download-spec-tests
       # Run them in different steps to quickly identifying which command failed

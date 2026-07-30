@@ -2,10 +2,10 @@ import {bench, describe} from "@chainsafe/benchmark";
 import {createChainForkConfig} from "@lodestar/config";
 import {NUMBER_OF_COLUMNS} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {reconstructBlobs} from "../../../src/util/blobs.ts";
-import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.ts";
-import {kzg} from "../../../src/util/kzg.ts";
-import {generateRandomBlob} from "../../utils/kzg.ts";
+import {reconstructBlobs} from "../../../src/util/blobs.js";
+import {getDataColumnSidecarsFromBlock} from "../../../src/util/dataColumns.js";
+import {kzg} from "../../../src/util/kzg.js";
+import {generateRandomBlob} from "../../utils/kzg.js";
 
 describe("reconstructBlobs", () => {
   const config = createChainForkConfig({
@@ -19,9 +19,12 @@ describe("reconstructBlobs", () => {
 
   const testCases = [
     {blobCount: 6, name: "6 blobs"},
-    {blobCount: 10, name: "10 blobs"},
-    {blobCount: 20, name: "20 blobs"},
-    // Disabled as those take too long to run
+    // Higher blob counts are disabled on CI: KZG cell reconstruction is CPU-heavy and has high
+    // run-to-run variance on the shared benchmark runner, which trips the 3x regression gate with
+    // false positives (the larger counts also take long to run). Kept enabled only for the
+    // smallest count; uncomment locally for fuller coverage.
+    // {blobCount: 10, name: "10 blobs"},
+    // {blobCount: 20, name: "20 blobs"},
     // {blobCount: 48, name: "48 blobs"},
     // {blobCount: 72, name: "72 blobs"},
   ];

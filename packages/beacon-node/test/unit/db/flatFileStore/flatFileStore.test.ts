@@ -2,6 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {createChainForkConfig} from "@lodestar/config";
+import {config as defaultConfig} from "@lodestar/config/default";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {fulu, gloas, ssz} from "@lodestar/types";
 import {DCOL_VERSION} from "../../../../src/db/flatFileStore/dcolFormat.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 
@@ -22,12 +26,18 @@ const ROOT_ORPHAN = "0x" + "11".repeat(32);
 const ROOT_CANONICAL = "0x" + "22".repeat(32);
 
 describe("FlatFileStore", () => {
+  const config = createChainForkConfig({
+    ...defaultConfig,
+    FULU_FORK_EPOCH: 0,
+    GLOAS_FORK_EPOCH: 1,
+  });
+
   let tmpDir: string;
   let store: FlatFileStore;
 
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-"));
-    store = new FlatFileStore(tmpDir, testLogger);
+    store = new FlatFileStore(tmpDir, config, testLogger);
     await store.init();
   });
 
@@ -107,6 +117,24 @@ describe("FlatFileStore", () => {
       expect(new Uint8Array(result[0]!)).toEqual(col0);
       expect(new Uint8Array(result[1]!)).toEqual(col5);
       expect(result[2]).toBeUndefined();
+    });
+
+    it("should derive the column SSZ type from the slot", async () => {
+      const fuluColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+      const gloasColumn = ssz.gloas.DataColumnSidecar.defaultValue();
+      const gloasSlot = SLOTS_PER_EPOCH;
+
+      await store.putDataColumns(0, ROOT_A, [fuluColumn]);
+      await store.putDataColumns(gloasSlot, ROOT_B, [gloasColumn]);
+
+      const [storedFuluColumn] = await store.getDataColumns(0, ROOT_A);
+      const [storedGloasColumn] = await store.getDataColumns(gloasSlot, ROOT_B);
+      expect(ssz.fulu.DataColumnSidecar.serialize(storedFuluColumn as fulu.DataColumnSidecar)).toEqual(
+        ssz.fulu.DataColumnSidecar.serialize(fuluColumn)
+      );
+      expect(ssz.gloas.DataColumnSidecar.serialize(storedGloasColumn as gloas.DataColumnSidecar)).toEqual(
+        ssz.gloas.DataColumnSidecar.serialize(gloasColumn)
+      );
     });
 
     it("should check column existence via cache (sync)", async () => {
@@ -217,7 +245,7 @@ describe("FlatFileStore", () => {
       ]);
 
       // Create a new store (simulating restart)
-      const store2 = new FlatFileStore(tmpDir, testLogger);
+      const store2 = new FlatFileStore(tmpDir, config, testLogger);
       await store2.init();
 
       // Cache should be rebuilt

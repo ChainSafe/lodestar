@@ -35,10 +35,13 @@ ETH
 Edgington
 Erigon
 Esat
+EthPandaOps
 EthStaker
 EtherScan
 Ethereum
 EthereumJS
+FCR
+FFG
 FINDNODE
 FX
 Filesystem
@@ -47,6 +50,7 @@ Flamegraphs
 GPG
 Geth
 Github
+Gloas
 Goerli
 Golang
 Gossipsub
@@ -100,6 +104,7 @@ Plaintext
 PoS
 Prysm
 Prysm's
+QUIC
 Quickstart
 README
 READMEs
@@ -116,6 +121,7 @@ Somer
 Stakehouse
 Subdirectories
 TMPFILE
+TLS
 TOC
 TTD
 Teku
@@ -130,6 +136,7 @@ Vitalik
 Vitest
 Wagyu
 addons
+api
 args
 async
 atime
@@ -145,8 +152,10 @@ bootnode
 bootnodes
 bundlers
 chainConfig
+chainsafe
 chiado
 chmod
+cli
 cmd
 codebase
 config
@@ -185,15 +194,20 @@ envs
 ephemery
 ethers
 fanout
+fastconfirm
 feeRecipient
 filesystem
 filesystems
+flamegraph
+flamegraphs
 floodsub
 fsSL
 fsync
 fulu
 getNetworkIdentity
+gloas
 gnosis
+gpg
 heapdump
 heaptrack
 holesky
@@ -225,6 +239,7 @@ merkle
 merkleization
 misconfiguration
 mmeshsub
+monorepo
 mtime
 multiaddr
 multifork
@@ -240,6 +255,7 @@ osx
 params
 performant
 pid
+plaintext
 pnpm
 pre
 pread
@@ -263,6 +279,7 @@ secp
 sepolia
 sharding
 src
+ssz
 stakers
 subnet
 subnets
@@ -285,6 +302,7 @@ validator
 validators
 verifier
 vite
+vitest
 webpack
 wip
 wordlist

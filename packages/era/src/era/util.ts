@@ -2,20 +2,20 @@ import type {FileHandle} from "node:fs/promises";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_HISTORICAL_ROOT, isForkPostCapella} from "@lodestar/params";
 import {BeaconState, Slot, capella, ssz} from "@lodestar/types";
-import {E2STORE_HEADER_SIZE, SlotIndex, readSlotIndex} from "../e2s.ts";
-import {readUint48} from "../util.ts";
+import {E2STORE_HEADER_SIZE, SlotIndex, readSlotIndex} from "../e2s.js";
+import {readUint48} from "../util.js";
 
 /**
  * Parsed components of an .era file name.
- * Format: <config-name>-<era-number>-<short-historical-root>.era
+ * Format: <config-name>-<era-number>-<short-era-root>.era
  */
 export interface EraFileName {
   /** CONFIG_NAME field of runtime config (mainnet, sepolia, hoodi, etc.) */
   configName: string;
   /** Number of the first era stored in file, 5-digit zero-padded (00000, 00001, etc.) */
   eraNumber: number;
-  /** First 4 bytes of last historical root, lower-case hex-encoded (8 chars) */
-  shortHistoricalRoot: string;
+  /** First 4 bytes of last era root, lower-case hex-encoded (8 chars) */
+  shortEraRoot: string;
 }
 
 export interface EraIndices {
@@ -46,9 +46,9 @@ export function computeStartBlockSlotFromEraNumber(eraNumber: number): Slot {
 /**
  * Parse era filename.
  *
- * Format: `<config-name>-<era-number>-<short-historical-root>.era`
+ * Format: `<config-name>-<era-number>-<short-era-root>.era`
  */
-export function parseEraName(filename: string): {configName: string; eraNumber: number; shortHistoricalRoot: string} {
+export function parseEraName(filename: string): {configName: string; eraNumber: number; shortEraRoot: string} {
   const match = filename.match(/^(.*)-(\d{5})-([0-9a-f]{8})\.era$/);
   if (!match) {
     throw new Error(`Invalid era filename format: ${filename}`);
@@ -56,7 +56,7 @@ export function parseEraName(filename: string): {configName: string; eraNumber: 
   return {
     configName: match[1],
     eraNumber: parseInt(match[2], 10),
-    shortHistoricalRoot: match[3],
+    shortEraRoot: match[3],
   };
 }
 
@@ -118,7 +118,7 @@ export function readSlotFromBeaconStateBytes(beaconStateBytes: Uint8Array): Slot
   );
 }
 
-export function getShortHistoricalRoot(config: ChainForkConfig, state: BeaconState): string {
+export function getShortEraRoot(config: ChainForkConfig, state: BeaconState): string {
   return Buffer.from(
     state.slot === 0
       ? state.genesisValidatorsRoot

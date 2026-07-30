@@ -29,3 +29,9 @@ export type BlobSidecarsByRootRequest = ValueOf<ReturnType<typeof BlobSidecarsBy
 export const DataColumnSidecarsByRootRequestType = (config: BeaconConfig) =>
   new ListCompositeType(ssz.fulu.DataColumnsByRootIdentifier, config.MAX_REQUEST_BLOCKS_DENEB);
 export type DataColumnSidecarsByRootRequest = ValueOf<ReturnType<typeof DataColumnSidecarsByRootRequestType>>;
+
+export const ExecutionPayloadEnvelopesByRootRequestType = (config: BeaconConfig) =>
+  new ListCompositeType(ssz.Root, config.MAX_REQUEST_PAYLOADS);
+export type ExecutionPayloadEnvelopesByRootRequest = ValueOf<
+  ReturnType<typeof ExecutionPayloadEnvelopesByRootRequestType>
+>;

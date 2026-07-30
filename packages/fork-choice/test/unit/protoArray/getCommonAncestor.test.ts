@@ -48,8 +48,6 @@ describe("getCommonAncestor", () => {
 
       parentBlockHash: null,
       payloadStatus: PayloadStatus.FULL,
-      builderIndex: null,
-      blockHashFromBid: null,
     },
     0
   );
@@ -79,8 +77,6 @@ describe("getCommonAncestor", () => {
 
         parentBlockHash: null,
         payloadStatus: PayloadStatus.FULL,
-        builderIndex: null,
-        blockHashFromBid: null,
       },
       block.slot,
       null
@@ -106,7 +102,7 @@ describe("getCommonAncestor", () => {
   const lastSlot = blocks.reverse()[0].slot;
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas,
+    attestationDeltas: deltas,
     proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
     justifiedEpoch: 0,
     justifiedRoot: "-",
@@ -118,7 +114,7 @@ describe("getCommonAncestor", () => {
 
   const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
-    deltas: deltasNew,
+    attestationDeltas: deltasNew,
     proposerBoost: {root: blocks.at(-1)?.root as string, score: 34},
     justifiedEpoch: 0,
     justifiedRoot: "-",

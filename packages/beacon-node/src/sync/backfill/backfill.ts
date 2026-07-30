@@ -2,7 +2,7 @@ import {EventEmitter} from "node:events";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {BeaconStateAllForks, blockToHeader, computeAnchorCheckpoint} from "@lodestar/state-transition";
+import {IBeaconStateView, blockToHeader} from "@lodestar/state-transition";
 import {Root, SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
 import {ErrorAborted, Logger, byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../chain/index.js";
@@ -29,7 +29,7 @@ export type BackfillSyncModules = {
   config: BeaconConfig;
   logger: Logger;
   metrics: Metrics | null;
-  anchorState: BeaconStateAllForks;
+  anchorState: IBeaconStateView;
   wsCheckpoint?: phase0.Checkpoint;
   signal: AbortSignal;
 };
@@ -127,7 +127,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private wsValidated = false;
 
   /**
-   * From https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/weak-subjectivity.md
+   * From https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/weak-subjectivity.md
    *
    *
    * If
@@ -231,7 +231,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   ): Promise<T> {
     const {config, anchorState, db, wsCheckpoint, logger} = modules;
 
-    const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
+    const {checkpoint: anchorCp} = anchorState.computeAnchorCheckpoint();
     const anchorSlot = anchorState.latestBlockHeader.slot;
     const syncAnchor = {
       anchorBlock: null,
