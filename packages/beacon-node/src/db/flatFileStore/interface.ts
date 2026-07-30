@@ -47,5 +47,4 @@ export interface IFlatFileStore {
   deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
   pruneBlobsBeforeSlot(slot: Slot): Promise<void>;
   pruneColumnsBeforeSlot(slot: Slot): Promise<void>;
-  pruneHotBlobs(): Promise<void>;
 }

@@ -455,59 +455,46 @@ Step 1 replaces the current "delete non-canonical blocks from hot" LevelDB opera
 
 ## 7. Migration Path from LevelDB
 
-### Phase 1a: New Data to Filesystem (Feature Flag)
+### Phase 1a: New Data to Filesystem
 
 Add a `--chain.flatFileStorage` CLI flag (default: `true`).
 
 When enabled:
 
 - Blob sidecars and data columns are written to the filesystem
-- Reads go to filesystem (with LevelDB fallback for data written before the flag was enabled)
+- Reads go to the filesystem
 - Pruning operates on the filesystem
 
-This allows easy rollback by disabling the flag.
+The flag supports internal testing before flat-file storage becomes the only backend. The transition is one-way once archived data has been migrated and removed from LevelDB.
 
-### Phase 1b: Background Migration of Existing Data
+### Phase 1b: Boot-Time Migration of Existing Archives
 
-A background migration task runs at low priority after startup:
+Before the node starts, archived blob sidecars and data columns are copied to flat-file storage in small batches. A batch is removed from LevelDB only after its flat-file writes succeed:
 
 ```typescript
 async function migrateExistingData(): Promise<void> {
-  // Migrate archived blob sidecars
-  for await (const entry of db.blobSidecarsArchive.entriesStream()) {
-    const slot = entry.key;
-    const wrapper = entry.value;
-    await flatStore.writeBlobSidecars(slot, wrapper.blockRoot, wrapper);
-  }
-
-  // Migrate archived data columns
-  for await (const entry of db.dataColumnSidecarArchive.entriesStreamBinary()) {
-    await flatStore.writeColumnBytes(entry.prefix, entry.id, entry.value);
-  }
-
-  // Migrate hot blob sidecars
-  for await (const entry of db.blobSidecars.entriesStream()) {
-    const wrapper = entry.value;
-    await flatStore.writeBlobSidecars(wrapper.slot, wrapper.blockRoot, wrapper);
-  }
-
-  // Migrate hot data columns
-  for await (const entry of db.dataColumnSidecar.entriesStreamBinary()) {
-    await flatStore.writeColumnBytes(...);
+  for await (const batch of archivedSidecarBatches(db)) {
+    try {
+      await writeBatchToFlatFiles(batch);
+      await deleteBatchFromLevelDb(batch);
+    } catch (e) {
+      logger.error("Failed to migrate archived sidecar batch", {batch}, e);
+    }
   }
 }
 ```
 
-The migration can be interrupted and resumed (check existence before writing).
+The remaining LevelDB entries are the migration progress marker. If migration is interrupted, already-written files are overwritten or merged on the next startup and only the remaining LevelDB entries are retried.
+
+Hot repositories are not migrated. Lodestar already refetches hot sidecars after startup, so legacy hot blob and column entries are deleted when flat-file storage is active.
 
 ### Phase 1c: Remove LevelDB Blob/Column Storage
 
 Once migration is verified:
 
-1. Remove the `--flatFileStorage` flag, make it the default
+1. Remove the `--flatFileStorage` flag
 2. Remove `BlobSidecarsRepository`, `BlobSidecarsArchiveRepository`, `DataColumnSidecarRepository`, `DataColumnSidecarArchiveRepository`
 3. Remove bucket IDs 27, 28, 57, 58
-4. Add a one-time startup task to clean up remaining LevelDB blob/column data
 
 ### Phase 2: Separate DB for Blocks (Future)
 
@@ -553,7 +540,6 @@ interface IFlatFileStore {
   deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
   pruneBlobsBeforeSlot(slot: Slot): Promise<void>;
   pruneColumnsBeforeSlot(slot: Slot): Promise<void>;
-  pruneHotBlobs(): Promise<void>; // no-op for flat files (no hot/cold distinction)
 }
 ```
 
@@ -677,7 +663,7 @@ packages/beacon-node/src/db/
 5. **`columnStore.ts`** - Data column read/write/prune with locking
 6. **`flatFileStore.ts`** - Unified store coordinating blob + column stores
 7. **Integration** - Wire into `BeaconDb`, update archive pipeline
-8. **Migration** - Background LevelDB→filesystem migration
+8. **Migration** - Boot-time archive LevelDB→filesystem migration
 9. **Cleanup** - Remove LevelDB blob/column repositories
 
 ### Testing Strategy
@@ -733,7 +719,7 @@ packages/beacon-node/src/db/
 
 **Mitigation:**
 
-- The feature flag allows instant rollback to LevelDB
+- Internal testing validates the flat-file backend before the one-way migration becomes the default
 - Write batching: group column writes for the same block into a single file write
 - OS page cache handles read caching automatically (no need for application-level read cache)
 
@@ -749,9 +735,7 @@ packages/beacon-node/src/db/
 
 ### Rollback Strategy
 
-1. **Phase 1a (dual-write):** Disable `--flatFileStorage` flag, restart. All data is in both LevelDB and filesystem.
-2. **Phase 1b (post-migration):** Re-enable LevelDB writes, data is still in LevelDB.
-3. **Phase 1c (LevelDB removed):** Cannot rollback without re-migration. This phase should only be entered after extended production validation.
+The migration is intentionally one-way. Successfully migrated archive entries are deleted from LevelDB, and new data is written only to flat files. Internal testing must complete before enabling the migration by default; reverting afterward requires a reverse migration.
 
 ---
 

@@ -248,7 +248,20 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
   }
 
-  async *entriesStreamBinary(prefix: P | P[]): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
+  async *entriesStreamBinary(prefix?: P | P[]): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
+    if (prefix === undefined) {
+      for await (const {key, value} of this.db.entriesStream({
+        gte: this.minKey,
+        lt: this.maxKey,
+        bucketId: this.bucketId,
+      })) {
+        const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
+
+        yield {prefix, id, value};
+      }
+      return;
+    }
+
     for (const v of Array.isArray(prefix) ? prefix : [prefix]) {
       for await (const {key, value} of this.db.entriesStream({
         gte: this.wrapKey(this.getMinKeyRaw(v)),

@@ -143,9 +143,4 @@ export class FlatFileStore implements IFlatFileStore {
   async pruneColumnsBeforeSlot(slot: Slot): Promise<void> {
     await this.columnStore.pruneBeforeSlot(slot);
   }
-
-  async pruneHotBlobs(): Promise<void> {
-    // No-op for flat file store: blobs are already in their final location
-    // (no hot/cold distinction). Pruning is done by pruneBlobsBeforeSlot.
-  }
 }

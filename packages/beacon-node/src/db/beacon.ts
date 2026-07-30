@@ -4,6 +4,7 @@ import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
 import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
 import type {IFlatFileStore} from "./flatFileStore/interface.js";
+import {migrateArchivedSidecars} from "./flatFileStore/migrate.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
 import {
@@ -97,6 +98,7 @@ export class BeaconDb implements IBeaconDb {
   async initFlatFileStore(dataDir: string, logger: Logger): Promise<void> {
     const store = new FlatFileStore(dataDir, this.config, logger);
     await store.init();
+    await migrateArchivedSidecars(this.config, this.blobSidecarsArchive, this.dataColumnSidecarArchive, store, logger);
     this.flatFileStore = store;
   }
 
@@ -113,7 +115,10 @@ export class BeaconDb implements IBeaconDb {
 
   async pruneHotDb(): Promise<void> {
     if (this.flatFileStore) {
-      await this.flatFileStore.pruneHotBlobs();
+      await Promise.all([
+        this.deleteBucketData(Bucket.deneb_blobSidecars),
+        this.deleteBucketData(Bucket.allForks_dataColumnSidecars),
+      ]);
     } else {
       // Prune all hot blobs
       await this.blobSidecars.batchDelete(await this.blobSidecars.keys());
