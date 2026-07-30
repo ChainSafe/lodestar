@@ -167,9 +167,13 @@ export class ArchiveStore {
   // Event handlers
   //-------------------------------------------------------------------------
   private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
+    // `jobQueue.push()` can throw synchronously (queue full/aborted) or reject asynchronously.
+    // Funnel both into a single handler via `Promise.resolve().then()` so neither path escapes as
+    // an unhandled rejection nor throws back through the (deferred) finalized event emit.
     callInNextEventLoop(() => {
-      try {
-        this.jobQueue.push(finalized).catch((e) => {
+      Promise.resolve()
+        .then(() => this.jobQueue.push(finalized))
+        .catch((e) => {
           if (!isQueueErrorAborted(e)) {
             this.logger.error(
               "Error queuing finalized checkpoint",
@@ -178,15 +182,6 @@ export class ArchiveStore {
             );
           }
         });
-      } catch (e) {
-        if (!isQueueErrorAborted(e)) {
-          this.logger.error(
-            "Error queuing finalized checkpoint",
-            {epoch: finalized.epoch, rootHex: finalized.rootHex},
-            e as Error
-          );
-        }
-      }
     });
   };
 
