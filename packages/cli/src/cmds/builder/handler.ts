@@ -10,8 +10,6 @@ import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs} from "./options.js";
 
 export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promise<void> {
-  const abortController = new AbortController();
-
   const {config, network} = getBeaconConfigFromArgs(args);
 
   const globalPaths = getGlobalPaths(args, network);
@@ -26,17 +24,23 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   const keypair = await loadBuilderKeypair(args.keystore, args.keystorePassword, args.builderPubkey);
 
+  const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
-    abortController.abort();
+    for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
+
+  const abortController = new AbortController();
+  onGracefulShutdownCbs.push(async () => abortController.abort());
 
   const api = getClient({urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal}}, {config, logger});
 
-  const _builder = await Builder.init({
+  const builder = await Builder.init({
     keypair,
     logger,
     config,
     abortController,
     api,
   });
+
+  onGracefulShutdownCbs.push(() => builder.close());
 }

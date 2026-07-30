@@ -29,12 +29,14 @@ export class Builder {
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
   private readonly logger: Logger;
+  private readonly controller: AbortController;
 
   constructor({opts, builderSigner, config, logger, metrics}: BuilderModules) {
     this.builderSigner = builderSigner;
     this.config = config;
     this.logger = logger;
     this.api = opts.api;
+    this.controller = opts.abortController;
   }
 
   static async init(opts: BuilderOptions, metrics: Metrics | null = null): Promise<Builder> {
@@ -48,5 +50,9 @@ export class Builder {
     const builderSigner = new BuilderSigner(config, opts.keypair);
 
     return new Builder({opts, builderSigner, config, logger: opts.logger, metrics});
+  }
+
+  async close(): Promise<void> {
+    this.controller.abort();
   }
 }
