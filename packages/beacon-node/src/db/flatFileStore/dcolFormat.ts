@@ -32,9 +32,12 @@ import {getSlotFromOffset} from "../../util/sszBytes.js";
 export const DCOL_VERSION = 0x01;
 export const DCOL_HEADER_SIZE = 149;
 const BITMAP_BYTES = 16;
+const BITMAP_BITS = BITMAP_BYTES * 8;
 const BITMAP_OFFSET = 5;
 const BLOCK_ROOT_OFFSET = 21;
+const BLOCK_ROOT_BYTES = 32;
 const SLOT_OFFSET = 53;
+const MAX_SLOT = 0xffffffff;
 
 // --- Bitmap helpers ---
 
@@ -84,6 +87,18 @@ export interface DcolHeader {
 }
 
 export function encodeDcolHeader(header: DcolHeader): Uint8Array {
+  // Defensive checks at the persistence boundary. Normal sidecars are already validated, but silently truncating
+  // malformed metadata here would turn an upstream regression into durable on-disk corruption.
+  if (header.bitmap.length !== BITMAP_BYTES) {
+    throw new Error(`Invalid dcol bitmap length: ${header.bitmap.length}`);
+  }
+  if (header.blockRoot.length !== BLOCK_ROOT_BYTES) {
+    throw new Error(`Invalid dcol block root length: ${header.blockRoot.length}`);
+  }
+  if (!Number.isInteger(header.slot) || header.slot < 0 || header.slot > MAX_SLOT) {
+    throw new Error(`Invalid dcol slot: ${header.slot}`);
+  }
+
   const buf = new Uint8Array(DCOL_HEADER_SIZE);
   const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
 
@@ -223,6 +238,18 @@ export function encodeDcolFile(
 ): Uint8Array {
   if (columns.length === 0) {
     throw new Error("Cannot encode dcol file with zero columns");
+  }
+
+  // Defensive validation keeps bitmap membership and offset table entries in one-to-one correspondence.
+  const seenIndices = new Set<number>();
+  for (const {index} of columns) {
+    if (!Number.isInteger(index) || index < 0 || index >= BITMAP_BITS) {
+      throw new Error(`Invalid dcol column index: ${index}`);
+    }
+    if (seenIndices.has(index)) {
+      throw new Error(`Duplicate dcol column index: ${index}`);
+    }
+    seenIndices.add(index);
   }
 
   const bitmap = new Uint8Array(BITMAP_BYTES);

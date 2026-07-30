@@ -108,6 +108,39 @@ describe("dcolFormat", () => {
       expect(decoded.slot).toBe(0xffffffff);
     });
 
+    it.each([-1, 1.5, 0x100000000])("should defensively reject invalid slot %s", (slot) => {
+      expect(() =>
+        encodeDcolHeader({
+          version: DCOL_VERSION,
+          bitmap: new Uint8Array(16),
+          blockRoot: new Uint8Array(32),
+          slot,
+        })
+      ).toThrow("Invalid dcol slot");
+    });
+
+    it.each([31, 33])("should defensively reject a %s-byte block root", (length) => {
+      expect(() =>
+        encodeDcolHeader({
+          version: DCOL_VERSION,
+          bitmap: new Uint8Array(16),
+          blockRoot: new Uint8Array(length),
+          slot: 0,
+        })
+      ).toThrow("Invalid dcol block root length");
+    });
+
+    it.each([15, 17])("should defensively reject a %s-byte bitmap", (length) => {
+      expect(() =>
+        encodeDcolHeader({
+          version: DCOL_VERSION,
+          bitmap: new Uint8Array(length),
+          blockRoot: new Uint8Array(32),
+          slot: 0,
+        })
+      ).toThrow("Invalid dcol bitmap length");
+    });
+
     it("should reject slot exceeding 4-byte range", () => {
       const header = encodeDcolHeader({
         version: DCOL_VERSION,
@@ -170,6 +203,21 @@ describe("dcolFormat", () => {
 
     it("should throw on empty columns", () => {
       expect(() => encodeDcolFile(new Uint8Array(32), 0, [])).toThrow("zero columns");
+    });
+
+    it.each([-1, 1.5, 128])("should defensively reject invalid column index %s", (index) => {
+      expect(() => encodeDcolFile(new Uint8Array(32), 0, [{index, data: new Uint8Array(1)}])).toThrow(
+        "Invalid dcol column index"
+      );
+    });
+
+    it("should defensively reject duplicate column indices", () => {
+      expect(() =>
+        encodeDcolFile(new Uint8Array(32), 0, [
+          {index: 3, data: new Uint8Array([1])},
+          {index: 3, data: new Uint8Array([2])},
+        ])
+      ).toThrow("Duplicate dcol column index");
     });
 
     it("compressed file should be smaller than uncompressed size for uniform data", () => {
