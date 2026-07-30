@@ -171,12 +171,20 @@ export class ArchiveStore {
       try {
         this.jobQueue.push(finalized).catch((e) => {
           if (!isQueueErrorAborted(e)) {
-            this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+            this.logger.error(
+              "Error queuing finalized checkpoint",
+              {epoch: finalized.epoch, rootHex: finalized.rootHex},
+              e as Error
+            );
           }
         });
       } catch (e) {
         if (!isQueueErrorAborted(e)) {
-          this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+          this.logger.error(
+            "Error queuing finalized checkpoint",
+            {epoch: finalized.epoch, rootHex: finalized.rootHex},
+            e as Error
+          );
         }
       }
     });

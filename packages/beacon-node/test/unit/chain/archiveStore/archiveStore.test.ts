@@ -45,7 +45,7 @@ describe("chain / archive / ArchiveStore", () => {
 
     expect(logger.error).toHaveBeenCalledWith(
       "Error queuing finalized checkpoint",
-      {epoch: finalized.epoch},
+      {epoch: finalized.epoch, rootHex: finalized.rootHex},
       expect.any(Error)
     );
   });
