@@ -5,6 +5,7 @@ import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
 import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
 import type {IFlatFileStore} from "./flatFileStore/interface.js";
+import type {FlatFileStoreMetrics} from "./flatFileStore/metrics.js";
 import {migrateArchivedSidecars} from "./flatFileStore/migrate.js";
 import {IBeaconDb} from "./interface.js";
 import {CheckpointStateRepository} from "./repositories/checkpointState.js";
@@ -89,15 +90,21 @@ export class BeaconDb implements IBeaconDb {
     this.backfilledRanges = new BackfilledRanges(config, db);
   }
 
-  async initFlatFileStore(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void> {
-    const store = new FlatFileStore(dataDir, this.config, logger);
+  async initFlatFileStore(
+    dataDir: string,
+    finalizedCheckpointSlot: Slot,
+    logger: Logger,
+    metrics: FlatFileStoreMetrics | null
+  ): Promise<void> {
+    const store = new FlatFileStore(dataDir, this.config, logger, metrics);
     await store.init(finalizedCheckpointSlot);
     await migrateArchivedSidecars(
       this.config,
       this.legacyBlobSidecarsArchive,
       this.legacyDataColumnSidecarArchive,
       store,
-      logger
+      logger,
+      metrics
     );
     this.flatFileStoreInstance = store;
   }

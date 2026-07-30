@@ -6,6 +6,7 @@ import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../repositories/blobSidecars.js";
 import {BlobSidecarsArchiveRepository} from "../repositories/blobSidecarsArchive.js";
 import {DataColumnSidecarArchiveRepository} from "../repositories/dataColumnSidecarArchive.js";
 import type {IFlatFileStore} from "./interface.js";
+import {type FlatFileStoreMetrics, FlatFileStoreMigrationResult, FlatFileStoreType} from "./metrics.js";
 
 const BLOB_DELETE_BATCH_SIZE = 128;
 
@@ -30,7 +31,8 @@ export async function migrateArchivedSidecars(
   blobSidecarsArchive: BlobSidecarsArchiveRepository,
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository,
   store: MigrationStore,
-  logger: Logger
+  logger: Logger,
+  metrics: FlatFileStoreMetrics | null = null
 ): Promise<ArchivedSidecarMigrationStats> {
   const stats: ArchivedSidecarMigrationStats = {
     blobs: 0,
@@ -60,9 +62,11 @@ export async function migrateArchivedSidecars(
 
         const blockRoot = toRootHex(value.subarray(0, 32));
         await store.putBlobSidecars(slot, blockRoot, value);
+        metrics?.migrationWrites.inc({store: FlatFileStoreType.blob, result: FlatFileStoreMigrationResult.success}, 1);
         slotsToDelete.push(slot);
       } catch (e) {
         stats.blobFailures++;
+        metrics?.migrationWrites.inc({store: FlatFileStoreType.blob, result: FlatFileStoreMigrationResult.error}, 1);
         logger.error("Failed to migrate archived blob sidecars to flat-file storage", {slot}, e as Error);
       }
 
@@ -87,6 +91,7 @@ export async function migrateArchivedSidecars(
       const columnsToMigrate = columns;
       currentSlot = null;
       columns = [];
+      let writeSucceeded = false;
 
       try {
         const dataColumnSidecarType = config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
@@ -98,12 +103,23 @@ export async function migrateArchivedSidecars(
         );
 
         await store.putDataColumnsBinary(slot, blockRoot, columnsToMigrate);
+        writeSucceeded = true;
+        metrics?.migrationWrites.inc(
+          {store: FlatFileStoreType.column, result: FlatFileStoreMigrationResult.success},
+          1
+        );
         await dataColumnSidecarArchive.deleteMany(slot);
 
         stats.columnSlots++;
         stats.columns += columnsToMigrate.length;
       } catch (e) {
         stats.columnFailures += columnsToMigrate.length;
+        if (!writeSucceeded) {
+          metrics?.migrationWrites.inc(
+            {store: FlatFileStoreType.column, result: FlatFileStoreMigrationResult.error},
+            1
+          );
+        }
         logger.error(
           "Failed to migrate archived data column sidecars to flat-file storage",
           {slot, columns: columnsToMigrate.length},

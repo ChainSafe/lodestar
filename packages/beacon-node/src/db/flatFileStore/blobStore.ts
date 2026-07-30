@@ -4,6 +4,12 @@ import {RootHex, Slot} from "@lodestar/types";
 import {atomicWrite, padSlot} from "./atomicWrite.js";
 import {isFsNotFoundError} from "./errors.js";
 import {ExistenceCache} from "./existenceCache.js";
+import {
+  type FlatFileStoreMetrics,
+  FlatFileStoreOperation,
+  FlatFileStoreType,
+  observeFlatFileStoreOperation,
+} from "./metrics.js";
 
 /**
  * Filesystem blob store.
@@ -19,7 +25,8 @@ export class BlobStore {
 
   constructor(
     baseDir: string,
-    private readonly cache: ExistenceCache
+    private readonly cache: ExistenceCache,
+    private readonly metrics: FlatFileStoreMetrics | null
   ) {
     this.dir = path.join(baseDir, "blob_sidecars");
   }
@@ -55,33 +62,58 @@ export class BlobStore {
     });
   }
 
-  async getBinary(slot: Slot, rootHex: RootHex): Promise<Uint8Array | null> {
+  private async readPath(filePath: string): Promise<Uint8Array | null> {
     try {
-      return await fs.promises.readFile(this.filePath(slot, rootHex));
+      const data = await fs.promises.readFile(filePath);
+      this.metrics?.readBytes.inc({store: FlatFileStoreType.blob}, data.length);
+      return data;
     } catch (e) {
       if (!isFsNotFoundError(e)) throw e;
       return null;
     }
   }
 
+  async getBinary(slot: Slot, rootHex: RootHex): Promise<Uint8Array | null> {
+    return observeFlatFileStoreOperation(this.metrics, FlatFileStoreType.blob, FlatFileStoreOperation.read, () =>
+      this.readPath(this.filePath(slot, rootHex))
+    );
+  }
+
   async put(slot: Slot, rootHex: RootHex, data: Uint8Array): Promise<void> {
-    const release = await this.acquireLock(slot, rootHex);
-    try {
-      await atomicWrite(this.filePath(slot, rootHex), data);
-      this.cache.setBlobPresent(slot, rootHex);
-    } finally {
-      release();
-    }
+    await observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.blob,
+      FlatFileStoreOperation.write,
+      async () => {
+        const release = await this.acquireLock(slot, rootHex);
+        try {
+          await atomicWrite(this.filePath(slot, rootHex), data);
+          this.metrics?.writeBytes.inc({store: FlatFileStoreType.blob}, data.length);
+          this.cache.setBlobPresent(slot, rootHex);
+          this.metrics?.files.set({store: FlatFileStoreType.blob}, this.cache.getBlobFileCount());
+        } finally {
+          release();
+        }
+      }
+    );
   }
 
   async delete(slot: Slot, rootHex: RootHex): Promise<void> {
-    const release = await this.acquireLock(slot, rootHex);
-    try {
-      await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
-      this.cache.removeBlobPresent(slot, rootHex);
-    } finally {
-      release();
-    }
+    await observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.blob,
+      FlatFileStoreOperation.delete,
+      async () => {
+        const release = await this.acquireLock(slot, rootHex);
+        try {
+          await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
+          this.cache.removeBlobPresent(slot, rootHex);
+          this.metrics?.files.set({store: FlatFileStoreType.blob}, this.cache.getBlobFileCount());
+        } finally {
+          release();
+        }
+      }
+    );
   }
 
   has(slot: Slot, rootHex: RootHex): boolean {
@@ -92,10 +124,19 @@ export class BlobStore {
    * Delete all slot directories with slot < minSlot.
    */
   async pruneBeforeSlot(minSlot: Slot): Promise<void> {
-    for (const slot of this.cache.getBlobSlotsBefore(minSlot)) {
-      await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
-      this.cache.removeBlobSlot(slot);
-    }
+    await observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.blob,
+      FlatFileStoreOperation.prune,
+      async () => {
+        for (const slot of this.cache.getBlobSlotsBefore(minSlot)) {
+          await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
+          this.cache.removeBlobSlot(slot);
+          this.metrics?.prunedDirectories.inc({store: FlatFileStoreType.blob});
+          this.metrics?.files.set({store: FlatFileStoreType.blob}, this.cache.getBlobFileCount());
+        }
+      }
+    );
   }
 
   /**
@@ -108,14 +149,21 @@ export class BlobStore {
       return this.getBinary(slot, cachedRoot);
     }
 
-    const slotDir = path.join(this.dir, padSlot(slot));
-    try {
-      const files = await fs.promises.readdir(slotDir);
-      const blobFiles = files.filter((file) => file.endsWith(".ssz") && file.startsWith("0x"));
-      if (blobFiles.length === 1) return await fs.promises.readFile(path.join(slotDir, blobFiles[0]));
-    } catch (e) {
-      if (!isFsNotFoundError(e)) throw e;
-    }
-    return null;
+    return observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.blob,
+      FlatFileStoreOperation.read,
+      async () => {
+        const slotDir = path.join(this.dir, padSlot(slot));
+        try {
+          const files = await fs.promises.readdir(slotDir);
+          const blobFiles = files.filter((file) => file.endsWith(".ssz") && file.startsWith("0x"));
+          if (blobFiles.length === 1) return this.readPath(path.join(slotDir, blobFiles[0]));
+        } catch (e) {
+          if (!isFsNotFoundError(e)) throw e;
+        }
+        return null;
+      }
+    );
   }
 }

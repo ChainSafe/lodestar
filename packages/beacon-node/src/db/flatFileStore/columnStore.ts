@@ -19,6 +19,12 @@ import {
 } from "./dcolFormat.js";
 import {isFsNotFoundError} from "./errors.js";
 import {ExistenceCache} from "./existenceCache.js";
+import {
+  type FlatFileStoreMetrics,
+  FlatFileStoreOperation,
+  FlatFileStoreType,
+  observeFlatFileStoreOperation,
+} from "./metrics.js";
 
 /**
  * Filesystem data column store using `.dcol` format.
@@ -35,7 +41,8 @@ export class ColumnStore {
   constructor(
     baseDir: string,
     private readonly config: ChainForkConfig,
-    private readonly cache: ExistenceCache
+    private readonly cache: ExistenceCache,
+    private readonly metrics: FlatFileStoreMetrics | null
   ) {
     this.dir = path.join(baseDir, "data_columns");
   }
@@ -91,15 +98,23 @@ export class ColumnStore {
    * Get deserialized data column sidecars.
    */
   async getColumns(slot: Slot, rootHex: RootHex): Promise<DataColumnSidecar[]> {
-    const data = await this.readFile(slot, rootHex);
-    if (!data) return [];
+    return observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.column,
+      FlatFileStoreOperation.read,
+      async () => {
+        const data = await this.readFile(slot, rootHex);
+        if (!data) return [];
 
-    const header = parseDcolHeader(data);
-    validateDcolHeader(header, slot, rootHex);
-    const columns = readAllColumns(data, header);
-    const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
+        this.metrics?.readBytes.inc({store: FlatFileStoreType.column}, data.length);
+        const header = parseDcolHeader(data);
+        validateDcolHeader(header, slot, rootHex);
+        const columns = readAllColumns(data, header);
+        const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
 
-    return columns.map((col) => dataColumnSidecarType.deserialize(col.data));
+        return columns.map((col) => dataColumnSidecarType.deserialize(col.data));
+      }
+    );
   }
 
   /**
@@ -107,6 +122,16 @@ export class ColumnStore {
    * Uses targeted fd.read() to avoid reading the entire file.
    */
   async getColumnsBinary(slot: Slot, rootHex: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]> {
+    return observeFlatFileStoreOperation(this.metrics, FlatFileStoreType.column, FlatFileStoreOperation.read, () =>
+      this.getColumnsBinaryUninstrumented(slot, rootHex, indices)
+    );
+  }
+
+  private async getColumnsBinaryUninstrumented(
+    slot: Slot,
+    rootHex: RootHex,
+    indices: number[]
+  ): Promise<(Uint8Array | undefined)[]> {
     let fd: fs.promises.FileHandle;
     try {
       fd = await fs.promises.open(this.filePath(slot, rootHex), "r");
@@ -118,6 +143,7 @@ export class ColumnStore {
     try {
       const headerBuf = new Uint8Array(DCOL_HEADER_SIZE);
       await readExactly(fd, headerBuf, 0);
+      this.metrics?.readBytes.inc({store: FlatFileStoreType.column}, headerBuf.length);
       const header = parseDcolHeader(headerBuf);
       validateDcolHeader(header, slot, rootHex);
 
@@ -125,6 +151,7 @@ export class ColumnStore {
       const tableSize = offsetTableSize(N);
       const offsetTable = new Uint8Array(tableSize);
       await readExactly(fd, offsetTable, DCOL_HEADER_SIZE);
+      this.metrics?.readBytes.inc({store: FlatFileStoreType.column}, offsetTable.length);
       const fileSize = (await fd.stat()).size;
 
       const results: (Uint8Array | undefined)[] = [];
@@ -139,6 +166,7 @@ export class ColumnStore {
         }
         const buf = new Uint8Array(range.length);
         await readExactly(fd, buf, range.offset);
+        this.metrics?.readBytes.inc({store: FlatFileStoreType.column}, buf.length);
         results.push(uncompress(buf));
       }
 
@@ -160,37 +188,55 @@ export class ColumnStore {
   ): Promise<void> {
     if (columns.length === 0) return;
 
-    const release = await this.acquireLock(slot, rootHex);
-    try {
-      const existing = await this.readFile(slot, rootHex);
-      let fileData: Uint8Array;
+    await observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.column,
+      FlatFileStoreOperation.write,
+      async () => {
+        const release = await this.acquireLock(slot, rootHex);
+        try {
+          const existing = await this.readFile(slot, rootHex);
+          let fileData: Uint8Array;
 
-      if (existing) {
-        const header = parseDcolHeader(existing);
-        validateDcolHeader(header, slot, rootHex);
-        fileData = mergeDcolColumns(existing, columns);
-      } else {
-        fileData = encodeDcolFile(blockRoot, slot, columns);
+          if (existing) {
+            this.metrics?.readBytes.inc({store: FlatFileStoreType.column}, existing.length);
+            const header = parseDcolHeader(existing);
+            validateDcolHeader(header, slot, rootHex);
+            fileData = mergeDcolColumns(existing, columns);
+          } else {
+            fileData = encodeDcolFile(blockRoot, slot, columns);
+          }
+
+          await atomicWrite(this.filePath(slot, rootHex), fileData);
+          this.metrics?.writeBytes.inc({store: FlatFileStoreType.column}, fileData.length);
+          this.cache.setColumnPresent(slot, rootHex);
+          this.metrics?.files.set({store: FlatFileStoreType.column}, this.cache.getColumnFileCount());
+        } finally {
+          release();
+        }
       }
-
-      await atomicWrite(this.filePath(slot, rootHex), fileData);
-      this.cache.setColumnPresent(slot, rootHex);
-    } finally {
-      release();
-    }
+    );
   }
 
   /**
    * Delete all columns for a (slot, root).
    */
   async delete(slot: Slot, rootHex: RootHex): Promise<void> {
-    const release = await this.acquireLock(slot, rootHex);
-    try {
-      await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
-      this.cache.removeColumns(slot, rootHex);
-    } finally {
-      release();
-    }
+    await observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.column,
+      FlatFileStoreOperation.delete,
+      async () => {
+        const release = await this.acquireLock(slot, rootHex);
+        try {
+          await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
+          this.cache.removeColumns(slot, rootHex);
+          this.metrics?.files.set({store: FlatFileStoreType.column}, this.cache.getColumnFileCount());
+        } finally {
+          release();
+        }
+      }
+    );
   }
 
   /**
@@ -203,27 +249,43 @@ export class ColumnStore {
       return this.getColumnsBinary(slot, cachedRoot, indices);
     }
 
-    const slotDir = path.join(this.dir, padSlot(slot));
-    try {
-      const files = await fs.promises.readdir(slotDir);
-      const columnFiles = files.filter((file) => file.endsWith(".dcol") && file.startsWith("0x"));
-      if (columnFiles.length === 1) {
-        return this.getColumnsBinary(slot, columnFiles[0].slice(0, -5), indices);
+    return observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.column,
+      FlatFileStoreOperation.read,
+      async () => {
+        const slotDir = path.join(this.dir, padSlot(slot));
+        try {
+          const files = await fs.promises.readdir(slotDir);
+          const columnFiles = files.filter((file) => file.endsWith(".dcol") && file.startsWith("0x"));
+          if (columnFiles.length === 1) {
+            return this.getColumnsBinaryUninstrumented(slot, columnFiles[0].slice(0, -5), indices);
+          }
+        } catch (e) {
+          if (!isFsNotFoundError(e)) throw e;
+        }
+        return indices.map(() => undefined);
       }
-    } catch (e) {
-      if (!isFsNotFoundError(e)) throw e;
-    }
-    return indices.map(() => undefined);
+    );
   }
 
   /**
    * Delete all slot directories with slot < minSlot.
    */
   async pruneBeforeSlot(minSlot: Slot): Promise<void> {
-    for (const slot of this.cache.getColumnSlotsBefore(minSlot)) {
-      await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
-      this.cache.removeColumnSlot(slot);
-    }
+    await observeFlatFileStoreOperation(
+      this.metrics,
+      FlatFileStoreType.column,
+      FlatFileStoreOperation.prune,
+      async () => {
+        for (const slot of this.cache.getColumnSlotsBefore(minSlot)) {
+          await fs.promises.rm(path.join(this.dir, padSlot(slot)), {recursive: true, force: true});
+          this.cache.removeColumnSlot(slot);
+          this.metrics?.prunedDirectories.inc({store: FlatFileStoreType.column});
+          this.metrics?.files.set({store: FlatFileStoreType.column}, this.cache.getColumnFileCount());
+        }
+      }
+    );
   }
 }
 

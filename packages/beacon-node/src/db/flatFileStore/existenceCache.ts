@@ -12,6 +12,8 @@ import {isFsNotFoundError} from "./errors.js";
 export class ExistenceCache {
   private blobPresence = new Map<Slot, Set<RootHex>>();
   private columnPresence = new Map<Slot, Set<RootHex>>();
+  private blobFileCount = 0;
+  private columnFileCount = 0;
 
   private trackBlobSlot(slot: Slot): Set<RootHex> {
     let roots = this.blobPresence.get(slot);
@@ -40,11 +42,27 @@ export class ExistenceCache {
   }
 
   removeBlobSlot(slot: Slot): void {
-    this.blobPresence.delete(slot);
+    const roots = this.blobPresence.get(slot);
+    if (roots) {
+      this.blobFileCount -= roots.size;
+      this.blobPresence.delete(slot);
+    }
   }
 
   removeColumnSlot(slot: Slot): void {
-    this.columnPresence.delete(slot);
+    const roots = this.columnPresence.get(slot);
+    if (roots) {
+      this.columnFileCount -= roots.size;
+      this.columnPresence.delete(slot);
+    }
+  }
+
+  getBlobFileCount(): number {
+    return this.blobFileCount;
+  }
+
+  getColumnFileCount(): number {
+    return this.columnFileCount;
   }
 
   // --- Slot → Root resolution (for finalized canonical lookups) ---
@@ -68,7 +86,11 @@ export class ExistenceCache {
   // --- Blobs ---
 
   setBlobPresent(slot: Slot, rootHex: RootHex): void {
-    this.trackBlobSlot(slot).add(rootHex);
+    const roots = this.trackBlobSlot(slot);
+    if (!roots.has(rootHex)) {
+      roots.add(rootHex);
+      this.blobFileCount++;
+    }
   }
 
   hasBlobPresent(slot: Slot, rootHex: RootHex): boolean {
@@ -76,13 +98,19 @@ export class ExistenceCache {
   }
 
   removeBlobPresent(slot: Slot, rootHex: RootHex): void {
-    this.blobPresence.get(slot)?.delete(rootHex);
+    if (this.blobPresence.get(slot)?.delete(rootHex)) {
+      this.blobFileCount--;
+    }
   }
 
   // --- Column files ---
 
   setColumnPresent(slot: Slot, rootHex: RootHex): void {
-    this.trackColumnSlot(slot).add(rootHex);
+    const roots = this.trackColumnSlot(slot);
+    if (!roots.has(rootHex)) {
+      roots.add(rootHex);
+      this.columnFileCount++;
+    }
   }
 
   hasColumnPresent(slot: Slot, rootHex: RootHex): boolean {
@@ -90,7 +118,9 @@ export class ExistenceCache {
   }
 
   removeColumns(slot: Slot, rootHex: RootHex): void {
-    this.columnPresence.get(slot)?.delete(rootHex);
+    if (this.columnPresence.get(slot)?.delete(rootHex)) {
+      this.columnFileCount--;
+    }
   }
 
   /**

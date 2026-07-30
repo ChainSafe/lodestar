@@ -17,6 +17,7 @@ import {
   DataColumnSidecarArchiveRepository,
   DataColumnSidecarRepository,
 } from "../../../../src/db/repositories/index.js";
+import {createMetricsTest} from "../../metrics/utils.js";
 
 const config = createChainForkConfig({
   ...defaultConfig,
@@ -93,7 +94,8 @@ describe("archived sidecar migration", () => {
     hotColumn.signedBlockHeader.message.slot = hotColumnSlot;
     await dataColumnSidecar.put(hotColumnRoot, hotColumn);
 
-    await db.initFlatFileStore(tmpDir, 0, testLogger("flat-file-migration"));
+    const metrics = createMetricsTest();
+    await db.initFlatFileStore(tmpDir, 0, testLogger("flat-file-migration"), metrics.flatFileStore);
 
     expect(await blobSidecarsArchive.get(archivedBlobSlot)).toBeNull();
     expect(await dataColumnSidecarArchive.values(archivedColumnSlot)).toEqual([]);
@@ -127,6 +129,16 @@ describe("archived sidecar migration", () => {
     expect(await store.getDataColumnsBinary(hotColumnSlot, toRootHex(hotColumnRoot), [hotColumn.index])).toEqual([
       undefined,
     ]);
+
+    const migrationMetrics = await metrics.register.getSingleMetricAsString(
+      "lodestar_flat_file_store_migration_writes_total"
+    );
+    expect(migrationMetrics).toContain(
+      'lodestar_flat_file_store_migration_writes_total{store="blob",result="success"} 1'
+    );
+    expect(migrationMetrics).toContain(
+      'lodestar_flat_file_store_migration_writes_total{store="column",result="success"} 2'
+    );
   });
 
   it("rejects flat file access before initialization", () => {
@@ -148,13 +160,15 @@ describe("archived sidecar migration", () => {
       putBlobSidecars: vi.fn().mockRejectedValue(new Error("write failed")),
       putDataColumnsBinary: vi.fn().mockRejectedValue(new Error("write failed")),
     };
+    const metrics = createMetricsTest();
 
     const failedStats = await migrateArchivedSidecars(
       config,
       blobSidecarsArchive,
       dataColumnSidecarArchive,
       failingStore,
-      testLogger("flat-file-migration")
+      testLogger("flat-file-migration"),
+      metrics.flatFileStore
     );
 
     expect(failedStats.blobFailures).toBe(1);
@@ -172,12 +186,29 @@ describe("archived sidecar migration", () => {
       blobSidecarsArchive,
       dataColumnSidecarArchive,
       succeedingStore,
-      testLogger("flat-file-migration")
+      testLogger("flat-file-migration"),
+      metrics.flatFileStore
     );
 
     expect(retriedStats.blobs).toBe(1);
     expect(retriedStats.columns).toBe(1);
     expect(await blobSidecarsArchive.get(blobSlot)).toBeNull();
     expect(await dataColumnSidecarArchive.values(columnSlot)).toEqual([]);
+
+    const migrationMetrics = await metrics.register.getSingleMetricAsString(
+      "lodestar_flat_file_store_migration_writes_total"
+    );
+    expect(migrationMetrics).toContain(
+      'lodestar_flat_file_store_migration_writes_total{store="blob",result="error"} 1'
+    );
+    expect(migrationMetrics).toContain(
+      'lodestar_flat_file_store_migration_writes_total{store="column",result="error"} 1'
+    );
+    expect(migrationMetrics).toContain(
+      'lodestar_flat_file_store_migration_writes_total{store="blob",result="success"} 1'
+    );
+    expect(migrationMetrics).toContain(
+      'lodestar_flat_file_store_migration_writes_total{store="column",result="success"} 1'
+    );
   });
 });

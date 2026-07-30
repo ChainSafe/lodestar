@@ -633,6 +633,24 @@ packages/beacon-node/src/db/
 - **Performance benchmarks:** Write throughput, read latency, pruning speed vs LevelDB
 - **Spec tests:** Ensure all blob/column-related spec tests pass with flat file backend
 
+### Operational Metrics
+
+Flat-file storage has dedicated metrics rather than reusing LevelDB counters:
+
+- `lodestar_flat_file_store_operation_duration_seconds{store,operation}`
+- `lodestar_flat_file_store_operation_errors_total{store,operation}`
+- `lodestar_flat_file_store_read_bytes_total{store}`
+- `lodestar_flat_file_store_write_bytes_total{store}`
+- `lodestar_flat_file_store_files{store}`
+- `lodestar_flat_file_store_pruned_directories_total{store}`
+- `lodestar_flat_file_store_startup_duration_seconds`
+- `lodestar_flat_file_store_startup_errors_total`
+- `lodestar_flat_file_store_migration_writes_total{store,result}`
+
+The existing `lodestar_db_size_bytes_total` metric measures LevelDB only. Calculating the current size of the flat-file
+directories would require an additional `stat` call for every retained file during startup, so total disk consumption
+remains the responsibility of host filesystem monitoring.
+
 ---
 
 ## 11. Risks and Mitigations

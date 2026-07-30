@@ -9,6 +9,7 @@ import {BlobStore} from "./blobStore.js";
 import {ColumnStore} from "./columnStore.js";
 import {ExistenceCache} from "./existenceCache.js";
 import type {IFlatFileStore} from "./interface.js";
+import {type FlatFileStoreMetrics, FlatFileStoreType} from "./metrics.js";
 import {removeSlotDirectories} from "./slotDirectory.js";
 
 export class FlatFileStore implements IFlatFileStore {
@@ -19,38 +20,51 @@ export class FlatFileStore implements IFlatFileStore {
   constructor(
     dataDir: string,
     private readonly config: ChainForkConfig,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly metrics: FlatFileStoreMetrics | null = null
   ) {
     this.cache = new ExistenceCache();
-    this.blobStore = new BlobStore(dataDir, this.cache);
-    this.columnStore = new ColumnStore(dataDir, config, this.cache);
+    this.blobStore = new BlobStore(dataDir, this.cache, metrics);
+    this.columnStore = new ColumnStore(dataDir, config, this.cache, metrics);
   }
 
   async init(finalizedCheckpointSlot: Slot): Promise<void> {
-    // Ensure directories exist
-    await fs.promises.mkdir(this.blobStore.dir, {recursive: true});
-    await fs.promises.mkdir(this.columnStore.dir, {recursive: true});
+    const endTimer = this.metrics?.startupDuration.startTimer();
+    try {
+      // Ensure directories exist
+      await fs.promises.mkdir(this.blobStore.dir, {recursive: true});
+      await fs.promises.mkdir(this.columnStore.dir, {recursive: true});
 
-    // Hot data is refetched after restart. Remove it before rebuilding the cache so roots
-    // from the previous unfinalized fork cannot survive canonical cleanup.
-    const [hotBlobSlots, hotColumnSlots] = await Promise.all([
-      removeSlotDirectories(this.blobStore.dir, (slot) => slot > finalizedCheckpointSlot),
-      removeSlotDirectories(this.columnStore.dir, (slot) => slot > finalizedCheckpointSlot),
-    ]);
-    if (hotBlobSlots > 0 || hotColumnSlots > 0) {
-      this.logger.info("Removed hot flat file data", {
-        finalizedCheckpointSlot,
-        blobSlots: hotBlobSlots,
-        columnSlots: hotColumnSlots,
+      // Hot data is refetched after restart. Remove it before rebuilding the cache so roots
+      // from the previous unfinalized fork cannot survive canonical cleanup.
+      const [hotBlobSlots, hotColumnSlots] = await Promise.all([
+        removeSlotDirectories(this.blobStore.dir, (slot) => slot > finalizedCheckpointSlot),
+        removeSlotDirectories(this.columnStore.dir, (slot) => slot > finalizedCheckpointSlot),
+      ]);
+      this.metrics?.prunedDirectories.inc({store: FlatFileStoreType.blob}, hotBlobSlots);
+      this.metrics?.prunedDirectories.inc({store: FlatFileStoreType.column}, hotColumnSlots);
+      if (hotBlobSlots > 0 || hotColumnSlots > 0) {
+        this.logger.info("Removed hot flat file data", {
+          finalizedCheckpointSlot,
+          blobSlots: hotBlobSlots,
+          columnSlots: hotColumnSlots,
+        });
+      }
+
+      // Rebuild existence cache from disk
+      const stats = await this.cache.rebuildFromDisk(this.blobStore.dir, this.columnStore.dir);
+      this.metrics?.files.set({store: FlatFileStoreType.blob}, this.cache.getBlobFileCount());
+      this.metrics?.files.set({store: FlatFileStoreType.column}, this.cache.getColumnFileCount());
+      this.logger.info("Flat file store initialized", {
+        blobFiles: stats.blobFiles,
+        columnFiles: stats.columnFiles,
       });
+    } catch (e) {
+      this.metrics?.startupErrors.inc();
+      throw e;
+    } finally {
+      endTimer?.();
     }
-
-    // Rebuild existence cache from disk
-    const stats = await this.cache.rebuildFromDisk(this.blobStore.dir, this.columnStore.dir);
-    this.logger.info("Flat file store initialized", {
-      blobFiles: stats.blobFiles,
-      columnFiles: stats.columnFiles,
-    });
   }
 
   async close(): Promise<void> {

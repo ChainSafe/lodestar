@@ -202,7 +202,12 @@ export class BeaconNode {
 
     const clock = new Clock({config, genesisTime: anchorState.genesisTime, signal});
 
-    await db.initFlatFileStore(dataDir, computeStartSlotAtEpoch(anchorState.finalizedCheckpoint.epoch), logger);
+    await db.initFlatFileStore(
+      dataDir,
+      computeStartSlotAtEpoch(anchorState.finalizedCheckpoint.epoch),
+      logger,
+      metrics?.flatFileStore ?? null
+    );
 
     // Prune hot db repos
     // TODO: Should this call be awaited?

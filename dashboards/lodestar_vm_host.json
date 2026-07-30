@@ -5558,7 +5558,7 @@
               "options": {
                 "mode": "exclude",
                 "names": [
-                  "db size"
+                  "LevelDB size"
                 ],
                 "prefix": "All except:",
                 "readOnly": true
@@ -5605,11 +5605,11 @@
           "exemplar": false,
           "expr": "lodestar_db_size_bytes_total",
           "interval": "",
-          "legendFormat": "db size",
+          "legendFormat": "LevelDB size",
           "refId": "A"
         }
       ],
-      "title": "DB size - Beacon node",
+      "title": "LevelDB size - Beacon node",
       "type": "timeseries"
     },
     {

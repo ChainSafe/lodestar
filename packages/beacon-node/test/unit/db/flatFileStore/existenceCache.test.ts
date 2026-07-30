@@ -10,8 +10,12 @@ describe("ExistenceCache", () => {
 
       cache.setBlobPresent(100, "0xabc");
       expect(cache.hasBlobPresent(100, "0xabc")).toBe(true);
+      expect(cache.getBlobFileCount()).toBe(1);
       expect(cache.hasBlobPresent(100, "0xdef")).toBe(false);
       expect(cache.hasBlobPresent(101, "0xabc")).toBe(false);
+
+      cache.setBlobPresent(100, "0xabc");
+      expect(cache.getBlobFileCount()).toBe(1);
     });
 
     it("should remove blob presence", () => {
@@ -20,6 +24,7 @@ describe("ExistenceCache", () => {
       cache.setBlobPresent(100, "0xabc");
       cache.removeBlobPresent(100, "0xabc");
       expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.getBlobFileCount()).toBe(0);
       expect(cache.getBlobSlotsBefore(101)).toEqual([100]);
 
       cache.removeBlobSlot(100);
@@ -35,7 +40,11 @@ describe("ExistenceCache", () => {
 
       cache.setColumnPresent(100, "0xabc");
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
+      expect(cache.getColumnFileCount()).toBe(1);
       expect(cache.hasColumnPresent(100, "0xdef")).toBe(false);
+
+      cache.setColumnPresent(100, "0xabc");
+      expect(cache.getColumnFileCount()).toBe(1);
     });
 
     it("should resolve a root only when it is unique", () => {
@@ -53,6 +62,7 @@ describe("ExistenceCache", () => {
       cache.setColumnPresent(100, "0xabc");
       cache.removeColumns(100, "0xabc");
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
+      expect(cache.getColumnFileCount()).toBe(0);
       expect(cache.getColumnSlotsBefore(101)).toEqual([100]);
 
       cache.removeColumnSlot(100);
@@ -80,10 +90,12 @@ describe("ExistenceCache", () => {
 
       cache.removeBlobSlot(100);
       expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.getBlobFileCount()).toBe(2);
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
 
       cache.removeColumnSlot(100);
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
+      expect(cache.getColumnFileCount()).toBe(1);
       expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
     });
   });
