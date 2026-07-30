@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {afterEach, beforeEach, describe, expect, it} from "vitest";
+import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
@@ -80,6 +80,19 @@ describe("FlatFileStore", () => {
 
       expect(store.hasBlobSidecars(1000, ROOT_A)).toBe(false);
       expect(await store.getBlobSidecarsBinary(1000, ROOT_A)).toBeNull();
+    });
+
+    it("should preserve blob cache entries when deletion fails", async () => {
+      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array(10));
+      const deleteError = new Error("delete failed");
+      const rmSpy = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(deleteError);
+
+      try {
+        await expect(store.deleteBlobSidecars(1000, ROOT_A)).rejects.toBe(deleteError);
+        expect(store.hasBlobSidecars(1000, ROOT_A)).toBe(true);
+      } finally {
+        rmSpy.mockRestore();
+      }
     });
 
     it("should stream binary entries in slot range", async () => {
@@ -190,6 +203,19 @@ describe("FlatFileStore", () => {
       expect(store.hasDataColumn(1000, ROOT_A, 0)).toBe(false);
       const result = await store.getDataColumnsBinary(1000, ROOT_A, [0]);
       expect(result[0]).toBeUndefined();
+    });
+
+    it("should preserve column cache entries when deletion fails", async () => {
+      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
+      const deleteError = new Error("delete failed");
+      const rmSpy = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(deleteError);
+
+      try {
+        await expect(store.deleteDataColumns(1000, ROOT_A)).rejects.toBe(deleteError);
+        expect(store.hasDataColumn(1000, ROOT_A, 0)).toBe(true);
+      } finally {
+        rmSpy.mockRestore();
+      }
     });
 
     it("should get columns by slot (canonical lookup)", async () => {

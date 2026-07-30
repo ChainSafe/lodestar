@@ -75,11 +75,7 @@ export class BlobStore {
   async delete(slot: Slot, rootHex: RootHex): Promise<void> {
     const release = await this.acquireLock(slot, rootHex);
     try {
-      try {
-        await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
-      } catch (_e) {
-        // File may not exist
-      }
+      await fs.promises.rm(this.filePath(slot, rootHex), {force: true});
       this.cache.removeBlobPresent(slot, rootHex);
     } finally {
       release();
