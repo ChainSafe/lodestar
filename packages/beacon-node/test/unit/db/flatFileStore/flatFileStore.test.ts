@@ -38,7 +38,7 @@ describe("FlatFileStore", () => {
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-"));
     store = new FlatFileStore(tmpDir, config, testLogger);
-    await store.init();
+    await store.init(Number.MAX_SAFE_INTEGER);
   });
 
   afterEach(async () => {
@@ -326,7 +326,7 @@ describe("FlatFileStore", () => {
       const store2 = new FlatFileStore(tmpDir, config, testLogger);
       const openSpy = vi.spyOn(fs.promises, "open");
       try {
-        await store2.init();
+        await store2.init(Number.MAX_SAFE_INTEGER);
         expect(openSpy).not.toHaveBeenCalled();
       } finally {
         openSpy.mockRestore();
@@ -337,6 +337,30 @@ describe("FlatFileStore", () => {
       expect(columns[0]).toBeDefined();
       expect(columns[1]).toBeDefined();
       expect(columns[2]).toBeUndefined();
+    });
+
+    it("should remove hot data after restart", async () => {
+      const finalizedCheckpointSlot = 100;
+      const hotSlot = finalizedCheckpointSlot + 1;
+
+      await store.putBlobSidecars(finalizedCheckpointSlot, ROOT_A, new Uint8Array([1]));
+      await store.putDataColumnsBinary(finalizedCheckpointSlot, ROOT_A, [{index: 0, data: new Uint8Array([2])}]);
+      await store.putBlobSidecars(hotSlot, ROOT_B, new Uint8Array([3]));
+      await store.putDataColumnsBinary(hotSlot, ROOT_B, [{index: 0, data: new Uint8Array([4])}]);
+
+      const store2 = new FlatFileStore(tmpDir, config, testLogger);
+      await store2.init(finalizedCheckpointSlot);
+
+      expect(store2.hasBlobSidecars(finalizedCheckpointSlot, ROOT_A)).toBe(true);
+      expect(await store2.getDataColumnsBinary(finalizedCheckpointSlot, ROOT_A, [0])).toEqual([new Uint8Array([2])]);
+      expect(store2.hasBlobSidecars(hotSlot, ROOT_B)).toBe(false);
+      expect(await store2.getDataColumnsBinary(hotSlot, ROOT_B, [0])).toEqual([undefined]);
+      await expect(fs.promises.access(path.join(tmpDir, "blobs", "000000000101"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+      await expect(fs.promises.access(path.join(tmpDir, "data_columns", "000000000101"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
     });
   });
 });

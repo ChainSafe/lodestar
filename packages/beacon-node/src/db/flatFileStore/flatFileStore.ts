@@ -10,6 +10,7 @@ import {BlobStore} from "./blobStore.js";
 import {ColumnStore} from "./columnStore.js";
 import {ExistenceCache} from "./existenceCache.js";
 import type {IFlatFileStore} from "./interface.js";
+import {removeSlotDirectories} from "./slotDirectory.js";
 
 export class FlatFileStore implements IFlatFileStore {
   private readonly cache: ExistenceCache;
@@ -26,10 +27,24 @@ export class FlatFileStore implements IFlatFileStore {
     this.columnStore = new ColumnStore(dataDir, config, this.cache);
   }
 
-  async init(): Promise<void> {
+  async init(finalizedCheckpointSlot: Slot): Promise<void> {
     // Ensure directories exist
     await fs.promises.mkdir(this.blobStore.dir, {recursive: true});
     await fs.promises.mkdir(this.columnStore.dir, {recursive: true});
+
+    // Hot data is refetched after restart. Remove it before rebuilding the cache so roots
+    // from the previous unfinalized fork cannot survive canonical cleanup.
+    const [hotBlobSlots, hotColumnSlots] = await Promise.all([
+      removeSlotDirectories(this.blobStore.dir, (slot) => slot > finalizedCheckpointSlot),
+      removeSlotDirectories(this.columnStore.dir, (slot) => slot > finalizedCheckpointSlot),
+    ]);
+    if (hotBlobSlots > 0 || hotColumnSlots > 0) {
+      this.logger.info("Removed hot flat file data", {
+        finalizedCheckpointSlot,
+        blobSlots: hotBlobSlots,
+        columnSlots: hotColumnSlots,
+      });
+    }
 
     // Clean up partial writes from previous crashes
     const blobsCleaned = await cleanupPartFiles(this.blobStore.dir);

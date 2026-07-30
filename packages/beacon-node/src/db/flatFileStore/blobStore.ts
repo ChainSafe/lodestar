@@ -4,6 +4,7 @@ import {RootHex, Slot} from "@lodestar/types";
 import {atomicWrite, padSlot} from "./atomicWrite.js";
 import {isFsNotFoundError} from "./errors.js";
 import {ExistenceCache} from "./existenceCache.js";
+import {removeSlotDirectories} from "./slotDirectory.js";
 
 /**
  * Filesystem blob store.
@@ -126,23 +127,8 @@ export class BlobStore {
    * Delete all slot directories with slot < minSlot.
    */
   async pruneBeforeSlot(minSlot: Slot): Promise<void> {
-    let slotDirs: string[];
-    try {
-      slotDirs = await fs.promises.readdir(this.dir);
-    } catch (e) {
-      if (!isFsNotFoundError(e)) throw e;
-      return;
-    }
-
-    for (const slotStr of slotDirs) {
-      const slot = Number.parseInt(slotStr, 10);
-      if (Number.isNaN(slot)) continue;
-      if (slot < minSlot) {
-        await fs.promises.rm(path.join(this.dir, slotStr), {recursive: true, force: true});
-      }
-    }
-
-    this.cache.evictBelow(minSlot);
+    await removeSlotDirectories(this.dir, (slot) => slot < minSlot);
+    this.cache.evictBlobsBelow(minSlot);
   }
 
   /**

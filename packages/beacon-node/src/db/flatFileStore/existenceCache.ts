@@ -77,13 +77,13 @@ export class ExistenceCache {
     }
   }
 
-  /**
-   * Evict all entries with slot < minSlot.
-   */
-  evictBelow(minSlot: Slot): void {
+  evictBlobsBelow(minSlot: Slot): void {
     for (const [slot] of this.blobPresence) {
       if (slot < minSlot) this.blobPresence.delete(slot);
     }
+  }
+
+  evictColumnsBelow(minSlot: Slot): void {
     for (const [slot] of this.columnPresence) {
       if (slot < minSlot) this.columnPresence.delete(slot);
     }

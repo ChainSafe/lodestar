@@ -6,7 +6,13 @@ import {BeaconApiMethods} from "@lodestar/api/beacon/server";
 import {BeaconConfig} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ZERO_HASH_HEX} from "@lodestar/params";
-import {IBeaconStateView, PubkeyCache, isStatePostBellatrix, isStatePostGloas} from "@lodestar/state-transition";
+import {
+  IBeaconStateView,
+  PubkeyCache,
+  computeStartSlotAtEpoch,
+  isStatePostBellatrix,
+  isStatePostGloas,
+} from "@lodestar/state-transition";
 import {phase0} from "@lodestar/types";
 import {sleep, toRootHex} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
@@ -198,7 +204,7 @@ export class BeaconNode {
 
     // Initialize flat file store if enabled
     if (opts.chain.flatFileStorage && db.initFlatFileStore) {
-      await db.initFlatFileStore(dataDir, logger);
+      await db.initFlatFileStore(dataDir, computeStartSlotAtEpoch(anchorState.finalizedCheckpoint.epoch), logger);
     }
 
     // Prune hot db repos

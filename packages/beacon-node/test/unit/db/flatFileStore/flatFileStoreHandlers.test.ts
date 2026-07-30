@@ -53,7 +53,7 @@ describe("FlatFileStore reqresp handler integration", () => {
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-handlers-"));
     store = new FlatFileStore(tmpDir, defaultConfig, testLogger);
-    await store.init();
+    await store.init(Number.MAX_SAFE_INTEGER);
   });
 
   afterEach(async () => {

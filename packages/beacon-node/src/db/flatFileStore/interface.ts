@@ -11,7 +11,7 @@ import {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
  * slot → root when exactly one root exists (no separate index needed).
  */
 export interface IFlatFileStore {
-  init(): Promise<void>;
+  init(finalizedCheckpointSlot: Slot): Promise<void>;
   close(): Promise<void>;
 
   // --- Blobs ---

@@ -1,5 +1,6 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {Db, LevelDbControllerMetrics, encodeKey} from "@lodestar/db";
+import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {Bucket} from "./buckets.js";
 import {FlatFileStore} from "./flatFileStore/flatFileStore.js";
@@ -95,9 +96,9 @@ export class BeaconDb implements IBeaconDb {
     this.backfilledRanges = new BackfilledRanges(config, db);
   }
 
-  async initFlatFileStore(dataDir: string, logger: Logger): Promise<void> {
+  async initFlatFileStore(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void> {
     const store = new FlatFileStore(dataDir, this.config, logger);
-    await store.init();
+    await store.init(finalizedCheckpointSlot);
     await migrateArchivedSidecars(this.config, this.blobSidecarsArchive, this.dataColumnSidecarArchive, store, logger);
     this.flatFileStore = store;
   }

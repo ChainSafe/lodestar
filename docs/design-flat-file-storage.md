@@ -479,6 +479,8 @@ The remaining LevelDB entries are the migration progress marker. If migration is
 
 Hot repositories are not migrated. Lodestar already refetches hot sidecars after startup, so legacy hot blob and column entries are deleted when flat-file storage is active.
 
+Flat-file slot directories newer than the anchor state's finalized checkpoint boundary are also deleted at startup. The boundary directory is retained, then the existence cache is rebuilt only from the surviving finalized archive. This prevents unfinalized roots from a previous run from escaping canonical cleanup after fork choice is reconstructed.
+
 ### Phase 1c: Remove LevelDB Blob/Column Storage
 
 Once migration is verified:
@@ -505,7 +507,7 @@ This is a lower priority since blocks are smaller and benefit more from KV store
 
 ```typescript
 interface IFlatFileStore {
-  init(): Promise<void>;
+  init(finalizedCheckpointSlot: Slot): Promise<void>;
   close(): Promise<void>;
 
   // Blob sidecars
@@ -548,7 +550,7 @@ export interface IBeaconDb {
 
   // Flat file store for blobs and columns (null when --chain.flatFileStorage is disabled)
   flatFileStore: IFlatFileStore | null;
-  initFlatFileStore?(dataDir: string, logger: Logger): Promise<void>;
+  initFlatFileStore?(dataDir: string, finalizedCheckpointSlot: Slot, logger: Logger): Promise<void>;
 
   // Coexists with flat file store during transition (Phase 1c: removed)
   blobSidecars: BlobSidecarsRepository;

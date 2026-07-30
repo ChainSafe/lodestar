@@ -79,7 +79,7 @@ describe("archived sidecar migration", () => {
     hotColumn.signedBlockHeader.message.slot = hotColumnSlot;
     await db.dataColumnSidecar.put(hotColumnRoot, hotColumn);
 
-    await db.initFlatFileStore(tmpDir, testLogger("flat-file-migration"));
+    await db.initFlatFileStore(tmpDir, 0, testLogger("flat-file-migration"));
 
     expect(await db.blobSidecarsArchive.get(archivedBlobSlot)).toBeNull();
     expect(await db.dataColumnSidecarArchive.values(archivedColumnSlot)).toEqual([]);

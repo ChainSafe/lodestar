@@ -52,8 +52,8 @@ describe("ExistenceCache", () => {
     });
   });
 
-  describe("evictBelow", () => {
-    it("should evict entries below minSlot", () => {
+  describe("evict below", () => {
+    it("should evict blob and column entries independently", () => {
       const cache = new ExistenceCache();
 
       cache.setBlobPresent(100, "0xabc");
@@ -63,11 +63,16 @@ describe("ExistenceCache", () => {
       cache.setColumnPresent(100, "0xabc");
       cache.setColumnPresent(300, "0xghi");
 
-      cache.evictBelow(200);
+      cache.evictBlobsBelow(200);
 
       expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
       expect(cache.hasBlobPresent(200, "0xdef")).toBe(true);
       expect(cache.hasBlobPresent(300, "0xghi")).toBe(true);
+
+      expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
+      expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
+
+      cache.evictColumnsBelow(200);
 
       expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
       expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
