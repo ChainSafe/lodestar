@@ -2,14 +2,22 @@ import {describe, expect, it, vi} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
-import {FAR_FUTURE_EPOCH, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {
+  EPOCHS_PER_SLASHINGS_VECTOR,
+  FAR_FUTURE_EPOCH,
+  ForkSeq,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+} from "@lodestar/params";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
 import {toHexString} from "@lodestar/utils";
 import {createPubkeyCache} from "../../src/cache/pubkeyCache.js";
 import {createCachedBeaconState, loadCachedBeaconState} from "../../src/cache/stateCache.js";
 import {interopPubkeysCached} from "../../src/testUtils/interop.js";
 import {createCachedBeaconStateTest} from "../../src/testUtils/state.js";
+import {computeActivationExitEpoch} from "../../src/util/epoch.js";
 import {EpochShuffling, calculateShufflingDecisionRoot} from "../../src/util/epochShuffling.js";
+import {computeProposerIndices} from "../../src/util/seed.js";
 import {modifyStateSameValidator, newStateWithValidators} from "../utils/capella.js";
 
 describe("CachedBeaconState", () => {
@@ -92,36 +100,55 @@ describe("CachedBeaconState", () => {
       GLOAS_FORK_EPOCH: 0,
     });
     const state = ssz.gloas.BeaconState.defaultViewDU();
-    state.slot = 2 * SLOTS_PER_EPOCH;
+    const currentEpoch = 2;
+    state.slot = currentEpoch * SLOTS_PER_EPOCH;
 
-    for (let i = 0; i < 16; i++) {
+    const unslashedValidatorCount = SLOTS_PER_EPOCH;
+    const slashedExitEpoch = computeActivationExitEpoch(currentEpoch);
+    const slashedWithdrawableEpoch = currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR;
+    // Keep the slashed validators active through the lookahead so the Gloas filter must exclude them.
+    for (let i = 0; i < 2 * unslashedValidatorCount; i++) {
       const validator = ssz.phase0.Validator.defaultViewDU();
       validator.pubkey = Buffer.alloc(48, i + 1);
       validator.effectiveBalance = 32e9;
       validator.activationEligibilityEpoch = 0;
       validator.activationEpoch = 0;
-      validator.exitEpoch = FAR_FUTURE_EPOCH;
-      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
-      validator.slashed = i !== 0;
+      validator.slashed = i >= unslashedValidatorCount;
+      validator.exitEpoch = validator.slashed ? slashedExitEpoch : FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = validator.slashed ? slashedWithdrawableEpoch : FAR_FUTURE_EPOCH;
       state.validators.push(validator);
       state.balances.push(32e9);
       state.previousEpochParticipation.push(0);
       state.currentEpochParticipation.push(0);
       state.inactivityScores.push(0);
     }
+    state.commit();
 
-    // Only validator 0 is eligible under Gloas proposer selection because the other active validators are slashed.
-    // Recomputing next proposers from the active shuffling would reintroduce those slashed validators.
-    const proposerLookahead = Array.from({length: (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH}, () => 0);
+    const config = createBeaconConfig(chainConfig, state.genesisValidatorsRoot);
+    const seedCachedState = createCachedBeaconState(
+      state,
+      {config, pubkeyCache: createPubkeyCache()},
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    );
+    const unslashedActiveIndices = Uint32Array.from({length: unslashedValidatorCount}, (_, index) => index);
+    const proposerLookahead: number[] = [];
+    for (let epochOffset = 0; epochOffset <= MIN_SEED_LOOKAHEAD; epochOffset++) {
+      proposerLookahead.push(
+        ...computeProposerIndices(
+          ForkSeq.gloas,
+          seedCachedState,
+          {activeIndices: unslashedActiveIndices},
+          currentEpoch + epochOffset
+        )
+      );
+    }
+    expect(new Set(proposerLookahead).size).toBeGreaterThan(1);
     state.proposerLookahead = ssz.fulu.ProposerLookahead.toViewDU(proposerLookahead);
     state.commit();
 
     const cachedState = createCachedBeaconState(
       state,
-      {
-        config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-        pubkeyCache: createPubkeyCache(),
-      },
+      {config, pubkeyCache: createPubkeyCache()},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     );
 
