@@ -447,7 +447,7 @@ describe("FlatFileStore", () => {
       expect(await store2.getDataColumnsBinary(finalizedCheckpointSlot, ROOT_A, [0])).toEqual([new Uint8Array([2])]);
       expect(store2.hasBlobSidecars(hotSlot, ROOT_B)).toBe(false);
       expect(await store2.getDataColumnsBinary(hotSlot, ROOT_B, [0])).toEqual([undefined]);
-      await expect(fs.promises.access(path.join(tmpDir, "blobs", "000000000101"))).rejects.toMatchObject({
+      await expect(fs.promises.access(path.join(tmpDir, "blob_sidecars", "000000000101"))).rejects.toMatchObject({
         code: "ENOENT",
       });
       await expect(fs.promises.access(path.join(tmpDir, "data_columns", "000000000101"))).rejects.toMatchObject({
