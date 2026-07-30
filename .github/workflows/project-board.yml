@@ -52,7 +52,7 @@ jobs:
           node-version: 24
 
       - name: Reconcile
-        run: node .github/scripts/project-board/main.ts ${PR:+--pr "$PR"}
+        run: node .github/scripts/project-board/src/main.ts ${PR:+--pr "$PR"}
         env:
           PR: ${{ inputs.pr }}
           PROJECT_BOARD_TOKEN: ${{ secrets.PROJECT_BOARD_TOKEN }}

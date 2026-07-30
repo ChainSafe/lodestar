@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {computeStatus} from "./compute-status.ts";
-import type {PrSnapshot, ReviewInfo} from "./types.ts";
+import {computeStatus} from "../src/compute-status.ts";
+import type {PrSnapshot, ReviewInfo} from "../src/types.ts";
 
 function pr(overrides: Partial<PrSnapshot>): PrSnapshot {
   return {prState: "OPEN", isDraft: false, pendingUserRequests: [], reviews: [], ...overrides};
