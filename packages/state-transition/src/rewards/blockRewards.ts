@@ -4,11 +4,17 @@ import {
   WHISTLEBLOWER_REWARD_QUOTIENT,
   WHISTLEBLOWER_REWARD_QUOTIENT_ELECTRA,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
-import {BeaconBlock, altair, phase0, rewards} from "@lodestar/types";
+import {BeaconBlock, Slot, altair, phase0, rewards} from "@lodestar/types";
 import {processAttestationsAltair} from "../block/processAttestationsAltair.js";
 import {RewardCache} from "../cache/rewardCache.js";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../cache/stateCache.js";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateGloas,
+  CachedBeaconStatePhase0,
+} from "../cache/stateCache.js";
 import {getAttesterSlashableIndices} from "../util/attestation.js";
 
 type SubRewardValue = number; // All reward values should be integer
@@ -36,10 +42,18 @@ export async function computeBlockRewards(
   let syncAggregateReward = cachedSyncAggregateReward;
 
   if (blockAttestationReward === 0) {
+    const parentSlot = isForkPostGloas(fork)
+      ? (preState as CachedBeaconStateGloas).latestExecutionPayloadBid.slot
+      : null;
     blockAttestationReward =
       fork === ForkName.phase0
         ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, preState as CachedBeaconStatePhase0)
-        : computeBlockAttestationRewardAltair(config, block as altair.BeaconBlock, preState as CachedBeaconStateAltair);
+        : computeBlockAttestationRewardAltair(
+            config,
+            block as altair.BeaconBlock,
+            preState as CachedBeaconStateAltair,
+            parentSlot
+          );
   }
 
   if (syncAggregateReward === 0) {
@@ -79,12 +93,13 @@ function computeBlockAttestationRewardPhase0(
 function computeBlockAttestationRewardAltair(
   config: BeaconConfig,
   block: altair.BeaconBlock,
-  preState: CachedBeaconStateAltair
+  preState: CachedBeaconStateAltair,
+  parentSlot: Slot | null
 ): SubRewardValue {
   const fork = config.getForkSeq(block.slot);
   const {attestations} = block.body;
 
-  processAttestationsAltair(fork, preState, attestations, false);
+  processAttestationsAltair(fork, preState, attestations, false, undefined, parentSlot);
 
   return preState.proposerRewards.attestations;
 }

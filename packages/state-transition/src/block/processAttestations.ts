@@ -1,5 +1,5 @@
 import {ForkSeq} from "@lodestar/params";
-import {Attestation} from "@lodestar/types";
+import {Attestation, Slot} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "../types.js";
 import {processAttestationPhase0} from "./processAttestationPhase0.js";
@@ -13,13 +13,21 @@ export function processAttestations(
   state: CachedBeaconStateAllForks,
   attestations: Attestation[],
   verifySignatures = true,
-  metrics?: BeaconStateTransitionMetrics | null
+  metrics?: BeaconStateTransitionMetrics | null,
+  parentSlot: Slot | null = null
 ): void {
   if (fork === ForkSeq.phase0) {
     for (const attestation of attestations) {
       processAttestationPhase0(state as CachedBeaconStatePhase0, attestation, verifySignatures);
     }
   } else {
-    processAttestationsAltair(fork, state as CachedBeaconStateAltair, attestations, verifySignatures, metrics);
+    processAttestationsAltair(
+      fork,
+      state as CachedBeaconStateAltair,
+      attestations,
+      verifySignatures,
+      metrics,
+      parentSlot
+    );
   }
 }

@@ -7,7 +7,7 @@ import {
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
 } from "@lodestar/params";
-import {BeaconBlockBody, capella, electra, gloas} from "@lodestar/types";
+import {BeaconBlockBody, Slot, capella, electra, gloas} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
@@ -45,7 +45,8 @@ export function processOperations(
   state: CachedBeaconStateAllForks,
   body: BeaconBlockBody,
   opts: ProcessBlockOpts = {verifySignatures: true},
-  metrics?: BeaconStateTransitionMetrics | null
+  metrics?: BeaconStateTransitionMetrics | null,
+  parentSlot: Slot | null = null
 ): void {
   if (fork >= ForkSeq.gloas) {
     assertGloasOperationLimits(body as gloas.BeaconBlockBody);
@@ -67,7 +68,7 @@ export function processOperations(
     processAttesterSlashing(fork, state, attesterSlashing, opts.verifySignatures);
   }
 
-  processAttestations(fork, state, body.attestations, opts.verifySignatures, metrics);
+  processAttestations(fork, state, body.attestations, opts.verifySignatures, metrics, parentSlot);
 
   for (const deposit of body.deposits) {
     processDeposit(fork, state, deposit);
