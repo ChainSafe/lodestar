@@ -37,23 +37,23 @@ export async function validateGossipProposerPreferences(
 
   // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  const latestCurrentSlot = chain.clock.currentSlotWithGossipDisparity;
-  const latestCurrentEpoch = computeEpochAtSlot(latestCurrentSlot);
-  if (proposalEpoch > latestCurrentEpoch + MIN_SEED_LOOKAHEAD) {
+  const currentSlot = chain.clock.currentSlotWithGossipDisparity;
+  const currentEpoch = computeEpochAtSlot(currentSlot);
+  if (proposalEpoch > currentEpoch + MIN_SEED_LOOKAHEAD) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH,
       proposalSlot,
-      currentEpoch: latestCurrentEpoch,
+      currentEpoch,
     });
   }
 
   // [IGNORE] `preferences.proposal_slot` has not already passed, i.e. `proposal_slot > current_slot`,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  if (proposalSlot <= latestCurrentSlot) {
+  if (proposalSlot <= currentSlot) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED,
       proposalSlot,
-      currentSlot: latestCurrentSlot,
+      currentSlot,
     });
   }
 
