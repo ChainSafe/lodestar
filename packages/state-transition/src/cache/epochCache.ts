@@ -411,8 +411,8 @@ export class EpochCache {
     let proposers: ValidatorIndex[];
     let proposersNextEpoch: ProposersDeferred;
     if (currentEpoch >= config.FULU_FORK_EPOCH) {
-      // Post-Fulu, state.proposerLookahead is authoritative. Recomputing the next epoch from the active
-      // shuffling is incorrect in Gloas because it can reintroduce slashed validators.
+      // After fulu, use state.proposerLookahead for both current and next epoch proposers. Computing next
+      // epoch proposers from the unfiltered active shuffling would include slashed validators in gloas.
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
       proposersNextEpoch = {
