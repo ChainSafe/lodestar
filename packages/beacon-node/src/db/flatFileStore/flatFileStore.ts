@@ -55,6 +55,12 @@ export class FlatFileStore implements IFlatFileStore {
       const stats = await this.cache.rebuildFromDisk(this.blobStore.dir, this.columnStore.dir);
       this.metrics?.files.set({store: FlatFileStoreType.blob}, this.cache.getBlobFileCount());
       this.metrics?.files.set({store: FlatFileStoreType.column}, this.cache.getColumnFileCount());
+      if (stats.ignoredBlobEntries > 0 || stats.ignoredColumnEntries > 0) {
+        this.logger.warn("Ignored non-canonical flat file store entries", {
+          blobEntries: stats.ignoredBlobEntries,
+          columnEntries: stats.ignoredColumnEntries,
+        });
+      }
       this.logger.info("Flat file store initialized", {
         blobFiles: stats.blobFiles,
         columnFiles: stats.columnFiles,

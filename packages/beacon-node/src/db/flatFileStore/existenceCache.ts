@@ -1,7 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import {RootHex, Slot} from "@lodestar/types";
+import {padSlot} from "./atomicWrite.js";
 import {isFsNotFoundError} from "./errors.js";
+
+export type ExistenceCacheRebuildStats = {
+  blobFiles: number;
+  columnFiles: number;
+  ignoredBlobEntries: number;
+  ignoredColumnEntries: number;
+};
 
 /**
  * In-memory existence cache to avoid filesystem stat()/read calls.
@@ -125,60 +133,68 @@ export class ExistenceCache {
 
   /**
    * Rebuild cache from disk by scanning blob and column directories.
-   * Ignores `.part` files.
+   * Only canonical slot directories and root filenames are cached. Unknown
+   * entries are left untouched on disk and reported to the caller.
    */
-  async rebuildFromDisk(blobsDir: string, columnsDir: string): Promise<{blobFiles: number; columnFiles: number}> {
-    let blobCount = 0;
-    let columnCount = 0;
+  async rebuildFromDisk(blobsDir: string, columnsDir: string): Promise<ExistenceCacheRebuildStats> {
+    const blobStats = await scanStoreDirectory(
+      blobsDir,
+      ".ssz",
+      (slot) => this.trackBlobSlot(slot),
+      (slot, rootHex) => this.setBlobPresent(slot, rootHex)
+    );
+    const columnStats = await scanStoreDirectory(
+      columnsDir,
+      ".dcol",
+      (slot) => this.trackColumnSlot(slot),
+      (slot, rootHex) => this.setColumnPresent(slot, rootHex)
+    );
 
-    // Scan blobs directory
-    try {
-      const slotDirs = await fs.promises.readdir(blobsDir, {withFileTypes: true});
-      for (const entry of slotDirs) {
-        const slot = Number(entry.name);
-        if (!entry.isDirectory() || !Number.isSafeInteger(slot) || slot < 0) continue;
-
-        this.trackBlobSlot(slot);
-        const slotDir = path.join(blobsDir, entry.name);
-        const files = await fs.promises.readdir(slotDir);
-        for (const file of files) {
-          if (file.endsWith(".part")) continue;
-          if (file.endsWith(".ssz") && file.startsWith("0x")) {
-            const rootHex = file.slice(0, -4); // strip .ssz
-            this.setBlobPresent(slot, rootHex);
-            blobCount++;
-          }
-        }
-      }
-    } catch (e) {
-      if (!isFsNotFoundError(e)) throw e;
-    }
-
-    // Scan columns directory
-    try {
-      const slotDirs = await fs.promises.readdir(columnsDir, {withFileTypes: true});
-      for (const entry of slotDirs) {
-        const slot = Number(entry.name);
-        if (!entry.isDirectory() || !Number.isSafeInteger(slot) || slot < 0) continue;
-
-        this.trackColumnSlot(slot);
-        const slotDir = path.join(columnsDir, entry.name);
-        const files = await fs.promises.readdir(slotDir);
-        for (const file of files) {
-          if (file.endsWith(".part")) continue;
-          if (file.endsWith(".dcol") && file.startsWith("0x")) {
-            const rootHex = file.slice(0, -5); // strip .dcol
-            this.setColumnPresent(slot, rootHex);
-            columnCount++;
-          }
-        }
-      }
-    } catch (e) {
-      if (!isFsNotFoundError(e)) throw e;
-    }
-
-    return {blobFiles: blobCount, columnFiles: columnCount};
+    return {
+      blobFiles: blobStats.files,
+      columnFiles: columnStats.files,
+      ignoredBlobEntries: blobStats.ignoredEntries,
+      ignoredColumnEntries: columnStats.ignoredEntries,
+    };
   }
+}
+
+async function scanStoreDirectory(
+  dir: string,
+  extension: ".ssz" | ".dcol",
+  trackSlot: (slot: Slot) => void,
+  setPresent: (slot: Slot, rootHex: RootHex) => void
+): Promise<{files: number; ignoredEntries: number}> {
+  let files = 0;
+  let ignoredEntries = 0;
+
+  try {
+    const slotDirs = await fs.promises.readdir(dir, {withFileTypes: true});
+    for (const entry of slotDirs) {
+      const slot = Number(entry.name);
+      if (!entry.isDirectory() || !Number.isSafeInteger(slot) || slot < 0 || entry.name !== padSlot(slot)) {
+        ignoredEntries++;
+        continue;
+      }
+
+      trackSlot(slot);
+      const slotEntries = await fs.promises.readdir(path.join(dir, entry.name), {withFileTypes: true});
+      for (const file of slotEntries) {
+        const rootHex = file.name.slice(0, -extension.length);
+        if (!file.isFile() || !file.name.endsWith(extension) || !/^0x[0-9a-f]{64}$/.test(rootHex)) {
+          ignoredEntries++;
+          continue;
+        }
+
+        setPresent(slot, rootHex);
+        files++;
+      }
+    }
+  } catch (e) {
+    if (!isFsNotFoundError(e)) throw e;
+  }
+
+  return {files, ignoredEntries};
 }
 
 function getSlotsBefore(presence: Map<Slot, Set<RootHex>>, minSlot: Slot): Slot[] {
