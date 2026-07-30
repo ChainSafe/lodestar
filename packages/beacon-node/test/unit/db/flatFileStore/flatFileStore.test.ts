@@ -168,24 +168,6 @@ describe("FlatFileStore", () => {
       );
     });
 
-    it("should check column existence via cache (sync)", async () => {
-      expect(store.hasDataColumn(1000, ROOT_A, 0)).toBe(false);
-
-      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(30)}]);
-      expect(store.hasDataColumn(1000, ROOT_A, 0)).toBe(true);
-      expect(store.hasDataColumn(1000, ROOT_A, 1)).toBe(false);
-    });
-
-    it("should return bitmap", async () => {
-      await store.putDataColumnsBinary(1000, ROOT_A, [
-        {index: 0, data: new Uint8Array(20)},
-        {index: 3, data: new Uint8Array(20)},
-      ]);
-
-      const bitmap = store.getColumnBitmap(1000, ROOT_A);
-      expect(bitmap).toBe(0b1001n); // bits 0 and 3
-    });
-
     it("should merge columns incrementally", async () => {
       const col0 = new Uint8Array(40).fill(0x01);
       const col1 = new Uint8Array(40).fill(0x02);
@@ -230,22 +212,23 @@ describe("FlatFileStore", () => {
       await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
       await store.deleteDataColumns(1000, ROOT_A);
 
-      expect(store.hasDataColumn(1000, ROOT_A, 0)).toBe(false);
       const result = await store.getDataColumnsBinary(1000, ROOT_A, [0]);
       expect(result[0]).toBeUndefined();
     });
 
-    it("should preserve column cache entries when deletion fails", async () => {
-      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
+    it("should preserve column data when deletion fails", async () => {
+      const column = new Uint8Array(20);
+      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: column}]);
       const deleteError = new Error("delete failed");
       const rmSpy = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(deleteError);
 
       try {
         await expect(store.deleteDataColumns(1000, ROOT_A)).rejects.toBe(deleteError);
-        expect(store.hasDataColumn(1000, ROOT_A, 0)).toBe(true);
       } finally {
         rmSpy.mockRestore();
       }
+
+      expect(await store.getDataColumnsBinary(1000, ROOT_A, [0])).toEqual([column]);
     });
 
     it("should get columns by slot (canonical lookup)", async () => {
@@ -279,8 +262,8 @@ describe("FlatFileStore", () => {
 
       await store.pruneColumnsBeforeSlot(200);
 
-      expect(store.hasDataColumn(100, ROOT_A, 0)).toBe(false);
-      expect(store.hasDataColumn(200, ROOT_B, 0)).toBe(true);
+      expect(await store.getDataColumnsBinary(100, ROOT_A, [0])).toEqual([undefined]);
+      expect(await store.getDataColumnsBinary(200, ROOT_B, [0])).not.toEqual([undefined]);
     });
   });
 
@@ -297,6 +280,22 @@ describe("FlatFileStore", () => {
       const raw = await fs.promises.readFile(path.join(slotDir, dcolFile!));
       expect(raw[0]).toBe(DCOL_VERSION);
     });
+
+    it("should reject truncated dcol files when read", async () => {
+      const slotDir = path.join(tmpDir, "data_columns", "000000001000");
+      await fs.promises.mkdir(slotDir, {recursive: true});
+      await fs.promises.writeFile(path.join(slotDir, `${ROOT_A}.dcol`), new Uint8Array([DCOL_VERSION]));
+
+      await expect(store.getDataColumnsBinary(1000, ROOT_A, [0])).rejects.toThrow("Unexpected end of dcol file");
+    });
+
+    it("should reject a dcol file whose header root does not match its path", async () => {
+      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
+      const slotDir = path.join(tmpDir, "data_columns", "000000001000");
+      await fs.promises.rename(path.join(slotDir, `${ROOT_A}.dcol`), path.join(slotDir, `${ROOT_B}.dcol`));
+
+      await expect(store.getDataColumnsBinary(1000, ROOT_B, [0])).rejects.toThrow("Dcol block root mismatch");
+    });
   });
 
   describe("deleteNonCanonical", () => {
@@ -308,7 +307,7 @@ describe("FlatFileStore", () => {
       await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_ORPHAN}]);
 
       expect(store.hasBlobSidecars(100, ROOT_ORPHAN)).toBe(false);
-      expect(store.hasDataColumn(100, ROOT_ORPHAN, 0)).toBe(false);
+      expect(await store.getDataColumnsBinary(100, ROOT_ORPHAN, [0])).toEqual([undefined]);
       // Canonical should remain
       expect(store.hasBlobSidecars(100, ROOT_CANONICAL)).toBe(true);
     });
@@ -325,13 +324,19 @@ describe("FlatFileStore", () => {
 
       // Create a new store (simulating restart)
       const store2 = new FlatFileStore(tmpDir, config, testLogger);
-      await store2.init();
+      const openSpy = vi.spyOn(fs.promises, "open");
+      try {
+        await store2.init();
+        expect(openSpy).not.toHaveBeenCalled();
+      } finally {
+        openSpy.mockRestore();
+      }
 
-      // Cache should be rebuilt
       expect(store2.hasBlobSidecars(1000, ROOT_A)).toBe(true);
-      expect(store2.hasDataColumn(1000, ROOT_B, 0)).toBe(true);
-      expect(store2.hasDataColumn(1000, ROOT_B, 5)).toBe(true);
-      expect(store2.hasDataColumn(1000, ROOT_B, 1)).toBe(false);
+      const columns = await store2.getDataColumnsBinaryBySlot(1000, [0, 5, 1]);
+      expect(columns[0]).toBeDefined();
+      expect(columns[1]).toBeDefined();
+      expect(columns[2]).toBeUndefined();
     });
   });
 });

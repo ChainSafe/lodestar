@@ -41,8 +41,8 @@ export class FlatFileStore implements IFlatFileStore {
     // Rebuild existence cache from disk
     const stats = await this.cache.rebuildFromDisk(this.blobStore.dir, this.columnStore.dir);
     this.logger.info("Flat file store initialized", {
-      blobEntries: stats.blobs,
-      columnEntries: stats.columns,
+      blobFiles: stats.blobFiles,
+      columnFiles: stats.columnFiles,
     });
   }
 
@@ -111,14 +111,6 @@ export class FlatFileStore implements IFlatFileStore {
 
   async deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void> {
     await this.columnStore.delete(slot, blockRoot);
-  }
-
-  hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean {
-    return this.columnStore.hasColumn(slot, blockRoot, index);
-  }
-
-  getColumnBitmap(slot: Slot, blockRoot: RootHex): bigint | null {
-    return this.columnStore.getColumnBitmap(slot, blockRoot);
   }
 
   async getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]> {

@@ -258,11 +258,7 @@ async function onDataColumnSidecars(slot: Slot, blockRoot: Root, columns: DataCo
   const existing = await this.readDcolHeader(filePath);
   const merged = existing ? mergeColumns(existing, columns) : packColumns(slot, blockRoot, columns);
   await atomicWrite(filePath, merged);
-  this.existenceCache.setColumnsPresent(
-    slot,
-    blockRoot,
-    columns.map((c) => c.index)
-  );
+  this.existenceCache.setColumnPresent(slot, blockRoot);
 }
 ```
 
@@ -309,10 +305,6 @@ This eliminates the deserialize-serialize round-trip for the hot write path. Col
 
 ```typescript
 async function getBlobSidecars(slot: Slot, blockRoot: Root): Promise<BlobSidecarsWrapper | null> {
-  // Check existence cache first
-  if (!this.existenceCache.hasBlobPresent(slot, blockRoot)) {
-    return null;
-  }
   const filePath = path.join(this.blobsDir, padSlot(slot), `0x${toRootHex(blockRoot)}.ssz`);
   try {
     const data = await fs.readFile(filePath);
@@ -344,7 +336,7 @@ When all columns are needed (merge, full deserialization), a single `readFile` +
 
 ### Purpose
 
-Avoid filesystem `stat()` or `open()` calls for non-existent data. With 128 columns per block and frequent DA sampling, the cache prevents thousands of unnecessary syscalls per second.
+Resolve finalized slot-only requests to a block root without reading directory contents on every request.
 
 ### Data Structure
 
@@ -353,30 +345,29 @@ class ExistenceCache {
   // Blob existence: slot → Set<rootHex>
   private blobPresence = new Map<Slot, Set<RootHex>>();
 
-  // Column existence: slot → Map<rootHex, bigint>
-  // bigint stores a 128-bit bitmap (1n << index for each present column)
-  private columnBitmaps = new Map<Slot, Map<RootHex, bigint>>();
+  // Column-file existence: slot → Set<rootHex>
+  private columnPresence = new Map<Slot, Set<RootHex>>();
 }
 ```
 
-The cache also provides `getAnyRootForSlot(slot)` which resolves slot → root from data it already tracks. For finalized slots there is exactly one canonical root per slot, so this replaces a separate slot-root index for by-slot lookups in reqresp handlers.
+The cache provides separate unique-root lookups for blobs and columns. They return a root only when exactly one root exists at the slot; while competing roots coexist, reqresp uses the canonical root from fork choice.
 
 ### Memory Usage
 
 Per slot with one canonical block:
 
 - Blob entry: ~80 bytes (RootHex string in Set)
-- Column entry: ~96 bytes (RootHex string + bigint bitmap)
+- Column entry: ~80 bytes (RootHex string in Set)
 
 For 18-day retention window (~130,000 slots):
 
 - Blobs: 130,000 x 80 = **~10 MB**
-- Columns: 130,000 x 96 = **~12 MB**
-- **Total: ~22 MB** (negligible)
+- Columns: 130,000 x 80 = **~10 MB**
+- **Total: ~20 MB**
 
 ### Cache Lifecycle
 
-1. **Startup:** `rebuildFromDisk()` walks the blob and column directories, reading only `.dcol` headers (149 bytes each) to extract bitmaps. `.part` files are ignored.
+1. **Startup:** `rebuildFromDisk()` walks the blob and column directories and records roots from filenames. It does not open sidecar files. `.part` files are ignored.
 2. **Runtime:** Updated on every write and delete.
 3. **Pruning:** `evictBelow(minSlot)` batch-evicts entries for pruned slots.
 
@@ -533,8 +524,6 @@ interface IFlatFileStore {
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
   putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void>;
   deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void>;
-  hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean; // sync, from cache
-  getColumnBitmap(slot: Slot, blockRoot: RootHex): bigint | null; // sync, from cache
 
   // Pruning
   deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
@@ -650,7 +639,7 @@ packages/beacon-node/src/db/
     blobStore.ts                # Blob sidecar file operations
     columnStore.ts              # Data column file operations
     dcolFormat.ts               # .dcol binary format encode/decode
-    existenceCache.ts           # In-memory existence bitmap cache
+    existenceCache.ts           # In-memory slot/root presence cache
     atomicWrite.ts              # Atomic write utility
 ```
 
@@ -658,7 +647,7 @@ packages/beacon-node/src/db/
 
 1. **`atomicWrite.ts`** - Atomic file write utility
 2. **`dcolFormat.ts`** - .dcol format encode/decode/merge
-3. **`existenceCache.ts`** - Bitmap-based existence cache
+3. **`existenceCache.ts`** - Slot/root presence cache
 4. **`blobStore.ts`** - Blob sidecar read/write/prune
 5. **`columnStore.ts`** - Data column read/write/prune with locking
 6. **`flatFileStore.ts`** - Unified store coordinating blob + column stores

@@ -23,45 +23,32 @@ describe("ExistenceCache", () => {
     });
   });
 
-  describe("column bitmaps", () => {
-    it("should track column presence", () => {
+  describe("column presence", () => {
+    it("should track column files", () => {
       const cache = new ExistenceCache();
 
-      expect(cache.hasColumnPresent(100, "0xabc", 0)).toBe(false);
+      expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
 
-      cache.setColumnsPresent(100, "0xabc", [0, 5, 127]);
-      expect(cache.hasColumnPresent(100, "0xabc", 0)).toBe(true);
-      expect(cache.hasColumnPresent(100, "0xabc", 5)).toBe(true);
-      expect(cache.hasColumnPresent(100, "0xabc", 127)).toBe(true);
-      expect(cache.hasColumnPresent(100, "0xabc", 1)).toBe(false);
+      cache.setColumnPresent(100, "0xabc");
+      expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
+      expect(cache.hasColumnPresent(100, "0xdef")).toBe(false);
     });
 
-    it("should accumulate columns", () => {
+    it("should resolve a root only when it is unique", () => {
       const cache = new ExistenceCache();
 
-      cache.setColumnsPresent(100, "0xabc", [0, 1]);
-      cache.setColumnsPresent(100, "0xabc", [2, 3]);
-      expect(cache.hasColumnPresent(100, "0xabc", 0)).toBe(true);
-      expect(cache.hasColumnPresent(100, "0xabc", 3)).toBe(true);
+      cache.setColumnPresent(100, "0xabc");
+      expect(cache.getUniqueColumnRootForSlot(100)).toBe("0xabc");
+      cache.setColumnPresent(100, "0xdef");
+      expect(cache.getUniqueColumnRootForSlot(100)).toBeNull();
     });
 
-    it("should return bitmap", () => {
+    it("should remove column files", () => {
       const cache = new ExistenceCache();
 
-      expect(cache.getColumnBitmap(100, "0xabc")).toBeNull();
-
-      cache.setColumnsPresent(100, "0xabc", [0, 1]);
-      const bitmap = cache.getColumnBitmap(100, "0xabc");
-      expect(bitmap).toBe(3n); // bit 0 + bit 1
-    });
-
-    it("should remove columns", () => {
-      const cache = new ExistenceCache();
-
-      cache.setColumnsPresent(100, "0xabc", [0, 5]);
+      cache.setColumnPresent(100, "0xabc");
       cache.removeColumns(100, "0xabc");
-      expect(cache.hasColumnPresent(100, "0xabc", 0)).toBe(false);
-      expect(cache.getColumnBitmap(100, "0xabc")).toBeNull();
+      expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
     });
   });
 
@@ -73,8 +60,8 @@ describe("ExistenceCache", () => {
       cache.setBlobPresent(200, "0xdef");
       cache.setBlobPresent(300, "0xghi");
 
-      cache.setColumnsPresent(100, "0xabc", [0]);
-      cache.setColumnsPresent(300, "0xghi", [1]);
+      cache.setColumnPresent(100, "0xabc");
+      cache.setColumnPresent(300, "0xghi");
 
       cache.evictBelow(200);
 
@@ -82,8 +69,8 @@ describe("ExistenceCache", () => {
       expect(cache.hasBlobPresent(200, "0xdef")).toBe(true);
       expect(cache.hasBlobPresent(300, "0xghi")).toBe(true);
 
-      expect(cache.hasColumnPresent(100, "0xabc", 0)).toBe(false);
-      expect(cache.hasColumnPresent(300, "0xghi", 1)).toBe(true);
+      expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
+      expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
     });
   });
 });

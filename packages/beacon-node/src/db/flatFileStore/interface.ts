@@ -35,9 +35,6 @@ export interface IFlatFileStore {
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
   putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void>;
   deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void>;
-  /** Sync check from in-memory cache */
-  hasDataColumn(slot: Slot, blockRoot: RootHex, index: number): boolean;
-  getColumnBitmap(slot: Slot, blockRoot: RootHex): bigint | null;
 
   /** Lookup by slot only when a single column root exists */
   getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]>;

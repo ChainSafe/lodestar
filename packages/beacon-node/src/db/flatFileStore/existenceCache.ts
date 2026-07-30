@@ -1,19 +1,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import {RootHex, Slot} from "@lodestar/types";
-import {DCOL_HEADER_SIZE, parseDcolHeader, totalBits} from "./dcolFormat.js";
+import {isFsNotFoundError} from "./errors.js";
 
 /**
  * In-memory existence cache to avoid filesystem stat()/read calls.
  *
  * - Blob presence: Map<Slot, Set<RootHex>> — knows which (slot, root) have blob files
- * - Column bitmaps: Map<Slot, Map<RootHex, bigint>> — 128-bit bitmap per (slot, root)
- *
- * Uses bigint for 128-bit bitmaps since JavaScript doesn't have native 128-bit integers.
+ * - Column presence: Map<Slot, Set<RootHex>> — knows which (slot, root) have column files
  */
 export class ExistenceCache {
   private blobPresence = new Map<Slot, Set<RootHex>>();
-  private columnBitmaps = new Map<Slot, Map<RootHex, bigint>>();
+  private columnPresence = new Map<Slot, Set<RootHex>>();
 
   // --- Slot → Root resolution (for finalized canonical lookups) ---
 
@@ -30,7 +28,7 @@ export class ExistenceCache {
    * Return the column root only when exactly one root is known at this slot.
    */
   getUniqueColumnRootForSlot(slot: Slot): RootHex | null {
-    return getOnlyValue(this.columnBitmaps.get(slot)?.keys());
+    return getOnlyValue(this.columnPresence.get(slot)?.values());
   }
 
   // --- Blobs ---
@@ -56,36 +54,26 @@ export class ExistenceCache {
     }
   }
 
-  // --- Columns ---
+  // --- Column files ---
 
-  setColumnsPresent(slot: Slot, rootHex: RootHex, indices: number[]): void {
-    let roots = this.columnBitmaps.get(slot);
+  setColumnPresent(slot: Slot, rootHex: RootHex): void {
+    let roots = this.columnPresence.get(slot);
     if (!roots) {
-      roots = new Map();
-      this.columnBitmaps.set(slot, roots);
+      roots = new Set();
+      this.columnPresence.set(slot, roots);
     }
-    let bitmap = roots.get(rootHex) ?? 0n;
-    for (const idx of indices) {
-      bitmap |= 1n << BigInt(idx);
-    }
-    roots.set(rootHex, bitmap);
+    roots.add(rootHex);
   }
 
-  hasColumnPresent(slot: Slot, rootHex: RootHex, index: number): boolean {
-    const bitmap = this.columnBitmaps.get(slot)?.get(rootHex);
-    if (bitmap === undefined) return false;
-    return (bitmap & (1n << BigInt(index))) !== 0n;
-  }
-
-  getColumnBitmap(slot: Slot, rootHex: RootHex): bigint | null {
-    return this.columnBitmaps.get(slot)?.get(rootHex) ?? null;
+  hasColumnPresent(slot: Slot, rootHex: RootHex): boolean {
+    return this.columnPresence.get(slot)?.has(rootHex) ?? false;
   }
 
   removeColumns(slot: Slot, rootHex: RootHex): void {
-    const roots = this.columnBitmaps.get(slot);
+    const roots = this.columnPresence.get(slot);
     if (roots) {
       roots.delete(rootHex);
-      if (roots.size === 0) this.columnBitmaps.delete(slot);
+      if (roots.size === 0) this.columnPresence.delete(slot);
     }
   }
 
@@ -96,8 +84,8 @@ export class ExistenceCache {
     for (const [slot] of this.blobPresence) {
       if (slot < minSlot) this.blobPresence.delete(slot);
     }
-    for (const [slot] of this.columnBitmaps) {
-      if (slot < minSlot) this.columnBitmaps.delete(slot);
+    for (const [slot] of this.columnPresence) {
+      if (slot < minSlot) this.columnPresence.delete(slot);
     }
   }
 
@@ -105,7 +93,7 @@ export class ExistenceCache {
    * Rebuild cache from disk by scanning blob and column directories.
    * Ignores `.part` files.
    */
-  async rebuildFromDisk(blobsDir: string, columnsDir: string): Promise<{blobs: number; columns: number}> {
+  async rebuildFromDisk(blobsDir: string, columnsDir: string): Promise<{blobFiles: number; columnFiles: number}> {
     let blobCount = 0;
     let columnCount = 0;
 
@@ -126,8 +114,8 @@ export class ExistenceCache {
           }
         }
       }
-    } catch (_e) {
-      // Directory may not exist
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
     }
 
     // Scan columns directory
@@ -142,39 +130,16 @@ export class ExistenceCache {
           if (file.endsWith(".part")) continue;
           if (file.endsWith(".dcol") && file.startsWith("0x")) {
             const rootHex = file.slice(0, -5); // strip .dcol
-            // Read just the header to get the bitmap
-            const filePath = path.join(slotDir, file);
-            try {
-              const fd = await fs.promises.open(filePath, "r");
-              try {
-                const headerBuf = new Uint8Array(DCOL_HEADER_SIZE);
-                await fd.read(headerBuf, 0, DCOL_HEADER_SIZE, 0);
-                const header = parseDcolHeader(headerBuf);
-                const indices: number[] = [];
-                const count = totalBits(header.bitmap);
-                if (count > 0) {
-                  for (let i = 0; i < 128; i++) {
-                    if ((header.bitmap[Math.floor(i / 8)] & (1 << (i % 8))) !== 0) {
-                      indices.push(i);
-                    }
-                  }
-                }
-                this.setColumnsPresent(slot, rootHex, indices);
-                columnCount += indices.length;
-              } finally {
-                await fd.close();
-              }
-            } catch (_e) {
-              // Corrupted file, skip
-            }
+            this.setColumnPresent(slot, rootHex);
+            columnCount++;
           }
         }
       }
-    } catch (_e) {
-      // Directory may not exist
+    } catch (e) {
+      if (!isFsNotFoundError(e)) throw e;
     }
 
-    return {blobs: blobCount, columns: columnCount};
+    return {blobFiles: blobCount, columnFiles: columnCount};
   }
 }
 

@@ -4,9 +4,11 @@ import {uncompress} from "snappyjs";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostFulu} from "@lodestar/params";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {atomicWrite, padSlot} from "./atomicWrite.js";
 import {
   DCOL_HEADER_SIZE,
+  type DcolHeader,
   encodeDcolFile,
   getColumnByteRange,
   mergeDcolColumns,
@@ -93,6 +95,7 @@ export class ColumnStore {
     if (!data) return [];
 
     const header = parseDcolHeader(data);
+    validateDcolHeader(header, slot, rootHex);
     const columns = readAllColumns(data, header);
     const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
 
@@ -113,18 +116,17 @@ export class ColumnStore {
     }
 
     try {
-      // Read header (149 bytes)
       const headerBuf = new Uint8Array(DCOL_HEADER_SIZE);
-      await fd.read(headerBuf, 0, DCOL_HEADER_SIZE, 0);
+      await readExactly(fd, headerBuf, 0);
       const header = parseDcolHeader(headerBuf);
+      validateDcolHeader(header, slot, rootHex);
 
-      // Read the offset table
       const N = totalBits(header.bitmap);
       const tableSize = offsetTableSize(N);
       const offsetTable = new Uint8Array(tableSize);
-      await fd.read(offsetTable, 0, tableSize, DCOL_HEADER_SIZE);
+      await readExactly(fd, offsetTable, DCOL_HEADER_SIZE);
+      const fileSize = (await fd.stat()).size;
 
-      // Read each requested column via targeted pread
       const results: (Uint8Array | undefined)[] = [];
       for (const idx of indices) {
         const range = getColumnByteRange(header, offsetTable, idx);
@@ -132,8 +134,11 @@ export class ColumnStore {
           results.push(undefined);
           continue;
         }
+        if (range.length < 0 || range.offset + range.length > fileSize) {
+          throw new Error(`Invalid dcol offset for slot=${slot} root=${rootHex} index=${idx}`);
+        }
         const buf = new Uint8Array(range.length);
-        await fd.read(buf, 0, range.length, range.offset);
+        await readExactly(fd, buf, range.offset);
         results.push(uncompress(buf));
       }
 
@@ -160,18 +165,16 @@ export class ColumnStore {
       const existing = await this.readFile(slot, rootHex);
       let fileData: Uint8Array;
 
-      if (existing && existing.length >= DCOL_HEADER_SIZE) {
+      if (existing) {
+        const header = parseDcolHeader(existing);
+        validateDcolHeader(header, slot, rootHex);
         fileData = mergeDcolColumns(existing, columns);
       } else {
         fileData = encodeDcolFile(blockRoot, slot, columns);
       }
 
       await atomicWrite(this.filePath(slot, rootHex), fileData);
-      this.cache.setColumnsPresent(
-        slot,
-        rootHex,
-        columns.map((c) => c.index)
-      );
+      this.cache.setColumnPresent(slot, rootHex);
     } finally {
       release();
     }
@@ -188,14 +191,6 @@ export class ColumnStore {
     } finally {
       release();
     }
-  }
-
-  hasColumn(slot: Slot, rootHex: RootHex, index: number): boolean {
-    return this.cache.hasColumnPresent(slot, rootHex, index);
-  }
-
-  getColumnBitmap(slot: Slot, rootHex: RootHex): bigint | null {
-    return this.cache.getColumnBitmap(slot, rootHex);
   }
 
   /**
@@ -242,5 +237,26 @@ export class ColumnStore {
     }
 
     this.cache.evictBelow(minSlot);
+  }
+}
+
+function validateDcolHeader(header: DcolHeader, slot: Slot, rootHex: RootHex): void {
+  if (header.slot !== slot) {
+    throw new Error(`Dcol slot mismatch: header=${header.slot} path=${slot}`);
+  }
+  const headerRoot = toRootHex(header.blockRoot);
+  if (headerRoot !== rootHex) {
+    throw new Error(`Dcol block root mismatch: header=${headerRoot} path=${rootHex}`);
+  }
+}
+
+async function readExactly(fd: fs.promises.FileHandle, buffer: Uint8Array, position: number): Promise<void> {
+  let totalRead = 0;
+  while (totalRead < buffer.length) {
+    const {bytesRead} = await fd.read(buffer, totalRead, buffer.length - totalRead, position + totalRead);
+    if (bytesRead === 0) {
+      throw new Error(`Unexpected end of dcol file at offset ${position + totalRead}`);
+    }
+    totalRead += bytesRead;
   }
 }
