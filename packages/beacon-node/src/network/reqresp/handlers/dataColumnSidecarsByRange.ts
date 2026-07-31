@@ -1,7 +1,7 @@
 import {PeerId} from "@libp2p/interface";
 import {ChainConfig} from "@lodestar/config";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, fulu} from "@lodestar/types";
@@ -51,7 +51,10 @@ export async function* onDataColumnSidecarsByRange(
   }
 
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
-  const archiveMaxSlot = finalizedSlot;
+  // At Gloas, finalizing the beacon block does not finalize its payload. Keep the boundary block in the
+  // fork-choice-backed section until the following finalization, matching ExecutionPayloadEnvelopesByRange.
+  const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
+  const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
 
   // Finalized range of columns
   if (startSlot <= archiveMaxSlot) {

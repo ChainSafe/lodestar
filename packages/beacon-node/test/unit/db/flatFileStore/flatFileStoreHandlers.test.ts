@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import {PeerId} from "@libp2p/interface";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {createChainForkConfig} from "@lodestar/config";
+import {type ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
 import {BLOB_SIDECAR_FIXED_SIZE, NUMBER_OF_COLUMNS} from "@lodestar/params";
@@ -191,12 +191,19 @@ describe("FlatFileStore reqresp handler integration", () => {
       DENEB_FORK_EPOCH: 0,
       FULU_FORK_EPOCH: 0,
     });
+    const gloasConfig = createChainForkConfig({
+      ...defaultConfig,
+      DENEB_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
 
     function makeMockChainAndDb(opts: {
+      config?: ChainForkConfig;
       finalizedSlot: number;
       custodyColumns: number[];
       earliestAvailableSlot?: number;
-      headChain?: {slot: number; blockRoot: string}[];
+      headChain?: {slot: number; blockRoot: string; payloadStatus?: PayloadStatus}[];
       canonicalBlocks?: {slot: number; blockRoot: string}[];
       getSerializedDataColumnSidecars?: (
         slot: number,
@@ -210,14 +217,17 @@ describe("FlatFileStore reqresp handler integration", () => {
       }
 
       const chain = {
-        config: fuluConfig,
+        config: opts.config ?? fuluConfig,
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
           getCanonicalBlockAtSlot: (slot: number) => opts.canonicalBlocks?.find((block) => block.slot === slot) ?? null,
           getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
           getAllAncestorBlocks: () =>
-            (opts.headChain ?? []).map((block) => ({...block, payloadStatus: PayloadStatus.FULL})),
+            (opts.headChain ?? []).map((block) => ({
+              ...block,
+              payloadStatus: block.payloadStatus ?? PayloadStatus.FULL,
+            })),
         },
         custodyConfig: {
           custodyColumns: opts.custodyColumns,
@@ -326,6 +336,49 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(new Uint8Array(responses[0].data)).toEqual(finalizedData);
       expect(new Uint8Array(responses[1].data)).toEqual(unfinalizedData);
     });
+
+    it("should serve a FULL Gloas block at the finalized boundary from the fork-choice section", async () => {
+      const columnData = new Uint8Array(32).fill(0x45);
+      const getSerializedDataColumnSidecars = vi.fn().mockResolvedValue([columnData]);
+      const {chain, db} = makeMockChainAndDb({
+        config: gloasConfig,
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        headChain: [{slot: 10, blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}],
+        getSerializedDataColumnSidecars,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(1);
+      expect(new Uint8Array(responses[0].data)).toEqual(columnData);
+      expect(getSerializedDataColumnSidecars).toHaveBeenCalledWith(10, ROOT_A, [0]);
+    });
+
+    for (const {name, payloadStatus} of [
+      {name: "PENDING", payloadStatus: PayloadStatus.PENDING},
+      {name: "EMPTY", payloadStatus: PayloadStatus.EMPTY},
+    ]) {
+      it(`should not serve a Gloas ${name} block at the finalized boundary`, async () => {
+        const getSerializedDataColumnSidecars = vi.fn().mockResolvedValue([new Uint8Array(32).fill(0x46)]);
+        const {chain, db} = makeMockChainAndDb({
+          config: gloasConfig,
+          finalizedSlot: 10,
+          custodyColumns: [0],
+          headChain: [{slot: 10, blockRoot: ROOT_A, payloadStatus}],
+          getSerializedDataColumnSidecars,
+        });
+
+        const responses = await collectAsync(
+          onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+        );
+
+        expect(responses).toHaveLength(0);
+        expect(getSerializedDataColumnSidecars).not.toHaveBeenCalled();
+      });
+    }
 
     it("should handle missing columns gracefully", async () => {
       // No columns stored for slot 10
