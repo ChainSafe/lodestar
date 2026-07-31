@@ -37,7 +37,7 @@ const BID_INCREMENT_CAP_GWEI = 10_000_000;
  * Return the minimum value a new bid must have to be forwarded given the current highest bid.
  * Division before multiplication to stay within safe integer range for max gwei values.
  */
-export function getMinBidValue(currentHighestBid: number): number {
+function getMinBidValue(currentHighestBid: number): number {
   const relativeIncrement = Math.floor(currentHighestBid / 10_000) * BID_INCREMENT_BPS;
   const increment = Math.min(Math.max(BID_INCREMENT_FLOOR_GWEI, relativeIncrement), BID_INCREMENT_CAP_GWEI);
   return currentHighestBid + increment;
@@ -49,7 +49,7 @@ export function getMinBidValue(currentHighestBid: number): number {
  * The direct parent path is always allowed for proposer-boost reorgs. Otherwise the bid
  * must build on the local head's full or empty payload variant, as selected for its slot.
  */
-export function isBidHeadCompatible(
+function isBidHeadCompatible(
   forkChoice: IForkChoice,
   head: ProtoBlock,
   bidSlot: Slot,
