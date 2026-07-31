@@ -6,8 +6,9 @@ import {
   isForkPostElectra,
   isForkPostGloas,
 } from "@lodestar/params";
-import {BeaconBlock, Slot, altair, phase0, rewards} from "@lodestar/types";
+import {BeaconBlock, Slot, altair, gloas, phase0, rewards} from "@lodestar/types";
 import {processAttestationsAltair} from "../block/processAttestationsAltair.js";
+import {processParentExecutionPayload} from "../block/processParentExecutionPayload.js";
 import {RewardCache} from "../cache/rewardCache.js";
 import {
   CachedBeaconStateAllForks,
@@ -42,9 +43,12 @@ export async function computeBlockRewards(
   let syncAggregateReward = cachedSyncAggregateReward;
 
   if (blockAttestationReward === 0) {
-    const parentSlot = isForkPostGloas(fork)
-      ? (preState as CachedBeaconStateGloas).latestExecutionPayloadBid.slot
-      : null;
+    let parentSlot: Slot | null = null;
+    if (isForkPostGloas(fork)) {
+      const gloasState = preState as CachedBeaconStateGloas;
+      parentSlot = gloasState.latestExecutionPayloadBid.slot;
+      processParentExecutionPayload(gloasState, block as gloas.BeaconBlock);
+    }
     blockAttestationReward =
       fork === ForkName.phase0
         ? computeBlockAttestationRewardPhase0(block as phase0.BeaconBlock, preState as CachedBeaconStatePhase0)
