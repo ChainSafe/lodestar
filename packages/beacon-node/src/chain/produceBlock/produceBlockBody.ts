@@ -91,6 +91,12 @@ export type BlockAttributes = {
   graffiti: Bytes32;
   slot: Slot;
   parentBlock: ProtoBlock;
+  // the state of parentBlock dialing to slot
+  parentState: IBeaconStateView;
+  // parentStateWithPayload is the same to parentState for pre-gloas or if building on EMPTY
+  parentStateWithPayload: IBeaconStateView;
+  // Parent's execution requests, undefined pre-gloas.
+  parentExecutionRequests?: gloas.ExecutionRequests;
   feeRecipient?: string;
   /** When provided, build block with this builder bid instead of a self-build bid */
   builderBid?: gloas.SignedExecutionPayloadBid;
@@ -153,32 +159,9 @@ export type ProduceResult =
   | ProduceFullPhase0
   | ProduceBlinded;
 
-/**
- * Drop voluntary exits that `parent_execution_requests` have invalidated (e.g. a withdrawal
- * request initiating an exit on the same validator). Op pool selected against the unapplied
- * state, so re-validate against the post-apply state to avoid producing an invalid block.
- *
- * `getStateAfterParentPayload` is a thunk so the post-apply state is only materialized when
- * actually needed (i.e. when extending the parent payload and there are exits to filter).
- */
-function maybeFilterInvalidatedVoluntaryExits(
-  commonBlockBody: CommonBlockBody,
-  isExtendingPayload: boolean,
-  getStateAfterParentPayload: () => IBeaconStateViewBellatrix
-): CommonBlockBody["voluntaryExits"] {
-  if (!isExtendingPayload || commonBlockBody.voluntaryExits.length === 0) {
-    return commonBlockBody.voluntaryExits;
-  }
-  const state = getStateAfterParentPayload();
-  return commonBlockBody.voluntaryExits.filter((signedVoluntaryExit) =>
-    state.isValidVoluntaryExit(signedVoluntaryExit, false)
-  );
-}
-
 export async function produceBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
-  currentState: IBeaconStateView,
   blockAttr: BlockAttributes & {
     proposerIndex: ValidatorIndex;
     proposerPubKey: BLSPubkey;
@@ -198,6 +181,9 @@ export async function produceBlockBody<T extends BlockType>(
     proposerPubKey,
     commonBlockBodyPromise,
     builderBid,
+    parentState,
+    parentStateWithPayload,
+    parentExecutionRequests,
   } = blockAttr;
   let executionPayloadValue: Wei;
   let blockBody: AssembledBodyType<T>;
@@ -219,17 +205,17 @@ export async function produceBlockBody<T extends BlockType>(
   this.logger.verbose("Producing beacon block body", logMeta);
 
   if (builderBid !== undefined) {
-    if (!isStatePostGloas(currentState)) {
-      throw new Error("Expected Gloas state for builder bid block production");
+    if (!isStatePostGloas(parentState)) {
+      throw new Error(`Expected Gloas state for builder bid block production slot=${blockSlot}`);
+    }
+    if (parentExecutionRequests === undefined) {
+      throw new Error(`Expected parentExecutionRequests for gloas block production slot=${blockSlot}`);
     }
 
     const isExtendingPayload = byteArrayEquals(
       builderBid.message.parentBlockHash,
-      currentState.latestExecutionPayloadBid.blockHash
+      parentState.latestExecutionPayloadBid.blockHash
     );
-    const parentExecutionRequests = isExtendingPayload
-      ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
-      : ssz.gloas.ExecutionRequests.defaultValue();
     executionPayloadValue = BigInt(builderBid.message.value) * GWEI_TO_WEI;
 
     const commonBlockBody = await commonBlockBodyPromise;
@@ -239,10 +225,9 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlock.blockRoot,
       blockSlot - 1
     );
+    // parentExecutionRequests fetched once by the entrypoint (isExtendingPayload aligns with the
+    // build-on-full decision used to select this bid; default value when building on an empty parent)
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(commonBlockBody, isExtendingPayload, () =>
-      currentState.withParentPayloadApplied(parentExecutionRequests)
-    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     this.logger.verbose("Produced block with builder bid", {
@@ -255,8 +240,11 @@ export async function produceBlockBody<T extends BlockType>(
       isExtendingPayload,
     });
   } else if (isForkPostGloas(fork)) {
-    if (!isStatePostGloas(currentState)) {
-      throw new Error("Expected Gloas state for Gloas block production");
+    if (!isStatePostGloas(parentState)) {
+      throw new Error(`Expected Gloas state for Gloas block production slot=${blockSlot}`);
+    }
+    if (parentExecutionRequests === undefined) {
+      throw new Error(`Expected parentExecutionRequests for gloas block production slot=${blockSlot}`);
     }
 
     // TODO GLOAS: support non self-building here, the block type differentiation between
@@ -273,20 +261,15 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
-    let parentExecutionRequests: gloas.ExecutionRequests;
-    // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
-    let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
+    const stateAfterParentPayload = parentStateWithPayload as IBeaconStateViewBellatrix;
     // Spec: should_build_on_full(store, head). `parentBlock` is the proposer's head
     // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
     // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
     const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
     if (isBuildingOnFull) {
-      parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
-      parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
-      stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
+      parentBlockHash = parentState.latestExecutionPayloadBid.blockHash;
     } else {
-      parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
+      parentBlockHash = parentState.latestExecutionPayloadBid.parentBlockHash;
     }
     const prepareRes = await prepareExecutionPayload(
       this,
@@ -343,7 +326,7 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlockHash,
       parentBlockRoot,
       blockHash: executionPayload.blockHash,
-      prevRandao: currentState.getRandaoMix(currentState.epoch),
+      prevRandao: parentState.getRandaoMix(parentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
       gasLimit: executionPayload.gasLimit,
       builderIndex: BUILDER_INDEX_SELF_BUILD,
@@ -365,12 +348,8 @@ export async function produceBlockBody<T extends BlockType>(
       parentBlock.blockRoot,
       blockSlot - 1
     );
+    // parentExecutionRequests fetched once by the entrypoint (default value when building on an empty parent)
     gloasBody.parentExecutionRequests = parentExecutionRequests;
-    gloasBody.voluntaryExits = maybeFilterInvalidatedVoluntaryExits(
-      commonBlockBody,
-      isBuildingOnFull,
-      () => stateAfterParentPayload
-    );
     blockBody = gloasBody as AssembledBodyType<T>;
 
     // Store execution payload data required to construct execution payload envelope later
@@ -400,7 +379,7 @@ export async function produceBlockBody<T extends BlockType>(
       shouldOverrideBuilder,
     });
   } else if (isForkPostBellatrix(fork)) {
-    if (!isStatePostBellatrix(currentState)) {
+    if (!isStatePostBellatrix(parentState)) {
       throw new Error("Expected Bellatrix state for execution block production");
     }
 
@@ -430,10 +409,10 @@ export async function produceBlockBody<T extends BlockType>(
             this.logger,
             fork,
             parentBlockRoot,
-            currentState.latestExecutionPayloadHeader.blockHash,
+            parentState.latestExecutionPayloadHeader.blockHash,
             safeBlockHash,
             finalizedBlockHash ?? ZERO_HASH_HEX,
-            currentState,
+            parentState,
             executionBuilder.issueLocalFcUWithFeeRecipient
           );
         }
@@ -445,7 +424,7 @@ export async function produceBlockBody<T extends BlockType>(
           slot: blockSlot,
           proposerPubKey: toHex(proposerPubKey),
         });
-        const headerRes = await prepareExecutionPayloadHeader(this, fork, currentState, proposerPubKey);
+        const headerRes = await prepareExecutionPayloadHeader(this, fork, parentState, proposerPubKey);
 
         endExecutionPayloadHeader?.({
           step: BlockProductionStep.executionPayload,
@@ -480,7 +459,7 @@ export async function produceBlockBody<T extends BlockType>(
         });
       } else {
         const headerGasLimit = builderRes.header.gasLimit;
-        const parentGasLimit = currentState.latestExecutionPayloadHeader.gasLimit;
+        const parentGasLimit = parentState.latestExecutionPayloadHeader.gasLimit;
         const expectedGasLimit = getExpectedGasLimit(parentGasLimit, targetGasLimit);
 
         const lowerBound = Math.min(parentGasLimit, expectedGasLimit);
@@ -539,10 +518,10 @@ export async function produceBlockBody<T extends BlockType>(
           this.logger,
           fork,
           parentBlockRoot,
-          currentState.latestExecutionPayloadHeader.blockHash,
+          parentState.latestExecutionPayloadHeader.blockHash,
           safeBlockHash,
           finalizedBlockHash ?? ZERO_HASH_HEX,
-          currentState,
+          parentState,
           feeRecipient
         );
 
@@ -985,8 +964,7 @@ function getProposerTargetGasLimit(
 export async function produceCommonBlockBody<T extends BlockType>(
   this: BeaconChain,
   blockType: T,
-  currentState: IBeaconStateView,
-  {randaoReveal, graffiti, slot, parentBlock}: BlockAttributes
+  {randaoReveal, graffiti, slot, parentBlock, parentStateWithPayload}: BlockAttributes
 ): Promise<CommonBlockBody> {
   const stepsMetrics =
     blockType === BlockType.Full
@@ -1007,14 +985,14 @@ export async function produceCommonBlockBody<T extends BlockType>(
   //   }
   // }
   const [attesterSlashings, proposerSlashings, voluntaryExits, blsToExecutionChanges] =
-    this.opPool.getSlashingsAndExits(currentState, blockType, this.metrics);
+    this.opPool.getSlashingsAndExits(parentStateWithPayload, blockType, this.metrics);
 
   const endAttestations = stepsMetrics?.startTimer();
   const attestations = this.aggregatedAttestationPool.getAttestationsForBlock(
     fork,
     this.forkChoice,
     this.shufflingCache,
-    currentState
+    parentStateWithPayload
   );
   endAttestations?.({
     step: BlockProductionStep.attestations,
@@ -1024,7 +1002,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
     randaoReveal,
     graffiti,
     // Eth1 data voting is no longer required since electra
-    eth1Data: currentState.eth1Data,
+    eth1Data: parentStateWithPayload.eth1Data,
     proposerSlashings,
     attesterSlashings,
     attestations,

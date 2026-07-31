@@ -93,14 +93,16 @@ describe("produceBlockBody", () => {
     fn: async ({chain, state, head, proposerIndex, proposerPubKey}) => {
       const slot = state.slot;
 
-      const commonBlockBodyPromise = produceCommonBlockBody.call(chain, BlockType.Full, state, {
+      const commonBlockBodyPromise = produceCommonBlockBody.call(chain, BlockType.Full, {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
         parentBlock: head,
+        parentState: state,
+        parentStateWithPayload: state,
       });
 
-      await produceBlockBody.call(chain, BlockType.Full, state, {
+      await produceBlockBody.call(chain, BlockType.Full, {
         slot: slot + 1,
         graffiti: Buffer.alloc(32),
         randaoReveal: Buffer.alloc(96),
@@ -108,6 +110,8 @@ describe("produceBlockBody", () => {
         proposerIndex,
         proposerPubKey,
         commonBlockBodyPromise,
+        parentState: state,
+        parentStateWithPayload: state,
       });
     },
   });

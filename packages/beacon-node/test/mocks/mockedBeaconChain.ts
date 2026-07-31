@@ -178,6 +178,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       pubkeyCache: createPubkeyCache(),
       produceCommonBlockBody: vi.fn(),
       getProposerHead: vi.fn(),
+      getParentExecutionRequests: vi.fn(),
       produceBlock: vi.fn(),
       produceBlindedBlock: vi.fn(),
       getCanonicalBlockAtSlot: vi.fn(),

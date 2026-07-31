@@ -1031,18 +1031,10 @@ export class BeaconChain implements IBeaconChain {
   }
 
   async produceCommonBlockBody(blockAttributes: BlockAttributes): Promise<CommonBlockBody> {
-    const {slot, parentBlock} = blockAttributes;
-    const state = await this.regen.getBlockSlotState(
-      parentBlock,
-      slot,
-      {dontTransferCache: true},
-      RegenCaller.produceBlock
-    );
-
     // TODO: To avoid breaking changes for metric define this attribute
     const blockType = BlockType.Full;
 
-    return produceCommonBlockBody.call(this, blockType, state, blockAttributes);
+    return produceCommonBlockBody.call(this, blockType, blockAttributes);
   }
 
   produceBlock(blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}): Promise<{
@@ -1064,44 +1056,24 @@ export class BeaconChain implements IBeaconChain {
 
   async produceBlockWrapper<T extends BlockType>(
     blockType: T,
-    {
-      randaoReveal,
-      graffiti,
-      slot,
-      feeRecipient,
-      commonBlockBodyPromise,
-      parentBlock,
-      builderBid,
-    }: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
+    blockAttributes: BlockAttributes & {commonBlockBodyPromise: Promise<CommonBlockBody>}
   ): Promise<{
     block: AssembledBlockType<T>;
     executionPayloadValue: Wei;
     consensusBlockValue: Wei;
     shouldOverrideBuilder?: boolean;
   }> {
-    const state = await this.regen.getBlockSlotState(
-      parentBlock,
-      slot,
-      {dontTransferCache: true},
-      RegenCaller.produceBlock
-    );
-    const proposerIndex = state.getBeaconProposer(slot);
+    const {slot, parentBlock, parentState} = blockAttributes;
+    const proposerIndex = parentState.getBeaconProposer(slot);
     const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
       blockType,
-      state,
       {
-        randaoReveal,
-        graffiti,
-        slot,
-        feeRecipient,
-        parentBlock,
+        ...blockAttributes,
         proposerIndex,
         proposerPubKey,
-        commonBlockBodyPromise,
-        builderBid,
       }
     );
 
@@ -1126,7 +1098,9 @@ export class BeaconChain implements IBeaconChain {
       body,
     } as AssembledBlockType<T>;
 
-    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, state, block);
+    // `parentState` is the un-applied production state; `computeNewStateRoot` re-applies the parent
+    // payload during state transition, so it must not receive the already-applied state
+    const {newStateRoot, proposerReward} = computeNewStateRoot(this.metrics, parentState, block);
     block.stateRoot = newStateRoot;
     const blockRoot =
       produceResult.type === BlockType.Full
