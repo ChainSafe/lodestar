@@ -19,6 +19,15 @@ describe("waitFor", () => {
     await waitFor(() => condition, {interval, timeout});
   });
 
+  it("Should not time out if timeout is omitted", async () => {
+    let condition = false;
+    setTimeout(() => {
+      condition = true;
+    }, timeout);
+
+    await expect(waitFor(() => condition, {interval: 5})).resolves.toBeUndefined();
+  });
+
   it("Should reject with TimeoutError if condition does not become true within timeout", async () => {
     await expect(waitFor(() => false, {interval, timeout})).rejects.toThrow(TimeoutError);
   });

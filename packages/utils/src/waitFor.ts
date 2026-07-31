@@ -26,10 +26,13 @@ export function waitFor(condition: () => boolean, opts: WaitForOpts = {}): Promi
 
     let onDone: () => void = () => {};
 
-    const timeoutId = setTimeout(() => {
-      onDone();
-      reject(new TimeoutError());
-    }, timeout);
+    const timeoutId =
+      timeout === Infinity
+        ? undefined
+        : setTimeout(() => {
+            onDone();
+            reject(new TimeoutError());
+          }, timeout);
 
     const intervalId = setInterval(() => {
       if (condition()) {
@@ -45,7 +48,9 @@ export function waitFor(condition: () => boolean, opts: WaitForOpts = {}): Promi
     if (signal) signal.addEventListener("abort", onAbort);
 
     onDone = () => {
-      clearTimeout(timeoutId);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
       clearInterval(intervalId);
       if (signal) signal.removeEventListener("abort", onAbort);
     };
