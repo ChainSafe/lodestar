@@ -134,13 +134,20 @@ export async function archiveBlocks(
       slotRange: prettyPrintIndices(nonCanonicalSlots),
     };
 
-    const items = finalizedNonCanonicalBlocks.map((summary) => ({
-      slot: summary.slot,
-      blockRoot: summary.blockRoot,
-    }));
-    // Delete sidecars first so their block roots remain available to retry cleanup after a failure or crash.
-    await flatFileStore.deleteNonCanonical(items);
-    logger.verbose("Deleted non canonical blobs/columns from flat file store", nonCanonicalLogCtx);
+    const sidecarItems = finalizedNonCanonicalBlocks
+      // Gloas EMPTY and FULL variants share a block root. EMPTY has no sidecars, so deleting by its root could
+      // remove the canonical FULL variant's columns. Pre-Gloas blocks are always FULL.
+      .filter((summary) => summary.payloadStatus === PayloadStatus.FULL)
+      .map((summary) => ({slot: summary.slot, blockRoot: summary.blockRoot}));
+    if (sidecarItems.length > 0) {
+      // Delete sidecars first so their block roots remain available to retry cleanup after a failure or crash.
+      await flatFileStore.deleteNonCanonical(sidecarItems);
+      logger.verbose("Deleted non canonical blobs/columns from flat file store", {
+        ...logCtx,
+        count: sidecarItems.length,
+        slotRange: prettyPrintIndices(sidecarItems.map(({slot}) => slot).sort((a, b) => a - b)),
+      });
+    }
 
     await db.block.batchDelete(nonCanonicalBlockRoots);
     logger.verbose("Deleted non canonical blocks from hot DB", nonCanonicalLogCtx);

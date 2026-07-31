@@ -39,7 +39,11 @@ describe("block archiver task", () => {
     vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(Buffer.from(blockBytes));
     // block i has slot i+1
     const blocks = Array.from({length: 5}, (_, i) =>
-      generateProtoBlock({slot: i + 1, blockRoot: toHexString(Buffer.alloc(32, i + 1))})
+      generateProtoBlock({
+        slot: i + 1,
+        blockRoot: toHexString(Buffer.alloc(32, i + 1)),
+        payloadStatus: PayloadStatus.FULL,
+      })
     );
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
     const nonCanonicalBlocks = [blocks[2]];
@@ -82,6 +86,33 @@ describe("block archiver task", () => {
     expect(dbStub.block.batchDelete).toBeCalledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)));
   });
 
+  it("should delete sidecars only for non-canonical FULL payload variants", async () => {
+    const fullRoot = toHexString(Buffer.alloc(32, 1));
+    const emptyRoot = toHexString(Buffer.alloc(32, 2));
+    const canonicalFull = generateProtoBlock({slot: 3, blockRoot: fullRoot, payloadStatus: PayloadStatus.FULL});
+    const nonCanonicalEmpty = generateProtoBlock({slot: 3, blockRoot: fullRoot, payloadStatus: PayloadStatus.EMPTY});
+    const canonicalEmpty = generateProtoBlock({slot: 4, blockRoot: emptyRoot, payloadStatus: PayloadStatus.EMPTY});
+    const nonCanonicalFull = generateProtoBlock({slot: 4, blockRoot: emptyRoot, payloadStatus: PayloadStatus.FULL});
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: [canonicalFull, canonicalEmpty],
+      nonAncestors: [nonCanonicalEmpty, nonCanonicalFull],
+    });
+
+    await archiveBlocks(
+      defaultConfig,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 5, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+      8
+    );
+
+    expect(dbStub.flatFileStore.deleteNonCanonical).toHaveBeenCalledWith([
+      {slot: nonCanonicalFull.slot, blockRoot: nonCanonicalFull.blockRoot},
+    ]);
+  });
+
   it("is a no-op when ancestors and non-ancestors are empty", async () => {
     const config = createChainForkConfig({
       ...defaultConfig,
@@ -107,7 +138,11 @@ describe("block archiver task", () => {
   });
 
   it("should retain non-canonical blocks when flat file cleanup fails", async () => {
-    const block = generateProtoBlock({slot: 3, blockRoot: toHexString(Buffer.alloc(32, 3))});
+    const block = generateProtoBlock({
+      slot: 3,
+      blockRoot: toHexString(Buffer.alloc(32, 3)),
+      payloadStatus: PayloadStatus.FULL,
+    });
     vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
       ancestors: [],
       nonAncestors: [block],
