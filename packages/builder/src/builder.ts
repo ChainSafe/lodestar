@@ -45,7 +45,7 @@ export class Builder {
 
     const res = await opts.api.config.getSpec();
     assertEqualParams(opts.config, res.value());
-    opts.logger.info("Verified connected beacon node and builder have same the config");
+    opts.logger.info("Verified connected beacon node and builder have the same config");
 
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
     const builderSigner = new BuilderSigner(config, opts.keypair);
