@@ -1,5 +1,5 @@
 import {ApiClient} from "@lodestar/api";
-import {assertEqualParams, BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
+import {BeaconConfig, ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Logger} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {Metrics} from "./metrics.js";
