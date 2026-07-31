@@ -9,8 +9,5 @@ import {phase0} from "@lodestar/types";
  * If pubkey cache is empty: SLOW CODE - 🐢
  */
 export function syncPubkeys(pubkeyCache: PubkeyCache, validators: phase0.Validator[]): void {
-  const newCount = validators.length;
-  for (let i = pubkeyCache.size; i < newCount; i++) {
-    pubkeyCache.append(i, validators[i].pubkey);
-  }
+  pubkeyCache.syncPubkeys(validators);
 }
