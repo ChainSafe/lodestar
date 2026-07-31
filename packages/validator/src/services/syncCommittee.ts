@@ -1,11 +1,12 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkName, isForkPostAltair} from "@lodestar/params";
+import {IClock} from "@lodestar/state-transition";
 import {CommitteeIndex, Root, Slot, altair} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ValidatorEventEmitter} from "./emitter.js";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties.js";
