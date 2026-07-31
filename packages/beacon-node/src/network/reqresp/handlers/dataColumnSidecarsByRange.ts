@@ -55,17 +55,30 @@ export async function* onDataColumnSidecarsByRange(
   // fork-choice-backed section until the following finalization, matching ExecutionPayloadEnvelopesByRange.
   const isPostGloasFinalized = chain.config.getForkSeq(finalizedSlot) >= ForkSeq.gloas;
   const archiveMaxSlot = isPostGloasFinalized ? finalizedSlot - 1 : finalizedSlot;
+  const headBlock = chain.forkChoice.getHead();
+  // The canonical walk reaches back to the previous finalized boundary. Within that range fork choice is
+  // authoritative: a missing block means the canonical chain skipped the slot, not that storage should choose a root.
+  const headChain = chain.forkChoice.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
+  const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
+  const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
 
   // Finalized range of columns
   if (startSlot <= archiveMaxSlot) {
     const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
     for (let slot = startSlot; slot < archiveEnd; slot++) {
-      // Fork choice publishes finality before the async archive job removes losing-fork files.
-      // While the slot is still in fork choice, use its canonical root instead of a slot-only lookup.
-      const canonicalBlock = chain.forkChoice.getCanonicalBlockAtSlot(slot);
-      const dataColumnSidecars = canonicalBlock
-        ? await db.flatFileStore.getDataColumnsBinary(slot, canonicalBlock.blockRoot, availableColumns)
-        : await db.flatFileStore.getDataColumnsBinaryBySlot(slot, availableColumns);
+      const canonicalBlock = slot >= oldestForkChoiceSlot ? canonicalBlocksBySlot.get(slot) : undefined;
+      let dataColumnSidecars: (Uint8Array | undefined)[];
+      if (slot >= oldestForkChoiceSlot) {
+        // Post-Gloas, only the FULL variant has columns. EMPTY and PENDING variants may share its block root.
+        if (!canonicalBlock || canonicalBlock.payloadStatus !== PayloadStatus.FULL) continue;
+        dataColumnSidecars = await db.flatFileStore.getDataColumnsBinary(
+          slot,
+          canonicalBlock.blockRoot,
+          availableColumns
+        );
+      } else {
+        dataColumnSidecars = await db.flatFileStore.getDataColumnsBinaryBySlot(slot, availableColumns);
+      }
 
       const unavailableColumnIndices: ColumnIndex[] = [];
       for (let i = 0; i < dataColumnSidecars.length; i++) {
@@ -101,11 +114,8 @@ export async function* onDataColumnSidecarsByRange(
 
   // Non-finalized range of columns
   if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
-    const headRoot = headBlock.blockRoot;
     // getAllAncestorBlocks includes the last finalized block as its final element.
     // Skip anything the archive loop above already served via the block.slot > archiveMaxSlot filter below.
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
 
     // Iterate head chain with ascending block numbers
     for (let i = headChain.length - 1; i >= 0; i--) {

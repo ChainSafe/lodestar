@@ -18,16 +18,24 @@ export async function* onBlobSidecarsByRange(
 
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
   const archiveMaxSlot = finalizedSlot;
+  const headBlock = chain.forkChoice.getHead();
+  // The canonical walk reaches back to the previous finalized boundary. Within that range fork choice is
+  // authoritative: a missing block means the canonical chain skipped the slot, not that storage should choose a root.
+  const headChain = chain.forkChoice.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
+  const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
+  const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
 
   // Finalized range of blobs
   if (startSlot <= archiveMaxSlot) {
     for (let slot = startSlot; slot < Math.min(endSlot, archiveMaxSlot + 1); slot++) {
-      // Fork choice publishes finality before the async archive job removes losing-fork files.
-      // While the slot is still in fork choice, use its canonical root instead of a slot-only lookup.
-      const canonicalBlock = chain.forkChoice.getCanonicalBlockAtSlot(slot);
-      const blobSideCarsBytesWrapped = canonicalBlock
-        ? await db.flatFileStore.getBlobSidecarsBinary(slot, canonicalBlock.blockRoot)
-        : await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
+      let blobSideCarsBytesWrapped: Uint8Array | null;
+      if (slot >= oldestForkChoiceSlot) {
+        const canonicalBlock = canonicalBlocksBySlot.get(slot);
+        if (!canonicalBlock) continue;
+        blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinary(slot, canonicalBlock.blockRoot);
+      } else {
+        blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
+      }
       if (!blobSideCarsBytesWrapped) {
         continue;
       }
@@ -37,10 +45,7 @@ export async function* onBlobSidecarsByRange(
 
   // Non-finalized range of blobs
   if (endSlot > archiveMaxSlot) {
-    const headBlock = chain.forkChoice.getHead();
-    const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
-    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
     // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers

@@ -67,17 +67,12 @@ describe("FlatFileStore reqresp handler integration", () => {
       DENEB_FORK_EPOCH: 0,
     });
 
-    function makeMockChainAndDb(opts: {
-      finalizedSlot: number;
-      headChain?: {slot: number; blockRoot: string}[];
-      canonicalBlocks?: {slot: number; blockRoot: string}[];
-    }) {
+    function makeMockChainAndDb(opts: {finalizedSlot: number; headChain?: {slot: number; blockRoot: string}[]}) {
       const chain = {
         config: denebConfig,
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getCanonicalBlockAtSlot: (slot: number) => opts.canonicalBlocks?.find((block) => block.slot === slot) ?? null,
           getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
           getAllAncestorBlocks: () =>
             (opts.headChain ?? []).map((block) => ({...block, payloadStatus: PayloadStatus.FULL})),
@@ -175,12 +170,27 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       const {chain, db} = makeMockChainAndDb({
         finalizedSlot: 100,
-        canonicalBlocks: [{slot: 100, blockRoot: ROOT_B}],
+        headChain: [{slot: 100, blockRoot: ROOT_B}],
       });
       const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
 
       expect(responses).toHaveLength(1);
       expect(responses[0].data[0]).toBe(0x90);
+    });
+
+    it("should not serve a losing-fork blob at a canonically skipped slot", async () => {
+      await store.putBlobSidecars(100, ROOT_A, buildBlobWrapper(1, 0xa0));
+
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        headChain: [
+          {slot: 101, blockRoot: ROOT_B},
+          {slot: 99, blockRoot: ROOT_A},
+        ],
+      });
+      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
+
+      expect(responses).toHaveLength(0);
     });
   });
 
@@ -204,7 +214,6 @@ describe("FlatFileStore reqresp handler integration", () => {
       custodyColumns: number[];
       earliestAvailableSlot?: number;
       headChain?: {slot: number; blockRoot: string; payloadStatus?: PayloadStatus}[];
-      canonicalBlocks?: {slot: number; blockRoot: string}[];
       getSerializedDataColumnSidecars?: (
         slot: number,
         root: string,
@@ -221,7 +230,6 @@ describe("FlatFileStore reqresp handler integration", () => {
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getCanonicalBlockAtSlot: (slot: number) => opts.canonicalBlocks?.find((block) => block.slot === slot) ?? null,
           getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
           getAllAncestorBlocks: () =>
             (opts.headChain ?? []).map((block) => ({
@@ -424,7 +432,7 @@ describe("FlatFileStore reqresp handler integration", () => {
       const {chain, db} = makeMockChainAndDb({
         finalizedSlot: 10,
         custodyColumns: [0],
-        canonicalBlocks: [{slot: 10, blockRoot: ROOT_B}],
+        headChain: [{slot: 10, blockRoot: ROOT_B}],
       });
       const responses = await collectAsync(
         onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
@@ -432,6 +440,44 @@ describe("FlatFileStore reqresp handler integration", () => {
 
       expect(responses).toHaveLength(1);
       expect(new Uint8Array(responses[0].data)).toEqual(canonicalData);
+    });
+
+    it("should not serve losing-fork columns at a canonically skipped slot", async () => {
+      await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: new Uint8Array(32).fill(0x77)}]);
+
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        headChain: [
+          {slot: 11, blockRoot: ROOT_B},
+          {slot: 9, blockRoot: ROOT_A},
+        ],
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
+    });
+
+    it("should not serve columns for an archived canonical Gloas EMPTY block", async () => {
+      await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: new Uint8Array(32).fill(0x88)}]);
+
+      const {chain, db} = makeMockChainAndDb({
+        config: gloasConfig,
+        finalizedSlot: 11,
+        custodyColumns: [0],
+        headChain: [
+          {slot: 11, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL},
+          {slot: 10, blockRoot: ROOT_A, payloadStatus: PayloadStatus.EMPTY},
+          {slot: 9, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL},
+        ],
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
     });
   });
 });
