@@ -168,8 +168,7 @@ describe("get proposers api impl", () => {
       data: routes.validator.ProposerDutyList;
     };
 
-    // Public keys should be different, but for tests we are generating a static list of validators with same public key
-    expect(currentProposers.map((p) => p.pubkey)).toEqual(nextProposers.map((p) => p.pubkey));
+    expect(currentProposers.map((p) => p.pubkey)).not.toEqual(nextProposers.map((p) => p.pubkey));
   });
 
   it("should have different proposer validator indexes for current and next epoch", async () => {

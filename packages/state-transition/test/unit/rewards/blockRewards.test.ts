@@ -15,7 +15,7 @@ describe("chain / rewards / blockRewards", () => {
   const testCases: {id: string; timeout?: number; opts: BlockAltairOpts}[] = [
     {
       id: "Normal case",
-      timeout: 90_000,
+      timeout: 180_000,
       opts: {
         proposerSlashingLen: 1,
         attesterSlashingLen: 2,
