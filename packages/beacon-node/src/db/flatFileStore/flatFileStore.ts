@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostFulu} from "@lodestar/params";
 import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import type {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
@@ -19,7 +18,7 @@ export class FlatFileStore implements IFlatFileStore {
 
   constructor(
     dataDir: string,
-    private readonly config: ChainForkConfig,
+    config: ChainForkConfig,
     private readonly logger: Logger,
     private readonly metrics: FlatFileStoreMetrics | null = null
   ) {
@@ -97,14 +96,6 @@ export class FlatFileStore implements IFlatFileStore {
     await this.blobStore.put(slot, blockRoot, data);
   }
 
-  async deleteBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<void> {
-    await this.blobStore.delete(slot, blockRoot);
-  }
-
-  hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean {
-    return this.blobStore.has(slot, blockRoot);
-  }
-
   // --- Columns ---
 
   async getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]> {
@@ -121,19 +112,6 @@ export class FlatFileStore implements IFlatFileStore {
     columns: {index: number; data: Uint8Array}[]
   ): Promise<void> {
     await this.columnStore.putColumnsBinary(slot, blockRoot, fromHex(blockRoot), columns);
-  }
-
-  async putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void> {
-    const dataColumnSidecarType = this.config.getForkTypes<ForkPostFulu>(slot).DataColumnSidecar;
-    const binaryColumns = columns.map((col) => ({
-      index: col.index,
-      data: dataColumnSidecarType.serialize(col),
-    }));
-    await this.columnStore.putColumnsBinary(slot, blockRoot, fromHex(blockRoot), binaryColumns);
-  }
-
-  async deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void> {
-    await this.columnStore.delete(slot, blockRoot);
   }
 
   async getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]> {

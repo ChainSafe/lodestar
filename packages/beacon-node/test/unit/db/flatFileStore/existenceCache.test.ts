@@ -6,13 +6,12 @@ describe("ExistenceCache", () => {
     it("should track blob presence", () => {
       const cache = new ExistenceCache();
 
-      expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.getUniqueBlobRootForSlot(100)).toBeNull();
 
       cache.setBlobPresent(100, "0xabc");
-      expect(cache.hasBlobPresent(100, "0xabc")).toBe(true);
+      expect(cache.getUniqueBlobRootForSlot(100)).toBe("0xabc");
       expect(cache.getBlobFileCount()).toBe(1);
-      expect(cache.hasBlobPresent(100, "0xdef")).toBe(false);
-      expect(cache.hasBlobPresent(101, "0xabc")).toBe(false);
+      expect(cache.getUniqueBlobRootForSlot(101)).toBeNull();
 
       cache.setBlobPresent(100, "0xabc");
       expect(cache.getBlobFileCount()).toBe(1);
@@ -23,7 +22,7 @@ describe("ExistenceCache", () => {
 
       cache.setBlobPresent(100, "0xabc");
       cache.removeBlobPresent(100, "0xabc");
-      expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.getUniqueBlobRootForSlot(100)).toBeNull();
       expect(cache.getBlobFileCount()).toBe(0);
       expect(cache.getBlobSlotsBefore(101)).toEqual([100]);
 
@@ -36,12 +35,11 @@ describe("ExistenceCache", () => {
     it("should track column files", () => {
       const cache = new ExistenceCache();
 
-      expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
+      expect(cache.getUniqueColumnRootForSlot(100)).toBeNull();
 
       cache.setColumnPresent(100, "0xabc");
-      expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
+      expect(cache.getUniqueColumnRootForSlot(100)).toBe("0xabc");
       expect(cache.getColumnFileCount()).toBe(1);
-      expect(cache.hasColumnPresent(100, "0xdef")).toBe(false);
 
       cache.setColumnPresent(100, "0xabc");
       expect(cache.getColumnFileCount()).toBe(1);
@@ -61,7 +59,7 @@ describe("ExistenceCache", () => {
 
       cache.setColumnPresent(100, "0xabc");
       cache.removeColumns(100, "0xabc");
-      expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
+      expect(cache.getUniqueColumnRootForSlot(100)).toBeNull();
       expect(cache.getColumnFileCount()).toBe(0);
       expect(cache.getColumnSlotsBefore(101)).toEqual([100]);
 
@@ -83,20 +81,20 @@ describe("ExistenceCache", () => {
 
       expect(cache.getBlobSlotsBefore(200)).toEqual([100]);
       expect(cache.getColumnSlotsBefore(200)).toEqual([100]);
-      expect(cache.hasBlobPresent(200, "0xdef")).toBe(true);
-      expect(cache.hasBlobPresent(300, "0xghi")).toBe(true);
-      expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
-      expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
+      expect(cache.getUniqueBlobRootForSlot(200)).toBe("0xdef");
+      expect(cache.getUniqueBlobRootForSlot(300)).toBe("0xghi");
+      expect(cache.getUniqueColumnRootForSlot(100)).toBe("0xabc");
+      expect(cache.getUniqueColumnRootForSlot(300)).toBe("0xghi");
 
       cache.removeBlobSlot(100);
-      expect(cache.hasBlobPresent(100, "0xabc")).toBe(false);
+      expect(cache.getUniqueBlobRootForSlot(100)).toBeNull();
       expect(cache.getBlobFileCount()).toBe(2);
-      expect(cache.hasColumnPresent(100, "0xabc")).toBe(true);
+      expect(cache.getUniqueColumnRootForSlot(100)).toBe("0xabc");
 
       cache.removeColumnSlot(100);
-      expect(cache.hasColumnPresent(100, "0xabc")).toBe(false);
+      expect(cache.getUniqueColumnRootForSlot(100)).toBeNull();
       expect(cache.getColumnFileCount()).toBe(1);
-      expect(cache.hasColumnPresent(300, "0xghi")).toBe(true);
+      expect(cache.getUniqueColumnRootForSlot(300)).toBe("0xghi");
     });
   });
 });

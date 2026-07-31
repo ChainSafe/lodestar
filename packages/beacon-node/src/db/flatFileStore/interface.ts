@@ -21,17 +21,12 @@ export interface IFlatFileStore {
   /** Lookup by slot only when a single blob root exists */
   getBlobSidecarsBinaryBySlot(slot: Slot): Promise<Uint8Array | null>;
   putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
-  deleteBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<void>;
-  /** Sync check from in-memory cache */
-  hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean;
 
   // --- Columns ---
 
   getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;
   getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]>;
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
-  putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void>;
-  deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void>;
 
   /** Lookup by slot only when a single column root exists */
   getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]>;

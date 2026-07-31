@@ -52,7 +52,7 @@ describe("FlatFileStore", () => {
       await store.putBlobSidecars(1000, ROOT_A, data);
 
       const result = await store.getBlobSidecarsBinary(1000, ROOT_A);
-      expect(new Uint8Array(result!)).toEqual(data);
+      expect(new Uint8Array(result ?? [])).toEqual(data);
     });
 
     it("should return null for missing blobs", async () => {
@@ -78,34 +78,6 @@ describe("FlatFileStore", () => {
       expect(await store.getBlobSidecarsBinaryBySlot(1000)).toBeNull();
     });
 
-    it("should check existence via cache (sync)", async () => {
-      expect(store.hasBlobSidecars(1000, ROOT_A)).toBe(false);
-
-      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array(10));
-      expect(store.hasBlobSidecars(1000, ROOT_A)).toBe(true);
-    });
-
-    it("should delete blob sidecars", async () => {
-      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array(10));
-      await store.deleteBlobSidecars(1000, ROOT_A);
-
-      expect(store.hasBlobSidecars(1000, ROOT_A)).toBe(false);
-      expect(await store.getBlobSidecarsBinary(1000, ROOT_A)).toBeNull();
-    });
-
-    it("should preserve blob cache entries when deletion fails", async () => {
-      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array(10));
-      const deleteError = new Error("delete failed");
-      const rmSpy = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(deleteError);
-
-      try {
-        await expect(store.deleteBlobSidecars(1000, ROOT_A)).rejects.toBe(deleteError);
-        expect(store.hasBlobSidecars(1000, ROOT_A)).toBe(true);
-      } finally {
-        rmSpy.mockRestore();
-      }
-    });
-
     it("should prune blobs before slot", async () => {
       await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
       await store.putBlobSidecars(200, ROOT_B, new Uint8Array([2]));
@@ -121,7 +93,7 @@ describe("FlatFileStore", () => {
     it("should prune empty blob slot directories retained in the cache", async () => {
       const slotDir = path.join(tmpDir, "blob_sidecars", "000000000100");
       await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
-      await store.deleteBlobSidecars(100, ROOT_A);
+      await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_A}]);
 
       await store.pruneBlobsBeforeSlot(200);
 
@@ -135,7 +107,7 @@ describe("FlatFileStore", () => {
 
       try {
         await expect(store.pruneBlobsBeforeSlot(200)).rejects.toBe(pruneError);
-        expect(store.hasBlobSidecars(100, ROOT_A)).toBe(true);
+        expect(await store.getBlobSidecarsBinaryBySlot(100)).not.toBeNull();
       } finally {
         rmSpy.mockRestore();
       }
@@ -153,8 +125,8 @@ describe("FlatFileStore", () => {
       ]);
 
       const result = await store.getDataColumnsBinary(1000, ROOT_A, [0, 5, 10]);
-      expect(new Uint8Array(result[0]!)).toEqual(col0);
-      expect(new Uint8Array(result[1]!)).toEqual(col5);
+      expect(new Uint8Array(result[0] ?? [])).toEqual(col0);
+      expect(new Uint8Array(result[1] ?? [])).toEqual(col5);
       expect(result[2]).toBeUndefined();
     });
 
@@ -163,8 +135,12 @@ describe("FlatFileStore", () => {
       const gloasColumn = ssz.gloas.DataColumnSidecar.defaultValue();
       const gloasSlot = SLOTS_PER_EPOCH;
 
-      await store.putDataColumns(0, ROOT_A, [fuluColumn]);
-      await store.putDataColumns(gloasSlot, ROOT_B, [gloasColumn]);
+      await store.putDataColumnsBinary(0, ROOT_A, [
+        {index: fuluColumn.index, data: ssz.fulu.DataColumnSidecar.serialize(fuluColumn)},
+      ]);
+      await store.putDataColumnsBinary(gloasSlot, ROOT_B, [
+        {index: gloasColumn.index, data: ssz.gloas.DataColumnSidecar.serialize(gloasColumn)},
+      ]);
 
       const [storedFuluColumn] = await store.getDataColumns(0, ROOT_A);
       const [storedGloasColumn] = await store.getDataColumns(gloasSlot, ROOT_B);
@@ -192,9 +168,9 @@ describe("FlatFileStore", () => {
 
       // All three columns should be present
       const result = await store.getDataColumnsBinary(1000, ROOT_A, [0, 1, 2]);
-      expect(new Uint8Array(result[0]!)).toEqual(col0);
-      expect(new Uint8Array(result[1]!)).toEqual(col1);
-      expect(new Uint8Array(result[2]!)).toEqual(col2);
+      expect(new Uint8Array(result[0] ?? [])).toEqual(col0);
+      expect(new Uint8Array(result[1] ?? [])).toEqual(col1);
+      expect(new Uint8Array(result[2] ?? [])).toEqual(col2);
     });
 
     it("should not overwrite existing columns when the merge read fails", async () => {
@@ -216,22 +192,22 @@ describe("FlatFileStore", () => {
       expect(storedCol1).toBeUndefined();
     });
 
-    it("should delete columns", async () => {
-      await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
-      await store.deleteDataColumns(1000, ROOT_A);
-
-      const result = await store.getDataColumnsBinary(1000, ROOT_A, [0]);
-      expect(result[0]).toBeUndefined();
-    });
-
     it("should preserve column data when deletion fails", async () => {
       const column = new Uint8Array(20);
       await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: column}]);
       const deleteError = new Error("delete failed");
-      const rmSpy = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(deleteError);
+      const originalRm = fs.promises.rm.bind(fs.promises);
+      const rmSpy = vi.spyOn(fs.promises, "rm").mockImplementation(async (filePath, options) => {
+        if (String(filePath).includes("data_columns")) {
+          throw deleteError;
+        }
+        return originalRm(filePath, options);
+      });
 
       try {
-        await expect(store.deleteDataColumns(1000, ROOT_A)).rejects.toBe(deleteError);
+        await expect(store.deleteNonCanonical([{slot: 1000, blockRoot: ROOT_A}])).rejects.toMatchObject({
+          errors: [deleteError],
+        });
       } finally {
         rmSpy.mockRestore();
       }
@@ -244,7 +220,7 @@ describe("FlatFileStore", () => {
       await store.putDataColumnsBinary(1000, ROOT_A, [{index: 0, data: col0}]);
 
       const result = await store.getDataColumnsBinaryBySlot(1000, [0, 1]);
-      expect(new Uint8Array(result[0]!)).toEqual(col0);
+      expect(new Uint8Array(result[0] ?? [])).toEqual(col0);
       expect(result[1]).toBeUndefined();
     });
 
@@ -277,7 +253,7 @@ describe("FlatFileStore", () => {
     it("should prune empty column slot directories retained in the cache", async () => {
       const slotDir = path.join(tmpDir, "data_columns", "000000000100");
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
-      await store.deleteDataColumns(100, ROOT_A);
+      await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_A}]);
 
       await store.pruneColumnsBeforeSlot(200);
 
@@ -294,8 +270,9 @@ describe("FlatFileStore", () => {
       const files = await fs.promises.readdir(slotDir);
       const dcolFile = files.find((f) => f.endsWith(".dcol"));
       expect(dcolFile).toBeDefined();
+      if (!dcolFile) throw new Error("Expected a dcol file");
 
-      const raw = await fs.promises.readFile(path.join(slotDir, dcolFile!));
+      const raw = await fs.promises.readFile(path.join(slotDir, dcolFile));
       expect(raw[0]).toBe(DCOL_VERSION);
     });
 
@@ -322,8 +299,13 @@ describe("FlatFileStore", () => {
       await fs.promises.writeFile(blobSiblingPath, sentinel);
       await fs.promises.writeFile(columnSiblingPath, sentinel);
 
-      await expect(store.deleteBlobSidecars(100, "../escape")).rejects.toThrow("Invalid flat file root");
-      await expect(store.deleteDataColumns(100, "../escape")).rejects.toThrow("Invalid flat file root");
+      const error = await store.deleteNonCanonical([{slot: 100, blockRoot: "../escape"}]).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(AggregateError);
+      const causes = (error as AggregateError).errors;
+      expect(causes).toHaveLength(2);
+      for (const cause of causes) {
+        expect(cause).toMatchObject({message: expect.stringContaining("Invalid flat file root")});
+      }
 
       expect(new Uint8Array(await fs.promises.readFile(blobSiblingPath))).toEqual(sentinel);
       expect(new Uint8Array(await fs.promises.readFile(columnSiblingPath))).toEqual(sentinel);
@@ -338,10 +320,10 @@ describe("FlatFileStore", () => {
 
       await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_ORPHAN}]);
 
-      expect(store.hasBlobSidecars(100, ROOT_ORPHAN)).toBe(false);
+      expect(await store.getBlobSidecarsBinary(100, ROOT_ORPHAN)).toBeNull();
       expect(await store.getDataColumnsBinary(100, ROOT_ORPHAN, [0])).toEqual([undefined]);
       // Canonical should remain
-      expect(store.hasBlobSidecars(100, ROOT_CANONICAL)).toBe(true);
+      expect(await store.getBlobSidecarsBinary(100, ROOT_CANONICAL)).not.toBeNull();
     });
 
     it("should attempt column deletion when blob deletion fails", async () => {
@@ -364,7 +346,7 @@ describe("FlatFileStore", () => {
         rmSpy.mockRestore();
       }
 
-      expect(store.hasBlobSidecars(100, ROOT_ORPHAN)).toBe(true);
+      expect(await store.getBlobSidecarsBinaryBySlot(100)).not.toBeNull();
       expect(await store.getDataColumnsBinary(100, ROOT_ORPHAN, [0])).toEqual([undefined]);
     });
   });
@@ -388,7 +370,7 @@ describe("FlatFileStore", () => {
         openSpy.mockRestore();
       }
 
-      expect(store2.hasBlobSidecars(1000, ROOT_A)).toBe(true);
+      expect(await store2.getBlobSidecarsBinaryBySlot(1000)).not.toBeNull();
       const columns = await store2.getDataColumnsBinaryBySlot(1000, [0, 5, 1]);
       expect(columns[0]).toBeDefined();
       expect(columns[1]).toBeDefined();
@@ -407,7 +389,7 @@ describe("FlatFileStore", () => {
 
       const store2 = new FlatFileStore(tmpDir, config, testLogger);
       await store2.init(Number.MAX_SAFE_INTEGER);
-      expect(store2.hasBlobSidecars(100, ROOT_A)).toBe(false);
+      expect(await store2.getBlobSidecarsBinaryBySlot(100)).toBeNull();
       expect(await store2.getDataColumnsBinaryBySlot(100, [0])).toEqual([undefined]);
       await expect(fs.promises.access(blobPartPath)).resolves.toBeUndefined();
       await expect(fs.promises.access(columnPartPath)).resolves.toBeUndefined();
@@ -446,7 +428,7 @@ describe("FlatFileStore", () => {
       try {
         expect(new Uint8Array((await store2.getBlobSidecarsBinaryBySlot(100)) ?? [])).toEqual(validData);
         expect(await store2.getBlobSidecarsBinaryBySlot(102)).toBeNull();
-        expect(store2.hasBlobSidecars(101, ROOT_B)).toBe(false);
+        expect(await store2.getBlobSidecarsBinaryBySlot(101)).toBeNull();
         expect(await store2.getDataColumnsBinaryBySlot(103, [0])).toEqual([undefined]);
         expect(readdirSpy).not.toHaveBeenCalled();
       } finally {
@@ -489,9 +471,9 @@ describe("FlatFileStore", () => {
       const store2 = new FlatFileStore(tmpDir, config, testLogger);
       await store2.init(finalizedCheckpointSlot);
 
-      expect(store2.hasBlobSidecars(finalizedCheckpointSlot, ROOT_A)).toBe(true);
+      expect(await store2.getBlobSidecarsBinary(finalizedCheckpointSlot, ROOT_A)).not.toBeNull();
       expect(await store2.getDataColumnsBinary(finalizedCheckpointSlot, ROOT_A, [0])).toEqual([new Uint8Array([2])]);
-      expect(store2.hasBlobSidecars(hotSlot, ROOT_B)).toBe(false);
+      expect(await store2.getBlobSidecarsBinary(hotSlot, ROOT_B)).toBeNull();
       expect(await store2.getDataColumnsBinary(hotSlot, ROOT_B, [0])).toEqual([undefined]);
       await expect(fs.promises.access(path.join(tmpDir, "blob_sidecars", "000000000101"))).rejects.toMatchObject({
         code: "ENOENT",

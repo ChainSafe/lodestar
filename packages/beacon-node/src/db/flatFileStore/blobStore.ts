@@ -118,10 +118,6 @@ export class BlobStore {
     );
   }
 
-  has(slot: Slot, rootHex: RootHex): boolean {
-    return this.cache.hasBlobPresent(slot, rootHex);
-  }
-
   /**
    * Delete all slot directories with slot < minSlot.
    */

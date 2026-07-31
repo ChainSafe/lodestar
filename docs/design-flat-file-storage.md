@@ -493,16 +493,12 @@ interface IFlatFileStore {
   getBlobSidecarsBinary(slot: Slot, blockRoot: RootHex): Promise<Uint8Array | null>;
   getBlobSidecarsBinaryBySlot(slot: Slot): Promise<Uint8Array | null>;
   putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
-  deleteBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<void>;
-  hasBlobSidecars(slot: Slot, blockRoot: RootHex): boolean; // sync, from cache
 
   // Data columns
   getDataColumns(slot: Slot, blockRoot: RootHex): Promise<DataColumnSidecar[]>;
   getDataColumnsBinary(slot: Slot, blockRoot: RootHex, indices: number[]): Promise<(Uint8Array | undefined)[]>;
   getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]>;
   putDataColumnsBinary(slot: Slot, blockRoot: RootHex, columns: {index: number; data: Uint8Array}[]): Promise<void>;
-  putDataColumns(slot: Slot, blockRoot: RootHex, columns: DataColumnSidecar[]): Promise<void>;
-  deleteDataColumns(slot: Slot, blockRoot: RootHex): Promise<void>;
 
   // Pruning
   deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void>;
@@ -577,7 +573,6 @@ No migration step needed - data is already in its final location.
 | ---------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ |
 | Single blob lookup           | ~0.5-2ms (key lookup + decompress) | ~0.1-0.5ms (open + read, cached by OS)                                         |
 | Single column lookup         | ~0.5-2ms (key lookup + decompress) | ~0.1-0.3ms (open + header pread + column pread + snappy decompress)            |
-| Existence check              | ~0.3-1ms (key lookup)              | **~0ns** (in-memory cache)                                                     |
 | Batch column lookup (4 cols) | ~2-8ms (4 key lookups)             | ~0.2-0.5ms (open + header pread + table pread + 4 column preads, ~30 KB total) |
 | All columns for block        | ~5-15ms (128 key lookups)          | ~1-3ms (single file read + 128 snappy decompress)                              |
 

@@ -101,10 +101,6 @@ export class ExistenceCache {
     }
   }
 
-  hasBlobPresent(slot: Slot, rootHex: RootHex): boolean {
-    return this.blobPresence.get(slot)?.has(rootHex) ?? false;
-  }
-
   removeBlobPresent(slot: Slot, rootHex: RootHex): void {
     if (this.blobPresence.get(slot)?.delete(rootHex)) {
       this.blobFileCount--;
@@ -119,10 +115,6 @@ export class ExistenceCache {
       roots.add(rootHex);
       this.columnFileCount++;
     }
-  }
-
-  hasColumnPresent(slot: Slot, rootHex: RootHex): boolean {
-    return this.columnPresence.get(slot)?.has(rootHex) ?? false;
   }
 
   removeColumns(slot: Slot, rootHex: RootHex): void {
