@@ -49,7 +49,7 @@ function getMinBidValue(currentHighestBid: number): number {
  * The direct parent path is always allowed for proposer-boost reorgs. Otherwise the bid
  * must build on the local head's full or empty payload variant, as selected for its slot.
  */
-function isBidHeadCompatible(
+function isBidCompatibleWithHead(
   forkChoice: IForkChoice,
   head: ProtoBlock,
   bidSlot: Slot,
@@ -112,7 +112,7 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
-  if (!isBidHeadCompatible(chain.forkChoice, head, bid.slot, parentBlockRootHex, parentBlockHashHex)) {
+  if (!isBidCompatibleWithHead(chain.forkChoice, head, bid.slot, parentBlockRootHex, parentBlockHashHex)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
       slot: bid.slot,
