@@ -39,7 +39,8 @@ export async function getNetworkForTest(
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     },
-    config
+    config,
+    true
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);

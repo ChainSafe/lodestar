@@ -1,6 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {Epoch, RootHex, ssz} from "@lodestar/types";
@@ -35,14 +34,9 @@ describe("CachedBeaconState", () => {
     const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
 
-    const pubkey1 = fromHexString(
-      "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
-    );
-    const index1 = 123;
-    const pubkey2 = fromHexString(
-      "0xa41726266b1d83ef609d759ba7796d54cfe549154e01e4730a3378309bc81a7638140d7e184b33593c072595f23f032d"
-    );
-    const index2 = 456;
+    const index1 = pubkeyCache.size;
+    const index2 = index1 + 1;
+    const [pubkey1, pubkey2] = interopPubkeysCached(index2 + 1).slice(index1);
 
     state1.epochCtx.addPubkey(index1, pubkey1);
 
@@ -88,6 +82,7 @@ describe("CachedBeaconState", () => {
 
     const stateView = newStateWithValidators(numValidator);
     const config = createBeaconConfig(defaultConfig, stateView.genesisValidatorsRoot);
+    pubkeyCache.reset();
     const seedState = createCachedBeaconState(
       stateView,
       {

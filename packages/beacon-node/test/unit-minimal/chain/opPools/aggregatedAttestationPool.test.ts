@@ -15,6 +15,7 @@ import {
   BeaconStateView,
   CachedBeaconStateAllForks,
   CachedBeaconStateElectra,
+  interopSecretKey,
   newFilledArray,
 } from "@lodestar/state-transition";
 import {Attestation, electra, phase0, ssz} from "@lodestar/types";
@@ -33,7 +34,7 @@ import {MockedForkChoice, getMockedForkChoice} from "../../../mocks/mockedBeacon
 import {renderBitArray} from "../../../utils/render.js";
 import {generateCachedElectraState} from "../../../utils/state.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
-import {generateValidators} from "../../../utils/validator.js";
+import {generateValidator} from "../../../utils/validator.js";
 
 /** Valid signature of random data to prevent BLS errors */
 const validSignature = fromHexString(
@@ -75,7 +76,9 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
   // this makes a committee length of 4
   const vc = 1024;
   const committeeLength = 32;
-  const validators = generateValidators(vc, validatorOpts);
+  const validators = Array.from({length: vc}, (_, i) =>
+    generateValidator({...validatorOpts, pubkey: interopSecretKey(i).toPublicKey().toBytes()})
+  );
   const originalState = generateCachedElectraState({slot: currentSlot + 1, validators}, electraForkEpoch);
   expect(originalState.epochCtx.getCommitteeCountPerSlot(currentEpoch)).toEqual(committeeIndices.length);
 

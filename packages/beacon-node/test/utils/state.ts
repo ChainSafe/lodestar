@@ -110,7 +110,7 @@ export function generateState(
  */
 export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.phase0);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkeyCache,
@@ -122,7 +122,7 @@ export function generateCachedState(opts?: TestBeaconState): CachedBeaconStateAl
  */
 export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoch = 0): CachedBeaconStateAllForks {
   const config = getConfig(ForkName.altair, altairForkEpoch);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkeyCache,
@@ -134,7 +134,7 @@ export function generateCachedAltairState(opts?: TestBeaconState, altairForkEpoc
  */
 export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeaconStateBellatrix {
   const config = getConfig(ForkName.bellatrix);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state as BeaconStateBellatrix, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkeyCache,
@@ -146,7 +146,7 @@ export function generateCachedBellatrixState(opts?: TestBeaconState): CachedBeac
  */
 export function generateCachedElectraState(opts?: TestBeaconState, electraForkEpoch = 0): CachedBeaconStateElectra {
   const config = getConfig(ForkName.electra, electraForkEpoch);
-  const state = generateState(opts, config);
+  const state = generateState(opts, config, true);
   return createCachedBeaconState(state as BeaconStateElectra, {
     config: createBeaconConfig(config, state.genesisValidatorsRoot),
     pubkeyCache,
