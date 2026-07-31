@@ -49,5 +49,3 @@ export const GLOAS_POLAR_BEAR_BANNER = String.raw`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~eth
 
 `;
-
-console.log(GLOAS_POLAR_BEAR_BANNER);
