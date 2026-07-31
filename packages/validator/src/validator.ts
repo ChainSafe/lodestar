@@ -362,7 +362,7 @@ export class Validator {
 
     const res = await api.config.getSpec();
     assertEqualParams(config, res.value());
-    logger.info("Verified connected beacon node and validator have same the config");
+    logger.info("Verified connected beacon node and validator have the same config");
 
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");
