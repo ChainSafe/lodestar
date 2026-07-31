@@ -53,13 +53,10 @@
     "@lodestar/params": "workspace:^",
     "@lodestar/types": "workspace:^",
     "@lodestar/utils": "workspace:^",
-    "@lodestar/state-transition": "workspace:^",
-    "strict-event-emitter-types": "^2.0.0"
+    "@lodestar/state-transition": "workspace:^"
   },
   "devDependencies": {
     "@lodestar/logger": "workspace:^",
-    "@lodestar/test-utils": "workspace:^",
-    "@vekexasia/bigint-buffer2": "^1.1.1",
-    "rimraf": "^4.4.1"
+    "@lodestar/test-utils": "workspace:^"
   }
 }

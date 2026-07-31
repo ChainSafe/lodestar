@@ -401,9 +401,6 @@ importers:
       '@lodestar/utils':
         specifier: workspace:^
         version: link:../utils
-      strict-event-emitter-types:
-        specifier: ^2.0.0
-        version: 2.0.0
     devDependencies:
       '@lodestar/logger':
         specifier: workspace:^
@@ -411,12 +408,6 @@ importers:
       '@lodestar/test-utils':
         specifier: workspace:^
         version: link:../test-utils
-      '@vekexasia/bigint-buffer2':
-        specifier: ^1.1.1
-        version: 1.1.1
-      rimraf:
-        specifier: ^4.4.1
-        version: 4.4.1
 
   packages/cli:
     dependencies:
