@@ -13,9 +13,9 @@ describe("BuilderSigner", () => {
   const beaconConfig = createBeaconConfig(chainConfig, genesisValidatorsRoot);
 
   const secretKey = SecretKey.fromBytes(Buffer.alloc(32, 1));
-  const pubkey = secretKey.toPublicKey();
+  const publicKey = secretKey.toPublicKey();
 
-  const builderSigner = new BuilderSigner(beaconConfig, secretKey);
+  const builderSigner = new BuilderSigner(beaconConfig, {publicKey, secretKey});
 
   it("verify signed payload envelope", () => {
     const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
@@ -25,7 +25,7 @@ describe("BuilderSigner", () => {
     expect(
       verify(
         getExecutionPayloadEnvelopeSigningRoot(beaconConfig, envelope),
-        pubkey,
+        publicKey,
         Signature.fromBytes(signedEnvelope.signature, true)
       )
     ).toEqual(true);
@@ -40,7 +40,7 @@ describe("BuilderSigner", () => {
     expect(
       verify(
         getExecutionPayloadBidSigningRoot(beaconConfig, bid.slot, bid),
-        pubkey,
+        publicKey,
         Signature.fromBytes(signedBid.signature, true)
       )
     ).toEqual(true);
@@ -58,7 +58,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadEnvelopeSigningRoot(beaconConfigOtherNetwork, envelope),
-          pubkey,
+          publicKey,
           Signature.fromBytes(signedEnvelope.signature, true)
         )
       ).toEqual(false);
@@ -73,7 +73,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadBidSigningRoot(beaconConfigOtherNetwork, bid.slot, bid),
-          pubkey,
+          publicKey,
           Signature.fromBytes(signedBid.signature, true)
         )
       ).toEqual(false);
@@ -92,7 +92,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadEnvelopeSigningRoot(beaconConfigOtherFork, envelope),
-          pubkey,
+          publicKey,
           Signature.fromBytes(signedEnvelope.signature, true)
         )
       ).toEqual(false);
@@ -107,7 +107,7 @@ describe("BuilderSigner", () => {
       expect(
         verify(
           getExecutionPayloadBidSigningRoot(beaconConfigOtherFork, bid.slot, bid),
-          pubkey,
+          publicKey,
           Signature.fromBytes(signedBid.signature, true)
         )
       ).toEqual(false);
