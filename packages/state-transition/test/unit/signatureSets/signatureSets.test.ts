@@ -61,8 +61,8 @@ describe("signatureSets", () => {
       activation: 0,
       exit: FAR_FUTURE_EPOCH,
     });
-    for (const validator of validators) {
-      validator.pubkey = SecretKey.fromKeygen(Buffer.alloc(32)).toPublicKey().toBytes();
+    for (const [i, validator] of validators.entries()) {
+      validator.pubkey = SecretKey.fromKeygen(Buffer.alloc(32, i)).toPublicKey().toBytes();
     }
 
     const state = generateCachedState(config, {validators});
