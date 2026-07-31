@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
-import {testLogger} from "@lodestar/logger/test-utils";
+import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
@@ -143,6 +143,59 @@ describe("archived sidecar migration", () => {
 
   it("rejects flat file access before initialization", () => {
     expect(() => db.flatFileStore).toThrow("Flat file store is not initialized");
+  });
+
+  it("logs migration phase progress during a long startup", async () => {
+    const blobSlot = 29;
+    await blobSidecarsArchive.add({
+      blockRoot: new Uint8Array(32).fill(0xaa),
+      slot: blobSlot,
+      blobSidecars: [],
+    });
+
+    for (const slot of [30, 31]) {
+      const column = ssz.fulu.DataColumnSidecar.defaultValue();
+      column.index = 0;
+      column.signedBlockHeader.message.slot = slot;
+      await dataColumnSidecarArchive.put(slot, column);
+    }
+
+    const store = {
+      putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
+    };
+    const logger = testLogger("flat-file-migration-progress");
+    const infoSpy = vi.spyOn(logger, LogLevel.info).mockImplementation(() => {});
+    let now = 0;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => {
+      now += 31_000;
+      return now;
+    });
+
+    try {
+      await migrateArchivedSidecars(config, blobSidecarsArchive, dataColumnSidecarArchive, store, logger);
+    } finally {
+      nowSpy.mockRestore();
+    }
+
+    expect(infoSpy).toHaveBeenCalledWith(
+      "Migrating archived blob sidecars to flat-file storage; startup will wait for completion",
+      {startingSlot: blobSlot}
+    );
+    expect(infoSpy).toHaveBeenCalledWith("Archived blob sidecar migration in progress", {
+      migrated: 1,
+      failures: 0,
+      currentSlot: blobSlot,
+      elapsedSeconds: 31,
+    });
+    expect(infoSpy).toHaveBeenCalledWith(
+      "Archived data column migration in progress",
+      expect.objectContaining({migratedSlots: 1, migratedColumns: 1, failures: 0, currentSlot: 31})
+    );
+    expect(infoSpy).toHaveBeenCalledWith(
+      "Archived data column migration phase complete",
+      expect.objectContaining({migratedSlots: 2, migratedColumns: 2, failures: 0})
+    );
   });
 
   it("keeps failed entries in LevelDB for a later retry", async () => {
