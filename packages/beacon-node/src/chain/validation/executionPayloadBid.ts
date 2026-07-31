@@ -1,4 +1,5 @@
 import {PublicKey} from "@chainsafe/blst";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {
   computeEpochAtSlot,
@@ -8,7 +9,7 @@ import {
   isGasLimitTargetCompatible,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {ValidatorIndex, gloas} from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
@@ -42,6 +43,39 @@ export function getMinBidValue(currentHighestBid: number): number {
   return currentHighestBid + increment;
 }
 
+/**
+ * Check whether a bid builds on one of the paths compatible with the local head branch.
+ *
+ * The direct parent path is always allowed for proposer-boost reorgs. Otherwise the bid
+ * must build on the local head's full or empty payload variant, as selected for its slot.
+ */
+export function isExecutionPayloadBidHeadCompatible(
+  forkChoice: IForkChoice,
+  head: ProtoBlock,
+  bidSlot: Slot,
+  parentBlockRoot: RootHex,
+  parentBlockHash: RootHex
+): boolean {
+  const buildsOnParentBlock = parentBlockRoot === head.parentRoot;
+  const buildsOnParentPayload = parentBlockHash === head.parentBlockHash;
+
+  if (buildsOnParentBlock && buildsOnParentPayload) {
+    return true;
+  }
+
+  if (parentBlockRoot !== head.blockRoot) {
+    return false;
+  }
+
+  const buildsOnHeadPayload = parentBlockHash === head.executionPayloadBlockHash;
+
+  if (forkChoice.shouldBuildOnFull(head, bidSlot)) {
+    return buildsOnHeadPayload;
+  }
+
+  return buildsOnParentPayload;
+}
+
 export async function validateApiExecutionPayloadBid(
   chain: IBeaconChain,
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
@@ -73,6 +107,32 @@ async function validateExecutionPayloadBid(
       code: ExecutionPayloadBidErrorCode.INVALID_SLOT,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
+    });
+  }
+
+  // [IGNORE] The bid is compatible with the current head branch.
+  const head = chain.forkChoice.getHead();
+  if (!isExecutionPayloadBidHeadCompatible(chain.forkChoice, head, bid.slot, parentBlockRootHex, parentBlockHashHex)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      parentBlockHash: parentBlockHashHex,
+      headBlockRoot: head.blockRoot,
+    });
+  }
+
+  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for
+  // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
+  // Entries are only added after signature verification, so known tuples can be dropped before
+  // state regeneration and the other expensive validation steps.
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      parentBlockHash: parentBlockHashHex,
     });
   }
 
@@ -245,17 +305,6 @@ async function validateExecutionPayloadBid(
     });
   }
 
-  // [IGNORE] this is the first signed bid seen with a valid signature from the given builder for this slot.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex)) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
-      builderIndex: bid.builderIndex,
-      slot: bid.slot,
-      parentBlockRoot: parentBlockRootHex,
-      parentBlockHash: parentBlockHashHex,
-    });
-  }
-
   // [IGNORE] this bid is the highest value bid seen for the tuple
   // `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
   // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
@@ -306,8 +355,20 @@ async function validateExecutionPayloadBid(
     });
   }
 
+  // Repeat the seen check after the awaited signature verification to prevent concurrent bids
+  // for the same builder and tuple from both passing validation.
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex)) {
+    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+      code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
+      builderIndex: bid.builderIndex,
+      slot: bid.slot,
+      parentBlockRoot: parentBlockRootHex,
+      parentBlockHash: parentBlockHashHex,
+    });
+  }
+
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex);
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }

@@ -5,6 +5,7 @@ export enum ExecutionPayloadBidErrorCode {
   BUILDER_NOT_ELIGIBLE = "EXECUTION_PAYLOAD_BID_ERROR_BUILDER_NOT_ELIGIBLE",
   INVALID_BUILDER_VERSION = "EXECUTION_PAYLOAD_BID_ERROR_INVALID_BUILDER_VERSION",
   NON_ZERO_EXECUTION_PAYMENT = "EXECUTION_PAYLOAD_BID_ERROR_NON_ZERO_EXECUTION_PAYMENT",
+  INCOMPATIBLE_WITH_HEAD = "EXECUTION_PAYLOAD_BID_ERROR_INCOMPATIBLE_WITH_HEAD",
   BID_ALREADY_KNOWN = "EXECUTION_PAYLOAD_BID_ERROR_BID_ALREADY_KNOWN",
   BID_TOO_LOW = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_LOW",
   BID_TOO_HIGH = "EXECUTION_PAYLOAD_BID_ERROR_BID_TOO_HIGH",
@@ -32,6 +33,13 @@ export type ExecutionPayloadBidErrorType =
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT;
       builderIndex: BuilderIndex;
       executionPayment: number;
+    }
+  | {
+      code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD;
+      slot: Slot;
+      parentBlockRoot: RootHex;
+      parentBlockHash: RootHex;
+      headBlockRoot: RootHex;
     }
   | {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
