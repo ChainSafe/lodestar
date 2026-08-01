@@ -11,6 +11,7 @@ import {DAType, IBlockInput} from "./blockInput/index.js";
 import {PayloadEnvelopeInput} from "./payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
+import {GLOAS_DEATHSTAR_BANNER} from "./utils/deathstarBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
@@ -228,6 +229,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.fulu:
             this.logger.info(FULU_ZEBRA_BANNER);
             this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+            break;
+
+          case ForkName.gloas:
+            this.logger.info(GLOAS_DEATHSTAR_BANNER);
+            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
             break;
 
           default:
