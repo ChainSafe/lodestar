@@ -12,12 +12,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./doubles": {
-      "bun": "./src/doubles.ts",
+      "typescript": "./src/doubles.ts",
       "types": "./lib/doubles.d.ts",
       "import": "./lib/doubles.js"
     }

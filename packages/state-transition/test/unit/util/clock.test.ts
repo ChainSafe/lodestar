@@ -2,11 +2,11 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {BeaconConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {Logger} from "@lodestar/utils";
 import {Clock, getCurrentSlotAround} from "../../../src/util/clock.js";
-import {testLogger} from "../../utils/logger.js";
 
 describe("util / Clock", () => {
-  const logger = testLogger();
+  const logger: Logger = {error: vi.fn(), warn: vi.fn(), info: vi.fn(), verbose: vi.fn(), debug: vi.fn()};
   let controller: AbortController;
 
   beforeEach(() => {

@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
+import {IClock} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BLSSignature,
@@ -16,7 +17,7 @@ import {
 import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 import {ValidatorStore} from "./validatorStore.js";
 

@@ -408,12 +408,17 @@ export class EpochCache {
 
     const nextShuffling = cachedNextShuffling ?? computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
-    const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
-
-    let proposers: number[];
+    let proposers: ValidatorIndex[];
+    let proposersNextEpoch: ProposersDeferred;
     if (currentEpoch >= config.FULU_FORK_EPOCH) {
-      // Overwrite proposers with state.proposerLookahead
-      proposers = (state as CachedBeaconStateFulu).proposerLookahead.getAll().slice(0, SLOTS_PER_EPOCH);
+      // After fulu, use state.proposerLookahead for current and next epoch proposers.
+      // Computing from the unfiltered active shuffling would include slashed validators in gloas.
+      const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
+      proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
+      proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // We need to calculate Pre-fulu
       // Allow to create CachedBeaconState for empty states, or no active validators
@@ -421,17 +426,16 @@ export class EpochCache {
         currentShuffling.activeIndices.length > 0
           ? computeProposers(
               config.getForkSeqAtEpoch(currentEpoch),
-              currentProposerSeed,
+              getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER),
               currentShuffling,
               effectiveBalanceIncrements
             )
           : [];
+      proposersNextEpoch = {
+        computed: false,
+        seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
+      };
     }
-
-    const proposersNextEpoch: ProposersDeferred = {
-      computed: false,
-      seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
-    };
 
     // Only after altair, compute the indices of the current sync committee
     const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
@@ -713,17 +717,10 @@ export class EpochCache {
       // Populate proposer cache with lookahead from state
       const proposerLookahead = (state as CachedBeaconStateFulu).proposerLookahead.getAll();
       this.proposers = proposerLookahead.slice(0, SLOTS_PER_EPOCH);
-
-      if (proposerLookahead.length >= SLOTS_PER_EPOCH * 2) {
-        this.proposersNextEpoch = {
-          computed: true,
-          indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
-        };
-      } else {
-        // This should not happen unless MIN_SEED_LOOKAHEAD is set to 0
-        // this ensures things don't break if the proposer lookahead is not long enough
-        this.proposersNextEpoch = {computed: false, seed: getSeed(state, epochAfterUpcoming, DOMAIN_BEACON_PROPOSER)};
-      }
+      this.proposersNextEpoch = {
+        computed: true,
+        indexes: proposerLookahead.slice(SLOTS_PER_EPOCH, SLOTS_PER_EPOCH * 2),
+      };
     } else {
       // Need to calculate proposers pre-fulu
       const upcomingProposerSeed = getSeed(state, upcomingEpoch, DOMAIN_BEACON_PROPOSER);
