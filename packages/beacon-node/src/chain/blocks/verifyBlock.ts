@@ -233,7 +233,7 @@ export async function verifyBlocksInEpoch(
 
           case ForkName.gloas:
             this.logger.info(GLOAS_DEATHSTAR_BANNER);
-            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
+            this.logger.info("Deactivating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
             break;
 
           default:
