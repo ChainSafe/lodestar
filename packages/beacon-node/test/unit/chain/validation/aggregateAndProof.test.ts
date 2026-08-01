@@ -183,13 +183,11 @@ describe("chain / validation / aggregateAndProof", () => {
   });
 
   it("INVALID_SIGNATURE - attestation sig", async () => {
-    const {chain, signedAggregateAndProof, bitIndex} = getValidData({bitIndex: 1});
+    const bitIndex = 1;
+    const {chain, signedAggregateAndProof} = getValidData({bitIndex});
     // Change the bit index so the signature is validated against a different pubkey
     signedAggregateAndProof.message.aggregate.aggregationBits.set(bitIndex, false);
-    signedAggregateAndProof.message.aggregate.aggregationBits.set(
-      (bitIndex + 1) % signedAggregateAndProof.message.aggregate.aggregationBits.bitLen,
-      true
-    );
+    signedAggregateAndProof.message.aggregate.aggregationBits.set(bitIndex + 1, true);
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
   });
