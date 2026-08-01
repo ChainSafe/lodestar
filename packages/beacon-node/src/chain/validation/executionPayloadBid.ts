@@ -53,21 +53,21 @@ function isBidCompatibleWithHead(
   forkChoice: IForkChoice,
   head: ProtoBlock,
   bidSlot: Slot,
-  parentBlockRoot: RootHex,
-  parentBlockHash: RootHex
+  bidParentBlockRoot: RootHex,
+  bidParentBlockHash: RootHex
 ): boolean {
-  const buildsOnParentBlock = parentBlockRoot === head.parentRoot;
-  const buildsOnParentPayload = parentBlockHash === head.parentBlockHash;
+  const buildsOnParentBlock = bidParentBlockRoot === head.parentRoot;
+  const buildsOnParentPayload = bidParentBlockHash === head.parentBlockHash;
 
   if (buildsOnParentBlock && buildsOnParentPayload) {
     return true;
   }
 
-  if (parentBlockRoot !== head.blockRoot) {
+  if (bidParentBlockRoot !== head.blockRoot) {
     return false;
   }
 
-  const buildsOnHeadPayload = parentBlockHash === head.executionPayloadBlockHash;
+  const buildsOnHeadPayload = bidParentBlockHash === head.executionPayloadBlockHash;
 
   if (forkChoice.shouldBuildOnFull(head, bidSlot)) {
     return buildsOnHeadPayload;
@@ -95,8 +95,8 @@ async function validateExecutionPayloadBid(
   signedExecutionPayloadBid: gloas.SignedExecutionPayloadBid
 ): Promise<{proposerIndex: ValidatorIndex}> {
   const bid = signedExecutionPayloadBid.message;
-  const parentBlockRootHex = toRootHex(bid.parentBlockRoot);
-  const parentBlockHashHex = toRootHex(bid.parentBlockHash);
+  const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
+  const bidParentBlockHashHex = toRootHex(bid.parentBlockHash);
 
   // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   if (
@@ -112,12 +112,12 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
-  if (!isBidCompatibleWithHead(chain.forkChoice, head, bid.slot, parentBlockRootHex, parentBlockHashHex)) {
+  if (!isBidCompatibleWithHead(chain.forkChoice, head, bid.slot, bidParentBlockRoot, bidParentBlockHashHex)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
       slot: bid.slot,
-      parentBlockRoot: parentBlockRootHex,
-      parentBlockHash: parentBlockHashHex,
+      parentBlockRoot: bidParentBlockRoot,
+      parentBlockHash: bidParentBlockHashHex,
       headBlockRoot: head.blockRoot,
     });
   }
@@ -126,24 +126,24 @@ async function validateExecutionPayloadBid(
   // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
   // Entries are only added after signature verification, so known tuples can be dropped before
   // state regeneration and the other expensive validation steps.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex)) {
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHashHex, bidParentBlockRoot)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
-      parentBlockRoot: parentBlockRootHex,
-      parentBlockHash: parentBlockHashHex,
+      parentBlockRoot: bidParentBlockRoot,
+      parentBlockHash: bidParentBlockHashHex,
     });
   }
 
   // [IGNORE] `bid.parent_block_root` is the hash tree root of a known beacon block in fork choice.
   // Moved earlier than the spec ordering so we can derive the proposer dependent root for the
   // proposer-preferences lookup below from a known fork-choice block.
-  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
+  const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(bidParentBlockRoot);
   if (parentBlock === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
-      parentBlockRoot: parentBlockRootHex,
+      parentBlockRoot: bidParentBlockRoot,
     });
   }
 
@@ -182,7 +182,7 @@ async function validateExecutionPayloadBid(
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES,
       slot: bid.slot,
-      parentBlockRoot: parentBlockRootHex,
+      parentBlockRoot: bidParentBlockRoot,
       dependentRoot: "unknown",
     });
   }
@@ -192,7 +192,7 @@ async function validateExecutionPayloadBid(
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.NO_MATCHING_PROPOSER_PREFERENCES,
       slot: bid.slot,
-      parentBlockRoot: parentBlockRootHex,
+      parentBlockRoot: bidParentBlockRoot,
       dependentRoot: dependentRootHex,
     });
   }
@@ -203,7 +203,7 @@ async function validateExecutionPayloadBid(
     .catch(() => {
       throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
         code: ExecutionPayloadBidErrorCode.UNKNOWN_BLOCK_ROOT,
-        parentBlockRoot: parentBlockRootHex,
+        parentBlockRoot: bidParentBlockRoot,
       });
     });
 
@@ -268,11 +268,11 @@ async function validateExecutionPayloadBid(
   // payload's hash) and EMPTY parents (EMPTY/PENDING variants carry the inherited parent
   // payload's hash, since the new block doesn't have its own payload). Variant carries the
   // executed payload's gas_limit, which we use as `parent_gas_limit` below.
-  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(parentBlockRootHex, parentBlockHashHex);
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHashHex);
   if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
-      parentBlockHash: parentBlockHashHex,
+      parentBlockHash: bidParentBlockHashHex,
     });
   }
 
@@ -310,7 +310,7 @@ async function validateExecutionPayloadBid(
   // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
   // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
   // from builders submitting numerous bids with minimal value increments.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, parentBlockHashHex, parentBlockRootHex);
+  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHashHex, bidParentBlockRoot);
   if (bestBid !== null && bid.value < getMinBidValue(bestBid.message.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
@@ -357,18 +357,18 @@ async function validateExecutionPayloadBid(
 
   // Repeat the seen check after the awaited signature verification to prevent concurrent bids
   // for the same builder and tuple from both passing validation.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex)) {
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHashHex, bidParentBlockRoot)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
-      parentBlockRoot: parentBlockRootHex,
-      parentBlockHash: parentBlockHashHex,
+      parentBlockRoot: bidParentBlockRoot,
+      parentBlockHash: bidParentBlockHashHex,
     });
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, parentBlockHashHex, parentBlockRootHex);
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHashHex, bidParentBlockRoot);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }
