@@ -96,7 +96,7 @@ async function validateExecutionPayloadBid(
 ): Promise<{proposerIndex: ValidatorIndex}> {
   const bid = signedExecutionPayloadBid.message;
   const bidParentBlockRoot = toRootHex(bid.parentBlockRoot);
-  const bidParentBlockHashHex = toRootHex(bid.parentBlockHash);
+  const bidParentBlockHash = toRootHex(bid.parentBlockHash);
 
   // [IGNORE] `bid.slot` is the current slot, or the next slot (`bid.slot - 1` is current), allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
   if (
@@ -112,12 +112,12 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
-  if (!isBidCompatibleWithHead(chain.forkChoice, head, bid.slot, bidParentBlockRoot, bidParentBlockHashHex)) {
+  if (!isBidCompatibleWithHead(chain.forkChoice, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
       slot: bid.slot,
       parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHashHex,
+      parentBlockHash: bidParentBlockHash,
       headBlockRoot: head.blockRoot,
     });
   }
@@ -126,13 +126,13 @@ async function validateExecutionPayloadBid(
   // the tuple `(bid.slot, bid.parent_block_hash, bid.parent_block_root)`.
   // Entries are only added after signature verification, so known tuples can be dropped before
   // state regeneration and the other expensive validation steps.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHashHex, bidParentBlockRoot)) {
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
       parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHashHex,
+      parentBlockHash: bidParentBlockHash,
     });
   }
 
@@ -268,11 +268,11 @@ async function validateExecutionPayloadBid(
   // payload's hash) and EMPTY parents (EMPTY/PENDING variants carry the inherited parent
   // payload's hash, since the new block doesn't have its own payload). Variant carries the
   // executed payload's gas_limit, which we use as `parent_gas_limit` below.
-  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHashHex);
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHash);
   if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.UNKNOWN_PARENT_BLOCK_HASH,
-      parentBlockHash: bidParentBlockHashHex,
+      parentBlockHash: bidParentBlockHash,
     });
   }
 
@@ -310,7 +310,7 @@ async function validateExecutionPayloadBid(
   // As a DoS prevention measure, the bid must also exceed the current highest bid by a minimum
   // increment, see https://github.com/ethereum/consensus-specs/pull/4831. This prevents spam
   // from builders submitting numerous bids with minimal value increments.
-  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHashHex, bidParentBlockRoot);
+  const bestBid = chain.executionPayloadBidPool.getBestBid(bid.slot, bidParentBlockHash, bidParentBlockRoot);
   if (bestBid !== null && bid.value < getMinBidValue(bestBid.message.value)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_TOO_LOW,
@@ -357,18 +357,18 @@ async function validateExecutionPayloadBid(
 
   // Repeat the seen check after the awaited signature verification to prevent concurrent bids
   // for the same builder and tuple from both passing validation.
-  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHashHex, bidParentBlockRoot)) {
+  if (chain.seenExecutionPayloadBids.isKnown(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN,
       builderIndex: bid.builderIndex,
       slot: bid.slot,
       parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHashHex,
+      parentBlockHash: bidParentBlockHash,
     });
   }
 
   // Valid
-  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHashHex, bidParentBlockRoot);
+  chain.seenExecutionPayloadBids.add(bid.slot, bid.builderIndex, bidParentBlockHash, bidParentBlockRoot);
 
   return {proposerIndex: proposerPreferences.message.validatorIndex};
 }
