@@ -21,7 +21,6 @@ import {
   computeStartSlotAtEpoch,
   createCachedBeaconState,
   isExecutionStateType,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {RootHex, SignedBeaconBlock, ssz, sszTypesFor} from "@lodestar/types";
 import {fromHex, loadYaml, toHex, toRootHex} from "@lodestar/utils";
@@ -382,7 +381,7 @@ export async function runGossipValidationTest(
     signal: controller.signal,
     logger: testLogger("executionEngine"),
   });
-  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {config: beaconConfig, pubkeyCache},

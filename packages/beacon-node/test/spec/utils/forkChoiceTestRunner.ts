@@ -31,7 +31,6 @@ import {
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -117,7 +116,7 @@ export const forkChoiceTestRunner =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {

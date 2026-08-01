@@ -63,7 +63,6 @@ import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
 } from "./syncCommitteeCache.js";
-import {syncPubkeys} from "./syncPubkeys.js";
 import {BeaconStateAllForks, BeaconStateAltair, ShufflingGetter} from "./types.js";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
@@ -335,7 +334,7 @@ export class EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is populated before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(pubkeyCache, validators);
+      pubkeyCache.syncPubkeys(validators);
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);

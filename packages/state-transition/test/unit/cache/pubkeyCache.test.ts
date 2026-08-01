@@ -3,7 +3,6 @@ import {Worker} from "node:worker_threads";
 import {beforeAll, describe, expect, it} from "vitest";
 import {type PubkeyCache, pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {phase0, ssz} from "@lodestar/types";
-import {syncPubkeys} from "../../../src/cache/syncPubkeys.js";
 import {interopSecretKey} from "../../../src/util/interop.js";
 
 /**
@@ -190,7 +189,7 @@ describe("Global native pubkey cache - multithreaded access", () => {
       const sk = interopSecretKey(i);
       validators[i] = {...ssz.phase0.Validator.defaultValue(), pubkey: sk.toPublicKey().toBytes()};
     }
-    syncPubkeys(cache, validators);
+    cache.syncPubkeys(validators);
 
     // Worker should see the newly synced entries
     const indices = Array.from({length: syncCount}, (_, i) => syncStart + i);

@@ -31,7 +31,6 @@ export {
   loadCachedBeaconState,
 } from "./cache/stateCache.js";
 export {type SyncCommitteeCache, SyncCommitteeCacheEmpty} from "./cache/syncCommitteeCache.js";
-export {syncPubkeys} from "./cache/syncPubkeys.js";
 export * from "./constants/index.js";
 export type {EpochTransitionStep} from "./epoch/index.js";
 export {type BeaconStateTransitionMetrics, getMetrics} from "./metrics.js";

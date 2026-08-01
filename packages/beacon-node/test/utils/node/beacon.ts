@@ -17,7 +17,6 @@ import {
   computeAnchorCheckpoint,
   computeEpochAtSlot,
   createCachedBeaconState,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {phase0, ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject} from "@lodestar/utils";
@@ -133,7 +132,7 @@ export async function getDevBeaconNode(
   );
 
   const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-  syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     anchorState,
     {

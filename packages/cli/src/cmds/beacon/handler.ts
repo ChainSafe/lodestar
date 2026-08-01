@@ -8,7 +8,7 @@ import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
 import {ACTIVE_PRESET, MAX_PENDING_DEPOSITS_PER_EPOCH, PresetName, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {createBeaconStateView, syncPubkeys} from "@lodestar/state-transition";
+import {createBeaconStateView} from "@lodestar/state-transition";
 import {ErrorAborted, bytesToInt, formatBytes} from "@lodestar/utils";
 import {ProcessShutdownCallback} from "@lodestar/validator";
 import {BeaconNodeOptions, getBeaconConfigFromArgs} from "../../config/index.js";
@@ -85,7 +85,7 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
     const headroomEpochs = (90 * 24 * 60 * 60) / (config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH);
     const pubkeyCacheHeadroom = MAX_PENDING_DEPOSITS_PER_EPOCH * Math.ceil(headroomEpochs);
     pubkeyCache.ensureCapacity(anchorState.validators.length + pubkeyCacheHeadroom);
-    syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+    pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
     const anchorStateView = args["chain.nativeStateView"]
       ? createBeaconStateView({useNative: true, stateBytes: anchorStateBytes})
       : createBeaconStateView({useNative: false, anchorState, config: beaconConfig, pubkeyCache});
