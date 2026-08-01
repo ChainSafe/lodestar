@@ -5,7 +5,6 @@ import {e2eMainnetProject, e2eMinimalProject} from "./configs/vitest.config.e2e.
 import {specProjectComptest, specProjectMainnet, specProjectMinimal} from "./configs/vitest.config.spec.js";
 import {typesTestProject} from "./configs/vitest.config.types.js";
 import {unitTestMainnetProject, unitTestMinimalProject} from "./configs/vitest.config.unit.js";
-import {esmCjsInteropPlugin} from "./scripts/vite/plugins/esmCjsInteropPlugin.js";
 
 export function getReporters(): TestUserConfig["reporters"] {
   if (process.env.GITHUB_ACTIONS) return ["tree", "hanging-process", "github-actions"];
@@ -15,7 +14,6 @@ export function getReporters(): TestUserConfig["reporters"] {
 }
 
 export default defineConfig({
-  plugins: [esmCjsInteropPlugin()],
   test: {
     projects: [
       {

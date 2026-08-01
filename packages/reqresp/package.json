@@ -15,12 +15,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
-      "bun": "./src/utils/index.ts",
+      "typescript": "./src/utils/index.ts",
       "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils/index.js"
     }
