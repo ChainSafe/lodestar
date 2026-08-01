@@ -1,6 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {fromHexString} from "@chainsafe/ssz";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {
@@ -122,7 +121,7 @@ describe("CachedBeaconState", () => {
     const config = createBeaconConfig(chainConfig, state.genesisValidatorsRoot);
     const seedCachedState = createCachedBeaconState(
       state,
-      {config, pubkeyCache: createPubkeyCache()},
+      {config, pubkeyCache},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     );
     const unslashedActiveIndices = Uint32Array.from({length: unslashedValidatorCount}, (_, index) => index);
@@ -143,7 +142,7 @@ describe("CachedBeaconState", () => {
 
     const cachedState = createCachedBeaconState(
       state,
-      {config, pubkeyCache: createPubkeyCache()},
+      {config, pubkeyCache},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     );
 
