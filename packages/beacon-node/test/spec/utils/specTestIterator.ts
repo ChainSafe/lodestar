@@ -97,7 +97,8 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
     // boost wrongly denied. Fails identically on every pre-gloas fork.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
-    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
+    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
