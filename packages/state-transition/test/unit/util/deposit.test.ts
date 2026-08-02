@@ -23,6 +23,11 @@ describe("getEth1DepositCount", () => {
     // 2. Should get MAX_DEPOSIT
     preElectraState.eth1DepositIndex = 100;
     expect(getEth1DepositCount(preElectraState)).toBe(MAX_DEPOSITS);
+
+    // 3. Should preserve precision above Number.MAX_SAFE_INTEGER
+    preElectraState.eth1Data.depositCount = 9007199254740993n;
+    preElectraState.eth1DepositIndex = 9007199254740992;
+    expect(getEth1DepositCount(preElectraState)).toBe(1);
   });
   it("Post Electra with eth1 deposit", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
@@ -56,6 +61,12 @@ describe("getEth1DepositCount", () => {
     // 3. Should be 0
     postElectraState.eth1DepositIndex = 1000;
     expect(getEth1DepositCount(postElectraState)).toBe(0);
+
+    // 4. Should preserve precision above Number.MAX_SAFE_INTEGER
+    postElectraState.depositRequestsStartIndex = 9007199254740993n;
+    postElectraState.eth1Data.depositCount = 9007199254740993n;
+    postElectraState.eth1DepositIndex = 9007199254740992;
+    expect(getEth1DepositCount(postElectraState)).toBe(1);
   });
   it("Post Electra without eth1 deposit", () => {
     const stateView = ssz.electra.BeaconState.defaultViewDU();
