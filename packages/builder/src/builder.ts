@@ -67,7 +67,7 @@ export class Builder {
     const res = await opts.api.beacon.getStateBuilders({stateId: "head", builderIds: [builderSigner.getPubkeyHex()]});
 
     if (!res.ok) {
-      throw Error("Getting state builders from BN failed.");
+      throw Error(`Getting state builders from BN failed: ${res.status}`);
     }
 
     const builders = res.value();
@@ -79,11 +79,11 @@ export class Builder {
     const builderStatus: routes.beacon.BuilderResponse = builders[0];
 
     if (builderStatus.status !== "active") {
-      throw Error("Builder not active");
+      throw Error(`Builder not active: ${builderStatus.status}`);
     }
 
     if (builderStatus.builder.version !== PAYLOAD_BUILDER_VERSION) {
-      throw Error("Version not matching");
+      throw Error(`Builder version mismatch: got ${builderStatus.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`);
     }
 
     const clock = new Clock(config, opts.logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
