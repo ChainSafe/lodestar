@@ -146,7 +146,9 @@ export const DepositEvent = new ContainerType(
 export const Eth1Data = new ContainerType(
   {
     depositRoot: Root,
-    depositCount: UintNum64,
+    // depositCount is a uint64 and must round-trip the full range exactly, so use UintBn64 (bigint).
+    // UintNum64 (float64-backed) silently loses precision above 2**53.
+    depositCount: UintBn64,
     blockHash: Bytes32,
   },
   {typeName: "Eth1Data", jsonCase: "eth2"}

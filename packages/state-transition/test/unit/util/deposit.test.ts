@@ -14,7 +14,7 @@ describe("getEth1DepositCount", () => {
       throw Error("Not a pre-Electra state");
     }
 
-    preElectraState.eth1Data.depositCount = 123;
+    preElectraState.eth1Data.depositCount = 123n;
 
     // 1. Should get less than MAX_DEPOSIT
     preElectraState.eth1DepositIndex = 120;
@@ -43,7 +43,7 @@ describe("getEth1DepositCount", () => {
     }
 
     postElectraState.depositRequestsStartIndex = 1000n;
-    postElectraState.eth1Data.depositCount = 995;
+    postElectraState.eth1Data.depositCount = 995n;
 
     // 1. Should get less than MAX_DEPOSIT
     postElectraState.eth1DepositIndex = 990;
@@ -76,7 +76,7 @@ describe("getEth1DepositCount", () => {
     }
 
     postElectraState.depositRequestsStartIndex = 1000n;
-    postElectraState.eth1Data.depositCount = 1005;
+    postElectraState.eth1Data.depositCount = 1005n;
 
     // Before eth1DepositIndex reaching the start index
     // 1. Should get less than MAX_DEPOSIT
