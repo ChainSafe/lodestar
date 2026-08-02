@@ -62,7 +62,10 @@ export class Builder {
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
     const builderSigner = new BuilderSigner(config, opts.keypair);
 
-    const builderRes = await opts.api.beacon.getStateBuilders({stateId: "head", builderIds: [builderSigner.getPubkeyHex()]});
+    const builderRes = await opts.api.beacon.getStateBuilders({
+      stateId: "head",
+      builderIds: [builderSigner.getPubkeyHex()],
+    });
 
     if (!builderRes.ok) {
       throw Error(`Getting state builders from BN failed: ${builderRes.status}`);
@@ -81,7 +84,9 @@ export class Builder {
     }
 
     if (builderStatus.builder.version !== PAYLOAD_BUILDER_VERSION) {
-      throw Error(`Builder version mismatch: got ${builderStatus.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`);
+      throw Error(
+        `Builder version mismatch: got ${builderStatus.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`
+      );
     }
 
     const clock = new Clock(config, opts.logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
