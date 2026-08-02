@@ -949,7 +949,7 @@ function getProposerTargetGasLimit(
   prepareSlot: Slot,
   parentBlockRoot: Root,
   parentBlockHash: Bytes32
-): number {
+): bigint {
   const parentBlockRootHex = toRootHex(parentBlockRoot);
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
   const dependentRootHex = (() => {
@@ -979,7 +979,7 @@ function getProposerTargetGasLimit(
       `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
     );
   }
-  return parentPayloadVariant.executionPayloadGasLimit;
+  return BigInt(parentPayloadVariant.executionPayloadGasLimit);
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(

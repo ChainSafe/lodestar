@@ -221,7 +221,7 @@ async function validateExecutionPayloadBid(
   // `target_gas_limit` is `proposer_preferences.target_gas_limit`.
   const bidGasLimit = bid.gasLimit;
   const parentGasLimit = parentPayloadVariant.executionPayloadGasLimit;
-  const targetGasLimit = proposerPreferences.message.targetGasLimit;
+  const targetGasLimit = Number(proposerPreferences.message.targetGasLimit);
   if (!isGasLimitTargetCompatible(parentGasLimit, bidGasLimit, targetGasLimit)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.PROPOSER_PREFERENCES_GAS_LIMIT_MISMATCH,
