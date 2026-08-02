@@ -4,26 +4,25 @@ import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 
 export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {
   const eth1DataToUse = eth1Data ?? state.eth1Data;
-  // depositCount is a UintBn64 (bigint) so the block root stays byte-exact for proposer-chosen
-  // values above 2**53. Narrowing to number here is loss-free in consensus terms: the result is
-  // min(MAX_DEPOSITS, depositCount - eth1DepositIndex), so depositCount's exact bits only matter
-  // when that gap is < MAX_DEPOSITS, which forces depositCount < eth1DepositIndex + MAX_DEPOSITS
-  // (well under 2**53, hence float-exact). Any larger value clamps to MAX_DEPOSITS identically to
-  // exact-uint64 arithmetic, so every client computes the same bound.
-  const depositCount = Number(eth1DataToUse.depositCount);
+  // depositCount is a UintBn64 (bigint) and is proposer-chosen and unbounded at block validation.
+  // Keep the comparison and subtraction in bigint and only narrow the final result — which is
+  // clamped to MAX_DEPOSITS — to a number. Converting depositCount to a number before clamping
+  // would round a value above 2**53 and could change this consensus-enforced count, so the exact
+  // type must be preserved through the arithmetic.
+  const depositCount = eth1DataToUse.depositCount;
+  const eth1DepositIndex = BigInt(state.eth1DepositIndex);
+  const maxDeposits = BigInt(MAX_DEPOSITS);
   if (state.config.getForkSeq(state.slot) >= ForkSeq.electra) {
     const electraState = state as CachedBeaconStateElectra;
-    // eth1DataIndexLimit = min(UintNum64, UintBn64) can be safely casted as UintNum64
-    // since the result lies within upper and lower bound of UintNum64
-    const eth1DataIndexLimit: UintNum64 =
-      depositCount < Number(electraState.depositRequestsStartIndex)
-        ? depositCount
-        : Number(electraState.depositRequestsStartIndex);
+    const eth1DataIndexLimit =
+      depositCount < electraState.depositRequestsStartIndex ? depositCount : electraState.depositRequestsStartIndex;
 
-    if (state.eth1DepositIndex < eth1DataIndexLimit) {
-      return Math.min(MAX_DEPOSITS, eth1DataIndexLimit - state.eth1DepositIndex);
+    if (eth1DepositIndex < eth1DataIndexLimit) {
+      const available = eth1DataIndexLimit - eth1DepositIndex;
+      return Number(available < maxDeposits ? available : maxDeposits);
     }
     return 0;
   }
-  return Math.min(MAX_DEPOSITS, depositCount - state.eth1DepositIndex);
+  const available = depositCount - eth1DepositIndex;
+  return Number(available < maxDeposits ? available : maxDeposits);
 }
