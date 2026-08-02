@@ -55,22 +55,20 @@ export class Builder {
     const genesis = await waitForGenesis(opts.api, opts.logger, opts.abortController.signal);
     opts.logger.info("Genesis fetched from the beacon node");
 
-    {
-      const res = await opts.api.config.getSpec();
-      assertEqualParams(opts.config, res.value());
-      opts.logger.info("Verified connected beacon node and builder have the same config");
-    }
+    const specRes = await opts.api.config.getSpec();
+    assertEqualParams(opts.config, specRes.value());
+    opts.logger.info("Verified connected beacon node and builder have the same config");
 
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
     const builderSigner = new BuilderSigner(config, opts.keypair);
 
-    const res = await opts.api.beacon.getStateBuilders({stateId: "head", builderIds: [builderSigner.getPubkeyHex()]});
+    const builderRes = await opts.api.beacon.getStateBuilders({stateId: "head", builderIds: [builderSigner.getPubkeyHex()]});
 
-    if (!res.ok) {
-      throw Error(`Getting state builders from BN failed: ${res.status}`);
+    if (!builderRes.ok) {
+      throw Error(`Getting state builders from BN failed: ${builderRes.status}`);
     }
 
-    const builders = res.value();
+    const builders = builderRes.value();
 
     if (builders.length === 0) {
       throw Error(`Builder not registered: ${builderSigner.getPubkeyHex()}`);
