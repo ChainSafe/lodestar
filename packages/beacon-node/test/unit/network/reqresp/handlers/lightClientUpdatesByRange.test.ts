@@ -35,9 +35,7 @@ describe("onLightClientUpdatesByRange", () => {
   });
 
   it("returns without error for a normal startPeriod when no updates are available", async () => {
-    const responses = await Array.fromAsync(
-      onLightClientUpdatesByRange({startPeriod: 5, count: 2}, createChain())
-    );
+    const responses = await Array.fromAsync(onLightClientUpdatesByRange({startPeriod: 5, count: 2}, createChain()));
     expect(responses).toEqual([]);
   });
 });
