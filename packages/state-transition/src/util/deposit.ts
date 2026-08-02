@@ -4,7 +4,7 @@ import {CachedBeaconStateAllForks, CachedBeaconStateElectra} from "../types.js";
 
 export function getEth1DepositCount(state: CachedBeaconStateAllForks, eth1Data?: phase0.Eth1Data): UintNum64 {
   const eth1DataToUse = eth1Data ?? state.eth1Data;
-  // Proposer can set any value: stay in bigint until the result is bounded by MAX_DEPOSITS.
+  // Proposer can set any value, use in bigint until the result is bounded by MAX_DEPOSITS
   const depositCount = eth1DataToUse.depositCount;
   const eth1DepositIndex = BigInt(state.eth1DepositIndex);
   const maxDeposits = BigInt(MAX_DEPOSITS);
