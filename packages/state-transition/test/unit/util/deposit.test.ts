@@ -24,7 +24,7 @@ describe("getEth1DepositCount", () => {
     preElectraState.eth1DepositIndex = 100;
     expect(getEth1DepositCount(preElectraState)).toBe(MAX_DEPOSITS);
 
-    // 3. Should preserve precision above Number.MAX_SAFE_INTEGER
+    // 3. Must not round before subtraction
     preElectraState.eth1Data.depositCount = 9007199254740993n;
     preElectraState.eth1DepositIndex = 9007199254740992;
     expect(getEth1DepositCount(preElectraState)).toBe(1);
@@ -62,7 +62,7 @@ describe("getEth1DepositCount", () => {
     postElectraState.eth1DepositIndex = 1000;
     expect(getEth1DepositCount(postElectraState)).toBe(0);
 
-    // 4. Should preserve precision above Number.MAX_SAFE_INTEGER
+    // 4. Must not round before subtraction
     postElectraState.depositRequestsStartIndex = 9007199254740993n;
     postElectraState.eth1Data.depositCount = 9007199254740993n;
     postElectraState.eth1DepositIndex = 9007199254740992;
