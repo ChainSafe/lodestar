@@ -349,7 +349,7 @@ export async function produceBlockBody<T extends BlockType>(
       builderIndex: BUILDER_INDEX_SELF_BUILD,
       slot: blockSlot,
       value: 0,
-      executionPayment: 0,
+      executionPayment: 0n,
       blobKzgCommitments: blobsBundle.commitments,
       executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };

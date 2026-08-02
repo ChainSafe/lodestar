@@ -31,7 +31,7 @@ export type ExecutionPayloadBidErrorType =
   | {
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT;
       builderIndex: BuilderIndex;
-      executionPayment: number;
+      executionPayment: bigint;
     }
   | {
       code: ExecutionPayloadBidErrorCode.BID_ALREADY_KNOWN;
