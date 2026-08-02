@@ -315,7 +315,7 @@ describe("api/validator - produceBlockV3", () => {
     });
 
     // use fee recipient passed in produceBlockBody call for payload gen in engine notifyForkchoiceUpdate
-    await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
+    await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
@@ -324,6 +324,8 @@ describe("api/validator - produceBlockV3", () => {
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
       commonBlockBodyPromise: createCommonBlockBodyPromise(),
+      parentState: state,
+      parentStateWithPayload: state,
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(
@@ -341,7 +343,7 @@ describe("api/validator - produceBlockV3", () => {
     // use fee recipient set in beaconProposerCacheStub if none passed
     modules.chain["beaconProposerCache"].getOrDefault.mockReturnValue("0x fee recipient address");
 
-    await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, state, {
+    await produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, {
       randaoReveal,
       graffiti: toGraffitiBytes(graffiti),
       slot,
@@ -349,6 +351,8 @@ describe("api/validator - produceBlockV3", () => {
       proposerIndex: 0,
       proposerPubKey: new Uint8Array(32).fill(1),
       commonBlockBodyPromise: createCommonBlockBodyPromise(),
+      parentState: state,
+      parentStateWithPayload: state,
     });
 
     expect(modules.chain["executionEngine"].notifyForkchoiceUpdate).toBeCalledWith(

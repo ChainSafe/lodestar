@@ -377,9 +377,13 @@ export function getValidatorApi(
     {
       commonBlockBodyPromise,
       parentBlock,
+      parentState,
+      parentStateWithPayload,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
+      parentState: IBeaconStateView;
+      parentStateWithPayload: IBeaconStateView;
     }
   ): Promise<ProduceBlindedBlockRes> {
     const version = config.getForkName(slot);
@@ -414,6 +418,8 @@ export function getValidatorApi(
         randaoReveal,
         graffiti,
         commonBlockBodyPromise,
+        parentState,
+        parentStateWithPayload,
       });
 
       metrics?.blockProductionSuccess.inc({source});
@@ -446,9 +452,13 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
+      parentState,
+      parentStateWithPayload,
     }: Omit<routes.validator.ExtraProduceBlockOpts, "builderSelection"> & {
       commonBlockBodyPromise: Promise<CommonBlockBody>;
       parentBlock: ProtoBlock;
+      parentState: IBeaconStateView;
+      parentStateWithPayload: IBeaconStateView;
     }
   ): Promise<ProduceBlockContentsRes & {shouldOverrideBuilder?: boolean}> {
     const source = ProducedBlockSource.engine;
@@ -464,6 +474,8 @@ export function getValidatorApi(
         graffiti,
         feeRecipient,
         commonBlockBodyPromise,
+        parentState,
+        parentStateWithPayload,
       });
       const version = config.getForkName(block.slot);
       if (strictFeeRecipientCheck && feeRecipient && isForkPostBellatrix(version)) {
@@ -548,6 +560,16 @@ export function getValidatorApi(
     notOnOutOfRangeData(parentBlockRoot);
     metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
+    // Fetch the production state once and thread it to all downstream production calls. Pre-gloas has no
+    // parent execution payload, so the applied state is the same view as parentState.
+    const parentState = await chain.regen.getBlockSlotState(
+      parentBlock,
+      slot,
+      {dontTransferCache: true},
+      RegenCaller.produceBlock
+    );
+    const parentStateWithPayload = parentState;
+
     const fork = config.getForkName(slot);
 
     const isBuilderEnabled =
@@ -591,6 +613,8 @@ export function getValidatorApi(
           strictFeeRecipientCheck: false,
           commonBlockBodyPromise,
           parentBlock,
+          parentState,
+          parentStateWithPayload,
         })
       : Promise.reject(new Error("Builder disabled"));
 
@@ -599,6 +623,8 @@ export function getValidatorApi(
       strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
+      parentState,
+      parentStateWithPayload,
     }).then((engineBlock) => {
       // Once the engine returns a block, in the event of either:
       // - suspected builder censorship
@@ -642,6 +668,8 @@ export function getValidatorApi(
           parentBlock,
           randaoReveal,
           graffiti: graffitiBytes,
+          parentState,
+          parentStateWithPayload,
         })
         .then((commonBlockBody) => {
           deferredCommonBlockBody.resolve(commonBlockBody);
@@ -910,11 +938,36 @@ export function getValidatorApi(
           : {}),
       };
 
+      // Fetch the production state once and apply the parent execution payload once here, so all
+      // downstream consumers share a single state: the un-applied `parentState` (for `computeNewStateRoot`)
+      // and the applied `parentStateWithPayload` (for attestation scoring and execution-payload prep).
+      const parentState = await chain.regen.getBlockSlotState(
+        parentBlock,
+        slot,
+        {dontTransferCache: true},
+        RegenCaller.produceBlock
+      );
+      // Fetch the parent's execution requests once here and thread them via blockAttributes: they are
+      // used both to apply the parent payload below and as the block's `parentExecutionRequests` field
+      // (so both are guaranteed consistent). Only needed when building on FULL; empty parent has none.
+      const parentExecutionRequests =
+        isBuildingOnFull && isStatePostGloas(parentState)
+          ? await chain.getParentExecutionRequests(parentSlot, parentBlockRootHex)
+          : ssz.gloas.ExecutionRequests.defaultValue();
+      // When building on EMPTY there is nothing to apply, so it stays the same view as parentState
+      // (the availability bit for parentSlot stays false, which is correct).
+      const parentStateWithPayload =
+        isBuildingOnFull && isStatePostGloas(parentState)
+          ? parentState.withParentPayloadApplied(parentExecutionRequests)
+          : parentState;
+
       const commonBlockBodyPromise = chain.produceCommonBlockBody({
         slot,
         parentBlock,
         randaoReveal,
         graffiti: graffitiBytes,
+        parentState,
+        parentStateWithPayload,
       });
 
       const baseAttrs = {
@@ -924,6 +977,9 @@ export function getValidatorApi(
         graffiti: graffitiBytes,
         feeRecipient,
         commonBlockBodyPromise,
+        parentState,
+        parentStateWithPayload,
+        parentExecutionRequests,
       };
 
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
