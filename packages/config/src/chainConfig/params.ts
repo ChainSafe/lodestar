@@ -1,5 +1,6 @@
-import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
 import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
+import {chainConfigToJson, deserializeBlobSchedule} from "./json.js";
+import {BlobScheduleEntry, ChainConfig, SpecJson} from "./types.js";
 
 export class NotEqualParamsError extends Error {}
 
@@ -326,15 +327,12 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
     MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
     MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
-    BUILDER_REGISTRY_LIMIT: gloasForkRelevant,
-    BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
     MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: false,
     MAX_ATTESTER_SLASHING_SIZE: false,
     MAX_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
-    MAX_SIGNED_BEACON_BLOCK_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
 
     // FastConfirmationRule
