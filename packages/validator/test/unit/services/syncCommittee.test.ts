@@ -138,6 +138,49 @@ describe("SyncCommitteeService", () => {
           contributionAndProofs: [contributionAndProof],
         });
       });
+
+      it("Should not participate in sync committees while the node is optimistic", async () => {
+        const clock = new ClockMock();
+        const syncCommitteeService = new SyncCommitteeService(
+          config,
+          loggerVc,
+          api,
+          clock,
+          validatorStore,
+          emitter,
+          chainHeaderTracker,
+          syncingStatusTracker,
+          null,
+          opts
+        );
+
+        const beaconBlockRoot = Buffer.alloc(32, 0x4d);
+        const duties: SyncDutyAndProofs[] = [
+          {
+            duty: {
+              pubkey: toHexString(pubkeys[0]),
+              validatorIndex: 0,
+              subnets: [0],
+            },
+            selectionProofs: [{selectionProof: ZERO_HASH, subcommitteeIndex: 0}],
+          },
+        ];
+
+        vi.spyOn(syncCommitteeService["dutiesService"], "getDutiesAtSlot").mockResolvedValue(duties);
+        chainHeaderTracker.getCurrentChainHead.mockReturnValue(beaconBlockRoot);
+
+        // Spec: an optimistic validator MUST NOT participate in sync committees
+        // https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
+        syncingStatusTracker.isNodeOptimistic.mockReturnValue(true);
+
+        await clock.tickSlotFns(0, controller.signal);
+
+        // Neither the sync committee message nor the contribution should be signed or published
+        expect(validatorStore.signSyncCommitteeSignature).not.toHaveBeenCalled();
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).not.toHaveBeenCalled();
+        expect(api.validator.produceSyncCommitteeContribution).not.toHaveBeenCalled();
+        expect(api.validator.publishContributionAndProofs).not.toHaveBeenCalled();
+      });
     });
   }
 });

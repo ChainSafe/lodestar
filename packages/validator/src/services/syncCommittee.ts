@@ -73,6 +73,14 @@ export class SyncCommitteeService {
         return;
       }
 
+      // An optimistic validator MUST NOT participate in sync committees, since it has not
+      // fully verified the execution payload of the head block it would sign over.
+      // https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
+      if (this.syncingStatusTracker.isNodeOptimistic() === true) {
+        this.logger.debug("Skipping sync committee duties while node is optimistic", {slot});
+        return;
+      }
+
       // unlike Attestation, SyncCommitteeSignature could be published asap
       // especially with lodestar, it's very busy at ATTESTATION_DUE_BPS of the slot
       // see https://github.com/ChainSafe/lodestar/issues/4608
