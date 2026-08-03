@@ -41,7 +41,6 @@ import {
   Slot,
   SyncPeriod,
   altair,
-  electra,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -214,10 +213,6 @@ export class LightClientServer {
   private checkpointHeaders = new Map<BlockRooHex, LightClientHeader>();
   private latestHeadUpdate: LightClientOptimisticUpdate | null = null;
 
-  private readonly zero: Pick<
-    altair.LightClientUpdate | electra.LightClientUpdate,
-    "finalityBranch" | "finalizedHeader"
-  >;
   private finalized: LightClientFinalityUpdate | null = null;
 
   constructor(
@@ -232,14 +227,6 @@ export class LightClientServer {
     this.emitter = emitter;
     this.logger = logger;
     this.signal = signal;
-
-    this.zero = {
-      // Assign the highest pre-Gloas light-client header because post-Gloas light-client updates are skipped for now.
-      finalizedHeader: ssz.electra.LightClientHeader.defaultValue(),
-      // Electra finalityBranch has fixed length of 5 whereas altair has 4. The fifth element will be ignored
-      // when serializing as altair LightClientUpdate
-      finalityBranch: ssz.electra.LightClientUpdate.fields.finalityBranch.defaultValue(),
-    };
 
     if (metrics) {
       metrics.lightclientServer.highestSlot.addCollect(() => {
@@ -693,9 +680,11 @@ export class LightClientServer {
       }
     } else {
       isFinalized = false;
-      finalityBranch = this.zero.finalityBranch;
-      // No need to upgrade finalizedHeader because its anyway set to zero of highest fork
-      finalizedHeader = this.zero.finalizedHeader;
+      const zeroUpdate = this.config
+        .getPostAltairForkTypes(attestedHeader.beacon.slot)
+        .LightClientUpdate.defaultValue();
+      finalityBranch = zeroUpdate.finalityBranch;
+      finalizedHeader = zeroUpdate.finalizedHeader;
     }
 
     const newUpdate = {
