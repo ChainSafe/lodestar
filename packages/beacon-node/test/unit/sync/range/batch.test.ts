@@ -638,11 +638,21 @@ describe("sync / range / batch", async () => {
       });
 
       for (let i = 0; i < MAX_BATCH_PROCESSING_ATTEMPTS; i++) {
+        const attempt = i + 1;
+
         batch.processingError(error);
 
-        expect(batch.state.status).toBe(BatchStatus.AwaitingDownload);
-        expect(batch.failedProcessingAttempts).toHaveLength(0);
-        expect(batch.executionErrorAttempts).toHaveLength(i + 1);
+        expect(batch.state.status, `attempt ${attempt}: batch should await redownload`).toBe(
+          BatchStatus.AwaitingDownload
+        );
+        expect(
+          batch.failedProcessingAttempts,
+          `attempt ${attempt}: local execution errors should not count as peer-attributable failures`
+        ).toHaveLength(0);
+        expect(
+          batch.executionErrorAttempts,
+          `attempt ${attempt}: local execution errors should be tracked`
+        ).toHaveLength(attempt);
 
         downloadBlock(batch);
         batch.startProcessing();
