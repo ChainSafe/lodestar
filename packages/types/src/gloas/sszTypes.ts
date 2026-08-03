@@ -303,7 +303,10 @@ export const ProposerPreferences = new ContainerType(
     proposalSlot: Slot,
     validatorIndex: ValidatorIndex,
     feeRecipient: ExecutionAddress,
-    targetGasLimit: UintNum64,
+    // targetGasLimit is a proposer-set uint64 with no bound; use UintBn64 so a value above 2**53
+    // round-trips exactly (this container is not in the block HTR, but the value is emitted to the
+    // EL via engine PayloadAttributesV4 and over the SSE payload_attributes event).
+    targetGasLimit: UintBn64,
   },
   {typeName: "ProposerPreferences", jsonCase: "eth2"}
 );
@@ -592,7 +595,7 @@ export const PayloadAttributes = new ContainerType(
   {
     ...denebSsz.PayloadAttributes.fields,
     slotNumber: Slot,
-    targetGasLimit: UintNum64,
+    targetGasLimit: UintBn64,
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );

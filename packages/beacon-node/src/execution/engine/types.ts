@@ -458,7 +458,7 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     withdrawals: data.withdrawals?.map((withdrawal) => deserializeWithdrawal(withdrawal)),
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
-    targetGasLimit: data.targetGasLimit !== undefined ? quantityToNum(data.targetGasLimit) : undefined,
+    targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
   };
 }
 
