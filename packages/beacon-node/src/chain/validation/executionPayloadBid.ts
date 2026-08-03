@@ -184,7 +184,7 @@ async function validateExecutionPayloadBid(
   }
 
   // [REJECT] `bid.execution_payment` is zero.
-  if (bid.executionPayment !== 0) {
+  if (bid.executionPayment !== 0n) {
     throw new ExecutionPayloadBidError(GossipAction.REJECT, {
       code: ExecutionPayloadBidErrorCode.NON_ZERO_EXECUTION_PAYMENT,
       builderIndex: bid.builderIndex,
