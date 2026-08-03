@@ -8,7 +8,6 @@ import {
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_PAYLOAD_ATTESTATIONS,
   MAX_PROPOSER_SLASHINGS,
   MAX_VOLUNTARY_EXITS,
@@ -104,8 +103,8 @@ export async function validateGossipBlock(
     // 2. The parent is unknown to us, we probably want to download it since it might actually
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
-    // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    // against known bad fork blocks, so we throw PARENT_BLOCK_UNKNOWN for cases (1) and (2)
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
   }
 
   // [IGNORE] The block's parent (defined by `block.parent_root`) passes all validation
@@ -182,7 +181,6 @@ export async function validateGossipBlock(
 
     // [REJECT] The counts of `block.body.parent_execution_requests` are within
     //   their respective limits -- i.e. validate that
-    //   `len(block.body.parent_execution_requests.deposits) <= MAX_DEPOSIT_REQUESTS_PER_PAYLOAD`,
     //   `len(block.body.parent_execution_requests.withdrawals) <= MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD`,
     //   `len(block.body.parent_execution_requests.consolidations) <= MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD`,
     //   `len(block.body.parent_execution_requests.builder_deposits) <= MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD`,
@@ -200,7 +198,6 @@ export async function validateGossipBlock(
     const body = (block as gloas.BeaconBlock).body;
     const requests = body.parentExecutionRequests;
     const countLimits: [string, number, number][] = [
-      ["parentExecutionRequests.deposits", requests.deposits.length, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD],
       ["parentExecutionRequests.withdrawals", requests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
       [
         "parentExecutionRequests.consolidations",
@@ -244,7 +241,7 @@ export async function validateGossipBlock(
   const blockState = await chain.regen
     .getPreState(block, {dontTransferCache: true}, RegenCaller.validateGossipBlock)
     .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot});
     });
 
   // in forky condition, make sure to populate ShufflingCache with regened state

@@ -323,7 +323,10 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     blockHash: Bytes32,
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintNum64,
+    // gasLimit is a uint64 with no bound in process_execution_payload_bid (the gas-limit target
+    // check is gossip-only), so a block can carry any value; use UintBn64 so the bid hashTreeRoot
+    // matches exact-uint64 clients for values above 2**53.
+    gasLimit: UintBn64,
     builderIndex: BuilderIndex,
     slot: Slot,
     value: UintNum64,
@@ -377,6 +380,15 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
+  {
+    signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "SignedExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
+);
+
 export const BeaconBlockBody = new ProgressiveContainerType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
@@ -414,6 +426,17 @@ export const SignedBeaconBlock = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+);
+
+// Full block production response for self-builds, enables stateless envelope publishing
+export const BlockContents = new ContainerType(
+  {
+    block: BeaconBlock,
+    executionPayloadEnvelope: ExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
 );
 
 export const LightClientHeader = new ContainerType(

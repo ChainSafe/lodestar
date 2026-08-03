@@ -22,6 +22,7 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   "PROPOSER_INCLUSION_LIST_CUTOFF_BPS" as keyof ChainConfig,
   "MAX_REQUEST_INCLUSION_LIST" as keyof ChainConfig,
   "MAX_BYTES_PER_INCLUSION_LIST" as keyof ChainConfig,
+  "MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" as keyof ChainConfig,
   // Networking params that may be in presets instead of chainConfig
   "ATTESTATION_SUBNET_COUNT" as keyof ChainConfig,
   "ATTESTATION_SUBNET_EXTRA_BITS" as keyof ChainConfig,
@@ -57,9 +58,6 @@ const ignoredRemoteConfigFields: (keyof ChainConfig)[] = [
   // These are preset values, not config values - they're tested separately
   "PRESET_BASE",
   "CONFIG_NAME",
-  // TODO GLOAS: Unskip in #9606
-  "PAYLOAD_DUE_BPS" as keyof ChainConfig,
-  "MIN_BUILDER_WITHDRAWABILITY_DELAY" as keyof ChainConfig,
 ];
 
 /**

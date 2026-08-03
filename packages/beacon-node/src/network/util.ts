@@ -27,3 +27,8 @@ export function getConnection(libp2p: Libp2p, peerIdStr: string): Connection | u
 export function isPublishToZeroPeersError(e: Error): boolean {
   return e.message.includes("PublishError.NoPeersSubscribedToTopic");
 }
+
+// https://github.com/libp2p/js-libp2p/blob/f87cba928991736d9646b3e054c367f55cab315c/packages/gossipsub/src/gossipsub.ts#L2076
+export function isPublishDuplicateError(e: Error): boolean {
+  return e.message.includes("PublishError.Duplicate");
+}

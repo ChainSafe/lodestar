@@ -11,16 +11,16 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.44.0",
+  "version": "1.45.0",
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./utils": {
-      "bun": "./src/utils/index.ts",
+      "typescript": "./src/utils/index.ts",
       "types": "./lib/utils/index.d.ts",
       "import": "./lib/utils/index.js"
     }
@@ -41,7 +41,7 @@
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "dependencies": {
     "@chainsafe/fast-crc32c": "^4.2.0",

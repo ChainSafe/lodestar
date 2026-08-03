@@ -8,7 +8,6 @@ import {
   MAX_ATTESTER_SLASHING_SIZE,
   MAX_DATA_COLUMN_SIDECAR_SIZE,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_BEACON_BLOCK_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   ZERO_HASH,
 } from "@lodestar/params";
@@ -274,7 +273,7 @@ describe("network / gossip / topic", () => {
         config.MAX_PAYLOAD_SIZE
       ),
     }).toEqual({
-      [GossipType.beacon_block]: MAX_SIGNED_BEACON_BLOCK_SIZE,
+      [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
       [GossipType.data_column_sidecar]: MAX_DATA_COLUMN_SIDECAR_SIZE,
       [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
       [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
