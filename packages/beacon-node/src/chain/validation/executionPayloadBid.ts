@@ -61,6 +61,8 @@ function isBidCompatibleWithHead(
   const buildsOnParentPayload = bidParentBlockHash === head.parentBlockHash;
 
   if (buildsOnParentBlock && buildsOnParentPayload) {
+    // The spec allows this at epoch boundaries, but Lodestar does not propagate these bids because validating
+    // them requires an epoch transition for a parent state that cannot be used for proposer-boost reorgs.
     return !isStartSlotOfEpoch(bidSlot);
   }
 
