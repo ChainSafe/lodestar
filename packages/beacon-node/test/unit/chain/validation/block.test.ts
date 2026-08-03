@@ -1,10 +1,11 @@
-import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
+import {Mock, Mocked, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
@@ -19,7 +20,7 @@ describe("gossip block validation", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
   let verifySignature: Mock<() => boolean>;
-  let job: SignedBeaconBlock;
+  let job: deneb.SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
   const block = ssz.deneb.BeaconBlock.defaultValue();
@@ -98,12 +99,55 @@ describe("gossip block validation", () => {
 
   it("REPEAT_PROPOSAL", async () => {
     // Register the proposer as known
-    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
+    chain.seenBlockProposers.add(
+      job.message.slot,
+      job.message.proposerIndex,
+      toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message))
+    );
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.REPEAT_PROPOSAL
     );
+  });
+
+  it("REPEAT_PROPOSAL records a conflicting root after verifying its proposer signature", async () => {
+    const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
+    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex, blockRoot);
+
+    const conflictingBlock = ssz.deneb.SignedBeaconBlock.clone(job);
+    conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+    const conflictingBlockRoot = toRootHex(
+      config.getForkTypes(conflictingBlock.message.slot).BeaconBlock.hashTreeRoot(conflictingBlock.message)
+    );
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, conflictingBlock, ForkName.phase0),
+      BlockErrorCode.REPEAT_PROPOSAL
+    );
+
+    expect(verifySignature).toHaveBeenCalledOnce();
+    expect(
+      chain.seenBlockProposers.getConflictingBlockRoots(job.message.slot, job.message.proposerIndex, blockRoot)
+    ).toEqual([conflictingBlockRoot]);
+  });
+
+  it("does not record a conflicting root with an invalid proposer signature", async () => {
+    const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
+    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex, blockRoot);
+
+    const conflictingBlock = ssz.deneb.SignedBeaconBlock.clone(job);
+    conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+    verifySignature.mockResolvedValue(false);
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, conflictingBlock, ForkName.phase0),
+      BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+    );
+
+    expect(
+      chain.seenBlockProposers.getConflictingBlockRoots(job.message.slot, job.message.proposerIndex, blockRoot)
+    ).toEqual([]);
   });
 
   it("PARENT_BLOCK_UNKNOWN (fork-choice)", async () => {

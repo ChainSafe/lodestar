@@ -775,15 +775,6 @@ export function getBeaconBlockApi({
               throw new ApiError(400, (error as Error).message);
             }
             chain.logger.debug("Consensus validated while publishing execution payload envelope", valLogMeta);
-
-            // TODO GLOAS: check the block is not a proposer equivocation before publishing the envelope
-            if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-              const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
-              if (chain.opts.broadcastValidationStrictness === "error") {
-                throw Error(message);
-              }
-              chain.logger.warn(message, valLogMeta);
-            }
             break;
           }
 
@@ -884,6 +875,27 @@ export function getBeaconBlockApi({
       const msToBlockSlot = computeTimeAtSlot(config, slot, chain.genesisTime) * 1000 - Date.now();
       if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
         await sleep(msToBlockSlot);
+      }
+
+      // Keep this as the final async validation before publishing. A conflicting block may be observed while the
+      // envelope, blob data, or slot timing is being validated above.
+      if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+        const conflictingRoots = chain.seenBlockProposers.getConflictingBlockRoots(
+          slot,
+          payloadInput.proposerIndex,
+          blockRootHex
+        );
+        if (conflictingRoots.length > 0) {
+          chain.logger.error("Equivocation checks failed while publishing execution payload envelope", {
+            ...valLogMeta,
+            conflictingRoots: conflictingRoots.join(", "),
+          });
+          throw new ApiError(
+            400,
+            `Block of execution payload envelope is a proposer equivocation, conflicting block roots: ${conflictingRoots.join(", ")}`
+          );
+        }
+        chain.logger.debug("Equivocation validated while publishing execution payload envelope", valLogMeta);
       }
 
       if (payloadInput.hasPayloadEnvelope()) {
