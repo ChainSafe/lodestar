@@ -27,7 +27,7 @@ export async function* onLightClientUpdatesByRange(
     const period = requestBody.startPeriod + i;
     try {
       const update = await chain.lightClientServer.getUpdate(period);
-      const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.signatureSlot));
+      const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.attestedHeader.beacon.slot));
       const type = responseSszTypeByMethod[ReqRespMethod.LightClientUpdatesByRange](boundary.fork, 0);
 
       yield {
