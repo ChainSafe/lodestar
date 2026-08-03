@@ -78,8 +78,6 @@ export const defaultSkipOpts: SkipOpts = {
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
-    /^gloas\/light_client\/sync\/.*/,
     // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
@@ -92,8 +90,6 @@ export const defaultSkipOpts: SkipOpts = {
     /^gloas\/fork_choice_compliance\/.*/,
   ],
   skippedTests: [
-    // TODO-GLOAS: re-enable after gloas light client is implemented
-    /\/gloas_fork$/,
     // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
     // boost wrongly denied. Fails identically on every pre-gloas fork.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
