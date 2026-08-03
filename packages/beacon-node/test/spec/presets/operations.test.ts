@@ -1,6 +1,6 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -38,7 +38,12 @@ const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
 const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = {
   attestation: (state, testCase: {attestation: phase0.Attestation}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processAttestations(fork, state, [testCase.attestation]);
+    blockFns.processAttestations(
+      fork,
+      state,
+      [testCase.attestation],
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.slot : null
+    );
   },
 
   attester_slashing: (state, testCase: BaseSpecTest & {attester_slashing: AttesterSlashing}) => {
