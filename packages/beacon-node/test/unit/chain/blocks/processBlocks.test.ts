@@ -32,9 +32,6 @@ describe("chain / blocks / processBlocks", () => {
     BELLATRIX_FORK_EPOCH: 0,
     CAPELLA_FORK_EPOCH: 0,
     DENEB_FORK_EPOCH: 0,
-    ELECTRA_FORK_EPOCH: 0,
-    FULU_FORK_EPOCH: 0,
-    GLOAS_FORK_EPOCH: 0,
   });
   let chain: MockedBeaconChain;
   let seenBlockProposers: SeenBlockProposers;
@@ -47,11 +44,11 @@ describe("chain / blocks / processBlocks", () => {
     seenBlockProposers = new SeenBlockProposers();
     Object.defineProperty(chain, "seenBlockProposers", {value: seenBlockProposers});
 
-    const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+    const block = ssz.deneb.SignedBeaconBlock.defaultValue();
     block.message.slot = slot;
     block.message.proposerIndex = proposerIndex;
-    const blockRoot = toRootHex(ssz.gloas.BeaconBlock.hashTreeRoot(block.message));
-    blockInput = new MockBlockInput({forkName: ForkName.gloas, slot, blockRootHex: blockRoot});
+    const blockRoot = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(block.message));
+    blockInput = new MockBlockInput({forkName: ForkName.deneb, slot, blockRootHex: blockRoot});
     blockInput._block = block;
 
     vi.mocked(verifyBlocksSanityChecks).mockReturnValue({
@@ -63,7 +60,7 @@ describe("chain / blocks / processBlocks", () => {
     vi.mocked(importBlock).mockResolvedValue(undefined);
   });
 
-  it("does not mark a Gloas proposal known when execution verification aborts", async () => {
+  it("does not mark a proposal known when execution verification aborts", async () => {
     const block = blockInput.getBlock();
     const execError = new BlockError(block, {
       code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -73,7 +70,7 @@ describe("chain / blocks / processBlocks", () => {
     vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
       seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex);
       return {
-        postStates: [{forkName: ForkName.gloas} as IBeaconStateView],
+        postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
         proposerBalanceDeltas: [0],
         segmentExecStatus: {execAborted: {blockIndex: 0, execError}},
         blockDAStatuses: [DataAvailabilityStatus.Available],
@@ -89,11 +86,11 @@ describe("chain / blocks / processBlocks", () => {
     expect(importBlock).not.toHaveBeenCalled();
   });
 
-  it("marks a Gloas proposal known after execution verification succeeds", async () => {
+  it("marks a proposal known after execution verification succeeds", async () => {
     vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
       seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex);
       return {
-        postStates: [{forkName: ForkName.gloas} as IBeaconStateView],
+        postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
         proposerBalanceDeltas: [0],
         segmentExecStatus: {
           execAborted: null,

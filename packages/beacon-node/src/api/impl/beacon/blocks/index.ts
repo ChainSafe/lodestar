@@ -24,6 +24,7 @@ import {
 } from "@lodestar/state-transition";
 import {
   ProducedBlockSource,
+  RootHex,
   SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
@@ -35,7 +36,7 @@ import {
   isSignedExecutionPayloadEnvelopeContents,
   sszTypesFor,
 } from "@lodestar/types";
-import {fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
+import {LogDataBasic, fromHex, sleep, toHex, toRootHex} from "@lodestar/utils";
 import {BlockInputSource, isBlockInputBlobs, isBlockInputColumns} from "../../../../chain/blocks/blockInput/index.js";
 import {PayloadEnvelopeInputSource} from "../../../../chain/blocks/payloadEnvelopeInput/index.js";
 import {ImportBlockOpts} from "../../../../chain/blocks/types.js";
@@ -58,7 +59,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
-import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
 import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
@@ -92,6 +93,30 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  * PeerID of identity keypair to signal self for score reporting
  */
 const IDENTITY_PEER_ID = ""; // TODO: Compute identity keypair
+
+function assertBlockNotEquivocating(
+  chain: ApiModules["chain"],
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
+  blockRoot: RootHex,
+  logMeta: Record<string, LogDataBasic>
+): void {
+  const conflictingRoots = chain.seenBlockProposers.getConflictingBlockRoots(
+    signedBlock.message.slot,
+    signedBlock.message.proposerIndex,
+    blockRoot
+  );
+  if (conflictingRoots.length > 0) {
+    chain.logger.error("Equivocation checks failed while publishing the block", {
+      ...logMeta,
+      conflictingRoots: conflictingRoots.join(", "),
+    });
+    throw new ApiError(
+      400,
+      `Block is a proposer equivocation, conflicting block roots: ${conflictingRoots.join(", ")}`
+    );
+  }
+  chain.logger.debug("Equivocation validated while publishing the block", logMeta);
+}
 
 export function getBeaconBlockApi({
   chain,
@@ -286,11 +311,22 @@ export function getBeaconBlockApi({
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
 
         if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-          const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
-          if (chain.opts.broadcastValidationStrictness === "error") {
-            throw Error(message);
+          try {
+            await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+            chain.seenBlockProposers.observeBlockRoot(slot, signedBlock.message.proposerIndex, blockRoot);
+          } catch (error) {
+            chain.logger.error(
+              "Proposer signature validation failed while publishing the block",
+              valLogMeta,
+              error as Error
+            );
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_consensus_and_equivocation_failure"
+            );
+            throw error;
           }
-          chain.logger.warn(message, valLogMeta);
         }
         break;
       }
@@ -316,6 +352,10 @@ export function getBeaconBlockApi({
     if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
       // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
       await sleep(msToBlockSlot);
+    }
+
+    if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+      assertBlockNotEquivocating(chain, signedBlock, blockRoot, valLogMeta);
     }
 
     // TODO: Validate block
@@ -438,6 +478,20 @@ export function getBeaconBlockApi({
       throw new ApiError(400, `Blinded blocks are not available for post-gloas fork=${fork}`);
     }
 
+    if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+      try {
+        await verifyBlockProposerSignature(chain, signedBlindedBlock, blockRoot);
+        chain.seenBlockProposers.observeBlockRoot(slot, signedBlindedBlock.message.proposerIndex, blockRoot);
+      } catch (error) {
+        chain.logger.error(
+          "Proposer signature validation failed while publishing the blinded block",
+          {slot, blockRoot, broadcastValidation},
+          error as Error
+        );
+        throw error;
+      }
+    }
+
     // Either the payload/blobs are cached from i) engine locally or ii) they are from the builder
     const producedResult = chain.blockProductionCache.get(blockRoot);
     if (producedResult !== undefined && producedResult.type !== BlockType.Blinded) {
@@ -456,6 +510,14 @@ export function getBeaconBlockApi({
     }
 
     const source = ProducedBlockSource.builder;
+
+    if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+      assertBlockNotEquivocating(chain, signedBlindedBlock, blockRoot, {
+        slot,
+        blockRoot,
+        broadcastValidation,
+      });
+    }
 
     if (isForkPostFulu(fork)) {
       await submitBlindedBlockToBuilder(chain, {

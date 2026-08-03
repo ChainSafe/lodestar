@@ -24,7 +24,7 @@ import {
   isExecutionBlockBodyType,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, SignedBlindedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -86,7 +86,7 @@ export async function validateGossipBlock(
   // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
   const proposerIndex = block.proposerIndex;
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    if (isForkPostGloas(fork) && !chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot)) {
+    if (!chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot)) {
       await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
       chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
     }
@@ -275,9 +275,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
-  if (isForkPostGloas(fork)) {
-    chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
-  }
+  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
@@ -310,9 +308,9 @@ export async function validateGossipBlock(
   return {skippedSlots};
 }
 
-async function verifyBlockProposerSignature(
+export async function verifyBlockProposerSignature(
   chain: IBeaconChain,
-  signedBlock: SignedBeaconBlock,
+  signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock,
   blockRoot: RootHex
 ): Promise<void> {
   const blockSlot = signedBlock.message.slot;
