@@ -47,8 +47,8 @@ function getMinBidValue(currentHighestBid: number): number {
 /**
  * Check whether a bid builds on one of the paths compatible with the local head branch.
  *
- * Building directly on the parent is always allowed for proposer-boost reorgs. Otherwise the bid
- * must build on the local head's full or empty payload variant, as selected for its slot.
+ * Building directly on the parent is allowed for proposer-boost reorgs outside epoch boundaries.
+ * Otherwise the bid must build on the local head's full or empty payload variant, as selected for its slot.
  */
 function isBidCompatibleWithHead(
   forkChoice: IForkChoice,
@@ -61,7 +61,7 @@ function isBidCompatibleWithHead(
   const buildsOnParentPayload = bidParentBlockHash === head.parentBlockHash;
 
   if (buildsOnParentBlock && buildsOnParentPayload) {
-    return true;
+    return !isStartSlotOfEpoch(bidSlot);
   }
 
   if (bidParentBlockRoot !== head.blockRoot) {
@@ -113,21 +113,6 @@ async function validateExecutionPayloadBid(
 
   // [IGNORE] The bid is compatible with the current head branch.
   const head = chain.forkChoice.getHead();
-  const buildsOnParentBlock = bidParentBlockRoot === head.parentRoot;
-  const buildsOnParentPayload = bidParentBlockHash === head.parentBlockHash;
-
-  // [IGNORE] A bid on the head's parent cannot be used at an epoch boundary because proposer-boost
-  // reorgs are disabled there. Drop it before regenerating the parent state through the epoch transition.
-  if (isStartSlotOfEpoch(bid.slot) && buildsOnParentBlock && buildsOnParentPayload) {
-    throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
-      code: ExecutionPayloadBidErrorCode.BUILDS_ON_PARENT_AT_EPOCH_BOUNDARY,
-      slot: bid.slot,
-      parentBlockRoot: bidParentBlockRoot,
-      parentBlockHash: bidParentBlockHash,
-      headBlockRoot: head.blockRoot,
-    });
-  }
-
   if (!isBidCompatibleWithHead(chain.forkChoice, head, bid.slot, bidParentBlockRoot, bidParentBlockHash)) {
     throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
       code: ExecutionPayloadBidErrorCode.INCOMPATIBLE_WITH_HEAD,
