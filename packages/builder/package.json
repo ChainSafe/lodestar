@@ -11,7 +11,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     }
@@ -51,9 +51,9 @@
     "@lodestar/api": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
+    "@lodestar/state-transition": "workspace:^",
     "@lodestar/types": "workspace:^",
-    "@lodestar/utils": "workspace:^",
-    "@lodestar/state-transition": "workspace:^"
+    "@lodestar/utils": "workspace:^"
   },
   "devDependencies": {
     "@lodestar/logger": "workspace:^",
