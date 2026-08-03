@@ -3,8 +3,8 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const AggregationBits =
   spec: |
-    <spec custom_type="AggregationBits" fork="electra" hash="b5ff0fee">
-    AggregationBits = Bitlist[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]
+    <spec custom_type="AggregationBits" fork="electra" hash="229bd765">
+    AggregationBits = BitList[MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT]
     </spec>
 
 - name: AggregationBits#gloas
@@ -12,8 +12,8 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const AggregationBits =
   spec: |
-    <spec custom_type="AggregationBits" fork="gloas" hash="b3a031ab">
-    AggregationBits = ProgressiveBitlist
+    <spec custom_type="AggregationBits" fork="gloas" hash="ba289449">
+    AggregationBits = ProgressiveBitList
     </spec>
 
 - name: AttestingIndices#electra
@@ -66,8 +66,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const BlobIndex =
   spec: |
-    <spec custom_type="BlobIndex" fork="deneb" hash="93fde5eb">
-    BlobIndex = uint64
+    <spec custom_type="BlobIndex" fork="deneb" hash="33e1ac02">
+    BlobIndex = Uint64
     </spec>
 
 - name: BlockAccessList#gloas
@@ -102,8 +102,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const BuilderIndex =
   spec: |
-    <spec custom_type="BuilderIndex" fork="gloas" hash="1b01f5a2">
-    BuilderIndex = uint64
+    <spec custom_type="BuilderIndex" fork="gloas" hash="e7ea6e8b">
+    BuilderIndex = Uint64
     </spec>
 
 - name: Cell#fulu
@@ -118,8 +118,8 @@
 - name: CellIndex#fulu
   sources: []
   spec: |
-    <spec custom_type="CellIndex" fork="fulu" hash="b9217d91">
-    CellIndex = uint64
+    <spec custom_type="CellIndex" fork="fulu" hash="74f4aa14">
+    CellIndex = Uint64
     </spec>
 
 - name: ColumnIndex#fulu
@@ -127,15 +127,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ColumnIndex =
   spec: |
-    <spec custom_type="ColumnIndex" fork="fulu" hash="4bcbe6e2">
-    ColumnIndex = uint64
-    </spec>
-
-- name: CommitmentIndex#fulu
-  sources: []
-  spec: |
-    <spec custom_type="CommitmentIndex" fork="fulu" hash="bb33608a">
-    CommitmentIndex = uint64
+    <spec custom_type="ColumnIndex" fork="fulu" hash="5488b647">
+    ColumnIndex = Uint64
     </spec>
 
 - name: CommitteeIndex#phase0
@@ -143,8 +136,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const CommitteeIndex =
   spec: |
-    <spec custom_type="CommitteeIndex" fork="phase0" hash="a438f3da">
-    CommitteeIndex = uint64
+    <spec custom_type="CommitteeIndex" fork="phase0" hash="0cebe62f">
+    CommitteeIndex = Uint64
     </spec>
 
 - name: ConsolidationRequests#electra
@@ -197,8 +190,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const CustodyIndex =
   spec: |
-    <spec custom_type="CustodyIndex" fork="fulu" hash="dc544cf4">
-    CustodyIndex = uint64
+    <spec custom_type="CustodyIndex" fork="fulu" hash="519f8cbf">
+    CustodyIndex = Uint64
     </spec>
 
 - name: DepositRequests#electra
@@ -242,23 +235,23 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Epoch =
   spec: |
-    <spec custom_type="Epoch" fork="phase0" hash="f4ad4edb">
-    Epoch = uint64
+    <spec custom_type="Epoch" fork="phase0" hash="c9e89b1e">
+    Epoch = Uint64
     </spec>
 
 - name: Ether#phase0
   sources: []
   spec: |
-    <spec custom_type="Ether" fork="phase0" hash="9b026dbe">
-    Ether = uint64
+    <spec custom_type="Ether" fork="phase0" hash="27d400ab">
+    Ether = Uint64
     </spec>
 
-- name: ExecutionAddress#bellatrix
+- name: ExecutionAddress#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ExecutionAddress =
   spec: |
-    <spec custom_type="ExecutionAddress" fork="bellatrix" hash="c21cdbfb">
+    <spec custom_type="ExecutionAddress" fork="phase0" hash="c21cdbfb">
     ExecutionAddress = Bytes20
     </spec>
 
@@ -314,31 +307,13 @@
     ForkDigest = Bytes4
     </spec>
 
-- name: G1Point#deneb
-  sources:
-    - file: packages/types/src/deneb/sszTypes.ts
-      search: export const G1Point =
-  spec: |
-    <spec custom_type="G1Point" fork="deneb" hash="0bf8682c">
-    G1Point = Bytes48
-    </spec>
-
-- name: G2Point#deneb
-  sources:
-    - file: packages/types/src/deneb/sszTypes.ts
-      search: export const G2Point =
-  spec: |
-    <spec custom_type="G2Point" fork="deneb" hash="d4d7ed78">
-    G2Point = Bytes96
-    </spec>
-
 - name: Gwei#phase0
   sources:
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Gwei =
   spec: |
-    <spec custom_type="Gwei" fork="phase0" hash="16aa7098">
-    Gwei = uint64
+    <spec custom_type="Gwei" fork="phase0" hash="436a6f8f">
+    Gwei = Uint64
     </spec>
 
 - name: Hash32#phase0
@@ -396,8 +371,8 @@
 - name: NodeID#phase0
   sources: []
   spec: |
-    <spec custom_type="NodeID" fork="phase0" hash="e557d650">
-    NodeID = uint256
+    <spec custom_type="NodeID" fork="phase0" hash="7bee022b">
+    NodeID = Uint256
     </spec>
 
 - name: ParticipationFlags#altair
@@ -405,8 +380,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ParticipationFlags =
   spec: |
-    <spec custom_type="ParticipationFlags" fork="altair" hash="e72bab11">
-    ParticipationFlags = uint8
+    <spec custom_type="ParticipationFlags" fork="altair" hash="1fc90e3e">
+    ParticipationFlags = Uint8
     </spec>
 
 - name: PayloadId#bellatrix
@@ -419,15 +394,15 @@
 - name: PayloadStatus#gloas
   sources: []
   spec: |
-    <spec custom_type="PayloadStatus" fork="gloas" hash="ccbcacae">
-    PayloadStatus = uint8
+    <spec custom_type="PayloadStatus" fork="gloas" hash="164e15bf">
+    PayloadStatus = Uint8
     </spec>
 
 - name: PayloadValidationStatus#bellatrix
   sources: []
   spec: |
-    <spec custom_type="PayloadValidationStatus" fork="bellatrix" hash="f1a196c7">
-    PayloadValidationStatus = uint8
+    <spec custom_type="PayloadValidationStatus" fork="bellatrix" hash="82f4a1dd">
+    PayloadValidationStatus = Uint8
     </spec>
 
 - name: Root#phase0
@@ -444,8 +419,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const RowIndex =
   spec: |
-    <spec custom_type="RowIndex" fork="fulu" hash="ee304720">
-    RowIndex = uint64
+    <spec custom_type="RowIndex" fork="fulu" hash="75a6061b">
+    RowIndex = Uint64
     </spec>
 
 - name: Slot#phase0
@@ -453,15 +428,15 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const Slot =
   spec: |
-    <spec custom_type="Slot" fork="phase0" hash="d0056c55">
-    Slot = uint64
+    <spec custom_type="Slot" fork="phase0" hash="73130c52">
+    Slot = Uint64
     </spec>
 
 - name: SubnetID#phase0
   sources: []
   spec: |
-    <spec custom_type="SubnetID" fork="phase0" hash="55bb7b76">
-    SubnetID = uint64
+    <spec custom_type="SubnetID" fork="phase0" hash="24b97fd7">
+    SubnetID = Uint64
     </spec>
 
 - name: Transaction#bellatrix
@@ -487,8 +462,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const ValidatorIndex =
   spec: |
-    <spec custom_type="ValidatorIndex" fork="phase0" hash="3bab44f1">
-    ValidatorIndex = uint64
+    <spec custom_type="ValidatorIndex" fork="phase0" hash="dfa6dbcf">
+    ValidatorIndex = Uint64
     </spec>
 
 - name: Version#phase0
@@ -514,8 +489,8 @@
     - file: packages/types/src/primitive/sszTypes.ts
       search: export const WithdrawalIndex =
   spec: |
-    <spec custom_type="WithdrawalIndex" fork="capella" hash="53fe9b45">
-    WithdrawalIndex = uint64
+    <spec custom_type="WithdrawalIndex" fork="capella" hash="fe950522">
+    WithdrawalIndex = Uint64
     </spec>
 
 - name: WithdrawalRequests#electra

@@ -19,8 +19,12 @@ export async function* onLightClientUpdatesByRange(
   assertLightClientServer(chain.lightClientServer);
 
   const count = Math.min(MAX_REQUEST_LIGHT_CLIENT_UPDATES, requestBody.count);
+  if (!Number.isSafeInteger(requestBody.startPeriod)) {
+    throw new ResponseError(RespStatus.INVALID_REQUEST, "startPeriod out of range");
+  }
   let started = false;
-  for (let period = requestBody.startPeriod; period < requestBody.startPeriod + count; period++) {
+  for (let i = 0; i < count; i++) {
+    const period = requestBody.startPeriod + i;
     try {
       const update = await chain.lightClientServer.getUpdate(period);
       const boundary = chain.config.getForkBoundaryAtEpoch(computeEpochAtSlot(update.signatureSlot));
