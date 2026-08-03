@@ -86,7 +86,7 @@ export async function validateGossipBlock(
   // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
   const proposerIndex = block.proposerIndex;
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    if (!chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot)) {
+    if (isForkPostGloas(fork) && !chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot)) {
       await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
       chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
     }
@@ -275,7 +275,9 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
-  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
+  if (isForkPostGloas(fork)) {
+    chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
+  }
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
@@ -283,6 +285,10 @@ export async function validateGossipBlock(
   // in such a case do not REJECT, instead IGNORE this message.
   if (blockState.getBeaconProposer(blockSlot) !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+  }
+
+  if (!isForkPostGloas(fork) && chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
@@ -294,12 +300,12 @@ export async function validateGossipBlock(
     await sleep(msToBlockSlot);
   }
 
-  // Check again after all async validation, including the early-block delay, so concurrent proposals cannot both pass.
-  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+  // Check again after all async validation so concurrent Gloas proposals cannot both pass.
+  if (isForkPostGloas(fork) && chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 
-  chain.seenBlockProposers.add(blockSlot, proposerIndex, blockRoot);
+  chain.seenBlockProposers.add(blockSlot, proposerIndex);
 
   return {skippedSlots};
 }

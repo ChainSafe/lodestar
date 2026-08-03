@@ -608,11 +608,7 @@ async function validateMessageForTopic(
       }
 
       await validateGossipBlock(chain.config, chain, signedBlock, fork);
-      chain.seenBlockProposers.add(
-        signedBlock.message.slot,
-        signedBlock.message.proposerIndex,
-        toRootHex(chain.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message))
-      );
+      chain.seenBlockProposers.add(signedBlock.message.slot, signedBlock.message.proposerIndex);
       break;
     }
 

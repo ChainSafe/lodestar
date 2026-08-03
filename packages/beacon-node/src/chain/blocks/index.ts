@@ -1,3 +1,4 @@
+import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, Slot} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../../metrics/metrics.js";
@@ -106,6 +107,16 @@ export async function processBlocks(
         this.forkChoice.validateLatestHash(segmentExecStatus.invalidSegmentLVH);
       }
       throw segmentExecStatus.execAborted.execError;
+    }
+
+    if (
+      opts.skipVerifyBlockSignatures !== true &&
+      this.config.getForkSeq(relevantBlocks[0].getBlock().message.slot) >= ForkSeq.gloas
+    ) {
+      for (const blockInput of relevantBlocks) {
+        const block = blockInput.getBlock().message;
+        this.seenBlockProposers.add(block.slot, block.proposerIndex);
+      }
     }
 
     const {executionStatuses} = segmentExecStatus;

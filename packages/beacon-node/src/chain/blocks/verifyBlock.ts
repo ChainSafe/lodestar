@@ -204,12 +204,12 @@ export async function verifyBlocksInEpoch(
       // maybe chain with the above verifyBlocksSignatures()
     ]);
 
-    if (opts.skipVerifyBlockSignatures !== true) {
+    if (fork >= ForkSeq.gloas && opts.skipVerifyBlockSignatures !== true) {
       for (const block of blocks) {
         const blockRoot = toRootHex(
           this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)
         );
-        this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex, blockRoot);
+        this.seenBlockProposers.observeBlockRoot(block.message.slot, block.message.proposerIndex, blockRoot);
       }
     }
 

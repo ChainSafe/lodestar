@@ -40,9 +40,8 @@ export class SeenBlockProposers {
     this.blockRootsBySlot.getOrDefault(blockSlot).getOrDefault(proposerIndex).add(blockRoot);
   }
 
-  /** Mark a signature-verified block as known from gossip or another block import path. */
-  add(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): void {
-    this.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
+  /** Mark a block as known from gossip or another block import path. */
+  add(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
     this.proposerIndexesBySlot.getOrDefault(blockSlot).add(proposerIndex);
   }
 

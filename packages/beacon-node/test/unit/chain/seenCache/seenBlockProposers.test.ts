@@ -16,7 +16,7 @@ describe("SeenBlockProposers", () => {
     expect(cache.isKnown(slot, proposerIndex)).toBe(false);
     expect(cache.hasBlockRoot(slot, proposerIndex, blockRoot)).toBe(true);
 
-    cache.add(slot, proposerIndex, blockRoot);
+    cache.add(slot, proposerIndex);
     cache.observeBlockRoot(slot, proposerIndex, conflictingBlockRoot);
 
     expect(cache.isKnown(slot, proposerIndex)).toBe(true);
@@ -26,7 +26,8 @@ describe("SeenBlockProposers", () => {
 
   it("prunes accepted proposals and observed roots", () => {
     const cache = new SeenBlockProposers();
-    cache.add(slot, proposerIndex, blockRoot);
+    cache.observeBlockRoot(slot, proposerIndex, blockRoot);
+    cache.add(slot, proposerIndex);
 
     cache.prune(slot + 1);
 
