@@ -33,5 +33,5 @@ jobs:
       - name: Install binutils
         run: sudo apt-get install -y binutils
 
-      - name: Check native module CPU portability
-        run: bash scripts/ci/check_native_portability.sh
+      - name: Check native module portability
+        run: node scripts/ci/check_native_portability.mjs
