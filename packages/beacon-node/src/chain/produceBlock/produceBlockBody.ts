@@ -276,7 +276,7 @@ export async function produceBlockBody<T extends BlockType>(
     let parentExecutionRequests: gloas.ExecutionRequests;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
-    // Spec: should_build_on_full(store, head). `parentBlock` is the proposer's head
+    // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
     // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
     // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
     const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
