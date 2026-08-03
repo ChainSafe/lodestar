@@ -67,17 +67,18 @@ export class SyncCommitteeService {
         return;
       }
 
-      // Fetch info first so a potential delay is absorbed by the sleep() below
-      const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
-      if (dutiesAtSlot.length === 0) {
-        return;
-      }
-
       // An optimistic validator MUST NOT participate in sync committees, since it has not
       // fully verified the execution payload of the head block it would sign over.
       // https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
       if (this.syncingStatusTracker.isNodeOptimistic() === true) {
         this.logger.debug("Skipping sync committee duties while node is optimistic", {slot});
+        return;
+      }
+
+      // Fetch info first so a potential delay is absorbed by the sleep() below.
+      // This signs selection proofs, so keep it after the optimistic-node gate above.
+      const dutiesAtSlot = await this.dutiesService.getDutiesAtSlot(slot);
+      if (dutiesAtSlot.length === 0) {
         return;
       }
 
@@ -91,9 +92,15 @@ export class SyncCommitteeService {
       ]);
       this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot) - syncMessageDueMs / 1000);
 
-      // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
+      const head = await this.getHeadForSyncCommitteeMessage(slot);
+      if (head.executionOptimistic) {
+        this.logger.debug("Skipping sync committee duties while head is optimistic", {slot});
+        return;
+      }
+
+      // Step 1. Sign and publish a `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
-      const beaconBlockRoot = await this.produceAndPublishSyncCommittees(fork, slot, dutiesAtSlot);
+      const beaconBlockRoot = await this.produceAndPublishSyncCommittees(fork, slot, head.root, dutiesAtSlot);
 
       // Step 2. If an attestation was produced, make an aggregate.
       // First, wait until the `CONTRIBUTION_DUE_BPS` of the slot
@@ -135,6 +142,7 @@ export class SyncCommitteeService {
   private async produceAndPublishSyncCommittees(
     fork: ForkName,
     slot: Slot,
+    blockRoot: Root,
     duties: SyncDutyAndProofs[]
   ): Promise<Root> {
     const logCtx = {slot};
@@ -144,10 +152,6 @@ export class SyncCommitteeService {
     // Produce one attestation data per slot and subcommitteeIndex
     // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
-
-    const blockRoot: Uint8Array =
-      this.chainHeaderTracker.getCurrentChainHead(slot) ??
-      (await this.api.beacon.getBlockRoot({blockId: "head"})).value().root;
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 
@@ -189,6 +193,16 @@ export class SyncCommitteeService {
     }
 
     return blockRoot;
+  }
+
+  private async getHeadForSyncCommitteeMessage(slot: Slot): Promise<{root: Root; executionOptimistic: boolean}> {
+    const cachedHead = this.chainHeaderTracker.getCurrentChainHeadData(slot);
+    if (cachedHead) {
+      return cachedHead;
+    }
+
+    const res = await this.api.beacon.getBlockRoot({blockId: "head"});
+    return {root: res.value().root, executionOptimistic: res.meta().executionOptimistic};
   }
 
   /**

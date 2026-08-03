@@ -343,8 +343,8 @@ export function getValidatorApi(
    *    need to be checked/aborted here as assembleBody would call EL's api for the latest
    *    executionStatus of the parentRoot. If still not validated, produceBlock will throw error.
    * 4. SyncCommitteeSignature (base sync committee message) is aborted in the validator client
-   *    (see SyncCommitteeService) when the node is optimistic, since it is produced from the head
-   *    root without a beacon-node produce endpoint to gate here. Spec:
+   *    (see SyncCommitteeService) when the head root it would sign is optimistic, since it is
+   *    produced from the head root without a beacon-node produce endpoint to gate here. Spec:
    *    https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
    */
 

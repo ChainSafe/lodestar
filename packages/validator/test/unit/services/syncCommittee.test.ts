@@ -47,15 +47,18 @@ describe("SyncCommitteeService", () => {
     vi.spyOn(validatorStore, "hasVotingPubkey");
     vi.spyOn(validatorStore, "hasSomeValidators");
     vi.spyOn(validatorStore, "signAttestationSelectionProof");
+    vi.spyOn(validatorStore, "signSyncCommitteeSelectionProof");
     vi.spyOn(validatorStore, "signSyncCommitteeSignature");
     vi.spyOn(validatorStore, "signContributionAndProof");
 
     vi.spyOn(chainHeaderTracker, "getCurrentChainHead");
+    vi.spyOn(chainHeaderTracker, "getCurrentChainHeadData");
 
     validatorStore.votingPubkeys.mockReturnValue(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.mockReturnValue(true);
     validatorStore.hasSomeValidators.mockReturnValue(true);
     validatorStore.signAttestationSelectionProof.mockResolvedValue(ZERO_HASH);
+    validatorStore.signSyncCommitteeSelectionProof.mockResolvedValue(ZERO_HASH);
   });
   afterEach(() => {
     controller.abort();
@@ -114,7 +117,10 @@ describe("SyncCommitteeService", () => {
 
         // Mock beacon's sync committee and contribution routes
 
-        chainHeaderTracker.getCurrentChainHead.mockReturnValue(beaconBlockRoot);
+        chainHeaderTracker.getCurrentChainHeadData.mockReturnValue({
+          root: beaconBlockRoot,
+          executionOptimistic: false,
+        });
         api.beacon.submitPoolSyncCommitteeSignatures.mockResolvedValue(mockApiResponse({}));
         api.validator.produceSyncCommitteeContribution.mockResolvedValue(mockApiResponse({data: contribution}));
         api.validator.publishContributionAndProofs.mockResolvedValue(mockApiResponse({}));
@@ -175,7 +181,54 @@ describe("SyncCommitteeService", () => {
 
         await clock.tickSlotFns(0, controller.signal);
 
-        // Neither the sync committee message nor the contribution should be signed or published
+        // Duties lookup signs selection proofs, so it must not happen while the node is optimistic.
+        expect(syncCommitteeService["dutiesService"].getDutiesAtSlot).not.toHaveBeenCalled();
+        expect(validatorStore.signSyncCommitteeSelectionProof).not.toHaveBeenCalled();
+        // Neither the sync committee message nor the contribution should be signed or published.
+        expect(validatorStore.signSyncCommitteeSignature).not.toHaveBeenCalled();
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).not.toHaveBeenCalled();
+        expect(api.validator.produceSyncCommitteeContribution).not.toHaveBeenCalled();
+        expect(api.validator.publishContributionAndProofs).not.toHaveBeenCalled();
+      });
+
+      it("Should not participate in sync committees when the head becomes optimistic after waiting for the block", async () => {
+        const clock = new ClockMock();
+        const syncCommitteeService = new SyncCommitteeService(
+          config,
+          loggerVc,
+          api,
+          clock,
+          validatorStore,
+          emitter,
+          chainHeaderTracker,
+          syncingStatusTracker,
+          null,
+          opts
+        );
+
+        const beaconBlockRoot = Buffer.alloc(32, 0x4d);
+        const duties: SyncDutyAndProofs[] = [
+          {
+            duty: {
+              pubkey: toHexString(pubkeys[0]),
+              validatorIndex: 0,
+              subnets: [0],
+            },
+            selectionProofs: [{selectionProof: ZERO_HASH, subcommitteeIndex: 0}],
+          },
+        ];
+
+        syncingStatusTracker.isNodeOptimistic.mockReturnValue(false);
+        vi.spyOn(syncCommitteeService["dutiesService"], "getDutiesAtSlot").mockResolvedValue(duties);
+        chainHeaderTracker.getCurrentChainHeadData.mockReturnValue({
+          root: beaconBlockRoot,
+          executionOptimistic: true,
+        });
+
+        await clock.tickSlotFns(0, controller.signal);
+
+        expect(syncCommitteeService["dutiesService"].getDutiesAtSlot).toHaveBeenCalledOnce();
+        // The already-fetched duties may include selection proofs, but the optimistic head must not be signed.
         expect(validatorStore.signSyncCommitteeSignature).not.toHaveBeenCalled();
         expect(api.beacon.submitPoolSyncCommitteeSignatures).not.toHaveBeenCalled();
         expect(api.validator.produceSyncCommitteeContribution).not.toHaveBeenCalled();
