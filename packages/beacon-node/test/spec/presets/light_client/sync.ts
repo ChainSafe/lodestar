@@ -107,7 +107,6 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         updateHeadersOnForcedUpdate: true,
       };
       const lightClient = new LightclientSpec(config, lightClientOpts, bootstrap);
-      let latestSignatureSlot = bootstrap.header.beacon.slot;
 
       const stepsLen = testcase.steps.length;
 
@@ -164,7 +163,6 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 
             lightClient.onUpdate(currentSlot, update);
-            latestSignatureSlot = update.signatureSlot;
             runChecks(processUpdate.checks);
           }
 
@@ -185,7 +183,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
             const targetFork = getForkFromVersion(config, upgradeStore.store_fork_version);
             logger.debug(`Step ${i}/${stepsLen} upgrade_store`, {storeFork, targetFork});
 
-            upgradeLightClientStore(config, targetFork, lightClient.store, latestSignatureSlot);
+            upgradeLightClientStore(config, targetFork, lightClient.store);
             storeFork = targetFork;
             runChecks(upgradeStore.checks);
           }

@@ -28,13 +28,12 @@ import {
   LightClientHeader,
   LightClientOptimisticUpdate,
   LightClientUpdate,
-  Slot,
   SyncCommittee,
   isElectraLightClientUpdate,
   ssz,
 } from "@lodestar/types";
 import {byteArrayEquals, hash, verifyMerkleBranch} from "@lodestar/utils";
-import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "../../util/epoch.js";
+import {computeEpochAtSlot} from "../../util/epoch.js";
 import type {ILightClientStore, SyncCommitteeFast} from "./store.js";
 
 export const GENESIS_SLOT = 0;
@@ -457,14 +456,10 @@ export function upgradeLightClientOptimisticUpdate(
 export function upgradeLightClientStore(
   config: ChainForkConfig,
   targetFork: ForkName,
-  store: ILightClientStore,
-  signatureSlot: Slot
+  store: ILightClientStore
 ): ILightClientStore {
-  const updateSignaturePeriod = computeSyncPeriodAtSlot(signatureSlot);
-  const bestValidUpdate = store.bestValidUpdates.get(updateSignaturePeriod);
-
-  if (bestValidUpdate) {
-    store.bestValidUpdates.set(updateSignaturePeriod, {
+  for (const [period, bestValidUpdate] of store.bestValidUpdates) {
+    store.bestValidUpdates.set(period, {
       update: upgradeLightClientUpdate(config, targetFork, bestValidUpdate.update),
       summary: bestValidUpdate.summary,
     });
