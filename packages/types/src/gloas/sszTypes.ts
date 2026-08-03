@@ -326,11 +326,16 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     blockHash: Bytes32,
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintNum64,
+    // gasLimit is a uint64 with no bound in process_execution_payload_bid (the gas-limit target
+    // check is gossip-only), so a block can carry any value; use UintBn64 so the bid hashTreeRoot
+    // matches exact-uint64 clients for values above 2**53.
+    gasLimit: UintBn64,
     builderIndex: BuilderIndex,
     slot: Slot,
     value: UintNum64,
-    executionPayment: UintNum64,
+    // executionPayment is a uint64 with no bound in process_execution_payload_bid, so a block can
+    // carry any value; use UintBn64 so the hashTreeRoot matches exact-uint64 clients for values > 2**53.
+    executionPayment: UintBn64,
     blobKzgCommitments: BlobKzgCommitments,
     executionRequestsRoot: Root,
   },

@@ -137,6 +137,7 @@ function translateParticipation(
       attestation.inclusionDelay,
       epochCtx.epoch,
       rootCache,
+      null,
       null
     );
 
