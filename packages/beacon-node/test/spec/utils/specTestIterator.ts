@@ -91,16 +91,12 @@ export const defaultSkipOpts: SkipOpts = {
     // New test suite added in v1.7.0-alpha.13 (consensus-specs #5441); Lodestar still applies
     // the pre-gloas proposer boost, so the head weight differs by the boost amount.
     /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
     // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
     /^heze\/fork_choice_compliance\/.*/,
     // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
-    // The fork_base_state vector in this suite is a broken eip8148 upgrade vector (post state has
-    // the eip8148-only validator_sweep_thresholds field) that crashes input deserialization before
-    // any per-test skip can apply. It was added by mistake and removed upstream in
-    // https://github.com/ethereum/consensus-specs/pull/5440 — unskip on the next spec-tests bump.
-    /^heze\/fork\/fork\/pyspec_tests$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented

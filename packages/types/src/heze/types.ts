@@ -4,7 +4,7 @@ import * as ssz from "./sszTypes.js";
 export type InclusionListCommittee = ValueOf<typeof ssz.InclusionListCommittee>;
 export type InclusionList = ValueOf<typeof ssz.InclusionList>;
 export type SignedInclusionList = ValueOf<typeof ssz.SignedInclusionList>;
-export type InclusionListByCommitteeIndicesRequest = ValueOf<typeof ssz.InclusionListByCommitteeIndicesRequest>;
+export type InclusionListsByIndicesRequest = ValueOf<typeof ssz.InclusionListsByIndicesRequest>;
 
 export type ExecutionPayloadBid = ValueOf<typeof ssz.ExecutionPayloadBid>;
 export type SignedExecutionPayloadBid = ValueOf<typeof ssz.SignedExecutionPayloadBid>;

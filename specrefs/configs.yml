@@ -612,7 +612,9 @@
     </spec>
 
 - name: MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS:"
   spec: |
     <spec config_var="MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" fork="heze" hash="4bab088f">
     MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: Slot = 1

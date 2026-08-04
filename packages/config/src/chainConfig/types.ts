@@ -140,6 +140,7 @@ export type ChainConfig = {
 
   // HEZE
   MAX_REQUEST_INCLUSION_LIST: number;
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: number;
   MAX_BYTES_PER_INCLUSION_LIST: number;
 
   // Fast Confirmation Rule
@@ -266,6 +267,7 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
 
   // HEZE
   MAX_REQUEST_INCLUSION_LIST: "number",
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: "number",
   MAX_BYTES_PER_INCLUSION_LIST: "number",
 
   // Gloas
