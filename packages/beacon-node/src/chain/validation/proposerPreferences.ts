@@ -1,5 +1,5 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -24,9 +24,10 @@ export async function validateGossipProposerPreferences(
   const dependentRootHex = toRootHex(dependentRoot);
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
-  // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead.
-  const currentEpoch = chain.clock.currentEpoch;
-  if (proposalEpoch < currentEpoch || proposalEpoch > currentEpoch + MIN_SEED_LOOKAHEAD) {
+  // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
+  // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
+  const currentEpoch = computeEpochAtSlot(chain.clock.currentSlotWithGossipDisparity);
+  if (proposalEpoch > currentEpoch + MIN_SEED_LOOKAHEAD) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.INVALID_EPOCH,
       proposalSlot,
@@ -36,12 +37,11 @@ export async function validateGossipProposerPreferences(
 
   // [IGNORE] `preferences.proposal_slot` has not already passed, i.e. `proposal_slot > current_slot`,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
-  const currentSlot = chain.clock.currentSlotWithGossipDisparity;
-  if (proposalSlot <= currentSlot) {
+  if (chain.clock.msFromSlot(proposalSlot) > chain.config.MAXIMUM_GOSSIP_CLOCK_DISPARITY) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
       code: ProposerPreferencesErrorCode.PROPOSAL_SLOT_PASSED,
       proposalSlot,
-      currentSlot,
+      currentSlot: chain.clock.currentSlot,
     });
   }
 
@@ -55,7 +55,7 @@ export async function validateGossipProposerPreferences(
     });
   }
 
-  const dependentEpoch = proposalEpoch - MIN_SEED_LOOKAHEAD;
+  const dependentEpoch = Math.max(GENESIS_EPOCH, proposalEpoch - MIN_SEED_LOOKAHEAD);
   const dependentRootSlot = getDependentRootSlot(dependentEpoch);
 
   // [REJECT] The slot of the block with root `preferences.dependent_root` is strictly less than

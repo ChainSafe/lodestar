@@ -1,11 +1,11 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
-import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {IClock, computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, gloas} from "@lodestar/types";
 import {fromHex, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {BlockDutiesService} from "./blockDuties.js";
 import {ValidatorStore} from "./validatorStore.js";
 
