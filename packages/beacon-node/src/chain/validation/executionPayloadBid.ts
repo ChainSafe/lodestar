@@ -7,6 +7,7 @@ import {
   getExecutionPayloadBidSigningRoot,
   isActiveBuilder,
   isGasLimitTargetCompatible,
+  isStartSlotOfEpoch,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
@@ -46,8 +47,8 @@ function getMinBidValue(currentHighestBid: number): number {
 /**
  * Check whether a bid builds on one of the paths compatible with the local head branch.
  *
- * The direct parent path is always allowed for proposer-boost reorgs. Otherwise the bid
- * must build on the local head's full or empty payload variant, as selected for its slot.
+ * Building directly on the parent is allowed for proposer-boost reorgs outside epoch boundaries.
+ * Otherwise the bid must build on the local head's full or empty payload variant, as selected for its slot.
  */
 function isBidCompatibleWithHead(
   forkChoice: IForkChoice,
@@ -60,7 +61,9 @@ function isBidCompatibleWithHead(
   const buildsOnParentPayload = bidParentBlockHash === head.parentBlockHash;
 
   if (buildsOnParentBlock && buildsOnParentPayload) {
-    return true;
+    // The spec allows this at epoch boundaries, but Lodestar does not propagate these bids because validating
+    // them requires an epoch transition for a parent state that cannot be used for proposer-boost reorgs.
+    return !isStartSlotOfEpoch(bidSlot);
   }
 
   if (bidParentBlockRoot !== head.blockRoot) {
