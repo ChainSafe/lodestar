@@ -30,8 +30,6 @@ const sanity: TestRunnerFn<any, BeaconStateAllForks> = (fork, testName, testSuit
 };
 
 const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (fork) => {
-  const timeout = fork === ForkName.gloas && ACTIVE_PRESET === PresetName.mainnet ? 60000 : 30000;
-
   return {
     testFunction: (testcase) => {
       const stateTB = testcase.pre.clone();
@@ -48,7 +46,7 @@ const sanitySlots: TestRunnerFn<SanitySlotsTestCase, BeaconStateAllForks> = (for
         post: ssz[fork].BeaconState,
       },
       shouldError: (testCase) => !testCase.post,
-      timeout,
+     timeout: 30000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (_testCase, expected, actual) => {
         expectEqualBeaconState(fork, expected, actual);
