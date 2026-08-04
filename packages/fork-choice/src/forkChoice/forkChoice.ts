@@ -388,7 +388,7 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
-  /** Spec: should_build_on_full(store, head) */
+  /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
     return this.protoArray.shouldBuildOnFull(head, slot);
   }

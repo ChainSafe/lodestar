@@ -34,6 +34,13 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: "category",
+          label: "Builder Client",
+          items: [
+            "run/builder-management/builder-cli",
+          ],
+        },
+        {
+          type: "category",
           label: "Validator Client",
           items: [
             "run/validator-management/vc-configuration",

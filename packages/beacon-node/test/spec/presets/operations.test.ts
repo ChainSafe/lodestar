@@ -38,7 +38,12 @@ const syncAggregate: BlockProcessFn<CachedBeaconStateAllForks> = (
 const operationFns: Record<string, BlockProcessFn<CachedBeaconStateAllForks>> = {
   attestation: (state, testCase: {attestation: phase0.Attestation}) => {
     const fork = state.config.getForkSeq(state.slot);
-    blockFns.processAttestations(fork, state, [testCase.attestation]);
+    blockFns.processAttestations(
+      fork,
+      state,
+      [testCase.attestation],
+      fork >= ForkSeq.gloas ? (state as CachedBeaconStateGloas).latestExecutionPayloadBid.slot : null
+    );
   },
 
   attester_slashing: (state, testCase: BaseSpecTest & {attester_slashing: AttesterSlashing}) => {

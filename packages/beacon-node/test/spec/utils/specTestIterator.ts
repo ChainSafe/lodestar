@@ -87,6 +87,10 @@ export const defaultSkipOpts: SkipOpts = {
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
     /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
+    // New test suite added in v1.7.0-alpha.13 (consensus-specs #5441); Lodestar still applies
+    // the pre-gloas proposer boost, so the head weight differs by the boost amount.
+    /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
     // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
     /^heze\/fork_choice_compliance\/.*/,
@@ -105,7 +109,8 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
     // boost wrongly denied. Fails identically on every pre-gloas fork.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
-    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
+    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
