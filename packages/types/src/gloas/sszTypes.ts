@@ -303,7 +303,10 @@ export const ProposerPreferences = new ContainerType(
     proposalSlot: Slot,
     validatorIndex: ValidatorIndex,
     feeRecipient: ExecutionAddress,
-    targetGasLimit: UintNum64,
+    // targetGasLimit is a proposer-set uint64 with no bound; use UintBn64 so a value above 2**53
+    // round-trips exactly (this container is not in the block HTR, but the value is emitted to the
+    // EL via engine PayloadAttributesV4 and over the SSE payload_attributes event).
+    targetGasLimit: UintBn64,
   },
   {typeName: "ProposerPreferences", jsonCase: "eth2"}
 );
@@ -323,11 +326,16 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     blockHash: Bytes32,
     prevRandao: Bytes32,
     feeRecipient: ExecutionAddress,
-    gasLimit: UintNum64,
+    // gasLimit is a uint64 with no bound in process_execution_payload_bid (the gas-limit target
+    // check is gossip-only), so a block can carry any value; use UintBn64 so the bid hashTreeRoot
+    // matches exact-uint64 clients for values above 2**53.
+    gasLimit: UintBn64,
     builderIndex: BuilderIndex,
     slot: Slot,
     value: UintNum64,
-    executionPayment: UintNum64,
+    // executionPayment is a uint64 with no bound in process_execution_payload_bid, so a block can
+    // carry any value; use UintBn64 so the hashTreeRoot matches exact-uint64 clients for values > 2**53.
+    executionPayment: UintBn64,
     blobKzgCommitments: BlobKzgCommitments,
     executionRequestsRoot: Root,
   },
@@ -377,6 +385,15 @@ export const SignedExecutionPayloadEnvelope = new ContainerType(
   {typeName: "SignedExecutionPayloadEnvelope", jsonCase: "eth2"}
 );
 
+export const SignedExecutionPayloadEnvelopeContents = new ContainerType(
+  {
+    signedExecutionPayloadEnvelope: SignedExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "SignedExecutionPayloadEnvelopeContents", jsonCase: "eth2"}
+);
+
 export const BeaconBlockBody = new ProgressiveContainerType(
   {
     randaoReveal: phase0Ssz.BeaconBlockBody.fields.randaoReveal,
@@ -414,6 +431,17 @@ export const SignedBeaconBlock = new ContainerType(
     signature: BLSSignature,
   },
   {typeName: "SignedBeaconBlock", jsonCase: "eth2"}
+);
+
+// Full block production response for self-builds, enables stateless envelope publishing
+export const BlockContents = new ContainerType(
+  {
+    block: BeaconBlock,
+    executionPayloadEnvelope: ExecutionPayloadEnvelope,
+    kzgProofs: fuluSsz.KZGProofs,
+    blobs: denebSsz.Blobs,
+  },
+  {typeName: "BlockContents", jsonCase: "eth2"}
 );
 
 export const LightClientHeader = new ContainerType(
@@ -567,7 +595,7 @@ export const PayloadAttributes = new ContainerType(
   {
     ...denebSsz.PayloadAttributes.fields,
     slotNumber: Slot,
-    targetGasLimit: UintNum64,
+    targetGasLimit: UintBn64,
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );

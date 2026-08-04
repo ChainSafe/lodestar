@@ -11,6 +11,7 @@ import {
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {PayloadEnvelopeInputSource} from "../../../../src/chain/blocks/payloadEnvelopeInput/types.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {computeNodeIdFromPrivateKey} from "../../../../src/network/subnets/index.js";
 import {Batch, BatchError, BatchErrorCode, BatchStatus} from "../../../../src/sync/range/batch.js";
 import {getBatchSlotRange} from "../../../../src/sync/range/utils/index.js";
@@ -592,5 +593,68 @@ describe("sync / range / batch", async () => {
         expectedStatus: BatchStatus.Processing,
       })
     );
+  });
+
+  describe("retainForReprocessing", () => {
+    const startEpoch = 0;
+
+    function batchInProcessing(): Batch {
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+      batch.startDownloading(peerSyncMeta);
+      batch.downloadingSuccess(
+        peer,
+        [
+          BlockInputPreData.createFromBlock({
+            block: ssz.capella.SignedBeaconBlock.defaultValue(),
+            blockRootHex: "0x1234",
+            source: BlockInputSource.byRoot,
+            seenTimestampSec: Date.now() / 1000,
+            forkName: ForkName.capella,
+            daOutOfRange: false,
+          }),
+        ],
+        null
+      );
+      batch.startProcessing();
+      return batch;
+    }
+
+    it("Processing -> AwaitingProcessing, keeps blocks and records no failed attempt", () => {
+      const batch = batchInProcessing();
+      const blocksBefore = batch.getBlocks();
+
+      batch.retainForReprocessing();
+
+      expect(batch.state.status).toBe(BatchStatus.AwaitingProcessing);
+      expect(batch.getBlocks()).toBe(blocksBefore);
+      expect(batch.failedProcessingAttempts.length).toBe(0);
+      expect(batch.getFailedPeers().length).toBe(0);
+    });
+
+    it("Should throw on inconsistent state - retainForReprocessing", () => {
+      const batch = new Batch(startEpoch, config, clock, custodyConfig, false, undefined, Number.MAX_SAFE_INTEGER);
+
+      expectThrowsLodestarError(
+        () => batch.retainForReprocessing(),
+        new BatchError({
+          code: BatchErrorCode.WRONG_STATUS,
+          startEpoch,
+          status: BatchStatus.AwaitingDownload,
+          expectedStatus: BatchStatus.Processing,
+        })
+      );
+    });
+
+    it("preserves the original peer across retain: a non-EL failure on reprocess is still attributed", () => {
+      const batch = batchInProcessing();
+      batch.retainForReprocessing();
+      batch.startProcessing();
+      batch.processingError(
+        new BlockError(ssz.phase0.SignedBeaconBlock.defaultValue(), {code: BlockErrorCode.NON_LINEAR_SLOTS})
+      );
+
+      expect(batch.failedProcessingAttempts).toHaveLength(1);
+      expect(batch.failedProcessingAttempts[0].peers).toEqual([peer]);
+    });
   });
 });

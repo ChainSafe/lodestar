@@ -855,7 +855,7 @@ export class ProtoArray {
   }
 
   /**
-   * Spec: should_build_on_full(store, head)
+   * Spec: should_build_on_full(store, head, slot)
    *
    * The proposer is forced to build on the EMPTY variant (effectively reorging)
    * when the PTC majority voted that the blob data is not available or that the

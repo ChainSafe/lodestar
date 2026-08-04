@@ -28,9 +28,9 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Attestation =
   spec: |
-    <spec container="Attestation" fork="phase0" hash="5fc71dce">
+    <spec container="Attestation" fork="phase0" hash="d0523528">
     class Attestation(Container):
-        aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]
+        aggregation_bits: BitList[MAX_VALIDATORS_PER_COMMITTEE]
         data: AttestationData
         signature: BLSSignature
     </spec>
@@ -40,14 +40,14 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const Attestation =
   spec: |
-    <spec container="Attestation" fork="electra" hash="05913162">
+    <spec container="Attestation" fork="electra" hash="36145004">
     class Attestation(Container):
         # [Modified in Electra:EIP7549]
         aggregation_bits: AggregationBits
         data: AttestationData
         signature: BLSSignature
         # [New in Electra:EIP7549]
-        committee_bits: Bitvector[MAX_COMMITTEES_PER_SLOT]
+        committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT]
     </spec>
 
 - name: Attestation#gloas
@@ -55,12 +55,12 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const Attestation =
   spec: |
-    <spec container="Attestation" fork="gloas" hash="6dcc1383">
+    <spec container="Attestation" fork="gloas" hash="4417e8c7">
     class Attestation(ProgressiveContainer(active_fields=[1] * 4)):  # type: ignore
         aggregation_bits: AggregationBits
         data: AttestationData
         signature: BLSSignature
-        committee_bits: Bitvector[MAX_COMMITTEES_PER_SLOT]
+        committee_bits: BitVector[MAX_COMMITTEES_PER_SLOT]
     </spec>
 
 - name: AttestationData#phase0
@@ -308,9 +308,9 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="phase0" hash="05beaa1c">
+    <spec container="BeaconState" fork="phase0" hash="28d6a433">
     class BeaconState(Container):
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -320,14 +320,14 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
         previous_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
         current_epoch_attestations: List[PendingAttestation, MAX_ATTESTATIONS * SLOTS_PER_EPOCH]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
@@ -338,9 +338,9 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="altair" hash="8de7d5fb">
+    <spec container="BeaconState" fork="altair" hash="8f9563b2">
     class BeaconState(Container):
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -350,7 +350,7 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
@@ -359,12 +359,12 @@
         previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
         # [Modified in Altair]
         current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
         # [New in Altair]
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        inactivity_scores: List[Uint64, VALIDATOR_REGISTRY_LIMIT]
         # [New in Altair]
         current_sync_committee: SyncCommittee
         # [New in Altair]
@@ -376,9 +376,9 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="bellatrix" hash="e5633a51">
+    <spec container="BeaconState" fork="bellatrix" hash="605f8b59">
     class BeaconState(Container):
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -388,18 +388,18 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
         previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
         current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        inactivity_scores: List[Uint64, VALIDATOR_REGISTRY_LIMIT]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         # [New in Bellatrix]
@@ -411,9 +411,9 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="capella" hash="245ba83b">
+    <spec container="BeaconState" fork="capella" hash="cd669bb4">
     class BeaconState(Container):
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -423,18 +423,18 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
         previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
         current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        inactivity_scores: List[Uint64, VALIDATOR_REGISTRY_LIMIT]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         # [Modified in Capella]
@@ -452,9 +452,9 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="deneb" hash="32fd9dc4">
+    <spec container="BeaconState" fork="deneb" hash="09a74ef7">
     class BeaconState(Container):
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -464,18 +464,18 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
         previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
         current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        inactivity_scores: List[Uint64, VALIDATOR_REGISTRY_LIMIT]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         # [Modified in Deneb:EIP4844]
@@ -490,9 +490,9 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="electra" hash="55e40daf">
+    <spec container="BeaconState" fork="electra" hash="d2b13d5a">
     class BeaconState(Container):
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -502,18 +502,18 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
         previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
         current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        inactivity_scores: List[Uint64, VALIDATOR_REGISTRY_LIMIT]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         latest_execution_payload_header: ExecutionPayloadHeader
@@ -521,7 +521,7 @@
         next_withdrawal_validator_index: ValidatorIndex
         historical_summaries: List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]
         # [New in Electra:EIP6110]
-        deposit_requests_start_index: uint64
+        deposit_requests_start_index: Uint64
         # [New in Electra:EIP7251]
         deposit_balance_to_consume: Gwei
         # [New in Electra:EIP7251]
@@ -545,9 +545,9 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="fulu" hash="0923b253">
+    <spec container="BeaconState" fork="fulu" hash="5735dc82">
     class BeaconState(Container):
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -557,25 +557,25 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: List[Validator, VALIDATOR_REGISTRY_LIMIT]
         balances: List[Gwei, VALIDATOR_REGISTRY_LIMIT]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
         previous_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
         current_epoch_participation: List[ParticipationFlags, VALIDATOR_REGISTRY_LIMIT]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: List[uint64, VALIDATOR_REGISTRY_LIMIT]
+        inactivity_scores: List[Uint64, VALIDATOR_REGISTRY_LIMIT]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         latest_execution_payload_header: ExecutionPayloadHeader
         next_withdrawal_index: WithdrawalIndex
         next_withdrawal_validator_index: ValidatorIndex
         historical_summaries: List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]
-        deposit_requests_start_index: uint64
+        deposit_requests_start_index: Uint64
         deposit_balance_to_consume: Gwei
         exit_balance_to_consume: Gwei
         earliest_exit_epoch: Epoch
@@ -593,9 +593,9 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const BeaconState =
   spec: |
-    <spec container="BeaconState" fork="gloas" hash="14b204a8">
+    <spec container="BeaconState" fork="gloas" hash="8a133a4f">
     class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):  # type: ignore
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -605,7 +605,7 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         # [Modified in Gloas:EIP7688]
         validators: ProgressiveList[Validator]
         # [Modified in Gloas:EIP7688]
@@ -616,12 +616,12 @@
         previous_epoch_participation: ProgressiveList[ParticipationFlags]
         # [Modified in Gloas:EIP7688]
         current_epoch_participation: ProgressiveList[ParticipationFlags]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
         # [Modified in Gloas:EIP7688]
-        inactivity_scores: ProgressiveList[uint64]
+        inactivity_scores: ProgressiveList[Uint64]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         # [Modified in Gloas:EIP7732]
@@ -631,7 +631,7 @@
         next_withdrawal_index: WithdrawalIndex
         next_withdrawal_validator_index: ValidatorIndex
         historical_summaries: List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]
-        deposit_requests_start_index: uint64
+        deposit_requests_start_index: Uint64
         deposit_balance_to_consume: Gwei
         exit_balance_to_consume: Gwei
         earliest_exit_epoch: Epoch
@@ -649,7 +649,7 @@
         # [New in Gloas:EIP7732]
         next_withdrawal_builder_index: BuilderIndex
         # [New in Gloas:EIP7732]
-        execution_payload_availability: Bitvector[SLOTS_PER_HISTORICAL_ROOT]
+        execution_payload_availability: BitVector[SLOTS_PER_HISTORICAL_ROOT]
         # [New in Gloas:EIP7732]
         builder_pending_payments: Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]
         # [New in Gloas:EIP7732]
@@ -665,9 +665,9 @@
 - name: BeaconState#heze
   sources: []
   spec: |
-    <spec container="BeaconState" fork="heze" hash="86ad69e6">
+    <spec container="BeaconState" fork="heze" hash="ca002717">
     class BeaconState(ProgressiveContainer(active_fields=[1] * 46)):  # type: ignore
-        genesis_time: uint64
+        genesis_time: Uint64
         genesis_validators_root: Root
         slot: Slot
         fork: Fork
@@ -677,25 +677,25 @@
         historical_roots: List[Root, HISTORICAL_ROOTS_LIMIT]
         eth1_data: Eth1Data
         eth1_data_votes: List[Eth1Data, EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH]
-        eth1_deposit_index: uint64
+        eth1_deposit_index: Uint64
         validators: ProgressiveList[Validator]
         balances: ProgressiveList[Gwei]
         randao_mixes: Vector[Bytes32, EPOCHS_PER_HISTORICAL_VECTOR]
         slashings: Vector[Gwei, EPOCHS_PER_SLASHINGS_VECTOR]
         previous_epoch_participation: ProgressiveList[ParticipationFlags]
         current_epoch_participation: ProgressiveList[ParticipationFlags]
-        justification_bits: Bitvector[JUSTIFICATION_BITS_LENGTH]
+        justification_bits: BitVector[JUSTIFICATION_BITS_LENGTH]
         previous_justified_checkpoint: Checkpoint
         current_justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
-        inactivity_scores: ProgressiveList[uint64]
+        inactivity_scores: ProgressiveList[Uint64]
         current_sync_committee: SyncCommittee
         next_sync_committee: SyncCommittee
         latest_block_hash: Hash32
         next_withdrawal_index: WithdrawalIndex
         next_withdrawal_validator_index: ValidatorIndex
         historical_summaries: List[HistoricalSummary, HISTORICAL_ROOTS_LIMIT]
-        deposit_requests_start_index: uint64
+        deposit_requests_start_index: Uint64
         deposit_balance_to_consume: Gwei
         exit_balance_to_consume: Gwei
         earliest_exit_epoch: Epoch
@@ -707,7 +707,7 @@
         proposer_lookahead: Vector[ValidatorIndex, (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH]
         builders: ProgressiveList[Builder]
         next_withdrawal_builder_index: BuilderIndex
-        execution_payload_availability: Bitvector[SLOTS_PER_HISTORICAL_ROOT]
+        execution_payload_availability: BitVector[SLOTS_PER_HISTORICAL_ROOT]
         builder_pending_payments: Vector[BuilderPendingPayment, 2 * SLOTS_PER_EPOCH]
         builder_pending_withdrawals: ProgressiveList[BuilderPendingWithdrawal]
         # [Modified in Heze:EIP7805]
@@ -747,10 +747,10 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const Builder =
   spec: |
-    <spec container="Builder" fork="gloas" hash="ae177179">
+    <spec container="Builder" fork="gloas" hash="c95d3cd2">
     class Builder(Container):
         pubkey: BLSPubkey
-        version: uint8
+        version: Uint8
         execution_address: ExecutionAddress
         balance: Gwei
         deposit_epoch: Epoch
@@ -931,13 +931,13 @@
     - file: packages/types/src/electra/sszTypes.ts
       search: export const DepositRequest =
   spec: |
-    <spec container="DepositRequest" fork="electra" hash="3af9895d">
+    <spec container="DepositRequest" fork="electra" hash="f51e4afe">
     class DepositRequest(Container):
         pubkey: BLSPubkey
         withdrawal_credentials: Bytes32
         amount: Gwei
         signature: BLSSignature
-        index: uint64
+        index: Uint64
     </spec>
 
 - name: Eth1Block#phase0
@@ -945,11 +945,11 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Eth1Block =
   spec: |
-    <spec container="Eth1Block" fork="phase0" hash="0a5c6b45">
+    <spec container="Eth1Block" fork="phase0" hash="587ddda8">
     class Eth1Block(Container):
-        timestamp: uint64
+        timestamp: Uint64
         deposit_root: Root
-        deposit_count: uint64
+        deposit_count: Uint64
     </spec>
 
 - name: Eth1Data#phase0
@@ -957,10 +957,10 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Eth1Data =
   spec: |
-    <spec container="Eth1Data" fork="phase0" hash="1d7be228">
+    <spec container="Eth1Data" fork="phase0" hash="e4ca9042">
     class Eth1Data(Container):
         deposit_root: Root
-        deposit_count: uint64
+        deposit_count: Uint64
         block_hash: Hash32
     </spec>
 
@@ -969,7 +969,7 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const ExecutionPayload =
   spec: |
-    <spec container="ExecutionPayload" fork="bellatrix" hash="da4d8580">
+    <spec container="ExecutionPayload" fork="bellatrix" hash="4c14e8c9">
     class ExecutionPayload(Container):
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
@@ -977,12 +977,12 @@
         receipts_root: Bytes32
         logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
         prev_randao: Bytes32
-        block_number: uint64
-        gas_limit: uint64
-        gas_used: uint64
-        timestamp: uint64
+        block_number: Uint64
+        gas_limit: Uint64
+        gas_used: Uint64
+        timestamp: Uint64
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
-        base_fee_per_gas: uint256
+        base_fee_per_gas: Uint256
         block_hash: Hash32
         transactions: List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]
     </spec>
@@ -992,7 +992,7 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const ExecutionPayload =
   spec: |
-    <spec container="ExecutionPayload" fork="capella" hash="5533cb47">
+    <spec container="ExecutionPayload" fork="capella" hash="78dd6037">
     class ExecutionPayload(Container):
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
@@ -1000,12 +1000,12 @@
         receipts_root: Bytes32
         logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
         prev_randao: Bytes32
-        block_number: uint64
-        gas_limit: uint64
-        gas_used: uint64
-        timestamp: uint64
+        block_number: Uint64
+        gas_limit: Uint64
+        gas_used: Uint64
+        timestamp: Uint64
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
-        base_fee_per_gas: uint256
+        base_fee_per_gas: Uint256
         block_hash: Hash32
         transactions: List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]
         # [New in Capella]
@@ -1017,7 +1017,7 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const ExecutionPayload =
   spec: |
-    <spec container="ExecutionPayload" fork="deneb" hash="974f7cc9">
+    <spec container="ExecutionPayload" fork="deneb" hash="548fc639">
     class ExecutionPayload(Container):
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
@@ -1025,19 +1025,19 @@
         receipts_root: Bytes32
         logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
         prev_randao: Bytes32
-        block_number: uint64
-        gas_limit: uint64
-        gas_used: uint64
-        timestamp: uint64
+        block_number: Uint64
+        gas_limit: Uint64
+        gas_used: Uint64
+        timestamp: Uint64
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
-        base_fee_per_gas: uint256
+        base_fee_per_gas: Uint256
         block_hash: Hash32
         transactions: List[Transaction, MAX_TRANSACTIONS_PER_PAYLOAD]
         withdrawals: List[Withdrawal, MAX_WITHDRAWALS_PER_PAYLOAD]
         # [New in Deneb:EIP4844]
-        blob_gas_used: uint64
+        blob_gas_used: Uint64
         # [New in Deneb:EIP4844]
-        excess_blob_gas: uint64
+        excess_blob_gas: Uint64
     </spec>
 
 - name: ExecutionPayload#gloas
@@ -1045,7 +1045,7 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayload =
   spec: |
-    <spec container="ExecutionPayload" fork="gloas" hash="0bee8801">
+    <spec container="ExecutionPayload" fork="gloas" hash="e985ae4c">
     class ExecutionPayload(ProgressiveContainer(active_fields=[1] * 19)):  # type: ignore
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
@@ -1053,23 +1053,23 @@
         receipts_root: Bytes32
         logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
         prev_randao: Bytes32
-        block_number: uint64
-        gas_limit: uint64
-        gas_used: uint64
-        timestamp: uint64
+        block_number: Uint64
+        gas_limit: Uint64
+        gas_used: Uint64
+        timestamp: Uint64
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
-        base_fee_per_gas: uint256
+        base_fee_per_gas: Uint256
         block_hash: Hash32
         # [Modified in Gloas:EIP7688]
         transactions: ProgressiveList[Transaction]
         # [Modified in Gloas:EIP7688]
         withdrawals: ProgressiveList[Withdrawal]
-        blob_gas_used: uint64
-        excess_blob_gas: uint64
+        blob_gas_used: Uint64
+        excess_blob_gas: Uint64
         # [New in Gloas:EIP7928]
         block_access_list: BlockAccessList
         # [New in Gloas:EIP7843]
-        slot_number: uint64
+        slot_number: Uint64
     </spec>
 
 - name: ExecutionPayloadBid#gloas
@@ -1077,14 +1077,14 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ExecutionPayloadBid =
   spec: |
-    <spec container="ExecutionPayloadBid" fork="gloas" hash="7465947d">
+    <spec container="ExecutionPayloadBid" fork="gloas" hash="3bc16ac1">
     class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 12)):  # type: ignore
         parent_block_hash: Hash32
         parent_block_root: Root
         block_hash: Hash32
         prev_randao: Bytes32
         fee_recipient: ExecutionAddress
-        gas_limit: uint64
+        gas_limit: Uint64
         builder_index: BuilderIndex
         slot: Slot
         value: Gwei
@@ -1096,14 +1096,14 @@
 - name: ExecutionPayloadBid#heze
   sources: []
   spec: |
-    <spec container="ExecutionPayloadBid" fork="heze" hash="7d0dbe33">
+    <spec container="ExecutionPayloadBid" fork="heze" hash="41633b32">
     class ExecutionPayloadBid(ProgressiveContainer(active_fields=[1] * 13)):  # type: ignore
         parent_block_hash: Hash32
         parent_block_root: Root
         block_hash: Hash32
         prev_randao: Bytes32
         fee_recipient: ExecutionAddress
-        gas_limit: uint64
+        gas_limit: Uint64
         builder_index: BuilderIndex
         slot: Slot
         value: Gwei
@@ -1111,7 +1111,7 @@
         blob_kzg_commitments: ProgressiveList[KZGCommitment]
         execution_requests_root: Root
         # [New in Heze:EIP7805]
-        inclusion_list_bits: Bitvector[INCLUSION_LIST_COMMITTEE_SIZE]
+        inclusion_list_bits: BitVector[INCLUSION_LIST_COMMITTEE_SIZE]
     </spec>
 
 - name: ExecutionPayloadEnvelope#gloas
@@ -1133,7 +1133,7 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const ExecutionPayloadHeader =
   spec: |
-    <spec container="ExecutionPayloadHeader" fork="bellatrix" hash="08fc7165">
+    <spec container="ExecutionPayloadHeader" fork="bellatrix" hash="a3ed912a">
     class ExecutionPayloadHeader(Container):
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
@@ -1141,12 +1141,12 @@
         receipts_root: Bytes32
         logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
         prev_randao: Bytes32
-        block_number: uint64
-        gas_limit: uint64
-        gas_used: uint64
-        timestamp: uint64
+        block_number: Uint64
+        gas_limit: Uint64
+        gas_used: Uint64
+        timestamp: Uint64
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
-        base_fee_per_gas: uint256
+        base_fee_per_gas: Uint256
         block_hash: Hash32
         transactions_root: Root
     </spec>
@@ -1156,7 +1156,7 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const ExecutionPayloadHeader =
   spec: |
-    <spec container="ExecutionPayloadHeader" fork="capella" hash="5f481de3">
+    <spec container="ExecutionPayloadHeader" fork="capella" hash="521fff4a">
     class ExecutionPayloadHeader(Container):
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
@@ -1164,12 +1164,12 @@
         receipts_root: Bytes32
         logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
         prev_randao: Bytes32
-        block_number: uint64
-        gas_limit: uint64
-        gas_used: uint64
-        timestamp: uint64
+        block_number: Uint64
+        gas_limit: Uint64
+        gas_used: Uint64
+        timestamp: Uint64
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
-        base_fee_per_gas: uint256
+        base_fee_per_gas: Uint256
         block_hash: Hash32
         transactions_root: Root
         # [New in Capella]
@@ -1181,7 +1181,7 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const ExecutionPayloadHeader =
   spec: |
-    <spec container="ExecutionPayloadHeader" fork="deneb" hash="957fa918">
+    <spec container="ExecutionPayloadHeader" fork="deneb" hash="48bef01c">
     class ExecutionPayloadHeader(Container):
         parent_hash: Hash32
         fee_recipient: ExecutionAddress
@@ -1189,19 +1189,19 @@
         receipts_root: Bytes32
         logs_bloom: ByteVector[BYTES_PER_LOGS_BLOOM]
         prev_randao: Bytes32
-        block_number: uint64
-        gas_limit: uint64
-        gas_used: uint64
-        timestamp: uint64
+        block_number: Uint64
+        gas_limit: Uint64
+        gas_used: Uint64
+        timestamp: Uint64
         extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
-        base_fee_per_gas: uint256
+        base_fee_per_gas: Uint256
         block_hash: Hash32
         transactions_root: Root
         withdrawals_root: Root
         # [New in Deneb:EIP4844]
-        blob_gas_used: uint64
+        blob_gas_used: Uint64
         # [New in Deneb:EIP4844]
-        excess_blob_gas: uint64
+        excess_blob_gas: Uint64
     </spec>
 
 - name: ExecutionRequests#electra
@@ -1540,9 +1540,9 @@
 - name: PartialDataColumnSidecar#gloas
   sources: []
   spec: |
-    <spec container="PartialDataColumnSidecar" fork="gloas" hash="0b62b015">
+    <spec container="PartialDataColumnSidecar" fork="gloas" hash="50942bc3">
     class PartialDataColumnSidecar(Container):
-        cells_present_bitmap: ProgressiveBitlist
+        cells_present_bitmap: ProgressiveBitList
         partial_column: ProgressiveList[Cell]
         kzg_proofs: ProgressiveList[KZGProof]
     </spec>
@@ -1552,9 +1552,9 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttestation =
   spec: |
-    <spec container="PayloadAttestation" fork="gloas" hash="688576d4">
+    <spec container="PayloadAttestation" fork="gloas" hash="f239524c">
     class PayloadAttestation(ProgressiveContainer(active_fields=[1] * 3)):  # type: ignore
-        aggregation_bits: Bitvector[PTC_SIZE]
+        aggregation_bits: BitVector[PTC_SIZE]
         data: PayloadAttestationData
         signature: BLSSignature
     </spec>
@@ -1564,12 +1564,12 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttestationData =
   spec: |
-    <spec container="PayloadAttestationData" fork="gloas" hash="9f1b7f92">
+    <spec container="PayloadAttestationData" fork="gloas" hash="739fcbbb">
     class PayloadAttestationData(Container):
         beacon_block_root: Root
         slot: Slot
-        payload_present: boolean
-        blob_data_available: boolean
+        payload_present: Boolean
+        blob_data_available: Boolean
     </spec>
 
 - name: PayloadAttestationMessage#gloas
@@ -1589,9 +1589,9 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const PendingAttestation =
   spec: |
-    <spec container="PendingAttestation" fork="phase0" hash="e0a37cea">
+    <spec container="PendingAttestation" fork="phase0" hash="fb34e482">
     class PendingAttestation(Container):
-        aggregation_bits: Bitlist[MAX_VALIDATORS_PER_COMMITTEE]
+        aggregation_bits: BitList[MAX_VALIDATORS_PER_COMMITTEE]
         data: AttestationData
         inclusion_delay: Slot
         proposer_index: ValidatorIndex
@@ -1639,11 +1639,11 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const PowBlock =
   spec: |
-    <spec container="PowBlock" fork="bellatrix" hash="c6c8739a">
+    <spec container="PowBlock" fork="bellatrix" hash="a3b91158">
     class PowBlock(Container):
         block_hash: Hash32
         parent_hash: Hash32
-        total_difficulty: uint256
+        total_difficulty: Uint256
     </spec>
 
 - name: ProposerPreferences#gloas
@@ -1651,13 +1651,13 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const ProposerPreferences =
   spec: |
-    <spec container="ProposerPreferences" fork="gloas" hash="305cd154">
+    <spec container="ProposerPreferences" fork="gloas" hash="43f09631">
     class ProposerPreferences(Container):
         dependent_root: Root
         proposal_slot: Slot
         validator_index: ValidatorIndex
         fee_recipient: ExecutionAddress
-        target_gas_limit: uint64
+        target_gas_limit: Uint64
     </spec>
 
 - name: ProposerSlashing#phase0
@@ -1830,9 +1830,9 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncAggregate =
   spec: |
-    <spec container="SyncAggregate" fork="altair" hash="51e247e5">
+    <spec container="SyncAggregate" fork="altair" hash="4cdfb6ae">
     class SyncAggregate(Container):
-        sync_committee_bits: Bitvector[SYNC_COMMITTEE_SIZE]
+        sync_committee_bits: BitVector[SYNC_COMMITTEE_SIZE]
         sync_committee_signature: BLSSignature
     </spec>
 
@@ -1841,10 +1841,10 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncAggregatorSelectionData =
   spec: |
-    <spec container="SyncAggregatorSelectionData" fork="altair" hash="990a8a7f">
+    <spec container="SyncAggregatorSelectionData" fork="altair" hash="ea5dd5f9">
     class SyncAggregatorSelectionData(Container):
         slot: Slot
-        subcommittee_index: uint64
+        subcommittee_index: Uint64
     </spec>
 
 - name: SyncCommittee#altair
@@ -1863,12 +1863,12 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const SyncCommitteeContribution =
   spec: |
-    <spec container="SyncCommitteeContribution" fork="altair" hash="9f9b0125">
+    <spec container="SyncCommitteeContribution" fork="altair" hash="ee2e8fe5">
     class SyncCommitteeContribution(Container):
         slot: Slot
         beacon_block_root: Root
-        subcommittee_index: uint64
-        aggregation_bits: Bitvector[SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT]
+        subcommittee_index: Uint64
+        aggregation_bits: BitVector[SYNC_COMMITTEE_SIZE // SYNC_COMMITTEE_SUBNET_COUNT]
         signature: BLSSignature
     </spec>
 
@@ -1890,12 +1890,12 @@
     - file: packages/types/src/phase0/sszTypes.ts
       search: export const Validator =
   spec: |
-    <spec container="Validator" fork="phase0" hash="54f88c17">
+    <spec container="Validator" fork="phase0" hash="d767a9f4">
     class Validator(Container):
         pubkey: BLSPubkey
         withdrawal_credentials: Bytes32
         effective_balance: Gwei
-        slashed: boolean
+        slashed: Boolean
         activation_eligibility_epoch: Epoch
         activation_epoch: Epoch
         exit_epoch: Epoch
