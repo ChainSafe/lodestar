@@ -296,10 +296,8 @@ exceptions:
     - get_next_sync_committee_indices#gloas
     - get_node_children#gloas
     - get_node_for_root#gloas
-    - get_parent_payload_status#gloas
     - get_payload_attestation_due_ms#gloas
     - get_payload_attestation_message_signature#gloas
-    - get_payload_status_tiebreaker#gloas
     - get_pending_balance_to_withdraw#gloas
     - get_ptc_assignment#gloas
     - get_safe_execution_block_hash#gloas
@@ -308,16 +306,12 @@ exceptions:
     - get_weight#gloas
     - has_compounding_withdrawal_credential#gloas
     - is_ancestor#gloas
-    - is_bid_compatible_with_head#gloas
     - is_head_late#gloas
-    - is_parent_node_full#gloas
     - is_previous_slot_payload_decision#gloas
     - is_valid_proposal_slot#gloas
     - notify_ptc_messages#gloas
     - on_block#gloas
     - on_payload_attestation_message#gloas
-    - payload_data_availability#gloas
-    - payload_timeliness#gloas
     - prepare_execution_payload#gloas
     - process_attestation#gloas
     - process_block#gloas
@@ -329,8 +323,6 @@ exceptions:
     - process_withdrawals#gloas
     - record_block_timeliness#gloas
     - should_apply_proposer_boost#gloas
-    - should_build_on_full#gloas
-    - should_extend_payload#gloas
     - update_builder_pending_withdrawals#gloas
     - update_latest_messages#gloas
     - update_next_withdrawal_builder_index#gloas
@@ -426,7 +418,6 @@ exceptions:
     - will_no_conflicting_checkpoint_be_justified#phase0
 
     # gloas / heze empty sources to skip
-    - is_payload_verified#gloas
     - on_execution_payload_envelope#gloas
     - on_execution_payload_envelope#heze
 
