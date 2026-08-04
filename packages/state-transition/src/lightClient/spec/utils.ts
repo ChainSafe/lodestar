@@ -218,6 +218,8 @@ export function getLcExecutionRoot(config: ChainForkConfig, header: LightClientH
     return header.executionBlockHash;
   }
 
+  // Reconstruct the pre-Gloas execution payload root for a header upgraded to the Gloas format
+  // because the structure is different, `execution` is removed
   const executionPayloadDepth = getGindexDepth(BLOCK_BODY_EXECUTION_PAYLOAD_GINDEX);
   const innerBranch = header.executionBranch.slice(0, -executionPayloadDepth);
 
