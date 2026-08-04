@@ -131,51 +131,5 @@ describe("ExecutionEngine / http ", () => {
       expect(reqJsonRpcPayload).toEqual(request);
       expect(errorResponsesBeforeSuccess).toBe(0);
     });
-
-    it("notifyForkchoiceUpdate serializes Heze inclusion list transactions", async () => {
-      errorResponsesBeforeSuccess = 0;
-      const forkChoiceHeadData = {
-        headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-        safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-        finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-      };
-      const payloadAttributes: PayloadAttributes = {
-        timestamp: 1647036763,
-        prevRandao: fromHexString("0x0000000000000000000000000000000000000000000000000000000000000000"),
-        suggestedFeeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-        inclusionListTransactions: [fromHexString("0x010203")],
-      };
-
-      returnValue = {
-        jsonrpc: "2.0",
-        id: 67,
-        result: {
-          payloadStatus: {status: "VALID", latestValidHash: null, validationError: null},
-          payloadId: Buffer.alloc(8, 1),
-        },
-      };
-
-      await executionEngine.notifyForkchoiceUpdate(
-        ForkName.heze,
-        forkChoiceHeadData.headBlockHash,
-        forkChoiceHeadData.safeBlockHash,
-        forkChoiceHeadData.finalizedBlockHash,
-        payloadAttributes
-      );
-
-      expect(reqJsonRpcPayload).toEqual({
-        jsonrpc: "2.0",
-        method: "engine_forkchoiceUpdatedV4",
-        params: [
-          forkChoiceHeadData,
-          {
-            timestamp: numToQuantity(payloadAttributes.timestamp),
-            prevRandao: bytesToData(payloadAttributes.prevRandao),
-            suggestedFeeRecipient: payloadAttributes.suggestedFeeRecipient,
-            inclusionListTransactions: ["0x010203"],
-          },
-        ],
-      });
-    });
   });
 });

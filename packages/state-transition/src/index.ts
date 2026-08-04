@@ -52,6 +52,7 @@ export {
   type IBeaconStateViewElectra,
   type IBeaconStateViewFulu,
   type IBeaconStateViewGloas,
+  type IBeaconStateViewHeze,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -59,6 +60,7 @@ export {
   isStatePostElectra,
   isStatePostFulu,
   isStatePostGloas,
+  isStatePostHeze,
 } from "./stateView/interface.js";
 export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
 export type {

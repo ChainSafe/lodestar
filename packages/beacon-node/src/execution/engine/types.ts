@@ -260,8 +260,6 @@ export type PayloadAttributesRpc = {
   slotNumber?: QUANTITY;
   /** QUANTITY, 64 Bits - target value for the gasLimit field of the new payload (GLOAS, execution-apis#796) */
   targetGasLimit?: QUANTITY;
-  /** Array of DATA - transactions selected from inclusion lists (HEZE, EIP-7805) */
-  inclusionListTransactions?: DATA[];
 };
 
 export type ClientVersionRpc = {
@@ -443,7 +441,6 @@ export function serializePayloadAttributes(data: PayloadAttributes): PayloadAttr
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? bytesToData(data.parentBeaconBlockRoot) : undefined,
     slotNumber: data.slotNumber !== undefined ? numToQuantity(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? numToQuantity(data.targetGasLimit) : undefined,
-    inclusionListTransactions: data.inclusionListTransactions?.map(bytesToData),
   };
 }
 
@@ -462,7 +459,6 @@ export function deserializePayloadAttributes(data: PayloadAttributesRpc): Payloa
     parentBeaconBlockRoot: data.parentBeaconBlockRoot ? dataToBytes(data.parentBeaconBlockRoot, 32) : undefined,
     slotNumber: data.slotNumber !== undefined ? quantityToNum(data.slotNumber) : undefined,
     targetGasLimit: data.targetGasLimit !== undefined ? quantityToBigint(data.targetGasLimit) : undefined,
-    inclusionListTransactions: data.inclusionListTransactions?.map((transaction) => dataToBytes(transaction, null)),
   };
 }
 

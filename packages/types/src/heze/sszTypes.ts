@@ -21,6 +21,7 @@ export const InclusionListTransactions = new ProgressiveListCompositeType(gloasS
   typeName: "InclusionListTransactions",
 });
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/heze/beacon-chain.md#inclusionlist
 export const InclusionList = new ContainerType(
   {
     slot: Slot,
@@ -31,6 +32,7 @@ export const InclusionList = new ContainerType(
   {typeName: "InclusionList", jsonCase: "eth2"}
 );
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/heze/beacon-chain.md#signedinclusionlist
 export const SignedInclusionList = new ContainerType(
   {
     message: InclusionList,
@@ -39,6 +41,7 @@ export const SignedInclusionList = new ContainerType(
   {typeName: "SignedInclusionList", jsonCase: "eth2"}
 );
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/heze/p2p-interface.md#inclusionlistsbyindices-v1
 export const InclusionListsByIndicesRequest = new ContainerType(
   {
     slot: Slot,
@@ -48,6 +51,7 @@ export const InclusionListsByIndicesRequest = new ContainerType(
   {typeName: "InclusionListsByIndicesRequest", jsonCase: "eth2"}
 );
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/heze/beacon-chain.md#executionpayloadbid
 export const ExecutionPayloadBid = new ProgressiveContainerType(
   {
     ...gloasSsz.ExecutionPayloadBid.fields,
@@ -57,6 +61,7 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
   {typeName: "ExecutionPayloadBid", jsonCase: "eth2"}
 );
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/heze/beacon-chain.md#signedexecutionpayloadbid
 export const SignedExecutionPayloadBid = new ContainerType(
   {
     message: ExecutionPayloadBid, // [Modified in Heze:EIP7805]
@@ -68,6 +73,7 @@ export const SignedExecutionPayloadBid = new ContainerType(
 export const DataColumnSidecar = gloasSsz.DataColumnSidecar;
 export const DataColumnSidecars = gloasSsz.DataColumnSidecars;
 
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/heze/beacon-chain.md#beaconstate
 export const BeaconState = new ProgressiveContainerType(
   {
     ...gloasSsz.BeaconState.fields,
@@ -111,6 +117,7 @@ export const BlockContents = new ContainerType(
 );
 
 // PayloadAttributes primarily for SSE event
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/heze/fork-choice.md#modified-payloadattributes
 export const PayloadAttributes = new ContainerType(
   {
     ...gloasSsz.PayloadAttributes.fields,

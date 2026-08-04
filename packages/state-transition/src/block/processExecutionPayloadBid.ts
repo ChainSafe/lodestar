@@ -1,13 +1,12 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {
   BUILDER_INDEX_SELF_BUILD,
-  ForkName,
   ForkSeq,
   GENESIS_SLOT,
   PAYLOAD_BUILDER_VERSION,
   SLOTS_PER_EPOCH,
 } from "@lodestar/params";
-import {Slot, gloas, heze, ssz, sszTypesFor} from "@lodestar/types";
+import {Slot, gloas, heze, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
@@ -17,7 +16,7 @@ import {getBlockRootAtSlot, getCurrentEpoch, getRandaoMix} from "../util/index.j
 
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas | CachedBeaconStateHeze,
-  signedBid: gloas.SignedExecutionPayloadBid | heze.SignedExecutionPayloadBid
+  signedBid: gloas.SignedExecutionPayloadBid
 ): Slot {
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;
@@ -48,7 +47,7 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the builder has funds to cover the bid
-    if (!canBuilderCoverBid(state, builderIndex, amount)) {
+    if (!canBuilderCoverBid(state as CachedBeaconStateGloas, builderIndex, amount)) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} has insufficient balance`);
     }
 
@@ -108,15 +107,11 @@ export function processExecutionPayloadBid(
 
   const parentSlot = state.latestExecutionPayloadBid.slot;
   if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
-    (state as CachedBeaconStateHeze).latestExecutionPayloadBid = sszTypesFor(
-      ForkName.heze,
-      "ExecutionPayloadBid"
-    ).toViewDU(bid as heze.ExecutionPayloadBid);
+    (state as CachedBeaconStateHeze).latestExecutionPayloadBid = ssz.heze.ExecutionPayloadBid.toViewDU(
+      bid as heze.ExecutionPayloadBid
+    );
   } else {
-    (state as CachedBeaconStateGloas).latestExecutionPayloadBid = sszTypesFor(
-      ForkName.gloas,
-      "ExecutionPayloadBid"
-    ).toViewDU(bid as gloas.ExecutionPayloadBid);
+    (state as CachedBeaconStateGloas).latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
   }
 
   return parentSlot;
@@ -125,7 +120,7 @@ export function processExecutionPayloadBid(
 function verifyExecutionPayloadBidSignature(
   state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   pubkey: Uint8Array,
-  signedBid: gloas.SignedExecutionPayloadBid | heze.SignedExecutionPayloadBid
+  signedBid: gloas.SignedExecutionPayloadBid
 ): boolean {
   const signingRoot = getExecutionPayloadBidSigningRoot(state.config, state.slot, signedBid.message);
 

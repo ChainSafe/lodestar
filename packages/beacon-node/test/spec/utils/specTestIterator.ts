@@ -102,10 +102,6 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
     /\/heze_fork$/,
-    // TODO-GLOAS: investigate why these mainnet post-Gloas historical accumulator slot tests
-    // take ~40-50s locally. Skipping for now instead of raising the global sanity/slots timeout.
-    /^gloas\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
-    /^heze\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
     // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
     // boost wrongly denied. Fails identically on every pre-gloas fork.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
