@@ -100,6 +100,7 @@ exceptions:
     # heze (not implemented)
     - GetInclusionListResponse#heze
     - InclusionListStore#heze
+    - PayloadAttributes#heze
     - Store#heze
 
   presets: []
