@@ -13587,7 +13587,9 @@
     </spec>
 
 - name: upgrade_to_heze#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/slot/upgradeStateToHeze.ts
+      search: export function upgradeStateToHeze(
   spec: |
     <spec fn="upgrade_to_heze" fork="heze" hash="db6fc133">
     def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:
