@@ -25,7 +25,7 @@ import {
 import {fromHex, intToBytes, toHex} from "@lodestar/utils";
 import {TestRunnerFn} from "../../utils/types.js";
 
-// https://github.com/ethereum/consensus-specs/blob/master/tests/formats/light_client/sync.md
+// https://github.com/ethereum/consensus-specs/blob/ca22f9c268d460afaf17ab51d01514fc545adaa5/tests/formats/light_client/sync.md#test-case-format
 type SyncTestCase = {
   meta: {
     genesis_validators_root: RootHex;
