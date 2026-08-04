@@ -475,6 +475,9 @@ export function upgradeLightClientStore(
 
 function computeBranchRoot(leaf: Uint8Array, branch: Uint8Array[], gindex: bigint): Uint8Array {
   const depth = getGindexDepth(Number(gindex));
+  if (branch.length < depth) {
+    throw Error(`Invalid Merkle branch length ${branch.length}, expected at least ${depth}`);
+  }
   const proof = branch.slice(-depth);
   const index = getGindexIndex(Number(gindex));
   let root = leaf;
