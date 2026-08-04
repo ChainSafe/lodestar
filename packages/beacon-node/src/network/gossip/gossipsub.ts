@@ -15,7 +15,12 @@ import {type Multiaddr, multiaddr} from "@multiformats/multiaddr";
 import {ENR} from "@chainsafe/enr";
 import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SUBNET_COUNT} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SUBNET_COUNT,
+} from "@lodestar/params";
 import {SubnetID} from "@lodestar/types";
 import {Logger, Map2d, Map2dArr} from "@lodestar/utils";
 import {RegistryMetricCreator} from "../../metrics/index.js";
@@ -179,7 +184,7 @@ export class Eth2Gossipsub {
       // Only send IDONTWANT messages if the message size is larger than this
       // This should be large enough to not send IDONTWANT for "small" messages
       // See https://github.com/ChainSafe/lodestar/pull/7077#issuecomment-2383679472
-      idontwantMinDataSize: 16829,
+      idontwantMinDataSize: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
     })(modules.libp2p.services.components) as GossipSubInternal;
 
     if (metrics) {

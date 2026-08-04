@@ -34,6 +34,7 @@ const coveredTestRunners = [
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",
@@ -75,15 +76,29 @@ export const defaultSkipOpts: SkipOpts = {
     /^.+\/light_client\/data_collection\/.*/,
     // Ignore the partial data column container additions for now. Unskip them when
     // cell level DAS is ready
-    /^fulu\/ssz_static\/PartialDataColumn(Header|PartsMetadata|Sidecar)\/.*$/,
+    /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
-    // TODO-GLOAS: re-enable after Gloas light client is implemented
-    /^gloas\/light_client\/.*/,
-    /^gloas\/ssz_static\/LightClient(Bootstrap|FinalityUpdate|Header|OptimisticUpdate|Update)\/.*/,
+    // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
+    /^gloas\/light_client\/sync\/.*/,
+    // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
+    // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
+    // handling is not yet implemented in Lodestar.
+    /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
+    // New test suite added in v1.7.0-alpha.13 (consensus-specs #5441); Lodestar still applies
+    // the pre-gloas proposer boost, so the head weight differs by the boost amount.
+    /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    // TODO GLOAS: enable this after gloas fork choice is ready
+    /^gloas\/fork_choice_compliance\/.*/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
+    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
+    // boost wrongly denied. Fails identically on every pre-gloas fork.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
+    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
@@ -174,9 +189,15 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-              if (opts.skippedTests && options.shouldSkip === undefined) {
-                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
-                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+              if (opts.skippedTests) {
+                // Compose with any runner-local shouldSkip — overwriting it would silently
+                // disable SkipOpts.skippedTests for runners that define their own (fork_choice).
+                const runnerShouldSkip = options.shouldSkip;
+                options.shouldSkip = (testCase: any, name: string, index: number): boolean => {
+                  return (
+                    (runnerShouldSkip?.(testCase, name, index) ?? false) ||
+                    (opts.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false)
+                  );
                 };
               }
               describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);

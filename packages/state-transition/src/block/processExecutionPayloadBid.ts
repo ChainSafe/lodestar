@@ -1,6 +1,6 @@
 import {PublicKey, Signature, verify} from "@chainsafe/blst";
 import {BUILDER_INDEX_SELF_BUILD, GENESIS_SLOT, PAYLOAD_BUILDER_VERSION, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {gloas, ssz} from "@lodestar/types";
+import {Slot, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {G2_POINT_AT_INFINITY} from "../constants/constants.js";
 import {getExecutionPayloadBidSigningRoot} from "../signatureSets/executionPayloadBid.js";
@@ -11,7 +11,7 @@ import {getBlockRootAtSlot, getCurrentEpoch, getRandaoMix} from "../util/index.j
 export function processExecutionPayloadBid(
   state: CachedBeaconStateGloas,
   signedBid: gloas.SignedExecutionPayloadBid
-): void {
+): Slot {
   const bid = signedBid.message;
   const {builderIndex, value: amount} = bid;
 
@@ -99,7 +99,10 @@ export function processExecutionPayloadBid(
     state.builderPendingPayments.set(SLOTS_PER_EPOCH + (bid.slot % SLOTS_PER_EPOCH), pendingPaymentView);
   }
 
+  const parentSlot = state.latestExecutionPayloadBid.slot;
   state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
+
+  return parentSlot;
 }
 
 function verifyExecutionPayloadBidSignature(

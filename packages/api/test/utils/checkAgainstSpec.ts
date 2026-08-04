@@ -7,7 +7,6 @@ import {JsonSchema, OpenApiJson, applyRecursively, parseOpenApiSpec} from "./par
 
 // Current Ajv package is a commonjs package which cause problem
 // when we have moduleResolution set to node16
-// This syntax works and tested with Node and Bun both
 const Ajv = ajvPkg.default;
 
 const ajv = new Ajv({
@@ -112,6 +111,11 @@ export function runTestCheckAgainstSpec<Es extends Record<string, Endpoint>>(
           // Stringify param and query to simulate rendering in HTTP query
           stringifyProperties(reqJson.params ?? {});
           stringifyProperties(reqJson.query ?? {});
+
+          // Parse headers back to typed values as the spec defines boolean headers as `{schema: type: boolean}`
+          if (reqJson.headers) {
+            reqJson.headers = parseHeaders(reqJson.headers as Record<string, string>) as typeof reqJson.headers;
+          }
 
           const ignoredProperties = ignoredProperty?.request;
           if (ignoredProperties) {
@@ -218,11 +222,16 @@ function prettyAjvErrors(errors: ErrorObject[] | null | undefined): string {
   return errors.map((e) => `${e.instancePath ?? "."} - ${e.message}`).join("\n");
 }
 
-type StringifiedProperty = string | StringifiedProperty[];
+type StringifiedProperty = string | boolean | StringifiedProperty[];
 
 function stringifyProperty(value: unknown): StringifiedProperty {
   if (typeof value === "number") {
     return value.toString(10);
+  }
+
+  // The spec defines boolean query params as `{schema: type: boolean}`, keep them as booleans
+  if (typeof value === "boolean") {
+    return value;
   }
 
   if (Array.isArray(value)) {

@@ -1,14 +1,5 @@
 import {DataAvailabilityStatus, EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
-import {
-  AttesterSlashing,
-  BeaconBlock,
-  Epoch,
-  IndexedAttestation,
-  Root,
-  RootHex,
-  Slot,
-  ValidatorIndex,
-} from "@lodestar/types";
+import {AttesterSlashing, BeaconBlock, Epoch, IndexedAttestation, Root, RootHex, Slot} from "@lodestar/types";
 import {
   BlockExecutionStatus,
   LVHExecResponse,
@@ -109,6 +100,10 @@ export interface IForkChoice {
   getHead(): ProtoBlock;
   getConfirmedRoot(): RootHex;
   getConfirmedBlock(): ProtoBlock | null;
+  /** Resume the fast confirmation rule; restarts from the finalized root on the next slot tick */
+  resumeFastConfirmation(): void;
+  /** Pause the fast confirmation rule (e.g. while syncing); pins the confirmed root to the finalized root */
+  pauseFastConfirmation(): void;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
@@ -160,8 +155,7 @@ export interface IForkChoice {
     blockDelaySec: number,
     currentSlot: Slot,
     executionStatus: BlockExecutionStatus,
-    dataAvailabilityStatus: DataAvailabilityStatus,
-    expectedProposerIndex: ValidatorIndex | null
+    dataAvailabilityStatus: DataAvailabilityStatus
   ): ProtoBlock;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
@@ -252,6 +246,11 @@ export interface IForkChoice {
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
+  /**
+   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
+   * payload (FULL variant exists). Used by the builder circuit breaker.
+   */
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number};
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
   getPTCVoteCounts(blockRootHex: RootHex): {
@@ -271,7 +270,7 @@ export interface IForkChoice {
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
-  /** Spec: should_build_on_full(store, head) */
+  /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;

@@ -113,7 +113,7 @@ export function parseBuilderSelection(builderSelection?: string): routes.validat
       case "builderalways":
         break;
       case "builderonly":
-        break;
+        throw Error("Builder selection builderonly is no longer supported, use builderalways instead");
       case "executionalways":
         break;
       case "executiononly":

@@ -32,9 +32,8 @@ export function getLodestarApi({
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ApplicationMethods<routes.lodestar.Endpoints> {
   let writingHeapdump = false;
   let writingProfile = false;
-  // for NodeJS, profile the whole epoch
-  // for Bun, profile 1 slot. Otherwise it will either crash the app, and/or inspector cannot render the profile
-  const defaultProfileMs = globalThis.Bun ? config.SLOT_DURATION_MS : SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
+  // profile the whole epoch by default
+  const defaultProfileMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
 
   return {
     async writeHeapdump({thread = "main", dirpath = "."}) {
@@ -217,7 +216,7 @@ export function getLodestarApi({
     },
 
     async getHistoricalSummaries({stateId}) {
-      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, stateId);
+      const {state, executionOptimistic, finalized} = await getStateResponseWithRegen(chain, sync, stateId);
 
       const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
 
@@ -332,7 +331,7 @@ export function getLodestarApi({
 
       for (const [epoch, attestationsPerEpoch] of attestations) {
         const slot = computeStartSlotAtEpoch(epoch);
-        const {state} = await getStateResponseWithRegen(chain, slot);
+        const {state} = await getStateResponseWithRegen(chain, sync, slot);
         const stateView = state instanceof Uint8Array ? chain.getHeadState().loadOtherState(state) : state;
         const shuffling = stateView.getShufflingAtEpoch(epoch);
         for (const attestation of attestationsPerEpoch) {

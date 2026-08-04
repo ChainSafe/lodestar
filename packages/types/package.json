@@ -11,51 +11,51 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.44.0",
+  "version": "1.45.0",
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./phase0": {
-      "bun": "./src/phase0/index.ts",
+      "typescript": "./src/phase0/index.ts",
       "types": "./lib/phase0/index.d.ts",
       "import": "./lib/phase0/index.js"
     },
     "./altair": {
-      "bun": "./src/altair/index.ts",
+      "typescript": "./src/altair/index.ts",
       "types": "./lib/altair/index.d.ts",
       "import": "./lib/altair/index.js"
     },
     "./capella": {
-      "bun": "./src/capella/index.ts",
+      "typescript": "./src/capella/index.ts",
       "types": "./lib/capella/index.d.ts",
       "import": "./lib/capella/index.js"
     },
     "./bellatrix": {
-      "bun": "./src/bellatrix/index.ts",
+      "typescript": "./src/bellatrix/index.ts",
       "types": "./lib/bellatrix/index.d.ts",
       "import": "./lib/bellatrix/index.js"
     },
     "./deneb": {
-      "bun": "./src/deneb/index.ts",
+      "typescript": "./src/deneb/index.ts",
       "types": "./lib/deneb/index.d.ts",
       "import": "./lib/deneb/index.js"
     },
     "./electra": {
-      "bun": "./src/electra/index.ts",
+      "typescript": "./src/electra/index.ts",
       "types": "./lib/electra/index.d.ts",
       "import": "./lib/electra/index.js"
     },
     "./fulu": {
-      "bun": "./src/fulu/index.ts",
+      "typescript": "./src/fulu/index.ts",
       "types": "./lib/fulu/index.d.ts",
       "import": "./lib/fulu/index.js"
     },
     "./gloas": {
-      "bun": "./src/gloas/index.ts",
+      "typescript": "./src/gloas/index.ts",
       "types": "./lib/gloas/index.d.ts",
       "import": "./lib/gloas/index.js"
     }
@@ -67,21 +67,21 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "pnpm run build --watch",
     "build:release": "pnpm clean && pnpm build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/ssz": "^1.4.0",
+    "@chainsafe/ssz": "^1.6.2",
     "@lodestar/params": "workspace:^",
     "ethereum-cryptography": "^2.0.0"
   },

@@ -71,6 +71,33 @@ export class NoBidReceived extends Error {
 }
 
 /**
+ * Beacon clients select randomized values from the following ranges when initializing
+ * the circuit breaker (so at boot time and once for each unique boot).
+ *
+ * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
+ * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
+ *
+ * The values are randomized per node so builders cannot predict when a given proposer will
+ * fall back to local blocks. With fixed thresholds a builder could withhold payloads right up
+ * to the limit without ever tripping the breaker.
+ */
+export function getFaultInspectionParams(opts: {faultInspectionWindow?: number; allowedFaults?: number}): {
+  faultInspectionWindow: number;
+  allowedFaults: number;
+} {
+  const faultInspectionWindow = Math.max(
+    opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
+    SLOTS_PER_EPOCH
+  );
+  // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
+  const allowedFaults = Math.min(
+    opts.allowedFaults ?? Math.floor(faultInspectionWindow / 4),
+    Math.floor(faultInspectionWindow / 4)
+  );
+  return {faultInspectionWindow, allowedFaults};
+}
+
+/**
  * Additional duration to account for potential event loop lag which causes
  * builder blocks to be rejected even though the response was sent in time.
  */
@@ -122,23 +149,9 @@ export class ExecutionBuilderHttp implements IExecutionBuilder {
     this.registrations = new ValidatorRegistrationCache();
     this.issueLocalFcUWithFeeRecipient = opts.issueLocalFcUWithFeeRecipient;
 
-    /**
-     * Beacon clients select randomized values from the following ranges when initializing
-     * the circuit breaker (so at boot time and once for each unique boot).
-     *
-     * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
-     * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
-     *
-     */
-    this.faultInspectionWindow = Math.max(
-      opts.faultInspectionWindow ?? SLOTS_PER_EPOCH + Math.floor(Math.random() * SLOTS_PER_EPOCH),
-      SLOTS_PER_EPOCH
-    );
-    // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
-    this.allowedFaults = Math.min(
-      opts.allowedFaults ?? Math.floor(this.faultInspectionWindow / 4),
-      Math.floor(this.faultInspectionWindow / 4)
-    );
+    const {faultInspectionWindow, allowedFaults} = getFaultInspectionParams(opts);
+    this.faultInspectionWindow = faultInspectionWindow;
+    this.allowedFaults = allowedFaults;
   }
 
   updateStatus(status: BuilderStatus): void {

@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/params",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -11,27 +11,27 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./presets/mainnet": {
-      "bun": "./src/presets/mainnet.ts",
+      "typescript": "./src/presets/mainnet.ts",
       "types": "./lib/presets/mainnet.d.ts",
       "import": "./lib/presets/mainnet.js"
     },
     "./presets/minimal": {
-      "bun": "./src/presets/minimal.ts",
+      "typescript": "./src/presets/minimal.ts",
       "types": "./lib/presets/minimal.d.ts",
       "import": "./lib/presets/minimal.js"
     },
     "./presets/gnosis": {
-      "bun": "./src/presets/gnosis.ts",
+      "typescript": "./src/presets/gnosis.ts",
       "types": "./lib/presets/gnosis.d.ts",
       "import": "./lib/presets/gnosis.js"
     },
     "./setPreset": {
-      "bun": "./src/setPreset.ts",
+      "typescript": "./src/setPreset.ts",
       "types": "./lib/setPreset.d.ts",
       "import": "./lib/setPreset.js"
     }
@@ -43,18 +43,18 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:release": "pnpm clean && pnpm build",
     "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:browsers": "vitest run --project browser",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",

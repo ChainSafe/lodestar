@@ -61,7 +61,7 @@ export function verifyExecutionPayloadEnvelope(
       `Prev randao mismatch between bid and payload bid=${toHex(bid.prevRandao)} payload=${toHex(payload.prevRandao)}`
     );
   }
-  if (bid.gasLimit !== payload.gasLimit) {
+  if (bid.gasLimit !== BigInt(payload.gasLimit)) {
     throw new Error(`Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${bid.gasLimit}`);
   }
   if (!byteArrayEquals(bid.blockHash, payload.blockHash)) {
@@ -100,8 +100,8 @@ export function verifyExecutionPayloadEnvelope(
   }
 
   // Verify consistency with expected withdrawals
-  const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
-  const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
+  const payloadWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
   if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
     throw new Error(
       `Withdrawals mismatch between payload and expected payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`
