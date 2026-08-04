@@ -91,7 +91,7 @@ describe("FlatFileStore reqresp handler integration", () => {
     it("should serve finalized blobs from flat file store", async () => {
       // Put a blob wrapper with 2 blobs at slot 100
       const wrapper = buildBlobWrapper(2, 0x10);
-      await store.putBlobSidecars(100, ROOT_A, wrapper);
+      await store.putBlobSidecarsBinary(100, ROOT_A, wrapper);
 
       const {chain, db} = makeMockChainAndDb({finalizedSlot: 200});
       const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
@@ -106,8 +106,8 @@ describe("FlatFileStore reqresp handler integration", () => {
     });
 
     it("should serve multiple finalized slots from flat file store", async () => {
-      await store.putBlobSidecars(100, ROOT_A, buildBlobWrapper(1, 0x20));
-      await store.putBlobSidecars(101, ROOT_B, buildBlobWrapper(1, 0x30));
+      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x20));
+      await store.putBlobSidecarsBinary(101, ROOT_B, buildBlobWrapper(1, 0x30));
 
       const {chain, db} = makeMockChainAndDb({finalizedSlot: 200});
       const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 2}, chain, db));
@@ -120,7 +120,7 @@ describe("FlatFileStore reqresp handler integration", () => {
     it("should serve unfinalized blobs from flat file store", async () => {
       // Put a blob at slot 300 (unfinalized, finalized is at 200)
       const wrapper = buildBlobWrapper(1, 0x40);
-      await store.putBlobSidecars(300, ROOT_A, wrapper);
+      await store.putBlobSidecarsBinary(300, ROOT_A, wrapper);
 
       const {chain, db} = makeMockChainAndDb({
         finalizedSlot: 200,
@@ -133,8 +133,8 @@ describe("FlatFileStore reqresp handler integration", () => {
     });
 
     it("should not duplicate boundary slot between finalized and unfinalized paths", async () => {
-      await store.putBlobSidecars(100, ROOT_A, buildBlobWrapper(1, 0x41));
-      await store.putBlobSidecars(101, ROOT_B, buildBlobWrapper(1, 0x42));
+      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x41));
+      await store.putBlobSidecarsBinary(101, ROOT_B, buildBlobWrapper(1, 0x42));
 
       const {chain, db} = makeMockChainAndDb({
         finalizedSlot: 100,
@@ -155,7 +155,7 @@ describe("FlatFileStore reqresp handler integration", () => {
 
     it("should resolve root from existence cache without readdir", async () => {
       // Put blobs — this populates the existence cache
-      await store.putBlobSidecars(100, ROOT_A, buildBlobWrapper(1, 0x70));
+      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x70));
 
       const {chain, db} = makeMockChainAndDb({finalizedSlot: 200});
       const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
@@ -165,8 +165,8 @@ describe("FlatFileStore reqresp handler integration", () => {
     });
 
     it("should use the canonical root while finalization cleanup is pending", async () => {
-      await store.putBlobSidecars(100, ROOT_A, buildBlobWrapper(1, 0x80));
-      await store.putBlobSidecars(100, ROOT_B, buildBlobWrapper(1, 0x90));
+      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x80));
+      await store.putBlobSidecarsBinary(100, ROOT_B, buildBlobWrapper(1, 0x90));
 
       const {chain, db} = makeMockChainAndDb({
         finalizedSlot: 100,
@@ -179,7 +179,7 @@ describe("FlatFileStore reqresp handler integration", () => {
     });
 
     it("should not serve a losing-fork blob at a canonically skipped slot", async () => {
-      await store.putBlobSidecars(100, ROOT_A, buildBlobWrapper(1, 0xa0));
+      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0xa0));
 
       const {chain, db} = makeMockChainAndDb({
         finalizedSlot: 100,

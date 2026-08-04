@@ -47,9 +47,19 @@ describe("FlatFileStore", () => {
   });
 
   describe("blobs", () => {
+    it("should serialize blob sidecars on put", async () => {
+      const blobSidecars = ssz.deneb.BlobSidecars.defaultValue();
+      await store.putBlobSidecars(1000, ROOT_A, blobSidecars);
+
+      const result = await store.getBlobSidecars(1000, ROOT_A);
+      expect(result?.slot).toBe(1000);
+      expect(Array.from(result?.blockRoot ?? [])).toEqual(Array.from(new Uint8Array(32).fill(0xaa)));
+      expect(result?.blobSidecars).toEqual(blobSidecars);
+    });
+
     it("should put and get blob sidecars binary", async () => {
       const data = new Uint8Array(100).fill(0xab);
-      await store.putBlobSidecars(1000, ROOT_A, data);
+      await store.putBlobSidecarsBinary(1000, ROOT_A, data);
 
       const result = await store.getBlobSidecarsBinary(1000, ROOT_A);
       expect(new Uint8Array(result ?? [])).toEqual(data);
@@ -72,16 +82,16 @@ describe("FlatFileStore", () => {
     });
 
     it("should not choose an arbitrary blob root for a slot", async () => {
-      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array([1]));
-      await store.putBlobSidecars(1000, ROOT_B, new Uint8Array([2]));
+      await store.putBlobSidecarsBinary(1000, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecarsBinary(1000, ROOT_B, new Uint8Array([2]));
 
       expect(await store.getBlobSidecarsBinaryBySlot(1000)).toBeNull();
     });
 
     it("should prune blobs before slot", async () => {
-      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
-      await store.putBlobSidecars(200, ROOT_B, new Uint8Array([2]));
-      await store.putBlobSidecars(300, ROOT_C, new Uint8Array([3]));
+      await store.putBlobSidecarsBinary(100, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecarsBinary(200, ROOT_B, new Uint8Array([2]));
+      await store.putBlobSidecarsBinary(300, ROOT_C, new Uint8Array([3]));
 
       await store.pruneBlobsBeforeSlot(200);
 
@@ -92,7 +102,7 @@ describe("FlatFileStore", () => {
 
     it("should prune empty blob slot directories retained in the cache", async () => {
       const slotDir = path.join(tmpDir, "blob_sidecars", "000000000100");
-      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecarsBinary(100, ROOT_A, new Uint8Array([1]));
       await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_A}]);
 
       await store.pruneBlobsBeforeSlot(200);
@@ -101,7 +111,7 @@ describe("FlatFileStore", () => {
     });
 
     it("should retain a blob slot in the cache when pruning fails", async () => {
-      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecarsBinary(100, ROOT_A, new Uint8Array([1]));
       const pruneError = new Error("prune failed");
       const rmSpy = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(pruneError);
 
@@ -233,7 +243,7 @@ describe("FlatFileStore", () => {
 
     it("should resolve column roots independently from blob roots", async () => {
       const column = new Uint8Array([2]);
-      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecarsBinary(1000, ROOT_A, new Uint8Array([1]));
       await store.putDataColumnsBinary(1000, ROOT_B, [{index: 0, data: column}]);
 
       const [result] = await store.getDataColumnsBinaryBySlot(1000, [0]);
@@ -314,9 +324,9 @@ describe("FlatFileStore", () => {
 
   describe("deleteNonCanonical", () => {
     it("should delete blobs and columns for non-canonical blocks", async () => {
-      await store.putBlobSidecars(100, ROOT_ORPHAN, new Uint8Array(10));
+      await store.putBlobSidecarsBinary(100, ROOT_ORPHAN, new Uint8Array(10));
       await store.putDataColumnsBinary(100, ROOT_ORPHAN, [{index: 0, data: new Uint8Array(20)}]);
-      await store.putBlobSidecars(100, ROOT_CANONICAL, new Uint8Array(10));
+      await store.putBlobSidecarsBinary(100, ROOT_CANONICAL, new Uint8Array(10));
 
       await store.deleteNonCanonical([{slot: 100, blockRoot: ROOT_ORPHAN}]);
 
@@ -327,7 +337,7 @@ describe("FlatFileStore", () => {
     });
 
     it("should attempt column deletion when blob deletion fails", async () => {
-      await store.putBlobSidecars(100, ROOT_ORPHAN, new Uint8Array(10));
+      await store.putBlobSidecarsBinary(100, ROOT_ORPHAN, new Uint8Array(10));
       await store.putDataColumnsBinary(100, ROOT_ORPHAN, [{index: 0, data: new Uint8Array(20)}]);
       const deleteError = new Error("blob delete failed");
       const originalRm = fs.promises.rm.bind(fs.promises);
@@ -354,7 +364,7 @@ describe("FlatFileStore", () => {
   describe("cache rebuild", () => {
     it("should rebuild cache from disk after restart", async () => {
       // Write some data
-      await store.putBlobSidecars(1000, ROOT_A, new Uint8Array(10));
+      await store.putBlobSidecarsBinary(1000, ROOT_A, new Uint8Array(10));
       await store.putDataColumnsBinary(1000, ROOT_B, [
         {index: 0, data: new Uint8Array(20)},
         {index: 5, data: new Uint8Array(20)},
@@ -403,7 +413,7 @@ describe("FlatFileStore", () => {
 
     it("should only cache canonical slot directories and root filenames", async () => {
       const validData = new Uint8Array([1, 2, 3]);
-      await store.putBlobSidecars(100, ROOT_A, validData);
+      await store.putBlobSidecarsBinary(100, ROOT_A, validData);
 
       const blobSlotDir = path.join(tmpDir, "blob_sidecars", "000000000102");
       await fs.promises.mkdir(blobSlotDir, {recursive: true});
@@ -446,7 +456,7 @@ describe("FlatFileStore", () => {
     });
 
     it("should not scan storage directories while pruning", async () => {
-      await store.putBlobSidecars(100, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecarsBinary(100, ROOT_A, new Uint8Array([1]));
       await store.putDataColumnsBinary(100, ROOT_A, [{index: 0, data: new Uint8Array(20)}]);
       const readdirSpy = vi.spyOn(fs.promises, "readdir");
 
@@ -463,9 +473,9 @@ describe("FlatFileStore", () => {
       const finalizedCheckpointSlot = 100;
       const hotSlot = finalizedCheckpointSlot + 1;
 
-      await store.putBlobSidecars(finalizedCheckpointSlot, ROOT_A, new Uint8Array([1]));
+      await store.putBlobSidecarsBinary(finalizedCheckpointSlot, ROOT_A, new Uint8Array([1]));
       await store.putDataColumnsBinary(finalizedCheckpointSlot, ROOT_A, [{index: 0, data: new Uint8Array([2])}]);
-      await store.putBlobSidecars(hotSlot, ROOT_B, new Uint8Array([3]));
+      await store.putBlobSidecarsBinary(hotSlot, ROOT_B, new Uint8Array([3]));
       await store.putDataColumnsBinary(hotSlot, ROOT_B, [{index: 0, data: new Uint8Array([4])}]);
 
       const store2 = new FlatFileStore(tmpDir, config, testLogger);

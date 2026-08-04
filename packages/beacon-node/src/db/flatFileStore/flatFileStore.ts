@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {ChainForkConfig} from "@lodestar/config";
-import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot, deneb} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import type {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
 import {blobSidecarsWrapperSsz} from "../repositories/blobSidecars.js";
@@ -11,6 +11,11 @@ import type {IFlatFileStore} from "./interface.js";
 import {type FlatFileStoreMetrics, FlatFileStoreType} from "./metrics.js";
 import {removeSlotDirectories} from "./slotDirectory.js";
 
+/**
+ * Filesystem storage for blob sidecars and data columns, keyed by slot and block root.
+ * Hot and finalized data share the same layout. On startup, unfinalized directories are
+ * removed and the in-memory existence cache is rebuilt from the remaining files.
+ */
 export class FlatFileStore implements IFlatFileStore {
   private readonly cache: ExistenceCache;
   private readonly blobStore: BlobStore;
@@ -92,7 +97,15 @@ export class FlatFileStore implements IFlatFileStore {
     return this.blobStore.getBinaryBySlot(slot);
   }
 
-  async putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void> {
+  async putBlobSidecars(slot: Slot, blockRoot: RootHex, blobSidecars: deneb.BlobSidecars): Promise<void> {
+    await this.putBlobSidecarsBinary(
+      slot,
+      blockRoot,
+      blobSidecarsWrapperSsz.serialize({blockRoot: fromHex(blockRoot), slot, blobSidecars})
+    );
+  }
+
+  async putBlobSidecarsBinary(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void> {
     await this.blobStore.put(slot, blockRoot, data);
   }
 

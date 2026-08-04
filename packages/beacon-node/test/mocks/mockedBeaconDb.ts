@@ -37,6 +37,7 @@ vi.mock("../../src/db/index.js", async (importActual) => {
       getBlobSidecarsBinary: vi.fn().mockResolvedValue(null),
       getBlobSidecarsBinaryBySlot: vi.fn().mockResolvedValue(null),
       putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putBlobSidecarsBinary: vi.fn().mockResolvedValue(undefined),
       getDataColumns: vi.fn().mockResolvedValue([]),
       getDataColumnsBinary: vi.fn().mockImplementation(async (_slot, _root, indices) => indices.map(() => undefined)),
       putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),

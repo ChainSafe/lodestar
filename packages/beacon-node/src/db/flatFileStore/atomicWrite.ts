@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import {mkdir, open, rename, rm} from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -9,10 +9,10 @@ import path from "node:path";
 export async function atomicWrite(targetPath: string, data: Uint8Array): Promise<void> {
   const dir = path.dirname(targetPath);
   const partPath = `${targetPath}.part-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  await fs.promises.mkdir(dir, {recursive: true});
+  await mkdir(dir, {recursive: true});
 
   try {
-    const fd = await fs.promises.open(partPath, "wx");
+    const fd = await open(partPath, "wx");
     try {
       await fd.writeFile(data);
       await fd.datasync();
@@ -20,17 +20,17 @@ export async function atomicWrite(targetPath: string, data: Uint8Array): Promise
       await fd.close();
     }
 
-    await fs.promises.rename(partPath, targetPath);
+    await rename(partPath, targetPath);
 
     // Ensure rename metadata is durable on crash.
-    const dirFd = await fs.promises.open(dir, "r");
+    const dirFd = await open(dir, "r");
     try {
       await dirFd.sync();
     } finally {
       await dirFd.close();
     }
   } catch (e) {
-    await fs.promises.rm(partPath, {force: true}).catch(() => {});
+    await rm(partPath, {force: true}).catch(() => {});
     throw e;
   }
 }

@@ -14,7 +14,7 @@ const BLOB_MIGRATION_BATCH_SIZE = 128;
 const COLUMN_MIGRATION_BATCH_SIZE = 32 * NUMBER_OF_COLUMNS;
 const MIGRATION_PROGRESS_INTERVAL_MS = 30_000;
 
-type MigrationStore = Pick<IFlatFileStore, "putBlobSidecars" | "putDataColumnsBinary">;
+type MigrationStore = Pick<IFlatFileStore, "putBlobSidecarsBinary" | "putDataColumnsBinary">;
 type MigrationDb = Pick<Db, "compactRange">;
 
 export type ArchivedSidecarMigrationStats = {
@@ -84,7 +84,7 @@ export async function migrateArchivedSidecars(
           }
 
           const blockRoot = toRootHex(value.subarray(0, 32));
-          await store.putBlobSidecars(slot, blockRoot, value);
+          await store.putBlobSidecarsBinary(slot, blockRoot, value);
           metrics?.migrationWrites.inc(
             {store: FlatFileStoreType.blob, result: FlatFileStoreMigrationResult.success},
             1

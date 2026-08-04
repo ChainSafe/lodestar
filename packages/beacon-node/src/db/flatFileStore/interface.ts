@@ -1,4 +1,4 @@
-import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot, deneb} from "@lodestar/types";
 import {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
 
 /**
@@ -20,7 +20,8 @@ export interface IFlatFileStore {
   getBlobSidecarsBinary(slot: Slot, blockRoot: RootHex): Promise<Uint8Array | null>;
   /** Lookup by slot only when a single blob root exists */
   getBlobSidecarsBinaryBySlot(slot: Slot): Promise<Uint8Array | null>;
-  putBlobSidecars(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
+  putBlobSidecars(slot: Slot, blockRoot: RootHex, blobSidecars: deneb.BlobSidecars): Promise<void>;
+  putBlobSidecarsBinary(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void>;
 
   // --- Columns ---
 

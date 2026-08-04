@@ -29,7 +29,7 @@ describe("FlatFileStore metrics", () => {
     await store.init(Number.MAX_SAFE_INTEGER);
 
     const blobData = new Uint8Array([1, 2, 3, 4]);
-    await store.putBlobSidecars(100, ROOT, blobData);
+    await store.putBlobSidecarsBinary(100, ROOT, blobData);
     await store.getBlobSidecarsBinary(100, ROOT);
 
     await store.putDataColumnsBinary(100, ROOT, [{index: 0, data: new Uint8Array(50).fill(0xaa)}]);

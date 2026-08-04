@@ -166,7 +166,7 @@ describe("archived sidecar migration", () => {
     }
 
     const store = {
-      putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putBlobSidecarsBinary: vi.fn().mockResolvedValue(undefined),
       putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
     };
     const logger = testLogger("flat-file-migration-progress");
@@ -217,7 +217,7 @@ describe("archived sidecar migration", () => {
     );
 
     const store = {
-      putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putBlobSidecarsBinary: vi.fn().mockResolvedValue(undefined),
       putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
     };
     const entriesSpy = vi.spyOn(blobSidecarsArchive, "binaryEntriesStream");
@@ -276,7 +276,7 @@ describe("archived sidecar migration", () => {
     }
 
     const store = {
-      putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putBlobSidecarsBinary: vi.fn().mockResolvedValue(undefined),
       putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
     };
     const entriesSpy = vi.spyOn(dataColumnSidecarArchive, "binaryEntriesStream");
@@ -322,7 +322,7 @@ describe("archived sidecar migration", () => {
     await dataColumnSidecarArchive.put(columnSlot, column);
 
     const failingStore = {
-      putBlobSidecars: vi.fn().mockRejectedValue(new Error("write failed")),
+      putBlobSidecarsBinary: vi.fn().mockRejectedValue(new Error("write failed")),
       putDataColumnsBinary: vi.fn().mockRejectedValue(new Error("write failed")),
     };
     const metrics = createMetricsTest();
@@ -343,7 +343,7 @@ describe("archived sidecar migration", () => {
     expect(await dataColumnSidecarArchive.values(columnSlot)).toHaveLength(1);
 
     const succeedingStore = {
-      putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putBlobSidecarsBinary: vi.fn().mockResolvedValue(undefined),
       putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
     };
 

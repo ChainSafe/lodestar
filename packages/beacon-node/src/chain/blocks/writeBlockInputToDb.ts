@@ -1,7 +1,6 @@
 import {ForkPostDeneb, ForkPostFulu, isForkPostDeneb} from "@lodestar/params";
 import {SignedBeaconBlock} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
-import {blobSidecarsWrapperSsz} from "../../db/repositories/blobSidecars.js";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import {BeaconChain} from "../chain.js";
 import {IBlockInput, IDataColumnsInput, isBlockInputBlobs, isBlockInputColumns} from "./blockInput/index.js";
@@ -56,8 +55,7 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
           await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
         }
         const blobSidecars = blockInput.getBlobs();
-        const wrapperBytes = blobSidecarsWrapperSsz.serialize({blockRoot, slot, blobSidecars});
-        await this.db.flatFileStore.putBlobSidecars(slot, blockRootHex, wrapperBytes);
+        await this.db.flatFileStore.putBlobSidecars(slot, blockRootHex, blobSidecars);
         this.logger.debug("Persisted blobSidecars", {
           slot,
           root: blockRootHex,
