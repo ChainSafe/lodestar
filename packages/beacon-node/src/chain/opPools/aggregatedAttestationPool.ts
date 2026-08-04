@@ -234,6 +234,7 @@ export class AggregatedAttestationPool {
     const stateEpoch = state.epoch;
     const statePrevEpoch = stateEpoch - 1;
     const rootCache = new RootCache(state);
+    const gloasState = isStatePostGloas(state) ? state : null;
 
     const notSeenValidatorsFn = getNotSeenValidatorsFn(this.config, shufflingCache, state);
     const validateAttestationDataFn = getValidateAttestationDataFn(forkChoice, state);
@@ -361,7 +362,8 @@ export class AggregatedAttestationPool {
             inclusionDistance,
             stateEpoch,
             rootCache,
-            isStatePostGloas(state) ? state.executionPayloadAvailability : null
+            gloasState?.executionPayloadAvailability ?? null,
+            gloasState?.latestExecutionPayloadBid.slot ?? null
           );
 
           const weight =

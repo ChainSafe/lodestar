@@ -11,7 +11,7 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     }
@@ -70,6 +70,7 @@
     "@libp2p/peer-id": "^6.0.4",
     "@lodestar/api": "workspace:^",
     "@lodestar/beacon-node": "workspace:^",
+    "@lodestar/builder": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/db": "workspace:^",
     "@lodestar/logger": "workspace:^",

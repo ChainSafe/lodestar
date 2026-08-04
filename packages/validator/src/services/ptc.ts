@@ -1,11 +1,12 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {isForkPostGloas} from "@lodestar/params";
+import {IClock} from "@lodestar/state-transition";
 import {Slot, gloas} from "@lodestar/types";
 import {prettyBytes, sleep, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {ChainHeaderTracker} from "./chainHeaderTracker.js";
 import {ExecutionPayloadAvailableEventData, ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
 import {PtcDutiesService} from "./ptcDuties.js";
