@@ -433,7 +433,7 @@ export class AggregatedAttestationPool {
       );
     } else {
       const attestationGroupsByIndex = this.attestationGroupByIndexByDataHexBySlot.get(bySlot);
-      if (!attestationGroupsByIndex) throw Error(`No attestations for slot ${bySlot}`);
+      if (!attestationGroupsByIndex) return [];
       attestationGroupsArr = Array.from(attestationGroupsByIndex.values());
     }
 
