@@ -6,9 +6,9 @@ import {createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LogLevel, testLogger} from "@lodestar/logger/test-utils";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
+import {NUMBER_OF_COLUMNS, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {toRootHex} from "@lodestar/utils";
+import {type Logger, toRootHex} from "@lodestar/utils";
 import {BeaconDb} from "../../../../src/db/beacon.js";
 import {migrateArchivedSidecars} from "../../../../src/db/flatFileStore/migrate.js";
 import {
@@ -24,9 +24,17 @@ const config = createChainForkConfig({
   FULU_FORK_EPOCH: 0,
   GLOAS_FORK_EPOCH: 1,
 });
+const silentLogger: Logger = {
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  verbose: vi.fn(),
+  debug: vi.fn(),
+};
 
 describe("archived sidecar migration", () => {
   let tmpDir: string;
+  let controller: LevelDbController;
   let db: BeaconDb;
   let blobSidecars: BlobSidecarsRepository;
   let blobSidecarsArchive: BlobSidecarsArchiveRepository;
@@ -35,10 +43,7 @@ describe("archived sidecar migration", () => {
 
   beforeEach(async () => {
     tmpDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "lodestar-flatfile-migration-"));
-    const controller = await LevelDbController.create(
-      {name: path.join(tmpDir, "chain-db")},
-      {logger: testLogger("flat-file-migration")}
-    );
+    controller = await LevelDbController.create({name: path.join(tmpDir, "chain-db")}, {logger: silentLogger});
     db = new BeaconDb(config, controller);
     blobSidecars = new BlobSidecarsRepository(config, controller);
     blobSidecarsArchive = new BlobSidecarsArchiveRepository(config, controller);
@@ -173,7 +178,7 @@ describe("archived sidecar migration", () => {
     });
 
     try {
-      await migrateArchivedSidecars(config, blobSidecarsArchive, dataColumnSidecarArchive, store, logger);
+      await migrateArchivedSidecars(config, blobSidecarsArchive, dataColumnSidecarArchive, store, controller, logger);
     } finally {
       nowSpy.mockRestore();
     }
@@ -198,6 +203,113 @@ describe("archived sidecar migration", () => {
     );
   });
 
+  it("migrates blobs with short iterators and compacts each batch", async () => {
+    const startingSlot = 1000;
+    const blobCount = 129;
+    await blobSidecarsArchive.batchPut(
+      Array.from({length: blobCount}, (_, i) => {
+        const slot = startingSlot + i;
+        return {
+          key: slot,
+          value: {blockRoot: new Uint8Array(32).fill(i % 256), slot, blobSidecars: []},
+        };
+      })
+    );
+
+    const store = {
+      putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
+    };
+    const entriesSpy = vi.spyOn(blobSidecarsArchive, "binaryEntriesStream");
+    const compactSpy = vi.spyOn(controller, "compactRange").mockResolvedValue(undefined);
+
+    try {
+      const stats = await migrateArchivedSidecars(
+        config,
+        blobSidecarsArchive,
+        dataColumnSidecarArchive,
+        store,
+        controller,
+        silentLogger
+      );
+
+      expect(stats.blobs).toBe(blobCount);
+      expect(entriesSpy).toHaveBeenCalledTimes(2);
+      expect(entriesSpy).toHaveBeenNthCalledWith(1, {limit: 128});
+      expect(entriesSpy).toHaveBeenNthCalledWith(2, {gt: startingSlot + 127, limit: 128});
+      expect(compactSpy).toHaveBeenCalledTimes(4);
+      expect(compactSpy.mock.calls[1][0]).toEqual(compactSpy.mock.calls[0][1]);
+      expect(compactSpy.mock.calls[2][0]).toEqual(compactSpy.mock.calls[1][1]);
+
+      compactSpy.mockClear();
+      await migrateArchivedSidecars(
+        config,
+        blobSidecarsArchive,
+        dataColumnSidecarArchive,
+        store,
+        controller,
+        silentLogger
+      );
+      expect(compactSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      entriesSpy.mockRestore();
+      compactSpy.mockRestore();
+    }
+  });
+
+  it("does not split a column slot across migration batches", async () => {
+    for (let slot = 0; slot <= SLOTS_PER_EPOCH; slot++) {
+      if (slot < SLOTS_PER_EPOCH) {
+        const columns = Array.from({length: NUMBER_OF_COLUMNS}, (_, index) => {
+          const column = ssz.fulu.DataColumnSidecar.defaultValue();
+          column.index = index;
+          column.signedBlockHeader.message.slot = slot;
+          return column;
+        });
+        await dataColumnSidecarArchive.putMany(slot, columns);
+      } else {
+        const column = ssz.gloas.DataColumnSidecar.defaultValue();
+        column.index = 0;
+        column.slot = slot;
+        await dataColumnSidecarArchive.putMany(slot, [column]);
+      }
+    }
+
+    const store = {
+      putBlobSidecars: vi.fn().mockResolvedValue(undefined),
+      putDataColumnsBinary: vi.fn().mockResolvedValue(undefined),
+    };
+    const entriesSpy = vi.spyOn(dataColumnSidecarArchive, "binaryEntriesStream");
+    const compactSpy = vi.spyOn(controller, "compactRange").mockResolvedValue(undefined);
+
+    try {
+      const stats = await migrateArchivedSidecars(
+        config,
+        blobSidecarsArchive,
+        dataColumnSidecarArchive,
+        store,
+        controller,
+        silentLogger
+      );
+
+      expect(stats.columnSlots).toBe(SLOTS_PER_EPOCH + 1);
+      expect(stats.columns).toBe(SLOTS_PER_EPOCH * NUMBER_OF_COLUMNS + 1);
+      expect(store.putDataColumnsBinary).toHaveBeenCalledTimes(SLOTS_PER_EPOCH + 1);
+      expect(entriesSpy).toHaveBeenCalledTimes(2);
+      expect(entriesSpy).toHaveBeenNthCalledWith(1, {limit: SLOTS_PER_EPOCH * NUMBER_OF_COLUMNS});
+      expect(entriesSpy).toHaveBeenNthCalledWith(2, {
+        gt: {prefix: SLOTS_PER_EPOCH - 1, id: NUMBER_OF_COLUMNS - 1},
+        limit: SLOTS_PER_EPOCH * NUMBER_OF_COLUMNS,
+      });
+      expect(await dataColumnSidecarArchive.values(SLOTS_PER_EPOCH - 1)).toEqual([]);
+      expect(await dataColumnSidecarArchive.values(SLOTS_PER_EPOCH)).toEqual([]);
+      expect(compactSpy).toHaveBeenCalledTimes(4);
+    } finally {
+      entriesSpy.mockRestore();
+      compactSpy.mockRestore();
+    }
+  });
+
   it("keeps failed entries in LevelDB for a later retry", async () => {
     const blobSlot = 20;
     const blobRoot = new Uint8Array(32).fill(0xdd);
@@ -220,7 +332,8 @@ describe("archived sidecar migration", () => {
       blobSidecarsArchive,
       dataColumnSidecarArchive,
       failingStore,
-      testLogger("flat-file-migration"),
+      controller,
+      silentLogger,
       metrics.flatFileStore
     );
 
@@ -239,7 +352,8 @@ describe("archived sidecar migration", () => {
       blobSidecarsArchive,
       dataColumnSidecarArchive,
       succeedingStore,
-      testLogger("flat-file-migration"),
+      controller,
+      silentLogger,
       metrics.flatFileStore
     );
 

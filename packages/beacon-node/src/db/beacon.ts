@@ -103,6 +103,7 @@ export class BeaconDb implements IBeaconDb {
       this.legacyBlobSidecarsArchive,
       this.legacyDataColumnSidecarArchive,
       store,
+      this.db,
       logger,
       metrics
     );

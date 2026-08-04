@@ -1,17 +1,21 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkPostFulu} from "@lodestar/params";
-import {Slot, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
+import {Db, encodeKey} from "@lodestar/db";
+import {ForkPostFulu, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ColumnIndex, Slot, isGloasDataColumnSidecar, ssz} from "@lodestar/types";
 import {Logger, toRootHex} from "@lodestar/utils";
+import {Bucket} from "../buckets.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../repositories/blobSidecars.js";
 import {BlobSidecarsArchiveRepository} from "../repositories/blobSidecarsArchive.js";
 import {DataColumnSidecarArchiveRepository} from "../repositories/dataColumnSidecarArchive.js";
 import type {IFlatFileStore} from "./interface.js";
 import {type FlatFileStoreMetrics, FlatFileStoreMigrationResult, FlatFileStoreType} from "./metrics.js";
 
-const BLOB_DELETE_BATCH_SIZE = 128;
+const BLOB_MIGRATION_BATCH_SIZE = 128;
+const COLUMN_MIGRATION_BATCH_SIZE = 32 * NUMBER_OF_COLUMNS;
 const MIGRATION_PROGRESS_INTERVAL_MS = 30_000;
 
 type MigrationStore = Pick<IFlatFileStore, "putBlobSidecars" | "putDataColumnsBinary">;
+type MigrationDb = Pick<Db, "compactRange">;
 
 export type ArchivedSidecarMigrationStats = {
   blobs: number;
@@ -32,6 +36,7 @@ export async function migrateArchivedSidecars(
   blobSidecarsArchive: BlobSidecarsArchiveRepository,
   dataColumnSidecarArchive: DataColumnSidecarArchiveRepository,
   store: MigrationStore,
+  db: MigrationDb,
   logger: Logger,
   metrics: FlatFileStoreMetrics | null = null
 ): Promise<ArchivedSidecarMigrationStats> {
@@ -44,60 +49,92 @@ export async function migrateArchivedSidecars(
   };
 
   try {
-    let slotsToDelete: Slot[] = [];
+    const bucketStart = encodeKey(Bucket.deneb_blobSidecarsArchive, Buffer.alloc(0));
+    const bucketEnd = encodeKey(Bucket.deneb_blobSidecarsArchive + 1, Buffer.alloc(0));
+    let cursor: Slot | null = null;
+    let compactionStart = bucketStart;
     let startedAt: number | null = null;
     let lastProgressAt = 0;
 
-    const deleteMigratedBlobs = async (): Promise<void> => {
-      if (slotsToDelete.length === 0) return;
+    while (true) {
+      let entriesRead = 0;
+      let lastSlot: Slot | null = null;
+      const slotsToDelete: Slot[] = [];
 
-      await blobSidecarsArchive.batchDelete(slotsToDelete);
-      stats.blobs += slotsToDelete.length;
-      slotsToDelete = [];
-    };
+      for await (const {key, value} of blobSidecarsArchive.binaryEntriesStream({
+        ...(cursor === null ? {} : {gt: cursor}),
+        limit: BLOB_MIGRATION_BATCH_SIZE,
+      })) {
+        const slot = blobSidecarsArchive.decodeKey(key);
+        entriesRead++;
+        cursor = slot;
+        lastSlot = slot;
 
-    for await (const {key, value} of blobSidecarsArchive.binaryEntriesStream()) {
-      const slot = blobSidecarsArchive.decodeKey(key);
-      if (startedAt === null) {
-        startedAt = Date.now();
-        lastProgressAt = startedAt;
-        logger.info("Migrating archived blob sidecars to flat-file storage; startup will wait for completion", {
-          startingSlot: slot,
-        });
-      }
-
-      try {
-        if (value.length < BLOB_SIDECARS_IN_WRAPPER_INDEX) {
-          throw new Error(`Invalid archived blob sidecars length ${value.length}`);
+        if (startedAt === null) {
+          startedAt = Date.now();
+          lastProgressAt = startedAt;
+          logger.info("Migrating archived blob sidecars to flat-file storage; startup will wait for completion", {
+            startingSlot: slot,
+          });
         }
 
-        const blockRoot = toRootHex(value.subarray(0, 32));
-        await store.putBlobSidecars(slot, blockRoot, value);
-        metrics?.migrationWrites.inc({store: FlatFileStoreType.blob, result: FlatFileStoreMigrationResult.success}, 1);
-        slotsToDelete.push(slot);
-      } catch (e) {
-        stats.blobFailures++;
-        metrics?.migrationWrites.inc({store: FlatFileStoreType.blob, result: FlatFileStoreMigrationResult.error}, 1);
-        logger.error("Failed to migrate archived blob sidecars to flat-file storage", {slot}, e as Error);
+        try {
+          if (value.length < BLOB_SIDECARS_IN_WRAPPER_INDEX) {
+            throw new Error(`Invalid archived blob sidecars length ${value.length}`);
+          }
+
+          const blockRoot = toRootHex(value.subarray(0, 32));
+          await store.putBlobSidecars(slot, blockRoot, value);
+          metrics?.migrationWrites.inc(
+            {store: FlatFileStoreType.blob, result: FlatFileStoreMigrationResult.success},
+            1
+          );
+          slotsToDelete.push(slot);
+        } catch (e) {
+          stats.blobFailures++;
+          metrics?.migrationWrites.inc({store: FlatFileStoreType.blob, result: FlatFileStoreMigrationResult.error}, 1);
+          logger.error("Failed to migrate archived blob sidecars to flat-file storage", {slot}, e as Error);
+        }
+
+        const now = Date.now();
+        if (now - lastProgressAt >= MIGRATION_PROGRESS_INTERVAL_MS) {
+          logger.info("Archived blob sidecar migration in progress", {
+            migrated: stats.blobs + slotsToDelete.length,
+            failures: stats.blobFailures,
+            currentSlot: slot,
+            elapsedSeconds: Math.floor((now - startedAt) / 1000),
+          });
+          lastProgressAt = now;
+        }
       }
 
-      if (slotsToDelete.length >= BLOB_DELETE_BATCH_SIZE) {
-        await deleteMigratedBlobs();
+      if (lastSlot === null) break;
+
+      if (slotsToDelete.length > 0) {
+        await blobSidecarsArchive.batchDelete(slotsToDelete);
+        stats.blobs += slotsToDelete.length;
       }
 
-      const now = Date.now();
-      if (now - lastProgressAt >= MIGRATION_PROGRESS_INTERVAL_MS) {
-        logger.info("Archived blob sidecar migration in progress", {
-          migrated: stats.blobs + slotsToDelete.length,
-          failures: stats.blobFailures,
-          currentSlot: slot,
-          elapsedSeconds: Math.floor((now - startedAt) / 1000),
-        });
-        lastProgressAt = now;
-      }
+      const compactionEnd = blobSidecarsArchive.encodeKey(lastSlot + 1);
+      logger.info("Compacting migrated archived blob sidecars in LevelDB; startup will wait for completion", {
+        throughSlot: lastSlot,
+      });
+      await db.compactRange(compactionStart, compactionEnd);
+      compactionStart = compactionEnd;
+      logger.info("Archived blob sidecar migration batch complete", {
+        migrated: stats.blobs,
+        failures: stats.blobFailures,
+        throughSlot: lastSlot,
+      });
+
+      if (entriesRead < BLOB_MIGRATION_BATCH_SIZE) break;
     }
 
-    await deleteMigratedBlobs();
+    // Also run when the bucket is empty to reclaim deletes left by an interrupted previous migration.
+    logger.info("Running final legacy blob sidecar LevelDB compaction; startup will wait for completion");
+    await db.compactRange(compactionStart, bucketEnd);
+    logger.info("Final legacy blob sidecar LevelDB compaction complete");
+
     if (startedAt !== null) {
       logger.info("Archived blob sidecar migration phase complete", {
         migrated: stats.blobs,
@@ -110,13 +147,17 @@ export async function migrateArchivedSidecars(
   }
 
   try {
+    const bucketStart = encodeKey(Bucket.allForks_dataColumnSidecarsArchive, Buffer.alloc(0));
+    const bucketEnd = encodeKey(Bucket.allForks_dataColumnSidecarsArchive + 1, Buffer.alloc(0));
+    let cursor: {prefix: Slot; id: ColumnIndex} | null = null;
+    let compactionStart = bucketStart;
     let currentSlot: Slot | null = null;
     let columns: {index: number; data: Uint8Array}[] = [];
     let startedAt: number | null = null;
     let lastProgressAt = 0;
 
-    const migrateColumnSlot = async (): Promise<void> => {
-      if (currentSlot === null || columns.length === 0) return;
+    const migrateColumnSlot = async (): Promise<Slot | null> => {
+      if (currentSlot === null || columns.length === 0) return null;
 
       const slot = currentSlot;
       const columnsToMigrate = columns;
@@ -157,37 +198,78 @@ export async function migrateArchivedSidecars(
           e as Error
         );
       }
+
+      return slot;
     };
 
-    for await (const {prefix: slot, id: index, value} of dataColumnSidecarArchive.entriesStreamBinary()) {
-      if (startedAt === null) {
-        startedAt = Date.now();
-        lastProgressAt = startedAt;
-        logger.info("Migrating archived data columns to flat-file storage; startup will wait for completion", {
-          startingSlot: slot,
+    while (true) {
+      let entriesRead = 0;
+      let lastProcessedSlot: Slot | null = null;
+
+      for await (const {prefix: slot, id: index, value} of dataColumnSidecarArchive.binaryEntriesStream({
+        ...(cursor === null ? {} : {gt: cursor}),
+        limit: COLUMN_MIGRATION_BATCH_SIZE,
+      })) {
+        entriesRead++;
+
+        if (startedAt === null) {
+          startedAt = Date.now();
+          lastProgressAt = startedAt;
+          logger.info("Migrating archived data columns to flat-file storage; startup will wait for completion", {
+            startingSlot: slot,
+          });
+        }
+
+        if (currentSlot !== null && slot !== currentSlot) {
+          lastProcessedSlot = await migrateColumnSlot();
+        }
+        currentSlot = slot;
+        columns.push({index, data: value});
+        cursor = {prefix: slot, id: index};
+
+        const now = Date.now();
+        if (now - lastProgressAt >= MIGRATION_PROGRESS_INTERVAL_MS) {
+          logger.info("Archived data column migration in progress", {
+            migratedSlots: stats.columnSlots,
+            migratedColumns: stats.columns,
+            failures: stats.columnFailures,
+            currentSlot: slot,
+            elapsedSeconds: Math.floor((now - startedAt) / 1000),
+          });
+          lastProgressAt = now;
+        }
+      }
+
+      if (entriesRead < COLUMN_MIGRATION_BATCH_SIZE) {
+        lastProcessedSlot = (await migrateColumnSlot()) ?? lastProcessedSlot;
+      }
+
+      if (lastProcessedSlot !== null) {
+        const compactionEnd = encodeKey(
+          Bucket.allForks_dataColumnSidecarsArchive,
+          dataColumnSidecarArchive.getMinKeyRaw(lastProcessedSlot + 1)
+        );
+        logger.info("Compacting migrated archived data columns in LevelDB; startup will wait for completion", {
+          throughSlot: lastProcessedSlot,
         });
-      }
-
-      if (currentSlot !== null && slot !== currentSlot) {
-        await migrateColumnSlot();
-      }
-      currentSlot = slot;
-      columns.push({index, data: value});
-
-      const now = Date.now();
-      if (now - lastProgressAt >= MIGRATION_PROGRESS_INTERVAL_MS) {
-        logger.info("Archived data column migration in progress", {
+        await db.compactRange(compactionStart, compactionEnd);
+        compactionStart = compactionEnd;
+        logger.info("Archived data column migration batch complete", {
           migratedSlots: stats.columnSlots,
           migratedColumns: stats.columns,
           failures: stats.columnFailures,
-          currentSlot: slot,
-          elapsedSeconds: Math.floor((now - startedAt) / 1000),
+          throughSlot: lastProcessedSlot,
         });
-        lastProgressAt = now;
       }
+
+      if (entriesRead < COLUMN_MIGRATION_BATCH_SIZE) break;
     }
 
-    await migrateColumnSlot();
+    // Also run when the bucket is empty to reclaim deletes left by an interrupted previous migration.
+    logger.info("Running final legacy data column LevelDB compaction; startup will wait for completion");
+    await db.compactRange(compactionStart, bucketEnd);
+    logger.info("Final legacy data column LevelDB compaction complete");
+
     if (startedAt !== null) {
       logger.info("Archived data column migration phase complete", {
         migratedSlots: stats.columnSlots,
