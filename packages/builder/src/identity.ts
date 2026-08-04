@@ -1,29 +1,14 @@
-import {ApiClient} from "@lodestar/api";
+import {ApiClient, routes} from "@lodestar/api";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
-import {BuilderIndex} from "@lodestar/types";
+import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {Logger, toHex} from "@lodestar/utils";
 
-export async function resolveBuilderIdentity(
-  api: ApiClient,
-  logger: Logger,
-  publicKeyHex: string
-): Promise<BuilderIndex> {
-  const builderRes = await api.beacon.getStateBuilders({
-    stateId: "head",
-    builderIds: [publicKeyHex],
-  });
+export async function resolveBuilderIdentity(api: ApiClient, logger: Logger, id: string): Promise<BuilderIndex> {
+  const builderEntry = await fetchBuilder(api, logger, id);
 
-  if (!builderRes.ok) {
-    throw Error(`Getting state builders from BN failed: ${builderRes.status}`);
+  if (builderEntry === null) {
+    throw Error("Unable to retrieve the builder.");
   }
-
-  const builders = builderRes.value();
-
-  if (builders.length === 0) {
-    throw Error(`Builder not registered: ${publicKeyHex}`);
-  }
-
-  const builderEntry = builders[0];
 
   if (builderEntry.status !== "active") {
     throw Error(`Builder not active: ${builderEntry.status}`);
@@ -41,4 +26,44 @@ export async function resolveBuilderIdentity(
   });
 
   return builderEntry.index;
+}
+
+export async function getBuilderStatus(
+  api: ApiClient,
+  logger: Logger,
+  id: routes.beacon.BuilderId
+): Promise<{status: BuilderStatus; balance: number} | null> {
+  const builderEntry = await fetchBuilder(api, logger, id);
+
+  if (builderEntry === null) return null;
+
+  return {
+    status: builderEntry.status,
+    balance: builderEntry.builder.balance,
+  };
+}
+
+async function fetchBuilder(
+  api: ApiClient,
+  logger: Logger,
+  id: routes.beacon.BuilderId
+): Promise<routes.beacon.BuilderResponse | null> {
+  const builderRes = await api.beacon.getStateBuilders({
+    stateId: "head",
+    builderIds: [id],
+  });
+
+  if (!builderRes.ok) {
+    logger.warn("Getting builder state from BN failed", {status: builderRes.status});
+    return null;
+  }
+
+  const builders = builderRes.value();
+
+  if (builders.length === 0) {
+    logger.warn(`Builder not known to the BN: ${id}`);
+    return null;
+  }
+
+  return builders[0];
 }
