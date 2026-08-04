@@ -173,6 +173,10 @@ export const forkChoiceTestRunner =
         const stepsLen = steps.length;
         logger.debug("Fork choice test", {steps: stepsLen});
 
+        // Block roots successfully imported so far, to recognize duplicate deliveries produced by
+        // the generator's `multi_route` mutation (see the catch below).
+        const importedBlockRootHexes = new Set<string>();
+
         try {
           for (const [i, step] of steps.entries()) {
             if (isTick(step)) {
@@ -515,14 +519,21 @@ export const forkChoiceTestRunner =
                   importAttestations: AttestationImportOpt.Force,
                   validSignatures: testcase.meta?.bls_setting !== BigInt(1),
                 });
+                importedBlockRootHexes.add(blockRootHex);
                 if (!isValid) throw Error("Expect error since this is a negative test");
               } catch (e) {
-                // Runner accommodation with a known limitation: the spec re-processes a duplicate
-                // block (re-runs the state transition and may refresh timeliness/boost/checkpoint
-                // state), while lodestar's production import path rejects duplicates with
-                // ALREADY_KNOWN. Treat as success; a vector that relies on duplicate-block side
-                // effects would diverge here.
-                if (isValid && e instanceof BlockError && e.type.code === BlockErrorCode.ALREADY_KNOWN) {
+                // Runner accommodation: the spec's `on_block` returns early for a block already in
+                // the store (consensus-specs #5495), while lodestar's production import path rejects
+                // the duplicate — with ALREADY_KNOWN, or with WOULD_REVERT_FINALIZED_SLOT when
+                // finalization has advanced past the block's slot in the meantime (the sanity check
+                // fires before the already-known check, and fork choice has pruned the block by
+                // then). Both are equivalent to the spec's no-op.
+                const isDuplicateNoOp =
+                  e instanceof BlockError &&
+                  (e.type.code === BlockErrorCode.ALREADY_KNOWN ||
+                    (e.type.code === BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT &&
+                      importedBlockRootHexes.has(blockRootHex)));
+                if (isValid && isDuplicateNoOp) {
                   logger.debug(`Step ${i}/${stepsLen} block already known — treating as no-op success`, {
                     id: step.block,
                   });
