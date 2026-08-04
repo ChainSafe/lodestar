@@ -130,9 +130,9 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         }
       }
 
-      function runChecks(checks: Checks): void {
-        assertHeader(lightClient.store.finalizedHeader, checks.finalized_header, "wrong finalizedHeader");
-        assertHeader(lightClient.store.optimisticHeader, checks.optimistic_header, "wrong optimisticHeader");
+      function runChecks(update: {checks: Checks}): void {
+        assertHeader(lightClient.store.finalizedHeader, update.checks.finalized_header, "wrong finalizedHeader");
+        assertHeader(lightClient.store.optimisticHeader, update.checks.optimistic_header, "wrong optimisticHeader");
       }
 
       function renderSlot(currentSlot: Slot): {currentSlot: number; curretPeriod: number} {
@@ -163,7 +163,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 
             lightClient.onUpdate(currentSlot, update);
-            runChecks(processUpdate.checks);
+            runChecks(processUpdate);
           }
 
           // force_update step
@@ -174,7 +174,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
 
             // Simulate force_update()
             lightClient.forceUpdate(currentSlot);
-            runChecks(forceUpdate.checks);
+            runChecks(forceUpdate);
           }
 
           // upgrade_store step
@@ -185,7 +185,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
 
             upgradeLightClientStore(config, targetFork, lightClient.store);
             storeFork = targetFork;
-            runChecks(upgradeStore.checks);
+            runChecks(upgradeStore);
           }
 
           logger.debug(
