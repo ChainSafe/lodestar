@@ -364,7 +364,9 @@
     </spec>
 
 - name: PayloadAttributes#heze
-  sources: []
+  sources:
+    - file: packages/types/src/heze/sszTypes.ts
+      search: export const PayloadAttributes =
   spec: |
     <spec dataclass="PayloadAttributes" fork="heze" hash="c1298bc5">
     class PayloadAttributes:

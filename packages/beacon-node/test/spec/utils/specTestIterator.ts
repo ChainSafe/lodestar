@@ -101,7 +101,6 @@ export const defaultSkipOpts: SkipOpts = {
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
-    /\/heze_fork$/,
     // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
     // boost wrongly denied. Fails identically on every pre-gloas fork.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
