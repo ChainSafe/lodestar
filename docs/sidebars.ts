@@ -36,7 +36,6 @@ const sidebars: SidebarsConfig = {
           type: "category",
           label: "Builder Client",
           items: [
-            "run/builder-management/builder-cli",
           ],
         },
         {
