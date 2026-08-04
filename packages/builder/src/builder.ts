@@ -1,15 +1,17 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
+import {BuilderIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
+import {resolveBuilderIdentity} from "./identity.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
   builderSigner: BuilderSigner;
   clock: IClock;
+  index: BuilderIndex;
 };
 
 export type BuilderOptions = {
@@ -28,56 +30,34 @@ export class Builder {
   readonly builderSigner: BuilderSigner;
   private readonly controller: AbortController;
   private readonly clock: IClock;
+  private readonly index: BuilderIndex;
 
-  constructor({opts, builderSigner, clock}: BuilderModules) {
+  constructor({opts, builderSigner, clock, index}: BuilderModules) {
     this.builderSigner = builderSigner;
     this.clock = clock;
     this.controller = opts.abortController;
+    this.index = index;
 
     this.clock.start(this.controller.signal);
   }
 
   static async init(opts: BuilderOptions): Promise<Builder> {
-    const genesis = await waitForGenesis(opts.api, opts.logger, opts.abortController.signal);
-    opts.logger.info("Genesis fetched from the beacon node");
+    const {api, logger} = opts;
+    const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
+    logger.info("Genesis fetched from the beacon node");
 
-    const specRes = await opts.api.config.getSpec();
+    const specRes = await api.config.getSpec();
     assertEqualParams(opts.config, specRes.value());
-    opts.logger.info("Verified connected beacon node and builder have the same config");
+    logger.info("Verified connected beacon node and builder have the same config");
 
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
     const builderSigner = new BuilderSigner(config, opts.keypair);
 
-    const builderRes = await opts.api.beacon.getStateBuilders({
-      stateId: "head",
-      builderIds: [builderSigner.getPubkeyHex()],
-    });
+    const index = await resolveBuilderIdentity(api, logger, builderSigner.getPubkeyHex());
 
-    if (!builderRes.ok) {
-      throw Error(`Getting state builders from BN failed: ${builderRes.status}`);
-    }
+    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 
-    const builders = builderRes.value();
-
-    if (builders.length === 0) {
-      throw Error(`Builder not registered: ${builderSigner.getPubkeyHex()}`);
-    }
-
-    const builderStatus: routes.beacon.BuilderResponse = builders[0];
-
-    if (builderStatus.status !== "active") {
-      throw Error(`Builder not active: ${builderStatus.status}`);
-    }
-
-    if (builderStatus.builder.version !== PAYLOAD_BUILDER_VERSION) {
-      throw Error(
-        `Builder version mismatch: got ${builderStatus.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`
-      );
-    }
-
-    const clock = new Clock(config, opts.logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
-
-    return new Builder({opts, builderSigner, clock});
+    return new Builder({opts, builderSigner, clock, index});
   }
 
   async close(): Promise<void> {
