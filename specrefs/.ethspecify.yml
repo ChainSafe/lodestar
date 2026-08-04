@@ -332,7 +332,6 @@ exceptions:
     - validate_on_attestation#gloas
 
     # gloas (new in alpha.3, not yet implemented)
-    - compute_weak_subjectivity_period#gloas
     - block_to_light_client_header#gloas
     - get_lc_execution_root#gloas
     - is_valid_light_client_header#gloas
