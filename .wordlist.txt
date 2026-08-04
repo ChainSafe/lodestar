@@ -120,8 +120,8 @@ SSZ
 Somer
 Stakehouse
 Subdirectories
-TMPFILE
 TLS
+TMPFILE
 TOC
 TTD
 Teku
