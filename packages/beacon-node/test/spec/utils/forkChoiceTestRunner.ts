@@ -3,7 +3,13 @@ import {expect} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
-import {CheckpointWithHex, ExecutionStatus, ForkChoice, getCommitteeFraction} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  ExecutionStatus,
+  ForkChoice,
+  PayloadStatus,
+  getCommitteeFraction,
+} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -745,10 +751,11 @@ export const forkChoiceTestRunner =
                 }
                 for (const [k, act] of actual.entries()) {
                   const exp = expected[k];
-                  // TODO GLOAS: boost attribution across payload-status variants of the boosted
-                  // root should be handled when we set up gloas compliance test.
-                  // Pre-gloas each root has exactly one entry.
-                  const isBoosted = exp.root === expectedBoostRoot;
+                  // Pre-gloas each root has exactly one entry. Gloas applies the boost to the
+                  // PENDING variant only, keeping it neutral between EMPTY and FULL.
+                  const isBoosted =
+                    exp.root === expectedBoostRoot &&
+                    (!isGloas || exp.payloadStatus === payloadStatusToSpec[PayloadStatus.PENDING]);
                   const expectedAdjusted = isBoosted
                     ? exp.weightGwei - specBoostGwei + lodestarBoostGwei
                     : exp.weightGwei;
