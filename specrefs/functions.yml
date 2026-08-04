@@ -5025,7 +5025,9 @@
     </spec>
 
 - name: get_parent_payload_status#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  getParentPayloadStatus(block: ProtoBlock): PayloadStatus {"
   spec: |
     <spec fn="get_parent_payload_status" fork="gloas" hash="4ab82d16">
     def get_parent_payload_status(store: Store, block: BeaconBlock) -> PayloadStatus:
@@ -5066,7 +5068,9 @@
     </spec>
 
 - name: get_payload_status_tiebreaker#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  private getPayloadStatusTiebreaker("
   spec: |
     <spec fn="get_payload_status_tiebreaker" fork="gloas" hash="68bd690c">
     def get_payload_status_tiebreaker(store: Store, node: ForkChoiceNode) -> Uint8:
@@ -6617,7 +6621,9 @@
     </spec>
 
 - name: is_bid_compatible_with_head#gloas
-  sources: []
+  sources:
+    - file: packages/beacon-node/src/chain/validation/executionPayloadBid.ts
+      search: function isBidCompatibleWithHead(
   spec: |
     <spec fn="is_bid_compatible_with_head" fork="gloas" hash="8918e061">
     def is_bid_compatible_with_head(store: Store, bid: ExecutionPayloadBid) -> bool:
@@ -7223,7 +7229,9 @@
     </spec>
 
 - name: is_parent_node_full#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  isParentNodeFull(block: ProtoBlock): boolean {"
   spec: |
     <spec fn="is_parent_node_full" fork="gloas" hash="4fc2d12c">
     def is_parent_node_full(store: Store, block: BeaconBlock) -> bool:
@@ -7320,7 +7328,9 @@
     </spec>
 
 - name: is_payload_verified#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  hasPayload(blockRoot: RootHex): boolean {"
   spec: |
     <spec fn="is_payload_verified" fork="gloas" hash="8ddb7023">
     def is_payload_verified(store: Store, root: Root) -> bool:
@@ -8681,7 +8691,11 @@
     </spec>
 
 - name: payload_data_availability#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  isPayloadDataAvailable(blockRoot: RootHex): boolean {"
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  isPayloadDataNotAvailable(blockRoot: RootHex): boolean {"
   spec: |
     <spec fn="payload_data_availability" fork="gloas" hash="19906223">
     def payload_data_availability(store: Store, root: Root, available: bool) -> bool:
@@ -8703,7 +8717,11 @@
     </spec>
 
 - name: payload_timeliness#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  isPayloadTimely(blockRoot: RootHex): boolean {"
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  isPayloadNotTimely(blockRoot: RootHex): boolean {"
   spec: |
     <spec fn="payload_timeliness" fork="gloas" hash="c8eb8248">
     def payload_timeliness(store: Store, root: Root, timely: bool) -> bool:
@@ -12072,7 +12090,9 @@
     </spec>
 
 - name: should_build_on_full#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {"
   spec: |
     <spec fn="should_build_on_full" fork="gloas" hash="759005a1">
     def should_build_on_full(store: Store, head: ForkChoiceNode, slot: Slot) -> bool:
@@ -12089,7 +12109,9 @@
     </spec>
 
 - name: should_extend_payload#gloas
-  sources: []
+  sources:
+    - file: packages/fork-choice/src/protoArray/protoArray.ts
+      search: "  shouldExtendPayload(blockRoot: RootHex, proposerBoostRoot: RootHex | null): boolean {"
   spec: |
     <spec fn="should_extend_payload" fork="gloas" hash="4c7f1056">
     def should_extend_payload(store: Store, root: Root) -> bool:
