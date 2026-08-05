@@ -40,33 +40,45 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push lodestar
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          ARCH: ${{ matrix.arch }}
         run: >
           docker buildx build . --push
-          --tag chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
+          --tag "chainsafe/lodestar:${IMAGE_TAG}-${ARCH}"
+          --platform "linux/${ARCH}"
           --build-arg COMMIT=$(git rev-parse HEAD)
 
       - name: Sanity check lodestar (${{ matrix.arch }})
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          ARCH: ${{ matrix.arch }}
         run: |
-          docker run -d --name lodestar-sanity-${{ matrix.arch }} -p 9596:9596 chainsafe/lodestar:${{ inputs.tag }}-${{ matrix.arch }} dev --rest.address 0.0.0.0
+          docker run -d --name "lodestar-sanity-${ARCH}" -p 9596:9596 "chainsafe/lodestar:${IMAGE_TAG}-${ARCH}" dev --rest.address 0.0.0.0
           sleep 30
-          curl -f http://127.0.0.1:9596/eth/v1/node/version || (docker logs lodestar-sanity-${{ matrix.arch }} && exit 1)
-          docker stop lodestar-sanity-${{ matrix.arch }}
+          curl -f http://127.0.0.1:9596/eth/v1/node/version || (docker logs "lodestar-sanity-${ARCH}" && exit 1)
+          docker stop "lodestar-sanity-${ARCH}"
 
       - name: Build and push custom Grafana
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          ARCH: ${{ matrix.arch }}
         run: >
           docker buildx build ./docker/grafana/ --push
           --file ./docker/grafana/Dockerfile
           --build-context dashboards=./dashboards
-          --tag chainsafe/lodestar-grafana:${{ inputs.tag }}-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
+          --tag "chainsafe/lodestar-grafana:${IMAGE_TAG}-${ARCH}"
+          --platform "linux/${ARCH}"
 
       - name: Build and push custom Prometheus
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          ARCH: ${{ matrix.arch }}
         run: >
           docker buildx build ./docker/prometheus/ --push
           --file ./docker/prometheus/Dockerfile
-          --tag chainsafe/lodestar-prometheus:${{ inputs.tag }}-${{ matrix.arch }}
-          --platform linux/${{ matrix.arch }}
+          --tag "chainsafe/lodestar-prometheus:${IMAGE_TAG}-${ARCH}"
+          --platform "linux/${ARCH}"
 
   docker-manifest:
     name: Create Docker manifest
@@ -82,30 +94,39 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Create and push lodestar manifest
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          EXTRA_TAGS_INPUT: ${{ inputs.extra-tags }}
         run: |
           EXTRA_TAGS=""
-          if [ -n "${{ inputs.extra-tags }}" ]; then
-            for t in $(echo "${{ inputs.extra-tags }}" | tr ',' ' '); do
+          if [ -n "$EXTRA_TAGS_INPUT" ]; then
+            for t in $(echo "$EXTRA_TAGS_INPUT" | tr ',' ' '); do
               EXTRA_TAGS="$EXTRA_TAGS -t chainsafe/lodestar:$t"
             done
           fi
-          docker buildx imagetools create -t chainsafe/lodestar:${{ inputs.tag }} $EXTRA_TAGS \
-            chainsafe/lodestar:${{ inputs.tag }}-amd64 \
-            chainsafe/lodestar:${{ inputs.tag }}-arm64
+          docker buildx imagetools create -t "chainsafe/lodestar:${IMAGE_TAG}" $EXTRA_TAGS \
+            "chainsafe/lodestar:${IMAGE_TAG}-amd64" \
+            "chainsafe/lodestar:${IMAGE_TAG}-arm64"
 
       - name: Create and push grafana manifest
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
         run: |
-          docker buildx imagetools create -t chainsafe/lodestar-grafana:${{ inputs.tag }} \
-            chainsafe/lodestar-grafana:${{ inputs.tag }}-amd64 \
-            chainsafe/lodestar-grafana:${{ inputs.tag }}-arm64
+          docker buildx imagetools create -t "chainsafe/lodestar-grafana:${IMAGE_TAG}" \
+            "chainsafe/lodestar-grafana:${IMAGE_TAG}-amd64" \
+            "chainsafe/lodestar-grafana:${IMAGE_TAG}-arm64"
 
       - name: Create and push prometheus manifest
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
         run: |
-          docker buildx imagetools create -t chainsafe/lodestar-prometheus:${{ inputs.tag }} \
-            chainsafe/lodestar-prometheus:${{ inputs.tag }}-amd64 \
-            chainsafe/lodestar-prometheus:${{ inputs.tag }}-arm64
+          docker buildx imagetools create -t "chainsafe/lodestar-prometheus:${IMAGE_TAG}" \
+            "chainsafe/lodestar-prometheus:${IMAGE_TAG}-amd64" \
+            "chainsafe/lodestar-prometheus:${IMAGE_TAG}-arm64"
 
       - name: Verify lodestar manifest
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
         run: |
-          docker pull chainsafe/lodestar:${{ inputs.tag }}
-          docker image history chainsafe/lodestar:${{ inputs.tag }}
+          docker pull "chainsafe/lodestar:${IMAGE_TAG}"
+          docker image history "chainsafe/lodestar:${IMAGE_TAG}"
