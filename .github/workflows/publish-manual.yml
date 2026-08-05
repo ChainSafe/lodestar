@@ -47,6 +47,6 @@ jobs:
     needs: validate
     uses: ./.github/workflows/docker.yml
     with:
-      tag: ${TAG}
-      ref: ${REF}
+      tag: ${{ inputs.tag }}
+      ref: ${{ inputs.ref }}
     secrets: inherit
