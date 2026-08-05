@@ -107,6 +107,12 @@ export const defaultSkipOpts: SkipOpts = {
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
     // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
     /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
+    // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
+    // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
+    // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
+    // so skip rather than raise the timeout and hide the regression.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
+    /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
