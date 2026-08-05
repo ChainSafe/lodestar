@@ -28,7 +28,7 @@ describe("api - beacon - publishBlockV2", () => {
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
   });
 
-  it("publishes a locally produced block after verifying its proposer signature and recording its root", async () => {
+  it("with consensus_and_equivocation, verifies the proposer signature and records the root before publishing a local block", async () => {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     signedBlock.message.proposerIndex = 2;
@@ -64,7 +64,7 @@ describe("api - beacon - publishBlockV2", () => {
     expect(modules.chain.processBlock).toHaveBeenCalledWith(blockInput, {});
   });
 
-  it("does not publish or import a non-local block that conflicts with an observed proposal", async () => {
+  it("with consensus_and_equivocation, does not publish or import a non-local block that conflicts with an observed proposal", async () => {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     signedBlock.message.proposerIndex = 2;
