@@ -4,7 +4,7 @@ import {config as configDef} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu} from "@lodestar/params";
 import {BeaconStateView} from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, ssz} from "@lodestar/types";
+import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
@@ -20,7 +20,7 @@ describe("gossip block validation", () => {
   let forkChoice: MockedBeaconChain["forkChoice"];
   let regen: Mocked<QueuedStateRegenerator>;
   let verifySignature: Mock<() => boolean>;
-  let job: deneb.SignedBeaconBlock;
+  let job: SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
   const block = ssz.deneb.BeaconBlock.defaultValue();
