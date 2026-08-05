@@ -107,11 +107,9 @@ export function processExecutionPayloadBid(
 
   const parentSlot = state.latestExecutionPayloadBid.slot;
   if (state.config.getForkSeq(state.slot) >= ForkSeq.heze) {
-    (state as CachedBeaconStateHeze).latestExecutionPayloadBid = ssz.heze.ExecutionPayloadBid.toViewDU(
-      bid as heze.ExecutionPayloadBid
-    );
+    state.latestExecutionPayloadBid = ssz.heze.ExecutionPayloadBid.toViewDU(bid as heze.ExecutionPayloadBid);
   } else {
-    (state as CachedBeaconStateGloas).latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
+    state.latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU(bid);
   }
 
   return parentSlot;
