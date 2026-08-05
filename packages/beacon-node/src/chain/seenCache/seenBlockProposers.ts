@@ -7,8 +7,10 @@ const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
 /**
  * Keeps a cache to filter block proposals from the same validator in the same slot.
  *
- * Block roots with a verified proposer signature are tracked separately from proposals that passed gossip validation.
- * This allows proposer equivocations to be detected without letting invalid blocks suppress valid gossip.
+ * Block roots with a signature verified against the block's proposer index are tracked separately from proposals
+ * accepted by gossip validation or block import. A signature-verified root is potential equivocation evidence, but the
+ * block may still fail other validation. Such a block must not mark the proposal as known, since that would cause a
+ * later valid block for the same slot and proposer to be ignored as a repeat proposal.
  *
  * The cache is pruned on finalization and stores at most two roots per proposer and slot, since two roots are sufficient
  * to establish an equivocation.
