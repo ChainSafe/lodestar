@@ -1,8 +1,9 @@
 import {ChainForkConfig} from "@lodestar/config";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, TimeSeconds} from "@lodestar/types";
 import {ErrorAborted, Logger, isErrorAborted, sleep} from "@lodestar/utils";
+import {computeEpochAtSlot} from "./epoch.js";
+import {computeTimeAtSlot, getCurrentSlot} from "./slot.js";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 

@@ -1,6 +1,12 @@
 import {ApiClient, ApiRequestInit, defaultInit, getClient, routes} from "@lodestar/api";
-import {BeaconConfig, ChainForkConfig, createBeaconConfig} from "@lodestar/config";
-import {computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
+import {
+  BeaconConfig,
+  ChainForkConfig,
+  NotEqualParamsError,
+  assertEqualParams,
+  createBeaconConfig,
+} from "@lodestar/config";
+import {Clock, ClockOptions, IClock, computeEpochAtSlot, getCurrentSlot} from "@lodestar/state-transition";
 import {BLSPubkey, phase0, ssz} from "@lodestar/types";
 import {Genesis} from "@lodestar/types/phase0";
 import {Logger, toPrintableUrl, toRootHex} from "@lodestar/utils";
@@ -23,8 +29,7 @@ import {SyncingStatusTracker} from "./services/syncingStatusTracker.js";
 import {Signer, ValidatorProposerConfig, ValidatorStore, defaultOptions} from "./services/validatorStore.js";
 import {ISlashingProtection, Interchange, InterchangeFormatVersion} from "./slashingProtection/index.js";
 import {LodestarValidatorDatabaseController, ProcessShutdownCallback, PubkeyHex} from "./types.js";
-import {Clock, ClockOptions, IClock} from "./util/clock.js";
-import {NotEqualParamsError, assertEqualParams, getLoggerVc} from "./util/index.js";
+import {getLoggerVc} from "./util/index.js";
 
 export type ValidatorModules = {
   opts: ValidatorOptions;
@@ -66,6 +71,7 @@ export type ValidatorOptions = {
   distributed?: boolean;
   broadcastValidation?: routes.beacon.BroadcastValidation;
   blindedLocal?: boolean;
+  payloadLocal?: boolean;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -256,6 +262,9 @@ export class Validator {
       {
         broadcastValidation: opts.broadcastValidation ?? defaultOptions.broadcastValidation,
         blindedLocal: opts.blindedLocal ?? defaultOptions.blindedLocal,
+        // Default to keeping the payload local to the beacon node if only a single node is
+        // configured, with multiple nodes the stateless flow allows publishing via any of them
+        payloadLocal: opts.payloadLocal ?? api.httpClient.urlsInits.length <= 1,
       }
     );
 
@@ -352,7 +361,7 @@ export class Validator {
 
     const res = await api.config.getSpec();
     assertEqualParams(config, res.value());
-    logger.info("Verified connected beacon node and validator have same the config");
+    logger.info("Verified connected beacon node and validator have the same config");
 
     await assertEqualGenesis(opts, genesis);
     logger.info("Verified connected beacon node and validator have the same genesisValidatorRoot");

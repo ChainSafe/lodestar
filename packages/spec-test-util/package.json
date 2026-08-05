@@ -1,6 +1,6 @@
 {
   "name": "@lodestar/spec-test-util",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "Spec test suite generator from yaml test files",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -11,17 +11,17 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./downloadTests": {
-      "bun": "./src/downloadTests.ts",
+      "typescript": "./src/downloadTests.ts",
       "types": "./lib/downloadTests.d.ts",
       "import": "./lib/downloadTests.js"
     },
     "./downloadNightlyTests": {
-      "bun": "./src/downloadNightlyTests.ts",
+      "typescript": "./src/downloadNightlyTests.ts",
       "types": "./lib/downloadNightlyTests.d.ts",
       "import": "./lib/downloadNightlyTests.js"
     }
@@ -36,17 +36,17 @@
   },
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:release": "pnpm clean && pnpm build",
     "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/downloadTests.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "vitest run --project unit --project unit-minimal",
     "test:e2e": "vitest run --project e2e --project e2e-mainnet",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",

@@ -1,7 +1,9 @@
 import {describe, expect, it, vi} from "vitest";
 import {IForkChoice} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BuilderCircuitBreaker} from "../../../src/chain/builderCircuitBreaker.js";
+import {getFaultInspectionParams} from "../../../src/execution/builder/http.js";
 
 describe("BuilderCircuitBreaker", () => {
   const faultInspectionWindow = 32;
@@ -51,5 +53,27 @@ describe("BuilderCircuitBreaker", () => {
 
     expect(breaker.isActive(101)).toBe(true);
     expect(getPayloadRevealCounts).toHaveBeenCalledTimes(2);
+  });
+
+  describe("getFaultInspectionParams", () => {
+    it("caps allowed faults at a quarter of the fault inspection window", () => {
+      expect(getFaultInspectionParams({faultInspectionWindow: 64, allowedFaults: 32})).toEqual({
+        faultInspectionWindow: 64,
+        allowedFaults: 16,
+      });
+    });
+
+    it("enforces a minimum window of SLOTS_PER_EPOCH", () => {
+      const params = getFaultInspectionParams({faultInspectionWindow: 1, allowedFaults: 1});
+      expect(params.faultInspectionWindow).toBe(SLOTS_PER_EPOCH);
+      expect(params.allowedFaults).toBe(1);
+    });
+
+    it("randomizes defaults within the recommended ranges", () => {
+      const params = getFaultInspectionParams({});
+      expect(params.faultInspectionWindow).toBeGreaterThanOrEqual(SLOTS_PER_EPOCH);
+      expect(params.faultInspectionWindow).toBeLessThan(2 * SLOTS_PER_EPOCH);
+      expect(params.allowedFaults).toBe(Math.floor(params.faultInspectionWindow / 4));
+    });
   });
 });

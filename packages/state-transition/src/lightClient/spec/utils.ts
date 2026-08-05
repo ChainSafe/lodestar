@@ -38,7 +38,6 @@ import type {LightClientStore, SyncCommitteeFast} from "./store.js";
 
 export const GENESIS_SLOT = 0;
 export const ZERO_HASH = new Uint8Array(32);
-export const ZERO_PUBKEY = new Uint8Array(48);
 export const ZERO_SYNC_COMMITTEE = ssz.altair.SyncCommittee.defaultValue();
 export const ZERO_HEADER = ssz.phase0.BeaconBlockHeader.defaultValue();
 /** From https://notes.ethereum.org/@vbuterin/extended_light_client_protocol#Optimistic-head-determining-function */
@@ -109,13 +108,16 @@ export function isFinalityUpdate(update: LightClientUpdate): boolean {
 }
 
 export function isZeroedHeader(header: BeaconBlockHeader): boolean {
-  // Fast return for when constructing full LightClientUpdate from partial updates
-  return header === ZERO_HEADER || byteArrayEquals(header.bodyRoot, ZERO_HASH);
+  // Spec requires the whole header to equal LightClientHeader() in the non-finality case
+  // (see altair/light-client/sync-protocol.md `process_light_client_update`). Checking only
+  // bodyRoot would let an attacker smuggle arbitrary slot/proposerIndex/parentRoot/stateRoot
+  // through the non-finality branch and overwrite store.finalizedHeader.
+  return header === ZERO_HEADER || ssz.phase0.BeaconBlockHeader.equals(header, ZERO_HEADER);
 }
 
 export function isZeroedSyncCommittee(syncCommittee: SyncCommittee): boolean {
-  // Fast return for when constructing full LightClientUpdate from partial updates
-  return syncCommittee === ZERO_SYNC_COMMITTEE || byteArrayEquals(syncCommittee.pubkeys[0], ZERO_PUBKEY);
+  // Spec requires the whole SyncCommittee to equal SyncCommittee() in the non-sync-committee-update case.
+  return syncCommittee === ZERO_SYNC_COMMITTEE || ssz.altair.SyncCommittee.equals(syncCommittee, ZERO_SYNC_COMMITTEE);
 }
 
 export function isValidMerkleBranch(
@@ -191,11 +193,11 @@ export function nextSyncCommitteeGindexAtFork(fork: ForkName): number {
   return NEXT_SYNC_COMMITTEE_GINDEX;
 }
 
-export function getGindexDepth(gindex: number): number {
+function getGindexDepth(gindex: number): number {
   return Math.floor(Math.log2(gindex));
 }
 
-export function getGindexIndex(gindex: number): number {
+function getGindexIndex(gindex: number): number {
   return gindex - 2 ** getGindexDepth(gindex);
 }
 
@@ -261,6 +263,7 @@ export function upgradeLightClientHeader(
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.fulu) break;
 
+    // biome-ignore lint/suspicious/noFallthroughSwitchClause: We need fall-through behavior here
     case ForkName.gloas:
       if (isGloasLightClientHeader(upgradedHeader)) {
         break;
@@ -270,6 +273,12 @@ export function upgradeLightClientHeader(
 
       // Break if no further upgrades is required else fall through
       if (ForkSeq[targetFork] <= ForkSeq.gloas) break;
+
+    case ForkName.heze:
+      // No changes to LightClientHeader in Heze
+
+      // Break if no further upgrades is required else fall through
+      if (ForkSeq[targetFork] <= ForkSeq.heze) break;
   }
   return upgradedHeader;
 }

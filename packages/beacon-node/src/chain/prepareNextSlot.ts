@@ -1,7 +1,14 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
-import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
+import {
+  ForkPostBellatrix,
+  ForkSeq,
+  SLOTS_PER_EPOCH,
+  isForkPostBellatrix,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   IBeaconStateView,
   IBeaconStateViewBellatrix,
@@ -11,7 +18,7 @@ import {
   isStatePostBellatrix,
   isStatePostGloas,
 } from "@lodestar/state-transition";
-import {Bytes32, Slot} from "@lodestar/types";
+import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger, fromHex, isErrorAborted, sleep} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../constants/constants.js";
 import {BuilderStatus} from "../execution/builder/http.js";
@@ -111,29 +118,36 @@ export class PrepareNextSlotScheduler {
         : null;
       const start = Date.now();
       // No need to wait for this or the clock drift
-      // Pre Bellatrix: we only do precompute state transition for the last slot of epoch
-      // For Bellatrix, we always do the `processSlots()` to prepare payload for the next slot
-      const prepareState = await this.chain.regen.getBlockSlotState(
-        headBlock,
-        prepareSlot,
-        // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
-        // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
-        // for other slots dontTransferCached=true because we don't run state transition on this state
-        {dontTransferCache: !isEpochTransition},
-        RegenCaller.precomputeEpoch
-      );
-
       if (isForkPostBellatrix(fork)) {
-        const proposerIndex = prepareState.getBeaconProposer(prepareSlot);
+        let preparedState: IBeaconStateView | undefined;
+
+        const getProposerIndex = async (): Promise<ValidatorIndex> => {
+          if (isForkPostFulu(fork)) {
+            // getBeaconProposer covers the current + next epoch; should not throw
+            // PROPOSER_EPOCH_MISMATCH here due to the PREPARE_EPOCH_LIMIT check above.
+            return this.chain.getHeadState().getBeaconProposer(prepareSlot);
+          }
+          // the slot 0 of next epoch will likely use this Previous Root Checkpoint state for state transition so we transfer cache here
+          // the resulting state with cache will be cached in Checkpoint State Cache which is used for the upcoming block processing
+          // for other slots dontTransferCached=true because we don't run state transition on this state
+          preparedState = await this.chain.regen.getBlockSlotState(
+            headBlock,
+            prepareSlot,
+            {dontTransferCache: !isEpochTransition},
+            RegenCaller.precomputeEpoch
+          );
+          return preparedState.getBeaconProposer(prepareSlot);
+        };
+
+        const proposerIndex = await getProposerIndex();
         const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
-        let updatedPrepareState = prepareState;
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
           const proposerHead = this.chain.predictProposerHead(clockSlot);
           const {slot: proposerHeadSlot, blockRoot: proposerHeadRoot} = proposerHead;
 
-          // If we predict we can reorg, update prepareState with proposer head block
+          // If we predict we can reorg, we build on the proposer head (parent) block instead
           if (proposerHeadRoot !== headRoot || proposerHeadSlot !== headSlot) {
             this.logger.verbose("Weak head detected. May build on parent block instead", {
               proposerHeadSlot,
@@ -142,13 +156,6 @@ export class PrepareNextSlotScheduler {
               headRoot,
             });
             this.metrics?.weakHeadDetected.inc();
-            updatedPrepareState = await this.chain.regen.getBlockSlotState(
-              proposerHead,
-              prepareSlot,
-              // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
-              {dontTransferCache: !isEpochTransition},
-              RegenCaller.predictProposerHead
-            );
             updatedHead = proposerHead;
           }
 
@@ -165,30 +172,41 @@ export class PrepareNextSlotScheduler {
           }
         }
 
-        if (!isStatePostBellatrix(updatedPrepareState)) {
+        // post-fulu we'll always reach here because preparedState is undefined
+        if (preparedState === undefined || updatedHead !== headBlock) {
+          preparedState = await this.chain.regen.getBlockSlotState(
+            updatedHead,
+            prepareSlot,
+            // only transfer cache if epoch transition because that's the state we will use to stateTransition() the 1st block of epoch
+            {dontTransferCache: !isEpochTransition},
+            updatedHead === headBlock ? RegenCaller.precomputeEpoch : RegenCaller.predictProposerHead
+          );
+        }
+
+        if (!isStatePostBellatrix(preparedState)) {
           throw new Error("Expected Bellatrix state for payload attributes");
         }
 
         let parentBlockHash: Bytes32;
         // Apply parent payload once here as it's reused by EL prep and SSE emit below
-        let stateAfterParentPayload: IBeaconStateViewBellatrix = updatedPrepareState;
-        if (isStatePostGloas(updatedPrepareState)) {
-          // Spec: should_build_on_full(store, head) — see produceBlockBody.ts for context.
+        let stateAfterParentPayload: IBeaconStateViewBellatrix = preparedState;
+        if (isStatePostGloas(preparedState)) {
+          // Spec: should_build_on_full(store, head, slot) - see produceBlockBody.ts for context.
           if (this.chain.forkChoice.shouldBuildOnFull(updatedHead, prepareSlot)) {
-            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.blockHash;
+            parentBlockHash = preparedState.latestExecutionPayloadBid.blockHash;
             // Skip applying parent payload unless we're proposing the next slot or have to emit payload_attributes events
             if (feeRecipient !== undefined || this.chain.opts.emitPayloadAttributes === true) {
               const parentExecutionRequests = await this.chain.getParentExecutionRequests(
                 updatedHead.slot,
                 updatedHead.blockRoot
               );
-              stateAfterParentPayload = updatedPrepareState.withParentPayloadApplied(parentExecutionRequests);
+              stateAfterParentPayload = preparedState.withParentPayloadApplied(parentExecutionRequests);
             }
           } else {
-            parentBlockHash = updatedPrepareState.latestExecutionPayloadBid.parentBlockHash;
+            parentBlockHash = preparedState.latestExecutionPayloadBid.parentBlockHash;
           }
         } else {
-          parentBlockHash = updatedPrepareState.latestExecutionPayloadHeader.blockHash;
+          parentBlockHash = preparedState.latestExecutionPayloadHeader.blockHash;
         }
 
         if (feeRecipient) {
@@ -221,7 +239,7 @@ export class PrepareNextSlotScheduler {
           });
         }
 
-        this.computeStateHashTreeRoot(updatedPrepareState, isEpochTransition);
+        this.computeStateHashTreeRoot(preparedState, isEpochTransition);
 
         // If emitPayloadAttributes is true emit a SSE payloadAttributes event for
         // every slot. Without the flag, only emit the event if we are proposing in the next slot.
@@ -239,7 +257,14 @@ export class PrepareNextSlotScheduler {
           this.chain.emitter.emit(routes.events.EventType.payloadAttributes, {data, version: fork});
         }
       } else {
-        this.computeStateHashTreeRoot(prepareState, isEpochTransition);
+        // Pre-bellatrix only reaches here at an epoch transition to precompute the next epoch state
+        const preparedState = await this.chain.regen.getBlockSlotState(
+          headBlock,
+          prepareSlot,
+          {dontTransferCache: !isEpochTransition},
+          RegenCaller.precomputeEpoch
+        );
+        this.computeStateHashTreeRoot(preparedState, isEpochTransition);
       }
 
       // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
