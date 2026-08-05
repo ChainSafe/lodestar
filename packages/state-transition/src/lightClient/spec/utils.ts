@@ -193,11 +193,11 @@ export function nextSyncCommitteeGindexAtFork(fork: ForkName): number {
   return NEXT_SYNC_COMMITTEE_GINDEX;
 }
 
-export function getGindexDepth(gindex: number): number {
+function getGindexDepth(gindex: number): number {
   return Math.floor(Math.log2(gindex));
 }
 
-export function getGindexIndex(gindex: number): number {
+function getGindexIndex(gindex: number): number {
   return gindex - 2 ** getGindexDepth(gindex);
 }
 

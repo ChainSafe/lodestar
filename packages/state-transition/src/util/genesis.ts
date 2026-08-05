@@ -139,7 +139,7 @@ export function applyDeposits(
   const fullDepositDataRootArr = fullDepositDataRootList ? fullDepositDataRootList.getAllReadonlyValues() : null;
 
   if (fullDepositDataRootArr) {
-    const depositCount = state.eth1Data.depositCount;
+    const depositCount = Number(state.eth1Data.depositCount);
     for (let index = 0; index < depositCount; index++) {
       depositDataRootList.push(fullDepositDataRootArr[index]);
     }
@@ -160,7 +160,7 @@ export function applyDeposits(
       );
     }
 
-    state.eth1Data.depositCount += 1;
+    state.eth1Data.depositCount += 1n;
 
     const fork = config.getForkSeq(GENESIS_SLOT);
     processDeposit(fork, state, deposit);

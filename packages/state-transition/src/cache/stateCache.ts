@@ -1,5 +1,6 @@
 import {BeaconConfig} from "@lodestar/config";
 import {loadState} from "../util/loadState/loadState.js";
+import {isViewDUNodesPopulated} from "../util/ssz.js";
 import {EpochCache, EpochCacheImmutableData, EpochCacheOpts} from "./epochCache.js";
 import {RewardCache, createEmptyRewardCache} from "./rewardCache.js";
 import {
@@ -256,9 +257,9 @@ export function isCachedBeaconState<T extends BeaconStateAllForks>(
 // This cache is populated during epoch transition, and should be preserved for performance.
 // If the cache is missing too often, means that our clone strategy is not working well.
 export function isStateValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  return (state.validators as unknown as {nodesPopulated?: boolean}).nodesPopulated === true;
+  return isViewDUNodesPopulated(state.validators);
 }
 
 export function isStateBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  return (state.balances as unknown as {nodesPopulated?: boolean}).nodesPopulated === true;
+  return isViewDUNodesPopulated(state.balances);
 }
