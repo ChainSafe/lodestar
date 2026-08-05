@@ -110,12 +110,6 @@ export class SyncCommitteeService {
         this.clock.secFromSlot(slot) - syncContributionDueMs / 1000
       );
 
-      const contributionHead = await this.getHeadForSyncCommitteeMessage(slot);
-      if (contributionHead.executionOptimistic) {
-        this.logger.debug("Skipping sync committee contributions while head is optimistic", {slot});
-        return;
-      }
-
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is conservative to reduce the node's load, review
       const dutiesBySubcommitteeIndex = groupSyncDutiesBySubcommitteeIndex(dutiesAtSlot);

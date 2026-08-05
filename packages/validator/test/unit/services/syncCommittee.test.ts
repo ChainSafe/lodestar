@@ -84,6 +84,7 @@ describe("SyncCommitteeService", () => {
           opts
         );
 
+        const slot = 0;
         const beaconBlockRoot = Buffer.alloc(32, 0x4d);
         const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();
         const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
@@ -130,7 +131,7 @@ describe("SyncCommitteeService", () => {
         validatorStore.signContributionAndProof.mockResolvedValue(contributionAndProof);
 
         // Trigger clock onSlot for slot 0
-        await clock.tickSlotFns(0, controller.signal);
+        await clock.tickSlotFns(slot, controller.signal);
 
         // Must submit the signature received through signSyncCommitteeSignature()
         expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledOnce();
@@ -235,7 +236,7 @@ describe("SyncCommitteeService", () => {
         expect(api.validator.publishContributionAndProofs).not.toHaveBeenCalled();
       });
 
-      it("Should not sign contributions when the head becomes optimistic before aggregation", async () => {
+      it("Should sign contributions for the validated root when the current head becomes optimistic before aggregation", async () => {
         const clock = new ClockMock();
         const syncCommitteeService = new SyncCommitteeService(
           config,
@@ -250,9 +251,12 @@ describe("SyncCommitteeService", () => {
           opts
         );
 
+        const slot = 0;
         const beaconBlockRoot = Buffer.alloc(32, 0x4d);
         const optimisticBlockRoot = Buffer.alloc(32, 0x4e);
         const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();
+        const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
+        const contributionAndProof = ssz.altair.SignedContributionAndProof.defaultValue();
         const duties: SyncDutyAndProofs[] = [
           {
             duty: {
@@ -276,15 +280,27 @@ describe("SyncCommitteeService", () => {
             executionOptimistic: true,
           });
         api.beacon.submitPoolSyncCommitteeSignatures.mockResolvedValue(mockApiResponse({}));
+        api.validator.produceSyncCommitteeContribution.mockResolvedValue(mockApiResponse({data: contribution}));
+        api.validator.publishContributionAndProofs.mockResolvedValue(mockApiResponse({}));
         validatorStore.signSyncCommitteeSignature.mockResolvedValue(syncCommitteeSignature);
+        validatorStore.signContributionAndProof.mockResolvedValue(contributionAndProof);
 
-        await clock.tickSlotFns(0, controller.signal);
+        await clock.tickSlotFns(slot, controller.signal);
 
         expect(validatorStore.signSyncCommitteeSignature).toHaveBeenCalledOnce();
         expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledOnce();
-        expect(api.validator.produceSyncCommitteeContribution).not.toHaveBeenCalled();
-        expect(validatorStore.signContributionAndProof).not.toHaveBeenCalled();
-        expect(api.validator.publishContributionAndProofs).not.toHaveBeenCalled();
+        expect(chainHeaderTracker.getCurrentChainHeadData).toHaveBeenCalledOnce();
+        expect(api.validator.produceSyncCommitteeContribution).toHaveBeenCalledOnce();
+        expect(api.validator.produceSyncCommitteeContribution).toHaveBeenCalledWith({
+          slot,
+          subcommitteeIndex: 0,
+          beaconBlockRoot,
+        });
+        expect(validatorStore.signContributionAndProof).toHaveBeenCalledOnce();
+        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledOnce();
+        expect(api.validator.publishContributionAndProofs).toHaveBeenCalledWith({
+          contributionAndProofs: [contributionAndProof],
+        });
       });
     });
   }
