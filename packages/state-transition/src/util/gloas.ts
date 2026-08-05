@@ -17,7 +17,7 @@ import {BuilderIndex, Epoch, ValidatorIndex, gloas, ssz} from "@lodestar/types";
 import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
-import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
+import {CachedBeaconStateFulu, CachedBeaconStateGloas, CachedBeaconStateHeze} from "../types.js";
 import {computeDomain} from "./domain.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {computeEpochShuffling} from "./epochShuffling.js";
@@ -117,7 +117,7 @@ export function isGasLimitTargetCompatible(parentGasLimit: bigint, gasLimit: big
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-get_pending_balance_to_withdraw_for_builder
  */
 export function getPendingBalanceToWithdrawForBuilder(
-  state: CachedBeaconStateGloas,
+  state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   builderIndex: BuilderIndex
 ): number {
   let pendingBalance = 0;
@@ -146,7 +146,7 @@ export function getPendingBalanceToWithdrawForBuilder(
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/beacon-chain.md#new-can_builder_cover_bid
  */
 export function canBuilderCoverBid(
-  state: CachedBeaconStateGloas,
+  state: CachedBeaconStateGloas | CachedBeaconStateHeze,
   builderIndex: BuilderIndex,
   bidAmount: number
 ): boolean {

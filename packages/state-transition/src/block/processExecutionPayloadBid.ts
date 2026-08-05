@@ -47,7 +47,7 @@ export function processExecutionPayloadBid(
     }
 
     // Verify that the builder has funds to cover the bid
-    if (!canBuilderCoverBid(state as CachedBeaconStateGloas, builderIndex, amount)) {
+    if (!canBuilderCoverBid(state, builderIndex, amount)) {
       throw Error(`Invalid execution payload bid: builder ${builderIndex} has insufficient balance`);
     }
 
