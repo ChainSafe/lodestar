@@ -24,6 +24,7 @@ overrides:
   elliptic: '>=6.6.1'
   loupe: ^2.3.6
   nan: ^2.19.0
+  sigstore: 4.0.0
 
 patchedDependencies:
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
