@@ -2,7 +2,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
-// Two distinct signature-verified roots are sufficient to establish a proposer equivocation
+/** Two distinct signature-verified roots are sufficient to establish a proposer equivocation */
 const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
 
 /**
