@@ -51,6 +51,10 @@ export class SeenBlockProposers {
 
   /** Mark a block as known from gossip or another block import path. */
   add(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
+    if (blockSlot < this.finalizedSlot) {
+      throw Error(`blockSlot ${blockSlot} < finalizedSlot ${this.finalizedSlot}`);
+    }
+
     this.proposerIndexesBySlot.getOrDefault(blockSlot).add(proposerIndex);
   }
 

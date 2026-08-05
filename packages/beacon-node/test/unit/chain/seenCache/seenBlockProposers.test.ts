@@ -52,4 +52,16 @@ describe("SeenBlockProposers", () => {
     expect(cache.hasBlockRoot(slot, proposerIndex, blockRoot)).toBe(false);
     expect(cache.getConflictingBlockRoots(slot, proposerIndex, conflictingBlockRoot)).toEqual([]);
   });
+
+  it("rejects proposals older than the finalized slot", () => {
+    const cache = new SeenBlockProposers();
+    cache.prune(slot + 1);
+
+    expect(() => cache.add(slot, proposerIndex)).toThrow(`blockSlot ${slot} < finalizedSlot ${slot + 1}`);
+    expect(() => cache.observeBlockRoot(slot, proposerIndex, blockRoot)).toThrow(
+      `blockSlot ${slot} < finalizedSlot ${slot + 1}`
+    );
+    expect(cache.isKnown(slot, proposerIndex)).toBe(false);
+    expect(cache.hasBlockRoot(slot, proposerIndex, blockRoot)).toBe(false);
+  });
 });
