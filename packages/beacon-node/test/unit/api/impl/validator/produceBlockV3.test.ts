@@ -290,7 +290,7 @@ describe("api/validator - produceBlockV3", () => {
       syncCommitteeBits: ssz.altair.SyncCommitteeBits.defaultValue(),
       syncCommitteeSignature: G2_POINT_AT_INFINITY,
     });
-    modules.forkChoice.getJustifiedBlock.mockReturnValue(generateProtoBlock());
+    modules.forkChoice.getConfirmedBlock.mockReturnValue(generateProtoBlock());
     modules.forkChoice.getFinalizedBlock.mockReturnValue(generateProtoBlock());
 
     modules.chain["executionEngine"].payloadIdCache = new PayloadIdCache();

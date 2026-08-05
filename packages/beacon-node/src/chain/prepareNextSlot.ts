@@ -214,8 +214,8 @@ export class PrepareNextSlotScheduler {
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
 
-          const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
-          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
+          const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
+          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice, this.logger);
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the
