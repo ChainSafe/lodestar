@@ -286,10 +286,6 @@ export async function validateGossipBlock(
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
   }
 
-  if (!isForkPostGloas(fork) && chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
-  }
-
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
   // gossip validation promise without any extra infrastructure.
   // Do the sleep at the end, since regen and signature validation can already take longer than `msToBlockSlot`.
@@ -299,8 +295,8 @@ export async function validateGossipBlock(
     await sleep(msToBlockSlot);
   }
 
-  // Check again after all async validation so concurrent Gloas proposals cannot both pass.
-  if (isForkPostGloas(fork) && chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+  // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass.
+  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 

@@ -290,6 +290,35 @@ describe("gossip block validation", () => {
     await validateGossipBlock(config, chain, job, ForkName.phase0);
   });
 
+  it("rejects a concurrent pre-Gloas proposal observed during the early-block delay", async () => {
+    const now = 1_000_000;
+    vi.useFakeTimers({now});
+
+    try {
+      Object.defineProperty(chain, "genesisTime", {
+        value: now / 1000 - clockSlot * (config.SLOT_DURATION_MS / 1000) + 0.1,
+      });
+      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
+      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+      const state = new BeaconStateView(generateCachedState());
+      regen.getPreState.mockResolvedValue(state);
+      vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+
+      const validation = expectRejectedWithLodestarError(
+        validateGossipBlock(config, chain, job, ForkName.phase0),
+        BlockErrorCode.REPEAT_PROPOSAL
+      );
+      await vi.advanceTimersByTimeAsync(0);
+      expect(vi.getTimerCount()).toBe(1);
+
+      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+      await vi.advanceTimersByTimeAsync(100);
+      await validation;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
     // Fill up with kzg commitments
     block.body.blobKzgCommitments = Array.from(
