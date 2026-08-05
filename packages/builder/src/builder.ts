@@ -5,6 +5,7 @@ import {BuilderIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
+import {assertNodeReady} from "./readiness.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 
 export type BuilderModules = {
@@ -52,6 +53,8 @@ export class Builder {
 
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
     const builderSigner = new BuilderSigner(config, opts.keypair);
+
+    await assertNodeReady(api, logger);
 
     const index = await resolveBuilderIdentity(api, logger, builderSigner.getPubkeyHex());
 
