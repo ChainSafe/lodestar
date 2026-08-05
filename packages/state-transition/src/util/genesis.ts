@@ -334,6 +334,12 @@ export function initializeBeaconStateFromEth1(
     stateGloas.fork.currentVersion = config.GLOAS_FORK_VERSION;
   }
 
+  if (fork >= ForkSeq.heze) {
+    const stateHeze = state as CompositeViewDU<typeof ssz.heze.BeaconState>;
+    stateHeze.fork.previousVersion = config.HEZE_FORK_VERSION;
+    stateHeze.fork.currentVersion = config.HEZE_FORK_VERSION;
+  }
+
   state.commit();
 
   return state;

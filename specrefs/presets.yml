@@ -161,7 +161,9 @@
     </spec>
 
 - name: INCLUSION_LIST_COMMITTEE_SIZE#heze
-  sources: []
+  sources:
+    - file: packages/params/src/presets/mainnet.ts
+      search: "INCLUSION_LIST_COMMITTEE_SIZE:"
   spec: |
     <spec preset_var="INCLUSION_LIST_COMMITTEE_SIZE" fork="heze" hash="514829ec">
     INCLUSION_LIST_COMMITTEE_SIZE: Uint64 = 16
@@ -429,14 +431,18 @@
     </spec>
 
 - name: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE#heze
-  sources: []
+  sources:
+    - file: packages/params/src/presets/mainnet.ts
+      search: "MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE:"
   spec: |
     <spec preset_var="MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE" fork="heze" hash="ebb32b2b">
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: Uint64 = 196934
     </spec>
 
 - name: MAX_SIGNED_INCLUSION_LIST_SIZE#heze
-  sources: []
+  sources:
+    - file: packages/params/src/presets/mainnet.ts
+      search: "MAX_SIGNED_INCLUSION_LIST_SIZE:"
   spec: |
     <spec preset_var="MAX_SIGNED_INCLUSION_LIST_SIZE" fork="heze" hash="805b7bca">
     MAX_SIGNED_INCLUSION_LIST_SIZE: Uint64 = 8348
