@@ -9,6 +9,7 @@ import {
   EpochDifference,
   ExecutionStatus,
   ForkChoice,
+  ForkChoiceStore,
   IForkChoiceStore,
   PayloadStatus,
   ProtoArray,
@@ -83,6 +84,28 @@ describe("Forkchoice", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
+    confirmedRoot: finalizedRoot,
+    previousEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    currentEpochObservedJustifiedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    previousEpochGreatestUnrealizedCheckpoint: {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+      rootHex: finalizedRoot,
+    },
+    previousEpochObservedJustifiedBalances: new Uint16Array([32]),
+    currentEpochObservedJustifiedBalances: new Uint16Array([32]),
+    previousEpochGreatestUnrealizedBalances: new Uint16Array([32]),
+    previousSlotHead: finalizedRoot,
+    currentSlotHead: finalizedRoot,
+    stateGetter: () => null,
   };
 
   const getParentBlockRoot = (slot: number, skippedSlots: number[] = []): RootHex => {
@@ -141,6 +164,32 @@ describe("Forkchoice", () => {
     }
   };
 
+  it("initializes fast confirmation checkpoints from finalized checkpoint", () => {
+    const justifiedRoot = getBlockRoot(genesisSlot + 1);
+    const finalizedCheckpoint = {
+      epoch: genesisEpoch,
+      root: fromHexString(finalizedRoot),
+    };
+    const justifiedCheckpoint = {
+      epoch: genesisEpoch + 1,
+      root: fromHexString(justifiedRoot),
+    };
+
+    const store = new ForkChoiceStore(
+      (genesisSlot + 1) as Slot,
+      justifiedCheckpoint,
+      finalizedCheckpoint,
+      new Uint16Array([32]),
+      () => new Uint16Array([32]),
+      () => null
+    );
+
+    expect(store.previousEpochObservedJustifiedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.currentEpochObservedJustifiedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.previousEpochGreatestUnrealizedCheckpoint.rootHex).toBe(finalizedRoot);
+    expect(store.confirmedRoot).toBe(finalizedRoot);
+  });
+
   it("getAllAncestorBlocks", () => {
     // Add block that is a finalized descendant.
     const block = getBlock(genesisSlot + 1);
@@ -155,6 +204,7 @@ describe("Forkchoice", () => {
       bestDescendant: undefined,
       parent: 0,
       weight: 0,
+      attestationScore: 0,
       payloadStatus: 2, // Pre-Gloas blocks always have PAYLOAD_STATUS_FULL
     });
   });

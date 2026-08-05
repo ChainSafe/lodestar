@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {
   IForkChoice,
@@ -15,6 +16,7 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
+  INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -48,11 +50,13 @@ import {
   ValidatorIndex,
   Wei,
   altair,
+  bellatrix,
   capella,
   deneb,
   electra,
   fulu,
   gloas,
+  heze,
   ssz,
 } from "@lodestar/types";
 import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
@@ -113,7 +117,7 @@ export type ProduceFullGloas = {
   type: BlockType.Full;
   fork: ForkPostGloas;
   executionPayload: ExecutionPayload<ForkPostGloas>;
-  executionRequests: electra.ExecutionRequests;
+  executionRequests: gloas.ExecutionRequests;
   blobsBundle: BlobsBundle<ForkPostGloas>;
   cells: fulu.Cell[][];
   parentBlockRoot: Root;
@@ -233,7 +237,7 @@ export async function produceBlockBody<T extends BlockType>(
     );
     const parentExecutionRequests = isExtendingPayload
       ? await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot)
-      : ssz.electra.ExecutionRequests.defaultValue();
+      : ssz.gloas.ExecutionRequests.defaultValue();
     executionPayloadValue = BigInt(builderBid.message.value) * GWEI_TO_WEI;
 
     const commonBlockBody = await commonBlockBodyPromise;
@@ -277,20 +281,20 @@ export async function produceBlockBody<T extends BlockType>(
 
     // Get execution payload from EL
     let parentBlockHash: Bytes32;
-    let parentExecutionRequests: electra.ExecutionRequests;
+    let parentExecutionRequests: gloas.ExecutionRequests;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
-    // Spec: should_build_on_full(store, head). `parentBlock` is the proposer's head
-    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority
-    // signalled the blob data is not available, forcing a build on EMPTY (reorg).
-    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock);
+    // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
+    // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
+    // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
+    const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
     if (isBuildingOnFull) {
       parentBlockHash = currentState.latestExecutionPayloadBid.blockHash;
       parentExecutionRequests = await this.getParentExecutionRequests(parentBlock.slot, parentBlock.blockRoot);
       stateAfterParentPayload = currentState.withParentPayloadApplied(parentExecutionRequests);
     } else {
       parentBlockHash = currentState.latestExecutionPayloadBid.parentBlockHash;
-      parentExecutionRequests = ssz.electra.ExecutionRequests.defaultValue();
+      parentExecutionRequests = ssz.gloas.ExecutionRequests.defaultValue();
     }
     const prepareRes = await prepareExecutionPayload(
       this,
@@ -353,10 +357,14 @@ export async function produceBlockBody<T extends BlockType>(
       builderIndex: BUILDER_INDEX_SELF_BUILD,
       slot: blockSlot,
       value: 0,
-      executionPayment: 0,
+      executionPayment: 0n,
       blobKzgCommitments: blobsBundle.commitments,
-      executionRequestsRoot: ssz.electra.ExecutionRequests.hashTreeRoot(executionRequests),
+      executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
+    if (ForkSeq[fork] >= ForkSeq.heze) {
+      // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+    }
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
       signature: G2_POINT_AT_INFINITY,
@@ -380,7 +388,7 @@ export async function produceBlockBody<T extends BlockType>(
     // Store execution payload data required to construct execution payload envelope later
     const gloasResult = produceResult as ProduceFullGloas;
     gloasResult.executionPayload = executionPayload as ExecutionPayload<ForkPostGloas>;
-    gloasResult.executionRequests = executionRequests;
+    gloasResult.executionRequests = executionRequests as gloas.ExecutionRequests;
     gloasResult.blobsBundle = blobsBundle;
     gloasResult.cells = cells;
     gloasResult.parentBlockRoot = fromHex(parentBlock.blockRoot);
@@ -835,28 +843,19 @@ export function getPayloadAttributesForSSE(
     feeRecipient,
   });
 
-  let parentBlockNumber: number;
-  if (isForkPostGloas(fork)) {
-    const parentBlock = chain.forkChoice.getBlockHexAndBlockHash(
-      toRootHex(parentBlockRoot),
-      toRootHex(parentBlockHash)
-    );
-    if (parentBlock?.executionPayloadBlockHash == null) {
-      throw Error(`Parent block not found in fork choice root=${toRootHex(parentBlockRoot)}`);
-    }
-    parentBlockNumber = parentBlock.executionPayloadNumber;
-  } else {
-    parentBlockNumber = prepareState.payloadBlockNumber;
-  }
-
-  const ssePayloadAttributes: SSEPayloadAttributes = {
+  const ssePayloadAttributes = {
     proposerIndex: prepareState.getBeaconProposer(prepareSlot),
     proposalSlot: prepareSlot,
-    parentBlockNumber,
     parentBlockRoot,
     parentBlockHash,
     payloadAttributes,
-  };
+  } as SSEPayloadAttributes;
+
+  if (!isForkPostGloas(fork)) {
+    // Removed in Gloas, builders can get the block number from the EL via the block hash if required
+    (ssePayloadAttributes as bellatrix.SSEPayloadAttributes).parentBlockNumber = prepareState.payloadBlockNumber;
+  }
+
   return ssePayloadAttributes;
 }
 
@@ -940,6 +939,11 @@ function preparePayloadAttributes(
     );
   }
 
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = [];
+  }
+
   return payloadAttributes;
 }
 
@@ -962,7 +966,7 @@ function getProposerTargetGasLimit(
   prepareSlot: Slot,
   parentBlockRoot: Root,
   parentBlockHash: Bytes32
-): number {
+): bigint {
   const parentBlockRootHex = toRootHex(parentBlockRoot);
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
   const dependentRootHex = (() => {
@@ -992,7 +996,7 @@ function getProposerTargetGasLimit(
       `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
     );
   }
-  return parentPayloadVariant.executionPayloadGasLimit;
+  return BigInt(parentPayloadVariant.executionPayloadGasLimit);
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(

@@ -53,7 +53,7 @@ export enum NotReorgedReason {
   HeadBlockIsTimely = "headBlockIsTimely",
   ParentBlockNotAvailable = "parentBlockNotAvailable",
   ProposerBoostReorgDisabled = "proposerBoostReorgDisabled",
-  NotShufflingStable = "notShufflingStable",
+  AtEpochBoundary = "atEpochBoundary",
   NotFFGCompetitive = "notFFGCompetitive",
   ChainLongUnfinality = "chainLongUnfinality",
   ParentBlockDistanceMoreThanOneSlot = "parentBlockDistanceMoreThanOneSlot",
@@ -81,7 +81,7 @@ export interface IForkChoice {
    * ## Specification
    *
    * Modified for Gloas to return ProtoNode instead of just root:
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#modified-get_ancestor
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#modified-get_ancestor
    *
    * Pre-Gloas: Returns (root, PAYLOAD_STATUS_FULL)
    * Gloas: Returns (root, payloadStatus) based on actual node state
@@ -98,6 +98,12 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): ProtoBlock;
+  getConfirmedRoot(): RootHex;
+  getConfirmedBlock(): ProtoBlock | null;
+  /** Resume the fast confirmation rule; restarts from the finalized root on the next slot tick */
+  resumeFastConfirmation(): void;
+  /** Pause the fast confirmation rule (e.g. while syncing); pins the confirmed root to the finalized root */
+  pauseFastConfirmation(): void;
   updateAndGetHead(mode: UpdateAndGetHeadOpt): {
     head: ProtoBlock;
     isHeadTimely?: boolean;
@@ -123,6 +129,10 @@ export interface IForkChoice {
   getAllNodes(): ProtoNode[];
   getFinalizedCheckpoint(): CheckpointWithHex;
   getJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedJustifiedCheckpoint(): CheckpointWithHex;
+  getUnrealizedFinalizedCheckpoint(): CheckpointWithHex;
+  getProposerBoostRoot(): RootHex;
+  getPreviousProposerBoostRoot(): RootHex;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -180,10 +190,11 @@ export interface IForkChoice {
    *
    * ## Specification
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.0/specs/gloas/fork-choice.md#new-notify_ptc_messages
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#new-notify_ptc_messages
    */
   notifyPtcMessages(
     blockRoot: RootHex,
+    slot: Slot,
     ptcIndices: number[],
     payloadPresent: boolean,
     blobDataAvailable: boolean
@@ -194,7 +205,7 @@ export interface IForkChoice {
    *
    * ## Specification
    *
-   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.1/specs/gloas/fork-choice.md#new-on_execution_payload
+   * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.11/specs/gloas/fork-choice.md#new-on_execution_payload_envelope
    *
    * @param blockRoot - The beacon block root for which the payload arrived
    * @param executionPayloadBlockHash - The block hash of the execution payload
@@ -235,7 +246,21 @@ export interface IForkChoice {
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
+  /**
+   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
+   * payload (FULL variant exists). Used by the builder circuit breaker.
+   */
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number};
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
+  getPTCVoteCounts(blockRootHex: RootHex): {
+    attesterCount: number;
+    payloadPresentCount: number;
+    dataAvailableCount: number;
+  } | null;
+  getPayloadTimelinessVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+  getPayloadDataAvailabilityVotes(blockRootHex: RootHex): (boolean | null)[] | null;
+
   /**
    * Returns a `ProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
@@ -245,8 +270,8 @@ export interface IForkChoice {
   getBlockHexDefaultStatus(blockRoot: RootHex): ProtoBlock | null;
   getBlockHexAndBlockHash(blockRoot: RootHex, blockHash: RootHex): ProtoBlock | null;
   shouldExtendPayload(blockRoot: RootHex): boolean;
-  /** Spec: should_build_on_full(store, head) */
-  shouldBuildOnFull(head: ProtoBlock): boolean;
+  /** Spec: should_build_on_full(store, head, slot) */
+  shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean;
   getFinalizedBlock(): ProtoBlock;
   getJustifiedBlock(): ProtoBlock;
   getFinalizedCheckpointSlot(): Slot;

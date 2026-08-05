@@ -46,41 +46,41 @@ function buildBlock(opts: {
   };
 }
 
-function mockForkChoice(justified: ProtoBlock, finalized: ProtoBlock): IForkChoice {
+function mockForkChoice(confirmed: ProtoBlock, finalized: ProtoBlock): IForkChoice {
   return {
-    getJustifiedBlock: () => justified,
+    getConfirmedBlock: () => confirmed,
     getFinalizedBlock: () => finalized,
   } as unknown as IForkChoice;
 }
 
 describe("safeBlocks - getSafeExecutionBlockHash", () => {
-  it("pre-Gloas: returns the justified block's own executionPayloadBlockHash", () => {
-    const justified = buildBlock({
+  it("pre-Gloas: returns the confirmed block's own executionPayloadBlockHash", () => {
+    const confirmed = buildBlock({
       blockRoot: "0xaa",
       executionPayloadBlockHash: "0xpayloadA",
       parentBlockHash: null,
     });
-    const fc = mockForkChoice(justified, justified);
+    const fc = mockForkChoice(confirmed, confirmed);
     expect(getSafeExecutionBlockHash(fc)).toBe("0xpayloadA");
   });
 
   it("pre-Bellatrix: returns ZERO_HASH_HEX when executionPayloadBlockHash is null", () => {
-    const justified = buildBlock({
+    const confirmed = buildBlock({
       blockRoot: "0xaa",
       executionPayloadBlockHash: null,
       parentBlockHash: null,
     });
-    const fc = mockForkChoice(justified, justified);
+    const fc = mockForkChoice(confirmed, confirmed);
     expect(getSafeExecutionBlockHash(fc)).toBe(HEX_ZERO_HASH);
   });
 
-  it("post-Gloas: returns the justified block's bid.parent_block_hash, not its own payload hash", () => {
-    const justified = buildBlock({
+  it("post-Gloas: returns the confirmed block's bid.parent_block_hash, not its own payload hash", () => {
+    const confirmed = buildBlock({
       blockRoot: "0xaa",
       executionPayloadBlockHash: "0xpayloadA",
       parentBlockHash: "0xparentEL",
     });
-    const fc = mockForkChoice(justified, justified);
+    const fc = mockForkChoice(confirmed, confirmed);
     expect(getSafeExecutionBlockHash(fc)).toBe("0xparentEL");
   });
 });

@@ -6,7 +6,18 @@ export {
   type InvalidBlock,
   InvalidBlockCode,
 } from "./forkChoice/errors.js";
-export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
+export {
+  type FastConfirmationBalanceSource,
+  type FastConfirmationContext,
+  type FastConfirmationMetrics,
+  type FastConfirmationResult,
+  FastConfirmationRule,
+  type ForkChoiceStateGetter,
+  type IFastConfirmationRule,
+  type IFastConfirmationStore,
+  getFastConfirmationMetrics,
+} from "./forkChoice/fastConfirmation/fastConfirmationRule.ts";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, getCommitteeFraction} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,

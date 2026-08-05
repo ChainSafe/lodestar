@@ -61,10 +61,8 @@ export function verifyExecutionPayloadEnvelope(
       `Prev randao mismatch between bid and payload bid=${toHex(bid.prevRandao)} payload=${toHex(payload.prevRandao)}`
     );
   }
-  if (Number(bid.gasLimit) !== payload.gasLimit) {
-    throw new Error(
-      `Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${Number(bid.gasLimit)}`
-    );
+  if (bid.gasLimit !== BigInt(payload.gasLimit)) {
+    throw new Error(`Gas limit mismatch between payload and bid payload=${payload.gasLimit} bid=${bid.gasLimit}`);
   }
   if (!byteArrayEquals(bid.blockHash, payload.blockHash)) {
     throw new Error(
@@ -74,7 +72,7 @@ export function verifyExecutionPayloadEnvelope(
   // Verify execution_requests_root matches bid commitment.
   // Can be skipped if already verified during gossip validation.
   if (verifyExecutionRequestsRoot) {
-    const requestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
+    const requestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(envelope.executionRequests);
     if (!byteArrayEquals(requestsRoot, bid.executionRequestsRoot)) {
       throw new Error(
         `Execution requests root mismatch envelope=${toRootHex(requestsRoot)} bid=${toRootHex(bid.executionRequestsRoot)}`
@@ -102,8 +100,8 @@ export function verifyExecutionPayloadEnvelope(
   }
 
   // Verify consistency with expected withdrawals
-  const payloadWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(payload.withdrawals);
-  const expectedWithdrawalsRoot = ssz.capella.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
+  const payloadWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(payload.withdrawals);
+  const expectedWithdrawalsRoot = ssz.gloas.Withdrawals.hashTreeRoot(state.payloadExpectedWithdrawals);
   if (!byteArrayEquals(payloadWithdrawalsRoot, expectedWithdrawalsRoot)) {
     throw new Error(
       `Withdrawals mismatch between payload and expected payload=${toRootHex(payloadWithdrawalsRoot)} expected=${toRootHex(expectedWithdrawalsRoot)}`

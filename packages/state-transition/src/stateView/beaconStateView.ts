@@ -8,6 +8,7 @@ import {
   BlindedBeaconBlock,
   BuilderIndex,
   Bytes32,
+  CommitteeIndex,
   Epoch,
   ExecutionPayloadBid,
   ExecutionPayloadHeader,
@@ -397,6 +398,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return (this.cachedState as CachedBeaconStateGloas).builders.getReadonly(index);
   }
 
+  getBuildersLength(): number {
+    if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
+      throw new Error("Builders are not supported before Gloas");
+    }
+
+    return (this.cachedState as CachedBeaconStateGloas).builders.length;
+  }
+
   canBuilderCoverBid(builderIndex: BuilderIndex, bidAmount: number): boolean {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("Builders are not supported before Gloas");
@@ -450,6 +459,14 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
 
   getShufflingAtEpoch(epoch: Epoch): EpochShuffling {
     return this.cachedState.epochCtx.getShufflingAtEpoch(epoch);
+  }
+
+  getBeaconCommittee(slot: Slot, index: CommitteeIndex): Uint32Array {
+    return this.cachedState.epochCtx.getBeaconCommittee(slot, index);
+  }
+
+  getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
+    return this.cachedState.epochCtx.getCommitteeCountPerSlot(epoch);
   }
 
   get previousDecisionRoot(): RootHex {
@@ -814,7 +831,7 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
   /**
    * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.5/specs/gloas/validator.md#executionpayload
    */
-  withParentPayloadApplied(executionRequests: electra.ExecutionRequests): IBeaconStateViewGloas {
+  withParentPayloadApplied(executionRequests: gloas.ExecutionRequests): IBeaconStateViewGloas {
     if (this.config.getForkSeq(this.cachedState.slot) < ForkSeq.gloas) {
       throw new Error("withParentPayloadApplied is not available before Gloas");
     }

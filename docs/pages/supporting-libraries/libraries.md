@@ -15,8 +15,8 @@ Several useful Ethereum consensus libraries are developed as part of the [Lodest
 
 The Lodestar light client and prover packages are developed in the [Lodestar Prover repository](https://github.com/ChainSafe/lodestar-prover).
 
-- [`light-client`](https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/light-client) - Ethereum light client
-- [`prover`](https://github.com/ChainSafe/lodestar-prover/tree/unstable/packages/prover) - A set of tools allowing to verify EL client JSON-RPC calls
+- [`light-client`](https://github.com/ChainSafe/lodestar-prover/tree/main/packages/light-client) - Ethereum light client
+- [`prover`](https://github.com/ChainSafe/lodestar-prover/tree/main/packages/prover) - A set of tools allowing to verify EL client JSON-RPC calls
 
 ## Other libraries
 

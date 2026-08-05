@@ -34,17 +34,6 @@ specTestIterator(
         // where deserialized .d value is D: '0x00'. However the tests guide mark that field as D: Bytes[256].
         // Those test won't be fixed since most implementations staticly compile types.
         "ComplexTestStruct",
-        "ProgressiveTestStruct",
-        "ProgressiveBitsStruct",
-        "proglist",
-        "progbitlist",
-        "ProgressiveVarTestStruct",
-        "ProgressiveSingleFieldContainerTestStruct",
-        "ProgressiveSingleListContainerTestStruct",
-        "ProgressiveComplexTestStruct",
-        "CompatibleUnionA",
-        "CompatibleUnionBC",
-        "CompatibleUnionABCA",
       ]),
     },
   },

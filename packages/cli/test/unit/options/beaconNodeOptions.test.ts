@@ -42,6 +42,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.maxCPStateEpochsOnDisk": 1000,
       "chain.archiveMode": ArchiveMode.Frequency,
       emitPayloadAttributes: false,
+      graffitiAppend: false,
 
       "execution.urls": ["http://localhost:8551"],
       "execution.timeout": 12000,
@@ -138,11 +139,14 @@ describe("options / beaconNodeOptions", () => {
         maxShufflingCacheEpochs: 100,
         archiveDataEpochs: 10000,
         archiveMode: ArchiveMode.Frequency,
+        graffitiAppend: false,
         nHistoricalStatesFileDataStore: true,
         nativeStateView: false,
         maxBlockStates: 100,
         maxCPStateEpochsInMemory: 100,
         maxCPStateEpochsOnDisk: 1000,
+        faultInspectionWindow: 32,
+        allowedFaults: 8,
       },
       executionEngine: {
         urls: ["http://localhost:8551"],

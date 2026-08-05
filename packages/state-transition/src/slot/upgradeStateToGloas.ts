@@ -1,12 +1,25 @@
-import {SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {getNodesAtDepth} from "@chainsafe/persistent-merkle-tree";
+import {
+  BasicType,
+  CompositeType,
+  CompositeView,
+  CompositeViewDU,
+  ListBasicTreeViewDU,
+  ListCompositeTreeViewDU,
+  ProgressiveListBasicType,
+  ProgressiveListCompositeType,
+  ValueOf,
+} from "@chainsafe/ssz";
+import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
-import {applyDepositForBuilder} from "../block/processDepositRequest.js";
+import {isValidDepositSignature} from "../block/processDeposit.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
+import {progressiveListRootNode} from "../util/ssz.js";
 
 /**
  * Upgrade a state from Fulu to Gloas.
@@ -34,23 +47,32 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.eth1Data = stateGloasCloned.eth1Data;
   stateGloasView.eth1DataVotes = stateGloasCloned.eth1DataVotes;
   stateGloasView.eth1DepositIndex = stateGloasCloned.eth1DepositIndex;
-  stateGloasView.validators = stateGloasCloned.validators;
-  stateGloasView.balances = stateGloasCloned.balances;
+  stateGloasView.validators = migrateCompositeListToGloas(stateGloasCloned.validators, ssz.gloas.Validators);
+  stateGloasView.balances = migrateBasicListToGloas(stateGloasCloned.balances, ssz.gloas.Balances);
   stateGloasView.randaoMixes = stateGloasCloned.randaoMixes;
   stateGloasView.slashings = stateGloasCloned.slashings;
-  stateGloasView.previousEpochParticipation = stateGloasCloned.previousEpochParticipation;
-  stateGloasView.currentEpochParticipation = stateGloasCloned.currentEpochParticipation;
+  stateGloasView.previousEpochParticipation = migrateBasicListToGloas(
+    stateGloasCloned.previousEpochParticipation,
+    ssz.gloas.EpochParticipation
+  );
+  stateGloasView.currentEpochParticipation = migrateBasicListToGloas(
+    stateGloasCloned.currentEpochParticipation,
+    ssz.gloas.EpochParticipation
+  );
   stateGloasView.justificationBits = stateGloasCloned.justificationBits;
   stateGloasView.previousJustifiedCheckpoint = stateGloasCloned.previousJustifiedCheckpoint;
   stateGloasView.currentJustifiedCheckpoint = stateGloasCloned.currentJustifiedCheckpoint;
   stateGloasView.finalizedCheckpoint = stateGloasCloned.finalizedCheckpoint;
-  stateGloasView.inactivityScores = stateGloasCloned.inactivityScores;
+  stateGloasView.inactivityScores = migrateBasicListToGloas(
+    stateGloasCloned.inactivityScores,
+    ssz.gloas.InactivityScores
+  );
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
   stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
-  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.electra.ExecutionRequests.hashTreeRoot(
-    ssz.electra.ExecutionRequests.defaultValue()
+  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
+    ssz.gloas.ExecutionRequests.defaultValue()
   );
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
@@ -61,9 +83,18 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.earliestExitEpoch = stateGloasCloned.earliestExitEpoch;
   stateGloasView.consolidationBalanceToConsume = stateGloasCloned.consolidationBalanceToConsume;
   stateGloasView.earliestConsolidationEpoch = stateGloasCloned.earliestConsolidationEpoch;
-  stateGloasView.pendingDeposits = stateGloasCloned.pendingDeposits;
-  stateGloasView.pendingPartialWithdrawals = stateGloasCloned.pendingPartialWithdrawals;
-  stateGloasView.pendingConsolidations = stateGloasCloned.pendingConsolidations;
+  stateGloasView.pendingDeposits = migrateCompositeListToGloas(
+    stateGloasCloned.pendingDeposits,
+    ssz.gloas.PendingDeposits
+  );
+  stateGloasView.pendingPartialWithdrawals = migrateCompositeListToGloas(
+    stateGloasCloned.pendingPartialWithdrawals,
+    ssz.gloas.PendingPartialWithdrawals
+  );
+  stateGloasView.pendingConsolidations = migrateCompositeListToGloas(
+    stateGloasCloned.pendingConsolidations,
+    ssz.gloas.PendingConsolidations
+  );
   stateGloasView.proposerLookahead = stateGloasCloned.proposerLookahead;
   stateGloasView.ptcWindow = ssz.gloas.PtcWindow.toViewDU(initializePtcWindow(stateFulu));
 
@@ -86,14 +117,59 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
 }
 
 /**
+ * Migrate a composite list from fulu to its gloas progressive-list equivalent by reusing the fulu
+ * list's element nodes.
+ *
+ * Works whenever the element type is identical across the fork (e.g. validators use ValidatorNodeStruct,
+ * the pending* queues use the same electra element types). Each element's cached subtree root is then
+ * valid under gloas, so only the progressive list superstructure is rebuilt and a subsequent
+ * hashTreeRoot() skips re-hashing every element — the dominant cost for large lists like validators.
+ * Much cheaper than `gloasType.toViewDU(fuluList.getAllReadonlyValues())`, which decodes every element
+ * to a value and forces a full re-hash.
+ *
+ * The chunk nodes of a composite list ARE the element root nodes, so they are extracted directly
+ * with getNodesAtDepth instead of allocating a temporary ViewDU wrapper per element (getAllReadonly).
+ * Requires the fulu view to be committed (done at the top of upgradeStateToGloas).
+ */
+function migrateCompositeListToGloas<
+  ElementType extends CompositeType<ValueOf<ElementType>, CompositeView<ElementType>, CompositeViewDU<ElementType>>,
+>(fuluList: ListCompositeTreeViewDU<ElementType>, gloasType: ProgressiveListCompositeType<ElementType>) {
+  const {length, type} = fuluList;
+  const elementNodes = getNodesAtDepth(fuluList.node.left, type.chunkDepth, 0, length);
+  return gloasType.getViewDU(progressiveListRootNode(elementNodes, length));
+}
+
+/**
+ * Migrate a basic list from fulu to its gloas progressive-list equivalent by reusing the fulu
+ * list's packed chunk leaf nodes.
+ *
+ * Packed leaf chunks are bit-identical between List[T, N] and ProgressiveList[T] (same 32-byte
+ * LE packing, zero-padded final chunk); only the superstructure above the leaves differs. Reusing
+ * the leaves avoids materializing the value array (getAll), re-serializing it, and allocating
+ * fresh LeafNodes — the gloas tree shares the leaf nodes with the fulu tree.
+ * Requires the fulu view to be committed (done at the top of upgradeStateToGloas).
+ */
+function migrateBasicListToGloas<ElementType extends BasicType<unknown>>(
+  fuluList: ListBasicTreeViewDU<ElementType>,
+  gloasType: ProgressiveListBasicType<ElementType>
+) {
+  const {length, type} = fuluList;
+  const chunkCount = Math.ceil(length / type.itemsPerChunk);
+  // List root = BranchNode(chunksNode, lengthNode) → chunks tree is the left child
+  const chunkLeafNodes = getNodesAtDepth(fuluList.node.left, type.chunkDepth, 0, chunkCount);
+  return gloasType.getViewDU(progressiveListRootNode(chunkLeafNodes, length));
+}
+
+/**
  * Applies any pending deposits for builders to onboard builders during the fork transition
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
 function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
-  // Track pubkeys of new builders added when applying deposits
+  // Track pubkeys of new builders added when applying deposits. `state.builders` starts empty
+  // at the fork, so every builder pubkey here is one added in an earlier iteration.
   const builderPubkeys = new Set<string>();
 
-  const pendingDeposits = ssz.electra.PendingDeposits.defaultViewDU();
+  const pendingDeposits = ssz.gloas.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
 
   for (let i = 0; i < state.pendingDeposits.length; i++) {
@@ -109,40 +185,55 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
       continue;
     }
 
-    // `applyDepositForBuilder` can mutate the state and add a builder to the registry, so
-    // the set of builder pubkeys must be recomputed each iteration. `builderPubkeys` stands
-    // in for the spec's `[b.pubkey for b in state.builders]`: `state.builders` starts empty
-    // at the fork, so every builder is one added in a previous iteration of this loop.
-    if (!builderPubkeys.has(pubkeyHex)) {
-      // Deposits for non-builders stay in the pending queue. If there is a valid pending
-      // deposit for a new validator with this pubkey, keep this deposit in the pending
-      // queue to be applied to that validator later.
-      if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
-        pendingDeposits.push(deposit);
-        pendingDepositsLookup.add(deposit, pubkeyHex);
-        continue;
+    if (builderPubkeys.has(pubkeyHex)) {
+      // Top up an already-onboarded builder
+      // TODO GLOAS: linear search; consider builder pubkey cache when we drop the upgrade-time set
+      for (let j = 0; j < state.builders.length; j++) {
+        if (toPubkeyHex(state.builders.getReadonly(j).pubkey) === pubkeyHex) {
+          state.builders.get(j).balance += deposit.amount;
+          break;
+        }
       }
-      if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
-        pendingDeposits.push(deposit);
-        pendingDepositsLookup.add(deposit, pubkeyHex);
-        continue;
-      }
+      continue;
     }
 
-    const buildersLenBefore = state.builders.length;
-    // TODO GLOAS: handle 20k 1ETH deposits on time
-    // there is a note in the spec https://github.com/ethereum/consensus-specs/pull/5227
-    applyDepositForBuilder(
+    // Deposits for non-builders stay in the pending queue. If there is a valid pending
+    // deposit for a new validator with this pubkey, keep this deposit pending so the validator
+    // can pick it up later.
+    if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
+      continue;
+    }
+    if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
+      pendingDeposits.push(deposit);
+      pendingDepositsLookup.add(deposit, pubkeyHex);
+      continue;
+    }
+
+    // Verify the deposit signature (proof of possession). If invalid the deposit is silently
+    // dropped — stake is forfeited, matching the validator deposit contract behavior.
+    if (
+      !isValidDepositSignature(
+        state.config,
+        deposit.pubkey,
+        deposit.withdrawalCredentials,
+        deposit.amount,
+        deposit.signature
+      )
+    ) {
+      continue;
+    }
+
+    addBuilderToRegistry(
       state,
       deposit.pubkey,
-      deposit.withdrawalCredentials,
+      PAYLOAD_BUILDER_VERSION,
+      deposit.withdrawalCredentials.subarray(12),
       deposit.amount,
-      deposit.signature,
       deposit.slot
     );
-    if (state.builders.length > buildersLenBefore) {
-      builderPubkeys.add(pubkeyHex);
-    }
+    builderPubkeys.add(pubkeyHex);
   }
 
   state.pendingDeposits = pendingDeposits;

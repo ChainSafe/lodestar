@@ -65,7 +65,7 @@ import {
 } from "./reqresp/utils/collect.js";
 import {collectSequentialBlocksInRange} from "./reqresp/utils/collectSequentialBlocksInRange.js";
 import {CommitteeSubscription} from "./subnets/index.js";
-import {isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
+import {isPublishDuplicateError, isPublishToZeroPeersError, prettyPrintPeerIdStr} from "./util.js";
 
 type NetworkModules = {
   opts: NetworkOptions;
@@ -366,7 +366,9 @@ export class Network implements INetwork {
     });
   }
 
-  async publishDataColumnSidecar(dataColumnSidecar: DataColumnSidecar): Promise<number> {
+  async publishDataColumnSidecar(
+    dataColumnSidecar: DataColumnSidecar
+  ): Promise<{sentPeers: number; alreadyPublished: boolean}> {
     const slot = isGloasDataColumnSidecar(dataColumnSidecar)
       ? dataColumnSidecar.slot
       : dataColumnSidecar.signedBlockHeader.message.slot;
@@ -374,18 +376,25 @@ export class Network implements INetwork {
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);
 
     const subnet = computeSubnetForDataColumnSidecar(this.config, dataColumnSidecar);
-    return this.publishGossip<GossipType.data_column_sidecar>(
-      {type: GossipType.data_column_sidecar, boundary, subnet},
-      dataColumnSidecar,
-      {
-        ignoreDuplicatePublishError: true,
-        // we ensure having all topic peers via prioritizePeers() function
-        // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
-        // because supernode will rebuild and publish missing data column sidecars for us
-        // hence we want to track sent peers as 0 instead of an error
-        allowPublishToZeroTopicPeers: true,
+    try {
+      const sentPeers = await this.publishGossip<GossipType.data_column_sidecar>(
+        {type: GossipType.data_column_sidecar, boundary, subnet},
+        dataColumnSidecar,
+        {
+          // we ensure having all topic peers via prioritizePeers() function
+          // in the worse case, if there is 0 peer on the topic, the overall publish operation could be still a success
+          // because supernode will rebuild and publish missing data column sidecars for us
+          // hence we want to track sent peers as 0 instead of an error
+          allowPublishToZeroTopicPeers: true,
+        }
+      );
+      return {sentPeers, alreadyPublished: false};
+    } catch (e) {
+      if (isPublishDuplicateError(e as Error)) {
+        return {sentPeers: 0, alreadyPublished: true};
       }
-    );
+      throw e;
+    }
   }
 
   async publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number> {
@@ -860,8 +869,8 @@ export class Network implements INetwork {
     this.core.setTargetGroupCount(count);
   };
 
-  private onPublishDataColumns = (sidecars: DataColumnSidecar[]): Promise<number[]> => {
-    return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
+  private onPublishDataColumns = async (sidecars: DataColumnSidecar[]): Promise<void> => {
+    await promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishDataColumnSidecar(sidecar)));
   };
 
   private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {

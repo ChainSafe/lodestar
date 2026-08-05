@@ -31,10 +31,13 @@ ETH
 Edgington
 Erigon
 Esat
+EthPandaOps
 EthStaker
 EtherScan
 Ethereum
 EthereumJS
+FCR
+FFG
 FINDNODE
 FX
 Flamegraph
@@ -42,6 +45,7 @@ Flamegraphs
 GPG
 Geth
 Github
+Gloas
 Goerli
 Golang
 Gossipsub
@@ -159,12 +163,14 @@ env
 envs
 ephemery
 ethers
+fastconfirm
 feeRecipient
 flamegraph
 flamegraphs
 floodsub
 fsSL
 getNetworkIdentity
+gloas
 gnosis
 gpg
 heapdump

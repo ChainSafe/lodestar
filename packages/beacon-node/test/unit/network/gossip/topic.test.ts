@@ -1,9 +1,32 @@
 import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {ForkName, GENESIS_EPOCH, ZERO_HASH} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  GENESIS_EPOCH,
+  MAX_ATTESTER_SLASHING_SIZE,
+  MAX_DATA_COLUMN_SIDECAR_SIZE,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  ZERO_HASH,
+} from "@lodestar/params";
+import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
-import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
+import {
+  GossipTopicCache,
+  getAllowedTopics,
+  getCoreTopicsAtFork,
+  getGossipSSZMaxSize,
+  getGossipSSZType,
+  parseGossipTopic,
+  stringifyGossipTopic,
+} from "../../../../src/network/gossip/topic.js";
+import {NetworkConfig} from "../../../../src/network/networkConfig.js";
+import {computeNodeId} from "../../../../src/network/subnets/index.js";
+import {CustodyConfig} from "../../../../src/util/dataColumns.js";
+import {getValidPeerId} from "../../../utils/peer.js";
 
 describe("network / gossip / topic", () => {
   const config = createBeaconConfig({...chainConfig, GLOAS_FORK_EPOCH: 700000}, ZERO_HASH);
@@ -216,4 +239,171 @@ describe("network / gossip / topic", () => {
       expect(() => parseGossipTopic(config, topicStr)).toThrow();
     });
   }
+
+  it("should provide finite gossip size limits for every gossip type", () => {
+    for (const {topic} of Object.values(testCases).flat()) {
+      const maxSize = getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE);
+
+      expect(Number.isFinite(maxSize)).toBe(true);
+      expect(maxSize).toBeGreaterThanOrEqual(getGossipSSZType(topic).minSize);
+    }
+  });
+
+  it("should use preset-defined gossip size limits for Gloas progressive objects", () => {
+    const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
+
+    expect({
+      [GossipType.beacon_block]: getGossipSSZMaxSize(
+        {type: GossipType.beacon_block, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.data_column_sidecar]: getGossipSSZMaxSize(
+        {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.beacon_aggregate_and_proof]: getGossipSSZMaxSize(
+        {type: GossipType.beacon_aggregate_and_proof, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.attester_slashing]: getGossipSSZMaxSize(
+        {type: GossipType.attester_slashing, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.execution_payload_bid]: getGossipSSZMaxSize(
+        {type: GossipType.execution_payload_bid, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+    }).toEqual({
+      [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
+      [GossipType.data_column_sidecar]: MAX_DATA_COLUMN_SIDECAR_SIZE,
+      [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+      [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
+      [GossipType.execution_payload_bid]: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+    });
+  });
+
+  it("should use the Heze bid size limit post-Heze", () => {
+    const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
+
+    expect(
+      getGossipSSZMaxSize({type: GossipType.execution_payload_bid, boundary, encoding}, config.MAX_PAYLOAD_SIZE)
+    ).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE);
+  });
+
+  it("should cap Gloas progressive gossip objects below their theoretical SSZ max", () => {
+    const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
+
+    for (const topic of [
+      {type: GossipType.beacon_block, boundary, encoding},
+      {type: GossipType.beacon_aggregate_and_proof, boundary, encoding},
+      {type: GossipType.attester_slashing, boundary, encoding},
+      {type: GossipType.execution_payload, boundary, encoding},
+      {type: GossipType.execution_payload_bid, boundary, encoding},
+      {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
+    ] as const) {
+      expect(getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE)).toBeLessThan(getGossipSSZType(topic).maxSize);
+    }
+  });
+
+  it("should reject gossip bytes above the per-topic limit before outbound compression", () => {
+    const topic = {
+      type: GossipType.beacon_aggregate_and_proof,
+      boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+      encoding,
+    } as const;
+    const topicStr = stringifyGossipTopic(config, topic);
+    const gossipTopicCache = new GossipTopicCache(config);
+    const transform = new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, null);
+
+    gossipTopicCache.setTopic(topicStr, topic);
+
+    expect(() =>
+      transform.outboundTransform(topicStr, new Uint8Array(MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE + 1))
+    ).toThrow(`ssz_snappy encoded data length ${MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE + 1}`);
+  });
+
+  describe("getAllowedTopics", () => {
+    // A config with every fork scheduled so all fork boundaries (and their topics) are present
+    const allForksConfig = createBeaconConfig(
+      {
+        ...chainConfig,
+        ALTAIR_FORK_EPOCH: 1,
+        BELLATRIX_FORK_EPOCH: 2,
+        CAPELLA_FORK_EPOCH: 3,
+        DENEB_FORK_EPOCH: 4,
+        ELECTRA_FORK_EPOCH: 5,
+        FULU_FORK_EPOCH: 6,
+        GLOAS_FORK_EPOCH: 7,
+      },
+      ZERO_HASH
+    );
+    const nodeId = computeNodeId(getValidPeerId());
+    const networkConfig: NetworkConfig = {
+      nodeId,
+      config: allForksConfig,
+      custodyConfig: new CustodyConfig({nodeId, config: allForksConfig}),
+    };
+    const allowedTopics = getAllowedTopics(networkConfig);
+
+    const findBoundary = (fork: ForkName) => {
+      const boundary = allForksConfig.forkBoundariesAscendingEpochOrder.find((b) => b.fork === fork);
+      if (!boundary) throw Error(`no boundary for fork ${fork}`);
+      return boundary;
+    };
+
+    it("is a superset of every topic the node may subscribe to across all forks", () => {
+      for (const boundary of allForksConfig.forkBoundariesAscendingEpochOrder) {
+        const topics = getCoreTopicsAtFork(networkConfig, boundary.fork, {
+          subscribeAllSubnets: true,
+          disableLightClientServer: false,
+        });
+        for (const topic of topics) {
+          const topicStr = stringifyGossipTopic(allForksConfig, {...topic, boundary});
+          expect(allowedTopics.has(topicStr), `missing subscribed topic ${topicStr}`).toBe(true);
+        }
+      }
+    });
+
+    it("includes all attestation subnets", () => {
+      const boundary = findBoundary(ForkName.phase0);
+      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+        const topicStr = stringifyGossipTopic(allForksConfig, {type: GossipType.beacon_attestation, subnet, boundary});
+        expect(allowedTopics.has(topicStr), `missing ${topicStr}`).toBe(true);
+      }
+    });
+
+    it("includes ALL data column subnets at fulu, not just the sampled ones", () => {
+      const boundary = findBoundary(ForkName.fulu);
+      for (let subnet = 0; subnet < allForksConfig.DATA_COLUMN_SIDECAR_SUBNET_COUNT; subnet++) {
+        const topicStr = stringifyGossipTopic(allForksConfig, {
+          type: GossipType.data_column_sidecar,
+          subnet,
+          boundary,
+        });
+        expect(allowedTopics.has(topicStr), `missing ${topicStr}`).toBe(true);
+      }
+    });
+
+    it("only contains valid, parseable topic strings", () => {
+      expect(allowedTopics.size).toBeGreaterThan(0);
+      for (const topicStr of allowedTopics) {
+        expect(() => parseGossipTopic(allForksConfig, topicStr), `unparseable allowed topic ${topicStr}`).not.toThrow();
+      }
+    });
+
+    it("excludes attacker-controlled topics (out-of-range subnet, unknown digest, garbage)", () => {
+      const boundary = findBoundary(ForkName.phase0);
+      // Valid fork digest + format, but out-of-range attestation subnet
+      const outOfRangeSubnet = stringifyGossipTopic(allForksConfig, {
+        type: GossipType.beacon_attestation,
+        subnet: 9999,
+        boundary,
+      });
+      expect(allowedTopics.has(outOfRangeSubnet)).toBe(false);
+      // Unknown fork digest
+      expect(allowedTopics.has("/eth2/ffffffff/beacon_attestation_5/ssz_snappy")).toBe(false);
+      // Garbage
+      expect(allowedTopics.has("/attacker/garbage/topic")).toBe(false);
+    });
+  });
 });

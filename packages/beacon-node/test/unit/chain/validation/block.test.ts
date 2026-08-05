@@ -25,7 +25,6 @@ describe("gossip block validation", () => {
   const block = ssz.deneb.BeaconBlock.defaultValue();
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
-  const maxSkipSlots = 10;
   const denebConfig = createChainForkConfig({
     ...configDef,
     ALTAIR_FORK_EPOCH: 0,
@@ -43,7 +42,7 @@ describe("gossip block validation", () => {
     chain.forkChoice = forkChoice;
     regen = chain.regen;
 
-    (chain as any).opts = {maxSkipSlots};
+    (chain as any).opts = {};
 
     verifySignature = chain.bls.verifySignatureSets;
     verifySignature.mockResolvedValue(true);
@@ -107,7 +106,7 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("PARENT_UNKNOWN (fork-choice)", async () => {
+  it("PARENT_BLOCK_UNKNOWN (fork-choice)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Return not known for parent block too
@@ -115,19 +114,7 @@ describe("gossip block validation", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
-      BlockErrorCode.PARENT_UNKNOWN
-    );
-  });
-
-  it("TOO_MANY_SKIPPED_SLOTS", async () => {
-    // Return not known for proposed block
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-    // Return parent block with 1 slot way back than maxSkipSlots
-    forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: block.slot - (maxSkipSlots + 1)} as ProtoBlock);
-
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
-      BlockErrorCode.TOO_MANY_SKIPPED_SLOTS
+      BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
 
@@ -143,7 +130,7 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("PARENT_UNKNOWN (regen)", async () => {
+  it("PARENT_BLOCK_UNKNOWN (regen)", async () => {
     // Return not known for proposed block
     forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
     // Returned parent block is latter than proposed block
@@ -153,7 +140,7 @@ describe("gossip block validation", () => {
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
-      BlockErrorCode.PARENT_UNKNOWN
+      BlockErrorCode.PARENT_BLOCK_UNKNOWN
     );
   });
 

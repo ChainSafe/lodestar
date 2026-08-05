@@ -16,6 +16,7 @@ import {
   upgradeStateToDeneb,
   upgradeStateToElectra,
   upgradeStateToGloas,
+  upgradeStateToHeze,
 } from "./slot/index.js";
 import {upgradeStateToFulu} from "./slot/upgradeStateToFulu.js";
 import {
@@ -26,6 +27,7 @@ import {
   CachedBeaconStateDeneb,
   CachedBeaconStateElectra,
   CachedBeaconStateFulu,
+  CachedBeaconStateGloas,
   CachedBeaconStatePhase0,
 } from "./types.js";
 import {computeEpochAtSlot} from "./util/index.js";
@@ -277,6 +279,9 @@ function processSlotsWithTransientCache(
       }
       if (stateEpoch === config.GLOAS_FORK_EPOCH) {
         postState = upgradeStateToGloas(postState as CachedBeaconStateFulu) as CachedBeaconStateAllForks;
+      }
+      if (stateEpoch === config.HEZE_FORK_EPOCH) {
+        postState = upgradeStateToHeze(postState as CachedBeaconStateGloas) as CachedBeaconStateAllForks;
       }
 
       {

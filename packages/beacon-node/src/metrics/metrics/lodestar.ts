@@ -424,7 +424,7 @@ export function createLodestarMetrics(
       jobWaitTime: register.histogram({
         name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
-        buckets: [0.01, 0.02, 0.5, 0.1, 0.3, 1],
+        buckets: [0.01, 0.02, 0.1, 0.3, 0.5, 1],
       }),
       queueLength: register.gauge({
         name: "lodestar_bls_thread_pool_queue_length",
@@ -608,6 +608,11 @@ export function createLodestarMetrics(
       source: register.gauge<{source: BlockInputSource}>({
         name: "lodestar_block_input_sync_source_total",
         help: "The origination source of one of the BlockInputSync triggers",
+        labelNames: ["source"],
+      }),
+      payloadSource: register.counter<{source: BlockInputSource}>({
+        name: "lodestar_payload_input_sync_source_total",
+        help: "Count of payload (execution payload envelope) sync triggers, labeled by their source",
         labelNames: ["source"],
       }),
       pendingBlocks: register.gauge({
@@ -859,6 +864,12 @@ export function createLodestarMetrics(
         help: "Time elapsed between block verified and blobs became available",
         buckets: [0.05, 0.1, 0.3, 0.5, 0.7, 1, 1.3, 1.6, 2, 2.5, 3, 3.5, 4],
         labelNames: ["numBlobs"],
+      }),
+
+      skippedSlots: register.histogram({
+        name: "lodestar_gossip_block_skipped_slots",
+        help: "Number of skipped slots between a gossip block and its parent (blockSlot - parentSlot - 1)",
+        buckets: [0, 1, 2, 4, 8, 16, 32],
       }),
 
       processBlockErrors: register.gauge<{error: BlockErrorCode | "NOT_BLOCK_ERROR"}>({

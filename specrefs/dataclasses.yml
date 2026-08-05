@@ -3,10 +3,10 @@
     - file: packages/config/src/forkConfig/types.ts
       search: export type BlobParameters =
   spec: |
-    <spec dataclass="BlobParameters" fork="fulu" hash="a4575aa8">
+    <spec dataclass="BlobParameters" fork="fulu" hash="f813ec73">
     class BlobParameters:
         epoch: Epoch
-        max_blobs_per_block: uint64
+        max_blobs_per_block: Uint64
     </spec>
 
 - name: BlobsBundle#deneb
@@ -14,8 +14,8 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const BlobsBundle =
   spec: |
-    <spec dataclass="BlobsBundle" fork="deneb" hash="8d6e7be6">
-    class BlobsBundle(object):
+    <spec dataclass="BlobsBundle" fork="deneb" hash="8baecab6">
+    class BlobsBundle:
         commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
         proofs: List[KZGProof, MAX_BLOB_COMMITMENTS_PER_BLOCK]
         blobs: List[Blob, MAX_BLOB_COMMITMENTS_PER_BLOCK]
@@ -26,8 +26,8 @@
     - file: packages/types/src/fulu/sszTypes.ts
       search: export const BlobsBundle =
   spec: |
-    <spec dataclass="BlobsBundle" fork="fulu" hash="e265362d">
-    class BlobsBundle(object):
+    <spec dataclass="BlobsBundle" fork="fulu" hash="322088f0">
+    class BlobsBundle:
         commitments: List[KZGCommitment, MAX_BLOB_COMMITMENTS_PER_BLOCK]
         # [Modified in Fulu:EIP7594]
         proofs: List[KZGProof, FIELD_ELEMENTS_PER_EXT_BLOB * MAX_BLOB_COMMITMENTS_PER_BLOCK]
@@ -37,42 +37,42 @@
 - name: ExpectedWithdrawals#capella
   sources: []
   spec: |
-    <spec dataclass="ExpectedWithdrawals" fork="capella" hash="73becb4c">
-    class ExpectedWithdrawals(object):
+    <spec dataclass="ExpectedWithdrawals" fork="capella" hash="0a0b25b7">
+    class ExpectedWithdrawals:
         withdrawals: Sequence[Withdrawal]
-        processed_sweep_withdrawals_count: uint64
+        processed_sweep_withdrawals_count: Uint64
     </spec>
 
 - name: ExpectedWithdrawals#electra
   sources: []
   spec: |
-    <spec dataclass="ExpectedWithdrawals" fork="electra" hash="a3827f01">
-    class ExpectedWithdrawals(object):
+    <spec dataclass="ExpectedWithdrawals" fork="electra" hash="2c82cb0e">
+    class ExpectedWithdrawals:
         withdrawals: Sequence[Withdrawal]
         # [New in Electra:EIP7251]
-        processed_partial_withdrawals_count: uint64
-        processed_sweep_withdrawals_count: uint64
+        processed_partial_withdrawals_count: Uint64
+        processed_sweep_withdrawals_count: Uint64
     </spec>
 
 - name: ExpectedWithdrawals#gloas
   sources: []
   spec: |
-    <spec dataclass="ExpectedWithdrawals" fork="gloas" hash="b32cc9c9">
-    class ExpectedWithdrawals(object):
+    <spec dataclass="ExpectedWithdrawals" fork="gloas" hash="254d1735">
+    class ExpectedWithdrawals:
         withdrawals: Sequence[Withdrawal]
         # [New in Gloas:EIP7732]
-        processed_builder_withdrawals_count: uint64
-        processed_partial_withdrawals_count: uint64
+        processed_builder_withdrawals_count: Uint64
+        processed_partial_withdrawals_count: Uint64
         # [New in Gloas:EIP7732]
-        processed_builders_sweep_count: uint64
-        processed_sweep_withdrawals_count: uint64
+        processed_builders_sweep_count: Uint64
+        processed_sweep_withdrawals_count: Uint64
     </spec>
 
 - name: FastConfirmationStore#phase0
   sources: []
   spec: |
-    <spec dataclass="FastConfirmationStore" fork="phase0" hash="12be269e">
-    class FastConfirmationStore(object):
+    <spec dataclass="FastConfirmationStore" fork="phase0" hash="e667d4ee">
+    class FastConfirmationStore:
         store: Store
         confirmed_root: Root
         previous_epoch_observed_justified_checkpoint: Checkpoint
@@ -82,11 +82,31 @@
         current_slot_head: Root
     </spec>
 
+- name: ForkChoiceNode#phase0
+  sources: []
+  spec: |
+    <spec dataclass="ForkChoiceNode" fork="phase0" hash="885e8b15">
+    @dataclass(eq=True, frozen=True)
+    class ForkChoiceNode:
+        root: Root
+    </spec>
+
+- name: ForkChoiceNode#gloas
+  sources: []
+  spec: |
+    <spec dataclass="ForkChoiceNode" fork="gloas" hash="d692047d">
+    @dataclass(eq=True, frozen=True)
+    class ForkChoiceNode:
+        root: Root
+        # [New in Gloas:EIP7732]
+        payload_status: PayloadStatus  # One of PAYLOAD_STATUS_* values
+    </spec>
+
 - name: GetInclusionListResponse#heze
   sources: []
   spec: |
-    <spec dataclass="GetInclusionListResponse" fork="heze" hash="ae3df85b">
-    class GetInclusionListResponse(object):
+    <spec dataclass="GetInclusionListResponse" fork="heze" hash="2d1de077">
+    class GetInclusionListResponse:
         inclusion_list_transactions: Sequence[Transaction]
     </spec>
 
@@ -97,8 +117,8 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "getPayload("
   spec: |
-    <spec dataclass="GetPayloadResponse" fork="bellatrix" hash="bc71e6e6">
-    class GetPayloadResponse(object):
+    <spec dataclass="GetPayloadResponse" fork="bellatrix" hash="e1adf40d">
+    class GetPayloadResponse:
         execution_payload: ExecutionPayload
     </spec>
 
@@ -109,10 +129,10 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "getPayload("
   spec: |
-    <spec dataclass="GetPayloadResponse" fork="capella" hash="5f10deae">
-    class GetPayloadResponse(object):
+    <spec dataclass="GetPayloadResponse" fork="capella" hash="b7032282">
+    class GetPayloadResponse:
         execution_payload: ExecutionPayload
-        block_value: uint256
+        block_value: Uint256
     </spec>
 
 - name: GetPayloadResponse#deneb
@@ -122,10 +142,10 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "getPayload("
   spec: |
-    <spec dataclass="GetPayloadResponse" fork="deneb" hash="95f3156d">
-    class GetPayloadResponse(object):
+    <spec dataclass="GetPayloadResponse" fork="deneb" hash="a8a0a123">
+    class GetPayloadResponse:
         execution_payload: ExecutionPayload
-        block_value: uint256
+        block_value: Uint256
         # [New in Deneb:EIP4844]
         blobs_bundle: BlobsBundle
     </spec>
@@ -137,10 +157,10 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "getPayload("
   spec: |
-    <spec dataclass="GetPayloadResponse" fork="electra" hash="7a57aa32">
-    class GetPayloadResponse(object):
+    <spec dataclass="GetPayloadResponse" fork="electra" hash="fce0ff0d">
+    class GetPayloadResponse:
         execution_payload: ExecutionPayload
-        block_value: uint256
+        block_value: Uint256
         blobs_bundle: BlobsBundle
         # [New in Electra]
         execution_requests: Sequence[bytes]
@@ -153,10 +173,10 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "getPayload("
   spec: |
-    <spec dataclass="GetPayloadResponse" fork="fulu" hash="0fbc9ac9">
-    class GetPayloadResponse(object):
+    <spec dataclass="GetPayloadResponse" fork="fulu" hash="44a5186e">
+    class GetPayloadResponse:
         execution_payload: ExecutionPayload
-        block_value: uint256
+        block_value: Uint256
         # [Modified in Fulu:EIP7594]
         blobs_bundle: BlobsBundle
         execution_requests: Sequence[bytes]
@@ -165,13 +185,13 @@
 - name: InclusionListStore#heze
   sources: []
   spec: |
-    <spec dataclass="InclusionListStore" fork="heze" hash="786c17aa">
-    class InclusionListStore(object):
-        inclusion_lists: DefaultDict[Tuple[Slot, Root], Dict[Root, InclusionList]] = field(
+    <spec dataclass="InclusionListStore" fork="heze" hash="342cd889">
+    class InclusionListStore:
+        inclusion_lists: DefaultDict[Root, Dict[Root, SignedInclusionList]] = field(
             default_factory=lambda: defaultdict(dict)
         )
-        inclusion_list_timeliness: Dict[Root, boolean] = field(default_factory=dict)
-        equivocators: DefaultDict[Tuple[Slot, Root], Set[ValidatorIndex]] = field(
+        inclusion_list_timeliness: Dict[Root, Boolean] = field(default_factory=dict)
+        equivocators: DefaultDict[Root, Set[ValidatorIndex]] = field(
             default_factory=lambda: defaultdict(set)
         )
     </spec>
@@ -179,9 +199,9 @@
 - name: LatestMessage#phase0
   sources: []
   spec: |
-    <spec dataclass="LatestMessage" fork="phase0" hash="44e832d0">
+    <spec dataclass="LatestMessage" fork="phase0" hash="af243a3b">
     @dataclass(eq=True, frozen=True)
-    class LatestMessage(object):
+    class LatestMessage:
         epoch: Epoch
         root: Root
     </spec>
@@ -189,12 +209,12 @@
 - name: LatestMessage#gloas
   sources: []
   spec: |
-    <spec dataclass="LatestMessage" fork="gloas" hash="a0030894">
+    <spec dataclass="LatestMessage" fork="gloas" hash="72ed3236">
     @dataclass(eq=True, frozen=True)
-    class LatestMessage(object):
+    class LatestMessage:
         slot: Slot
         root: Root
-        payload_present: boolean
+        payload_present: Boolean
     </spec>
 
 - name: LightClientStore#altair
@@ -202,8 +222,8 @@
     - file: packages/types/src/altair/sszTypes.ts
       search: export const LightClientStore =
   spec: |
-    <spec dataclass="LightClientStore" fork="altair" hash="24725cec">
-    class LightClientStore(object):
+    <spec dataclass="LightClientStore" fork="altair" hash="edeb2c0a">
+    class LightClientStore:
         # Header that is finalized
         finalized_header: LightClientHeader
         # Sync committees corresponding to the finalized header
@@ -214,8 +234,8 @@
         # Most recent available reasonably-safe header
         optimistic_header: LightClientHeader
         # Max number of active participants in a sync committee (used to calculate safety threshold)
-        previous_max_active_participants: uint64
-        current_max_active_participants: uint64
+        previous_max_active_participants: Uint64
+        current_max_active_participants: Uint64
     </spec>
 
 - name: LightClientStore#capella
@@ -223,8 +243,8 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const LightClientStore =
   spec: |
-    <spec dataclass="LightClientStore" fork="capella" hash="04b41062">
-    class LightClientStore(object):
+    <spec dataclass="LightClientStore" fork="capella" hash="de5160cf">
+    class LightClientStore:
         # [Modified in Capella]
         finalized_header: LightClientHeader
         current_sync_committee: SyncCommittee
@@ -233,8 +253,8 @@
         best_valid_update: Optional[LightClientUpdate]
         # [Modified in Capella]
         optimistic_header: LightClientHeader
-        previous_max_active_participants: uint64
-        current_max_active_participants: uint64
+        previous_max_active_participants: Uint64
+        current_max_active_participants: Uint64
     </spec>
 
 - name: NewPayloadRequest#bellatrix
@@ -242,8 +262,8 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "notifyNewPayload("
   spec: |
-    <spec dataclass="NewPayloadRequest" fork="bellatrix" hash="4d32e8c7">
-    class NewPayloadRequest(object):
+    <spec dataclass="NewPayloadRequest" fork="bellatrix" hash="cbd668dc">
+    class NewPayloadRequest:
         execution_payload: ExecutionPayload
     </spec>
 
@@ -252,8 +272,8 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "notifyNewPayload("
   spec: |
-    <spec dataclass="NewPayloadRequest" fork="deneb" hash="26cf2e26">
-    class NewPayloadRequest(object):
+    <spec dataclass="NewPayloadRequest" fork="deneb" hash="a61cff05">
+    class NewPayloadRequest:
         execution_payload: ExecutionPayload
         versioned_hashes: Sequence[VersionedHash]
         parent_beacon_block_root: Root
@@ -264,8 +284,8 @@
     - file: packages/beacon-node/src/execution/engine/interface.ts
       search: "notifyNewPayload("
   spec: |
-    <spec dataclass="NewPayloadRequest" fork="electra" hash="b1f69cc9">
-    class NewPayloadRequest(object):
+    <spec dataclass="NewPayloadRequest" fork="electra" hash="366a2e72">
+    class NewPayloadRequest:
         execution_payload: ExecutionPayload
         versioned_hashes: Sequence[VersionedHash]
         parent_beacon_block_root: Root
@@ -289,9 +309,9 @@
     - file: packages/types/src/bellatrix/sszTypes.ts
       search: export const PayloadAttributes =
   spec: |
-    <spec dataclass="PayloadAttributes" fork="bellatrix" hash="8f6fc523">
-    class PayloadAttributes(object):
-        timestamp: uint64
+    <spec dataclass="PayloadAttributes" fork="bellatrix" hash="7c9497a8">
+    class PayloadAttributes:
+        timestamp: Uint64
         prev_randao: Bytes32
         suggested_fee_recipient: ExecutionAddress
     </spec>
@@ -301,9 +321,9 @@
     - file: packages/types/src/capella/sszTypes.ts
       search: export const PayloadAttributes =
   spec: |
-    <spec dataclass="PayloadAttributes" fork="capella" hash="f63ac439">
-    class PayloadAttributes(object):
-        timestamp: uint64
+    <spec dataclass="PayloadAttributes" fork="capella" hash="c0c3dd95">
+    class PayloadAttributes:
+        timestamp: Uint64
         prev_randao: Bytes32
         suggested_fee_recipient: ExecutionAddress
         # [New in Capella]
@@ -315,9 +335,9 @@
     - file: packages/types/src/deneb/sszTypes.ts
       search: export const PayloadAttributes =
   spec: |
-    <spec dataclass="PayloadAttributes" fork="deneb" hash="2beea525">
-    class PayloadAttributes(object):
-        timestamp: uint64
+    <spec dataclass="PayloadAttributes" fork="deneb" hash="9e6f75bd">
+    class PayloadAttributes:
+        timestamp: Uint64
         prev_randao: Bytes32
         suggested_fee_recipient: ExecutionAddress
         withdrawals: Sequence[Withdrawal]
@@ -330,31 +350,31 @@
     - file: packages/types/src/gloas/sszTypes.ts
       search: export const PayloadAttributes =
   spec: |
-    <spec dataclass="PayloadAttributes" fork="gloas" hash="8e6c6fe5">
-    class PayloadAttributes(object):
-        timestamp: uint64
+    <spec dataclass="PayloadAttributes" fork="gloas" hash="67f80e43">
+    class PayloadAttributes:
+        timestamp: Uint64
         prev_randao: Bytes32
         suggested_fee_recipient: ExecutionAddress
         withdrawals: Sequence[Withdrawal]
         parent_beacon_block_root: Root
         # [New in Gloas:EIP7843]
-        slot_number: uint64
+        slot_number: Uint64
         # [New in Gloas]
-        target_gas_limit: uint64
+        target_gas_limit: Uint64
     </spec>
 
 - name: PayloadAttributes#heze
   sources: []
   spec: |
-    <spec dataclass="PayloadAttributes" fork="heze" hash="c0dfb31c">
-    class PayloadAttributes(object):
-        timestamp: uint64
+    <spec dataclass="PayloadAttributes" fork="heze" hash="c1298bc5">
+    class PayloadAttributes:
+        timestamp: Uint64
         prev_randao: Bytes32
         suggested_fee_recipient: ExecutionAddress
         withdrawals: Sequence[Withdrawal]
         parent_beacon_block_root: Root
-        slot_number: uint64
-        target_gas_limit: uint64
+        slot_number: Uint64
+        target_gas_limit: Uint64
         # [New in Heze:EIP7805]
         inclusion_list_transactions: Sequence[Transaction]
     </spec>
@@ -362,38 +382,38 @@
 - name: Seen#altair
   sources: []
   spec: |
-    <spec dataclass="Seen" fork="altair" hash="aba9af1a">
-    class Seen(object):
+    <spec dataclass="Seen" fork="altair" hash="e87cf7f7">
+    class Seen:
         proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
         aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-        aggregate_data_roots: Dict[Root, Set[Tuple[boolean, ...]]]
+        aggregate_data_roots: Dict[Root, Set[Tuple[Boolean, ...]]]
         voluntary_exit_indices: Set[ValidatorIndex]
         proposer_slashing_indices: Set[ValidatorIndex]
         attester_slashing_indices: Set[ValidatorIndex]
         attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
         # [New in Altair]
-        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
+        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
         # [New in Altair]
-        sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
+        sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
         # [New in Altair]
-        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
     </spec>
 
 - name: Seen#capella
   sources: []
   spec: |
-    <spec dataclass="Seen" fork="capella" hash="a2b00f90">
-    class Seen(object):
+    <spec dataclass="Seen" fork="capella" hash="20ad1ead">
+    class Seen:
         proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
         aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-        aggregate_data_roots: Dict[Root, Set[Tuple[boolean, ...]]]
+        aggregate_data_roots: Dict[Root, Set[Tuple[Boolean, ...]]]
         voluntary_exit_indices: Set[ValidatorIndex]
         proposer_slashing_indices: Set[ValidatorIndex]
         attester_slashing_indices: Set[ValidatorIndex]
         attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
-        sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
-        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+        sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
         # [New in Capella]
         bls_to_execution_change_indices: Set[ValidatorIndex]
     </spec>
@@ -401,18 +421,18 @@
 - name: Seen#deneb
   sources: []
   spec: |
-    <spec dataclass="Seen" fork="deneb" hash="f4c42261">
-    class Seen(object):
+    <spec dataclass="Seen" fork="deneb" hash="23e6b8c9">
+    class Seen:
         proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
         aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-        aggregate_data_roots: Dict[Root, Set[Tuple[boolean, ...]]]
+        aggregate_data_roots: Dict[Root, Set[Tuple[Boolean, ...]]]
         voluntary_exit_indices: Set[ValidatorIndex]
         proposer_slashing_indices: Set[ValidatorIndex]
         attester_slashing_indices: Set[ValidatorIndex]
         attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
-        sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
-        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+        sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
         bls_to_execution_change_indices: Set[ValidatorIndex]
         # [New in Deneb]
         blob_sidecar_tuples: Set[Tuple[Slot, ValidatorIndex, BlobIndex]]
@@ -421,21 +441,64 @@
 - name: Seen#electra
   sources: []
   spec: |
-    <spec dataclass="Seen" fork="electra" hash="c81f78e0">
-    class Seen(object):
+    <spec dataclass="Seen" fork="electra" hash="d07ba019">
+    class Seen:
         proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
         aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
         # [Modified in Electra:EIP7549]
-        aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[boolean, ...]]]
+        aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[Boolean, ...]]]
         voluntary_exit_indices: Set[ValidatorIndex]
         proposer_slashing_indices: Set[ValidatorIndex]
         attester_slashing_indices: Set[ValidatorIndex]
         attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
-        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, uint64]]
-        sync_contribution_data: Dict[Tuple[Slot, Root, uint64], Set[Tuple[boolean, ...]]]
-        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, uint64]]
+        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+        sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
         bls_to_execution_change_indices: Set[ValidatorIndex]
         blob_sidecar_tuples: Set[Tuple[Slot, ValidatorIndex, BlobIndex]]
+    </spec>
+
+- name: Seen#fulu
+  sources: []
+  spec: |
+    <spec dataclass="Seen" fork="fulu" hash="0c9400e0">
+    class Seen:
+        proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
+        aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
+        aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[Boolean, ...]]]
+        voluntary_exit_indices: Set[ValidatorIndex]
+        proposer_slashing_indices: Set[ValidatorIndex]
+        attester_slashing_indices: Set[ValidatorIndex]
+        attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
+        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+        sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
+        bls_to_execution_change_indices: Set[ValidatorIndex]
+        # [Modified in Fulu:EIP7594]
+        # Removed `blob_sidecar_tuples`
+        # [New in Fulu:EIP7594]
+        data_column_sidecar_tuples: Set[Tuple[Slot, ValidatorIndex, ColumnIndex]]
+        # [New in Fulu]
+        partial_data_column_headers: Dict[Root, PartialDataColumnHeader]
+    </spec>
+
+- name: Seen#gloas
+  sources: []
+  spec: |
+    <spec dataclass="Seen" fork="gloas" hash="e2e5bf67">
+    class Seen:
+        proposer_slots: Set[Tuple[ValidatorIndex, Slot]]
+        aggregator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
+        aggregate_data_roots: Dict[Tuple[Root, CommitteeIndex], Set[Tuple[Boolean, ...]]]
+        voluntary_exit_indices: Set[ValidatorIndex]
+        proposer_slashing_indices: Set[ValidatorIndex]
+        attester_slashing_indices: Set[ValidatorIndex]
+        attestation_validator_epochs: Set[Tuple[ValidatorIndex, Epoch]]
+        sync_contribution_aggregator_slots: Set[Tuple[ValidatorIndex, Slot, Uint64]]
+        sync_contribution_data: Dict[Tuple[Slot, Root, Uint64], Set[Tuple[Boolean, ...]]]
+        sync_message_validator_slots: Set[Tuple[Slot, ValidatorIndex, Uint64]]
+        bls_to_execution_change_indices: Set[ValidatorIndex]
+        data_column_sidecar_tuples: Set[Tuple[Slot, ValidatorIndex, ColumnIndex]]
     </spec>
 
 - name: Store#phase0
@@ -443,10 +506,10 @@
     - file: packages/fork-choice/src/forkChoice/store.ts
       search: export interface IForkChoiceStore
   spec: |
-    <spec dataclass="Store" fork="phase0" hash="abe525d6">
-    class Store(object):
-        time: uint64
-        genesis_time: uint64
+    <spec dataclass="Store" fork="phase0" hash="7fed6bfc">
+    class Store:
+        time: Uint64
+        genesis_time: Uint64
         justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
         unrealized_justified_checkpoint: Checkpoint
@@ -455,7 +518,7 @@
         equivocating_indices: Set[ValidatorIndex]
         blocks: Dict[Root, BeaconBlock] = field(default_factory=dict)
         block_states: Dict[Root, BeaconState] = field(default_factory=dict)
-        block_timeliness: Dict[Root, boolean] = field(default_factory=dict)
+        block_timeliness: Dict[Root, Boolean] = field(default_factory=dict)
         checkpoint_states: Dict[Checkpoint, BeaconState] = field(default_factory=dict)
         latest_messages: Dict[ValidatorIndex, LatestMessage] = field(default_factory=dict)
         unrealized_justifications: Dict[Root, Checkpoint] = field(default_factory=dict)
@@ -464,10 +527,10 @@
 - name: Store#gloas
   sources: []
   spec: |
-    <spec dataclass="Store" fork="gloas" hash="c3c521fb">
-    class Store(object):
-        time: uint64
-        genesis_time: uint64
+    <spec dataclass="Store" fork="gloas" hash="7e0cbbb8">
+    class Store:
+        time: Uint64
+        genesis_time: Uint64
         justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
         unrealized_justified_checkpoint: Checkpoint
@@ -477,16 +540,16 @@
         blocks: Dict[Root, BeaconBlock] = field(default_factory=dict)
         block_states: Dict[Root, BeaconState] = field(default_factory=dict)
         # [Modified in Gloas:EIP7732]
-        block_timeliness: Dict[Root, list[boolean]] = field(default_factory=dict)
+        block_timeliness: Dict[Root, list[Boolean]] = field(default_factory=dict)
         checkpoint_states: Dict[Checkpoint, BeaconState] = field(default_factory=dict)
         latest_messages: Dict[ValidatorIndex, LatestMessage] = field(default_factory=dict)
         unrealized_justifications: Dict[Root, Checkpoint] = field(default_factory=dict)
         # [New in Gloas:EIP7732]
         payloads: Dict[Root, ExecutionPayloadEnvelope] = field(default_factory=dict)
         # [New in Gloas:EIP7732]
-        payload_timeliness_vote: Dict[Root, list[Optional[boolean]]] = field(default_factory=dict)
+        payload_timeliness_vote: Dict[Root, list[Optional[Boolean]]] = field(default_factory=dict)
         # [New in Gloas:EIP7732]
-        payload_data_availability_vote: Dict[Root, list[Optional[boolean]]] = field(
+        payload_data_availability_vote: Dict[Root, list[Optional[Boolean]]] = field(
             default_factory=dict
         )
     </spec>
@@ -494,10 +557,10 @@
 - name: Store#heze
   sources: []
   spec: |
-    <spec dataclass="Store" fork="heze" hash="2849f1e5">
-    class Store(object):
-        time: uint64
-        genesis_time: uint64
+    <spec dataclass="Store" fork="heze" hash="e95945a4">
+    class Store:
+        time: Uint64
+        genesis_time: Uint64
         justified_checkpoint: Checkpoint
         finalized_checkpoint: Checkpoint
         unrealized_justified_checkpoint: Checkpoint
@@ -506,15 +569,15 @@
         equivocating_indices: Set[ValidatorIndex]
         blocks: Dict[Root, BeaconBlock] = field(default_factory=dict)
         block_states: Dict[Root, BeaconState] = field(default_factory=dict)
-        block_timeliness: Dict[Root, list[boolean]] = field(default_factory=dict)
+        block_timeliness: Dict[Root, list[Boolean]] = field(default_factory=dict)
         checkpoint_states: Dict[Checkpoint, BeaconState] = field(default_factory=dict)
         latest_messages: Dict[ValidatorIndex, LatestMessage] = field(default_factory=dict)
         unrealized_justifications: Dict[Root, Checkpoint] = field(default_factory=dict)
         payloads: Dict[Root, ExecutionPayloadEnvelope] = field(default_factory=dict)
-        payload_timeliness_vote: Dict[Root, list[Optional[boolean]]] = field(default_factory=dict)
-        payload_data_availability_vote: Dict[Root, list[Optional[boolean]]] = field(
+        payload_timeliness_vote: Dict[Root, list[Optional[Boolean]]] = field(default_factory=dict)
+        payload_data_availability_vote: Dict[Root, list[Optional[Boolean]]] = field(
             default_factory=dict
         )
         # [New in Heze:EIP7805]
-        payload_inclusion_list_satisfaction: Dict[Root, boolean] = field(default_factory=dict)
+        payload_inclusion_list_satisfaction: Dict[Root, Boolean] = field(default_factory=dict)
     </spec>

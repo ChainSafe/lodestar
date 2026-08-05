@@ -4,6 +4,7 @@ import {Checkpoint} from "@lodestar/types/phase0";
 import {callFnWhenAwait} from "@lodestar/utils";
 import {IBeaconDb} from "../../db/index.js";
 import {Metrics} from "../../metrics/metrics.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {JobItemQueue, isQueueErrorAborted} from "../../util/queue/index.js";
 import {ChainEvent} from "../emitter.js";
@@ -30,7 +31,6 @@ export enum ArchiveStoreTask {
   PruneHistory = "prune_history",
   OnFinalizedCheckpoint = "on_finalized_checkpoint",
   MaybeArchiveState = "maybe_archive_state",
-  RegenPruneOnFinalized = "regen_prune_on_finalized",
   ForkchoicePrune = "forkchoice_prune",
   UpdateBackfillRange = "update_backfill_range",
 }
@@ -167,9 +167,25 @@ export class ArchiveStore {
   // Event handlers
   //-------------------------------------------------------------------------
   private onFinalizedCheckpoint = (finalized: CheckpointWithHex): void => {
-    this.jobQueue.push(finalized).catch((e) => {
-      if (!isQueueErrorAborted(e)) {
-        this.logger.error("Error queuing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+    // Decouple finalized-checkpoint processing from block import. This handler runs synchronously
+    // inside the `ChainEvent.forkChoiceFinalized` emit from `forkChoice.onBlock()` during
+    // `importBlock()`; deferring the work to the next event-loop tick keeps any failure here off the
+    // import call stack, so it can't abort `importBlock()` before `regen.processState()` caches the
+    // head post-state — the deep-sync wedge this PR fixes (#9716).
+    //
+    // `jobQueue.push()` can throw synchronously (queue aborted / full) or reject asynchronously;
+    // awaiting it inside the deferred callback funnels both failure modes into the one catch.
+    callInNextEventLoop(async () => {
+      try {
+        await this.jobQueue.push(finalized);
+      } catch (e) {
+        if (!isQueueErrorAborted(e)) {
+          this.logger.error(
+            "Error queuing finalized checkpoint",
+            {epoch: finalized.epoch, rootHex: finalized.rootHex},
+            e as Error
+          );
+        }
       }
     });
   };
@@ -228,10 +244,6 @@ export class ArchiveStore {
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
       await this.statesArchiverStrategy.maybeArchiveState(finalized, this.metrics);
       timer?.({source: ArchiveStoreTask.MaybeArchiveState});
-
-      timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();
-      this.chain.regen.pruneOnFinalized(finalizedEpoch);
-      timer?.({source: ArchiveStoreTask.RegenPruneOnFinalized});
 
       // tasks rely on extended fork choice
       timer = this.metrics?.processFinalizedCheckpoint.durationByTask.startTimer();

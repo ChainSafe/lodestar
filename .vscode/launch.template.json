@@ -46,7 +46,6 @@
       "args": [
         "--run",
         "${file}",
-        "-t",
         "${input:testName}",
         "--pool",
         "forks",
@@ -76,10 +75,17 @@
     {
       "id": "testName",
       "type": "command",
-      "command": "extension.commandvariable.promptStringRemember",
+      "command": "extension.commandvariable.transform",
       "args": {
-        "key": "testName",
-        "description": "Enter the test name to run, leave empty to run all"
+        "text": "${promptStringRemember:name}",
+        "promptStringRemember": {
+          "name": {
+            "key": "testName",
+            "description": "Enter the test name to run, leave empty to run all"
+          }
+        },
+        "find": "^(.+)$",
+        "replace": "-t=$1"
       }
     }
   ]

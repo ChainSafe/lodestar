@@ -50,6 +50,9 @@ export type ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: Uint8Array;
   GLOAS_FORK_EPOCH: number;
+  // HEZE
+  HEZE_FORK_VERSION: Uint8Array;
+  HEZE_FORK_EPOCH: number;
 
   // Time parameters
   /** @deprecated Use `SLOT_DURATION_MS` instead. */
@@ -73,6 +76,8 @@ export type ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: number;
   PAYLOAD_ATTESTATION_DUE_BPS: number;
   PAYLOAD_DUE_BPS: number;
+
+  INCLUSION_LIST_DUE_BPS: number;
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: number;
@@ -132,6 +137,14 @@ export type ChainConfig = {
 
   // Blob Scheduling
   BLOB_SCHEDULE: BlobSchedule;
+
+  // HEZE
+  MAX_REQUEST_INCLUSION_LIST: number;
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: number;
+  MAX_BYTES_PER_INCLUSION_LIST: number;
+
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: number;
 };
 
 export const chainConfigTypes: SpecTypes<ChainConfig> = {
@@ -171,6 +184,9 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   // GLOAS
   GLOAS_FORK_VERSION: "bytes",
   GLOAS_FORK_EPOCH: "number",
+  // HEZE
+  HEZE_FORK_VERSION: "bytes",
+  HEZE_FORK_EPOCH: "number",
 
   // Time parameters
   SECONDS_PER_SLOT: "number",
@@ -193,6 +209,8 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   CONTRIBUTION_DUE_BPS_GLOAS: "number",
   PAYLOAD_ATTESTATION_DUE_BPS: "number",
   PAYLOAD_DUE_BPS: "number",
+
+  INCLUSION_LIST_DUE_BPS: "number",
 
   // Validator cycle
   INACTIVITY_SCORE_BIAS: "number",
@@ -247,11 +265,19 @@ export const chainConfigTypes: SpecTypes<ChainConfig> = {
   VALIDATOR_CUSTODY_REQUIREMENT: "number",
   BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: "number",
 
+  // HEZE
+  MAX_REQUEST_INCLUSION_LIST: "number",
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: "number",
+  MAX_BYTES_PER_INCLUSION_LIST: "number",
+
   // Gloas
   MAX_REQUEST_PAYLOADS: "number",
 
   // Blob Scheduling
   BLOB_SCHEDULE: "blob_schedule",
+
+  // Fast Confirmation Rule
+  CONFIRMATION_BYZANTINE_THRESHOLD: "number",
 };
 
 export type BlobScheduleEntry = {

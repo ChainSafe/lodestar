@@ -1,7 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {
-  ForkName,
   ForkPostElectra,
   ForkPreElectra,
   SYNC_COMMITTEE_SUBNET_SIZE,
@@ -9,7 +8,7 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {isStatePostAltair} from "@lodestar/state-transition";
-import {Attestation, Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
+import {Epoch, SingleAttestation, isElectraAttestation, ssz, sszTypesFor} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {
   AttestationError,
@@ -17,15 +16,12 @@ import {
   GossipAction,
   PayloadAttestationError,
   PayloadAttestationErrorCode,
-  ProposerPreferencesError,
-  ProposerPreferencesErrorCode,
   SyncCommitteeError,
 } from "../../../../chain/errors/index.js";
 import {validateApiAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
 import {validateApiBlsToExecutionChange} from "../../../../chain/validation/blsToExecutionChange.js";
 import {toElectraSingleAttestation, validateApiAttestation} from "../../../../chain/validation/index.js";
 import {validateApiPayloadAttestationMessage} from "../../../../chain/validation/payloadAttestationMessage.js";
-import {validateGossipProposerPreferences} from "../../../../chain/validation/proposerPreferences.js";
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
@@ -40,25 +36,6 @@ export function getBeaconPoolApi({
   network,
 }: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): ApplicationMethods<routes.beacon.pool.Endpoints> {
   return {
-    async getPoolAttestations({slot, committeeIndex}) {
-      // Already filtered by slot
-      let attestations: Attestation[] = chain.aggregatedAttestationPool.getAll(slot);
-      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getPoolAttestationsV2 to retrieve pool attestations for post-electra fork=${fork}`
-        );
-      }
-
-      if (committeeIndex !== undefined) {
-        attestations = attestations.filter((attestation) => committeeIndex === attestation.data.index);
-      }
-
-      return {data: attestations};
-    },
-
     async getPoolAttestationsV2({slot, committeeIndex}) {
       // Already filtered by slot
       let attestations = chain.aggregatedAttestationPool.getAll(slot);
@@ -85,68 +62,6 @@ export function getBeaconPoolApi({
       return {data: chain.payloadAttestationPool.getAll(slot), meta: {version: fork}};
     },
 
-    async getPoolProposerPreferences({slot}) {
-      const fork = chain.config.getForkName(slot ?? chain.clock.currentSlot);
-      if (!isForkPostGloas(fork)) {
-        throw new ApiError(400, `Proposer preferences pool is not supported before Gloas fork=${fork}`);
-      }
-
-      return {data: chain.proposerPreferencesPool.getAll(slot), meta: {version: fork}};
-    },
-
-    async submitSignedProposerPreferences({signedProposerPreferences}) {
-      const failures: FailureList = [];
-
-      await Promise.all(
-        signedProposerPreferences.map(async (signed, i) => {
-          try {
-            await validateGossipProposerPreferences(chain, signed);
-
-            chain.proposerPreferencesPool.add(signed);
-            await network.publishProposerPreferences(signed);
-            chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-              version: ForkName.gloas,
-              data: signed,
-            });
-          } catch (e) {
-            const logCtx = {
-              slot: signed.message.proposalSlot,
-              validatorIndex: signed.message.validatorIndex,
-              dependentRoot: toRootHex(signed.message.dependentRoot),
-            };
-
-            if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
-              logger.debug("Ignoring known signed proposer preferences", logCtx);
-              return;
-            }
-
-            failures.push({index: i, message: (e as Error).message});
-            logger.verbose(`Error on submitSignedProposerPreferences [${i}]`, logCtx, e as Error);
-            if (e instanceof ProposerPreferencesError && e.action === GossipAction.REJECT) {
-              chain.persistInvalidSszValue(ssz.gloas.SignedProposerPreferences, signed, "api_reject");
-            }
-          }
-        })
-      );
-
-      if (failures.length > 0) {
-        throw new IndexedError("Error processing signed proposer preferences", failures);
-      }
-    },
-
-    async getPoolAttesterSlashings() {
-      const fork = chain.config.getForkName(chain.clock.currentSlot);
-
-      if (isForkPostElectra(fork)) {
-        throw new ApiError(
-          400,
-          `Use getPoolAttesterSlashingsV2 to retrieve pool attester slashings for post-electra fork=${fork}`
-        );
-      }
-
-      return {data: chain.opPool.getAllAttesterSlashings()};
-    },
-
     async getPoolAttesterSlashingsV2() {
       const fork = chain.config.getForkName(chain.clock.currentSlot);
       return {data: chain.opPool.getAllAttesterSlashings(), meta: {version: fork}};
@@ -162,10 +77,6 @@ export function getBeaconPoolApi({
 
     async getPoolBLSToExecutionChanges() {
       return {data: chain.opPool.getAllBlsToExecutionChanges().map(({data}) => data)};
-    },
-
-    async submitPoolAttestations({signedAttestations}) {
-      await this.submitPoolAttestationsV2({signedAttestations});
     },
 
     async submitPoolAttestationsV2({signedAttestations}) {
@@ -247,10 +158,6 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashings({attesterSlashing}) {
-      await this.submitPoolAttesterSlashingsV2({attesterSlashing});
-    },
-
     async submitPoolAttesterSlashingsV2({attesterSlashing}) {
       await validateApiAttesterSlashing(chain, attesterSlashing);
       const fork = chain.config.getForkName(Number(attesterSlashing.attestation1.data.slot));
@@ -328,10 +235,16 @@ export function getBeaconPoolApi({
 
             chain.forkChoice.notifyPtcMessages(
               toRootHex(payloadAttestationMessage.data.beaconBlockRoot),
+              payloadAttestationMessage.data.slot,
               validatorCommitteeIndices,
               payloadAttestationMessage.data.payloadPresent,
               payloadAttestationMessage.data.blobDataAvailable
             );
+
+            chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
+              version: chain.config.getForkName(slot),
+              data: payloadAttestationMessage,
+            });
 
             await network.publishPayloadAttestationMessage(payloadAttestationMessage);
           } catch (e) {

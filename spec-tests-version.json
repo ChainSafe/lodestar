@@ -1,6 +1,6 @@
 {
   "ethereumConsensusSpecsTests": {
-    "specVersion": "v1.7.0-alpha.8",
+    "specVersion": "v1.7.0-alpha.13",
     "specTestsRepoUrl": "https://github.com/ethereum/consensus-specs",
     "outputDirBase": "spec-tests",
     "testsToDownload": [
@@ -15,6 +15,12 @@
     "outputDirBase": "spec-tests-bls",
     "testsToDownload": [
       "bls_tests_yaml"
+    ]
+  },
+  "comptestsSpecTests": {
+    "outputDirBase": "spec-tests-comptests",
+    "testsToDownload": [
+      "comptests"
     ]
   }
 }

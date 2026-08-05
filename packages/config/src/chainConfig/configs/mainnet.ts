@@ -60,6 +60,10 @@ export const chainConfig: ChainConfig = {
   GLOAS_FORK_VERSION: b("0x07000000"),
   GLOAS_FORK_EPOCH: Infinity,
 
+  // HEZE
+  HEZE_FORK_VERSION: b("0x08000000"),
+  HEZE_FORK_EPOCH: Infinity,
+
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds (DEPRECATED)
@@ -70,12 +74,15 @@ export const chainConfig: ChainConfig = {
   SECONDS_PER_ETH1_BLOCK: 14,
   // 2**8 (= 256) epochs ~27 hours
   MIN_VALIDATOR_WITHDRAWABILITY_DELAY: 256,
-  // 2**13 (= 8,192) epochs ~36 days
-  MIN_BUILDER_WITHDRAWABILITY_DELAY: 8192,
+  // 2**6 (= 64) epochs ~6.8 hours
+  MIN_BUILDER_WITHDRAWABILITY_DELAY: 64,
   // 2**8 (= 256) epochs ~27 hours
   SHARD_COMMITTEE_PERIOD: 256,
   // 2**11 (= 2,048) Eth1 blocks ~8 hours
   ETH1_FOLLOW_DISTANCE: 2048,
+
+  // 67% of `SLOT_DURATION_MS`
+  INCLUSION_LIST_DUE_BPS: 6667,
   // 1667 basis points, ~17% of SLOT_DURATION_MS
   PROPOSER_REORG_CUTOFF_BPS: 1667,
   // 3333 basis points, ~33% of SLOT_DURATION_MS
@@ -99,8 +106,8 @@ export const chainConfig: ChainConfig = {
   CONTRIBUTION_DUE_BPS_GLOAS: 5000,
   // 75% of SLOT_DURATION_MS
   PAYLOAD_ATTESTATION_DUE_BPS: 7500,
-  // 75% of SLOT_DURATION_MS
-  PAYLOAD_DUE_BPS: 7500,
+  // 50% of SLOT_DURATION_MS
+  PAYLOAD_DUE_BPS: 5000,
 
   // Validator cycle
   // ---------------------------------------------------------------
@@ -190,6 +197,14 @@ export const chainConfig: ChainConfig = {
   // `2**12` (= 4096 epochs, ~18 days)
   MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4096,
 
+  // HEZE
+  // 2**4 (= 16)
+  MAX_REQUEST_INCLUSION_LIST: 16,
+  // 1 slots
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1,
+  // 2**13 (=8192)
+  MAX_BYTES_PER_INCLUSION_LIST: 8192,
+
   // Gloas
   // 2**7 (= 128) payloads
   MAX_REQUEST_PAYLOADS: 128,
@@ -206,4 +221,8 @@ export const chainConfig: ChainConfig = {
       MAX_BLOBS_PER_BLOCK: 21,
     },
   ],
+
+  // Fast Confirmation Rule
+  // ---------------------------------------------------------------
+  CONFIRMATION_BYZANTINE_THRESHOLD: 25,
 };

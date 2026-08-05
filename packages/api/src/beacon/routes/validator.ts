@@ -4,6 +4,8 @@ import {
   ForkPostDeneb,
   ForkPostGloas,
   ForkPreDeneb,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
   VALIDATOR_REGISTRY_LIMIT,
   isForkPostDeneb,
   isForkPostElectra,
@@ -36,6 +38,7 @@ import {
   EmptyResponseCodec,
   EmptyResponseData,
   JsonOnlyReq,
+  WithMeta,
   WithVersion,
 } from "../../utils/codecs.js";
 import {getPostBellatrixForkTypes, getPostGloasForkTypes, toForkName} from "../../utils/fork.js";
@@ -96,6 +99,10 @@ export const ProduceBlockV4MetaType = new ContainerType(
     ...VersionType.fields,
     /** Consensus rewards paid to the proposer for this block, in Wei */
     consensusBlockValue: ssz.UintBn64,
+    /** Local execution payload value when self-building, or builder bid value when committing to a bid, in Wei */
+    executionPayloadValue: ssz.UintBn64,
+    /** Specifies whether the response contains full block contents or only the beacon block */
+    executionPayloadIncluded: ssz.Boolean,
   },
   {jsonCase: "eth2"}
 );
@@ -246,6 +253,10 @@ export const SignedValidatorRegistrationV1ListType = ArrayOf(
   ssz.bellatrix.SignedValidatorRegistrationV1,
   VALIDATOR_REGISTRY_LIMIT
 );
+export const SignedProposerPreferencesListType = ArrayOf(
+  ssz.gloas.SignedProposerPreferences,
+  (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH
+);
 
 export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
 export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
@@ -273,6 +284,13 @@ export type SyncCommitteeSelectionList = ValueOf<typeof SyncCommitteeSelectionLi
 export type LivenessResponseData = ValueOf<typeof LivenessResponseDataType>;
 export type LivenessResponseDataList = ValueOf<typeof LivenessResponseDataListType>;
 export type SignedValidatorRegistrationV1List = ValueOf<typeof SignedValidatorRegistrationV1ListType>;
+export type SignedProposerPreferencesList = ValueOf<typeof SignedProposerPreferencesListType>;
+
+// The beacon node does not return any data if there is no canonical block at the requested slot (missed slot).
+// In this case, we receive a success response (204) which is not handled as an error. The generic response
+// handler already checks the status code and will not attempt to parse the body, but it will return no value.
+// It is important that this type indicates that there might be no value to ensure it is properly handled downstream.
+export type MaybePayloadAttestationData = gloas.PayloadAttestationData | undefined;
 
 export type Endpoints = {
   /**
@@ -408,6 +426,12 @@ export type Endpoints = {
    * Post-Gloas, proposers submit execution payload bids rather than full execution payloads,
    * so there is no longer a concept of blinded or unblinded blocks. Builders release the payload later.
    * This endpoint is specific to the post-Gloas forks and is not backwards compatible with previous forks.
+   *
+   * When self-building and `includePayload` is true, the response contains the full `BlockContents`
+   * (block, execution payload envelope, KZG proofs and blobs) which enables stateless envelope
+   * publishing via any beacon node. When `includePayload` is false, only the `BeaconBlock` is
+   * returned and the beacon node caches the envelope and blobs internally.
+   * When committing to a builder bid, only the `BeaconBlock` is returned in either case.
    */
   produceBlockV4: Endpoint<
     "GET",
@@ -420,6 +444,8 @@ export type Endpoints = {
       graffiti?: string;
       skipRandaoVerification?: boolean;
       builderBoostFactor?: UintBn64;
+      /** Include execution payload envelope and blobs in the response when self-building */
+      includePayload: boolean;
     } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
     {
       params: {slot: number};
@@ -431,16 +457,18 @@ export type Endpoints = {
         builder_selection?: string;
         builder_boost_factor?: string;
         strict_fee_recipient_check?: boolean;
+        include_payload: boolean;
       };
     },
-    BeaconBlock<ForkPostGloas>,
+    BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>,
     ProduceBlockV4Meta
   >;
 
   /**
    * Get execution payload envelope.
-   * Retrieves execution payload envelope for a given slot and beacon block root.
-   * The envelope contains the full execution payload along with associated metadata.
+   * Retrieves the cached execution payload envelope for a given slot and beacon block root,
+   * to be signed and published via `publishExecutionPayloadEnvelope`.
+   * Used in the stateful (`includePayload=false`) local build flow.
    */
   getExecutionPayloadEnvelope: Endpoint<
     "GET",
@@ -482,8 +510,8 @@ export type Endpoints = {
       /** The slot for which payload attestation data should be created */
       slot: Slot;
     },
-    {params: {slot: Slot}},
-    gloas.PayloadAttestationData,
+    {query: {slot: Slot}},
+    MaybePayloadAttestationData,
     VersionMeta
   >;
 
@@ -496,23 +524,6 @@ export type Endpoints = {
     },
     {query: {slot: number; subcommittee_index: number; beacon_block_root: string}},
     altair.SyncCommitteeContribution,
-    EmptyMeta
-  >;
-
-  /**
-   * Get aggregated attestation
-   * Aggregates all attestations matching given attestation data root and slot
-   * Returns an aggregated `Attestation` object with same `AttestationData` root.
-   */
-  getAggregatedAttestation: Endpoint<
-    "GET",
-    {
-      /** HashTreeRoot of AttestationData that validator want's aggregated */
-      attestationDataRoot: Root;
-      slot: Slot;
-    },
-    {query: {attestation_data_root: string; slot: number}},
-    phase0.Attestation,
     EmptyMeta
   >;
 
@@ -532,18 +543,6 @@ export type Endpoints = {
     {query: {attestation_data_root: string; slot: number; committee_index: number}},
     Attestation,
     VersionMeta
-  >;
-
-  /**
-   * Publish multiple aggregate and proofs
-   * Verifies given aggregate and proofs and publishes them on appropriate gossipsub topic.
-   */
-  publishAggregateAndProofs: Endpoint<
-    "POST",
-    {signedAggregateAndProofs: SignedAggregateAndProofListPhase0},
-    {body: unknown},
-    EmptyResponseData,
-    EmptyMeta
   >;
 
   /**
@@ -672,6 +671,20 @@ export type Endpoints = {
     "POST",
     {registrations: SignedValidatorRegistrationV1List},
     {body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Submit signed proposer preferences
+   *
+   * Verifies given signed proposer preferences and publishes them on the `proposer_preferences`
+   * gossipsub topic. Supersedes `prepareBeaconProposer` and `registerValidator` from Gloas onwards.
+   */
+  submitProposerPreferences: Endpoint<
+    "POST",
+    {signedProposerPreferences: SignedProposerPreferencesList},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
   >;
@@ -908,6 +921,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           builderSelection,
           builderBoostFactor,
           strictFeeRecipientCheck,
+          includePayload,
         }) => ({
           params: {slot},
           query: {
@@ -918,6 +932,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builder_selection: builderSelection,
             builder_boost_factor: builderBoostFactor?.toString(),
             strict_fee_recipient_check: strictFeeRecipientCheck,
+            include_payload: includePayload,
           },
         }),
         parseReq: ({params, query}) => ({
@@ -929,6 +944,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           builderSelection: query.builder_selection as BuilderSelection,
           builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
           strictFeeRecipientCheck: query.strict_fee_recipient_check,
+          includePayload: query.include_payload,
         }),
         schema: {
           params: {slot: Schema.UintRequired},
@@ -940,27 +956,39 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             builder_selection: Schema.String,
             builder_boost_factor: Schema.String,
             strict_fee_recipient_check: Schema.Boolean,
+            include_payload: Schema.BooleanRequired,
           },
         },
       },
       resp: {
-        data: WithVersion((fork) => getPostGloasForkTypes(fork).BeaconBlock),
+        data: WithMeta(
+          ({version, executionPayloadIncluded}) =>
+            (executionPayloadIncluded
+              ? getPostGloasForkTypes(version).BlockContents
+              : getPostGloasForkTypes(version).BeaconBlock) as Type<
+              BeaconBlock<ForkPostGloas> | BlockContents<ForkPostGloas>
+            >
+        ),
         meta: {
           toJson: (meta) => ProduceBlockV4MetaType.toJson(meta),
           fromJson: (val) => ProduceBlockV4MetaType.fromJson(val),
           toHeadersObject: (meta) => ({
             [MetaHeader.Version]: meta.version,
             [MetaHeader.ConsensusBlockValue]: meta.consensusBlockValue.toString(),
+            [MetaHeader.ExecutionPayloadValue]: meta.executionPayloadValue.toString(),
+            [MetaHeader.ExecutionPayloadIncluded]: meta.executionPayloadIncluded.toString(),
           }),
           fromHeaders: (headers) => ({
             version: toForkName(headers.getRequired(MetaHeader.Version)),
             consensusBlockValue: BigInt(headers.getRequired(MetaHeader.ConsensusBlockValue)),
+            executionPayloadValue: BigInt(headers.getRequired(MetaHeader.ExecutionPayloadValue)),
+            executionPayloadIncluded: toBoolean(headers.getRequired(MetaHeader.ExecutionPayloadIncluded)),
           }),
         },
       },
     },
     getExecutionPayloadEnvelope: {
-      url: "/eth/v1/validator/execution_payload_envelope/{slot}/{beacon_block_root}",
+      url: "/eth/v1/validator/execution_payload_envelopes/{slot}/{beacon_block_root}",
       method: "GET",
       req: {
         writeReq: ({slot, beaconBlockRoot}) => ({
@@ -1001,17 +1029,17 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
     producePayloadAttestationData: {
-      url: "/eth/v1/validator/payload_attestation_data/{slot}",
+      url: "/eth/v1/validator/payload_attestation_data",
       method: "GET",
       req: {
-        writeReq: ({slot}) => ({params: {slot}}),
-        parseReq: ({params}) => ({slot: params.slot}),
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
         schema: {
-          params: {slot: Schema.UintRequired},
+          query: {slot: Schema.UintRequired},
         },
       },
       resp: {
-        data: ssz.gloas.PayloadAttestationData,
+        data: WithVersion<MaybePayloadAttestationData, VersionMeta>(() => ssz.gloas.PayloadAttestationData),
         meta: VersionCodec,
       },
     },
@@ -1040,29 +1068,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         meta: EmptyMetaCodec,
       },
     },
-    getAggregatedAttestation: {
-      url: "/eth/v1/validator/aggregate_attestation",
-      method: "GET",
-      req: {
-        writeReq: ({attestationDataRoot, slot}) => ({
-          query: {attestation_data_root: toRootHex(attestationDataRoot), slot},
-        }),
-        parseReq: ({query}) => ({
-          attestationDataRoot: fromHex(query.attestation_data_root),
-          slot: query.slot,
-        }),
-        schema: {
-          query: {
-            attestation_data_root: Schema.StringRequired,
-            slot: Schema.UintRequired,
-          },
-        },
-      },
-      resp: {
-        data: ssz.phase0.Attestation,
-        meta: EmptyMetaCodec,
-      },
-    },
     getAggregatedAttestationV2: {
       url: "/eth/v2/validator/aggregate_attestation",
       method: "GET",
@@ -1087,28 +1092,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         data: WithVersion((fork) => (isForkPostElectra(fork) ? ssz.electra.Attestation : ssz.phase0.Attestation)),
         meta: VersionCodec,
       },
-    },
-    publishAggregateAndProofs: {
-      url: "/eth/v1/validator/aggregate_and_proofs",
-      method: "POST",
-      req: {
-        writeReqJson: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListPhase0Type.toJson(signedAggregateAndProofs),
-        }),
-        parseReqJson: ({body}) => ({
-          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.fromJson(body),
-        }),
-        writeReqSsz: ({signedAggregateAndProofs}) => ({
-          body: SignedAggregateAndProofListPhase0Type.serialize(signedAggregateAndProofs),
-        }),
-        parseReqSsz: ({body}) => ({
-          signedAggregateAndProofs: SignedAggregateAndProofListPhase0Type.deserialize(body),
-        }),
-        schema: {
-          body: Schema.ObjectArray,
-        },
-      },
-      resp: EmptyResponseCodec,
     },
     publishAggregateAndProofsV2: {
       url: "/eth/v2/validator/aggregate_and_proofs",
@@ -1283,6 +1266,33 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       init: {
         requestWireFormat: WireFormat.ssz,
       },
+    },
+    submitProposerPreferences: {
+      url: "/eth/v1/validator/proposer_preferences",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedProposerPreferences}) => ({
+          body: SignedProposerPreferencesListType.toJson(signedProposerPreferences),
+          headers: {[MetaHeader.Version]: config.getForkName(signedProposerPreferences[0]?.message.proposalSlot ?? 0)},
+        }),
+        parseReqJson: ({body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {signedProposerPreferences: SignedProposerPreferencesListType.fromJson(body)};
+        },
+        writeReqSsz: ({signedProposerPreferences}) => ({
+          body: SignedProposerPreferencesListType.serialize(signedProposerPreferences),
+          headers: {[MetaHeader.Version]: config.getForkName(signedProposerPreferences[0]?.message.proposalSlot ?? 0)},
+        }),
+        parseReqSsz: ({body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {signedProposerPreferences: SignedProposerPreferencesListType.deserialize(body)};
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: EmptyResponseCodec,
     },
   };
 }

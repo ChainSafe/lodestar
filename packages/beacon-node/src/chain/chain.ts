@@ -1,8 +1,17 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  EpochDifference,
+  ForkChoiceStateGetter,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -40,7 +49,6 @@ import {
   ValidatorIndex,
   Wei,
   deneb,
-  electra,
   gloas,
   isBlindedBeaconBlock,
   phase0,
@@ -76,6 +84,7 @@ import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
 import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
 import {ForkchoiceCaller, initializeForkChoice} from "./forkChoice/index.js";
@@ -108,7 +117,6 @@ import {
   SeenExecutionPayloadBids,
   SeenPayloadAttesters,
   SeenPayloadEnvelopeInput,
-  SeenProposerPreferences,
   SeenSyncCommitteeMessages,
 } from "./seenCache/index.js";
 import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof.js";
@@ -153,6 +161,7 @@ export class BeaconChain implements IBeaconChain {
   readonly genesisValidatorsRoot: Root;
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
+  readonly builderCircuitBreaker: BuilderCircuitBreaker;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -190,7 +199,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenPayloadAttesters = new SeenPayloadAttesters();
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
-  readonly seenProposerPreferences = new SeenProposerPreferences();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
@@ -382,6 +390,14 @@ export class BeaconChain implements IBeaconChain {
     blockStateCache.setHeadState(anchorState);
     checkpointStateCache.add(checkpoint, anchorState);
 
+    const forkChoiceStateGetter: ForkChoiceStateGetter = ({stateRoot, checkpoint}) => {
+      if (stateRoot) return blockStateCache.get(stateRoot);
+
+      if (checkpoint) return checkpointStateCache.get({epoch: checkpoint.epoch, rootHex: checkpoint.rootHex});
+
+      return null;
+    };
+
     const forkChoice = initializeForkChoice(
       config,
       emitter,
@@ -390,6 +406,7 @@ export class BeaconChain implements IBeaconChain {
       isAnchorStateFinalized,
       opts,
       this.justifiedBalancesGetter.bind(this),
+      forkChoiceStateGetter,
       metrics,
       logger
     );
@@ -418,6 +435,11 @@ export class BeaconChain implements IBeaconChain {
     this.payloadEnvelopeProcessor = new PayloadEnvelopeProcessor(this, metrics, signal);
 
     this.forkChoice = forkChoice;
+
+    this.builderCircuitBreaker = new BuilderCircuitBreaker(
+      {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
+      {forkChoice, logger, metrics}
+    );
 
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
@@ -916,10 +938,10 @@ export class BeaconChain implements IBeaconChain {
   async getParentExecutionRequests(
     parentBlockSlot: Slot,
     parentBlockRootHex: RootHex
-  ): Promise<electra.ExecutionRequests> {
+  ): Promise<gloas.ExecutionRequests> {
     // at the fork boundary, parent is pre-gloas
     if (!isForkPostGloas(this.config.getForkName(parentBlockSlot))) {
-      return ssz.electra.ExecutionRequests.defaultValue();
+      return ssz.gloas.ExecutionRequests.defaultValue();
     }
     const envelope = await this.getExecutionPayloadEnvelope(parentBlockSlot, parentBlockRootHex);
     if (envelope === null) {
@@ -1166,7 +1188,56 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+      const prevHead = this.forkChoice.getHead();
+      const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+
+      const headRootChanged = head.blockRoot !== prevHead.blockRoot;
+
+      if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
+        return head;
+      }
+
+      try {
+        const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
+        const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
+        const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
+        const executionOptimistic = isOptimisticBlock(head);
+
+        if (headRootChanged) {
+          this.emitter.emit(routes.events.EventType.head, {
+            block: head.blockRoot,
+            epochTransition,
+            slot: head.slot,
+            state: head.stateRoot,
+            previousDutyDependentRoot,
+            currentDutyDependentRoot,
+            executionOptimistic,
+          });
+        }
+
+        this.emitter.emit(routes.events.EventType.headV2, {
+          version: this.config.getForkName(head.slot),
+          data: {
+            slot: head.slot,
+            block: head.blockRoot,
+            state: head.stateRoot,
+            payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+            epochTransition,
+            currentEpochDependentRoot: previousDutyDependentRoot,
+            nextEpochDependentRoot: currentDutyDependentRoot,
+            executionOptimistic,
+          },
+        });
+      } catch (e) {
+        // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+        this.logger.debug(
+          "Error emitting head/head_v2 event",
+          {slot: head.slot, root: head.blockRoot, headRootChanged},
+          e as Error
+        );
+      }
+
+      return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
@@ -1196,6 +1267,7 @@ export class BeaconChain implements IBeaconChain {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
+      // Do not emit head event here, when proposing we rely on the one emitted when importing our own block
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
         secFromSlot,
@@ -1465,7 +1537,6 @@ export class BeaconChain implements IBeaconChain {
     this.payloadAttestationPool.prune(slot);
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
-    this.seenProposerPreferences.prune(slot);
     this.proposerPreferencesPool.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
