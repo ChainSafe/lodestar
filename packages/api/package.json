@@ -11,46 +11,46 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.44.0",
+  "version": "1.45.0",
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./server": {
-      "bun": "./src/server/index.ts",
+      "typescript": "./src/server/index.ts",
       "types": "./lib/server/index.d.ts",
       "import": "./lib/server/index.js"
     },
     "./beacon": {
-      "bun": "./src/beacon/index.ts",
+      "typescript": "./src/beacon/index.ts",
       "types": "./lib/beacon/index.d.ts",
       "import": "./lib/beacon/index.js"
     },
     "./beacon/server": {
-      "bun": "./src/beacon/server/index.ts",
+      "typescript": "./src/beacon/server/index.ts",
       "types": "./lib/beacon/server/index.d.ts",
       "import": "./lib/beacon/server/index.js"
     },
     "./builder": {
-      "bun": "./src/builder/index.ts",
+      "typescript": "./src/builder/index.ts",
       "types": "./lib/builder/index.d.ts",
       "import": "./lib/builder/index.js"
     },
     "./builder/server": {
-      "bun": "./src/builder/server/index.ts",
+      "typescript": "./src/builder/server/index.ts",
       "types": "./lib/builder/server/index.d.ts",
       "import": "./lib/builder/server/index.js"
     },
     "./keymanager": {
-      "bun": "./src/keymanager/index.ts",
+      "typescript": "./src/keymanager/index.ts",
       "types": "./lib/keymanager/index.d.ts",
       "import": "./lib/keymanager/index.js"
     },
     "./keymanager/server": {
-      "bun": "./src/keymanager/server/index.ts",
+      "typescript": "./src/keymanager/server/index.ts",
       "types": "./lib/keymanager/server/index.d.ts",
       "import": "./lib/keymanager/server/index.js"
     }
@@ -62,11 +62,11 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "pnpm run build --watch",
     "build:release": "pnpm clean && pnpm run build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",

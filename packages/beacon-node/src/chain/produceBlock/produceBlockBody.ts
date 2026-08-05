@@ -1,3 +1,4 @@
+import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
 import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
 import {
@@ -10,6 +11,7 @@ import {
   ForkPostGloas,
   ForkPreGloas,
   ForkSeq,
+  INCLUSION_LIST_COMMITTEE_SIZE,
   isForkPostAltair,
   isForkPostBellatrix,
   isForkPostGloas,
@@ -49,6 +51,7 @@ import {
   electra,
   fulu,
   gloas,
+  heze,
   ssz,
 } from "@lodestar/types";
 import {GWEI_TO_WEI, Logger, byteArrayEquals, fromHex, sleep, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
@@ -276,7 +279,7 @@ export async function produceBlockBody<T extends BlockType>(
     let parentExecutionRequests: gloas.ExecutionRequests;
     // Apply parent payload once here as it's reused by EL prep and voluntary exit filtering below
     let stateAfterParentPayload: IBeaconStateViewBellatrix = currentState;
-    // Spec: should_build_on_full(store, head). `parentBlock` is the proposer's head
+    // Spec: should_build_on_full(store, head, slot). `parentBlock` is the proposer's head
     // (set by chain.getProposerHead(slot)). Returns false when the PTC majority signalled
     // the blob data is not available or the payload was not timely, forcing a build on EMPTY (reorg).
     const isBuildingOnFull = this.forkChoice.shouldBuildOnFull(parentBlock, blockSlot);
@@ -345,14 +348,18 @@ export async function produceBlockBody<T extends BlockType>(
       blockHash: executionPayload.blockHash,
       prevRandao: currentState.getRandaoMix(currentState.epoch),
       feeRecipient: executionPayload.feeRecipient,
-      gasLimit: executionPayload.gasLimit,
+      gasLimit: BigInt(executionPayload.gasLimit),
       builderIndex: BUILDER_INDEX_SELF_BUILD,
       slot: blockSlot,
       value: 0,
-      executionPayment: 0,
+      executionPayment: 0n,
       blobKzgCommitments: blobsBundle.commitments,
       executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(executionRequests as gloas.ExecutionRequests),
     };
+    if (ForkSeq[fork] >= ForkSeq.heze) {
+      // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
+      (bid as heze.ExecutionPayloadBid).inclusionListBits = BitArray.fromBitLen(INCLUSION_LIST_COMMITTEE_SIZE);
+    }
     const signedBid: gloas.SignedExecutionPayloadBid = {
       message: bid,
       signature: G2_POINT_AT_INFINITY,
@@ -927,6 +934,11 @@ function preparePayloadAttributes(
     );
   }
 
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = [];
+  }
+
   return payloadAttributes;
 }
 
@@ -949,7 +961,7 @@ function getProposerTargetGasLimit(
   prepareSlot: Slot,
   parentBlockRoot: Root,
   parentBlockHash: Bytes32
-): number {
+): bigint {
   const parentBlockRootHex = toRootHex(parentBlockRoot);
   const parentBlock = chain.forkChoice.getBlockHexDefaultStatus(parentBlockRootHex);
   const dependentRootHex = (() => {
@@ -979,7 +991,7 @@ function getProposerTargetGasLimit(
       `Cannot resolve parent payload gas_limit for proposer targetGasLimit fallback parentBlockRoot=${parentBlockRootHex} parentBlockHash=${toRootHex(parentBlockHash)}`
     );
   }
-  return parentPayloadVariant.executionPayloadGasLimit;
+  return BigInt(parentPayloadVariant.executionPayloadGasLimit);
 }
 
 export async function produceCommonBlockBody<T extends BlockType>(
