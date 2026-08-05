@@ -295,7 +295,7 @@ export async function validateGossipBlock(
     await sleep(msToBlockSlot);
   }
 
-  // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass.
+  // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }

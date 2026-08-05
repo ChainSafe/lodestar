@@ -13,7 +13,7 @@ const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
  * later valid block for the same slot and proposer to be ignored as a repeat proposal.
  *
  * The cache is pruned on finalization and stores at most two roots per proposer and slot, since two roots are sufficient
- * to establish an equivocation.
+ * to establish an equivocation
  */
 export class SeenBlockProposers {
   private readonly proposerIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
@@ -39,7 +39,7 @@ export class SeenBlockProposers {
     return roots === undefined ? [] : Array.from(roots).filter((root) => root !== blockRoot);
   }
 
-  /** Record a block only after its proposer signature has been verified. */
+  /** Record a block only after its proposer signature has been verified */
   observeBlockRoot(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): void {
     if (blockSlot < this.finalizedSlot) {
       throw Error(`blockSlot ${blockSlot} < finalizedSlot ${this.finalizedSlot}`);
@@ -51,7 +51,7 @@ export class SeenBlockProposers {
     }
   }
 
-  /** Mark a block as known from gossip or another block import path. */
+  /** Mark a block as known from gossip or another block import path */
   add(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
     if (blockSlot < this.finalizedSlot) {
       throw Error(`blockSlot ${blockSlot} < finalizedSlot ${this.finalizedSlot}`);
