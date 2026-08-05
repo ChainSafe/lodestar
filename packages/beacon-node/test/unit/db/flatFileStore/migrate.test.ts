@@ -187,20 +187,72 @@ describe("archived sidecar migration", () => {
       "Migrating archived blob sidecars to flat-file storage; startup will wait for completion",
       {startingSlot: blobSlot}
     );
-    expect(infoSpy).toHaveBeenCalledWith("Archived blob sidecar migration in progress", {
-      migrated: 1,
-      failures: 0,
-      currentSlot: blobSlot,
-      elapsedSeconds: 31,
-    });
+    expect(infoSpy).toHaveBeenCalledWith(
+      "Archived blob sidecar migration in progress",
+      expect.objectContaining({migrated: expect.any(Number), failures: 0, currentSlot: blobSlot})
+    );
     expect(infoSpy).toHaveBeenCalledWith(
       "Archived data column migration in progress",
-      expect.objectContaining({migratedSlots: 1, migratedColumns: 1, failures: 0, currentSlot: 31})
+      expect.objectContaining({
+        migratedSlots: expect.any(Number),
+        migratedColumns: expect.any(Number),
+        failures: 0,
+        currentSlot: 31,
+      })
     );
     expect(infoSpy).toHaveBeenCalledWith(
       "Archived data column migration phase complete",
       expect.objectContaining({migratedSlots: 2, migratedColumns: 2, failures: 0})
     );
+  });
+
+  it("writes archived sidecars concurrently", async () => {
+    const itemCount = 8;
+    for (let slot = 0; slot < itemCount; slot++) {
+      await blobSidecarsArchive.add({
+        blockRoot: new Uint8Array(32).fill(slot),
+        slot,
+        blobSidecars: [],
+      });
+
+      const column = ssz.fulu.DataColumnSidecar.defaultValue();
+      column.index = 0;
+      column.signedBlockHeader.message.slot = slot;
+      await dataColumnSidecarArchive.put(slot, column);
+    }
+
+    let activeBlobWrites = 0;
+    let maxActiveBlobWrites = 0;
+    let activeColumnWrites = 0;
+    let maxActiveColumnWrites = 0;
+    const store = {
+      putBlobSidecarsBinary: vi.fn(async () => {
+        activeBlobWrites++;
+        maxActiveBlobWrites = Math.max(maxActiveBlobWrites, activeBlobWrites);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        activeBlobWrites--;
+      }),
+      putDataColumnsBinary: vi.fn(async () => {
+        activeColumnWrites++;
+        maxActiveColumnWrites = Math.max(maxActiveColumnWrites, activeColumnWrites);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        activeColumnWrites--;
+      }),
+    };
+
+    const stats = await migrateArchivedSidecars(
+      config,
+      blobSidecarsArchive,
+      dataColumnSidecarArchive,
+      store,
+      controller,
+      silentLogger
+    );
+
+    expect(maxActiveBlobWrites).toBeGreaterThan(1);
+    expect(maxActiveColumnWrites).toBeGreaterThan(1);
+    expect(stats.blobs).toBe(itemCount);
+    expect(stats.columnSlots).toBe(itemCount);
   });
 
   it("migrates blobs with short iterators and compacts each batch", async () => {
