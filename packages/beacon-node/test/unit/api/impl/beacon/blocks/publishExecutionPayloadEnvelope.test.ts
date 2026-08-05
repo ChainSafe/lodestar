@@ -40,42 +40,44 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     modules.chain.processExecutionPayload = vi.fn();
   });
 
-  it("with consensus_and_equivocation, rejects an envelope for an observed proposer equivocation", async () => {
-    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
-    const slot = signedBlock.message.slot;
-    const proposerIndex = signedBlock.message.proposerIndex;
-    const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
-    const conflictingBlockRoot = toRootHex(Buffer.alloc(32, 1));
-    const payloadInput = PayloadEnvelopeInput.createFromBlock({
-      blockRootHex: blockRoot,
-      block: signedBlock,
-      forkName: ForkName.gloas,
-      sampledColumns: [],
-      custodyColumns: [],
-      timeCreatedSec: 0,
-      daOutOfRange: false,
+  describe("broadcast_validation=consensus_and_equivocation", () => {
+    it("rejects an envelope for an observed proposer equivocation", async () => {
+      const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      const slot = signedBlock.message.slot;
+      const proposerIndex = signedBlock.message.proposerIndex;
+      const blockRoot = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
+      const conflictingBlockRoot = toRootHex(Buffer.alloc(32, 1));
+      const payloadInput = PayloadEnvelopeInput.createFromBlock({
+        blockRootHex: blockRoot,
+        block: signedBlock,
+        forkName: ForkName.gloas,
+        sampledColumns: [],
+        custodyColumns: [],
+        timeCreatedSec: 0,
+        daOutOfRange: false,
+      });
+      const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+      signedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
+      signedEnvelope.message.payload.slotNumber = slot;
+
+      modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot}));
+      vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
+      modules.chain.regen.getBlockSlotState.mockResolvedValue({forkName: ForkName.gloas} as IBeaconStateView);
+      modules.chain.seenBlockProposers.add(slot, proposerIndex);
+      modules.chain.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockRoot);
+      modules.chain.seenBlockProposers.observeBlockRoot(slot, proposerIndex, conflictingBlockRoot);
+
+      const api = getBeaconBlockApi(modules);
+      await expect(
+        api.publishExecutionPayloadEnvelope({
+          signedEnvelopeOrContents: signedEnvelope,
+          broadcastValidation: routes.beacon.BroadcastValidation.consensusAndEquivocation,
+        })
+      ).rejects.toThrow(/proposer equivocation/);
+
+      expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
+      expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
+      expect(payloadInput.hasPayloadEnvelope()).toBe(false);
     });
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message.beaconBlockRoot = fromHex(blockRoot);
-    signedEnvelope.message.payload.slotNumber = slot;
-
-    modules.forkChoice.getBlockHex.mockReturnValue(generateProtoBlock({slot}));
-    vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
-    modules.chain.regen.getBlockSlotState.mockResolvedValue({forkName: ForkName.gloas} as IBeaconStateView);
-    modules.chain.seenBlockProposers.add(slot, proposerIndex);
-    modules.chain.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockRoot);
-    modules.chain.seenBlockProposers.observeBlockRoot(slot, proposerIndex, conflictingBlockRoot);
-
-    const api = getBeaconBlockApi(modules);
-    await expect(
-      api.publishExecutionPayloadEnvelope({
-        signedEnvelopeOrContents: signedEnvelope,
-        broadcastValidation: routes.beacon.BroadcastValidation.consensusAndEquivocation,
-      })
-    ).rejects.toThrow(/proposer equivocation/);
-
-    expect(modules.network.publishSignedExecutionPayloadEnvelope).not.toHaveBeenCalled();
-    expect(modules.chain.processExecutionPayload).not.toHaveBeenCalled();
-    expect(payloadInput.hasPayloadEnvelope()).toBe(false);
   });
 });
