@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {getSafeExecutionBlockHashForHead} from "@lodestar/fork-choice";
 import {ForkPostBellatrix, ForkSeq, SLOTS_PER_EPOCH, isForkPostBellatrix, isForkPostGloas} from "@lodestar/params";
 import {
   IBeaconStateView,
@@ -196,7 +196,7 @@ export class PrepareNextSlotScheduler {
             computeTimeAtSlot(this.config, prepareSlot, this.chain.genesisTime) - Date.now() / 1000;
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
 
-          const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice);
+          const safeBlockHash = getSafeExecutionBlockHashForHead(this.chain.forkChoice, updatedHead);
           const finalizedBlockHash =
             this.chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
 

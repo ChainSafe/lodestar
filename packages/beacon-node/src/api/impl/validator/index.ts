@@ -1837,8 +1837,17 @@ export function getValidatorApi(
           try {
             await validateGossipProposerPreferences(chain, signed);
 
-            chain.proposerPreferencesPool.add(signed);
-            await network.publishProposerPreferences(signed);
+            try {
+              await network.publishProposerPreferences(signed);
+            } catch (e) {
+              chain.proposerPreferencesPool.remove(signed);
+              throw e;
+            }
+            chain.proposerPreferencesPool.markLocal(
+              signed.message.proposalSlot,
+              toRootHex(signed.message.dependentRoot),
+              signed.message.validatorIndex
+            );
             chain.emitter.emit(routes.events.EventType.proposerPreferences, {
               version: config.getForkName(signed.message.proposalSlot),
               data: signed,
@@ -1851,6 +1860,21 @@ export function getValidatorApi(
             };
 
             if (e instanceof ProposerPreferencesError && e.type.code === ProposerPreferencesErrorCode.ALREADY_KNOWN) {
+              const known = chain.proposerPreferencesPool.get(
+                signed.message.proposalSlot,
+                toRootHex(signed.message.dependentRoot)
+              );
+              if (
+                known !== null &&
+                toRootHex(ssz.gloas.SignedProposerPreferences.hashTreeRoot(known)) ===
+                  toRootHex(ssz.gloas.SignedProposerPreferences.hashTreeRoot(signed))
+              ) {
+                chain.proposerPreferencesPool.markLocal(
+                  signed.message.proposalSlot,
+                  toRootHex(signed.message.dependentRoot),
+                  signed.message.validatorIndex
+                );
+              }
               logger.debug("Ignoring known signed proposer preferences", logCtx);
               return;
             }

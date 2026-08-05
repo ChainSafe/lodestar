@@ -6,6 +6,7 @@ import {
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  ProtoBlock,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
@@ -28,6 +29,7 @@ import {
 import {Attestation, BeaconBlock, altair, capella, electra, isGloasBeaconBlock, phase0, ssz} from "@lodestar/types";
 import {isErrorAborted, toRootHex} from "@lodestar/utils";
 import {GENESIS_SLOT, ZERO_HASH_HEX} from "../../constants/index.js";
+import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {callInNextEventLoop} from "../../util/eventLoop.js";
 import {isOptimisticBlock} from "../../util/forkChoice.js";
 import {isQueueErrorAborted} from "../../util/queue/index.js";
@@ -382,9 +384,14 @@ export async function importBlock(
     const proposalSlot = blockSlot + 1;
     try {
       const proposerIndex = postState.getBeaconProposer(proposalSlot);
-      const feeRecipient = this.beaconProposerCache.get(proposerIndex);
+      // Pre-Gloas local proposers are identified by prepareBeaconProposer fee-recipient registrations.
+      // Gloas proposers submit signed preferences instead; track only preferences submitted through
+      // our validator API, since gossip preferences from remote proposers must not suppress local EL FCUs.
+      const hasLocalProposerPreparation =
+        this.beaconProposerCache.get(proposerIndex) !== undefined ||
+        hasLocalGloasProposerPreferences(this, blockSummary, proposalSlot, proposerIndex);
 
-      if (feeRecipient) {
+      if (hasLocalProposerPreparation) {
         // We would set this to true if
         //  1) This is a gossip block
         //  2) We are proposer of next slot
@@ -669,5 +676,29 @@ export function addAttestationPostElectra(
         true
       );
     }
+  }
+}
+
+function hasLocalGloasProposerPreferences(
+  chain: BeaconChain,
+  headBlock: ProtoBlock,
+  proposalSlot: number,
+  proposerIndex: number
+): boolean {
+  if (chain.config.getForkSeq(proposalSlot) < ForkSeq.gloas) {
+    return false;
+  }
+
+  try {
+    const proposalEpoch = computeEpochAtSlot(proposalSlot);
+    const dependentRoot = getShufflingDependentRoot(
+      chain.forkChoice,
+      proposalEpoch,
+      computeEpochAtSlot(headBlock.slot),
+      headBlock
+    );
+    return chain.proposerPreferencesPool.isKnownLocal(proposalSlot, dependentRoot, proposerIndex);
+  } catch {
+    return false;
   }
 }
