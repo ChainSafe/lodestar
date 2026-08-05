@@ -48,8 +48,8 @@ describe("gossip block validation", () => {
     Buffer.alloc(32, 0xaa)
   );
 
-  beforeEach(() => {
-    chain = getMockedBeaconChain({config});
+  function setupChain(chainConfig = config): void {
+    chain = getMockedBeaconChain({config: chainConfig});
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
     forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
@@ -74,6 +74,10 @@ describe("gossip block validation", () => {
     ).seenBlockProposers = new SeenBlockProposers();
 
     job = {signature, message: block};
+  }
+
+  beforeEach(() => {
+    setupChain();
   });
 
   it("FUTURE_SLOT", async () => {
@@ -111,52 +115,56 @@ describe("gossip block validation", () => {
   });
 
   describe("repeat proposal handling", () => {
-    it("verifies the proposer signature before recording a conflicting block root", async () => {
-      Object.defineProperty(chain, "config", {value: gloasConfig});
-      const forkTypes = gloasConfig.getForkTypes(clockSlot);
-      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
-      signedBlock.message.slot = clockSlot;
-      signedBlock.message.proposerIndex = proposerIndex;
-      const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
-      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+    describe("proposer signature validation", () => {
+      beforeEach(() => {
+        setupChain(gloasConfig);
+      });
 
-      const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
-      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
-      const conflictingBlockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(conflictingBlock.message));
+      it("records a conflicting block root after verifying the proposer signature", async () => {
+        const forkTypes = gloasConfig.getForkTypes(clockSlot);
+        const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = clockSlot;
+        signedBlock.message.proposerIndex = proposerIndex;
+        const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+        chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
+        chain.seenBlockProposers.add(clockSlot, proposerIndex);
 
-      await expectRejectedWithLodestarError(
-        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
-        BlockErrorCode.REPEAT_PROPOSAL
-      );
+        const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
+        conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+        const conflictingBlockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(conflictingBlock.message));
 
-      expect(verifySignature).toHaveBeenCalledOnce();
-      expect(verifySignature).toHaveBeenCalledWith(expect.any(Array), {verifyOnMainThread: false});
-      expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
-        conflictingBlockRoot,
-      ]);
-    });
+        await expectRejectedWithLodestarError(
+          validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+          BlockErrorCode.REPEAT_PROPOSAL
+        );
 
-    it("does not record a conflicting block root when the proposer signature is invalid", async () => {
-      Object.defineProperty(chain, "config", {value: gloasConfig});
-      const forkTypes = gloasConfig.getForkTypes(clockSlot);
-      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
-      signedBlock.message.slot = clockSlot;
-      signedBlock.message.proposerIndex = proposerIndex;
-      const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
-      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+        expect(verifySignature).toHaveBeenCalledOnce();
+        expect(verifySignature).toHaveBeenCalledWith(expect.any(Array), {verifyOnMainThread: false});
+        expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
+          conflictingBlockRoot,
+        ]);
+      });
 
-      const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
-      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
-      verifySignature.mockResolvedValue(false);
+      it("does not record a conflicting block root when the proposer signature is invalid", async () => {
+        const forkTypes = gloasConfig.getForkTypes(clockSlot);
+        const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = clockSlot;
+        signedBlock.message.proposerIndex = proposerIndex;
+        const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+        chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
+        chain.seenBlockProposers.add(clockSlot, proposerIndex);
 
-      await expectRejectedWithLodestarError(
-        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
-        BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
-      );
+        const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
+        conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+        verifySignature.mockResolvedValue(false);
 
-      expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([]);
+        await expectRejectedWithLodestarError(
+          validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+          BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+        );
+
+        expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([]);
+      });
     });
 
     it("skips proposer signature verification after observing an equivocation", async () => {
