@@ -125,6 +125,10 @@ export const {
   MAX_DATA_COLUMN_SIDECAR_SIZE,
   MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+
+  INCLUSION_LIST_COMMITTEE_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  MAX_SIGNED_INCLUSION_LIST_SIZE,
 } = activePreset;
 
 ////////////
@@ -171,6 +175,7 @@ export const DOMAIN_BEACON_BUILDER = Uint8Array.from([11, 0, 0, 0]);
 export const DOMAIN_PTC_ATTESTER = Uint8Array.from([12, 0, 0, 0]);
 export const DOMAIN_PROPOSER_PREFERENCES = Uint8Array.from([13, 0, 0, 0]);
 export const DOMAIN_BUILDER_DEPOSIT = Uint8Array.from([14, 0, 0, 0]);
+export const DOMAIN_INCLUSION_LIST_COMMITTEE = Uint8Array.from([16, 0, 0, 0]);
 
 // Application specific domains
 

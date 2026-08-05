@@ -87,15 +87,19 @@ export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): 
  * From https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
  */
 export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: number): number {
-  const maxGasLimitDifference = Math.max(Math.floor(parentGasLimit / 1024), 1) - 1;
+  return Number(getExpectedGasLimitBigint(BigInt(parentGasLimit), BigInt(targetGasLimit)));
+}
+
+export function getExpectedGasLimitBigint(parentGasLimit: bigint, targetGasLimit: bigint): bigint {
+  const maxGasLimitDifference = (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
 
   if (targetGasLimit > parentGasLimit) {
     const gasDiff = targetGasLimit - parentGasLimit;
-    return parentGasLimit + Math.min(gasDiff, maxGasLimitDifference);
+    return parentGasLimit + (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
   }
 
   const gasDiff = parentGasLimit - targetGasLimit;
-  return parentGasLimit - Math.min(gasDiff, maxGasLimitDifference);
+  return parentGasLimit - (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
 }
 
 /**
@@ -104,8 +108,8 @@ export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: numb
  * adjustment step of the parent, otherwise it must hit the clamped boundary.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/builder.md#new-is_gas_limit_target_compatible
  */
-export function isGasLimitTargetCompatible(parentGasLimit: number, gasLimit: number, targetGasLimit: number): boolean {
-  return gasLimit === getExpectedGasLimit(parentGasLimit, targetGasLimit);
+export function isGasLimitTargetCompatible(parentGasLimit: bigint, gasLimit: bigint, targetGasLimit: bigint): boolean {
+  return gasLimit === getExpectedGasLimitBigint(parentGasLimit, targetGasLimit);
 }
 
 /**

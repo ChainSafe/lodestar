@@ -1809,7 +1809,7 @@ export function getValidatorApi(
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
         const validatorIndex = chain.pubkeyCache.getIndex(pubkey);
-        if (validatorIndex === null) return false;
+        if (validatorIndex === null || validatorIndex >= headState.validatorCount) return false;
 
         const validator = headState.getValidator(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);
