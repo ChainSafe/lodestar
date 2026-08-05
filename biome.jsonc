@@ -18,8 +18,6 @@
             "identifierOrder": "lexicographic",
             "groups": [
               [
-                // Bun modules
-                ":BUN:",
                 // Node.js modules
                 ":NODE:"
               ],
@@ -62,9 +60,6 @@
       "!packages/**/*/spec-tests",
       "!packages/**/*/node_modules/"
     ]
-  },
-  "javascript": {
-    "globals": ["Bun"]
   },
   "linter": {
     "rules": {

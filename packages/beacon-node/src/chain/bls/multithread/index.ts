@@ -267,7 +267,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     for (let i = 0; i < poolSize; i++) {
       const workerData: WorkerData = {workerId: i};
       const worker = new Worker(path.join(workerDir, "worker.js"), {
-        suppressTranspileTS: Boolean(globalThis.Bun),
         workerData,
       } as ConstructorParameters<typeof Worker>[1]);
 

@@ -11,17 +11,17 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./downloadTests": {
-      "bun": "./src/downloadTests.ts",
+      "typescript": "./src/downloadTests.ts",
       "types": "./lib/downloadTests.d.ts",
       "import": "./lib/downloadTests.js"
     },
     "./downloadNightlyTests": {
-      "bun": "./src/downloadNightlyTests.ts",
+      "typescript": "./src/downloadNightlyTests.ts",
       "types": "./lib/downloadNightlyTests.d.ts",
       "import": "./lib/downloadNightlyTests.js"
     }
@@ -36,11 +36,11 @@
   },
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:release": "pnpm clean && pnpm build",
     "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/downloadTests.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit && pnpm test:e2e",

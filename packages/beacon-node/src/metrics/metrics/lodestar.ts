@@ -424,7 +424,7 @@ export function createLodestarMetrics(
       jobWaitTime: register.histogram({
         name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
         help: "Time from job added to the queue to starting the job in seconds",
-        buckets: [0.01, 0.02, 0.5, 0.1, 0.3, 1],
+        buckets: [0.01, 0.02, 0.1, 0.3, 0.5, 1],
       }),
       queueLength: register.gauge({
         name: "lodestar_bls_thread_pool_queue_length",
