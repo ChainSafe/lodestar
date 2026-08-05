@@ -29,21 +29,24 @@ jobs:
           fetch-depth: 0
 
       - name: Validate inputs
+        env:
+          TAG: ${{ inputs.tag }}
+          REF: ${{ inputs.ref }}
         run: |
           # Ensure tag doesn't conflict with protected tags
-          if [[ "${{ inputs.tag }}" =~ ^(latest|next|stable|rc)$ ]]; then
-            echo "Error: Cannot use reserved tag '${{ inputs.tag }}'. Use a custom tag name."
+          if [[ "$TAG" =~ ^(latest|next|stable|rc)$ ]]; then
+            echo "Error: Cannot use reserved tag '${TAG}'. Use a custom tag name."
             exit 1
           fi
-          echo "Building from ref: ${{ inputs.ref }}"
+          echo "Building from ref: ${REF}"
           echo "Commit: $(git rev-parse HEAD)"
-          echo "Tag: ${{ inputs.tag }}"
+          echo "Tag: ${TAG}"
 
   docker:
     name: Build and publish Docker
     needs: validate
     uses: ./.github/workflows/docker.yml
     with:
-      tag: ${{ inputs.tag }}
-      ref: ${{ inputs.ref }}
+      tag: ${TAG}
+      ref: ${REF}
     secrets: inherit
