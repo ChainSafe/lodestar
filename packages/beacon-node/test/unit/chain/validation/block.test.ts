@@ -110,95 +110,126 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("verifies the proposer signature and records a conflicting pre-Gloas block root before returning REPEAT_PROPOSAL", async () => {
-    const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
-    chain.seenBlockProposers.observeBlockRoot(job.message.slot, job.message.proposerIndex, blockRoot);
-    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
+  describe("repeat proposal handling", () => {
+    it("verifies the proposer signature before recording a conflicting pre-Gloas block root", async () => {
+      const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
+      chain.seenBlockProposers.observeBlockRoot(job.message.slot, job.message.proposerIndex, blockRoot);
+      chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
 
-    const conflictingBlock = ssz.deneb.SignedBeaconBlock.clone(job);
-    conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
-    const conflictingBlockRoot = toRootHex(
-      config.getForkTypes(conflictingBlock.message.slot).BeaconBlock.hashTreeRoot(conflictingBlock.message)
-    );
+      const conflictingBlock = ssz.deneb.SignedBeaconBlock.clone(job);
+      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+      const conflictingBlockRoot = toRootHex(
+        config.getForkTypes(conflictingBlock.message.slot).BeaconBlock.hashTreeRoot(conflictingBlock.message)
+      );
 
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, conflictingBlock, ForkName.phase0),
-      BlockErrorCode.REPEAT_PROPOSAL
-    );
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(config, chain, conflictingBlock, ForkName.phase0),
+        BlockErrorCode.REPEAT_PROPOSAL
+      );
 
-    expect(verifySignature).toHaveBeenCalledOnce();
-    expect(verifySignature).toHaveBeenCalledWith(expect.any(Array), {verifyOnMainThread: false});
-    expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
-      conflictingBlockRoot,
-    ]);
-  });
+      expect(verifySignature).toHaveBeenCalledOnce();
+      expect(verifySignature).toHaveBeenCalledWith(expect.any(Array), {verifyOnMainThread: false});
+      expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
+        conflictingBlockRoot,
+      ]);
+    });
 
-  it("does not verify another proposer signature after observing an equivocation", async () => {
-    const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
-    chain.seenBlockProposers.observeBlockRoot(job.message.slot, job.message.proposerIndex, blockRoot);
-    chain.seenBlockProposers.observeBlockRoot(
-      job.message.slot,
-      job.message.proposerIndex,
-      toRootHex(Buffer.alloc(32, 1))
-    );
-    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
+    it("skips proposer signature verification after observing an equivocation", async () => {
+      const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
+      chain.seenBlockProposers.observeBlockRoot(job.message.slot, job.message.proposerIndex, blockRoot);
+      chain.seenBlockProposers.observeBlockRoot(
+        job.message.slot,
+        job.message.proposerIndex,
+        toRootHex(Buffer.alloc(32, 1))
+      );
+      chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
 
-    const additionalBlock = ssz.deneb.SignedBeaconBlock.clone(job);
-    additionalBlock.message.stateRoot = Buffer.alloc(32, 2);
+      const additionalBlock = ssz.deneb.SignedBeaconBlock.clone(job);
+      additionalBlock.message.stateRoot = Buffer.alloc(32, 2);
 
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, additionalBlock, ForkName.phase0),
-      BlockErrorCode.REPEAT_PROPOSAL
-    );
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(config, chain, additionalBlock, ForkName.phase0),
+        BlockErrorCode.REPEAT_PROPOSAL
+      );
 
-    expect(verifySignature).not.toHaveBeenCalled();
-  });
+      expect(verifySignature).not.toHaveBeenCalled();
+    });
 
-  it("verifies the proposer signature and records a conflicting Gloas block root before returning REPEAT_PROPOSAL", async () => {
-    Object.defineProperty(chain, "config", {value: gloasConfig});
-    const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
-    gloasBlock.message.slot = clockSlot;
-    gloasBlock.message.proposerIndex = proposerIndex;
-    const blockRoot = toRootHex(gloasConfig.getForkTypes(clockSlot).BeaconBlock.hashTreeRoot(gloasBlock.message));
-    chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
-    chain.seenBlockProposers.add(clockSlot, proposerIndex);
+    it("verifies the proposer signature before recording a conflicting Gloas block root", async () => {
+      Object.defineProperty(chain, "config", {value: gloasConfig});
+      const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      gloasBlock.message.slot = clockSlot;
+      gloasBlock.message.proposerIndex = proposerIndex;
+      const blockRoot = toRootHex(gloasConfig.getForkTypes(clockSlot).BeaconBlock.hashTreeRoot(gloasBlock.message));
+      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
+      chain.seenBlockProposers.add(clockSlot, proposerIndex);
 
-    const conflictingBlock = ssz.gloas.SignedBeaconBlock.clone(gloasBlock);
-    conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
-    const conflictingBlockRoot = toRootHex(
-      gloasConfig.getForkTypes(conflictingBlock.message.slot).BeaconBlock.hashTreeRoot(conflictingBlock.message)
-    );
+      const conflictingBlock = ssz.gloas.SignedBeaconBlock.clone(gloasBlock);
+      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+      const conflictingBlockRoot = toRootHex(
+        gloasConfig.getForkTypes(conflictingBlock.message.slot).BeaconBlock.hashTreeRoot(conflictingBlock.message)
+      );
 
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
-      BlockErrorCode.REPEAT_PROPOSAL
-    );
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+        BlockErrorCode.REPEAT_PROPOSAL
+      );
 
-    expect(verifySignature).toHaveBeenCalledOnce();
-    expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
-      conflictingBlockRoot,
-    ]);
-  });
+      expect(verifySignature).toHaveBeenCalledOnce();
+      expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
+        conflictingBlockRoot,
+      ]);
+    });
 
-  it("does not record a conflicting Gloas block root with an invalid proposer signature", async () => {
-    Object.defineProperty(chain, "config", {value: gloasConfig});
-    const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
-    gloasBlock.message.slot = clockSlot;
-    gloasBlock.message.proposerIndex = proposerIndex;
-    const blockRoot = toRootHex(gloasConfig.getForkTypes(clockSlot).BeaconBlock.hashTreeRoot(gloasBlock.message));
-    chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
-    chain.seenBlockProposers.add(clockSlot, proposerIndex);
+    it("does not record a conflicting Gloas block root when the proposer signature is invalid", async () => {
+      Object.defineProperty(chain, "config", {value: gloasConfig});
+      const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      gloasBlock.message.slot = clockSlot;
+      gloasBlock.message.proposerIndex = proposerIndex;
+      const blockRoot = toRootHex(gloasConfig.getForkTypes(clockSlot).BeaconBlock.hashTreeRoot(gloasBlock.message));
+      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
+      chain.seenBlockProposers.add(clockSlot, proposerIndex);
 
-    const conflictingBlock = ssz.gloas.SignedBeaconBlock.clone(gloasBlock);
-    conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
-    verifySignature.mockResolvedValue(false);
+      const conflictingBlock = ssz.gloas.SignedBeaconBlock.clone(gloasBlock);
+      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+      verifySignature.mockResolvedValue(false);
 
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
-      BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
-    );
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+        BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+      );
 
-    expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([]);
+      expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([]);
+    });
+
+    it("detects another proposal that becomes known during the early-block delay", async () => {
+      const now = 1_000_000;
+      vi.useFakeTimers({now});
+
+      try {
+        Object.defineProperty(chain, "genesisTime", {
+          value: now / 1000 - clockSlot * (config.SLOT_DURATION_MS / 1000) + 0.1,
+        });
+        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
+        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+        const state = new BeaconStateView(generateCachedState());
+        regen.getPreState.mockResolvedValue(state);
+        vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+
+        const validation = expectRejectedWithLodestarError(
+          validateGossipBlock(config, chain, job, ForkName.phase0),
+          BlockErrorCode.REPEAT_PROPOSAL
+        );
+        await vi.advanceTimersByTimeAsync(0);
+        expect(vi.getTimerCount()).toBe(1);
+
+        chain.seenBlockProposers.add(clockSlot, proposerIndex);
+        await vi.advanceTimersByTimeAsync(100);
+        await validation;
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it("PARENT_BLOCK_UNKNOWN (fork-choice)", async () => {
@@ -288,35 +319,6 @@ describe("gossip block validation", () => {
     vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
 
     await validateGossipBlock(config, chain, job, ForkName.phase0);
-  });
-
-  it("rejects a block when another proposal becomes known during the early-block delay", async () => {
-    const now = 1_000_000;
-    vi.useFakeTimers({now});
-
-    try {
-      Object.defineProperty(chain, "genesisTime", {
-        value: now / 1000 - clockSlot * (config.SLOT_DURATION_MS / 1000) + 0.1,
-      });
-      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
-      forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
-      const state = new BeaconStateView(generateCachedState());
-      regen.getPreState.mockResolvedValue(state);
-      vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
-
-      const validation = expectRejectedWithLodestarError(
-        validateGossipBlock(config, chain, job, ForkName.phase0),
-        BlockErrorCode.REPEAT_PROPOSAL
-      );
-      await vi.advanceTimersByTimeAsync(0);
-      expect(vi.getTimerCount()).toBe(1);
-
-      chain.seenBlockProposers.add(clockSlot, proposerIndex);
-      await vi.advanceTimersByTimeAsync(100);
-      await validation;
-    } finally {
-      vi.useRealTimers();
-    }
   });
 
   it("deneb - TOO_MANY_KZG_COMMITMENTS", async () => {
