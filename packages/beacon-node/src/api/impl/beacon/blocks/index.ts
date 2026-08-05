@@ -285,7 +285,7 @@ export function getBeaconBlockApi({
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
 
         // Non-local blocks had their proposer and block-body signatures checked by verifyBlocksInEpoch above
-        // Locally produced blocks already passed block production validation, but receive their proposer signature later
+        // Locally produced blocks already passed block production validation, so only their proposer signature is unchecked
         // Verify that signature and observe the block root here
         if (blockLocallyProduced) {
           try {
