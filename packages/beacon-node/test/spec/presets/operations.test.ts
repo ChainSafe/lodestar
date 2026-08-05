@@ -1,6 +1,6 @@
 import path from "node:path";
 import {getConfig} from "@lodestar/config/test-utils";
-import {ACTIVE_PRESET, ForkName, ForkSeq} from "@lodestar/params";
+import {ACTIVE_PRESET, ForkName, ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {
   BeaconStateAllForks,
@@ -192,8 +192,9 @@ const operations: TestRunnerFn<OperationsTestCase, BeaconStateAllForks> = (fork,
         deposit_request: ssz.electra.DepositRequest,
         consolidation_request: ssz.electra.ConsolidationRequest,
         payload_attestation: ssz.gloas.PayloadAttestation,
-        execution_payload_bid:
-          ForkSeq[fork] >= ForkSeq.heze ? ssz.heze.SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid,
+        execution_payload_bid: isForkPostGloas(fork)
+          ? sszTypesFor(fork).SignedExecutionPayloadBid
+          : ssz.gloas.SignedExecutionPayloadBid,
         builder_deposit_request: ssz.gloas.BuilderDepositRequest,
         builder_exit_request: ssz.gloas.BuilderExitRequest,
       },

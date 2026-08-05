@@ -343,7 +343,7 @@ async function validateExecutionPayloadBid(
   // [REJECT] `signed_execution_payload_bid.signature` is valid with respect to the `bid.builder_index`.
   const signatureSet = createSingleSignatureSetFromComponents(
     PublicKey.fromBytes(builder.pubkey),
-    getExecutionPayloadBidSigningRoot(chain.config, state.slot, bid),
+    getExecutionPayloadBidSigningRoot(chain.config, bid),
     signedExecutionPayloadBid.signature
   );
 
