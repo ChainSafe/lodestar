@@ -60,7 +60,7 @@ describe("chain / blocks / processBlocks", () => {
     vi.mocked(importBlock).mockResolvedValue(undefined);
   });
 
-  it("does not mark a proposal known when execution verification aborts", async () => {
+  it("does not mark a proposal as known when execution verification aborts", async () => {
     const block = blockInput.getBlock();
     const execError = new BlockError(block, {
       code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
@@ -86,7 +86,7 @@ describe("chain / blocks / processBlocks", () => {
     expect(importBlock).not.toHaveBeenCalled();
   });
 
-  it("marks a proposal known after execution verification succeeds", async () => {
+  it("marks a proposal as known after execution verification succeeds", async () => {
     vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
       seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex);
       return {

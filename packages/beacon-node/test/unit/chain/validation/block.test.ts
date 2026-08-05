@@ -110,7 +110,7 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("pre-Gloas REPEAT_PROPOSAL records a conflicting root after verifying its proposer signature", async () => {
+  it("verifies the proposer signature and records a conflicting pre-Gloas block root before returning REPEAT_PROPOSAL", async () => {
     const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
     chain.seenBlockProposers.observeBlockRoot(job.message.slot, job.message.proposerIndex, blockRoot);
     chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
@@ -133,7 +133,7 @@ describe("gossip block validation", () => {
     ]);
   });
 
-  it("does not verify additional roots after observing an equivocation", async () => {
+  it("does not verify another proposer signature after observing an equivocation", async () => {
     const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
     chain.seenBlockProposers.observeBlockRoot(job.message.slot, job.message.proposerIndex, blockRoot);
     chain.seenBlockProposers.observeBlockRoot(
@@ -154,7 +154,7 @@ describe("gossip block validation", () => {
     expect(verifySignature).not.toHaveBeenCalled();
   });
 
-  it("Gloas REPEAT_PROPOSAL records a conflicting root after verifying its proposer signature", async () => {
+  it("verifies the proposer signature and records a conflicting Gloas block root before returning REPEAT_PROPOSAL", async () => {
     Object.defineProperty(chain, "config", {value: gloasConfig});
     const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
     gloasBlock.message.slot = clockSlot;
@@ -180,7 +180,7 @@ describe("gossip block validation", () => {
     ]);
   });
 
-  it("does not record a Gloas conflicting root with an invalid proposer signature", async () => {
+  it("does not record a conflicting Gloas block root with an invalid proposer signature", async () => {
     Object.defineProperty(chain, "config", {value: gloasConfig});
     const gloasBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
     gloasBlock.message.slot = clockSlot;
@@ -290,7 +290,7 @@ describe("gossip block validation", () => {
     await validateGossipBlock(config, chain, job, ForkName.phase0);
   });
 
-  it("rejects a concurrent pre-Gloas proposal observed during the early-block delay", async () => {
+  it("rejects a block when another proposal becomes known during the early-block delay", async () => {
     const now = 1_000_000;
     vi.useFakeTimers({now});
 

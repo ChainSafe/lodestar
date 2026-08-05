@@ -9,7 +9,7 @@ describe("SeenBlockProposers", () => {
   const conflictingBlockRoot = toRootHex(Buffer.alloc(32, 2));
   const additionalBlockRoot = toRootHex(Buffer.alloc(32, 3));
 
-  it("tracks signature-verified roots separately from gossip-accepted proposals", () => {
+  it("tracks observed block roots separately from known proposals", () => {
     const cache = new SeenBlockProposers();
 
     cache.observeBlockRoot(slot, proposerIndex, blockRoot);
@@ -26,7 +26,7 @@ describe("SeenBlockProposers", () => {
     expect(cache.getConflictingBlockRoots(slot, proposerIndex, conflictingBlockRoot)).toEqual([blockRoot]);
   });
 
-  it("stores at most two roots per proposal", () => {
+  it("stores at most two roots per slot and proposer", () => {
     const cache = new SeenBlockProposers();
 
     cache.observeBlockRoot(slot, proposerIndex, blockRoot);
@@ -41,7 +41,7 @@ describe("SeenBlockProposers", () => {
     ]);
   });
 
-  it("prunes accepted proposals and observed roots", () => {
+  it("prunes known proposals and observed roots", () => {
     const cache = new SeenBlockProposers();
     cache.observeBlockRoot(slot, proposerIndex, blockRoot);
     cache.add(slot, proposerIndex);
@@ -53,7 +53,7 @@ describe("SeenBlockProposers", () => {
     expect(cache.getConflictingBlockRoots(slot, proposerIndex, conflictingBlockRoot)).toEqual([]);
   });
 
-  it("rejects proposals older than the finalized slot", () => {
+  it("rejects updates for slots before the finalized slot", () => {
     const cache = new SeenBlockProposers();
     cache.prune(slot + 1);
 

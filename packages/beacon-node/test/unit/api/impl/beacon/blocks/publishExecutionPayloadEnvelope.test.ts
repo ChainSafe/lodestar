@@ -40,7 +40,7 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
     modules.chain.processExecutionPayload = vi.fn();
   });
 
-  it("rejects an envelope for a proposer equivocation without publishing or importing it", async () => {
+  it("rejects an envelope when another block root is observed for its proposer and slot", async () => {
     const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
     const slot = signedBlock.message.slot;
     const proposerIndex = signedBlock.message.proposerIndex;

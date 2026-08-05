@@ -28,7 +28,7 @@ describe("api - beacon - publishBlockV2", () => {
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
   });
 
-  it("publishes a locally produced pre-Gloas block after equivocation validation", async () => {
+  it("publishes a locally produced block after verifying its proposer signature and recording its root", async () => {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     signedBlock.message.proposerIndex = 2;
@@ -64,7 +64,7 @@ describe("api - beacon - publishBlockV2", () => {
     expect(modules.chain.processBlock).toHaveBeenCalledWith(blockInput, {});
   });
 
-  it("rejects a non-local pre-Gloas block equivocation before publishing", async () => {
+  it("does not publish or import a non-local block that conflicts with an observed proposal", async () => {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     signedBlock.message.proposerIndex = 2;
@@ -102,7 +102,7 @@ describe("api - beacon - publishBlockV2", () => {
   });
 
   it.each([routes.beacon.BroadcastValidation.consensus, routes.beacon.BroadcastValidation.consensusAndEquivocation])(
-    "verifies all signatures for a non-local block with %s validation",
+    "verifies all signatures for a non-local block with %s broadcast validation",
     async (broadcastValidation) => {
       const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
       signedBlock.message.slot = 1;
