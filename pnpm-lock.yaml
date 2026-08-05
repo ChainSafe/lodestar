@@ -24,6 +24,10 @@ overrides:
   elliptic: '>=6.6.1'
   loupe: ^2.3.6
   nan: ^2.19.0
+  sigstore: 4.0.0
+
+patchedDependencies:
+  sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
 
 importers:
 
@@ -10771,7 +10775,7 @@ snapshots:
       npm-registry-fetch: 19.1.1
       proc-log: 6.1.0
       semver: 7.7.3
-      sigstore: 4.0.0
+      sigstore: 4.0.0(patch_hash=0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32)
       ssri: 13.0.0
     transitivePeerDependencies:
       - supports-color
@@ -11389,7 +11393,7 @@ snapshots:
       npm-registry-fetch: 19.1.1
       proc-log: 6.1.0
       promise-retry: 2.0.1
-      sigstore: 4.0.0
+      sigstore: 4.0.0(patch_hash=0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32)
       ssri: 13.0.0
       tar: 7.5.2
     transitivePeerDependencies:
@@ -11871,7 +11875,7 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
-  sigstore@4.0.0:
+  sigstore@4.0.0(patch_hash=0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32):
     dependencies:
       '@sigstore/bundle': 4.0.0
       '@sigstore/core': 3.0.0
