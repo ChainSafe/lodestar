@@ -35,6 +35,20 @@ export class SyncingStatusTracker {
     this.fns.push(fn);
   }
 
+  /**
+   * Whether the node is currently optimistic (i.e. the head block's execution payload
+   * has not yet been validated) based on the last successful syncing status check.
+   *
+   * Returns `undefined` if the status is not yet known (never fetched or last check
+   * errored); callers should not assume the node is optimistic in that case.
+   */
+  isNodeOptimistic(): boolean | undefined {
+    if (this.prevSyncingStatus === undefined || this.prevSyncingStatus instanceof Error) {
+      return undefined;
+    }
+    return this.prevSyncingStatus.isOptimistic;
+  }
+
   private checkSyncingStatus = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     try {
       const syncingStatus = (await this.api.node.getSyncingStatus()).value();
