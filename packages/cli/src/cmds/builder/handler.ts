@@ -13,6 +13,10 @@ import {IBuilderCliArgs} from "./options.js";
 export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
+  if (config.forks.gloas.epoch === Infinity) {
+    throw Error(`Gloas must be scheduled via GLOAS_FORK_EPOCH (network: ${network})`);
+  }
+
   const globalPaths = getGlobalPaths(args, network);
   const defaultLogFilepath = path.join(globalPaths.dataDir, "builder.log");
   const logger = getNodeLogger(parseLoggerArgs(args, {defaultLogFilepath}, config));
