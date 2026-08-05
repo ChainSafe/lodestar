@@ -29,42 +29,6 @@ describe("api - beacon - publishBlockV2", () => {
   });
 
   describe("broadcast_validation=consensus_and_equivocation", () => {
-    it("verifies the proposer signature and records the root before publishing a local block", async () => {
-      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
-      signedBlock.message.slot = 1;
-      signedBlock.message.proposerIndex = 2;
-      const blockRoot = toRootHex(
-        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
-      );
-      const blockInput = BlockInputPreData.createFromBlock({
-        forkName: ForkName.phase0,
-        block: signedBlock,
-        blockRootHex: blockRoot,
-        source: BlockInputSource.api,
-        seenTimestampSec: 0,
-        daOutOfRange: false,
-      });
-      vi.spyOn(modules.chain.blockProductionCache, "has").mockReturnValue(true);
-      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
-
-      const api = getBeaconBlockApi(modules);
-      await api.publishBlockV2({
-        signedBlockContents: {signedBlock},
-        broadcastValidation: routes.beacon.BroadcastValidation.consensusAndEquivocation,
-      });
-
-      expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
-      expect(
-        modules.chain.seenBlockProposers.hasBlockRoot(
-          signedBlock.message.slot,
-          signedBlock.message.proposerIndex,
-          blockRoot
-        )
-      ).toBe(true);
-      expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
-      expect(modules.chain.processBlock).toHaveBeenCalledWith(blockInput, {});
-    });
-
     it("does not publish or import a non-local block that conflicts with an observed proposal", async () => {
       const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
       signedBlock.message.slot = 1;
@@ -104,6 +68,42 @@ describe("api - beacon - publishBlockV2", () => {
   });
 
   describe("consensus validation strategies", () => {
+    it.each([routes.beacon.BroadcastValidation.consensus, routes.beacon.BroadcastValidation.consensusAndEquivocation])(
+      "verifies the proposer signature and records the root before publishing a local block with broadcast_validation=%s",
+      async (broadcastValidation) => {
+        const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = 1;
+        signedBlock.message.proposerIndex = 2;
+        const blockRoot = toRootHex(
+          modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+        );
+        const blockInput = BlockInputPreData.createFromBlock({
+          forkName: ForkName.phase0,
+          block: signedBlock,
+          blockRootHex: blockRoot,
+          source: BlockInputSource.api,
+          seenTimestampSec: 0,
+          daOutOfRange: false,
+        });
+        vi.spyOn(modules.chain.blockProductionCache, "has").mockReturnValue(true);
+        modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+
+        const api = getBeaconBlockApi(modules);
+        await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
+
+        expect(modules.chain.bls.verifySignatureSets).toHaveBeenCalledOnce();
+        expect(
+          modules.chain.seenBlockProposers.hasBlockRoot(
+            signedBlock.message.slot,
+            signedBlock.message.proposerIndex,
+            blockRoot
+          )
+        ).toBe(true);
+        expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
+        expect(modules.chain.processBlock).toHaveBeenCalledWith(blockInput, {});
+      }
+    );
+
     it.each([routes.beacon.BroadcastValidation.consensus, routes.beacon.BroadcastValidation.consensusAndEquivocation])(
       "verifies all signatures for a non-local block with broadcast_validation=%s",
       async (broadcastValidation) => {

@@ -286,10 +286,7 @@ export function getBeaconBlockApi({
 
         // Non-local blocks had all signatures checked and their root observed by verifyBlocksInEpoch above.
         // Locally produced blocks skip that path, so verify their proposer signature and observe the root here.
-        if (
-          broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation &&
-          blockLocallyProduced
-        ) {
+        if (blockLocallyProduced) {
           try {
             await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
             chain.seenBlockProposers.observeBlockRoot(slot, signedBlock.message.proposerIndex, blockRoot);
@@ -302,7 +299,7 @@ export function getBeaconBlockApi({
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
-              "api_reject_consensus_and_equivocation_failure"
+              "api_reject_consensus_failure"
             );
             throw e;
           }
