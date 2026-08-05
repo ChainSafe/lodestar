@@ -2,6 +2,7 @@ import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
+// Two distinct signature-verified roots are sufficient to establish a proposer equivocation
 const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
 
 /**
@@ -12,8 +13,7 @@ const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
  * block may still fail other validation. Such a block must not mark the proposal as known, since that would cause a
  * later valid block for the same slot and proposer to be ignored as a repeat proposal.
  *
- * The cache is pruned on finalization and stores at most two roots per proposer and slot, since two roots are sufficient
- * to establish an equivocation
+ * The cache is pruned on finalization and bounds the number of roots stored per proposer and slot
  */
 export class SeenBlockProposers {
   private readonly proposerIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
