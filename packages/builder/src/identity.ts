@@ -3,12 +3,12 @@ import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {Logger, toHex} from "@lodestar/utils";
 
-export async function resolveBuilderIdentity(api: ApiClient, logger: Logger, id: string): Promise<BuilderIndex> {
-  const builderEntry = await fetchBuilder(api, logger, id);
-
-  if (builderEntry === null) {
-    throw Error("Unable to retrieve the builder.");
-  }
+export async function resolveBuilderIdentity(
+  api: ApiClient,
+  logger: Logger,
+  id: routes.beacon.BuilderId
+): Promise<BuilderIndex> {
+  const builderEntry = await fetchBuilder(api, id);
 
   if (builderEntry.status !== "active") {
     throw Error(`Builder not active: ${builderEntry.status}`);
@@ -33,36 +33,32 @@ export async function getBuilderStatus(
   logger: Logger,
   id: routes.beacon.BuilderId
 ): Promise<{status: BuilderStatus; balance: number} | null> {
-  const builderEntry = await fetchBuilder(api, logger, id);
-
-  if (builderEntry === null) return null;
-
-  return {
-    status: builderEntry.status,
-    balance: builderEntry.builder.balance,
-  };
+  try {
+    const builderEntry = await fetchBuilder(api, id);
+    return {
+      status: builderEntry.status,
+      balance: builderEntry.builder.balance,
+    };
+  } catch (e) {
+    logger.warn("Couldn't fetch the builder", {}, e as Error);
+    return null;
+  }
 }
 
-async function fetchBuilder(
-  api: ApiClient,
-  logger: Logger,
-  id: routes.beacon.BuilderId
-): Promise<routes.beacon.BuilderResponse | null> {
+async function fetchBuilder(api: ApiClient, id: routes.beacon.BuilderId): Promise<routes.beacon.BuilderResponse> {
   const builderRes = await api.beacon.getStateBuilders({
     stateId: "head",
     builderIds: [id],
   });
 
   if (!builderRes.ok) {
-    logger.warn("Getting builder state from BN failed", {status: builderRes.status});
-    return null;
+    throw Error(`Failed to get builder state from beacon node: ${builderRes.status}`);
   }
 
   const builders = builderRes.value();
 
   if (builders.length === 0) {
-    logger.warn(`Builder not known to the BN: ${id}`);
-    return null;
+    throw Error(`Builder not known to the beacon node: ${id}`);
   }
 
   return builders[0];
