@@ -1,8 +1,8 @@
 import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
-import {BuilderIndex} from "@lodestar/types";
-import {Logger} from "@lodestar/utils";
+import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
+import {Logger, toHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
@@ -22,6 +22,7 @@ export type BuilderOptions = {
   abortController: AbortController;
   api: ApiClient;
   clock?: ClockOptions;
+  executionFeeRecipient: ExecutionAddress;
 };
 
 /**
@@ -33,6 +34,7 @@ export class Builder {
   private readonly clock: IClock;
   private readonly index: BuilderIndex;
   private readonly logger: Logger;
+  private readonly executionFeeRecipient: ExecutionAddress;
 
   constructor({opts, builderSigner, clock, index}: BuilderModules) {
     this.builderSigner = builderSigner;
@@ -41,9 +43,14 @@ export class Builder {
     this.logger = opts.logger;
     this.index = index;
 
+    this.executionFeeRecipient = opts.executionFeeRecipient;
+
     this.clock.start(this.controller.signal);
 
-    this.logger.info("Builder client initialized", {index: this.index});
+    this.logger.info("Builder client initialized", {
+      index: this.index,
+      executionFeeRecipient: toHex(this.executionFeeRecipient),
+    });
   }
 
   static async init(opts: BuilderOptions): Promise<Builder> {

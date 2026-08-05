@@ -7,6 +7,7 @@ export type IBuilderCliArgs = LogArgs & {
   keystore: string;
   keystorePassword: string;
   builderPubkey?: string;
+  executionFeeRecipient: string;
 };
 
 export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
@@ -33,5 +34,11 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
   builderPubkey: {
     description: "Builder's expected public key based on the keystore from 'keystore' option",
     type: "string",
+  },
+
+  executionFeeRecipient: {
+    description: "Execution address for receiving the payload rewards",
+    type: "string",
+    demandOption: true,
   },
 };
