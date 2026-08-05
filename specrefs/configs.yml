@@ -378,14 +378,18 @@
     </spec>
 
 - name: HEZE_FORK_EPOCH#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "HEZE_FORK_EPOCH:"
   spec: |
     <spec config_var="HEZE_FORK_EPOCH" fork="heze" hash="f4539c03">
     HEZE_FORK_EPOCH: Epoch = 18446744073709551615
     </spec>
 
 - name: HEZE_FORK_VERSION#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "HEZE_FORK_VERSION:"
   spec: |
     <spec config_var="HEZE_FORK_VERSION" fork="heze" hash="29986fed">
     HEZE_FORK_VERSION: Version = '0x08000000'
@@ -410,7 +414,9 @@
     </spec>
 
 - name: INCLUSION_LIST_DUE_BPS#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "INCLUSION_LIST_DUE_BPS:"
   spec: |
     <spec config_var="INCLUSION_LIST_DUE_BPS" fork="heze" hash="2b6a4401">
     INCLUSION_LIST_DUE_BPS: Uint64 = 6667
@@ -444,7 +450,9 @@
     </spec>
 
 - name: MAX_BYTES_PER_INCLUSION_LIST#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_BYTES_PER_INCLUSION_LIST:"
   spec: |
     <spec config_var="MAX_BYTES_PER_INCLUSION_LIST" fork="heze" hash="1d503ddc">
     MAX_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
@@ -505,7 +513,9 @@
     </spec>
 
 - name: MAX_REQUEST_INCLUSION_LIST#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_REQUEST_INCLUSION_LIST:"
   spec: |
     <spec config_var="MAX_REQUEST_INCLUSION_LIST" fork="heze" hash="b64ddfd1">
     MAX_REQUEST_INCLUSION_LIST: Uint64 = 16
@@ -602,7 +612,9 @@
     </spec>
 
 - name: MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS#heze
-  sources: []
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS:"
   spec: |
     <spec config_var="MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS" fork="heze" hash="4bab088f">
     MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: Slot = 1

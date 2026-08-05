@@ -41,9 +41,6 @@ exceptions:
     - PAYLOAD_STATUS_PENDING#gloas
     - PTC_TIMELINESS_INDEX#gloas
 
-    # heze (not implemented)
-    - DOMAIN_INCLUSION_LIST_COMMITTEE#heze
-
     # phase0 fast confirmation / not implemented
     - COMMITTEE_WEIGHT_ESTIMATION_ADJUSTMENT_FACTOR#phase0
 
@@ -59,13 +56,6 @@ exceptions:
     - PartialDataColumnHeader#fulu
     - PartialDataColumnPartsMetadata#fulu
     - PartialDataColumnSidecar#fulu
-
-    # heze (not implemented)
-    - BeaconState#heze
-    - ExecutionPayloadBid#heze
-    - InclusionList#heze
-    - SignedExecutionPayloadBid#heze
-    - SignedInclusionList#heze
 
   dataclasses:
     # phase0
@@ -113,11 +103,7 @@ exceptions:
     - PayloadAttributes#heze
     - Store#heze
 
-  presets:
-    # heze (not implemented)
-    - INCLUSION_LIST_COMMITTEE_SIZE#heze
-    - MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE#heze
-    - MAX_SIGNED_INCLUSION_LIST_SIZE#heze
+  presets: []
 
   functions:
     # phase0
@@ -377,7 +363,6 @@ exceptions:
     - process_inclusion_list#heze
     - record_payload_inclusion_list_satisfaction#heze
     - should_extend_payload#heze
-    - upgrade_to_heze#heze
 
     # phase0 fast confirmation / not implemented
     - adjust_committee_weight_estimate_to_ensure_safety#phase0
@@ -423,14 +408,6 @@ exceptions:
   configs:
     # phase0 fast confirmation / not implemented
     - CONFIRMATION_BYZANTINE_THRESHOLD#phase0
-
-    # heze (not implemented)
-    - HEZE_FORK_EPOCH#heze
-    - HEZE_FORK_VERSION#heze
-    - INCLUSION_LIST_DUE_BPS#heze
-    - MAX_BYTES_PER_INCLUSION_LIST#heze
-    - MAX_REQUEST_INCLUSION_LIST#heze
-    - MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS#heze
 
   custom_types:
     # phase0

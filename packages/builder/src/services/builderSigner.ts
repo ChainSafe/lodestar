@@ -24,7 +24,7 @@ export class BuilderSigner {
   }
 
   signExecutionPayloadBid(bid: gloas.ExecutionPayloadBid): gloas.SignedExecutionPayloadBid {
-    const signingRoot = getExecutionPayloadBidSigningRoot(this.config, bid.slot, bid);
+    const signingRoot = getExecutionPayloadBidSigningRoot(this.config, bid);
 
     return {
       message: bid,
