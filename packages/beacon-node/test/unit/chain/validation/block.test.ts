@@ -127,9 +127,31 @@ describe("gossip block validation", () => {
     );
 
     expect(verifySignature).toHaveBeenCalledOnce();
+    expect(verifySignature).toHaveBeenCalledWith(expect.any(Array), {verifyOnMainThread: false});
     expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
       conflictingBlockRoot,
     ]);
+  });
+
+  it("does not verify additional roots after observing an equivocation", async () => {
+    const blockRoot = toRootHex(config.getForkTypes(job.message.slot).BeaconBlock.hashTreeRoot(job.message));
+    chain.seenBlockProposers.observeBlockRoot(job.message.slot, job.message.proposerIndex, blockRoot);
+    chain.seenBlockProposers.observeBlockRoot(
+      job.message.slot,
+      job.message.proposerIndex,
+      toRootHex(Buffer.alloc(32, 1))
+    );
+    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
+
+    const additionalBlock = ssz.deneb.SignedBeaconBlock.clone(job);
+    additionalBlock.message.stateRoot = Buffer.alloc(32, 2);
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, additionalBlock, ForkName.phase0),
+      BlockErrorCode.REPEAT_PROPOSAL
+    );
+
+    expect(verifySignature).not.toHaveBeenCalled();
   });
 
   it("Gloas REPEAT_PROPOSAL records a conflicting root after verifying its proposer signature", async () => {

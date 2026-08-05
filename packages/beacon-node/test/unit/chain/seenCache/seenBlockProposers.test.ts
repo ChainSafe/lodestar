@@ -7,6 +7,7 @@ describe("SeenBlockProposers", () => {
   const proposerIndex = 1;
   const blockRoot = toRootHex(Buffer.alloc(32, 1));
   const conflictingBlockRoot = toRootHex(Buffer.alloc(32, 2));
+  const additionalBlockRoot = toRootHex(Buffer.alloc(32, 3));
 
   it("tracks signature-verified roots separately from gossip-accepted proposals", () => {
     const cache = new SeenBlockProposers();
@@ -20,8 +21,24 @@ describe("SeenBlockProposers", () => {
     cache.observeBlockRoot(slot, proposerIndex, conflictingBlockRoot);
 
     expect(cache.isKnown(slot, proposerIndex)).toBe(true);
+    expect(cache.isEquivocating(slot, proposerIndex)).toBe(true);
     expect(cache.getConflictingBlockRoots(slot, proposerIndex, blockRoot)).toEqual([conflictingBlockRoot]);
     expect(cache.getConflictingBlockRoots(slot, proposerIndex, conflictingBlockRoot)).toEqual([blockRoot]);
+  });
+
+  it("stores at most two roots per proposal", () => {
+    const cache = new SeenBlockProposers();
+
+    cache.observeBlockRoot(slot, proposerIndex, blockRoot);
+    cache.observeBlockRoot(slot, proposerIndex, conflictingBlockRoot);
+    cache.observeBlockRoot(slot, proposerIndex, additionalBlockRoot);
+
+    expect(cache.isEquivocating(slot, proposerIndex)).toBe(true);
+    expect(cache.hasBlockRoot(slot, proposerIndex, additionalBlockRoot)).toBe(false);
+    expect(cache.getConflictingBlockRoots(slot, proposerIndex, additionalBlockRoot)).toEqual([
+      blockRoot,
+      conflictingBlockRoot,
+    ]);
   });
 
   it("prunes accepted proposals and observed roots", () => {
