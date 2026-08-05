@@ -234,6 +234,58 @@ describe("SyncCommitteeService", () => {
         expect(api.validator.produceSyncCommitteeContribution).not.toHaveBeenCalled();
         expect(api.validator.publishContributionAndProofs).not.toHaveBeenCalled();
       });
+
+      it("Should not sign contributions when the head becomes optimistic before aggregation", async () => {
+        const clock = new ClockMock();
+        const syncCommitteeService = new SyncCommitteeService(
+          config,
+          loggerVc,
+          api,
+          clock,
+          validatorStore,
+          emitter,
+          chainHeaderTracker,
+          syncingStatusTracker,
+          null,
+          opts
+        );
+
+        const beaconBlockRoot = Buffer.alloc(32, 0x4d);
+        const optimisticBlockRoot = Buffer.alloc(32, 0x4e);
+        const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();
+        const duties: SyncDutyAndProofs[] = [
+          {
+            duty: {
+              pubkey: toHexString(pubkeys[0]),
+              validatorIndex: 0,
+              subnets: [0],
+            },
+            selectionProofs: [{selectionProof: ZERO_HASH, subcommitteeIndex: 0}],
+          },
+        ];
+
+        syncingStatusTracker.isNodeOptimistic.mockReturnValue(false);
+        vi.spyOn(syncCommitteeService["dutiesService"], "getDutiesAtSlot").mockResolvedValue(duties);
+        chainHeaderTracker.getCurrentChainHeadData
+          .mockReturnValueOnce({
+            root: beaconBlockRoot,
+            executionOptimistic: false,
+          })
+          .mockReturnValue({
+            root: optimisticBlockRoot,
+            executionOptimistic: true,
+          });
+        api.beacon.submitPoolSyncCommitteeSignatures.mockResolvedValue(mockApiResponse({}));
+        validatorStore.signSyncCommitteeSignature.mockResolvedValue(syncCommitteeSignature);
+
+        await clock.tickSlotFns(0, controller.signal);
+
+        expect(validatorStore.signSyncCommitteeSignature).toHaveBeenCalledOnce();
+        expect(api.beacon.submitPoolSyncCommitteeSignatures).toHaveBeenCalledOnce();
+        expect(api.validator.produceSyncCommitteeContribution).not.toHaveBeenCalled();
+        expect(validatorStore.signContributionAndProof).not.toHaveBeenCalled();
+        expect(api.validator.publishContributionAndProofs).not.toHaveBeenCalled();
+      });
     });
   }
 });
