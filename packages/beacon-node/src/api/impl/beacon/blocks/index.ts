@@ -293,18 +293,18 @@ export function getBeaconBlockApi({
           try {
             await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
             chain.seenBlockProposers.observeBlockRoot(slot, signedBlock.message.proposerIndex, blockRoot);
-          } catch (error) {
+          } catch (e) {
             chain.logger.error(
               "Proposer signature validation failed while publishing the block",
               valLogMeta,
-              error as Error
+              e as Error
             );
             chain.persistInvalidSszValue(
               chain.config.getForkTypes(slot).SignedBeaconBlock,
               signedBlock,
               "api_reject_consensus_and_equivocation_failure"
             );
-            throw error;
+            throw e;
           }
         }
         break;
@@ -340,7 +340,7 @@ export function getBeaconBlockApi({
         blockRoot
       );
       if (conflictingRoots.length > 0) {
-        chain.logger.error("Equivocation checks failed while publishing the block", {
+        chain.logger.warn("Not publishing block due to proposer equivocation", {
           ...valLogMeta,
           conflictingRoots: conflictingRoots.join(", "),
         });
@@ -920,7 +920,7 @@ export function getBeaconBlockApi({
           blockRootHex
         );
         if (conflictingRoots.length > 0) {
-          chain.logger.error("Equivocation checks failed while publishing execution payload envelope", {
+          chain.logger.warn("Not publishing execution payload envelope due to proposer equivocation", {
             ...valLogMeta,
             conflictingRoots: conflictingRoots.join(", "),
           });
