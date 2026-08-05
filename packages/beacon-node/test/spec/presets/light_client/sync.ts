@@ -1,7 +1,7 @@
 import {expect} from "vitest";
 import {ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {ForkName, ForkPostAltair, ForkSeq, isForkPostAltair} from "@lodestar/params";
+import {ForkName, ForkPostAltair, ForkSeq} from "@lodestar/params";
 import {InputType} from "@lodestar/spec-test-util";
 import {computeSyncPeriodAtSlot} from "@lodestar/state-transition";
 import {
@@ -35,7 +35,7 @@ type SyncTestCase = {
   };
   steps: LightclientSyncSteps[];
   config: Partial<ChainConfig>;
-  bootstrap: LightClientBootstrap;
+  bootstrap: Uint8Array;
 
   // Injected after parsing
   // However updates are multifork and need config and step access to deserialize inside test
@@ -90,7 +90,7 @@ type LightclientSyncSteps = ProcessUpdateStep | ForceUpdateStep | UpgradeStoreSt
 const logger = testLogger("spec-test");
 const UPDATE_FILE_NAME = "^(update)_([0-9a-zA-Z_]+)$";
 
-export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
+export const sync: TestRunnerFn<SyncTestCase, void> = (_fork) => {
   return {
     testFunction: async (testcase) => {
       // Fork digests depend on the vector's fork epochs, versions, and BPO schedule.
@@ -99,11 +99,14 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         fromHex(testcase.meta.genesis_validators_root)
       );
       let storeFork = getForkFromVersion(config, testcase.meta.store_fork_version);
-      const bootstrapFork = config.forkDigest2ForkBoundary(fromHex(testcase.meta.bootstrap_fork_digest)).fork;
-      const bootstrap =
-        ForkSeq[bootstrapFork] < ForkSeq[storeFork]
-          ? upgradeLightClientBootstrap(config, storeFork, testcase.bootstrap)
-          : testcase.bootstrap;
+      const bootstrapFork = config.forkDigest2ForkBoundary(fromHex(testcase.meta.bootstrap_fork_digest))
+        .fork as ForkPostAltair;
+      let bootstrap = sszTypesFor(bootstrapFork).LightClientBootstrap.deserialize(
+        testcase.bootstrap
+      ) as LightClientBootstrap;
+      if (ForkSeq[bootstrapFork] < ForkSeq[storeFork]) {
+        bootstrap = upgradeLightClientBootstrap(config, storeFork, bootstrap);
+      }
 
       const lightClientOpts = {
         allowForcedUpdates: true,
@@ -204,7 +207,8 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
         config: InputType.YAML,
       },
       sszTypes: {
-        bootstrap: isForkPostAltair(fork) ? sszTypesFor(fork).LightClientBootstrap : ssz.altair.LightClientBootstrap,
+        // Bootstrap is multifork and needs its metadata fork digest to select the SSZ type inside the test.
+        bootstrap: {typeName: "LightClientBootstrap", deserialize: (bytes: Uint8Array) => bytes},
         // Updates are multifork and need their step's fork digest to select the SSZ type inside the test.
         [UPDATE_FILE_NAME]: {typeName: "LightClientUpdate", deserialize: (bytes: Uint8Array) => bytes},
       },
