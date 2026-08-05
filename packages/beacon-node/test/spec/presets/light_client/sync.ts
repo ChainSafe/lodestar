@@ -100,7 +100,10 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       );
       let storeFork = getForkFromVersion(config, testcase.meta.store_fork_version);
       const bootstrapFork = config.forkDigest2ForkBoundary(fromHex(testcase.meta.bootstrap_fork_digest)).fork;
-      const bootstrap = maybeUpgradeBootstrap(config, bootstrapFork, storeFork, testcase.bootstrap);
+      const bootstrap =
+        ForkSeq[bootstrapFork] < ForkSeq[storeFork]
+          ? upgradeLightClientBootstrap(config, storeFork, testcase.bootstrap)
+          : testcase.bootstrap;
 
       const lightClientOpts = {
         allowForcedUpdates: true,
@@ -142,19 +145,17 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
       for (const [i, step] of testcase.steps.entries()) {
         try {
           if (isProcessUpdateStep(step)) {
-            const {process_update: processUpdate} = step;
-            const currentSlot = Number(processUpdate.current_slot);
+            const currentSlot = Number(step.process_update.current_slot as bigint);
             logger.debug(`Step ${i}/${stepsLen} process_update`, renderSlot(currentSlot));
 
-            const updateBytes = testcase.updates.get(processUpdate.update);
+            const updateBytes = testcase.updates.get(step.process_update.update);
             if (!updateBytes) {
-              throw Error(`update ${processUpdate.update} not found`);
+              throw Error(`update ${step.process_update.update} not found`);
             }
 
             // Decode the original network object using its context fork before upgrading it to the store's fork.
-            const updateFork = onlyPostAltairFork(
-              config.forkDigest2ForkBoundary(fromHex(processUpdate.update_fork_digest)).fork
-            );
+            const updateFork = config.forkDigest2ForkBoundary(fromHex(step.process_update.update_fork_digest))
+              .fork as ForkPostAltair;
             let update = sszTypesFor(updateFork).LightClientUpdate.deserialize(updateBytes) as LightClientUpdate;
             if (ForkSeq[updateFork] < ForkSeq[storeFork]) {
               update = upgradeLightClientUpdate(config, storeFork, update);
@@ -163,18 +164,16 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
             logger.debug(`LightclientUpdateSummary: ${JSON.stringify(toLightClientUpdateSummary(update))}`);
 
             lightClient.onUpdate(currentSlot, update);
-            runChecks(processUpdate);
+            runChecks(step.process_update);
           }
 
           // force_update step
           else if (isForceUpdateStep(step)) {
-            const {force_update: forceUpdate} = step;
-            const currentSlot = Number(forceUpdate.current_slot);
+            const currentSlot = Number(step.force_update.current_slot as bigint);
             logger.debug(`Step ${i}/${stepsLen} force_update`, renderSlot(currentSlot));
 
-            // Simulate force_update()
             lightClient.forceUpdate(currentSlot);
-            runChecks(forceUpdate);
+            runChecks(step.force_update);
           }
 
           // upgrade_store step
@@ -226,25 +225,7 @@ export const sync: TestRunnerFn<SyncTestCase, void> = (fork) => {
   };
 };
 
-function onlyPostAltairFork(fork: ForkName): ForkPostAltair {
-  if (!isForkPostAltair(fork)) {
-    throw Error(`Invalid light client fork ${fork}`);
-  }
-  return fork;
-}
-
-function maybeUpgradeBootstrap(
-  config: ReturnType<typeof createBeaconConfig>,
-  bootstrapFork: ForkName,
-  storeFork: ForkName,
-  bootstrap: LightClientBootstrap
-): LightClientBootstrap {
-  if (ForkSeq[bootstrapFork] < ForkSeq[storeFork]) {
-    return upgradeLightClientBootstrap(config, storeFork, bootstrap);
-  }
-  return bootstrap;
-}
-
+/** Resolves a raw fork version from sync test metadata to its configured fork name. */
 function getForkFromVersion(config: ReturnType<typeof createBeaconConfig>, versionHex: string): ForkName {
   const version = fromHex(versionHex);
   for (const fork of config.forksAscendingEpochOrder) {
