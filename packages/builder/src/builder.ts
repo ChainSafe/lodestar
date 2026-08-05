@@ -32,14 +32,18 @@ export class Builder {
   private readonly controller: AbortController;
   private readonly clock: IClock;
   private readonly index: BuilderIndex;
+  private readonly logger: Logger;
 
   constructor({opts, builderSigner, clock, index}: BuilderModules) {
     this.builderSigner = builderSigner;
     this.clock = clock;
     this.controller = opts.abortController;
+    this.logger = opts.logger;
     this.index = index;
 
     this.clock.start(this.controller.signal);
+
+    this.logger.info("Builder client initialized", {index: this.index});
   }
 
   static async init(opts: BuilderOptions): Promise<Builder> {
