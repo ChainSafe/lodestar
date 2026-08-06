@@ -7,10 +7,12 @@ import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
+import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
   builderSigner: BuilderSigner;
+  builderStatusTracker: BuilderStatusTracker;
   clock: IClock;
   index: BuilderIndex;
 };
@@ -30,14 +32,16 @@ export type BuilderOptions = {
  */
 export class Builder {
   readonly builderSigner: BuilderSigner;
+  private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
   private readonly clock: IClock;
   private readonly index: BuilderIndex;
   private readonly logger: Logger;
   private readonly executionFeeRecipient: ExecutionAddress;
 
-  constructor({opts, builderSigner, clock, index}: BuilderModules) {
+  constructor({opts, builderSigner, builderStatusTracker, clock, index}: BuilderModules) {
     this.builderSigner = builderSigner;
+    this.builderStatusTracker = builderStatusTracker;
     this.clock = clock;
     this.controller = opts.abortController;
     this.logger = opts.logger;
@@ -45,6 +49,7 @@ export class Builder {
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
+    this.clock.runEveryEpoch(() => this.builderStatusTracker.poll());
     this.clock.start(this.controller.signal);
 
     this.logger.info("Builder client initialized", {
@@ -72,7 +77,9 @@ export class Builder {
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 
-    return new Builder({opts, builderSigner, clock, index});
+    const builderStatusTracker = new BuilderStatusTracker(api, logger, index);
+
+    return new Builder({opts, builderSigner, builderStatusTracker, clock, index});
   }
 
   async close(): Promise<void> {
