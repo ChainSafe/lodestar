@@ -21,7 +21,7 @@ describe("BuilderCircuitBreaker", () => {
   }
 
   const testCases: [string, {blocksPresent: number; payloadsRevealed: number}, boolean][] = [
-    ["empty window", {blocksPresent: 0, payloadsRevealed: 0}, false],
+    ["empty window keeps initial state", {blocksPresent: 0, payloadsRevealed: 0}, false],
     ["full window, no faults", {blocksPresent: 32, payloadsRevealed: 32}, false],
     ["full window, faults at budget", {blocksPresent: 32, payloadsRevealed: 24}, false],
     ["full window, faults above budget", {blocksPresent: 32, payloadsRevealed: 23}, true],
@@ -41,6 +41,17 @@ describe("BuilderCircuitBreaker", () => {
     const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 32, payloadsRevealed: 32});
     breaker.isActive(100);
     expect(getPayloadRevealCounts).toHaveBeenCalledWith(100 - faultInspectionWindow, 99);
+  });
+
+  it("keeps previous state while window has no blocks", () => {
+    const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 8, payloadsRevealed: 0});
+    expect(breaker.isActive(100)).toBe(true);
+
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 0, payloadsRevealed: 0});
+    expect(breaker.isActive(101)).toBe(true);
+
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 8, payloadsRevealed: 8});
+    expect(breaker.isActive(102)).toBe(false);
   });
 
   it("only updates once per slot", () => {

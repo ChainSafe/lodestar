@@ -57,8 +57,11 @@ export class BuilderCircuitBreaker {
     const faults = blocksPresent - payloadsRevealed;
 
     const wasActive = this.active;
-    // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
-    this.active = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    // Keep the previous state if the window has no blocks, there is no data to assess builder health
+    if (blocksPresent > 0) {
+      // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
+      this.active = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    }
 
     this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);
     this.modules.metrics?.builderCircuitBreaker.faults.set(faults);
