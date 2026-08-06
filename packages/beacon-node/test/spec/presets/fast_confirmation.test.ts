@@ -721,15 +721,12 @@ const fastConfirmationTest =
           // real, or if full bls_setting=2 support is ever added.
           name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
           name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state") ||
-          // Upstream test-encoding artifact: `on_fast_confirmation` runs are implicit in the
-          // format ("once per slot at slot start"), but the generator deviates in these vectors —
-          // `fcr_no_restart_if_head_gu_is_stale` runs the handler TWICE in one slot (two
-          // consecutive FCR checks steps at the same time, violating the spec's once-per-slot
-          // MUST), and `..._two_consecutive_slots_2` SKIPS the run for an epoch-start slot (tick
-          // without an FCR checks step, so no rotation). A client running the handler once per
-          // slot cannot reproduce the expected FCR-store variables. Unskip once the format
-          // declares the schedule (explicit on_fast_confirmation step) or generation is
-          // constrained to once per slot.
+          // These vectors run `on_fast_confirmation` twice in one slot (stale GU test) or skip an
+          // epoch-boundary run (consecutive slots test), so a client running the handler once per
+          // slot cannot reproduce the expected FCR-store variables. Fixed upstream, unskip when
+          // the next spec-tests release (> v1.7.0-alpha.13) is picked up:
+          // - https://github.com/ethereum/consensus-specs/pull/5499
+          // - https://github.com/ethereum/consensus-specs/pull/5498
           name.includes("fcr_no_restart_if_head_gu_is_stale") ||
           name.includes("is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive_slots_2"),
       },
