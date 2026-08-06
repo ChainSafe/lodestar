@@ -547,7 +547,7 @@ export function getValidatorApi(
     const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
     const parentBlockRoot = fromHex(parentBlockRootHex);
     // An optimistic validator MUST NOT produce a block
-    if (parentBlock.executionStatus === ExecutionStatus.Syncing) {
+    if (isOptimisticBlock(parentBlock)) {
       throw new NodeIsSyncing(
         `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
       );
@@ -878,7 +878,7 @@ export function getValidatorApi(
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);
       // An optimistic validator MUST NOT produce a block
-      if (parentBlock.executionStatus === ExecutionStatus.Syncing) {
+      if (isOptimisticBlock(parentBlock)) {
         throw new NodeIsSyncing(
           `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
         );
