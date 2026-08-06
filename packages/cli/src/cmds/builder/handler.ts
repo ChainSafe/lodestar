@@ -10,6 +10,8 @@ import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs} from "./options.js";
 
+const ZERO_ADDRESS = "0x" + "0".repeat(40);
+
 export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
@@ -29,7 +31,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   const executionFeeRecipient = parseFeeRecipient(args.executionFeeRecipient);
 
-  if (executionFeeRecipient === "0x" + "0".repeat(40)) {
+  if (executionFeeRecipient === ZERO_ADDRESS) {
     throw Error("Cannot put zero address as an executionFeeRecipient");
   }
 
