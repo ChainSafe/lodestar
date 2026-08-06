@@ -339,9 +339,9 @@ export function getValidatorApi(
    * Following activities should be skipped on an Optimistic head (with Syncing status):
    * 1. Attestation if targetRoot is optimistic
    * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
-   * 3. ProduceBlock if the parentRoot (chain's current head is optimistic). However this doesn't
-   *    need to be checked/aborted here as assembleBody would call EL's api for the latest
-   *    executionStatus of the parentRoot. If still not validated, produceBlock will throw error.
+   * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
+   *    explicitly as only local payload production consults the EL, blinded blocks from an
+   *    external builder or bid based blocks (gloas) can be produced without a synced EL.
    * 4. SyncCommitteeSignature (base sync committee message) is aborted in the validator client
    *    (see SyncCommitteeService) when the head root it would sign is optimistic, since it is
    *    produced from the head root without a beacon-node produce endpoint to gate here. Spec:
@@ -546,6 +546,12 @@ export function getValidatorApi(
     const parentBlock = chain.getProposerHead(slot);
     const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
     const parentBlockRoot = fromHex(parentBlockRootHex);
+    // An optimistic validator MUST NOT produce a block
+    if (isOptimisticBlock(parentBlock)) {
+      throw new NodeIsSyncing(
+        `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
+      );
+    }
     notOnOutOfRangeData(parentBlockRoot);
     metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
@@ -871,6 +877,12 @@ export function getValidatorApi(
       const parentBlock = chain.getProposerHead(slot);
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);
+      // An optimistic validator MUST NOT produce a block
+      if (isOptimisticBlock(parentBlock)) {
+        throw new NodeIsSyncing(
+          `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
+        );
+      }
       notOnOutOfRangeData(parentBlockRoot);
       metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
