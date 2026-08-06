@@ -226,6 +226,22 @@ describe("Gloas Fork Choice", () => {
         payloadsRevealed: 0,
       });
     });
+
+    it("does not count the anchor block seeded at initialization", () => {
+      const currentSlot = gloasForkSlot + 1;
+      // Gloas anchor is seeded as PENDING without payload data, as after checkpoint sync or gloas genesis
+      const protoArray = ProtoArray.initialize(
+        createTestBlock(gloasForkSlot, genesisRoot, "0x00", "0x00"),
+        currentSlot
+      );
+
+      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x02", genesisRoot, genesisRoot), currentSlot, null);
+
+      expect(protoArray.getPayloadRevealCounts(gloasForkSlot, currentSlot)).toEqual({
+        blocksPresent: 1,
+        payloadsRevealed: 0,
+      });
+    });
   });
 
   describe("Pre-Gloas (Fulu) behavior", () => {

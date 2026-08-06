@@ -704,6 +704,10 @@ export class ProtoArray {
       if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
         continue;
       }
+      // Skip anchor nodes (no parent), they are seeded without payload data and cannot be assessed
+      if (node.parent === undefined) {
+        continue;
+      }
       blocksPresent++;
       if (this.hasPayload(node.blockRoot)) {
         payloadsRevealed++;
