@@ -3,6 +3,10 @@ import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {getBuilderStatus} from "../identity.js";
 
+/**
+ * Service for tracking builder status.
+ * Provides regular builder status and balance updates for operator diagnostics.
+ */
 export class BuilderStatusTracker {
   private readonly api: ApiClient;
   private readonly logger: Logger;
