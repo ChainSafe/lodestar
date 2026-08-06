@@ -1,6 +1,7 @@
 import {describe, expect, it, vi} from "vitest";
+import {GENESIS_SLOT} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
-import {RootHex} from "@lodestar/types";
+import {RootHex, Slot} from "@lodestar/types";
 import {IForkChoice} from "../../../src/forkChoice/interface.js";
 import {getFinalizedExecutionBlockHash, getSafeExecutionBlockHash} from "../../../src/forkChoice/safeBlocks.js";
 import {ExecutionStatus, HEX_ZERO_HASH, PayloadStatus, ProtoBlock} from "../../../src/protoArray/interface.js";
@@ -9,9 +10,10 @@ function buildBlock(opts: {
   blockRoot: RootHex;
   executionPayloadBlockHash: RootHex | null;
   parentBlockHash: RootHex | null;
+  slot?: Slot;
 }): ProtoBlock {
   const common = {
-    slot: 0,
+    slot: opts.slot ?? 1,
     blockRoot: opts.blockRoot,
     parentRoot: "0x00",
     stateRoot: "0x00",
@@ -104,6 +106,28 @@ describe("safeBlocks - getSafeExecutionBlockHash", () => {
       confirmedRoot: "0xconfirmed",
     });
   });
+
+  it("pre-Gloas genesis anchor: returns ZERO_HASH_HEX, not the state's payload header hash", () => {
+    const confirmed = buildBlock({
+      blockRoot: "0xaa",
+      executionPayloadBlockHash: "0xfromStateHeader",
+      parentBlockHash: null,
+      slot: GENESIS_SLOT,
+    });
+    const fc = mockForkChoice(confirmed, confirmed);
+    expect(getSafeExecutionBlockHash(fc)).toBe(HEX_ZERO_HASH);
+  });
+
+  it("Gloas genesis anchor: returns the bid.parent_block_hash", () => {
+    const confirmed = buildBlock({
+      blockRoot: "0xaa",
+      executionPayloadBlockHash: "0xpayloadA",
+      parentBlockHash: "0xparentEL",
+      slot: GENESIS_SLOT,
+    });
+    const fc = mockForkChoice(confirmed, confirmed);
+    expect(getSafeExecutionBlockHash(fc)).toBe("0xparentEL");
+  });
 });
 
 describe("safeBlocks - getFinalizedExecutionBlockHash", () => {
@@ -140,5 +164,16 @@ describe("safeBlocks - getFinalizedExecutionBlockHash", () => {
     });
     const fc = mockForkChoice(finalized, finalized);
     expect(getFinalizedExecutionBlockHash(fc)).toBe("0xparentEL");
+  });
+
+  it("pre-Gloas genesis anchor: returns ZERO_HASH_HEX, not the state's payload header hash", () => {
+    const finalized = buildBlock({
+      blockRoot: "0xbb",
+      executionPayloadBlockHash: "0xfromStateHeader",
+      parentBlockHash: null,
+      slot: GENESIS_SLOT,
+    });
+    const fc = mockForkChoice(finalized, finalized);
+    expect(getFinalizedExecutionBlockHash(fc)).toBe(HEX_ZERO_HASH);
   });
 });

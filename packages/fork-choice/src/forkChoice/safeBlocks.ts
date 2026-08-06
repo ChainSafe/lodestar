@@ -1,4 +1,4 @@
-import {ZERO_HASH_HEX} from "@lodestar/params";
+import {GENESIS_SLOT, ZERO_HASH_HEX} from "@lodestar/params";
 import {Root, RootHex} from "@lodestar/types";
 import {LogLevel, Logger, fromHex} from "@lodestar/utils";
 import {HEX_ZERO_HASH, ProtoBlock, isGloasBlock} from "../protoArray/interface.js";
@@ -27,7 +27,7 @@ export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
  * payload may not yet be confirmed canonical, so we report the parent EL block which has
  * been (the bid commits to extending it).
  *
- * https://github.com/ethereum/consensus-specs/blob/master/fork_choice/safe-block.md#get_safe_execution_block_hash
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/bellatrix/fast-confirmation.md#new-get_safe_execution_block_hash
  */
 export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.warn>): RootHex {
   const confirmedBlock = forkChoice.getConfirmedBlock();
@@ -45,7 +45,7 @@ export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick
  * Get execution payload hash to report as `finalizedBlockHash` in `engine_forkchoiceUpdated`.
  * Mirrors `getSafeExecutionBlockHash`: post-Gloas returns the bid `parent_block_hash`.
  *
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork-choice.md#modified-notify_forkchoice_updated
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/gloas/fork-choice.md#notify_forkchoice_updated
  */
 export function getFinalizedExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.warn>): RootHex {
   return getExecutionBlockHash(forkChoice.getFinalizedBlock(), logger);
@@ -54,6 +54,13 @@ export function getFinalizedExecutionBlockHash(forkChoice: IForkChoice, logger?:
 function getExecutionBlockHash(block: ProtoBlock, logger?: Pick<Logger, LogLevel.warn>): RootHex {
   if (isGloasBlock(block)) {
     return block.parentBlockHash;
+  }
+
+  // The genesis block body carries a default execution payload, so it is not an execution block
+  // per the spec (`is_execution_block`); its proto-array payload hash comes from the anchor
+  // state header instead of a block body and must not be reported as safe.
+  if (block.slot === GENESIS_SLOT) {
+    return HEX_ZERO_HASH;
   }
 
   if (block.executionPayloadBlockHash === null) {
