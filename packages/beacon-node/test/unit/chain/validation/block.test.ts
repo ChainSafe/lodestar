@@ -3,7 +3,7 @@ import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
+import {BeaconStateView, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
@@ -125,7 +125,12 @@ describe("gossip block validation", () => {
       signedBlock.message.slot = clockSlot;
       signedBlock.message.proposerIndex = proposerIndex;
       const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        blockRoot,
+        signedBlockToSignedHeader(gloasConfig, signedBlock)
+      );
       chain.seenBlockProposers.add(clockSlot, proposerIndex);
 
       const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
@@ -142,6 +147,10 @@ describe("gossip block validation", () => {
       expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
         conflictingBlockRoot,
       ]);
+      const equivocationHeaders = chain.seenBlockProposers.getEquivocationHeaders(clockSlot, proposerIndex);
+      expect(
+        equivocationHeaders?.map((header) => toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.message)))
+      ).toEqual([blockRoot, conflictingBlockRoot]);
     });
 
     it("does not record a conflicting block root when the proposer signature is invalid", async () => {
@@ -150,7 +159,12 @@ describe("gossip block validation", () => {
       signedBlock.message.slot = clockSlot;
       signedBlock.message.proposerIndex = proposerIndex;
       const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        blockRoot,
+        signedBlockToSignedHeader(gloasConfig, signedBlock)
+      );
       chain.seenBlockProposers.add(clockSlot, proposerIndex);
 
       const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
@@ -171,8 +185,18 @@ describe("gossip block validation", () => {
       signedBlock.message.slot = clockSlot;
       signedBlock.message.proposerIndex = proposerIndex;
       const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, blockRoot);
-      chain.seenBlockProposers.observeBlockRoot(clockSlot, proposerIndex, toRootHex(Buffer.alloc(32, 1)));
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        blockRoot,
+        signedBlockToSignedHeader(gloasConfig, signedBlock)
+      );
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        toRootHex(Buffer.alloc(32, 1)),
+        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
+      );
       chain.seenBlockProposers.add(clockSlot, proposerIndex);
 
       const additionalBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);

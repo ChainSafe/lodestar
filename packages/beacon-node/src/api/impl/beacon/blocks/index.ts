@@ -290,7 +290,12 @@ export function getBeaconBlockApi({
         if (blockLocallyProduced) {
           try {
             await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
-            chain.seenBlockProposers.observeBlockRoot(slot, signedBlock.message.proposerIndex, blockRoot);
+            chain.seenBlockProposers.observeBlockRoot(
+              slot,
+              signedBlock.message.proposerIndex,
+              blockRoot,
+              signedBlockToSignedHeader(config, signedBlock)
+            );
           } catch (e) {
             chain.logger.error(
               "Proposer signature validation failed while publishing the block",

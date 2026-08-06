@@ -23,8 +23,9 @@ import {
   getBlockProposerSignatureSet,
   isExecutionBlockBodyType,
   isStatePostBellatrix,
+  signedBlockToSignedHeader,
 } from "@lodestar/state-transition";
-import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock, ssz} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -75,7 +76,10 @@ export async function validateGossipBlock(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = toRootHex(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
+  // A block's hash tree root is identical to its header's, so the root is derived from the header
+  // which is also used as potential equivocation evidence
+  const signedBlockHeader = signedBlockToSignedHeader(config, signedBlock);
+  const blockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
   if (chain.forkChoice.getBlockHexDefaultStatus(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
@@ -89,7 +93,7 @@ export async function validateGossipBlock(
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
     if (!hasBlockRoot && !chain.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
       await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
-      chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
+      chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
     }
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
@@ -276,7 +280,7 @@ export async function validateGossipBlock(
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
-  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
+  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected

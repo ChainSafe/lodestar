@@ -147,6 +147,7 @@ export class Network implements INetwork {
     this.chain.emitter.on(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.on(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.on(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
+    this.chain.emitter.on(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.on(ChainEvent.updateStatus, this.onUpdateStatus);
   }
 
@@ -244,6 +245,7 @@ export class Network implements INetwork {
     this.chain.emitter.off(ChainEvent.updateTargetCustodyGroupCount, this.onTargetGroupCountUpdated);
     this.chain.emitter.off(ChainEvent.publishDataColumns, this.onPublishDataColumns);
     this.chain.emitter.off(ChainEvent.publishBlobSidecars, this.onPublishBlobSidecars);
+    this.chain.emitter.off(ChainEvent.publishProposerSlashing, this.onPublishProposerSlashing);
     this.chain.emitter.off(ChainEvent.updateStatus, this.onUpdateStatus);
     await this.core.close();
 
@@ -455,7 +457,8 @@ export class Network implements INetwork {
 
     return this.publishGossip<GossipType.proposer_slashing>(
       {type: GossipType.proposer_slashing, boundary},
-      proposerSlashing
+      proposerSlashing,
+      {ignoreDuplicatePublishError: true}
     );
   }
 
@@ -875,6 +878,18 @@ export class Network implements INetwork {
 
   private onPublishBlobSidecars = (sidecars: deneb.BlobSidecar[]): Promise<number[]> => {
     return promiseAllMaybeAsync(sidecars.map((sidecar) => () => this.publishBlobSidecar(sidecar)));
+  };
+
+  private onPublishProposerSlashing = async (proposerSlashing: phase0.ProposerSlashing): Promise<void> => {
+    try {
+      await this.publishProposerSlashing(proposerSlashing);
+    } catch (e) {
+      this.logger.error(
+        "Error publishing proposer slashing",
+        {proposerIndex: proposerSlashing.signedHeader1.message.proposerIndex},
+        e as Error
+      );
+    }
   };
 
   private onUpdateStatus = async (): Promise<void> => {
