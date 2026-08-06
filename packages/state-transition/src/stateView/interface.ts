@@ -247,7 +247,7 @@ export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
    * Pre-verify a slice of builder-prefix pending deposits and cache the results on the underlying
    * `BuilderDepositSignatureCache` (Fulu is the fork immediately before Gloas).
    */
-  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult;
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult;
   /** Drop the pre-Gloas builder-deposit signature cache (called once the Gloas fork is finalized). */
   clearPreGloasBuilderDepositCache(): void;
 }

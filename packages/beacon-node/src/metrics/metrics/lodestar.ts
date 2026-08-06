@@ -1709,8 +1709,6 @@ export function createLodestarMetrics(
     },
 
     // Pre-verify builder-deposit signatures in the epochs before the Gloas fork (prepareNextSlot).
-    // These are for tuning MAX_BUILDER_DEPOSITS_PER_SLOT on devnets: watch `duration` vs the spare
-    // slot budget and whether `cached_deposits` drains `pending_deposits` before the fork.
     builderDepositPreVerify: {
       duration: register.histogram({
         name: "lodestar_builder_deposit_preverify_duration_seconds",

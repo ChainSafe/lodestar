@@ -7,9 +7,13 @@ import {createCachedBeaconStateTest} from "../../../src/testUtils/state.js";
 import {generateBuilderPendingDeposits} from "../../../src/testUtils/util.js";
 import {CachedBeaconStateFulu} from "../../../src/types.js";
 import {
+  BUILDER_DEPOSIT_BATCH_SIZE,
   MAX_BUILDER_DEPOSITS_PER_SLOT,
   preVerifyBuilderDepositsPreGloas,
 } from "../../../src/util/preVerifyBuilderDeposits.js";
+
+// Generous wall-clock budget so tests that aren't exercising the time-box verify everything in one call.
+const NO_TIME_LIMIT_MS = 60_000;
 
 const chainConfig = getConfig(ForkName.fulu);
 const beaconConfig = createBeaconConfig(chainConfig, Buffer.alloc(32));
@@ -53,7 +57,7 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
     const cache = state.epochCtx.builderDepositSignatureCache;
     const [dValidBuilder0, dValidator, dValidBuilder1, dInvalidBuilder] = state.pendingDeposits.getAllReadonlyValues();
 
-    const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+    const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
 
     expect(result).toEqual({
       verifiedBuildersCount: 2,
@@ -75,12 +79,12 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
   it("skips already-cached deposits on a second call (no re-verify)", () => {
     const state = buildFuluStateWithPendingDeposits(generateBuilderPendingDeposits(beaconConfig, 3, 3000));
 
-    const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+    const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
     expect(first.verifiedBuildersCount).toBe(3);
     expect(first.totalBuildersVerified).toBe(3);
 
     // second call: all 3 already cached → nothing new verified, cache unchanged
-    const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT);
+    const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
     expect(second.verifiedBuildersCount).toBe(0);
     expect(second.invalidBuildersCount).toBe(0);
     expect(second.scannedPendingDeposits).toBe(3);
@@ -92,17 +96,35 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
     const state = buildFuluStateWithPendingDeposits(generateBuilderPendingDeposits(beaconConfig, 3, 4000));
 
     // cap = 2: queue 2, break before scanning the 3rd
-    const first = preVerifyBuilderDepositsPreGloas(state, 2);
+    const first = preVerifyBuilderDepositsPreGloas(state, 2, NO_TIME_LIMIT_MS);
     expect(first.verifiedBuildersCount).toBe(2);
     expect(first.scannedPendingDeposits).toBe(2);
     expect(first.pendingDepositsCount).toBe(3);
     expect(first.scannedPendingDeposits).toBeLessThan(first.pendingDepositsCount); // cap hit
 
     // next call resumes past the 2 cached, verifies the 3rd, scans to the end
-    const second = preVerifyBuilderDepositsPreGloas(state, 2);
+    const second = preVerifyBuilderDepositsPreGloas(state, 2, NO_TIME_LIMIT_MS);
     expect(second.verifiedBuildersCount).toBe(1);
     expect(second.scannedPendingDeposits).toBe(3);
     expect(second.scannedPendingDeposits).toBe(second.pendingDepositsCount); // scanned to the end
     expect(second.totalBuildersVerified).toBe(3);
+  });
+
+  it("time-boxes verification per batch and resumes on the next call", () => {
+    // maxDurationMs = 0 → after each verified batch, `Date.now() >= Date.now() + 0` is always true,
+    // so exactly one BUILDER_DEPOSIT_BATCH_SIZE batch is verified per call, deterministically.
+    const total = BUILDER_DEPOSIT_BATCH_SIZE + 5;
+    const state = buildFuluStateWithPendingDeposits(generateBuilderPendingDeposits(beaconConfig, total, 5000));
+
+    // first call: one full batch, then time-box out (count cap is generous, so time is the bound)
+    const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, 0);
+    expect(first.verifiedBuildersCount).toBe(BUILDER_DEPOSIT_BATCH_SIZE);
+    expect(first.invalidBuildersCount).toBe(0);
+    expect(first.totalBuildersVerified).toBe(BUILDER_DEPOSIT_BATCH_SIZE); // < total ⇒ timed out
+
+    // second call resumes past the cached batch and finishes the remaining 5
+    const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, 0);
+    expect(second.verifiedBuildersCount).toBe(5);
+    expect(second.totalBuildersVerified).toBe(total);
   });
 });

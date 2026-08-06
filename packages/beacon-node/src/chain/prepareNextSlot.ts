@@ -40,6 +40,11 @@ export const PREPARE_NEXT_SLOT_BPS = 6667;
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
 
+/* Fraction of a slot (out of 10_000) the pre-Gloas builder-deposit pre-verify may spend per tick.
+ * 2000 = 20% of slot (2.4s on mainnet), within the spare window left after PREPARE_NEXT_SLOT_BPS.
+ * Expressed in bps so it scales with slot duration (mainnet vs minimal/devnet). */
+const BUILDER_PREVERIFY_LIMIT_BPS = 2000;
+
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
  * 4s before the start of next slot at PREPARE_NEXT_SLOT_BPS of the current slot.
@@ -120,6 +125,7 @@ export class PrepareNextSlotScheduler {
         ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
         : null;
       const start = Date.now();
+      let feeRecipient: string | undefined;
       // No need to wait for this or the clock drift
       if (isForkPostBellatrix(fork)) {
         let preparedState: IBeaconStateView | undefined;
@@ -143,7 +149,7 @@ export class PrepareNextSlotScheduler {
         };
 
         const proposerIndex = await getProposerIndex();
-        const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
+        feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
@@ -299,25 +305,28 @@ export class PrepareNextSlotScheduler {
       // Pre-verify builder-deposit signatures in the GLOAS_PREVERIFY_WINDOW_EPOCHS epochs leading
       // up to the Gloas fork, off the block-import hot path, so onboardBuildersFromPendingDeposits
       // at the transition is mostly cache hits. Reached only on non-epoch-transition slots (the
-      // epoch-transition branch returned above). The scan runs on prepareState (a spare-time,
-      // proposer-prep state); results are stashed on the shared builderDepositSignatureCache.
-      if (isStatePostFulu(prepareState)) {
+      // epoch-transition branch returned above). Runs on the head state — its pendingDeposits are
+      // what the fork transition derives from, and its epochCtx holds the shared, app-wide
+      // builderDepositSignatureCache.
+      const headState = this.chain.getHeadState();
+      if (isStatePostFulu(headState)) {
         const gloasEpoch = this.config.GLOAS_FORK_EPOCH;
         const finalizedEpoch = this.chain.forkChoice.getFinalizedCheckpoint().epoch;
         if (finalizedEpoch >= gloasEpoch) {
           // Gloas is finalized — the pre-verify cache has served its purpose; release its memory.
-          prepareState.clearPreGloasBuilderDepositCache();
+          headState.clearPreGloasBuilderDepositCache();
         } else {
           const clockEpoch = computeEpochAtSlot(clockSlot);
           if (
-            ForkSeq[fork] < ForkSeq.gloas && // pins prepareState (at prepareSlot) to Fulu, not Gloas
+            ForkSeq[fork] < ForkSeq.gloas && // only before the fork
             clockEpoch >= gloasEpoch - GLOAS_PREVERIFY_WINDOW_EPOCHS && // Infinity when Gloas unscheduled → skip
             clockEpoch < gloasEpoch &&
-            // avoid the risk of missing block proposal when this task may expand to the next epoch on some low resource node
-            this.chain.beaconProposerCache.get(prepareState.getBeaconProposer(prepareSlot)) === undefined
+            // skip when we're the next-slot proposer — don't compete with block-production prep.
+            feeRecipient === undefined
           ) {
+            const maxDurationMs = this.config.getSlotComponentDurationMs(BUILDER_PREVERIFY_LIMIT_BPS);
             const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
-            const result = prepareState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT);
+            const result = headState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT, maxDurationMs);
             preVerifyTimer?.();
 
             const preVerifyMetrics = this.metrics?.builderDepositPreVerify;

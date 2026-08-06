@@ -45,12 +45,15 @@ export type PreVerifyBuilderDepositsResult = {
  * selects builder-prefix deposits (a cheap credential check that filters out the validator-deposit
  * majority first), skips those already cached (by value-object identity), and signature-verifies the
  * rest in BUILDER_DEPOSIT_BATCH_SIZE chunks, stashing each result on `builderDepositSignatureCache`
- * keyed by the value object. Capped at `maxBuilderDeposits` new verifications per call; a later tick
- * resumes past the cached deposits. Caller guarantees the fork-epoch + non-epoch-transition gates.
+ * keyed by the value object.
+ *
+ * Bounded by two knobs: at most `maxBuilderDeposits` new deposits are queued per call, and the chunk
+ * verification is **time-boxed** to `maxDurationMs`.
  */
 export function preVerifyBuilderDepositsPreGloas(
   state: CachedBeaconStateFulu,
-  maxBuilderDeposits: number
+  maxBuilderDeposits: number,
+  maxDurationMs: number
 ): PreVerifyBuilderDepositsResult {
   const cache = state.epochCtx.builderDepositSignatureCache;
 
@@ -85,21 +88,27 @@ export function preVerifyBuilderDepositsPreGloas(
   }
 
   // Verify in chunks; chunking caps the fallback blast radius so one bad signature only forces 32
-  // individual re-verifications. Key each result by the deposit value object.
+  // individual re-verifications. Key each result by the deposit value object. Track invalid count
+  // incrementally (not queue.length - verified) so it stays correct when we time-box out early.
+  const deadline = Date.now() + maxDurationMs;
   let verifiedBuildersCount = 0;
-  for (let start = 0; start < queue.length; start += BUILDER_DEPOSIT_BATCH_SIZE) {
-    const end = Math.min(start + BUILDER_DEPOSIT_BATCH_SIZE, queue.length);
-    const chunk = queue.slice(start, end);
+  let invalidBuildersCount = 0;
+  for (let chunkStart = 0; chunkStart < queue.length; chunkStart += BUILDER_DEPOSIT_BATCH_SIZE) {
+    const end = Math.min(chunkStart + BUILDER_DEPOSIT_BATCH_SIZE, queue.length);
+    const chunk = queue.slice(chunkStart, end);
     const chunkResults = verifyDepositSignatures(state.epochCtx.config, chunk);
     for (let j = 0; j < chunk.length; j++) {
       cache.setSignatureValidity(chunk[j], chunkResults[j]);
       if (chunkResults[j]) verifiedBuildersCount++;
+      else invalidBuildersCount++;
     }
+    // Time-box: keep everything verified so far (already cached) and stop
+    if (Date.now() >= deadline) break;
   }
 
   return {
     verifiedBuildersCount,
-    invalidBuildersCount: queue.length - verifiedBuildersCount,
+    invalidBuildersCount,
     scannedPendingDeposits,
     totalBuildersVerified: cache.size,
     pendingDepositsCount,

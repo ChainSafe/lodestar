@@ -342,8 +342,12 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this._proposerLookahead;
   }
 
-  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult {
-    return preVerifyBuilderDepositsPreGloas(this.cachedState as CachedBeaconStateFulu, maxBuilderDeposits);
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return preVerifyBuilderDepositsPreGloas(
+      this.cachedState as CachedBeaconStateFulu,
+      maxBuilderDeposits,
+      maxDurationMs
+    );
   }
 
   clearPreGloasBuilderDepositCache(): void {

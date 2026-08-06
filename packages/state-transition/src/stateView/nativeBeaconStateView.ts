@@ -846,8 +846,8 @@ export class NativeBeaconStateView implements IBeaconStateViewLatestFork {
     return this._proposerLookahead;
   }
 
-  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number): PreVerifyBuilderDepositsResult {
-    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits);
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult {
+    return this.binding.preVerifyBuilderDepositsPreGloas(maxBuilderDeposits, maxDurationMs);
   }
 
   clearPreGloasBuilderDepositCache(): void {
