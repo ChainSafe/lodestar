@@ -27,7 +27,7 @@ describe("signatureSets", () => {
         eth1Data: {
           depositRoot: crypto.randomBytes(32),
           blockHash: crypto.randomBytes(32),
-          depositCount: 0,
+          depositCount: 0n,
         },
         graffiti: crypto.randomBytes(32),
         proposerSlashings: [

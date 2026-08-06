@@ -8,14 +8,16 @@ import {Epoch, Slot, phase0, ssz} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {BlockInputPreData} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource, IBlockInput} from "../../../../src/chain/blocks/blockInput/types.js";
+import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {ZERO_HASH} from "../../../../src/constants/index.js";
 import type {Metrics} from "../../../../src/metrics/metrics.js";
+import {BatchError, BatchErrorCode} from "../../../../src/sync/range/batch.js";
 import {ChainTarget, SyncChain, SyncChainFns} from "../../../../src/sync/range/chain.js";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType.js";
 import {Clock} from "../../../../src/util/clock.js";
 import {CustodyConfig} from "../../../../src/util/dataColumns.js";
 import {linspace} from "../../../../src/util/numpy.js";
-import {validPeerIdStr} from "../../../utils/peer.js";
+import {getRandPeerIdStr, validPeerIdStr} from "../../../utils/peer.js";
 
 describe("sync / range / chain", () => {
   const testCases: {
@@ -392,6 +394,90 @@ describe("sync / range / chain", () => {
     });
 
     expect(downloads).toBeGreaterThanOrEqual(2);
+  });
+
+  describe("batch teardown peer reporting", () => {
+    async function runToTeardown(
+      syncType: RangeSyncType,
+      processChainSegment: SyncChainFns["processChainSegment"] = async () => {
+        throw Error("always reject to force teardown");
+      }
+    ): Promise<{reportPeerSpy: ReturnType<typeof vi.fn>; err: Error | null}> {
+      const reportPeerSpy = vi.fn();
+      const downloadByRange: SyncChainFns["downloadByRange"] = async (_peer, request) => {
+        const blocks: IBlockInput[] = [];
+        for (let i = request.startSlot; i < request.startSlot + request.count; i += 1) {
+          blocks.push(
+            BlockInputPreData.createFromBlock({
+              block: {message: generateEmptyBlock(i), signature: ACCEPT_BLOCK},
+              blockRootHex: "0x00",
+              forkName: config.getForkName(i),
+              daOutOfRange: false,
+              source: BlockInputSource.byRange,
+              seenTimestampSec: Math.floor(Date.now() / 1000),
+            })
+          );
+        }
+        return {result: {blocks, payloadEnvelopes: null}, warnings: null};
+      };
+
+      const target: ChainTarget = {slot: computeStartSlotAtEpoch(16), root: ZERO_HASH};
+      const clock = new Clock({config, genesisTime: 0, signal: new AbortController().signal});
+      const peers = await Promise.all(Array.from({length: 6}, () => getRandPeerIdStr()));
+
+      let timer: NodeJS.Timeout | undefined;
+      const ended = new Promise<Error | null>((resolve) => {
+        const onEnd: SyncChainFns["onEnd"] = (err) => resolve(err ?? null);
+        const chain = new SyncChain(
+          0,
+          target,
+          syncType,
+          logSyncChainFns(logger, {
+            processChainSegment,
+            downloadByRange,
+            getConnectedPeerSyncMeta,
+            reportPeer: reportPeerSpy,
+            pruneBlockInputs,
+            onEnd,
+          }),
+          {config, logger, clock, custodyConfig, metrics: null},
+          undefined
+        );
+        for (const p of peers) chain.addPeer(p, target);
+        chain.startSyncing(0);
+      });
+
+      const err = await Promise.race([
+        ended,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(Error("SyncChain stalled: onEnd never called")), 5000);
+        }),
+      ]).finally(() => clearTimeout(timer));
+
+      return {reportPeerSpy, err};
+    }
+
+    it("finalized sync reports peers on teardown", async () => {
+      const {reportPeerSpy} = await runToTeardown(RangeSyncType.Finalized);
+      expect(reportPeerSpy).toHaveBeenCalled();
+    });
+
+    it("head sync also reports peers on teardown", async () => {
+      const {reportPeerSpy} = await runToTeardown(RangeSyncType.Head);
+      expect(reportPeerSpy).toHaveBeenCalled();
+    });
+
+    it("first batch failing PARENT_BLOCK_UNKNOWN at startSlot tears down instead of stalling", async () => {
+      const processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+        const signedBlock = blocks[0].getBlock();
+        throw new BlockError(signedBlock, {code: BlockErrorCode.PARENT_BLOCK_UNKNOWN, parentRoot: "0x00"});
+      };
+
+      const {err} = await runToTeardown(RangeSyncType.Finalized, processChainSegment);
+
+      expect(err).toBeInstanceOf(BatchError);
+      expect((err as BatchError).type.code).toBe(BatchErrorCode.MAX_PROCESSING_ATTEMPTS);
+    });
   });
 
   function generateEmptyBlock(slot: Slot): phase0.BeaconBlock {

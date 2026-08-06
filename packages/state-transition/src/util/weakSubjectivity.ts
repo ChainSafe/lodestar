@@ -1,10 +1,12 @@
 import {BeaconConfig, ChainForkConfig} from "@lodestar/config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
+  ForkSeq,
   MAX_DEPOSITS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {Epoch, Root, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
@@ -14,10 +16,14 @@ import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../types.js";
 import {computeCheckpointEpochAtStateSlot, computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";
 import {getCurrentSlot} from "./slot.js";
 import {
+  getActivationChurnLimit,
   getActiveValidatorIndices,
   getBalanceChurnLimit,
   getBalanceChurnLimitFromCache,
   getChurnLimit,
+  getConsolidationChurnLimit,
+  getExitChurnLimit,
+  getGloasChurnLimits,
 } from "./validator.js";
 
 export const ETH_TO_GWEI = 10 ** 9;
@@ -49,18 +55,26 @@ export function computeWeakSubjectivityPeriodCachedState(
   const activeValidatorCount = state.epochCtx.currentShuffling.activeIndices.length;
   const fork = config.getForkName(state.slot);
 
-  return isForkPostElectra(fork)
-    ? computeWeakSubjectivityPeriodFromConstituentsElectra(
+  return isForkPostGloas(fork)
+    ? computeWeakSubjectivityPeriodFromConstituentsGloas(
         state.epochCtx.totalActiveBalanceIncrements,
-        getBalanceChurnLimitFromCache(state.epochCtx),
+        getExitChurnLimit(state.epochCtx),
+        getActivationChurnLimit(state.epochCtx),
+        getConsolidationChurnLimit(ForkSeq.gloas, state.epochCtx),
         config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
       )
-    : computeWeakSubjectivityPeriodFromConstituentsPhase0(
-        activeValidatorCount,
-        state.epochCtx.totalActiveBalanceIncrements,
-        getChurnLimit(config, activeValidatorCount),
-        config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
-      );
+    : isForkPostElectra(fork)
+      ? computeWeakSubjectivityPeriodFromConstituentsElectra(
+          state.epochCtx.totalActiveBalanceIncrements,
+          getBalanceChurnLimitFromCache(state.epochCtx),
+          config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+        )
+      : computeWeakSubjectivityPeriodFromConstituentsPhase0(
+          activeValidatorCount,
+          state.epochCtx.totalActiveBalanceIncrements,
+          getChurnLimit(config, activeValidatorCount),
+          config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+        );
 }
 
 /**
@@ -80,22 +94,32 @@ export function computeWeakSubjectivityPeriod(config: ChainForkConfig, state: Be
     totalActiveBalanceIncrements = 1;
   }
 
-  return isForkPostElectra(fork)
-    ? computeWeakSubjectivityPeriodFromConstituentsElectra(
+  const churnLimitsGloas = getGloasChurnLimits(config, totalActiveBalanceIncrements);
+
+  return isForkPostGloas(fork)
+    ? computeWeakSubjectivityPeriodFromConstituentsGloas(
         totalActiveBalanceIncrements,
-        getBalanceChurnLimit(
-          totalActiveBalanceIncrements,
-          config.CHURN_LIMIT_QUOTIENT,
-          config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
-        ),
+        churnLimitsGloas.exit,
+        churnLimitsGloas.activation,
+        churnLimitsGloas.consolidation,
         config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
       )
-    : computeWeakSubjectivityPeriodFromConstituentsPhase0(
-        activeIndices.length,
-        totalActiveBalanceIncrements,
-        getChurnLimit(config, activeIndices.length),
-        config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
-      );
+    : isForkPostElectra(fork)
+      ? computeWeakSubjectivityPeriodFromConstituentsElectra(
+          totalActiveBalanceIncrements,
+          getBalanceChurnLimit(
+            totalActiveBalanceIncrements,
+            config.CHURN_LIMIT_QUOTIENT,
+            config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
+          ),
+          config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+        )
+      : computeWeakSubjectivityPeriodFromConstituentsPhase0(
+          activeIndices.length,
+          totalActiveBalanceIncrements,
+          getChurnLimit(config, activeIndices.length),
+          config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+        );
 }
 
 export function computeWeakSubjectivityPeriodFromConstituentsPhase0(
@@ -137,6 +161,21 @@ export function computeWeakSubjectivityPeriodFromConstituentsElectra(
   // Keep t as increment for now. Multiply final result by EFFECTIVE_BALANCE_INCREMENT
   const t = totalBalanceByIncrement;
   const delta = balanceChurnLimit;
+  const epochsForValidatorSetChurn = Math.floor(((SAFETY_DECAY * t) / (2 * delta * 100)) * EFFECTIVE_BALANCE_INCREMENT);
+
+  return minWithdrawabilityDelay + epochsForValidatorSetChurn;
+}
+
+export function computeWeakSubjectivityPeriodFromConstituentsGloas(
+  totalBalanceByIncrement: number,
+  exitChurnLimit: number,
+  activationChurnLimit: number,
+  consolidationChurnLimit: number,
+  minWithdrawabilityDelay: number
+): number {
+  // Keep t as increment for now. Multiply final result by EFFECTIVE_BALANCE_INCREMENT
+  const t = totalBalanceByIncrement;
+  const delta = Math.floor((2 * exitChurnLimit) / 3) + Math.floor(activationChurnLimit / 3) + consolidationChurnLimit;
   const epochsForValidatorSetChurn = Math.floor(((SAFETY_DECAY * t) / (2 * delta * 100)) * EFFECTIVE_BALANCE_INCREMENT);
 
   return minWithdrawabilityDelay + epochsForValidatorSetChurn;
