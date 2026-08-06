@@ -586,3 +586,28 @@ export function generateBuilderPendingDeposits(
 
   return deposits;
 }
+
+/**
+ * Generate a validly-signed *validator* (0x00-prefix) pending deposit for interop key `keyIndex`.
+ * Shares its pubkey with `generateBuilderPendingDeposits(config, 1, keyIndex)`, so it stands in for a
+ * validator deposit competing with a builder deposit for the same pubkey (the `hasPendingValidator`
+ * path). `amount` lets callers build otherwise-identical-but-distinct deposit value objects.
+ */
+export function generateValidatorPendingDeposit(
+  config: BeaconConfig,
+  keyIndex: number,
+  amount = 32_000_000_000
+): electra.PendingDeposit {
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const sk = interopSecretKey(keyIndex);
+  const pubkey = sk.toPublicKey().toBytes();
+  const withdrawalCredentials = Buffer.alloc(32, 0); // 0x00 prefix → validator, not a builder
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+  return {
+    pubkey,
+    withdrawalCredentials,
+    amount,
+    signature: sk.sign(signingRoot).toBytes(),
+    slot: GENESIS_SLOT,
+  };
+}

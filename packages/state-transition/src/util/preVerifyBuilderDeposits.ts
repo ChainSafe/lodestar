@@ -50,7 +50,9 @@ export type PreVerifyBuilderDepositsResult = {
  * GLOAS_FORK_EPOCH. Walks `state.pendingDeposits` (as struct values via getAllReadonlyValues) and
  * queues, for signature verification, the deposits the fork transition will check on its hot path:
  *   - builder-prefix deposits (for onboarding); records each builder pubkey on the cache, and
- *   - validator deposits sharing a builder pubkey (the set `hasPendingValidator` walks at the fork).
+ *   - validator deposits sharing a builder pubkey (the set `hasPendingValidator` walks at the fork),
+ *     but only until one is found valid — `hasPendingValidator` stops at the first valid signature, so
+ *     the cache marks the pubkey and the scanner skips that pubkey's remaining validator deposits.
  *
  * Bounded by two knobs: at most `maxBuilderDeposits` new deposits are queued per call, and the chunk
  * verification is **time-boxed** to `maxDurationMs`.
@@ -79,9 +81,14 @@ export function preVerifyBuilderDepositsPreGloas(
       // builder deposit already added its pubkey, so it's safe to skip via the `continue` above.
       cache.addBuilderPubkey(toPubkeyHex(deposit.pubkey));
       queue.push(deposit);
-    } else if (cache.isBuilderPubkey(toPubkeyHex(deposit.pubkey))) {
-      // Validator deposit sharing a builder pubkey — the set hasPendingValidator() walks at the fork.
-      queue.push(deposit);
+    } else {
+      // Validator deposit — pre-verify only if it shares a builder pubkey (the set hasPendingValidator
+      // walks at the fork) AND we haven't already cached a valid validator deposit for that pubkey.
+      // this is the same logic to hasPendingValidator.
+      const pubkeyHex = toPubkeyHex(deposit.pubkey);
+      if (cache.isBuilderPubkey(pubkeyHex) && !cache.hasValidValidatorDeposit(pubkeyHex)) {
+        queue.push(deposit);
+      }
     }
   }
 
@@ -115,8 +122,14 @@ export function preVerifyBuilderDepositsPreGloas(
       cache.setSignatureValidity(chunk[j], chunkResults[j]);
       const isBuilder = isBuilderWithdrawalCredential(chunk[j].withdrawalCredentials);
       if (chunkResults[j]) {
-        if (isBuilder) validBuilderSignaturesCount++;
-        else validValidatorSignaturesCount++;
+        if (isBuilder) {
+          validBuilderSignaturesCount++;
+        } else {
+          validValidatorSignaturesCount++;
+          // A valid validator deposit satisfies hasPendingValidator() for this pubkey; stop
+          // pre-verifying its remaining validator deposits on later ticks.
+          cache.setValidValidatorDeposit(toPubkeyHex(chunk[j].pubkey));
+        }
       } else if (isBuilder) {
         invalidBuilderSignaturesCount++;
       } else {

@@ -11,8 +11,11 @@ import {PubkeyHex, electra} from "@lodestar/types";
  * prepareNextSlot-derived states and carried by reference through the gloas pendingDeposits
  * migration. No merkle-root computation, no slot bucketing.
  *
- * Also tracks the set of builder pubkeys seen so the scanner knows which validator deposits to
- * pre-verify (only those sharing a pubkey with a builder deposit ever reach `hasPendingValidator`).
+ * Also tracks builder pubkeys seen so the scanner knows which validator deposits to pre-verify (only
+ * those sharing a pubkey with a builder deposit ever reach `hasPendingValidator`). The mapped boolean
+ * records whether a *valid* validator deposit for that pubkey has been found: once true, the scanner
+ * stops pre-verifying further validator deposits for it — `hasPendingValidator` short-circuits on the
+ * first valid signature at the fork, so the rest would never be read.
  *
  * Lifecycle owned by `prepareNextSlot`: filled during the pre-fork window, then `clear()`ed once the
  * Gloas fork is finalized. `onboardBuildersFromPendingDeposits()` only reads it. A plain `Map` (not a
@@ -23,8 +26,8 @@ import {PubkeyHex, electra} from "@lodestar/types";
  */
 export class BuilderDepositSignatureCache {
   private validityByDeposit = new Map<electra.PendingDeposit, boolean>();
-  /** Pubkeys of builder deposits seen by the scanner*/
-  private builderPubkeys = new Set<PubkeyHex>();
+  /** builder pubkey → whether a valid validator deposit sharing it has already been pre-verified. */
+  private builderPubkeys = new Map<PubkeyHex, boolean>();
 
   setSignatureValidity(deposit: electra.PendingDeposit, isValid: boolean): void {
     this.validityByDeposit.set(deposit, isValid);
@@ -38,13 +41,27 @@ export class BuilderDepositSignatureCache {
     return this.validityByDeposit.has(deposit);
   }
 
-  /** Record a builder deposit's pubkey so the scanner pre-verifies validator deposits for it. */
+  /** Record a builder deposit's pubkey so the scanner pre-verifies validator deposits for it.
+   *  Idempotent; never downgrades a pubkey already marked as having a valid validator deposit. */
   addBuilderPubkey(pubkeyHex: PubkeyHex): void {
-    this.builderPubkeys.add(pubkeyHex);
+    if (!this.builderPubkeys.has(pubkeyHex)) {
+      this.builderPubkeys.set(pubkeyHex, false);
+    }
   }
 
   isBuilderPubkey(pubkeyHex: PubkeyHex): boolean {
     return this.builderPubkeys.has(pubkeyHex);
+  }
+
+  /** True once a valid validator deposit sharing this builder pubkey has been pre-verified — the
+   *  scanner then skips this pubkey's remaining validator deposits (as `hasPendingValidator` would). */
+  hasValidValidatorDeposit(pubkeyHex: PubkeyHex): boolean {
+    return this.builderPubkeys.get(pubkeyHex) === true;
+  }
+
+  /** Mark that a valid validator deposit sharing this builder pubkey was found. */
+  setValidValidatorDeposit(pubkeyHex: PubkeyHex): void {
+    this.builderPubkeys.set(pubkeyHex, true);
   }
 
   /** Cumulative deposits verified & cached this window (pass + fail). */
