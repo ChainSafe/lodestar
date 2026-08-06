@@ -4,7 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {createChainForkConfig} from "@lodestar/config";
 import {config as mainnetConfig} from "@lodestar/config/default";
-import {ForkName} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {ProducedBlockSource, ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BlockProposingService} from "../../../src/services/block.js";
@@ -39,6 +39,8 @@ describe("BlockDutiesService", () => {
     vi.spyOn(validatorStore, "votingPubkeys");
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
+    vi.spyOn(validatorStore, "signBlockForEquivocation");
+    vi.spyOn(validatorStore, "signExecutionPayloadEnvelope");
     vi.spyOn(validatorStore, "getBuilderSelectionParams");
     vi.spyOn(validatorStore, "getGraffiti");
     vi.spyOn(validatorStore, "getFeeRecipient");
@@ -189,5 +191,142 @@ describe("BlockDutiesService", () => {
     expect(api.beacon.publishBlindedBlockV2.mock.calls[0]).toEqual([
       {signedBlindedBlock: signedBlock, broadcastValidation: routes.beacon.BroadcastValidation.consensus},
     ]);
+  });
+
+  it("Should submit a proposer equivocation only when a builder bid is selected", async () => {
+    const slot = 1;
+    const config = createChainForkConfig({
+      ...mainnetConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const clock = new ClockMock();
+    const dutiesService = new BlockDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
+      broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+      blindedLocal: false,
+      payloadLocal: true,
+      adversarialEquivocateBlockProposal: true,
+    });
+
+    const block = ssz.gloas.BeaconBlock.defaultValue();
+    block.slot = slot;
+    block.body.signedExecutionPayloadBid.message.builderIndex = 42;
+    const equivocationBlock = ssz.gloas.BeaconBlock.clone(block);
+    equivocationBlock.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+    signedBlock.message = block;
+
+    validatorStore.signRandao.mockResolvedValue(block.body.randaoReveal);
+    validatorStore.signBlock.mockResolvedValue(signedBlock);
+    validatorStore.signBlockForEquivocation.mockImplementation(async (_, conflictingBlock) => ({
+      message: conflictingBlock,
+      signature: signedBlock.signature,
+    }));
+    validatorStore.getBuilderSelectionParams.mockReturnValue({
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: BigInt(100),
+    });
+    validatorStore.getGraffiti.mockReturnValue("deathstar");
+    validatorStore.getFeeRecipient.mockReturnValue("0x00");
+    api.validator.produceBlockV4
+      .mockResolvedValueOnce(
+        mockApiResponse({
+          data: block,
+          meta: {
+            version: ForkName.gloas,
+            executionPayloadValue: BigInt(1),
+            consensusBlockValue: BigInt(0),
+            executionPayloadIncluded: false,
+          },
+        })
+      )
+      .mockResolvedValueOnce(
+        mockApiResponse({
+          data: equivocationBlock,
+          meta: {
+            version: ForkName.gloas,
+            executionPayloadValue: BigInt(0),
+            consensusBlockValue: BigInt(0),
+            executionPayloadIncluded: false,
+          },
+        })
+      );
+    api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
+
+    await blockService["createAndPublishBlockGloas"](pubkeys[0], slot);
+    expect(api.validator.produceBlockV4).toHaveBeenCalledTimes(2);
+    expect(api.validator.produceBlockV4).toHaveBeenNthCalledWith(2, {
+      slot,
+      randaoReveal: block.body.randaoReveal,
+      graffiti: "deathstar",
+      feeRecipient: "0x00",
+      includePayload: false,
+      builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+      builderBoostFactor: BigInt(0),
+    });
+    expect(api.beacon.publishBlockV2).toHaveBeenCalledTimes(2);
+    const original = api.beacon.publishBlockV2.mock.calls[0][0].signedBlockContents.signedBlock;
+    const conflicting = api.beacon.publishBlockV2.mock.calls[1][0].signedBlockContents.signedBlock;
+    expect(original.message).toEqual(block);
+    expect(conflicting.message).toEqual(equivocationBlock);
+    expect(conflicting.message.parentRoot).toEqual(block.parentRoot);
+    expect(conflicting.message.stateRoot).toEqual(block.stateRoot);
+    expect(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(conflicting.message)).not.toEqual(
+      config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
+    );
+
+    expect(validatorStore.signBlockForEquivocation).toHaveBeenCalledWith(
+      pubkeys[0],
+      conflicting.message,
+      slot,
+      loggerVc
+    );
+    expect(api.beacon.publishBlockV2.mock.calls[1][0].broadcastValidation).toBe(
+      routes.beacon.BroadcastValidation.gossip
+    );
+
+    api.validator.produceBlockV4.mockReset();
+    api.beacon.publishBlockV2.mockClear();
+    validatorStore.signBlockForEquivocation.mockClear();
+    block.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    signedEnvelope.message = envelope;
+    api.validator.getExecutionPayloadEnvelope.mockResolvedValue(
+      mockApiResponse({data: envelope, meta: {version: ForkName.gloas}})
+    );
+    validatorStore.signExecutionPayloadEnvelope.mockResolvedValue(signedEnvelope);
+    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+    api.validator.produceBlockV4.mockResolvedValue(
+      mockApiResponse({
+        data: block,
+        meta: {
+          version: ForkName.gloas,
+          executionPayloadValue: BigInt(1),
+          consensusBlockValue: BigInt(0),
+          executionPayloadIncluded: false,
+        },
+      })
+    );
+
+    await blockService["createAndPublishBlockGloas"](pubkeys[0], slot);
+    expect(api.validator.produceBlockV4).toHaveBeenCalledOnce();
+    expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlockForEquivocation).not.toHaveBeenCalled();
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
   });
 });

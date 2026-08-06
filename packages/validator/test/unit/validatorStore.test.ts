@@ -1,10 +1,12 @@
 import {toBufferBE} from "@vekexasia/bigint-buffer2";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey, Signature, verify} from "@chainsafe/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {bellatrix} from "@lodestar/types";
+import {BUILDER_INDEX_SELF_BUILD, DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
+import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
@@ -129,6 +131,32 @@ describe("ValidatorStore", () => {
       expect(JSON.stringify(val2)).toEqual(JSON.stringify(valReg));
       expect(validatorStore.signValidatorRegistration).toHaveBeenCalledOnce();
     }
+  });
+
+  it("Should sign a proposer equivocation with the local signer", async () => {
+    const gloasChainConfig = {
+      ...chainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    };
+    const gloasStore = await initValidatorStore(secretKeys, api, gloasChainConfig, valProposerConfig);
+    const config = createBeaconConfig(gloasChainConfig, Buffer.alloc(32, 0xdd));
+    const block = ssz.gloas.BeaconBlock.defaultValue();
+    block.slot = 1;
+    block.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+
+    const signedBlock = await gloasStore.signBlockForEquivocation(pubkeys[0], block, block.slot);
+    const blockRoot = ssz.gloas.BeaconBlock.hashTreeRoot(block);
+    const domain = config.getDomain(block.slot, DOMAIN_BEACON_PROPOSER);
+    const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blockRoot, domain});
+
+    expect(signedBlock.message).toEqual(block);
+    expect(verify(signingRoot, secretKeys[0].toPublicKey(), Signature.fromBytes(signedBlock.signature))).toBe(true);
   });
 });
 

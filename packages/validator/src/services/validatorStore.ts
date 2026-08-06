@@ -504,6 +504,38 @@ export class ValidatorStore {
     } as SignedBeaconBlock | SignedBlindedBeaconBlock;
   }
 
+  /** ADVERSARIAL (devnet test only): sign a conflicting block without inserting it into slashing protection. */
+  async signBlockForEquivocation(
+    pubkey: BLSPubkey,
+    block: BeaconBlock,
+    currentSlot: Slot,
+    logger?: LoggerVc
+  ): Promise<SignedBeaconBlock> {
+    if (block.slot > currentSlot) {
+      throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
+    }
+
+    this.assertDoppelgangerSafe(pubkey);
+
+    const pubkeyHex = toPubkeyHex(pubkey);
+    const signer = this.validators.get(pubkeyHex)?.signer;
+    if (signer?.type !== SignerType.Local) {
+      throw Error("ADVERSARIAL: Proposer equivocation requires a local signer");
+    }
+
+    const domain = this.config.getDomain(block.slot, DOMAIN_BEACON_PROPOSER);
+    const blockRoot = blindedOrFullBlockHashTreeRoot(this.config, block);
+    const signingRoot = ssz.phase0.SigningData.hashTreeRoot({objectRoot: blockRoot, domain});
+
+    logger?.warn("ADVERSARIAL: Signing conflicting block proposal without slashing protection", {
+      slot: block.slot,
+      blockRoot: toRootHex(blockRoot),
+      signingRoot: toRootHex(signingRoot),
+    });
+
+    return {message: block, signature: signer.secretKey.sign(signingRoot).toBytes()};
+  }
+
   async signExecutionPayloadEnvelope(
     pubkey: BLSPubkey,
     envelope: gloas.ExecutionPayloadEnvelope,

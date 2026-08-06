@@ -54,6 +54,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     broadcastValidation?: string;
     blindedLocal?: boolean;
     payloadLocal?: boolean;
+    "adversarial.equivocate.blockProposal"?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -298,6 +299,15 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "Request keeping the execution payload (envelope and blobs) local to the beacon node during post-Gloas block production. Reduces bandwidth but the envelope must be published via the same beacon node that produced the block",
     defaultDescription: "true if a single beacon node is configured, otherwise false",
+  },
+
+  "adversarial.equivocate.blockProposal": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "ADVERSARIAL (devnet test only): when a Gloas proposer selects an external builder bid, publish a valid self-built sibling block while bypassing slashing protection",
+    default: false,
+    group: "adversarial",
   },
 
   importKeystores: {

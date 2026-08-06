@@ -8,6 +8,7 @@ import {
   BlindedBeaconBlock,
   BlockContents,
   ProducedBlockSource,
+  SignedBeaconBlock,
   SignedBlindedBeaconBlock,
   SignedBlockContents,
   Slot,
@@ -40,6 +41,7 @@ type BlockProposalOpts = {
   broadcastValidation: routes.beacon.BroadcastValidation;
   blindedLocal: boolean;
   payloadLocal: boolean;
+  adversarialEquivocateBlockProposal?: boolean;
 };
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -230,12 +232,75 @@ export class BlockProposingService {
     });
     this.metrics?.blocksProduced.inc();
 
-    // Step 2: Sign and publish the beacon block
+    const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
+
+    // Step 2: Sign the beacon block
     const signedBlock = await this.validatorStore.signBlock(pubkey, block, slot, this.logger);
 
-    // Publish the block first so it propagates as soon as possible. This reduces the chance other nodes
-    // see the payload envelope before the block over gossip and have to queue it. There's also plenty of
-    // time left in the slot to propagate the payload, so publishing it in parallel is unnecessary.
+    let signedEquivocation: SignedBeaconBlock | null = null;
+    let equivocationBlockRootHex: string | null = null;
+    if (this.opts.adversarialEquivocateBlockProposal && !isSelfBuild) {
+      try {
+        // ADVERSARIAL (devnet test only): produce a valid self-built sibling before publishing the
+        // builder block, ensuring both blocks are built on the same parent.
+        const equivocationRes = await this.api.validator.produceBlockV4({
+          slot,
+          randaoReveal,
+          graffiti,
+          feeRecipient,
+          includePayload: false,
+          builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+          builderBoostFactor: BigInt(0),
+        });
+        const equivocationBlockOrContents = equivocationRes.value();
+        const equivocationMeta = equivocationRes.meta();
+        const equivocationBlock = equivocationMeta.executionPayloadIncluded
+          ? (equivocationBlockOrContents as BlockContents<ForkPostGloas>).block
+          : (equivocationBlockOrContents as BeaconBlock<ForkPostGloas>);
+        const equivocationBuilderIndex = equivocationBlock.body.signedExecutionPayloadBid.message.builderIndex;
+        const equivocationParentRootHex = toRootHex(equivocationBlock.parentRoot);
+        const expectedParentRootHex = toRootHex(block.parentRoot);
+
+        if (
+          equivocationBlock.slot !== block.slot ||
+          equivocationBlock.proposerIndex !== block.proposerIndex ||
+          equivocationParentRootHex !== expectedParentRootHex ||
+          equivocationBuilderIndex !== BUILDER_INDEX_SELF_BUILD
+        ) {
+          this.logger.warn("ADVERSARIAL: Skipping invalid self-build proposer equivocation", {
+            ...logCtx,
+            equivocationSlot: equivocationBlock.slot,
+            equivocationProposerIndex: equivocationBlock.proposerIndex,
+            equivocationParentRoot: equivocationParentRootHex,
+            expectedParentRoot: expectedParentRootHex,
+            equivocationBuilderIndex,
+          });
+        } else {
+          equivocationBlockRootHex = toRootHex(
+            this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(equivocationBlock)
+          );
+
+          if (equivocationBlockRootHex === blockRootHex) {
+            this.logger.warn("ADVERSARIAL: Skipping proposer equivocation with identical block root", {
+              ...logCtx,
+              blockRoot: blockRootHex,
+            });
+          } else {
+            signedEquivocation = await this.validatorStore.signBlockForEquivocation(
+              pubkey,
+              equivocationBlock,
+              slot,
+              this.logger
+            );
+          }
+        }
+      } catch (e) {
+        this.logger.warn("ADVERSARIAL: Failed to prepare self-build proposer equivocation", logCtx, e as Error);
+      }
+    }
+
+    // Publish the primary block first so peers observe it before the equivocation. This also reduces the chance
+    // other nodes see its payload envelope before the block over gossip and have to queue it.
     (
       await this.api.beacon
         .publishBlockV2({
@@ -260,7 +325,20 @@ export class BlockProposingService {
     this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
     this.metrics?.blocksPublished.inc();
 
-    const isSelfBuild = block.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD;
+    if (signedEquivocation !== null && equivocationBlockRootHex !== null) {
+      (
+        await this.api.beacon.publishBlockV2({
+          signedBlockContents: {signedBlock: signedEquivocation},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).assertOk();
+
+      this.logger.warn("ADVERSARIAL: Published proposer equivocation", {
+        ...logCtx,
+        blockRoot: blockRootHex,
+        conflictingBlockRoot: equivocationBlockRootHex,
+      });
+    }
 
     if (isSelfBuild) {
       // Self-build: proposer is responsible for building and publishing the execution payload envelope

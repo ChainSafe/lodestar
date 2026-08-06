@@ -180,6 +180,7 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       broadcastValidation: parseBroadcastValidation(args.broadcastValidation),
       blindedLocal: args.blindedLocal,
       payloadLocal: args.payloadLocal,
+      adversarialEquivocateBlockProposal: args["adversarial.equivocate.blockProposal"],
       externalSigner: {
         urls: args["externalSigner.urls"],
         fetch: args["externalSigner.fetch"],

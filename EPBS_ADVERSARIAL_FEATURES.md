@@ -1,6 +1,6 @@
 # ePBS (gloas) Adversarial Node: Potential Features
 
-Status: catalog. Four features shipped so far (Tier 1 #4, #4b, #4c, and #4d,
+Status: catalog. Five features shipped so far (Tier 1 #4, #4b, #4c, #4d, and Tier 2 #6,
 see Conventions); the rest are planned.
 
 Purpose: a list of adversarial behaviors we could build into a test-only "deathstar"
@@ -17,11 +17,12 @@ Every adversarial behavior MUST be:
 1. Individually toggleable via a CLI flag, and DEFAULT OFF so focused tests can
    enable only the behavior under test with
    `--adversarial.<topic>.<behavior>=true`. Flags are
-   grouped by attack topic under a dedicated `adversarial.*` namespace, defined in
-   `packages/cli/src/options/beaconNodeOptions/adversarial.ts` and consumed into the
-   chain options bag by `chain.parseArgs` (the same cross-group pattern the
-   `builder.*` circuit-breaker flags use). Mark the option `hidden: true`, and
-   prefix the description with "ADVERSARIAL (devnet test only)".
+   grouped by attack topic under a dedicated `adversarial.*` namespace. Beacon-node
+   flags are defined in `packages/cli/src/options/beaconNodeOptions/adversarial.ts`
+   and consumed into the chain options bag by `chain.parseArgs`; validator-duty
+   flags are defined in `packages/cli/src/cmds/validator/options.ts` and consumed
+   into `ValidatorOptions`. Mark the option `hidden: true`, and prefix the
+   description with "ADVERSARIAL (devnet test only)".
 2. Parameterized via CLI thresholds wherever the behavior has a tunable knob
    (probability, delay or timing offset, value cutoff, count, target subset),
    each with a sensible default. Never hardcode the knob.
@@ -31,13 +32,14 @@ Naming: `adversarial.<topic>.<behavior>`, one sub-namespace per attack topic
 `IChainOptions` field is the flattened topic-prefixed camelCase name, e.g.
 `adversarial.reorg.buildOnEmpty` -> `adversarialReorgBuildOnEmpty`.
 
-Default-OFF wiring: set the default `false` in
-`defaultChainOptions` (`packages/beacon-node/src/chain/options.ts`); in
-`chain.parseArgs` map plain `args["adversarial.<topic>.<behavior>"]` so an unset
-flag is stripped by `removeUndefinedRecursive` and the default survives the merge,
-while `=true` enables it. Keep the lib consumer a plain truthy check
-(`if (this.opts?.<field>)`) so shared-lib unit tests built with no opts stay OFF
-and do not break.
+Default-OFF wiring: beacon-node features set the default `false` in
+`defaultChainOptions` (`packages/beacon-node/src/chain/options.ts`); validator
+features set it in their CLI option and when constructing `Validator`. In
+`chain.parseArgs`, map plain `args["adversarial.<topic>.<behavior>"]` so an unset
+beacon-node flag is stripped by `removeUndefinedRecursive` and the default
+survives the merge, while `=true` enables it. Keep the lib consumer a plain
+truthy check (`if (this.opts?.<field>)`) so shared-lib unit tests built with no
+opts stay OFF and do not break.
 
 First feature shipped this way: `--adversarial.reorg.buildOnEmpty` (Tier 1 #4,
 always build on the EMPTY parent variant; default false). It is binary, so it has
@@ -48,7 +50,9 @@ slot's block until `--adversarial.reorg.lastSlotProposalDelayBps`, default 4000
 basis points into the slot). Fourth:
 `--adversarial.reorg.buildOnParentInLastSlot` (Tier 1 #4d, make the final-slot
 proposer build on the current head's parent even when the head is strong; default
-false).
+false). Fifth: `--adversarial.equivocate.blockProposal` (Tier 2 #6, publish a
+valid self-built sibling when the proposer selects an external builder bid;
+default false).
 
 ## How ePBS changes the threat model
 
@@ -83,8 +87,9 @@ are genuinely new attack surfaces:
 - `DATA_AVAILABILITY_TIMELY_THRESHOLD = floor(PTC_SIZE / 2)`: same for blob DA.
 - `PAYLOAD_ATTESTATION_DUE_BPS`: when in the slot PTC members attest.
 - `MAXIMUM_GOSSIP_CLOCK_DISPARITY`: timing tolerance to straddle.
-- `BUILDER_INDEX_SELF_BUILD = 0`: proposer self-build sentinel.
-- `BUILDER_INDEX_FLAG = 2^32`: withdrawal index flag for builders.
+- `BUILDER_INDEX_SELF_BUILD = UINT64_MAX`: proposer self-build sentinel,
+  represented as `Infinity` by Lodestar's uint64 number type.
+- `BUILDER_INDEX_FLAG = 2^40`: withdrawal index flag for builders.
 
 ---
 
@@ -212,11 +217,17 @@ beacon-block root and flood them to disjoint peer subsets.
 
 ### 6. Proposer equivocation (ePBS-flavored)
 
-Produce two beacon blocks for slot N committing to different bids or parents,
-gossip to disjoint peer subsets.
+Produce two valid beacon blocks for slot N committing to different bids or
+parents. The implemented variant activates when the primary block selects an
+external builder bid, then forces production of a self-built sibling on the same
+parent and publishes both over gossip. Per-peer subset targeting remains a future
+extension for split-view tests.
 
 - Effect: tests block dedup, proposer slashing, and how the bid-to-envelope
   binding copes with two competing blocks for one slot.
+- Injection point: produce the self-built sibling through `produceBlockV4` with
+  `BuilderSelection.ExecutionOnly`, then bypass validator slashing protection for
+  its proposer signature in `packages/validator/src/services/block.ts`.
 
 ### 7. PTC vote splitting / withholding
 
