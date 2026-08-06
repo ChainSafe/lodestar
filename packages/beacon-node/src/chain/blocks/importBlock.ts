@@ -479,7 +479,7 @@ export async function importBlock(
     }
   }
 
-  if (blockSlot % SLOTS_PER_EPOCH === 0) {
+  if (blockSlot % SLOTS_PER_EPOCH === 0 && fork < ForkSeq.heze) {
     // Cache state to preserve epoch transition work
     const checkpointState = postState;
     const cp = getCheckpointFromState(checkpointState);

@@ -1,4 +1,4 @@
-import {ForkName, GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
+import {ForkSeq, GENESIS_EPOCH, GENESIS_SLOT} from "@lodestar/params";
 import {Epoch, Root, Slot, phase0} from "@lodestar/types";
 import {IBeaconStateView} from "../stateView/interface.js";
 import {computeStartSlotAtEpoch} from "./epoch.js";
@@ -18,7 +18,7 @@ export class RootCache {
   constructor(private readonly state: IBeaconStateView) {
     this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
     this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
-    this.checkpointBoundaryForkEpoch = state.forkName === ForkName.gloas ? state.fork.epoch : Infinity;
+    this.checkpointBoundaryForkEpoch = ForkSeq[state.forkName] >= ForkSeq.heze ? state.fork.epoch : Infinity;
   }
 
   getBlockRoot(epoch: Epoch): Root {

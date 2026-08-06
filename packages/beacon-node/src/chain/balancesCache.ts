@@ -26,7 +26,7 @@ export class CheckpointBalancesCache {
    * If there is not already some entry for the given block root, then add the effective balances
    * from the `state` to the cache.
    *
-   * Post EIP-8333 the checkpoint block is the last block of the previous epoch, so all branches
+   * Starting at EIP-8333 the checkpoint block is the last block of the previous epoch, so all branches
    * sharing that block resolve to a single entry instead of one entry per first-slot block.
    */
   processState(blockRootHex: RootHex, state: IBeaconStateView): void {

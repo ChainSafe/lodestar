@@ -9,8 +9,8 @@ import {fromHex, toRootHex} from "@lodestar/utils";
 import {CheckpointBalancesCache} from "../../../src/chain/balancesCache.js";
 
 describe("CheckpointBalancesCache", () => {
-  const gloasForkEpoch = 4;
-  const config = getConfig(ForkName.gloas, gloasForkEpoch);
+  const hezeForkEpoch = 4;
+  const config = getConfig(ForkName.heze, hezeForkEpoch);
 
   const boundaryRoot = fromHex(`0x${"aa".repeat(32)}`);
   const branchARoot = fromHex(`0x${"bb".repeat(32)}`);
@@ -38,7 +38,7 @@ describe("CheckpointBalancesCache", () => {
   }
 
   it("keys post-activation entries by the previous epoch boundary block", () => {
-    const epoch = gloasForkEpoch + 1;
+    const epoch = hezeForkEpoch + 1;
     const cache = new CheckpointBalancesCache(config);
 
     cache.processState(toRootHex(branchARoot), stateAtEpoch(epoch, branchARoot, 4));
@@ -49,7 +49,7 @@ describe("CheckpointBalancesCache", () => {
   });
 
   it("dedupes branches sharing the same previous epoch boundary block", () => {
-    const epoch = gloasForkEpoch + 1;
+    const epoch = hezeForkEpoch + 1;
     const cache = new CheckpointBalancesCache(config);
 
     // both branches descend from `boundaryRoot` but have a different block at the first slot
@@ -62,7 +62,7 @@ describe("CheckpointBalancesCache", () => {
   });
 
   it("keys pre-activation entries by the first block of the epoch", () => {
-    const epoch = gloasForkEpoch - 1;
+    const epoch = hezeForkEpoch - 1;
     const cache = new CheckpointBalancesCache(config);
 
     cache.processState(toRootHex(branchARoot), stateAtEpoch(epoch, branchARoot, 4));

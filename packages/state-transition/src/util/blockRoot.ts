@@ -38,7 +38,7 @@ export function computeCheckpointSlotAtEpoch(config: Pick<ChainForkConfig, "getF
     return GENESIS_SLOT;
   }
 
-  return config.getForkSeqAtEpoch(epoch) >= ForkSeq.gloas
+  return config.getForkSeqAtEpoch(epoch) >= ForkSeq.heze
     ? computeStartSlotAtEpoch(epoch) - 1
     : computeStartSlotAtEpoch(epoch);
 }

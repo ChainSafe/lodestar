@@ -6,10 +6,7 @@ import {
   NUMBER_OF_COLUMNS,
   isForkPostFulu,
 } from "@lodestar/params";
-import {
-  computeEpochAtSlot,
-  getBlockHeaderProposerSignatureSetByHeaderSlot,
-} from "@lodestar/state-transition";
+import {computeEpochAtSlot, getBlockHeaderProposerSignatureSetByHeaderSlot} from "@lodestar/state-transition";
 import {DataColumnSidecar, Root, Slot, SubnetID, ValidatorIndex, fulu, gloas, ssz} from "@lodestar/types";
 import {byteArrayEquals, toRootHex, verifyMerkleBranch} from "@lodestar/utils";
 import {BeaconMetrics} from "../../metrics/metrics/beacon.js";
