@@ -1,10 +1,12 @@
 import {electra} from "@lodestar/types";
+import {toPubkeyHex} from "@lodestar/utils";
 import {verifyDepositSignatures} from "../block/processDeposit.js";
 import {CachedBeaconStateFulu} from "../types.js";
 import {isBuilderWithdrawalCredential} from "./gloas.js";
 
-/** Verify queued builder deposit signatures in batches of this size. */
-const BUILDER_DEPOSIT_BATCH_SIZE = 32;
+/** Verify queued deposit signatures in batches of this size. Also the time-box granularity: the
+ *  deadline is checked once per batch, so overrun is bounded to a single batch. Exported for tests. */
+export const BUILDER_DEPOSIT_BATCH_SIZE = 32;
 
 /**
  * Per-tick cap on builder deposits the prepareForNextSlot scanner will verify.
@@ -21,31 +23,34 @@ export const MAX_BUILDER_DEPOSITS_PER_SLOT = 10_000;
  */
 export const GLOAS_PREVERIFY_WINDOW_EPOCHS = 2;
 
-/** Summary of a single `preVerifyBuilderDepositsPreGloas` call. */
+/**
+ * Summary of a single `preVerifyBuilderDepositsPreGloas` call.
+ */
 export type PreVerifyBuilderDepositsResult = {
-  /** Builder deposits whose signatures passed verification in THIS call (cached true). */
-  verifiedBuildersCount: number;
-  /**
-   * Builder deposits whose signatures failed in THIS call (cached false; the fork-transition path
-   * drops them). Non-zero is worth surfacing — legitimate deposits should not have invalid
-   * signatures, so a spike likely indicates abuse.
-   */
-  invalidBuildersCount: number;
+  /** Builder-prefix deposit signatures verified valid in this call (cached true). */
+  validBuilderSignaturesCount: number;
+  /** Builder-prefix deposit signatures verified invalid in this call (cached false, dropped at fork). */
+  invalidBuilderSignaturesCount: number;
+  /** Validator (builder-pubkey) deposit signatures verified valid in this call. */
+  validValidatorSignaturesCount: number;
+  /** Validator (builder-pubkey) deposit signatures verified invalid in this call (abuse signal). */
+  invalidValidatorSignaturesCount: number;
   /** Pending deposits examined this call (all creds; < pendingDepositsCount ⇒ per-tick cap hit). */
   scannedPendingDeposits: number;
-  /** Cumulative builder deposits verified & cached so far this window (cache size, pass + fail). */
-  totalBuildersVerified: number;
+  /** Cumulative deposits verified & cached so far this window (cache size, pass + fail). */
+  totalCachedDeposits: number;
+  /** Distinct builder pubkeys tracked so far this window. */
+  totalBuilderPubkeys: number;
   /** Current `state.pendingDeposits.length` — the full backlog. */
   pendingDepositsCount: number;
 };
 
 /**
  * Scanner driven by `prepareForNextSlot` over the `GLOAS_PREVERIFY_WINDOW_EPOCHS` epochs before
- * GLOAS_FORK_EPOCH. Walks `state.pendingDeposits` (as struct values via getAllReadonlyValues),
- * selects builder-prefix deposits (a cheap credential check that filters out the validator-deposit
- * majority first), skips those already cached (by value-object identity), and signature-verifies the
- * rest in BUILDER_DEPOSIT_BATCH_SIZE chunks, stashing each result on `builderDepositSignatureCache`
- * keyed by the value object.
+ * GLOAS_FORK_EPOCH. Walks `state.pendingDeposits` (as struct values via getAllReadonlyValues) and
+ * queues, for signature verification, the deposits the fork transition will check on its hot path:
+ *   - builder-prefix deposits (for onboarding); records each builder pubkey on the cache, and
+ *   - validator deposits sharing a builder pubkey (the set `hasPendingValidator` walks at the fork).
  *
  * Bounded by two knobs: at most `maxBuilderDeposits` new deposits are queued per call, and the chunk
  * verification is **time-boxed** to `maxDurationMs`.
@@ -57,60 +62,79 @@ export function preVerifyBuilderDepositsPreGloas(
 ): PreVerifyBuilderDepositsResult {
   const cache = state.epochCtx.builderDepositSignatureCache;
 
-  // Collect uncached builder-prefix deposits as struct values. Full rescan each tick: iteration is
-  // O(pendingDeposits) but runs in prepareNextSlot spare time; the credential check short-circuits
-  // the validator-deposit majority and isVerified() is an O(1) skip for already-cached builders, so
-  // a "nothing new" rescan is cheap. For a ContainerNodeStructType, getAllReadonlyValues() returns
-  // each node.value by reference — the stable cache key.
+  // Collect uncached deposits to verify as struct values. Full rescan each tick: iteration is
+  // O(pendingDeposits) but runs in prepareNextSlot spare time, and isVerified() is an O(1) skip for
+  // already-cached deposits. For a ContainerNodeStructType, getAllReadonlyValues() returns each
+  // node.value by reference — the stable cache key.
   const queue: electra.PendingDeposit[] = [];
   let scannedPendingDeposits = 0;
   for (const deposit of state.pendingDeposits.getAllReadonlyValues()) {
     if (queue.length >= maxBuilderDeposits) break; // per-tick cap; next tick resumes via isVerified()
     scannedPendingDeposits++;
-    // Cheap credential prefix check first: most pending deposits are validator (non-builder)
-    // deposits, so this short-circuits the majority before any cache lookup. Only builder deposits
-    // are ever cached, so isVerified() is only meaningful past this filter.
-    if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) continue;
-    if (cache.isVerified(deposit)) continue; // verified in an earlier tick
+    if (cache.isVerified(deposit)) continue; // already verified in an earlier tick
 
-    queue.push(deposit);
+    if (isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
+      // Record the builder pubkey so validator deposits sharing it get pre-verified — this or a
+      // later tick, since those validator deposits precede the builder deposit in the queue. A cached
+      // builder deposit already added its pubkey, so it's safe to skip via the `continue` above.
+      cache.addBuilderPubkey(toPubkeyHex(deposit.pubkey));
+      queue.push(deposit);
+    } else if (cache.isBuilderPubkey(toPubkeyHex(deposit.pubkey))) {
+      // Validator deposit sharing a builder pubkey — the set hasPendingValidator() walks at the fork.
+      queue.push(deposit);
+    }
   }
 
   const pendingDepositsCount = state.pendingDeposits.length;
   if (queue.length === 0) {
     return {
-      verifiedBuildersCount: 0,
-      invalidBuildersCount: 0,
+      validBuilderSignaturesCount: 0,
+      invalidBuilderSignaturesCount: 0,
+      validValidatorSignaturesCount: 0,
+      invalidValidatorSignaturesCount: 0,
       scannedPendingDeposits,
-      totalBuildersVerified: cache.size,
+      totalCachedDeposits: cache.cachedDepositCount,
+      totalBuilderPubkeys: cache.builderPubkeyCount,
       pendingDepositsCount,
     };
   }
 
   // Verify in chunks; chunking caps the fallback blast radius so one bad signature only forces 32
-  // individual re-verifications. Key each result by the deposit value object. Track invalid count
-  // incrementally (not queue.length - verified) so it stays correct when we time-box out early.
+  // individual re-verifications. Key each result by the deposit value object. Counts are tracked
+  // incrementally (not queue.length - verified) so they stay correct when we time-box out early.
   const deadline = Date.now() + maxDurationMs;
-  let verifiedBuildersCount = 0;
-  let invalidBuildersCount = 0;
+  let validBuilderSignaturesCount = 0;
+  let invalidBuilderSignaturesCount = 0;
+  let validValidatorSignaturesCount = 0;
+  let invalidValidatorSignaturesCount = 0;
   for (let chunkStart = 0; chunkStart < queue.length; chunkStart += BUILDER_DEPOSIT_BATCH_SIZE) {
     const end = Math.min(chunkStart + BUILDER_DEPOSIT_BATCH_SIZE, queue.length);
     const chunk = queue.slice(chunkStart, end);
     const chunkResults = verifyDepositSignatures(state.epochCtx.config, chunk);
     for (let j = 0; j < chunk.length; j++) {
       cache.setSignatureValidity(chunk[j], chunkResults[j]);
-      if (chunkResults[j]) verifiedBuildersCount++;
-      else invalidBuildersCount++;
+      const isBuilder = isBuilderWithdrawalCredential(chunk[j].withdrawalCredentials);
+      if (chunkResults[j]) {
+        if (isBuilder) validBuilderSignaturesCount++;
+        else validValidatorSignaturesCount++;
+      } else if (isBuilder) {
+        invalidBuilderSignaturesCount++;
+      } else {
+        invalidValidatorSignaturesCount++;
+      }
     }
     // Time-box: keep everything verified so far (already cached) and stop
     if (Date.now() >= deadline) break;
   }
 
   return {
-    verifiedBuildersCount,
-    invalidBuildersCount,
+    validBuilderSignaturesCount,
+    invalidBuilderSignaturesCount,
+    validValidatorSignaturesCount,
+    invalidValidatorSignaturesCount,
     scannedPendingDeposits,
-    totalBuildersVerified: cache.size,
+    totalCachedDeposits: cache.cachedDepositCount,
+    totalBuilderPubkeys: cache.builderPubkeyCount,
     pendingDepositsCount,
   };
 }

@@ -1,14 +1,18 @@
-import {electra} from "@lodestar/types";
+import {PubkeyHex, electra} from "@lodestar/types";
 
 /**
- * Caches builder-deposit signature-verification results — passes (`true`) and failures (`false`)
- * — so the Fulu → Gloas fork transition can skip the bulk verification cost AND skip re-verifying
- * deposits already proven invalid.
+ * Caches deposit signature-verification results — passes (`true`) and failures (`false`) — so the
+ * Fulu → Gloas fork transition can skip the bulk verification cost AND skip re-verifying deposits
+ * already proven invalid. Covers both builder-prefix deposits (onboarding) and validator deposits
+ * that share a pubkey with a builder deposit (the ones `hasPendingValidator` checks at the fork).
  *
  * Keyed by the deposit's struct **value object** — `electra.PendingDeposit` is a
  * `ContainerNodeStructType`, so its `node.value` is a stable object reused across
  * prepareNextSlot-derived states and carried by reference through the gloas pendingDeposits
  * migration. No merkle-root computation, no slot bucketing.
+ *
+ * Also tracks the set of builder pubkeys seen so the scanner knows which validator deposits to
+ * pre-verify (only those sharing a pubkey with a builder deposit ever reach `hasPendingValidator`).
  *
  * Lifecycle owned by `prepareNextSlot`: filled during the pre-fork window, then `clear()`ed once the
  * Gloas fork is finalized. `onboardBuildersFromPendingDeposits()` only reads it. A plain `Map` (not a
@@ -19,6 +23,8 @@ import {electra} from "@lodestar/types";
  */
 export class BuilderDepositSignatureCache {
   private validityByDeposit = new Map<electra.PendingDeposit, boolean>();
+  /** Pubkeys of builder deposits seen by the scanner*/
+  private builderPubkeys = new Set<PubkeyHex>();
 
   setSignatureValidity(deposit: electra.PendingDeposit, isValid: boolean): void {
     this.validityByDeposit.set(deposit, isValid);
@@ -32,12 +38,27 @@ export class BuilderDepositSignatureCache {
     return this.validityByDeposit.has(deposit);
   }
 
-  /** Cumulative builder deposits verified & cached this window (pass + fail). */
-  get size(): number {
+  /** Record a builder deposit's pubkey so the scanner pre-verifies validator deposits for it. */
+  addBuilderPubkey(pubkeyHex: PubkeyHex): void {
+    this.builderPubkeys.add(pubkeyHex);
+  }
+
+  isBuilderPubkey(pubkeyHex: PubkeyHex): boolean {
+    return this.builderPubkeys.has(pubkeyHex);
+  }
+
+  /** Cumulative deposits verified & cached this window (pass + fail). */
+  get cachedDepositCount(): number {
     return this.validityByDeposit.size;
+  }
+
+  /** Distinct builder pubkeys tracked this window. */
+  get builderPubkeyCount(): number {
+    return this.builderPubkeys.size;
   }
 
   clear(): void {
     this.validityByDeposit.clear();
+    this.builderPubkeys.clear();
   }
 }

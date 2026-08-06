@@ -18,6 +18,9 @@ const {createPubkeyCache} = await import("../../../src/cache/pubkeyCache.js");
 const {createCachedBeaconState} = await import("../../../src/cache/stateCache.js");
 const {upgradeStateToGloas} = await import("../../../src/slot/upgradeStateToGloas.js");
 const {generateBuilderPendingDeposits} = await import("../../../src/testUtils/util.js");
+const {preVerifyBuilderDepositsPreGloas, MAX_BUILDER_DEPOSITS_PER_SLOT} = await import(
+  "../../../src/util/preVerifyBuilderDeposits.js"
+);
 
 const config = createBeaconConfig(getConfig(ForkName.fulu), Buffer.alloc(32));
 
@@ -85,4 +88,56 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
       expect(gloasState.pendingDeposits.length).toBe(0);
     });
   }
+
+  it("Scenario 5: fork resolves same-pubkey validator deposits from the cache (no BLS fallback)", () => {
+    isValidDepositSignatureSpy.mockClear();
+
+    const [builder] = generateBuilderPendingDeposits(config, 1, 2000);
+    // Many invalid 0x01 validator deposits, all targeting the builder's pubkey (each a distinct
+    // object). At the fork, hasPendingValidator(P) walks these — the unbounded-BLS DoS this guards.
+    const validatorsForBuilder = Array.from({length: 40}, () => ({
+      pubkey: builder.pubkey,
+      withdrawalCredentials: Buffer.alloc(32), // 0x00 → validator, not builder-routed
+      amount: 32_000_000_000,
+      signature: Buffer.alloc(96), // invalid (fails to parse)
+      slot: 0,
+    }));
+
+    const fuluStateView = ssz.fulu.BeaconState.defaultViewDU();
+    for (let i = 0; i < 64; i++) {
+      const validator = ssz.phase0.Validator.defaultValue();
+      validator.pubkey = Buffer.alloc(48, i + 1);
+      validator.withdrawalCredentials = Buffer.alloc(32, i + 1);
+      validator.effectiveBalance = 32e9;
+      validator.activationEligibilityEpoch = 0;
+      validator.activationEpoch = 0;
+      validator.exitEpoch = FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      fuluStateView.validators.push(ssz.phase0.Validator.toViewDU(validator));
+      fuluStateView.balances.push(32e9);
+    }
+    for (const deposit of validatorsForBuilder) {
+      fuluStateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
+    }
+    fuluStateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(builder)); // builder LAST
+    fuluStateView.commit();
+
+    const fuluState = createCachedBeaconState(
+      fuluStateView,
+      {config, pubkeyCache: createPubkeyCache()},
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    ) as CachedBeaconStateFulu;
+
+    // Warm the cache like prepareNextSlot would: tick 1 discovers the builder pubkey + verifies the
+    // builder deposit; tick 2 pre-verifies the same-pubkey validator deposits.
+    preVerifyBuilderDepositsPreGloas(fuluState, MAX_BUILDER_DEPOSITS_PER_SLOT, 60_000);
+    preVerifyBuilderDepositsPreGloas(fuluState, MAX_BUILDER_DEPOSITS_PER_SLOT, 60_000);
+
+    const gloasState = upgradeStateToGloas(fuluState);
+
+    // The builder onboards; hasPendingValidator resolved all 40 validator checks from the cache, so
+    // isValidDepositSignature (the BLS fallback) is never called on the transition's critical path.
+    expect(gloasState.builders.length).toBe(1);
+    expect(isValidDepositSignatureSpy).not.toHaveBeenCalled();
+  });
 });

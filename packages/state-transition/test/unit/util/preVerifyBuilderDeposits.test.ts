@@ -3,6 +3,7 @@ import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {ForkName, GENESIS_SLOT} from "@lodestar/params";
 import {electra, ssz} from "@lodestar/types";
+import {toPubkeyHex} from "@lodestar/utils";
 import {createCachedBeaconStateTest} from "../../../src/testUtils/state.js";
 import {generateBuilderPendingDeposits} from "../../../src/testUtils/util.js";
 import {CachedBeaconStateFulu} from "../../../src/types.js";
@@ -60,10 +61,13 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
     const result = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
 
     expect(result).toEqual({
-      verifiedBuildersCount: 2,
-      invalidBuildersCount: 1,
+      validBuilderSignaturesCount: 2,
+      invalidBuilderSignaturesCount: 1,
+      validValidatorSignaturesCount: 0,
+      invalidValidatorSignaturesCount: 0,
       scannedPendingDeposits: 4,
-      totalBuildersVerified: 3,
+      totalCachedDeposits: 3,
+      totalBuilderPubkeys: 3,
       pendingDepositsCount: 4,
     });
     // builder deposits cached by validity
@@ -73,22 +77,22 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
     // validator deposit never touched
     expect(cache.getSignatureValidity(dValidator)).toBeNull();
     expect(cache.isVerified(dValidator)).toBe(false);
-    expect(cache.size).toBe(3);
+    expect(cache.cachedDepositCount).toBe(3);
   });
 
   it("skips already-cached deposits on a second call (no re-verify)", () => {
     const state = buildFuluStateWithPendingDeposits(generateBuilderPendingDeposits(beaconConfig, 3, 3000));
 
     const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
-    expect(first.verifiedBuildersCount).toBe(3);
-    expect(first.totalBuildersVerified).toBe(3);
+    expect(first.validBuilderSignaturesCount).toBe(3);
+    expect(first.totalCachedDeposits).toBe(3);
 
     // second call: all 3 already cached → nothing new verified, cache unchanged
     const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
-    expect(second.verifiedBuildersCount).toBe(0);
-    expect(second.invalidBuildersCount).toBe(0);
+    expect(second.validBuilderSignaturesCount).toBe(0);
+    expect(second.invalidBuilderSignaturesCount).toBe(0);
     expect(second.scannedPendingDeposits).toBe(3);
-    expect(second.totalBuildersVerified).toBe(3);
+    expect(second.totalCachedDeposits).toBe(3);
     expect(second.pendingDepositsCount).toBe(3);
   });
 
@@ -97,17 +101,17 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
 
     // cap = 2: queue 2, break before scanning the 3rd
     const first = preVerifyBuilderDepositsPreGloas(state, 2, NO_TIME_LIMIT_MS);
-    expect(first.verifiedBuildersCount).toBe(2);
+    expect(first.validBuilderSignaturesCount).toBe(2);
     expect(first.scannedPendingDeposits).toBe(2);
     expect(first.pendingDepositsCount).toBe(3);
     expect(first.scannedPendingDeposits).toBeLessThan(first.pendingDepositsCount); // cap hit
 
     // next call resumes past the 2 cached, verifies the 3rd, scans to the end
     const second = preVerifyBuilderDepositsPreGloas(state, 2, NO_TIME_LIMIT_MS);
-    expect(second.verifiedBuildersCount).toBe(1);
+    expect(second.validBuilderSignaturesCount).toBe(1);
     expect(second.scannedPendingDeposits).toBe(3);
     expect(second.scannedPendingDeposits).toBe(second.pendingDepositsCount); // scanned to the end
-    expect(second.totalBuildersVerified).toBe(3);
+    expect(second.totalCachedDeposits).toBe(3);
   });
 
   it("time-boxes verification per batch and resumes on the next call", () => {
@@ -118,13 +122,42 @@ describe("preVerifyBuilderDepositsPreGloas", () => {
 
     // first call: one full batch, then time-box out (count cap is generous, so time is the bound)
     const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, 0);
-    expect(first.verifiedBuildersCount).toBe(BUILDER_DEPOSIT_BATCH_SIZE);
-    expect(first.invalidBuildersCount).toBe(0);
-    expect(first.totalBuildersVerified).toBe(BUILDER_DEPOSIT_BATCH_SIZE); // < total ⇒ timed out
+    expect(first.validBuilderSignaturesCount).toBe(BUILDER_DEPOSIT_BATCH_SIZE);
+    expect(first.invalidBuilderSignaturesCount).toBe(0);
+    expect(first.totalCachedDeposits).toBe(BUILDER_DEPOSIT_BATCH_SIZE); // < total ⇒ timed out
 
     // second call resumes past the cached batch and finishes the remaining 5
     const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, 0);
-    expect(second.verifiedBuildersCount).toBe(5);
-    expect(second.totalBuildersVerified).toBe(total);
+    expect(second.validBuilderSignaturesCount).toBe(5);
+    expect(second.totalCachedDeposits).toBe(total);
+  });
+
+  it("pre-verifies validator deposits sharing a builder pubkey (discovered one tick, verified the next)", () => {
+    const [builder] = generateBuilderPendingDeposits(beaconConfig, 1, 6000);
+    // a validator (0x00) deposit for the SAME pubkey as the builder deposit, with an invalid sig
+    const validatorForBuilder: electra.PendingDeposit = {
+      pubkey: builder.pubkey,
+      withdrawalCredentials: Buffer.alloc(32),
+      amount: 32_000_000_000,
+      signature: Buffer.alloc(96),
+      slot: GENESIS_SLOT,
+    };
+    // the validator deposit precedes the builder deposit — the Scenario-5 ordering
+    const state = buildFuluStateWithPendingDeposits([validatorForBuilder, builder]);
+    const cache = state.epochCtx.builderDepositSignatureCache;
+    const [dValidator, dBuilder] = state.pendingDeposits.getAllReadonlyValues();
+
+    // tick 1: discovers the builder pubkey and verifies the builder deposit; the validator deposit
+    // was scanned before the builder deposit, so it isn't queued yet.
+    const first = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(first.validBuilderSignaturesCount).toBe(1);
+    expect(cache.getSignatureValidity(dBuilder)).toBe(true);
+    expect(cache.isBuilderPubkey(toPubkeyHex(builder.pubkey))).toBe(true);
+    expect(cache.getSignatureValidity(dValidator)).toBeNull(); // not verified yet
+
+    // tick 2: the validator deposit now matches a known builder pubkey → verified (invalid) and cached
+    const second = preVerifyBuilderDepositsPreGloas(state, MAX_BUILDER_DEPOSITS_PER_SLOT, NO_TIME_LIMIT_MS);
+    expect(second.invalidValidatorSignaturesCount).toBe(1);
+    expect(cache.getSignatureValidity(dValidator)).toBe(false);
   });
 });

@@ -1721,15 +1721,25 @@ export function createLodestarMetrics(
       }),
       cachedDeposits: register.gauge({
         name: "lodestar_builder_deposit_preverify_cached_deposits",
-        help: "Builder deposits verified & cached so far this pre-fork window (valid + invalid)",
+        help: "Deposit signatures verified & cached so far this pre-fork window (valid + invalid)",
       }),
       scannedDeposits: register.gauge({
         name: "lodestar_builder_deposit_preverify_scanned_deposits",
         help: "Pending deposits examined by the last pre-verify call (< pending_deposits ⇒ cap hit)",
       }),
-      invalidSignatures: register.counter({
+      builderPubkeys: register.gauge({
+        name: "lodestar_builder_deposit_preverify_builder_pubkeys",
+        help: "Distinct builder pubkeys tracked this window (validator deposits for these are pre-verified)",
+      }),
+      validSignatures: register.counter<{type: "builder" | "validator"}>({
+        name: "lodestar_builder_deposit_preverify_valid_signatures_total",
+        help: "Cumulative deposit signatures whose BLS verification passed (VALID), by credential type",
+        labelNames: ["type"],
+      }),
+      invalidSignatures: register.counter<{type: "builder" | "validator"}>({
         name: "lodestar_builder_deposit_preverify_invalid_signatures_total",
-        help: "Cumulative builder-deposit signatures pre-verified as invalid (abuse/anomaly signal)",
+        help: "Cumulative deposit signatures whose BLS verification failed (INVALID), by credential type",
+        labelNames: ["type"],
       }),
     },
 

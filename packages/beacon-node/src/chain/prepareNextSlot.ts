@@ -332,23 +332,36 @@ export class PrepareNextSlotScheduler {
             const preVerifyMetrics = this.metrics?.builderDepositPreVerify;
             if (preVerifyMetrics) {
               preVerifyMetrics.pendingDeposits.set(result.pendingDepositsCount);
-              preVerifyMetrics.cachedDeposits.set(result.totalBuildersVerified);
+              preVerifyMetrics.cachedDeposits.set(result.totalCachedDeposits);
               preVerifyMetrics.scannedDeposits.set(result.scannedPendingDeposits);
-              if (result.invalidBuildersCount > 0) {
-                preVerifyMetrics.invalidSignatures.inc(result.invalidBuildersCount);
+              preVerifyMetrics.builderPubkeys.set(result.totalBuilderPubkeys);
+              if (result.validBuilderSignaturesCount > 0) {
+                preVerifyMetrics.validSignatures.inc({type: "builder"}, result.validBuilderSignaturesCount);
+              }
+              if (result.validValidatorSignaturesCount > 0) {
+                preVerifyMetrics.validSignatures.inc({type: "validator"}, result.validValidatorSignaturesCount);
+              }
+              if (result.invalidBuilderSignaturesCount > 0) {
+                preVerifyMetrics.invalidSignatures.inc({type: "builder"}, result.invalidBuilderSignaturesCount);
+              }
+              if (result.invalidValidatorSignaturesCount > 0) {
+                preVerifyMetrics.invalidSignatures.inc({type: "validator"}, result.invalidValidatorSignaturesCount);
               }
             }
 
-            if (result.verifiedBuildersCount > 0 || result.invalidBuildersCount > 0) {
-              this.logger.verbose("PrepareNextSlotScheduler pre-verified builder deposit signatures", {
-                clockSlot,
-                verifiedBuildersCount: result.verifiedBuildersCount,
-                invalidBuildersCount: result.invalidBuildersCount,
-                scannedPendingDeposits: result.scannedPendingDeposits,
-                totalBuildersVerified: result.totalBuildersVerified,
-                pendingDepositsCount: result.pendingDepositsCount,
-              });
-            }
+            // Always log (once per slot, only within the pre-fork window) so devnets show the
+            // pre-verify draining even on all-cache-hit ticks.
+            this.logger.verbose("PrepareNextSlotScheduler pre-verified deposit signatures", {
+              clockSlot,
+              validBuilderSignaturesCount: result.validBuilderSignaturesCount,
+              invalidBuilderSignaturesCount: result.invalidBuilderSignaturesCount,
+              validValidatorSignaturesCount: result.validValidatorSignaturesCount,
+              invalidValidatorSignaturesCount: result.invalidValidatorSignaturesCount,
+              scannedPendingDeposits: result.scannedPendingDeposits,
+              totalCachedDeposits: result.totalCachedDeposits,
+              totalBuilderPubkeys: result.totalBuilderPubkeys,
+              pendingDepositsCount: result.pendingDepositsCount,
+            });
           }
         }
       }

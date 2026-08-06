@@ -37,12 +37,12 @@ describe("BuilderDepositSignatureCache", () => {
     expect(cache.getSignatureValidity(unseen)).toBeNull();
     expect(cache.isVerified(a)).toBe(true);
     expect(cache.isVerified(unseen)).toBe(false);
-    expect(cache.size).toBe(2);
+    expect(cache.cachedDepositCount).toBe(2);
 
     cache.clear();
     expect(cache.isVerified(a)).toBe(false);
     expect(cache.getSignatureValidity(a)).toBeNull();
-    expect(cache.size).toBe(0);
+    expect(cache.cachedDepositCount).toBe(0);
   });
 
   it("getAllReadonlyValues() returns reference-equal structs across calls (value-identity assumption)", () => {
@@ -57,5 +57,18 @@ describe("BuilderDepositSignatureCache", () => {
     // the same node.value reference as getAllReadonlyValues()[i] (the scanner path) — the invariant
     // that lets the cache hit across the two.
     expect(list.getReadonly(0).toValue()).toBe(first[0]);
+  });
+
+  it("tracks builder pubkeys and clears them", () => {
+    const cache = new BuilderDepositSignatureCache();
+    const pubkeyHex = "0x1234";
+
+    expect(cache.isBuilderPubkey(pubkeyHex)).toBe(false);
+    cache.addBuilderPubkey(pubkeyHex);
+    expect(cache.isBuilderPubkey(pubkeyHex)).toBe(true);
+    expect(cache.isBuilderPubkey("0xabcd")).toBe(false);
+
+    cache.clear();
+    expect(cache.isBuilderPubkey(pubkeyHex)).toBe(false);
   });
 });

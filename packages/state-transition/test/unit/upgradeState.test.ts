@@ -185,7 +185,7 @@ describe("upgradeState", () => {
     // all builder deposits consumed from the pending queue
     expect(gloasState.pendingDeposits.length).toBe(0);
     // (d) the fork transition does NOT clear the cache — prepareNextSlot drops it on finalization
-    expect(cache.size).toBe(2);
+    expect(cache.cachedDepositCount).toBe(2);
   });
 });
 
