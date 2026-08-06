@@ -715,12 +715,10 @@ const fastConfirmationTest =
           name.includes("voting_source_beyond_two_epoch") ||
           name.includes("justified_update_always_if_better") ||
           name.includes("justified_update_not_realized_finality") ||
-          // Upstream test-generation artifact: bls_setting=2 vectors carry STUB deposit request
-          // signatures which the generator (BLS verification disabled) accepts, adding the
-          // validator to the registry. Deposit signature validity determines state contents, so it
-          // must be real in vectors regardless of bls_setting — same principle as the aggregate
-          // pubkey fix in consensus-specs #5489. Unskip once deposits are signed for real during
-          // generation and a new spec-tests release is picked up.
+          // These vectors carry stub deposit signatures (bls_setting=2) and expect the deposit to
+          // be applied. Passing them requires skipping deposit signature verification inside epoch
+          // processing, which Lodestar does not support. Unskip if upstream signs deposits for
+          // real, or if full bls_setting=2 support is ever added.
           name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
           name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state") ||
           // Upstream test-encoding artifact: `on_fast_confirmation` runs are implicit in the
