@@ -64,8 +64,18 @@ describe("api - beacon - publishExecutionPayloadEnvelope", () => {
       vi.mocked(modules.chain.seenPayloadEnvelopeInputCache.get).mockReturnValue(payloadInput);
       modules.chain.regen.getBlockSlotState.mockResolvedValue({forkName: ForkName.gloas} as IBeaconStateView);
       modules.chain.seenBlockProposers.add(slot, proposerIndex);
-      modules.chain.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockRoot);
-      modules.chain.seenBlockProposers.observeBlockRoot(slot, proposerIndex, conflictingBlockRoot);
+      modules.chain.seenBlockProposers.observeBlockRoot(
+        slot,
+        proposerIndex,
+        blockRoot,
+        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
+      );
+      modules.chain.seenBlockProposers.observeBlockRoot(
+        slot,
+        proposerIndex,
+        conflictingBlockRoot,
+        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
+      );
 
       const api = getBeaconBlockApi(modules);
       await expect(
