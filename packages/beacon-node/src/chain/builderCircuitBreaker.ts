@@ -69,6 +69,7 @@ export class BuilderCircuitBreaker {
     this.modules.metrics?.builderCircuitBreaker.payloadsRevealed.set(payloadsRevealed);
 
     const logCtx = {
+      clockSlot,
       blocksPresent,
       faults,
       faultInspectionWindow: this.faultInspectionWindow,
