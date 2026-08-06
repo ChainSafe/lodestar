@@ -49,6 +49,7 @@ import {
   FastConfirmationRule,
   FastConfirmationSteps,
   type IFastConfirmationRule,
+  type IFastConfirmationSpecStore,
 } from "./fastConfirmation/fastConfirmationRule.ts";
 import {
   AncestorResult,
@@ -226,6 +227,17 @@ export class ForkChoice implements IForkChoice {
 
   getConfirmedRoot(): RootHex {
     return this.fastConfirmationRule?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
+  }
+
+  getFastConfirmationStore(): IFastConfirmationSpecStore {
+    return {
+      confirmedRoot: this.getConfirmedRoot(),
+      previousEpochObservedJustifiedCheckpoint: this.fcStore.previousEpochObservedJustifiedCheckpoint,
+      currentEpochObservedJustifiedCheckpoint: this.fcStore.currentEpochObservedJustifiedCheckpoint,
+      previousEpochGreatestUnrealizedCheckpoint: this.fcStore.previousEpochGreatestUnrealizedCheckpoint,
+      previousSlotHead: this.fcStore.previousSlotHead,
+      currentSlotHead: this.fcStore.currentSlotHead,
+    };
   }
 
   getConfirmedBlock(): ProtoBlock | null {
