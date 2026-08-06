@@ -128,6 +128,23 @@ export function getConsolidationChurnLimit(fork: ForkSeq, epochCtx: EpochCache):
   return getBalanceChurnLimitFromCache(epochCtx) - getActivationExitChurnLimit(epochCtx);
 }
 
+// NOTE: duplicates the quotient/min choices in get{Exit,Activation,Consolidation}ChurnLimit.
+export function getGloasChurnLimits(
+  config: ChainForkConfig,
+  totalActiveBalanceIncrements: number
+): {exit: number; activation: number; consolidation: number} {
+  const exit = getBalanceChurnLimit(
+    totalActiveBalanceIncrements,
+    config.CHURN_LIMIT_QUOTIENT_GLOAS,
+    config.MIN_PER_EPOCH_CHURN_LIMIT_ELECTRA
+  );
+  return {
+    exit,
+    activation: Math.min(config.MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT_GLOAS, exit),
+    consolidation: getBalanceChurnLimit(totalActiveBalanceIncrements, config.CONSOLIDATION_CHURN_LIMIT_QUOTIENT, 0),
+  };
+}
+
 export function getMaxEffectiveBalance(withdrawalCredentials: Uint8Array): number {
   // Compounding withdrawal credential only available since Electra
   if (hasCompoundingWithdrawalCredential(withdrawalCredentials)) {

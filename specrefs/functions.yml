@@ -1710,7 +1710,9 @@
     </spec>
 
 - name: compute_weak_subjectivity_period#gloas
-  sources: []
+  sources:
+    - file: packages/state-transition/src/util/weakSubjectivity.ts
+      search: export function computeWeakSubjectivityPeriod(
   spec: |
     <spec fn="compute_weak_subjectivity_period" fork="gloas" hash="687b7a35">
     def compute_weak_subjectivity_period(state: BeaconState) -> Uint64:
@@ -13609,7 +13611,9 @@
     </spec>
 
 - name: upgrade_to_heze#heze
-  sources: []
+  sources:
+    - file: packages/state-transition/src/slot/upgradeStateToHeze.ts
+      search: export function upgradeStateToHeze(
   spec: |
     <spec fn="upgrade_to_heze" fork="heze" hash="db6fc133">
     def upgrade_to_heze(pre: gloas.BeaconState) -> BeaconState:
