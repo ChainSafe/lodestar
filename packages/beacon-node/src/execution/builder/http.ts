@@ -71,15 +71,18 @@ export class NoBidReceived extends Error {
 }
 
 /**
- * Beacon clients select randomized values from the following ranges when initializing
- * the circuit breaker (so at boot time and once for each unique boot).
+ * The fault inspection window is randomized when initializing the circuit breaker (so at
+ * boot time and once for each unique boot), the fault budget is derived from it:
  *
- * ALLOWED_FAULTS: between 1 and SLOTS_PER_EPOCH // 4
  * FAULT_INSPECTION_WINDOW: between SLOTS_PER_EPOCH and 2 * SLOTS_PER_EPOCH
+ * ALLOWED_FAULTS: FAULT_INSPECTION_WINDOW // 4
  *
- * The values are randomized per node so builders cannot predict when a given proposer will
- * fall back to local blocks. With fixed thresholds a builder could withhold payloads right up
- * to the limit without ever tripping the breaker.
+ * e.g. on mainnet SLOTS_PER_EPOCH is 32, so FAULT_INSPECTION_WINDOW is between 32 and 63,
+ * and a window of 40 results in ALLOWED_FAULTS = 10.
+ *
+ * The tolerated fault rate is ~25% on every node, but the randomized window keeps the exact
+ * slots under inspection unpredictable per node, so a builder cannot tell when past faults
+ * age out of a given proposer's window and time withholding around trip or recovery points.
  */
 export function getFaultInspectionParams(opts: {faultInspectionWindow?: number; allowedFaults?: number}): {
   faultInspectionWindow: number;
@@ -90,10 +93,7 @@ export function getFaultInspectionParams(opts: {faultInspectionWindow?: number; 
     SLOTS_PER_EPOCH
   );
   // allowedFaults should be < faultInspectionWindow, limiting them to faultInspectionWindow/4
-  const allowedFaults = Math.min(
-    opts.allowedFaults ?? Math.floor(faultInspectionWindow / 4),
-    Math.floor(faultInspectionWindow / 4)
-  );
+  const allowedFaults = Math.min(opts.allowedFaults ?? Infinity, Math.floor(faultInspectionWindow / 4));
   return {faultInspectionWindow, allowedFaults};
 }
 

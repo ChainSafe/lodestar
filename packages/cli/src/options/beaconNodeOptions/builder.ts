@@ -62,7 +62,7 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   "builder.allowedFaults": {
     type: "number",
     description:
-      "Number of missed slots (pre-gloas) or unrevealed payloads (post-gloas) allowed in the `faultInspectionWindow` for builder circuit",
+      "Number of missed slots allowed within `faultInspectionWindow` before ignoring the external builder (pre-gloas). Post-gloas, sets the tolerated rate of unrevealed payloads, defined as `allowedFaults` out of `faultInspectionWindow` and applied to blocks observed in the window",
     group: "builder",
   },
 };
