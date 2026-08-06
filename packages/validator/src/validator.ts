@@ -68,6 +68,7 @@ export type ValidatorOptions = {
   blindedLocal?: boolean;
   payloadLocal?: boolean;
   adversarialEquivocateBlockProposal?: boolean;
+  adversarialEquivocateBuilderBlockPeersBps?: number;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -262,6 +263,7 @@ export class Validator {
         // configured, with multiple nodes the stateless flow allows publishing via any of them
         payloadLocal: opts.payloadLocal ?? api.httpClient.urlsInits.length <= 1,
         adversarialEquivocateBlockProposal: opts.adversarialEquivocateBlockProposal ?? false,
+        adversarialEquivocateBuilderBlockPeersBps: opts.adversarialEquivocateBuilderBlockPeersBps,
       }
     );
 

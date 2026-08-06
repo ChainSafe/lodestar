@@ -232,6 +232,14 @@ export class WorkerNetworkCore implements INetworkCore {
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number> {
     return this.getApi().publishGossip(topic, data, opts);
   }
+  publishGossipPartition(
+    topic: string,
+    majorityData: Uint8Array,
+    minorityData: Uint8Array,
+    minorityBps: number
+  ): Promise<{majorityPeers: number; minorityPeers: number}> {
+    return this.getApi().publishGossipPartition(topic, majorityData, minorityData, minorityBps);
+  }
 
   // Custody
 

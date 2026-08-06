@@ -193,7 +193,7 @@ describe("BlockDutiesService", () => {
     ]);
   });
 
-  it("Should submit a proposer equivocation only when a builder bid is selected", async () => {
+  it("Should split the network with a self-built canonical block and a builder-block minority", async () => {
     const slot = 1;
     const config = createChainForkConfig({
       ...mainnetConfig,
@@ -222,19 +222,21 @@ describe("BlockDutiesService", () => {
       adversarialEquivocateBlockProposal: true,
     });
 
-    const block = ssz.gloas.BeaconBlock.defaultValue();
-    block.slot = slot;
-    block.body.signedExecutionPayloadBid.message.builderIndex = 42;
-    const equivocationBlock = ssz.gloas.BeaconBlock.clone(block);
-    equivocationBlock.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
-    const signedBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
-    signedBlock.message = block;
+    const builderBlock = ssz.gloas.BeaconBlock.defaultValue();
+    builderBlock.slot = slot;
+    builderBlock.body.signedExecutionPayloadBid.message.builderIndex = 42;
+    const selfBuildBlock = ssz.gloas.BeaconBlock.clone(builderBlock);
+    selfBuildBlock.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+    const {signature} = ssz.gloas.SignedBeaconBlock.defaultValue();
 
-    validatorStore.signRandao.mockResolvedValue(block.body.randaoReveal);
-    validatorStore.signBlock.mockResolvedValue(signedBlock);
-    validatorStore.signBlockForEquivocation.mockImplementation(async (_, conflictingBlock) => ({
+    validatorStore.signRandao.mockResolvedValue(builderBlock.body.randaoReveal);
+    validatorStore.signBlock.mockImplementation(async (_pubkey, signableBlock) => ({
+      message: signableBlock,
+      signature,
+    }));
+    validatorStore.signBlockForEquivocation.mockImplementation(async (_pubkey, conflictingBlock) => ({
       message: conflictingBlock,
-      signature: signedBlock.signature,
+      signature,
     }));
     validatorStore.getBuilderSelectionParams.mockReturnValue({
       selection: routes.validator.BuilderSelection.MaxProfit,
@@ -242,10 +244,20 @@ describe("BlockDutiesService", () => {
     });
     validatorStore.getGraffiti.mockReturnValue("deathstar");
     validatorStore.getFeeRecipient.mockReturnValue("0x00");
+
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
+    signedEnvelope.message = envelope;
+    validatorStore.signExecutionPayloadEnvelope.mockResolvedValue(signedEnvelope);
+    api.validator.getExecutionPayloadEnvelope.mockResolvedValue(
+      mockApiResponse({data: envelope, meta: {version: ForkName.gloas}})
+    );
+    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+
     api.validator.produceBlockV4
       .mockResolvedValueOnce(
         mockApiResponse({
-          data: block,
+          data: builderBlock,
           meta: {
             version: ForkName.gloas,
             executionPayloadValue: BigInt(1),
@@ -256,7 +268,7 @@ describe("BlockDutiesService", () => {
       )
       .mockResolvedValueOnce(
         mockApiResponse({
-          data: equivocationBlock,
+          data: selfBuildBlock,
           meta: {
             version: ForkName.gloas,
             executionPayloadValue: BigInt(0),
@@ -266,54 +278,50 @@ describe("BlockDutiesService", () => {
         })
       );
     api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
+    api.lodestar.publishBlockEquivocation.mockResolvedValue(mockApiResponse({}));
 
     await blockService["createAndPublishBlockGloas"](pubkeys[0], slot);
+
+    // Produced the builder block, then a self-built sibling on the same parent with ExecutionOnly selection
     expect(api.validator.produceBlockV4).toHaveBeenCalledTimes(2);
     expect(api.validator.produceBlockV4).toHaveBeenNthCalledWith(2, {
       slot,
-      randaoReveal: block.body.randaoReveal,
+      randaoReveal: builderBlock.body.randaoReveal,
       graffiti: "deathstar",
       feeRecipient: "0x00",
       includePayload: false,
       builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
       builderBoostFactor: BigInt(0),
     });
-    expect(api.beacon.publishBlockV2).toHaveBeenCalledTimes(2);
-    const original = api.beacon.publishBlockV2.mock.calls[0][0].signedBlockContents.signedBlock;
-    const conflicting = api.beacon.publishBlockV2.mock.calls[1][0].signedBlockContents.signedBlock;
-    expect(original.message).toEqual(block);
-    expect(conflicting.message).toEqual(equivocationBlock);
-    expect(conflicting.message.parentRoot).toEqual(block.parentRoot);
-    expect(conflicting.message.stateRoot).toEqual(block.stateRoot);
-    expect(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(conflicting.message)).not.toEqual(
-      config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block)
+
+    // The equivocation goes through the single split route, not the normal flood publish
+    expect(api.beacon.publishBlockV2).not.toHaveBeenCalled();
+    expect(api.lodestar.publishBlockEquivocation).toHaveBeenCalledOnce();
+    expect(validatorStore.signBlock).toHaveBeenCalledWith(pubkeys[0], selfBuildBlock, slot, loggerVc);
+
+    // The self-built block is the canonical (majority) block, the builder block the minority, signed without
+    // slashing protection, sized by builderPeersBps
+    const [equivocationArgs] = api.lodestar.publishBlockEquivocation.mock.calls[0];
+    expect(equivocationArgs.selfBuiltBlock.message).toEqual(selfBuildBlock);
+    expect(equivocationArgs.builderBlock.message).toEqual(builderBlock);
+    expect(equivocationArgs.builderPeersBps).toBe(4000);
+    expect(validatorStore.signBlockForEquivocation).toHaveBeenCalledWith(pubkeys[0], builderBlock, slot, loggerVc);
+    expect(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(equivocationArgs.selfBuiltBlock.message)).not.toEqual(
+      config.getForkTypes(slot).BeaconBlock.hashTreeRoot(builderBlock)
     );
 
-    expect(validatorStore.signBlockForEquivocation).toHaveBeenCalledWith(
-      pubkeys[0],
-      conflicting.message,
-      slot,
-      loggerVc
-    );
-    expect(api.beacon.publishBlockV2.mock.calls[1][0].broadcastValidation).toBe(
-      routes.beacon.BroadcastValidation.gossip
-    );
+    // The canonical self-built block reveals its own execution payload envelope
+    expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
 
+    // A self-build proposal does not equivocate: no sibling produced, normal flood publish, no split route
     api.validator.produceBlockV4.mockReset();
     api.beacon.publishBlockV2.mockClear();
+    api.lodestar.publishBlockEquivocation.mockClear();
     validatorStore.signBlockForEquivocation.mockClear();
-    block.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
-    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
-    const signedEnvelope = ssz.gloas.SignedExecutionPayloadEnvelope.defaultValue();
-    signedEnvelope.message = envelope;
-    api.validator.getExecutionPayloadEnvelope.mockResolvedValue(
-      mockApiResponse({data: envelope, meta: {version: ForkName.gloas}})
-    );
-    validatorStore.signExecutionPayloadEnvelope.mockResolvedValue(signedEnvelope);
-    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+    api.beacon.publishExecutionPayloadEnvelope.mockClear();
     api.validator.produceBlockV4.mockResolvedValue(
       mockApiResponse({
-        data: block,
+        data: selfBuildBlock,
         meta: {
           version: ForkName.gloas,
           executionPayloadValue: BigInt(1),
@@ -326,6 +334,7 @@ describe("BlockDutiesService", () => {
     await blockService["createAndPublishBlockGloas"](pubkeys[0], slot);
     expect(api.validator.produceBlockV4).toHaveBeenCalledOnce();
     expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    expect(api.lodestar.publishBlockEquivocation).not.toHaveBeenCalled();
     expect(validatorStore.signBlockForEquivocation).not.toHaveBeenCalled();
     expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
   });

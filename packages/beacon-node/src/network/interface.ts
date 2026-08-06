@@ -100,6 +100,12 @@ export interface INetwork extends INetworkCorePublic {
 
   // Gossip
   publishBeaconBlock(signedBlock: SignedBeaconBlock): Promise<number>;
+  /** ADVERSARIAL (devnet test only): split peers into disjoint sets, gossiping the two blocks to each (no import) */
+  publishBeaconBlockPartition(
+    majorityBlock: SignedBeaconBlock,
+    minorityBlock: SignedBeaconBlock,
+    minorityBps: number
+  ): Promise<{majorityPeers: number; minorityPeers: number}>;
   publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number>;
   publishBeaconAggregateAndProof(aggregateAndProof: SignedAggregateAndProof): Promise<number>;
   publishBeaconAttestation(attestation: SingleAttestation, subnet: SubnetID): Promise<number>;

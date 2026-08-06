@@ -369,6 +369,15 @@ export class NetworkCore implements INetworkCore {
     return recipients.length;
   }
 
+  async publishGossipPartition(
+    topic: string,
+    majorityData: Uint8Array,
+    minorityData: Uint8Array,
+    minorityBps: number
+  ): Promise<{majorityPeers: number; minorityPeers: number}> {
+    return this.gossip.publishPartition(topic, majorityData, minorityData, minorityBps);
+  }
+
   /**
    * Handler of ChainEvent.updateTargetCustodyGroupCount event
    * Updates the target custody group count in the network config and metadata.

@@ -355,6 +355,39 @@ export class Network implements INetwork {
     });
   }
 
+  // ADVERSARIAL (devnet test only): split peers into disjoint sets and gossip the majority (canonical) block to
+  // the larger set and the minority block to the smaller `minorityBps` fraction, without importing either.
+  // Used to split the network's view for a proposer equivocation.
+  async publishBeaconBlockPartition(
+    majorityBlock: SignedBeaconBlock,
+    minorityBlock: SignedBeaconBlock,
+    minorityBps: number
+  ): Promise<{majorityPeers: number; minorityPeers: number}> {
+    const epoch = computeEpochAtSlot(majorityBlock.message.slot);
+    const boundary = this.config.getForkBoundaryAtEpoch(epoch);
+    const topic = {type: GossipType.beacon_block, boundary} as const;
+    const topicStr = stringifyGossipTopic(this.config, topic);
+    const sszType = getGossipSSZType(topic);
+    // Call `sszType.serialize` as a member so its `this` binding is preserved (extracting it to a variable breaks it).
+    const serialize = (block: SignedBeaconBlock): Uint8Array =>
+      (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(block);
+    const result = await this.core.publishGossipPartition(
+      topicStr,
+      serialize(majorityBlock),
+      serialize(minorityBlock),
+      minorityBps
+    );
+
+    this.logger.verbose("Publish partition", {
+      topic: topicStr,
+      majorityPeers: result.majorityPeers,
+      minorityPeers: result.minorityPeers,
+      minorityBps,
+      currentSlot: this.clock.currentSlot,
+    });
+    return result;
+  }
+
   async publishBlobSidecar(blobSidecar: deneb.BlobSidecar): Promise<number> {
     const epoch = computeEpochAtSlot(blobSidecar.signedBlockHeader.message.slot);
     const boundary = this.config.getForkBoundaryAtEpoch(epoch);

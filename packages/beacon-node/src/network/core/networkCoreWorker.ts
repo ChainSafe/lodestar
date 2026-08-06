@@ -143,6 +143,8 @@ const libp2pWorkerApi: NetworkWorkerApi = {
 
   // sendReqRespRequest - handled via events with AsyncIterableBridgeHandler
   publishGossip: (topic, data, opts) => core.publishGossip(topic, data, opts),
+  publishGossipPartition: (topic, majorityData, minorityData, minorityBps) =>
+    core.publishGossipPartition(topic, majorityData, minorityData, minorityBps),
 
   setTargetGroupCount: (count) => core.setTargetGroupCount(count),
 

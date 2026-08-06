@@ -1,7 +1,9 @@
 import {FastifyInstance} from "fastify";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
-import {config} from "@lodestar/config/default";
+import {createChainForkConfig} from "@lodestar/config";
+import {chainConfig, config} from "@lodestar/config/default";
 import {ForkName} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
 import {getClient} from "../../../../src/beacon/client/lodestar.js";
 import {Endpoints, getDefinitions} from "../../../../src/beacon/routes/lodestar.js";
 import {getRoutes} from "../../../../src/beacon/server/lodestar.js";
@@ -52,6 +54,56 @@ describe("beacon / lodestar", () => {
         historical_summaries: [],
         proof: [],
       });
+    });
+  });
+
+  describe("publishBlockEquivocation (ssz round-trip)", () => {
+    const gloasConfig = createChainForkConfig({
+      ...chainConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const mockApi = getMockApi<Endpoints>(getDefinitions(gloasConfig));
+    let baseUrl: string;
+    let server: FastifyInstance;
+
+    beforeAll(async () => {
+      const res = getTestServer();
+      server = res.server;
+      for (const route of Object.values(getRoutes(gloasConfig, mockApi))) {
+        server.route(route as FastifyRoute<AnyEndpoint>);
+      }
+      baseUrl = await res.start();
+    });
+
+    afterAll(async () => {
+      if (server !== undefined) await server.close();
+    });
+
+    it("publishBlockEquivocation", async () => {
+      mockApi.publishBlockEquivocation.mockResolvedValue(undefined);
+
+      const selfBuiltBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      const builderBlock = ssz.gloas.SignedBeaconBlock.defaultValue();
+      builderBlock.message.body.signedExecutionPayloadBid.message.builderIndex = 42;
+      const httpClient = new HttpClient({baseUrl});
+      const client = getClient(gloasConfig, httpClient);
+
+      const res = await client.publishBlockEquivocation({selfBuiltBlock, builderBlock, builderPeersBps: 4000});
+
+      expect(res.ok).toBe(true);
+      expect(mockApi.publishBlockEquivocation).toHaveBeenCalledOnce();
+      const [args] = mockApi.publishBlockEquivocation.mock.calls[0];
+      expect(args.builderPeersBps).toBe(4000);
+      expect(ssz.gloas.SignedBeaconBlock.equals(args.selfBuiltBlock as typeof selfBuiltBlock, selfBuiltBlock)).toBe(
+        true
+      );
+      expect(ssz.gloas.SignedBeaconBlock.equals(args.builderBlock as typeof builderBlock, builderBlock)).toBe(true);
     });
   });
 });

@@ -55,6 +55,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     blindedLocal?: boolean;
     payloadLocal?: boolean;
     "adversarial.equivocate.blockProposal"?: boolean;
+    "adversarial.equivocate.builderBlockPeersBps"?: number;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -305,8 +306,17 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     type: "boolean",
     description:
-      "ADVERSARIAL (devnet test only): when a Gloas proposer selects an external builder bid, publish a valid self-built sibling block while bypassing slashing protection",
+      "ADVERSARIAL (devnet test only): when a Gloas proposer selects an external builder bid, flood a valid self-built sibling block as canonical (bypassing slashing protection) and publish the builder block to only a minority of peers so the builder still reveals its payload for the losing block",
     default: false,
+    group: "adversarial",
+  },
+
+  "adversarial.equivocate.builderBlockPeersBps": {
+    hidden: true,
+    type: "number",
+    description:
+      "ADVERSARIAL (devnet test only): fraction of peers (basis points) to seed with the builder block during a proposer equivocation; keep it below 5000 (half) so the self-built block still wins fork choice while the seeded minority forms a split-view fork",
+    default: 4000,
     group: "adversarial",
   },
 

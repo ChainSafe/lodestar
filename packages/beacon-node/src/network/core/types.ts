@@ -66,6 +66,13 @@ export interface INetworkCore extends INetworkCorePublic {
   sendReqRespRequest(data: OutgoingRequestArgs): AsyncIterable<ResponseIncoming>;
   /** Publish gossip message to peers */
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
+  /** ADVERSARIAL (devnet test only): split the topic's flood peers, sending majority/minority data to disjoint sets */
+  publishGossipPartition(
+    topic: string,
+    majorityData: Uint8Array,
+    minorityData: Uint8Array,
+    minorityBps: number
+  ): Promise<{majorityPeers: number; minorityPeers: number}>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;
@@ -114,6 +121,12 @@ export type NetworkWorkerApi = INetworkCorePublic & {
 
   // sendReqRespRequest - implemented via events
   publishGossip(topic: string, data: Uint8Array, opts?: PublishOpts): Promise<number>;
+  publishGossipPartition(
+    topic: string,
+    majorityData: Uint8Array,
+    minorityData: Uint8Array,
+    minorityBps: number
+  ): Promise<{majorityPeers: number; minorityPeers: number}>;
 
   close(): Promise<void>;
   scrapeMetrics(): Promise<string>;

@@ -17,6 +17,7 @@ import {routes} from "@lodestar/api";
 import {BeaconConfig, ForkBoundary} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
+  BASIS_POINTS,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -231,6 +232,58 @@ export class Eth2Gossipsub {
 
   publish(topic: TopicStr, data: Uint8Array, opts?: PublishOpts): Promise<PublishResult> {
     return this.gossipsub.publish(topic, data, opts);
+  }
+
+  /**
+   * ADVERSARIAL (devnet test only): partition the peers this topic would flood to into two disjoint sets and
+   * send `majorityData` to the larger set and `minorityData` to the smaller `minorityBps` fraction, back to back
+   * (negligible gap, effectively simultaneous). Used to split the network's view for a proposer equivocation:
+   * each set observes its own block one hop before the other block's two-hop relay arrives, and REPEAT_PROPOSAL
+   * then keeps them apart. gossipsub has no public API to target a peer subset, so we temporarily hook the
+   * internal `selectPeersToPublish` seam that `publish` reads (scoped to this topic) and restore it after; all
+   * correct framing, dedup and mcache bookkeeping still run via the normal `publish` path.
+   */
+  async publishPartition(
+    topic: TopicStr,
+    majorityData: Uint8Array,
+    minorityData: Uint8Array,
+    minorityBps: number
+  ): Promise<{majorityPeers: number; minorityPeers: number}> {
+    // biome-ignore lint/suspicious/noExplicitAny: reaching into a gossipsub-internal method by design
+    const gossipsub = this.gossipsub as any;
+    const selectPeersToPublish = gossipsub.selectPeersToPublish;
+    // Compute the full flood set once and sort it so the split is deterministic and the two sets are disjoint.
+    const allPeers = Array.from(selectPeersToPublish.call(gossipsub, topic).tosend as Set<string>).sort();
+    const split = Math.min(allPeers.length, Math.max(0, Math.floor((allPeers.length * minorityBps) / BASIS_POINTS)));
+    const minoritySet = new Set(allPeers.slice(0, split));
+    const majoritySet = new Set(allPeers.slice(split));
+
+    const publishTo = async (data: Uint8Array, peers: Set<string>): Promise<number> => {
+      if (peers.size === 0) {
+        return 0;
+      }
+      gossipsub.selectPeersToPublish = (t: TopicStr) =>
+        t === topic
+          ? {tosend: peers, tosendCount: {direct: 0, floodsub: 0, mesh: peers.size, fanout: 0}}
+          : selectPeersToPublish.call(gossipsub, t);
+      try {
+        const {recipients} = await this.gossipsub.publish(topic, data);
+        return recipients.length;
+      } catch (e) {
+        // No peers to publish to yet, treat as best-effort for the adversarial path
+        if ((e as Error).message?.includes("NoPeersSubscribedToTopic")) {
+          return 0;
+        }
+        throw e;
+      } finally {
+        gossipsub.selectPeersToPublish = selectPeersToPublish;
+      }
+    };
+
+    // Publish the majority (canonical) block first so it never trails the minority block.
+    const majorityPeers = await publishTo(majorityData, majoritySet);
+    const minorityPeers = await publishTo(minorityData, minoritySet);
+    return {majorityPeers, minorityPeers};
   }
 
   dumpPeerScoreStats(): PeerScoreStatsDump {

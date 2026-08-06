@@ -32,6 +32,7 @@ import {
   VersionCodec,
   VersionMeta,
 } from "../../utils/metadata.js";
+import {WireFormat} from "../../utils/wireFormat.js";
 import {StateArgs} from "./beacon/state.js";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node.js";
 
@@ -426,6 +427,20 @@ export type Endpoints = {
     AttesterSlashing[],
     VersionMeta
   >;
+
+  /**
+   * ADVERSARIAL (devnet test only): perform a proposer equivocation split. Imports the self-built (canonical)
+   * block locally, then gossips it to the majority of peers and the builder block to the disjoint
+   * `builderPeersBps` minority, so the network's view splits and resolves to the self-built block. The request
+   * body carries [selfBuiltBlock, builderBlock].
+   */
+  publishBlockEquivocation: Endpoint<
+    "POST",
+    {selfBuiltBlock: SignedBeaconBlock; builderBlock: SignedBeaconBlock; builderPeersBps: number},
+    {body: unknown; headers: {[MetaHeader.Version]: string}; query: {builder_peers_bps: number}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 };
 
 export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoints> {
@@ -699,6 +714,55 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       resp: {
         data: WithVersion((fork) => ArrayOf(ssz[fork].AttesterSlashing)),
         meta: VersionCodec,
+      },
+    },
+    publishBlockEquivocation: {
+      url: "/eth/v1/lodestar/publish_block_equivocation",
+      method: "POST",
+      req: {
+        writeReqJson: ({selfBuiltBlock, builderBlock, builderPeersBps}) => {
+          const fork = config.getForkName(selfBuiltBlock.message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).toJson([selfBuiltBlock, builderBlock] as SignedBeaconBlock<
+              typeof fork
+            >[]),
+            headers: {[MetaHeader.Version]: fork},
+            query: {builder_peers_bps: builderPeersBps},
+          };
+        },
+        parseReqJson: ({body, headers, query}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const [selfBuiltBlock, builderBlock] = ArrayOf(ssz[fork].SignedBeaconBlock).fromJson(
+            body
+          ) as SignedBeaconBlock[];
+          return {selfBuiltBlock, builderBlock, builderPeersBps: query.builder_peers_bps};
+        },
+        writeReqSsz: ({selfBuiltBlock, builderBlock, builderPeersBps}) => {
+          const fork = config.getForkName(selfBuiltBlock.message.slot);
+          return {
+            body: ArrayOf(ssz[fork].SignedBeaconBlock).serialize([selfBuiltBlock, builderBlock] as SignedBeaconBlock<
+              typeof fork
+            >[]),
+            headers: {[MetaHeader.Version]: fork},
+            query: {builder_peers_bps: builderPeersBps},
+          };
+        },
+        parseReqSsz: ({body, headers, query}) => {
+          const fork = toForkName(fromHeaders(headers, MetaHeader.Version));
+          const [selfBuiltBlock, builderBlock] = ArrayOf(ssz[fork].SignedBeaconBlock).deserialize(
+            body
+          ) as SignedBeaconBlock[];
+          return {selfBuiltBlock, builderBlock, builderPeersBps: query.builder_peers_bps};
+        },
+        schema: {
+          body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
+          query: {builder_peers_bps: Schema.UintRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+      init: {
+        requestWireFormat: WireFormat.ssz,
       },
     },
   };

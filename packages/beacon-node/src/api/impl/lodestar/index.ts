@@ -2,16 +2,17 @@ import {routes} from "@lodestar/api";
 import {ApplicationMethods} from "@lodestar/api/server";
 import {ChainForkConfig} from "@lodestar/config";
 import {Repository} from "@lodestar/db";
-import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ForkPostGloas, ForkSeq, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getIndexedAttestation,
   isStatePostCapella,
 } from "@lodestar/state-transition";
-import {Attestation, Epoch, IndexedAttestation, ssz} from "@lodestar/types";
+import {Attestation, Epoch, IndexedAttestation, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {Checkpoint} from "@lodestar/types/phase0";
 import {fromHex, toHex, toRootHex} from "@lodestar/utils";
+import {BlockInputSource} from "../../../chain/blocks/blockInput/index.js";
 import {BeaconChain} from "../../../chain/index.js";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
 import {IBeaconDb} from "../../../db/interface.js";
@@ -348,6 +349,42 @@ export function getLodestarApi({
           version: config.getForkName(signedBlocks[0].message.slot),
         },
       };
+    },
+
+    // ADVERSARIAL (devnet test only): proposer equivocation split. Import the self-built (canonical) block
+    // locally, gossip it to the majority of peers and the builder block to the disjoint minority.
+    async publishBlockEquivocation({selfBuiltBlock, builderBlock, builderPeersBps}) {
+      const seenTimestampSec = Date.now() / 1000;
+      const slot = selfBuiltBlock.message.slot;
+      const fork = config.getForkName(slot);
+      const blockRootHex = toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(selfBuiltBlock.message));
+
+      // Prepare the import input for the self-built block and mark its payload envelope as expected, mirroring
+      // the gloas branch of publishBlockV2.
+      const blockForImport = chain.seenBlockInputCache.getByBlock({
+        block: selfBuiltBlock,
+        source: BlockInputSource.api,
+        seenTimestampSec,
+        blockRootHex,
+      });
+      if (isForkPostGloas(fork)) {
+        chain.seenPayloadEnvelopeInputCache.add({
+          blockRootHex,
+          block: selfBuiltBlock as SignedBeaconBlock<ForkPostGloas>,
+          forkName: fork,
+          sampledColumns: chain.custodyConfig.sampledColumns,
+          custodyColumns: chain.custodyConfig.custodyColumns,
+          timeCreatedSec: seenTimestampSec,
+        });
+      }
+
+      // Split the network: self-built (canonical) to the majority, builder block to the disjoint minority.
+      await network.publishBeaconBlockPartition(selfBuiltBlock, builderBlock, builderPeersBps);
+
+      // Import the self-built block locally so this node follows it and can reveal its payload envelope.
+      await chain.processBlock(blockForImport, {}).catch((e) => {
+        chain.logger.error("ADVERSARIAL: Failed to import self-built equivocation block", {slot}, e as Error);
+      });
     },
   };
 }

@@ -28,6 +28,9 @@ export function getApiClientStub(): ApiClientStub {
     node: {
       getSyncingStatus: vi.fn(),
     },
+    lodestar: {
+      publishBlockEquivocation: vi.fn(),
+    },
     validator: {
       getProposerDuties: vi.fn(),
       getProposerDutiesV2: vi.fn(),

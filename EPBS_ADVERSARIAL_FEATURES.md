@@ -50,9 +50,11 @@ slot's block until `--adversarial.reorg.lastSlotProposalDelayBps`, default 4000
 basis points into the slot). Fourth:
 `--adversarial.reorg.buildOnParentInLastSlot` (Tier 1 #4d, make the final-slot
 proposer build on the current head's parent even when the head is strong; default
-false). Fifth: `--adversarial.equivocate.blockProposal` (Tier 2 #6, publish a
-valid self-built sibling when the proposer selects an external builder bid;
-default false).
+false). Fifth: `--adversarial.equivocate.blockProposal` (Tier 2 #6, when the
+proposer selects an external builder bid, split the network into two disjoint peer
+sets, gossiping a valid self-built block to the majority and the builder block to
+the minority so the view splits and resolves to the self-built block, sized by
+`--adversarial.equivocate.builderBlockPeersBps` (default 4000 = 40%); default false).
 
 ## How ePBS changes the threat model
 
@@ -218,16 +220,36 @@ beacon-block root and flood them to disjoint peer subsets.
 ### 6. Proposer equivocation (ePBS-flavored)
 
 Produce two valid beacon blocks for slot N committing to different bids or
-parents. The implemented variant activates when the primary block selects an
-external builder bid, then forces production of a self-built sibling on the same
-parent and publishes both over gossip. Per-peer subset targeting remains a future
-extension for split-view tests.
+parents and split the network's view of which is canonical. The implemented
+variant activates when the primary block selects an external builder bid: the
+proposer produces a self-built sibling on the same parent, then the beacon node
+partitions its peers into two disjoint sets and, in one operation, gossips the
+self-built (canonical) block to the majority and the builder block to the minority
+(`builderBlockPeersBps`, default 40%) back to back. Each set observes its own block
+one hop before the other block's two-hop relay arrives, and because honest nodes
+IGNORE and do not relay a second block from the same proposer (REPEAT_PROPOSAL),
+the split is stable: the minority follows the builder block (so the builder, if
+among them, reveals its payload) while the majority follows the self-built block.
+Since the minority stays below half, the self-built block wins fork choice and the
+split heals to it over later slots. Publishing both blocks simultaneously to
+disjoint sets is essential: publishing either block first lets it relay network-
+wide and win outright (an earlier flood-then-seed version failed for exactly this
+reason, see git history).
 
-- Effect: tests block dedup, proposer slashing, and how the bid-to-envelope
-  binding copes with two competing blocks for one slot.
+- Effect: tests block dedup, proposer slashing, split-view fork choice (a real
+  competing fork that must lose), and how the bid-to-envelope binding copes with a
+  revealed-but-orphaned builder payload.
 - Injection point: produce the self-built sibling through `produceBlockV4` with
-  `BuilderSelection.ExecutionOnly`, then bypass validator slashing protection for
-  its proposer signature in `packages/validator/src/services/block.ts`.
+  `BuilderSelection.ExecutionOnly` and sign the builder block bypassing slashing
+  protection in `packages/validator/src/services/block.ts`; both blocks are handed
+  to the hidden `lodestar.publishBlockEquivocation` route, which imports the
+  self-built block locally (required so its payload envelope can be revealed) and
+  drives the disjoint dual-publish via `publishPartition` in
+  `packages/beacon-node/src/network/gossip/gossipsub.ts`.
+- Caveat: reaching the actual builder is best-effort (no builderIndex->peerId
+  mapping); a larger minority fraction raises the odds the builder is in it but
+  must stay below half or the builder fork wins. Peer-fraction approximates
+  attester-weight-fraction only when validators are spread evenly across nodes.
 
 ### 7. PTC vote splitting / withholding
 
