@@ -8,8 +8,8 @@ import {
   MAX_ATTESTER_SLASHING_SIZE,
   MAX_DATA_COLUMN_SIDECAR_SIZE,
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
-  MAX_SIGNED_BEACON_BLOCK_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
   ZERO_HASH,
 } from "@lodestar/params";
 import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
@@ -274,12 +274,20 @@ describe("network / gossip / topic", () => {
         config.MAX_PAYLOAD_SIZE
       ),
     }).toEqual({
-      [GossipType.beacon_block]: MAX_SIGNED_BEACON_BLOCK_SIZE,
+      [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
       [GossipType.data_column_sidecar]: MAX_DATA_COLUMN_SIDECAR_SIZE,
       [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
       [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
       [GossipType.execution_payload_bid]: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
     });
+  });
+
+  it("should use the Heze bid size limit post-Heze", () => {
+    const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
+
+    expect(
+      getGossipSSZMaxSize({type: GossipType.execution_payload_bid, boundary, encoding}, config.MAX_PAYLOAD_SIZE)
+    ).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE);
   });
 
   it("should cap Gloas progressive gossip objects below their theoretical SSZ max", () => {

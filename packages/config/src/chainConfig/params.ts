@@ -1,5 +1,6 @@
-import {BlobScheduleEntry, ChainConfig, SpecJson, chainConfigToJson, deserializeBlobSchedule} from "@lodestar/config";
 import {BeaconPreset, activePreset, presetToJson} from "@lodestar/params";
+import {chainConfigToJson, deserializeBlobSchedule} from "./json.js";
+import {BlobScheduleEntry, ChainConfig, SpecJson} from "./types.js";
 
 export class NotEqualParamsError extends Error {}
 
@@ -103,6 +104,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
   const electraForkRelevant = localConfig.ELECTRA_FORK_EPOCH < Infinity;
   const fuluForkRelevant = localConfig.FULU_FORK_EPOCH < Infinity;
   const gloasForkRelevant = localConfig.GLOAS_FORK_EPOCH < Infinity;
+  const hezeForkRelevant = localConfig.HEZE_FORK_EPOCH < Infinity;
 
   return {
     // # Config
@@ -144,6 +146,9 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     // gloas
     GLOAS_FORK_VERSION: gloasForkRelevant,
     GLOAS_FORK_EPOCH: gloasForkRelevant,
+    // heze
+    HEZE_FORK_VERSION: hezeForkRelevant,
+    HEZE_FORK_EPOCH: hezeForkRelevant,
 
     // Time parameters
     SECONDS_PER_SLOT: false, // Deprecated
@@ -326,16 +331,22 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PAYLOAD_ATTESTATIONS: gloasForkRelevant,
     MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
     MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD: gloasForkRelevant,
-    BUILDER_REGISTRY_LIMIT: gloasForkRelevant,
-    BUILDER_PENDING_WITHDRAWALS_LIMIT: gloasForkRelevant,
     MAX_BUILDERS_PER_WITHDRAWALS_SWEEP: gloasForkRelevant,
     MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE: false,
     MAX_ATTESTER_SLASHING_SIZE: false,
     MAX_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
-    MAX_SIGNED_BEACON_BLOCK_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
+
+    // HEZE
+    INCLUSION_LIST_DUE_BPS: hezeForkRelevant,
+    MAX_REQUEST_INCLUSION_LIST: hezeForkRelevant,
+    MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: false,
+    MAX_BYTES_PER_INCLUSION_LIST: hezeForkRelevant,
+    INCLUSION_LIST_COMMITTEE_SIZE: hezeForkRelevant,
+    MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE: false,
+    MAX_SIGNED_INCLUSION_LIST_SIZE: false,
 
     // FastConfirmationRule
     CONFIRMATION_BYZANTINE_THRESHOLD: false,

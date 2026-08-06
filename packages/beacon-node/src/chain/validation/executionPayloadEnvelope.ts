@@ -3,7 +3,6 @@ import {
   MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_BUILDER_EXIT_REQUESTS_PER_PAYLOAD,
   MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
-  MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
   MAX_WITHDRAWALS_PER_PAYLOAD,
   MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
 } from "@lodestar/params";
@@ -123,7 +122,6 @@ async function validateExecutionPayloadEnvelope(
   // are enforced here in gossip validation.
   const {executionRequests} = envelope;
   const requestCountLimits: [string, number, number][] = [
-    ["deposits", executionRequests.deposits.length, MAX_DEPOSIT_REQUESTS_PER_PAYLOAD],
     ["withdrawals", executionRequests.withdrawals.length, MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD],
     ["consolidations", executionRequests.consolidations.length, MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD],
     ["builderDeposits", executionRequests.builderDeposits.length, MAX_BUILDER_DEPOSIT_REQUESTS_PER_PAYLOAD],

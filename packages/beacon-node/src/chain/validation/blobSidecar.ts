@@ -108,7 +108,7 @@ export async function validateGossipBlobSidecar(
 
   // [REJECT] The blob is from a higher slot than its parent.
   if (parentBlock.slot >= blobSlot) {
-    throw new BlobSidecarGossipError(GossipAction.IGNORE, {
+    throw new BlobSidecarGossipError(GossipAction.REJECT, {
       code: BlobSidecarErrorCode.NOT_LATER_THAN_PARENT,
       parentSlot: parentBlock.slot,
       slot: blobSlot,

@@ -11,36 +11,36 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.44.0",
+  "version": "1.45.0",
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./block": {
-      "bun": "./src/block/index.ts",
+      "typescript": "./src/block/index.ts",
       "types": "./lib/block/index.d.ts",
       "import": "./lib/block/index.js"
     },
     "./epoch": {
-      "bun": "./src/epoch/index.ts",
+      "typescript": "./src/epoch/index.ts",
       "types": "./lib/epoch/index.d.ts",
       "import": "./lib/epoch/index.js"
     },
     "./slot": {
-      "bun": "./src/slot/index.ts",
+      "typescript": "./src/slot/index.ts",
       "types": "./lib/slot/index.d.ts",
       "import": "./lib/slot/index.js"
     },
     "./light-client": {
-      "bun": "./src/lightClient/spec/index.ts",
+      "typescript": "./src/lightClient/spec/index.ts",
       "types": "./lib/lightClient/spec/index.d.ts",
       "import": "./lib/lightClient/spec/index.js"
     },
     "./test-utils": {
-      "bun": "./src/testUtils/index.ts",
+      "typescript": "./src/testUtils/index.ts",
       "types": "./lib/testUtils/index.d.ts",
       "import": "./lib/testUtils/index.js"
     }
@@ -52,16 +52,16 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "pnpm run build --watch",
     "build:release": "pnpm clean && pnpm build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit",
     "test:unit": "vitest run --project unit --project unit-minimal",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "types": "lib/index.d.ts",
   "dependencies": {

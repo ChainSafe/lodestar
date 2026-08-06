@@ -34,6 +34,7 @@ const coveredTestRunners = [
   "finality",
   "fork",
   "fork_choice",
+  "fork_choice_compliance",
   "sync",
   "fork",
   "genesis",
@@ -60,7 +61,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805", "heze"],
+  skippedForks: ["eip8148"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -77,35 +78,41 @@ export const defaultSkipOpts: SkipOpts = {
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
     /^gloas\/light_client\/sync\/.*/,
+    /^heze\/light_client\/sync\/.*/,
     // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
-    // TODO GLOAS: Unskip in #9606
-    /^gloas\/operations\/builder_deposit_request\/.*$/,
+    /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
+    // New test suite added in v1.7.0-alpha.13 (consensus-specs #5441); Lodestar still applies
+    // the pre-gloas proposer boost, so the head weight differs by the boost amount.
+    /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    // TODO GLOAS: enable this after gloas fork choice is ready
+    /^gloas\/fork_choice_compliance\/.*/,
+    /^heze\/fork_choice_compliance\/.*/,
+    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
+    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
-    // TODO GLOAS: Unskip in #9606
-    /^gloas\/operations\/builder_deposit_request\/.*$/,
-    /\/fork_builder_deposit_followed_by_non_builder_credentials$/,
-    /\/fork_builder_deposit_uses_deposit_slot_epoch$/,
-    /\/fork_builder_deposit_version$/,
-    /\/fork_invalid_builder_deposit_followed_by_valid_builder_deposit$/,
-    /\/fork_invalid_validator_deposit_followed_by_builder_credentials$/,
-    /\/fork_mixed_pending_deposits$/,
-    /\/fork_multiple_builder_deposits$/,
-    /\/fork_multiple_deposits_same_builder$/,
-    /\/fork_single_builder_deposit$/,
-    /\/fork_valid_builder_deposit_followed_by_invalid_builder_deposit$/,
-    /\/deposit_requests_greater_than_electra_max$/,
-    /\/process_parent_execution_payload__new_builder_does_not_reuse_topped_up_builder_slot$/,
-    /\/process_builder_exit_request__success$/,
-    /\/process_parent_execution_payload__builder_exit_request$/,
-    /\/switch_to_compounding_with_pending_consolidations_at_limit$/,
+    /\/heze_fork$/,
+    // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
+    // boost wrongly denied. Fails identically on every pre-gloas fork.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
+    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
+    // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
+    // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
+    // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
+    // so skip rather than raise the timeout and hide the regression.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
+    /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],
@@ -196,9 +203,15 @@ export function specTestIterator(
             // Generic testRunner
             else {
               const {testFunction, options} = testRunner.fn(fork, testHandler, testSuite);
-              if (opts.skippedTests && options.shouldSkip === undefined) {
-                options.shouldSkip = (_testCase: any, name: string, _index: number): boolean => {
-                  return opts?.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false;
+              if (opts.skippedTests) {
+                // Compose with any runner-local shouldSkip — overwriting it would silently
+                // disable SkipOpts.skippedTests for runners that define their own (fork_choice).
+                const runnerShouldSkip = options.shouldSkip;
+                options.shouldSkip = (testCase: any, name: string, index: number): boolean => {
+                  return (
+                    (runnerShouldSkip?.(testCase, name, index) ?? false) ||
+                    (opts.skippedTests?.some((skippedMatch) => name.match(skippedMatch)) ?? false)
+                  );
                 };
               }
               describeDirectorySpecTest(testId, testSuiteDirpath, testFunction, options);

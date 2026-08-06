@@ -1,11 +1,16 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength, isStartSlotOfEpoch} from "@lodestar/state-transition";
+import {
+  IClock,
+  computeEpochAtSlot,
+  isAggregatorFromCommitteeLength,
+  isStartSlotOfEpoch,
+} from "@lodestar/state-transition";
 import {BLSSignature, Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {sleep, toPubkeyHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc, batchItems} from "../util/index.js";
+import {LoggerVc, batchItems} from "../util/index.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {SyncingStatusTracker} from "./syncingStatusTracker.js";
 import {ValidatorStore} from "./validatorStore.js";
