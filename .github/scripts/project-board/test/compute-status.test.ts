@@ -4,7 +4,15 @@ import {computeStatus} from "../src/compute-status.ts";
 import type {PrSnapshot, ReviewInfo} from "../src/types.ts";
 
 function pr(overrides: Partial<PrSnapshot>): PrSnapshot {
-  return {prState: "OPEN", isDraft: false, pendingUserRequests: [], reviews: [], ...overrides};
+  const pendingUserRequests = overrides.pendingUserRequests ?? [];
+  return {
+    prState: "OPEN",
+    isDraft: false,
+    pendingUserRequests,
+    reviewRequestSignals: pendingUserRequests,
+    reviews: [],
+    ...overrides,
+  };
 }
 
 function review(overrides: Partial<ReviewInfo>): ReviewInfo {
@@ -78,6 +86,21 @@ test("approval with another request still pending stays Review Requested", () =>
   const p = pr({
     pendingUserRequests: [{login: "bob", requestedAt: "2026-01-01T00:00:00Z"}],
     reviews: [review({state: "APPROVED", submittedAt: "2026-01-02T00:00:00Z"})],
+  });
+  assert.equal(computeStatus(p), "Review Requested");
+});
+
+test("approval after re-request stays Review Requested while another reviewer is pending", () => {
+  const p = pr({
+    pendingUserRequests: [{login: "bob", requestedAt: "2026-01-01T00:00:00Z"}],
+    reviewRequestSignals: [
+      {login: "bob", requestedAt: "2026-01-01T00:00:00Z"},
+      {login: "alice", requestedAt: "2026-01-03T00:00:00Z"},
+    ],
+    reviews: [
+      review({authorLogin: "alice", submittedAt: "2026-01-02T00:00:00Z"}),
+      review({authorLogin: "alice", state: "APPROVED", submittedAt: "2026-01-04T00:00:00Z"}),
+    ],
   });
   assert.equal(computeStatus(p), "Review Requested");
 });

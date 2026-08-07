@@ -76,9 +76,14 @@ query ($owner: String!, $repo: String!, $number: Int!) {
       reviews(last: 100) {
         nodes { state submittedAt author { __typename login } }
       }
-      timelineItems(last: 100, itemTypes: [REVIEW_REQUESTED_EVENT]) {
+      timelineItems(last: 100, itemTypes: [REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT]) {
         nodes {
+          __typename
           ... on ReviewRequestedEvent {
+            createdAt
+            requestedReviewer { __typename ... on User { login } }
+          }
+          ... on ReviewRequestRemovedEvent {
             createdAt
             requestedReviewer { __typename ... on User { login } }
           }

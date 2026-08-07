@@ -25,14 +25,27 @@ test("team review requests are excluded; user requests get timeline timestamps",
     },
     timelineItems: {
       nodes: [
-        {createdAt: "2026-01-01T00:00:00Z", requestedReviewer: {__typename: "User", login: "alice"}},
-        {createdAt: "2026-01-03T00:00:00Z", requestedReviewer: {__typename: "User", login: "alice"}},
-        {createdAt: "2026-01-04T00:00:00Z", requestedReviewer: {__typename: "Team", login: undefined}},
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-01T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "alice"},
+        },
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-03T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "alice"},
+        },
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-04T00:00:00Z",
+          requestedReviewer: {__typename: "Team", login: undefined},
+        },
       ],
     },
   });
   const snap = buildSnapshot(node);
   assert.deepEqual(snap.pendingUserRequests, [{login: "alice", requestedAt: "2026-01-03T00:00:00Z"}]);
+  assert.deepEqual(snap.reviewRequestSignals, [{login: "alice", requestedAt: "2026-01-03T00:00:00Z"}]);
 });
 
 test("pending request with no timeline event falls back to epoch", () => {
@@ -41,6 +54,67 @@ test("pending request with no timeline event falls back to epoch", () => {
   });
   const snap = buildSnapshot(node);
   assert.deepEqual(snap.pendingUserRequests, [{login: "alice", requestedAt: "1970-01-01T00:00:00Z"}]);
+  assert.deepEqual(snap.reviewRequestSignals, [{login: "alice", requestedAt: "1970-01-01T00:00:00Z"}]);
+});
+
+test("completed re-request remains a signal while another reviewer is pending", () => {
+  const node = prNode({
+    reviewRequests: {nodes: [{requestedReviewer: {__typename: "User", login: "bob"}}]},
+    timelineItems: {
+      nodes: [
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-01T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "bob"},
+        },
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-03T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "alice"},
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(buildSnapshot(node).reviewRequestSignals, [
+    {login: "bob", requestedAt: "2026-01-01T00:00:00Z"},
+    {login: "alice", requestedAt: "2026-01-03T00:00:00Z"},
+  ]);
+});
+
+test("explicit removal cancels only the latest request signal for a reviewer", () => {
+  const node = prNode({
+    reviewRequests: {nodes: [{requestedReviewer: {__typename: "User", login: "bob"}}]},
+    timelineItems: {
+      nodes: [
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-01T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "bob"},
+        },
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-02T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "alice"},
+        },
+        {
+          __typename: "ReviewRequestedEvent",
+          createdAt: "2026-01-03T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "alice"},
+        },
+        {
+          __typename: "ReviewRequestRemovedEvent",
+          createdAt: "2026-01-04T00:00:00Z",
+          requestedReviewer: {__typename: "User", login: "alice"},
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(buildSnapshot(node).reviewRequestSignals, [
+    {login: "bob", requestedAt: "2026-01-01T00:00:00Z"},
+    {login: "alice", requestedAt: "2026-01-02T00:00:00Z"},
+  ]);
 });
 
 test("bot and deleted review authors are marked fromUser=false", () => {

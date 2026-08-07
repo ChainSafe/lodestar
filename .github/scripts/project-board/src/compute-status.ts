@@ -16,7 +16,11 @@ export function computeStatus(pr: PrSnapshot): Status | null {
   const counted = pr.reviews.filter((r) => r.fromUser);
   const feedback = counted.filter((r) => r.state === "CHANGES_REQUESTED" || r.state === "COMMENTED");
   const newestFeedback = newest(feedback.map((r) => r.submittedAt));
-  const newestRequest = newest(pr.pendingUserRequests.map((r) => r.requestedAt));
+  // Completed requests remain signals while another reviewer is pending so
+  // that an approval preserves the lane selected by the preceding re-request.
+  const newestRequest = pr.pendingUserRequests.length
+    ? newest(pr.reviewRequestSignals.map((r) => r.requestedAt))
+    : undefined;
 
   // Latest signal wins; a request wins timestamp ties (re-request intent is explicit).
   if (newestRequest !== undefined && (newestFeedback === undefined || newestRequest >= newestFeedback)) {

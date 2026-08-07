@@ -35,5 +35,10 @@ export interface PrSnapshot {
   isDraft: boolean;
   /** User-level pending review requests only — team requests are excluded upstream. */
   pendingUserRequests: PendingRequest[];
+  /**
+   * User-level request signals that have not been explicitly removed. Includes
+   * completed requests because approvals with another reviewer pending are a no-op.
+   */
+  reviewRequestSignals: PendingRequest[];
   reviews: ReviewInfo[];
 }
