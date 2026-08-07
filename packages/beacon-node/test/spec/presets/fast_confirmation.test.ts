@@ -881,15 +881,5 @@ specTestIterator(
   {
     fast_confirmation: {type: RunnerType.default, fn: fastConfirmationTest({onlyPredefinedResponses: false})},
   },
-  {
-    ...defaultSkipOpts,
-    skippedTestSuites: [
-      ...(defaultSkipOpts.skippedTestSuites ?? []),
-      // TODO GLOAS: unskip with the v1.7.0-alpha.13 gloas implementation. The alpha.13 gloas
-      // vectors require beacon-chain changes not yet on unstable (blocks fail state transition),
-      // and the gloas-modified `get_safe_execution_block_hash` (parent payload block hash) is not
-      // implemented yet.
-      /^gloas\/fast_confirmation\/.*/,
-    ],
-  }
+  defaultSkipOpts
 );
