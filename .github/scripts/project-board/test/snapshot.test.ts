@@ -117,6 +117,20 @@ test("explicit removal cancels only the latest request signal for a reviewer", (
   ]);
 });
 
+test("latest ready-for-review or reopened event starts the review cycle", () => {
+  const node = prNode({
+    timelineItems: {
+      nodes: [
+        {__typename: "ReadyForReviewEvent", createdAt: "2026-01-01T00:00:00Z"},
+        {__typename: "ReopenedEvent", createdAt: "2026-01-03T00:00:00Z"},
+        {__typename: "ReadyForReviewEvent", createdAt: "2026-01-02T00:00:00Z"},
+      ],
+    },
+  });
+
+  assert.equal(buildSnapshot(node).reviewCycleStartedAt, "2026-01-03T00:00:00Z");
+});
+
 test("bot and deleted review authors are marked fromUser=false", () => {
   const node = prNode({
     reviews: {

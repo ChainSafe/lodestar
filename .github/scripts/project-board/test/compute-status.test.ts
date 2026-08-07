@@ -29,6 +29,43 @@ test("draft is In Progress even with pending requests", () => {
   assert.equal(computeStatus(p), "In Progress");
 });
 
+test("ready for review starts a new cycle that ignores older feedback", () => {
+  const p = pr({
+    reviewCycleStartedAt: "2026-01-03T00:00:00Z",
+    reviews: [review({submittedAt: "2026-01-02T00:00:00Z"})],
+  });
+  assert.equal(computeStatus(p), "In Progress");
+});
+
+test("pending request from before ready for review carries into the new cycle", () => {
+  const p = pr({
+    reviewCycleStartedAt: "2026-01-03T00:00:00Z",
+    pendingUserRequests: [{login: "bob", requestedAt: "2026-01-01T00:00:00Z"}],
+    reviewRequestSignals: [{login: "bob", requestedAt: "2026-01-01T00:00:00Z"}],
+    reviews: [review({submittedAt: "2026-01-02T00:00:00Z"})],
+  });
+  assert.equal(computeStatus(p), "Review Requested");
+});
+
+test("reopened PR ignores approvals and feedback from before it was reopened", () => {
+  const p = pr({
+    reviewCycleStartedAt: "2026-01-03T00:00:00Z",
+    reviews: [
+      review({submittedAt: "2026-01-01T00:00:00Z"}),
+      review({state: "APPROVED", submittedAt: "2026-01-02T00:00:00Z"}),
+    ],
+  });
+  assert.equal(computeStatus(p), "In Progress");
+});
+
+test("feedback submitted after reopen is Awaiting Author", () => {
+  const p = pr({
+    reviewCycleStartedAt: "2026-01-03T00:00:00Z",
+    reviews: [review({submittedAt: "2026-01-04T00:00:00Z"})],
+  });
+  assert.equal(computeStatus(p), "Awaiting Author");
+});
+
 test("open non-draft with no signals is In Progress", () => {
   assert.equal(computeStatus(pr({})), "In Progress");
 });

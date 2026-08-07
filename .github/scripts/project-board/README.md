@@ -18,16 +18,18 @@ Automates the Status field for PR cards on [Lodestar Team Coordination](https://
 
 | Event                                     | Condition                                                                       | Status           |
 | ----------------------------------------- | ------------------------------------------------------------------------------- | ---------------- |
-| PR opened / converted to draft            | draft                                                                           | In Progress      |
-| PR opened / marked ready                  | non-draft, no user-level reviewers requested                                    | In Progress      |
+| PR opened / reopened / converted to draft | draft                                                                           | In Progress      |
+| PR opened / reopened / marked ready       | non-draft, no user-level reviewers requested                                    | In Progress      |
 | Review requested (or re-requested)        | non-draft, user-level request                                                   | Review Requested |
-| PR marked ready                           | user-level reviewers already requested                                          | Review Requested |
+| PR reopened / marked ready                | user-level reviewers already requested                                          | Review Requested |
 | Review: changes requested / commented     | counted reviewers only — even with other reviewers pending, including drive-bys | Awaiting Author  |
 | Review: approved                          | other user-level review requests still pending                                  | no change        |
 | Review: approved                          | no pending user-level review requests left                                      | Awaiting Author  |
 | Commits pushed                            | always                                                                          | no change        |
 | Review request removed / review dismissed | recompute (see Model)                                                           | per invariants   |
 | PR merged/closed                          | always (built-in project workflow)                                              | Done             |
+
+The reconciler owns the `reopened` transition. The project's built-in **Item reopened** workflow must remain disabled to avoid competing status writes.
 
 **Team convention:** reviewers normally submit **comment** reviews rather than "request changes" (a changes-requested review blocks merging until re-reviewed, which causes stale-review friction). The automation treats both identically, so the convention is optional as far as the board is concerned.
 
@@ -45,8 +47,9 @@ Events do not map directly to moves. Every relevant event (and the sweep) trigge
 
 1. Merged or closed → **Done** (built-in workflow; reconciler skips)
 2. Draft → **In Progress**
-3. **Latest signal wins:** while at least one user-level review request is pending, compare the newest non-removed user-level request signal against the newest non-dismissed comment/changes-requested counted review. Request is newer (or tied) → **Review Requested**; review is newer → **Awaiting Author** — a timestamp tie goes to the request, since a re-request is an explicit signal
-4. No pending requests and no comment/changes reviews: any approval → **Awaiting Author**; no reviews at all → **In Progress**
+3. The latest ready-for-review or reopened event starts a new review cycle. Older reviews and completed request signals are ignored. User-level requests that remain pending carry into the new cycle.
+4. **Latest signal wins:** while at least one user-level review request is pending, compare the newest non-removed user-level request signal against the newest non-dismissed comment/changes-requested counted review. Request is newer (or tied) → **Review Requested**; review is newer → **Awaiting Author** — a timestamp tie goes to the request, since a re-request is an explicit signal
+5. No pending requests and no comment/changes reviews: any approval → **Awaiting Author**; no reviews at all → **In Progress**
 
 Request timestamps are not exposed on pending requests. They are reconstructed from `REVIEW_REQUESTED_EVENT` and `REVIEW_REQUEST_REMOVED_EVENT` timeline items. A request remains a signal after its reviewer responds because an approval with another reviewer pending is a no-op. An explicit removal cancels only that reviewer's latest request signal. Request signals are ignored when no user-level requests remain pending.
 

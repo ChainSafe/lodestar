@@ -33,6 +33,8 @@ export interface PendingRequest {
 export interface PrSnapshot {
   prState: "OPEN" | "MERGED" | "CLOSED";
   isDraft: boolean;
+  /** Latest ready-for-review or reopened event; older review signals do not count. */
+  reviewCycleStartedAt?: string;
   /** User-level pending review requests only — team requests are excluded upstream. */
   pendingUserRequests: PendingRequest[];
   /**

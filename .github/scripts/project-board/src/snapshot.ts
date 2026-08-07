@@ -13,13 +13,16 @@ export interface PrNode {
   isDraft: boolean;
   reviewRequests: {nodes: Array<{requestedReviewer: Actor | null}>};
   reviews: {nodes: Array<{state: ReviewInfo["state"]; submittedAt: string | null; author: Actor | null}>};
-  /** Review request and explicit removal events, newest last (query uses `last:`). */
+  /** Review request and lifecycle events, newest last (query uses `last:`). */
   timelineItems: {
-    nodes: Array<{
-      __typename: "ReviewRequestedEvent" | "ReviewRequestRemovedEvent";
-      createdAt: string;
-      requestedReviewer: Actor | null;
-    }>;
+    nodes: Array<
+      | {
+          __typename: "ReviewRequestedEvent" | "ReviewRequestRemovedEvent";
+          createdAt: string;
+          requestedReviewer: Actor | null;
+        }
+      | {__typename: "ReadyForReviewEvent" | "ReopenedEvent"; createdAt: string}
+    >;
   };
   projectItems: {
     nodes: Array<{id: string; project: {number: number}; fieldValueByName: {name: string} | null}>;
@@ -33,7 +36,15 @@ export function buildSnapshot(pr: PrNode): PrSnapshot {
   // but emits ReviewRequestRemovedEvent only for an explicit removal. Retain
   // completed request signals and pop only explicitly removed requests.
   const requestStacks = new Map<string, PendingRequest[]>();
+  let reviewCycleStartedAt: string | undefined;
   for (const event of pr.timelineItems.nodes) {
+    if (!("requestedReviewer" in event)) {
+      if (reviewCycleStartedAt === undefined || event.createdAt > reviewCycleStartedAt) {
+        reviewCycleStartedAt = event.createdAt;
+      }
+      continue;
+    }
+
     const reviewer = event.requestedReviewer;
     if (reviewer?.__typename !== "User" || !reviewer.login) continue;
 
@@ -69,7 +80,14 @@ export function buildSnapshot(pr: PrNode): PrSnapshot {
       submittedAt: n.submittedAt as string,
     }));
 
-  return {prState: pr.state, isDraft: pr.isDraft, pendingUserRequests, reviewRequestSignals, reviews};
+  return {
+    prState: pr.state,
+    isDraft: pr.isDraft,
+    reviewCycleStartedAt,
+    pendingUserRequests,
+    reviewRequestSignals,
+    reviews,
+  };
 }
 
 export function pickProjectItem(
