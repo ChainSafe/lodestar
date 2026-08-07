@@ -1179,6 +1179,10 @@ export function createLodestarMetrics(
         name: "lodestar_oppool_proposer_slashing_pool_size",
         help: "Current size of the ProposerSlashingPool",
       }),
+      proposerSlashingsProduced: register.counter({
+        name: "lodestar_oppool_proposer_slashings_produced_total",
+        help: "Total number of proposer slashings produced from observed equivocations",
+      }),
       voluntaryExitPoolSize: register.gauge({
         name: "lodestar_oppool_voluntary_exit_pool_size",
         help: "Current size of the VoluntaryExitPool",

@@ -50,7 +50,8 @@ describe("api - beacon - publishBlockV2", () => {
       modules.chain.seenBlockProposers.observeBlockRoot(
         signedBlock.message.slot,
         signedBlock.message.proposerIndex,
-        conflictingBlockRoot
+        conflictingBlockRoot,
+        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
       );
 
       const api = getBeaconBlockApi(modules);

@@ -68,7 +68,12 @@ describe("chain / blocks / processBlocks", () => {
       errorMessage: "test execution error",
     });
     vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
-      seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex);
+      seenBlockProposers.observeBlockRoot(
+        slot,
+        proposerIndex,
+        blockInput.blockRootHex,
+        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
+      );
       return {
         postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
         proposerBalanceDeltas: [0],
@@ -88,7 +93,12 @@ describe("chain / blocks / processBlocks", () => {
 
   it("marks a proposal as known after execution verification succeeds", async () => {
     vi.mocked(verifyBlocksInEpoch).mockImplementation(async () => {
-      seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex);
+      seenBlockProposers.observeBlockRoot(
+        slot,
+        proposerIndex,
+        blockInput.blockRootHex,
+        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
+      );
       return {
         postStates: [{forkName: ForkName.deneb} as IBeaconStateView],
         proposerBalanceDeltas: [0],
