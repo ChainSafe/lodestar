@@ -20,7 +20,7 @@ const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
  */
 export class SeenBlockProposers {
   private readonly proposerIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
-  private readonly blockRootsBySlot = new MapDef<
+  private readonly signedBlockHeadersBySlot = new MapDef<
     Slot,
     MapDef<ValidatorIndex, Map<RootHex, phase0.SignedBeaconBlockHeader>>
   >(() => new MapDef<ValidatorIndex, Map<RootHex, phase0.SignedBeaconBlockHeader>>(() => new Map()));
@@ -31,16 +31,20 @@ export class SeenBlockProposers {
   }
 
   hasBlockRoot(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): boolean {
-    return this.blockRootsBySlot.get(blockSlot)?.get(proposerIndex)?.has(blockRoot) === true;
+    return this.signedBlockHeadersBySlot.get(blockSlot)?.get(proposerIndex)?.has(blockRoot) === true;
   }
 
   isEquivocating(blockSlot: Slot, proposerIndex: ValidatorIndex): boolean {
-    return (this.blockRootsBySlot.get(blockSlot)?.get(proposerIndex)?.size ?? 0) >= MAX_BLOCK_ROOTS_PER_PROPOSAL;
+    return (
+      (this.signedBlockHeadersBySlot.get(blockSlot)?.get(proposerIndex)?.size ?? 0) >= MAX_BLOCK_ROOTS_PER_PROPOSAL
+    );
   }
 
   getConflictingBlockRoots(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): RootHex[] {
-    const roots = this.blockRootsBySlot.get(blockSlot)?.get(proposerIndex);
-    return roots === undefined ? [] : Array.from(roots.keys()).filter((root) => root !== blockRoot);
+    const signedBlockHeaderByRoot = this.signedBlockHeadersBySlot.get(blockSlot)?.get(proposerIndex);
+    return signedBlockHeaderByRoot === undefined
+      ? []
+      : Array.from(signedBlockHeaderByRoot.keys()).filter((root) => root !== blockRoot);
   }
 
   /** Return the two signed block headers that establish an equivocation, or null if there is none */
@@ -48,11 +52,11 @@ export class SeenBlockProposers {
     blockSlot: Slot,
     proposerIndex: ValidatorIndex
   ): [phase0.SignedBeaconBlockHeader, phase0.SignedBeaconBlockHeader] | null {
-    const headers = this.blockRootsBySlot.get(blockSlot)?.get(proposerIndex);
-    if (headers === undefined || headers.size < MAX_BLOCK_ROOTS_PER_PROPOSAL) {
+    const signedBlockHeaderByRoot = this.signedBlockHeadersBySlot.get(blockSlot)?.get(proposerIndex);
+    if (signedBlockHeaderByRoot === undefined || signedBlockHeaderByRoot.size < MAX_BLOCK_ROOTS_PER_PROPOSAL) {
       return null;
     }
-    const [signedHeader1, signedHeader2] = headers.values();
+    const [signedHeader1, signedHeader2] = signedBlockHeaderByRoot.values();
     return [signedHeader1, signedHeader2];
   }
 
@@ -67,9 +71,9 @@ export class SeenBlockProposers {
       throw Error(`blockSlot ${blockSlot} < finalizedSlot ${this.finalizedSlot}`);
     }
 
-    const blockRoots = this.blockRootsBySlot.getOrDefault(blockSlot).getOrDefault(proposerIndex);
-    if (blockRoots.size < MAX_BLOCK_ROOTS_PER_PROPOSAL && !blockRoots.has(blockRoot)) {
-      blockRoots.set(blockRoot, signedBlockHeader);
+    const signedBlockHeaderByRoot = this.signedBlockHeadersBySlot.getOrDefault(blockSlot).getOrDefault(proposerIndex);
+    if (signedBlockHeaderByRoot.size < MAX_BLOCK_ROOTS_PER_PROPOSAL && !signedBlockHeaderByRoot.has(blockRoot)) {
+      signedBlockHeaderByRoot.set(blockRoot, signedBlockHeader);
     }
   }
 
@@ -89,9 +93,9 @@ export class SeenBlockProposers {
         this.proposerIndexesBySlot.delete(slot);
       }
     }
-    for (const slot of this.blockRootsBySlot.keys()) {
+    for (const slot of this.signedBlockHeadersBySlot.keys()) {
       if (slot < finalizedSlot) {
-        this.blockRootsBySlot.delete(slot);
+        this.signedBlockHeadersBySlot.delete(slot);
       }
     }
   }
