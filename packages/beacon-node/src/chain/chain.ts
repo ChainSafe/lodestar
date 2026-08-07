@@ -1168,7 +1168,7 @@ export class BeaconChain implements IBeaconChain {
 
   processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
     this.produceProposerSlashing(blockSlot, proposerIndex).catch((e) => {
-      this.logger.error("Error producing proposer slashing", {slot: blockSlot, proposerIndex}, e as Error);
+      this.logger.debug("Error producing proposer slashing", {slot: blockSlot, proposerIndex}, e as Error);
     });
   }
 
