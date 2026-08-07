@@ -76,7 +76,7 @@ describe("safeBlocks - getSafeExecutionBlockHash", () => {
     });
     const fc = mockForkChoice(confirmed, confirmed);
     expect(getSafeExecutionBlockHash(fc, {warn})).toBe(HEX_ZERO_HASH);
-    expect(warn).toHaveBeenCalledWith("Execution payload block hash not found; using zero hash", {
+    expect(warn).toHaveBeenCalledWith("Execution payload block hash not found, using zero hash", {
       blockRoot: confirmed.blockRoot,
       slot: confirmed.slot,
     });
@@ -102,7 +102,7 @@ describe("safeBlocks - getSafeExecutionBlockHash", () => {
     const fc = mockForkChoice(null, finalized);
 
     expect(getSafeExecutionBlockHash(fc, {warn})).toBe(HEX_ZERO_HASH);
-    expect(warn).toHaveBeenCalledWith("Confirmed block not found; using zero safe execution block hash", {
+    expect(warn).toHaveBeenCalledWith("Confirmed block not found, using zero safe execution block hash", {
       confirmedRoot: "0xconfirmed",
     });
   });
@@ -150,7 +150,7 @@ describe("safeBlocks - getFinalizedExecutionBlockHash", () => {
     });
     const fc = mockForkChoice(finalized, finalized);
     expect(getFinalizedExecutionBlockHash(fc, {warn})).toBe(HEX_ZERO_HASH);
-    expect(warn).toHaveBeenCalledWith("Execution payload block hash not found; using zero hash", {
+    expect(warn).toHaveBeenCalledWith("Execution payload block hash not found, using zero hash", {
       blockRoot: finalized.blockRoot,
       slot: finalized.slot,
     });
