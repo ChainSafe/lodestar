@@ -1037,7 +1037,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
     graffiti,
     // Eth1 data voting is no longer required since electra
     eth1Data: currentState.eth1Data,
-    proposerSlashings,
+    proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
     attesterSlashings,
     attestations,
     // Since electra, deposits are processed by the execution layer,
