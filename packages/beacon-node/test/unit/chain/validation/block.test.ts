@@ -1,10 +1,11 @@
-import {Mock, Mocked, beforeEach, describe, it, vi} from "vitest";
+import {Mock, Mocked, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as configDef} from "@lodestar/config/default";
 import {ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkPostDeneb, ForkPreFulu} from "@lodestar/params";
-import {BeaconStateView} from "@lodestar/state-transition";
+import {BeaconStateView, signedBlockToSignedHeader} from "@lodestar/state-transition";
 import {SignedBeaconBlock, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {BlockErrorCode} from "../../../../src/chain/errors/index.js";
 import {QueuedStateRegenerator} from "../../../../src/chain/regen/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/index.js";
@@ -33,9 +34,22 @@ describe("gossip block validation", () => {
     DENEB_FORK_EPOCH: 0,
   });
   const config = createBeaconConfig(configDef, Buffer.alloc(32, 0xaa));
+  const gloasConfig = createBeaconConfig(
+    {
+      ...configDef,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    },
+    Buffer.alloc(32, 0xaa)
+  );
 
-  beforeEach(() => {
-    chain = getMockedBeaconChain({config});
+  function setupChain(chainConfig = config, genesisTime = 0): void {
+    chain = getMockedBeaconChain({config: chainConfig, genesisTime});
     vi.spyOn(chain.clock, "currentSlotWithGossipDisparity", "get").mockReturnValue(clockSlot);
     forkChoice = chain.forkChoice;
     forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
@@ -60,6 +74,10 @@ describe("gossip block validation", () => {
     ).seenBlockProposers = new SeenBlockProposers();
 
     job = {signature, message: block};
+  }
+
+  beforeEach(() => {
+    setupChain();
   });
 
   it("FUTURE_SLOT", async () => {
@@ -96,14 +114,134 @@ describe("gossip block validation", () => {
     );
   });
 
-  it("REPEAT_PROPOSAL", async () => {
-    // Register the proposer as known
-    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
+  describe("repeat proposal handling", () => {
+    beforeEach(() => {
+      setupChain(gloasConfig);
+    });
 
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, job, ForkName.phase0),
-      BlockErrorCode.REPEAT_PROPOSAL
-    );
+    it("records a conflicting block root after verifying the proposer signature", async () => {
+      const forkTypes = gloasConfig.getForkTypes(clockSlot);
+      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = clockSlot;
+      signedBlock.message.proposerIndex = proposerIndex;
+      const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        blockRoot,
+        signedBlockToSignedHeader(gloasConfig, signedBlock)
+      );
+      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+
+      const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
+      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+      const conflictingBlockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(conflictingBlock.message));
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+        BlockErrorCode.REPEAT_PROPOSAL
+      );
+
+      expect(verifySignature).toHaveBeenCalledOnce();
+      expect(verifySignature).toHaveBeenCalledWith(expect.any(Array), {verifyOnMainThread: false});
+      expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([
+        conflictingBlockRoot,
+      ]);
+      const equivocationHeaders = chain.seenBlockProposers.getEquivocationHeaders(clockSlot, proposerIndex);
+      expect(
+        equivocationHeaders?.map((header) => toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header.message)))
+      ).toEqual([blockRoot, conflictingBlockRoot]);
+    });
+
+    it("does not record a conflicting block root when the proposer signature is invalid", async () => {
+      const forkTypes = gloasConfig.getForkTypes(clockSlot);
+      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = clockSlot;
+      signedBlock.message.proposerIndex = proposerIndex;
+      const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        blockRoot,
+        signedBlockToSignedHeader(gloasConfig, signedBlock)
+      );
+      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+
+      const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
+      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
+      verifySignature.mockResolvedValue(false);
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas),
+        BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
+      );
+
+      expect(chain.seenBlockProposers.getConflictingBlockRoots(clockSlot, proposerIndex, blockRoot)).toEqual([]);
+    });
+
+    it("skips proposer signature verification after observing an equivocation", async () => {
+      const forkTypes = gloasConfig.getForkTypes(clockSlot);
+      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = clockSlot;
+      signedBlock.message.proposerIndex = proposerIndex;
+      const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        blockRoot,
+        signedBlockToSignedHeader(gloasConfig, signedBlock)
+      );
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        toRootHex(Buffer.alloc(32, 1)),
+        ssz.phase0.SignedBeaconBlockHeader.defaultValue()
+      );
+      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+
+      const additionalBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
+      additionalBlock.message.stateRoot = Buffer.alloc(32, 2);
+
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, additionalBlock, ForkName.gloas),
+        BlockErrorCode.REPEAT_PROPOSAL
+      );
+
+      expect(verifySignature).not.toHaveBeenCalled();
+    });
+
+    it("detects another proposal that becomes known during the early-block delay", async () => {
+      const now = 1_000_000;
+      vi.useFakeTimers({now});
+
+      try {
+        const genesisTime = now / 1000 - clockSlot * (gloasConfig.SLOT_DURATION_MS / 1000) + 0.1;
+        setupChain(gloasConfig, genesisTime);
+        const forkTypes = gloasConfig.getForkTypes(clockSlot);
+        const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+        signedBlock.message.slot = clockSlot;
+        signedBlock.message.proposerIndex = proposerIndex;
+        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce(null);
+        forkChoice.getBlockHexDefaultStatus.mockReturnValueOnce({slot: clockSlot - 1} as ProtoBlock);
+        forkChoice.getBlockHexAndBlockHash.mockReturnValue({slot: clockSlot - 1} as ProtoBlock);
+        const state = new BeaconStateView(generateCachedState());
+        regen.getPreState.mockResolvedValue(state);
+        vi.spyOn(state.cachedState.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
+
+        const validation = expectRejectedWithLodestarError(
+          validateGossipBlock(gloasConfig, chain, signedBlock, ForkName.gloas),
+          BlockErrorCode.REPEAT_PROPOSAL
+        );
+        await vi.advanceTimersByTimeAsync(0);
+        expect(vi.getTimerCount()).toBe(1);
+
+        chain.seenBlockProposers.add(clockSlot, proposerIndex);
+        await vi.advanceTimersByTimeAsync(100);
+        await validation;
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it("PARENT_BLOCK_UNKNOWN (fork-choice)", async () => {

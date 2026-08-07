@@ -9,6 +9,7 @@ import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInpu
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
+import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
 import {validateGossipBlock} from "../../../../src/chain/validation/index.js";
 import {ExecutionPayloadStatus} from "../../../../src/execution/index.js";
@@ -93,6 +94,8 @@ async function runBeaconBlockProcessingError(
     getBlobsTracker: {triggerGetBlobs: vi.fn()},
     logger,
     processBlock: vi.fn().mockRejectedValue(error),
+    processProposerEquivocation: vi.fn(),
+    seenBlockProposers: new SeenBlockProposers(),
     seenBlockInputCache: {
       getByBlock: vi.fn().mockReturnValue(blockInput),
       prune: vi.fn(),

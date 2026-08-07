@@ -257,6 +257,13 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         chain.seenPayloadEnvelopeInputCache.prune(blockRootHex);
       }
       throw e;
+    } finally {
+      // The block received from the network may have established an equivocation, either by conflicting
+      // with a previously observed block root (REPEAT_PROPOSAL) or with a root observed during validation
+      const proposerIndex = signedBlock.message.proposerIndex;
+      if (chain.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+        chain.processProposerEquivocation(slot, proposerIndex);
+      }
     }
   }
 

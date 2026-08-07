@@ -1,7 +1,13 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
+import {
+  DataAvailabilityStatus,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
+import {IndexedAttestation, Slot, deneb, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -203,6 +209,20 @@ export async function verifyBlocksInEpoch(
       // TODO GLOAS: can verify payload signatures in batch too
       // maybe chain with the above verifyBlocksSignatures()
     ]);
+
+    if (opts.skipVerifyBlockSignatures !== true) {
+      for (const block of blocks) {
+        const {slot, proposerIndex} = block.message;
+        const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
+        const blockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
+        this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockRoot, signedBlockHeader);
+        // Only produce a slashing while importing the block. A block that is verified before it is published
+        // must not be treated as equivocation evidence since it may never be seen by the network
+        if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+          this.processProposerEquivocation(slot, proposerIndex);
+        }
+      }
+    }
 
     if (opts.verifyOnly !== true) {
       const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
