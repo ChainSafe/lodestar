@@ -10,6 +10,7 @@ import {BeaconConfig, chainConfigToJson} from "@lodestar/config";
 import type {LoggerNode} from "@lodestar/logger/node";
 import {ResponseIncoming, ResponseOutgoing} from "@lodestar/reqresp";
 import {Status} from "@lodestar/types";
+import {withTimeout} from "@lodestar/utils";
 import {Metrics} from "../../metrics/index.js";
 import {AsyncIterableBridgeCaller, AsyncIterableBridgeHandler} from "../../util/asyncIterableToEvents.js";
 import {PeerIdStr, peerIdFromString} from "../../util/peerId.js";
@@ -58,6 +59,12 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
 const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
+/**
+ * Closing the network core is an RPC into the worker, so it never settles if the worker is wedged.
+ * Bound it: `BeaconNode.close()` closes the network before archiving chain state to disk, so an
+ * unbounded await here costs that archive and forces a slow replay on the next start.
+ */
+const NETWORK_CORE_CLOSE_TIMEOUT_MS = 3000;
 
 /**
  * NetworkCore implementation using a Worker thread
@@ -165,7 +172,13 @@ export class WorkerNetworkCore implements INetworkCore {
 
   async close(): Promise<void> {
     this.modules.logger.debug("closing network core running in network worker");
-    await this.getApi().close();
+    try {
+      await withTimeout(async () => this.getApi().close(), NETWORK_CORE_CLOSE_TIMEOUT_MS);
+    } catch (e) {
+      // Terminating the worker below tears the core down anyway, and the peers we failed to say
+      // goodbye to will time us out. Neither is worth failing the shutdown over.
+      this.modules.logger.warn("Error closing network core, terminating worker anyway", {}, e as Error);
+    }
     this.modules.logger.debug("terminating network worker");
     const terminated = await terminateWorkerThread({
       worker: this.getApi(),
