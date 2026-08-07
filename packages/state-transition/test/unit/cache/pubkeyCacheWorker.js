@@ -8,7 +8,7 @@
  */
 import worker from "node:worker_threads";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
-import {interopSecretKey, syncPubkeys} from "@lodestar/state-transition";
+import {interopSecretKey} from "@lodestar/state-transition";
 
 const parentPort = worker.parentPort;
 if (!parentPort) throw Error("parentPort must be defined");
@@ -47,7 +47,7 @@ parentPort.on("message", (task) => {
       const sk = interopSecretKey(i);
       validators[i] = {pubkey: sk.toPublicKey().toBytes()};
     }
-    syncPubkeys(cache, validators);
+    cache.syncPubkeys(validators);
     parentPort.postMessage({type: "syncPubkeys", size: cache.size});
   }
 });
