@@ -7,8 +7,6 @@ interface Actor {
 
 /** Shape produced by PR_QUERY in github.ts — keep the two in sync. */
 export interface PrNode {
-  /** GraphQL node ID; used as contentId for addProjectV2ItemById. */
-  id: string;
   state: "OPEN" | "MERGED" | "CLOSED";
   isDraft: boolean;
   reviewRequests: {nodes: Array<{requestedReviewer: Actor | null}>};

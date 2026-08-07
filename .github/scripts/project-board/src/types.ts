@@ -8,14 +8,6 @@ export const STATUS_TO_LANE: Record<Status, string> = {
   "Awaiting Author": "Awaiting Author",
 };
 
-/**
- * Lanes the SWEEP processes; statusless cards and Backlog/Ready/Done parked
- * cards are skipped by the sweep — event runs own initial placement (adding
- * the card if the built-in auto-add hasn't landed it yet) and reassert status
- * regardless of lane.
- */
-export const SWEEP_LANES: ReadonlySet<string> = new Set(Object.values(STATUS_TO_LANE));
-
 export interface ReviewInfo {
   authorLogin: string;
   /** true only for User-type authors; Bot-type (GitHub Apps) and deleted authors don't count. */

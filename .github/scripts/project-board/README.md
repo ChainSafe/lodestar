@@ -41,7 +41,7 @@ The reconciler owns the `reopened` transition. The project's built-in **Item reo
 
 ## Model: reconciler, not event rules
 
-Events do not map directly to moves. Every relevant event (and the sweep) triggers a recompute of the correct lane from the PR's **current full state** — draft flag, pending user-level review requests, non-dismissed counted reviews — and writes it. This makes the automation idempotent, self-healing (missed webhooks, coalesced events, and manual drags get corrected), and handles removed requests / dismissed reviews with no special cases. An event run reconciles only the PR that triggered it — it never touches the rest of the board. If that PR has no card yet (the built-in auto-add can lag the event), the event run adds the card itself — `addProjectV2ItemById` is idempotent with auto-add — and then places it. The sweep reconciles only open PR cards already sitting in the three automated lanes.
+Events do not map directly to moves. Every relevant event (and the sweep) triggers a recompute of the correct lane from the PR's **current full state** — draft flag, pending user-level review requests, non-dismissed counted reviews — and writes it. This makes the automation idempotent, self-healing (missed webhooks, coalesced events, and manual drags get corrected), and handles removed requests / dismissed reviews with no special cases. An event run reconciles only the PR that triggered it. Project membership is owned by the project's built-in auto-add workflows. If auto-add has not created the card when an event runs, the event skips it and the sweep places it after auto-add completes.
 
 `computeStatus(pr)` precedence:
 
@@ -56,19 +56,22 @@ Request timestamps are not exposed on pending requests. They are reconstructed f
 ## Implementation
 
 - The full logic lives in a **reusable workflow** in `ChainSafe/lodestar` (`workflow_call`). Each accessory repo managed by the board adds an identical thin caller workflow — behavior is uniform across all repos by construction.
+- Every participating repository must have a built-in project auto-add workflow matching all PRs. Auto-add is the sole owner of project membership; this script only updates the Status field.
+- The built-in close, merge, and auto-archive workflows must be configured so only closed or merged PRs can disappear from the board. Open PR cards must remain present.
 - Triggers:
   - `pull_request_target` (opened, ready_for_review, converted_to_draft, review_requested, review_request_removed, reopened) — runs with secrets even for fork PRs; safe because the workflow never checks out or executes PR code.
   - `pull_request_review` (submitted, dismissed) — **no secrets for fork PRs** (documented GitHub restriction), so review-driven moves on fork PRs are picked up by the sweep instead (≤15 min latency). Same-repo PRs move instantly.
-  - `schedule` — sweep every 15 minutes: recompute open PR cards in the three automated lanes; self-heals fork-PR reviews, missed events, and manual drags.
+  - `schedule` — sweep every 15 minutes: recompute every open PR card on the board, including statusless and incorrectly placed cards; self-heals fork-PR reviews, missed events, auto-add races, and manual drags.
 - Concurrency: one group per PR, `cancel-in-progress: false`. GitHub keeps only the newest pending run per group; coalescing is safe because the reconciler recomputes from full state.
 - Auth: the default `GITHUB_TOKEN` cannot access org projects (documented). Interim: fine-grained PAT (resource owner ChainSafe; org **Projects: read/write**, repo **Pull requests: read** + **Metadata: read**) stored as an Actions secret. Target: an org-owned GitHub App — swapping replaces the secret with an `actions/create-github-app-token` step; logic unchanged.
 - **To verify empirically before rollout:** that re-requesting review from someone who already reviewed fires `review_requested` — universally observed, but not documented by GitHub.
 
 ## Scope
 
-PR cards on project #75 only. Status field only. Issues and PRs not on the board are ignored.
+Every PR targeting a participating ChainSafe repository is in scope, including PRs from external forks. The project's built-in auto-add workflows add those PRs to project #75. This script only owns the Status field and never adds or removes project items.
 
-- **Event runs are idempotent and unconditional:** a PR event reasserts the computed status no matter which lane the card is in — e.g. a review requested on a PR parked in Backlog moves it to Review Requested. **Event runs also own initial placement:** if the PR's card is missing (auto-add race) the run adds it, and a card with no status gets its lane set — a PR opened as draft lands in In Progress without the author touching the board.
-- **The sweep is scoped:** it only processes open PR cards whose Status is already one of the three automated lanes. Cards with no status (old/stale PRs are triaged manually) and cards parked in Backlog/Ready/Done are left alone by the sweep, since a sweep carries no new signal. The sweep never adds cards.
+- **Event runs are idempotent and unconditional:** a PR event reasserts the computed status no matter which lane the card is in. If auto-add has not created the card yet, the event skips it and the next sweep assigns its status.
+- **The sweep covers every open PR card:** statusless cards and cards in Backlog/Ready/Done are moved to the computed lane. Open PR status is never managed manually.
+- **Closed and merged PRs are excluded:** the project's built-in close, merge, and archive workflows own their final status and removal from the board.
 
-The lanes **In Progress ↔ Review Requested ↔ Awaiting Author** are 100% automation-owned for PR cards: cards must not be moved between them manually, and the automation reasserts the computed status on every relevant event. The same workflow will be deployed identically to every ChainSafe repo managed by this board.
+The Status field is 100% automation-owned for open PR cards. The same workflow will be deployed identically to every participating ChainSafe repository.

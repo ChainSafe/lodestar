@@ -1,6 +1,8 @@
 # Copy this file to .github/workflows/project-board.yml in every repo managed by
 # the Lodestar Team Coordination board. Requires the PROJECT_BOARD_TOKEN secret
 # (org-level, or per-repo until the org secret exists).
+# Project #75 must also have an enabled auto-add workflow for this repository
+# whose filter matches every PR.
 # The PROJECT_BOARD_DRY_RUN Actions variable resolves from THIS repo (the caller),
 # not from ChainSafe/lodestar — set it to true for a dry-run rollout in this repo;
 # unset or false runs live.
