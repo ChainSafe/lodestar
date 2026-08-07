@@ -1174,11 +1174,15 @@ export class BeaconChain implements IBeaconChain {
 
   /** Produce a proposer slashing from two conflicting signed block headers observed for the same slot and proposer */
   private async produceProposerSlashing(blockSlot: Slot, proposerIndex: ValidatorIndex): Promise<void> {
-    if (
-      this.opts.disableProposerSlashings === true ||
-      this.opPool.hasSeenProposerSlashing(proposerIndex) ||
-      this.producingProposerSlashing.has(proposerIndex)
-    ) {
+    if (this.opts.disableProposerSlashings === true || this.producingProposerSlashing.has(proposerIndex)) {
+      return;
+    }
+
+    if (this.opPool.hasSeenProposerSlashing(proposerIndex)) {
+      this.logger.debug("Not producing proposer slashing, already in the op pool", {
+        slot: blockSlot,
+        proposerIndex,
+      });
       return;
     }
 
