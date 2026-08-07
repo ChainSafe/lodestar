@@ -177,7 +177,7 @@ export class WorkerNetworkCore implements INetworkCore {
     } catch (e) {
       // Terminating the worker below tears the core down anyway, and the peers we failed to say
       // goodbye to will time us out. Neither is worth failing the shutdown over.
-      this.modules.logger.warn("Error closing network core, terminating worker anyway", {}, e as Error);
+      this.modules.logger.debug("Error closing network core, terminating worker anyway", {}, e as Error);
     }
     this.modules.logger.debug("terminating network worker");
     const terminated = await terminateWorkerThread({
@@ -193,7 +193,7 @@ export class WorkerNetworkCore implements INetworkCore {
       // still be running. Unref it so it can not keep the main process alive, otherwise graceful
       // shutdown would hang until the process is force-killed (see #5775, #6053).
       (this.modules.worker as unknown as workerThreads.Worker).unref();
-      this.modules.logger.warn("Network worker did not terminate in time, unref-ed it to allow process exit");
+      this.modules.logger.debug("Network worker did not terminate in time, unref-ed it to allow process exit");
     }
   }
 

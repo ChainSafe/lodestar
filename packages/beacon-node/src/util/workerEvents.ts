@@ -152,9 +152,10 @@ export async function terminateWorkerThread({
 
     if (result) return true;
 
-    logger?.warn("Worker thread failed to terminate, retrying...");
+    logger?.debug("Worker thread failed to terminate, retrying...");
   }
 
-  logger?.error(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
+  // Logged at debug as the caller owns how severe a failed termination is, it gets `false` back.
+  logger?.debug(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
   return false;
 }
