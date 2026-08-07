@@ -365,7 +365,7 @@ importers:
         version: 16.4.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
@@ -498,7 +498,7 @@ importers:
         version: 9.1.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -681,7 +681,7 @@ importers:
         version: 1.13.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
 
   packages/reqresp:
     dependencies:
@@ -855,7 +855,7 @@ importers:
         version: 1.6.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
     devDependencies:
       '@types/js-yaml':
         specifier: ^4.0.5
@@ -4606,8 +4606,8 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
-  js-yaml@4.3.0:
-    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
+  js-yaml@4.3.1:
+    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
   json-parse-even-better-errors@5.0.0:
@@ -5338,9 +5338,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.61.1:
-    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
-    engines: {node: '>=18'}
+  playwright-core@1.62.1:
+    resolution: {integrity: sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==}
+    engines: {node: '>=20'}
     hasBin: true
 
   playwright@1.60.0:
@@ -5348,9 +5348,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.61.1:
-    resolution: {integrity: sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ==}
-    engines: {node: '>=18'}
+  playwright@1.62.1:
+    resolution: {integrity: sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==}
+    engines: {node: '>=20'}
     hasBin: true
 
   pngjs@7.0.0:
@@ -8911,11 +8911,11 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser-playwright@4.0.7(playwright@1.62.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
       '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
       '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))
-      playwright: 1.61.1
+      playwright: 1.62.1
       tinyrainbow: 3.0.3
       vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
     transitivePeerDependencies:
@@ -10699,7 +10699,7 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
-  js-yaml@4.3.0:
+  js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
@@ -11519,7 +11519,7 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
-  playwright-core@1.61.1:
+  playwright-core@1.62.1:
     optional: true
 
   playwright@1.60.0:
@@ -11528,9 +11528,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  playwright@1.61.1:
+  playwright@1.62.1:
     dependencies:
-      playwright-core: 1.61.1
+      playwright-core: 1.62.1
     optionalDependencies:
       fsevents: 2.3.2
     optional: true
@@ -12446,7 +12446,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.4.0
-      '@vitest/browser-playwright': 4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser-playwright': 4.0.7(playwright@1.62.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
     transitivePeerDependencies:
       - jiti
       - less
