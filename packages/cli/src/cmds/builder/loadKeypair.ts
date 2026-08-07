@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {Keypair} from "@lodestar/builder";
 import {ensure0xPrefix} from "../../util/format.js";
 import {readPassphraseFile} from "../../util/passphrase.js";

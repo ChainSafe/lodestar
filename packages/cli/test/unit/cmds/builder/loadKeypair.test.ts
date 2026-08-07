@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {loadBuilderKeypair} from "../../../../src/cmds/builder/loadKeypair.js";
 import {testFilesDir} from "../../../utils.js";
 

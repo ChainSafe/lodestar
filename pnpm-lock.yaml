@@ -387,9 +387,9 @@ importers:
 
   packages/builder:
     dependencies:
-      '@chainsafe/blst':
-        specifier: ^2.2.0
-        version: 2.2.0
+      '@chainsafe/lodestar-z':
+        specifier: 'catalog:'
+        version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b82750f6c3ec3d57ed63fe31c2f968d4527ce0a5
       '@chainsafe/ssz':
         specifier: ^1.6.2
         version: 1.6.2
