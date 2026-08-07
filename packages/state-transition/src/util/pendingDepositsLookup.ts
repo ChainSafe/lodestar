@@ -1,8 +1,7 @@
 import {BeaconConfig} from "@lodestar/config";
 import {PubkeyHex, electra} from "@lodestar/types";
-import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
-import {CachedBeaconStateGloas} from "../types.js";
+import {BuilderDepositSignatureCache} from "../cache/builderDepositSignatureCache.js";
 
 type PendingDepositsValidation = {
   hasValidSignature: boolean;
@@ -34,28 +33,14 @@ export class PendingDepositsLookup {
   }
 
   /**
-   * Build a pubkey -> pending-deposits lookup from `state.pendingDeposits`.
-   * No BLS work is done here; signature verification happens lazily in `hasPendingValidator`.
+   * Append a pending deposit to the represented sequence, keyed by its (precomputed) `pubkeyHex`.
    */
-  static build(state: CachedBeaconStateGloas): PendingDepositsLookup {
-    const lookup = PendingDepositsLookup.buildEmpty();
-    for (const pendingDeposit of state.pendingDeposits.getAllReadonly()) {
-      lookup.add(pendingDeposit);
-    }
-    return lookup;
-  }
-
-  /**
-   * Append a pending deposit to the represented sequence.
-   * Pass `pubkeyHex` if the caller has already computed it.
-   */
-  add(pendingDeposit: electra.PendingDeposit, pubkeyHex?: PubkeyHex): void {
-    const key = pubkeyHex ?? toPubkeyHex(pendingDeposit.pubkey);
-    const existing = this.depositsByPubkey.get(key);
+  add(pendingDeposit: electra.PendingDeposit, pubkeyHex: PubkeyHex): void {
+    const existing = this.depositsByPubkey.get(pubkeyHex);
     if (existing) {
       existing.push(pendingDeposit);
     } else {
-      this.depositsByPubkey.set(key, [pendingDeposit]);
+      this.depositsByPubkey.set(pubkeyHex, [pendingDeposit]);
     }
   }
 
@@ -63,8 +48,11 @@ export class PendingDepositsLookup {
    * Returns true if any pending deposit for `pubkeyHex` has a valid BLS deposit signature.
    * Memoizes the result in `validationCache` so repeated checks for the same pubkey
    * within a block only verify deposits that have not already been checked.
+   *
+   * Most of the time it should hit the BuilderDepositSignatureCache so we don't have to validate
+   * signatures here.
    */
-  hasPendingValidator(config: BeaconConfig, pubkeyHex: PubkeyHex): boolean {
+  hasPendingValidator(config: BeaconConfig, pubkeyHex: PubkeyHex, cache: BuilderDepositSignatureCache): boolean {
     const validation = this.validationCache.get(pubkeyHex);
     if (validation?.hasValidSignature === true) {
       return true;
@@ -85,15 +73,16 @@ export class PendingDepositsLookup {
 
     for (let i = startIndex; i < deposits.length; i++) {
       const deposit = deposits[i];
-      if (
+      const isValid =
+        cache.getSignatureValidity(deposit) ??
         isValidDepositSignature(
           config,
           deposit.pubkey,
           deposit.withdrawalCredentials,
           deposit.amount,
           deposit.signature
-        )
-      ) {
+        );
+      if (isValid) {
         this.validationCache.set(pubkeyHex, {hasValidSignature: true, validatedCount: i + 1});
         return true;
       }

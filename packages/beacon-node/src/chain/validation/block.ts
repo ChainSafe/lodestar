@@ -24,7 +24,7 @@ import {
   isExecutionBlockBodyType,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
-import {SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, deneb, gloas, isGloasBeaconBlock} from "@lodestar/types";
 import {byteArrayEquals, sleep, toRootHex} from "@lodestar/utils";
 import {BlockErrorCode, BlockGossipError, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../interface.js";
@@ -85,7 +85,12 @@ export async function validateGossipBlock(
 
   // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
   const proposerIndex = block.proposerIndex;
+  const hasBlockRoot = chain.seenBlockProposers.hasBlockRoot(blockSlot, proposerIndex, blockRoot);
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+    if (!hasBlockRoot && !chain.seenBlockProposers.isEquivocating(blockSlot, proposerIndex)) {
+      await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
+      chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
+    }
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 
@@ -270,18 +275,8 @@ export async function validateGossipBlock(
   }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  if (!chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
-    const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
-    // Don't batch so verification is not delayed
-    if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
-        blockSlot,
-      });
-    }
-
-    chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
-  }
+  await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+  chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot);
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
@@ -289,11 +284,6 @@ export async function validateGossipBlock(
   // in such a case do not REJECT, instead IGNORE this message.
   if (blockState.getBeaconProposer(blockSlot) !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
-  }
-
-  // Check again in case there two blocks are processed concurrently
-  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
@@ -305,7 +295,35 @@ export async function validateGossipBlock(
     await sleep(msToBlockSlot);
   }
 
+  // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass
+  if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+  }
+
   chain.seenBlockProposers.add(blockSlot, proposerIndex);
 
   return {skippedSlots};
+}
+
+export async function verifyBlockProposerSignature(
+  chain: IBeaconChain,
+  signedBlock: SignedBeaconBlock,
+  blockRoot: RootHex,
+  opts: {verifyOnMainThread?: boolean} = {}
+): Promise<void> {
+  const blockSlot = signedBlock.message.slot;
+  if (chain.seenBlockInputCache.isVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature)) {
+    return;
+  }
+
+  const signatureSet = getBlockProposerSignatureSet(chain.config, signedBlock);
+  // Don't batch so verification is not delayed
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: opts.verifyOnMainThread ?? true}))) {
+    throw new BlockGossipError(GossipAction.REJECT, {
+      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+      blockSlot,
+    });
+  }
+
+  chain.seenBlockInputCache.markVerifiedProposerSignature(blockSlot, blockRoot, signedBlock.signature);
 }

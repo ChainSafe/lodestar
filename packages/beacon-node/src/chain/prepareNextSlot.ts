@@ -10,12 +10,15 @@ import {
   isForkPostGloas,
 } from "@lodestar/params";
 import {
+  GLOAS_PREVERIFY_WINDOW_EPOCHS,
   IBeaconStateView,
   IBeaconStateViewBellatrix,
+  MAX_BUILDER_DEPOSITS_PER_SLOT,
   StateHashTreeRootSource,
   computeEpochAtSlot,
   computeTimeAtSlot,
   isStatePostBellatrix,
+  isStatePostFulu,
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {Bytes32, Slot, ValidatorIndex} from "@lodestar/types";
@@ -36,6 +39,11 @@ export const PREPARE_NEXT_SLOT_BPS = 6667;
 
 /* We don't want to do more epoch transition than this */
 const PREPARE_EPOCH_LIMIT = 1;
+
+/* Fraction of a slot (out of 10_000) the pre-Gloas builder-deposit pre-verify may spend per tick.
+ * 2000 = 20% of slot (2.4s on mainnet), within the spare window left after PREPARE_NEXT_SLOT_BPS.
+ * Expressed in bps so it scales with slot duration (mainnet vs minimal/devnet). */
+const BUILDER_PREVERIFY_LIMIT_BPS = 2000;
 
 /**
  * At Bellatrix, if we are responsible for proposing in next slot, we want to prepare payload
@@ -117,6 +125,7 @@ export class PrepareNextSlotScheduler {
         ? this.metrics?.precomputeNextEpochTransition.duration.startTimer()
         : null;
       const start = Date.now();
+      let feeRecipient: string | undefined;
       // No need to wait for this or the clock drift
       if (isForkPostBellatrix(fork)) {
         let preparedState: IBeaconStateView | undefined;
@@ -140,7 +149,7 @@ export class PrepareNextSlotScheduler {
         };
 
         const proposerIndex = await getProposerIndex();
-        const feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
+        feeRecipient = this.chain.beaconProposerCache.get(proposerIndex);
 
         if (feeRecipient) {
           // If we are proposing next slot, we need to predict if we can proposer-boost-reorg or not
@@ -286,6 +295,74 @@ export class PrepareNextSlotScheduler {
         });
 
         precomputeEpochTransitionTimer?.();
+
+        // Nothing more to do on an epoch-transition slot: that precompute already ran a full (>1s)
+        // epoch transition, so we don't pile the builder-deposit pre-verify (below) on top of it.
+        return;
+      }
+
+      // Pre-verify builder-deposit signatures in the GLOAS_PREVERIFY_WINDOW_EPOCHS epochs leading
+      // up to the Gloas fork, off the block-import hot path, so onboardBuildersFromPendingDeposits
+      // at the transition is mostly cache hits. Reached only on non-epoch-transition slots (the
+      // epoch-transition branch returned above). Runs on the head state — its pendingDeposits are
+      // what the fork transition derives from, and its epochCtx holds the shared, app-wide
+      // builderDepositSignatureCache.
+      const headState = this.chain.getHeadState();
+      if (isStatePostFulu(headState)) {
+        const gloasEpoch = this.config.GLOAS_FORK_EPOCH;
+        const finalizedEpoch = this.chain.forkChoice.getFinalizedCheckpoint().epoch;
+        if (finalizedEpoch >= gloasEpoch) {
+          // Gloas is finalized — the pre-verify cache has served its purpose; release its memory.
+          headState.clearPreGloasBuilderDepositCache();
+        } else {
+          const clockEpoch = computeEpochAtSlot(clockSlot);
+          if (
+            ForkSeq[fork] < ForkSeq.gloas && // only before the fork
+            clockEpoch >= gloasEpoch - GLOAS_PREVERIFY_WINDOW_EPOCHS && // Infinity when Gloas unscheduled → skip
+            clockEpoch < gloasEpoch &&
+            // skip when we're the next-slot proposer — don't compete with block-production prep.
+            feeRecipient === undefined
+          ) {
+            const maxDurationMs = this.config.getSlotComponentDurationMs(BUILDER_PREVERIFY_LIMIT_BPS);
+            const preVerifyTimer = this.metrics?.builderDepositPreVerify.duration.startTimer();
+            const result = headState.preVerifyBuilderDepositsPreGloas(MAX_BUILDER_DEPOSITS_PER_SLOT, maxDurationMs);
+            preVerifyTimer?.();
+
+            const preVerifyMetrics = this.metrics?.builderDepositPreVerify;
+            if (preVerifyMetrics) {
+              preVerifyMetrics.pendingDeposits.set(result.pendingDepositsCount);
+              preVerifyMetrics.cachedDeposits.set(result.totalCachedDeposits);
+              preVerifyMetrics.scannedDeposits.set(result.scannedPendingDeposits);
+              preVerifyMetrics.builderPubkeys.set(result.totalBuilderPubkeys);
+              if (result.validBuilderSignaturesCount > 0) {
+                preVerifyMetrics.validSignatures.inc({type: "builder"}, result.validBuilderSignaturesCount);
+              }
+              if (result.validValidatorSignaturesCount > 0) {
+                preVerifyMetrics.validSignatures.inc({type: "validator"}, result.validValidatorSignaturesCount);
+              }
+              if (result.invalidBuilderSignaturesCount > 0) {
+                preVerifyMetrics.invalidSignatures.inc({type: "builder"}, result.invalidBuilderSignaturesCount);
+              }
+              if (result.invalidValidatorSignaturesCount > 0) {
+                preVerifyMetrics.invalidSignatures.inc({type: "validator"}, result.invalidValidatorSignaturesCount);
+              }
+            }
+
+            // Always log (once per slot, only within the pre-fork window) so devnets show the
+            // pre-verify draining even on all-cache-hit ticks.
+            this.logger.verbose("PrepareNextSlotScheduler pre-verified deposit signatures", {
+              clockSlot,
+              validBuilderSignaturesCount: result.validBuilderSignaturesCount,
+              invalidBuilderSignaturesCount: result.invalidBuilderSignaturesCount,
+              validValidatorSignaturesCount: result.validValidatorSignaturesCount,
+              invalidValidatorSignaturesCount: result.invalidValidatorSignaturesCount,
+              scannedPendingDeposits: result.scannedPendingDeposits,
+              totalCachedDeposits: result.totalCachedDeposits,
+              totalBuilderPubkeys: result.totalBuilderPubkeys,
+              pendingDepositsCount: result.pendingDepositsCount,
+            });
+          }
+        }
       }
     } catch (e) {
       if (!isErrorAborted(e) && !isQueueErrorAborted(e)) {
