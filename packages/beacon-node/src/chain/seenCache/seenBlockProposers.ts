@@ -1,21 +1,57 @@
 import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
-import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
+import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
+
+/** Two distinct block roots signed by the same proposer for the same slot are sufficient to establish an equivocation */
+const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
 
 /**
  * Keeps a cache to filter block proposals from the same validator in the same slot.
  *
- * This cache is not bounded and for extremely long periods of non-finality it can grow a lot. However it's practically
- * limited by the possible shufflings in those epochs, and the stored data is very cheap
+ * Block roots with a signature verified against the block's proposer index are tracked separately from proposals
+ * accepted by gossip validation or block import. A root from a block signed by its declared proposer is potential
+ * equivocation evidence, but the block may still fail other validation. Such a block must not mark the proposal as
+ * known, since that would cause a later valid block for the same slot and proposer to be ignored as a repeat proposal.
+ *
+ * The cache is pruned on finalization and bounds the number of roots stored per proposer and slot
  */
 export class SeenBlockProposers {
   private readonly proposerIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
-  private finalizedSlot: Epoch = 0;
+  private readonly blockRootsBySlot = new MapDef<Slot, MapDef<ValidatorIndex, Set<RootHex>>>(
+    () => new MapDef<ValidatorIndex, Set<RootHex>>(() => new Set<RootHex>())
+  );
+  private finalizedSlot: Slot = 0;
 
   isKnown(blockSlot: Slot, proposerIndex: ValidatorIndex): boolean {
     return this.proposerIndexesBySlot.get(blockSlot)?.has(proposerIndex) === true;
   }
 
+  hasBlockRoot(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): boolean {
+    return this.blockRootsBySlot.get(blockSlot)?.get(proposerIndex)?.has(blockRoot) === true;
+  }
+
+  isEquivocating(blockSlot: Slot, proposerIndex: ValidatorIndex): boolean {
+    return (this.blockRootsBySlot.get(blockSlot)?.get(proposerIndex)?.size ?? 0) >= MAX_BLOCK_ROOTS_PER_PROPOSAL;
+  }
+
+  getConflictingBlockRoots(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): RootHex[] {
+    const roots = this.blockRootsBySlot.get(blockSlot)?.get(proposerIndex);
+    return roots === undefined ? [] : Array.from(roots).filter((root) => root !== blockRoot);
+  }
+
+  /** Record a block only after its proposer signature has been verified */
+  observeBlockRoot(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): void {
+    if (blockSlot < this.finalizedSlot) {
+      throw Error(`blockSlot ${blockSlot} < finalizedSlot ${this.finalizedSlot}`);
+    }
+
+    const blockRoots = this.blockRootsBySlot.getOrDefault(blockSlot).getOrDefault(proposerIndex);
+    if (blockRoots.size < MAX_BLOCK_ROOTS_PER_PROPOSAL) {
+      blockRoots.add(blockRoot);
+    }
+  }
+
+  /** Mark a block as known from gossip or another block import path */
   add(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
     if (blockSlot < this.finalizedSlot) {
       throw Error(`blockSlot ${blockSlot} < finalizedSlot ${this.finalizedSlot}`);
@@ -31,9 +67,14 @@ export class SeenBlockProposers {
         this.proposerIndexesBySlot.delete(slot);
       }
     }
+    for (const slot of this.blockRootsBySlot.keys()) {
+      if (slot < finalizedSlot) {
+        this.blockRootsBySlot.delete(slot);
+      }
+    }
   }
 
-  seenAtEpoch(epoch: Slot, index: ValidatorIndex): boolean {
+  seenAtEpoch(epoch: Epoch, index: ValidatorIndex): boolean {
     const fromSlot = computeStartSlotAtEpoch(epoch);
     const toSlot = computeStartSlotAtEpoch(epoch + 1);
 
