@@ -884,7 +884,7 @@ export class Network implements INetwork {
     try {
       await this.publishProposerSlashing(proposerSlashing);
     } catch (e) {
-      this.logger.error(
+      this.logger.debug(
         "Error publishing proposer slashing",
         {proposerIndex: proposerSlashing.signedHeader1.message.proposerIndex},
         e as Error
