@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
@@ -181,5 +181,18 @@ describe("api/validator - produceBlockV4", () => {
     );
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(bidBlock);
+  });
+
+  it("rejects block production if parent block is optimistic", async () => {
+    modules.chain.getProposerHead.mockReturnValue({
+      ...parentBlock,
+      executionStatus: ExecutionStatus.Syncing,
+    } as ProtoBlock);
+
+    await expect(
+      api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload: false})
+    ).rejects.toThrow("Node is syncing");
+
+    expect(modules.chain.produceBlock).not.toHaveBeenCalled();
   });
 });

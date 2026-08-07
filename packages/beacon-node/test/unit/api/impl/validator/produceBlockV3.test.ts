@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
-import {ProtoBlock} from "@lodestar/fork-choice";
+import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, SLOTS_PER_EPOCH, ZERO_HASH_HEX} from "@lodestar/params";
 import {BeaconStateView, G2_POINT_AT_INFINITY, computeTimeAtSlot} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
@@ -208,6 +208,30 @@ describe("api/validator - produceBlockV3", () => {
     );
     expect(block).toEqual(blindedBlock);
     expect(meta.executionPayloadBlinded).toBe(true);
+  });
+
+  it("rejects block production if parent block is optimistic", async () => {
+    const fullBlock = ssz.bellatrix.BeaconBlock.defaultValue();
+    const slot = 1 * SLOTS_PER_EPOCH;
+
+    vi.spyOn(modules.chain.clock, "currentSlot", "get").mockReturnValue(slot);
+    vi.spyOn(modules.sync, "state", "get").mockReturnValue(SyncState.Synced);
+    modules.chain.getProposerHead.mockReturnValue({
+      blockRoot: toRootHex(fullBlock.parentRoot),
+      executionStatus: ExecutionStatus.Syncing,
+    } as ProtoBlock);
+
+    await expect(
+      api.produceBlockV3({
+        slot,
+        randaoReveal: fullBlock.body.randaoReveal,
+        graffiti: "a".repeat(32),
+        skipRandaoVerification: false,
+      })
+    ).rejects.toThrow("Node is syncing");
+
+    expect(modules.chain.produceBlock).not.toHaveBeenCalled();
+    expect(modules.chain.produceBlindedBlock).not.toHaveBeenCalled();
   });
 
   it("correctly pass feeRecipient to produceBlock", async () => {
