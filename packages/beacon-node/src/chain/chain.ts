@@ -1179,7 +1179,7 @@ export class BeaconChain implements IBeaconChain {
     }
 
     if (this.opPool.hasSeenProposerSlashing(proposerIndex)) {
-      this.logger.debug("Not producing proposer slashing, one is already known for the proposer", {
+      this.logger.debug("Not producing proposer slashing, already in the op pool", {
         slot: blockSlot,
         proposerIndex,
       });
