@@ -49,7 +49,7 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
     eth1Data: {
       depositRoot: Buffer.alloc(32),
       blockHash: Buffer.alloc(32),
-      depositCount: 0,
+      depositCount: 0n,
     },
     eth1DataVotes: [],
     eth1DepositIndex: 0,

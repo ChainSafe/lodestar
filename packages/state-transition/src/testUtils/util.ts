@@ -436,13 +436,13 @@ function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconSt
     historicalRoots: [],
     // Eth1
     eth1Data: {
-      depositCount: pubkeys.length,
+      depositCount: BigInt(pubkeys.length),
       depositRoot: fromHexString("0xcb1f89a924cfd31224823db5a41b1643f10faa7aedf231f1e28887f6ee98c047"),
       blockHash: fromHexString("0x701fb2869ce16d0f1d14f6705725adb0dec6799da29006dfc6fff83960298f21"),
     },
     // minus one so that inserting 1 from block works
     eth1DataVotes: newFilledArray(EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH - 1, {
-      depositCount: 1,
+      depositCount: 1n,
       depositRoot: Buffer.alloc(32, 1),
       blockHash: Buffer.alloc(32, 1),
     }),

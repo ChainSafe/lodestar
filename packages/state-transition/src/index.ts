@@ -47,6 +47,7 @@ export {
   type IBeaconStateViewElectra,
   type IBeaconStateViewFulu,
   type IBeaconStateViewGloas,
+  type IBeaconStateViewHeze,
   isStatePostAltair,
   isStatePostBellatrix,
   isStatePostCapella,
@@ -54,6 +55,7 @@ export {
   isStatePostElectra,
   isStatePostFulu,
   isStatePostGloas,
+  isStatePostHeze,
 } from "./stateView/interface.js";
 export {createBeaconStateView, createBeaconStateViewForHistoricalRegen} from "./stateView/stateViewFactory.js";
 export type {
@@ -66,6 +68,7 @@ export type {
   BeaconStateExecutions,
   BeaconStateFulu,
   BeaconStateGloas,
+  BeaconStateHeze,
   // Non-cached states
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
@@ -77,6 +80,7 @@ export type {
   CachedBeaconStateExecutions,
   CachedBeaconStateFulu,
   CachedBeaconStateGloas,
+  CachedBeaconStateHeze,
   CachedBeaconStatePhase0,
 } from "./types.js";
 export * from "./util/index.js";

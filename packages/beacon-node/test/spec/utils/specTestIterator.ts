@@ -62,7 +62,7 @@ const coveredTestRunners = [
 // ],
 // ```
 export const defaultSkipOpts: SkipOpts = {
-  skippedForks: ["eip7805", "heze"],
+  skippedForks: ["eip8148"],
   skippedTestSuites: [
     // Merge transition tests are skipped because we no longer support performing the merge transition.
     // All networks have already completed the merge, so this code path is no longer needed.
@@ -79,22 +79,41 @@ export const defaultSkipOpts: SkipOpts = {
     // cell level DAS is ready
     /^fulu\/ssz_static\/PartialDataColumn(GroupID|Header|PartsMetadata|Sidecar)\/.*$/,
     /^gloas\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
+    /^heze\/ssz_static\/PartialDataColumn(GroupID|PartsMetadata|Sidecar)\/.*$/,
     // TODO-GLOAS: re-enable after Gloas light-client sync deserializes updates by fork digest.
     /^gloas\/light_client\/sync\/.*/,
+    /^heze\/light_client\/sync\/.*/,
     // TODO-GLOAS: re-enable after on_payload_attestation_message (PTC) fork choice is implemented.
     // New test suite added in v1.7.0-alpha.8 (consensus-specs #5206); gloas PTC fork choice
     // handling is not yet implemented in Lodestar.
     /^gloas\/fork_choice\/on_payload_attestation_message\/.*$/,
+    /^heze\/fork_choice\/on_payload_attestation_message\/.*$/,
+    // TODO-GLOAS: re-enable after the gloas should_apply_proposer_boost rule is implemented.
+    // New test suite added in v1.7.0-alpha.13 (consensus-specs #5441); Lodestar still applies
+    // the pre-gloas proposer boost, so the head weight differs by the boost amount.
+    /^gloas\/fork_choice\/should_apply_proposer_boost\/.*$/,
+    /^heze\/fork_choice\/should_apply_proposer_boost\/.*$/,
     // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
+    /^heze\/fork_choice_compliance\/.*/,
+    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
+    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
+    /\/heze_fork$/,
     // TODO GLOAS: Proposer-boost dependent-root gate uses stale cached head across epoch-boundary ticks;
     // boost wrongly denied. Fails identically on every pre-gloas fork.
     // Enable this after https://github.com/ChainSafe/lodestar/issues/9666 is resolved
-    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_16_201284350_1$/,
+    // The case name embeds the generation seed, so it changes whenever comptests are regenerated.
+    /fork_choice_compliance\/block_tree_test\/pyspec_tests\/block_tree_test_17_381675768_1$/,
+    // TODO GLOAS: gloas/heze take ~23-24s on the mainnet preset (~7.5x pre-gloas) because every
+    // post-gloas slot writes into the SLOTS_PER_HISTORICAL_ROOT-wide executionPayloadAvailability
+    // bitvector, and this suite steps 8192 slots. That is 76-81% of the 30s sanity/slots timeout,
+    // so skip rather than raise the timeout and hide the regression.
+    // Enable this after https://github.com/ChainSafe/lodestar/issues/9771 is resolved
+    /^(gloas|heze)\/sanity\/slots\/pyspec_tests\/historical_accumulator$/,
   ],
   // TODO GLOAS: Investigate why networking tests are failing since alpha.5
   skippedRunners: ["networking"],

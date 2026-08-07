@@ -689,7 +689,13 @@ const fastConfirmationTest =
           // is_one_confirmed cases (new in v1.7.0-alpha.12, present in electra + fulu) currently
           // fail. Unskip once the FCR is reworked.
           name.includes("is_one_confirmed_fails_large_validator_slashed") ||
-          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot"),
+          name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
+          // This case (new in v1.7.0-alpha.13, consensus-specs #5449) deposits a validator, but the
+          // vectors are generated with bls_setting=2 so the deposit carries a stub signature that
+          // only the pyspec BLS stub accepts. Lodestar verifies the deposit proof of possession
+          // inside processPendingDeposits, so the validator is never onboarded and the state root
+          // diverges once the pending deposit is applied.
+          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
     };
   };
