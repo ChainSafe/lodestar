@@ -32,7 +32,7 @@ export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
 export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.warn>): RootHex {
   const confirmedBlock = forkChoice.getConfirmedBlock();
   if (confirmedBlock === null) {
-    logger?.warn("Confirmed block not found; using zero safe execution block hash", {
+    logger?.warn("Confirmed block not found, using zero safe execution block hash", {
       confirmedRoot: forkChoice.getConfirmedRoot(),
     });
     return ZERO_HASH_HEX;
@@ -64,7 +64,7 @@ function getExecutionBlockHash(block: ProtoBlock, logger?: Pick<Logger, LogLevel
   }
 
   if (block.executionPayloadBlockHash === null) {
-    logger?.warn("Execution payload block hash not found; using zero hash", {
+    logger?.warn("Execution payload block hash not found, using zero hash", {
       blockRoot: block.blockRoot,
       slot: block.slot,
     });
