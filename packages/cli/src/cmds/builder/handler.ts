@@ -2,7 +2,7 @@ import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {Builder} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
@@ -45,7 +45,12 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   const abortController = new AbortController();
   onGracefulShutdownCbs.push(async () => abortController.abort());
 
-  const api = getClient({urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal}}, {config, logger});
+  const api = getClient(
+    {urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal, timeoutMs: args.requestTimeout}},
+    {config, logger}
+  );
+
+  logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});
 
   const builder = await Builder.init({
     keypair,

@@ -8,6 +8,7 @@ export type IBuilderCliArgs = LogArgs & {
   keystorePassword: string;
   builderPubkey?: string;
   executionFeeRecipient: string;
+  requestTimeout: number;
 };
 
 export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
@@ -40,5 +41,11 @@ export const builderOptions: CliCommandOptions<IBuilderCliArgs> = {
     description: "Execution address for receiving the payload rewards",
     type: "string",
     demandOption: true,
+  },
+
+  requestTimeout: {
+    description: "Timeout in milliseconds for HTTP requests to the beacon node",
+    type: "number",
+    default: defaultOptions.requestTimeout,
   },
 };
