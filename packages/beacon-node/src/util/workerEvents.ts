@@ -114,8 +114,8 @@ export function wireEventsOnMainThread<EventData>(
 /**
  * Terminate a worker thread, bounded to `retryCount * retryMs`.
  *
- * @returns `false` if it could not be terminated, the worker is then still running and the caller
- * must ensure it can not keep the process alive (e.g. by `unref`-ing it).
+ * @returns `false` if it could not be terminated, the worker thread is then still running and the
+ * caller has to decide how to proceed without it.
  */
 export async function terminateWorkerThread({
   worker,
@@ -137,8 +137,9 @@ export async function terminateWorkerThread({
   });
 
   for (let i = 0; i < retryCount; i++) {
-    // `Worker.terminate()` cannot preempt a worker stuck in a synchronous native (napi) call and
-    // then never resolves, so it has to be raced too, otherwise `retryCount * retryMs` never applies.
+    // `Worker.terminate()` resolves only once the worker thread exits, and the thread can spin
+    // forever in `Environment::CleanupHandles()` when a libuv handle on its loop never closes, so
+    // it has to be raced too, otherwise `retryCount * retryMs` never applies.
     const result = await Promise.race([
       Thread.terminate(worker).then(() => terminated),
       sleep(retryMs).then(() => false),
