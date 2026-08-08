@@ -59,8 +59,8 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
 const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
-/** RPC into the worker, never settles if the worker is blocked in a native call, and
- * `BeaconNode.close()` archives chain state to disk only after the network is closed */
+/** Unbounded RPC into the worker, and `BeaconNode.close()` archives chain state to disk only after
+ * the network is closed. Measured at 2-4s on mainnet, this only caps a pathological close */
 const NETWORK_CORE_CLOSE_TIMEOUT_MS = 5000;
 
 /**
