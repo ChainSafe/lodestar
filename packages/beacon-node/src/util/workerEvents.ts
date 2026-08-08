@@ -138,7 +138,7 @@ export async function terminateWorkerThread({
 
   for (let i = 0; i < retryCount; i++) {
     // `Worker.terminate()` cannot preempt a worker stuck in a synchronous native (napi) call and
-    // then never resolves, so it has to be raced too, otherwise the budget is unreachable.
+    // then never resolves, so it has to be raced too, otherwise `retryCount * retryMs` never applies.
     const result = await Promise.race([
       Thread.terminate(worker).then(() => terminated),
       sleep(retryMs).then(() => false),
