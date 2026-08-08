@@ -114,10 +114,8 @@ export function wireEventsOnMainThread<EventData>(
 /**
  * Terminate a worker thread, bounded to `retryCount * retryMs`.
  *
- * @returns `true` if the worker terminated in time. Returns `false` if it could not be terminated
- * (it may be blocked in a native call that a forced `terminate()` can not preempt); in that case the
- * worker is still running and the caller must ensure it can not keep the process alive (e.g. by
- * `unref`-ing it). See #5775, #6053.
+ * @returns `false` if it could not be terminated, the worker is then still running and the caller
+ * must ensure it can not keep the process alive (e.g. by `unref`-ing it).
  */
 export async function terminateWorkerThread({
   worker,
@@ -139,12 +137,8 @@ export async function terminateWorkerThread({
   });
 
   for (let i = 0; i < retryCount; i++) {
-    // `Thread.terminate()` resolves to `Worker.terminate()`, which cannot preempt a worker that is
-    // stuck inside a synchronous native (napi) call (V8 can only tear down the isolate at a JS
-    // safepoint). If that happens the terminate call itself never resolves, so it must be raced
-    // against the timeout too - otherwise the intended `retryCount * retryMs` budget is unreachable
-    // and shutdown hangs indefinitely instead of failing bounded. See #5775 / the network-worker
-    // shutdown hang.
+    // `Worker.terminate()` cannot preempt a worker stuck in a synchronous native (napi) call and
+    // then never resolves, so it has to be raced too, otherwise the budget is unreachable.
     const result = await Promise.race([
       Thread.terminate(worker).then(() => terminated),
       sleep(retryMs).then(() => false),
@@ -155,7 +149,6 @@ export async function terminateWorkerThread({
     logger?.debug("Worker thread failed to terminate, retrying...");
   }
 
-  // Logged at debug as the caller owns how severe a failed termination is, it gets `false` back.
   logger?.debug(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
   return false;
 }

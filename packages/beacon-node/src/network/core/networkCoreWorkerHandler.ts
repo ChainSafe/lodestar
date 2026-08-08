@@ -59,12 +59,9 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
 const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
-/**
- * Closing the network core is an RPC into the worker, so it never settles if the worker is wedged.
- * Bound it: `BeaconNode.close()` closes the network before archiving chain state to disk, so an
- * unbounded await here costs that archive and forces a slow replay on the next start.
- */
-const NETWORK_CORE_CLOSE_TIMEOUT_MS = 3000;
+/** RPC into the worker, never settles if the worker is wedged, and `BeaconNode.close()` archives
+ * chain state to disk only after the network is closed */
+const NETWORK_CORE_CLOSE_TIMEOUT_MS = 5000;
 
 /**
  * NetworkCore implementation using a Worker thread
@@ -175,8 +172,7 @@ export class WorkerNetworkCore implements INetworkCore {
     try {
       await withTimeout(async () => this.getApi().close(), NETWORK_CORE_CLOSE_TIMEOUT_MS);
     } catch (e) {
-      // Terminating the worker below tears the core down anyway, and the peers we failed to say
-      // goodbye to will time us out. Neither is worth failing the shutdown over.
+      // Terminating the worker below tears the core down anyway
       this.modules.logger.debug("Error closing network core, terminating worker anyway", {}, e as Error);
     }
     this.modules.logger.debug("terminating network worker");
@@ -189,9 +185,7 @@ export class WorkerNetworkCore implements INetworkCore {
     if (terminated) {
       this.modules.logger.debug("terminated network worker");
     } else {
-      // A forced terminate() can not preempt a worker blocked in a native call, so the worker may
-      // still be running. Unref it so it can not keep the main process alive, otherwise graceful
-      // shutdown would hang until the process is force-killed (see #5775, #6053).
+      // Worker may still be running, unref it so it can not keep the process alive
       (this.modules.worker as unknown as workerThreads.Worker).unref();
       this.modules.logger.debug("Network worker did not terminate in time, unref-ed it to allow process exit");
     }
