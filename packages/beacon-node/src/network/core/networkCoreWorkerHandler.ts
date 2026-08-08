@@ -172,7 +172,6 @@ export class WorkerNetworkCore implements INetworkCore {
     try {
       await withTimeout(async () => this.getApi().close(), NETWORK_CORE_CLOSE_TIMEOUT_MS);
     } catch (e) {
-      // Terminating the worker below tears the core down anyway
       this.modules.logger.debug("Error closing network core, terminating worker anyway", {}, e as Error);
     }
     this.modules.logger.debug("terminating network worker");
@@ -185,7 +184,6 @@ export class WorkerNetworkCore implements INetworkCore {
     if (terminated) {
       this.modules.logger.debug("terminated network worker");
     } else {
-      // Worker may still be running, unref it so it can not keep the process alive
       (this.modules.worker as unknown as workerThreads.Worker).unref();
       this.modules.logger.debug("Network worker did not terminate in time, unref-ed it to allow process exit");
     }
