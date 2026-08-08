@@ -172,7 +172,7 @@ export class WorkerNetworkCore implements INetworkCore {
     try {
       await withTimeout(async () => this.getApi().close(), NETWORK_CORE_CLOSE_TIMEOUT_MS);
     } catch (e) {
-      this.modules.logger.debug("Error closing network core, terminating worker anyway", {}, e as Error);
+      this.modules.logger.debug("Error closing network core", {}, e as Error);
     }
     this.modules.logger.debug("terminating network worker");
     const terminated = await terminateWorkerThread({
