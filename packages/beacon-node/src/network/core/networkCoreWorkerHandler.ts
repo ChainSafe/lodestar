@@ -185,8 +185,8 @@ export class WorkerNetworkCore implements INetworkCore {
     if (terminated) {
       this.modules.logger.debug("terminated network worker");
     } else {
-      // Best effort, `process.exit()` still joins the thread, but it can no longer hold the loop open
-      (this.modules.worker as unknown as workerThreads.Worker).unref();
+      // Nothing more to do, `process.exit()` joins the thread regardless so the process still waits
+      // on it. What matters is returning, so the caller can archive state and close the db
       this.modules.logger.debug("Network worker did not terminate in time, continuing shutdown without it");
     }
   }
