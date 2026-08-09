@@ -41,7 +41,7 @@ describe("util / workerEvents / terminateWorkerThread", () => {
   });
 
   it("returns false in bounded time when Thread.terminate() never resolves (does not hang)", async () => {
-    // Worker stuck in a blocking native call, terminate() never resolves
+    // Worker that never exits, terminate() never resolves
     mockEvents([]);
     vi.mocked(Thread.terminate).mockReturnValue(new Promise<void>(() => {}) as never);
 

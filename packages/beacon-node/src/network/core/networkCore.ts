@@ -298,8 +298,9 @@ export class NetworkCore implements INetworkCore {
     this.attnetsService.close();
     this.syncnetsService.close();
     await this.libp2p.stop();
-    // Anything still listed here keeps this thread's event loop from draining, which is what stops
-    // `Worker.terminate()` from ever resolving and hangs shutdown until the process manager steps in
+    // Diagnostic for the shutdown hang, this thread can spin in `Environment::CleanupHandles()` on
+    // a handle that never closes and `Worker.terminate()` then never resolves. Diffing this list
+    // between a clean and a stuck shutdown should narrow down which handle it is
     this.logger.debug("network lib2p closed", {activeResources: formatActiveResources()});
 
     this.closed = true;
