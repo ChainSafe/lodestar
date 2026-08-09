@@ -117,6 +117,17 @@ export function wireEventsOnMainThread<EventData>(
  * @returns `false` if it could not be terminated, the worker thread is then still running and the
  * caller has to decide how to proceed without it.
  */
+/**
+ * Process-wide record that some worker thread could not be terminated. It is a property of the
+ * process, not of any one instance, and `process.exit()` joins every worker regardless of which
+ * one is stuck, so the caller only needs to know that it happened at all.
+ */
+let someWorkerTerminationFailed = false;
+
+export function hasWorkerTerminationFailed(): boolean {
+  return someWorkerTerminationFailed;
+}
+
 export async function terminateWorkerThread({
   worker,
   retryMs,
@@ -151,5 +162,6 @@ export async function terminateWorkerThread({
   }
 
   logger?.debug(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
+  someWorkerTerminationFailed = true;
   return false;
 }

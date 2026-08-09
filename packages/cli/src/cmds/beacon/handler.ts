@@ -2,7 +2,7 @@ import path from "node:path";
 import {getHeapStatistics} from "node:v8";
 import {SignableENR} from "@chainsafe/enr";
 import {hasher} from "@chainsafe/persistent-merkle-tree";
-import {BeaconDb, BeaconNode} from "@lodestar/beacon-node";
+import {BeaconDb, BeaconNode, hasWorkerTerminationFailed} from "@lodestar/beacon-node";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode, getNodeLogger} from "@lodestar/logger/node";
@@ -146,6 +146,24 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
         try {
           await node.close();
           logger.debug("Beacon node closed");
+          if (hasWorkerTerminationFailed()) {
+            // The state is archived and the db is closed by now, but `process.exit()` joins every
+            // worker via `stop_sub_worker_contexts()`, so a worker that could not be terminated
+            // blocks it until the process manager gives up. Leave on our own terms instead.
+            logger.warn("Worker thread still running, forcing process exit");
+            // A signal always reports 128+signum, the code can not be chosen, but SIGTERM (143) is
+            // what a container reports for a normal stop while SIGKILL (137) reads as a crash
+            process.removeAllListeners("SIGTERM");
+            process.kill(process.pid, "SIGTERM");
+            // Only reached if the signal was not delivered. The kernel discards signals sent to
+            // pid 1 that have no handler installed, including SIGKILL, so this is expected when
+            // running as pid 1 in a container without an init. `process.exit()` below then still
+            // blocks on the join, which is no worse than before this branch existed.
+            logger.error(
+              "Could not force exit, run with an init (docker --init, tini) so the process is not pid 1",
+              {pid: process.pid}
+            );
+          }
           // Explicitly exit until active handles issue is resolved
           // See https://github.com/ChainSafe/lodestar/issues/5642
           process.exit(0);
