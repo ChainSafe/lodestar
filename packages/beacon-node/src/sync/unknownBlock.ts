@@ -37,6 +37,7 @@ import {
   PendingPayloadInput,
   PendingPayloadInputStatus,
   PendingPayloadRootHex,
+  PrunedPendingPayloadReason,
   getBlockInputSyncCacheItemRootHex,
   getBlockInputSyncCacheItemSlot,
   getPayloadSyncCacheItemRootHex,
@@ -636,6 +637,7 @@ export class BlockInputSync {
 
       // Roots that just failed are backing off, do not re-issue a request for them on this pass
       if (payload.nextRetryAtMs !== undefined && Date.now() < payload.nextRetryAtMs) {
+        this.metrics?.blockInputSync.deferredPayloadDownloads.inc();
         continue;
       }
 
@@ -704,6 +706,11 @@ export class BlockInputSync {
     }
 
     if (prunedFinalized > 0 || prunedStale > 0) {
+      this.metrics?.blockInputSync.prunedPendingPayloads.inc(
+        {reason: PrunedPendingPayloadReason.FINALIZED},
+        prunedFinalized
+      );
+      this.metrics?.blockInputSync.prunedPendingPayloads.inc({reason: PrunedPendingPayloadReason.STALE}, prunedStale);
       this.logger.verbose("Pruned unservable roots from BlockInputSync.pendingPayloads", {
         finalized: prunedFinalized,
         stale: prunedStale,

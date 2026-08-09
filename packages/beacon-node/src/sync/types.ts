@@ -62,6 +62,13 @@ export type PendingRootHex = {
 
 export type BlockInputSyncCacheItem = PendingBlockInput | PendingRootHex;
 
+export enum PrunedPendingPayloadReason {
+  /** Block is below the finalized slot, fork choice can never need its payload and peers no longer serve it. */
+  FINALIZED = "finalized",
+  /** Slot never resolved, so the finalized rule cannot apply. Bounded by age instead. */
+  STALE = "stale",
+}
+
 /**
  * Retry bookkeeping shared by every payload sync cache shape. A root that cannot currently be
  * served (no peer has it, or every peer is already at `MAX_CONCURRENT_REQUESTS`) is backed off
