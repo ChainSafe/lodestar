@@ -13,7 +13,7 @@ export async function waitForGenesis(api: ApiClient, logger: Logger, signal: Abo
       if (e instanceof ApiError && e.status === HttpStatusCode.NOT_FOUND) {
         logger.info("Waiting for genesis", {message: e.message});
       } else {
-        logger.warn("Failed to fetch genesis", {}, e as Error);
+        logger.warn("Failed to fetch genesis", {message: (e as Error).message});
       }
       await sleep(WAITING_FOR_GENESIS_POLL_MS, signal);
     }
