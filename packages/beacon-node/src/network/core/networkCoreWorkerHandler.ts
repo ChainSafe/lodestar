@@ -60,8 +60,8 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
 const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
 /** Unbounded RPC into the worker, and `BeaconNode.close()` archives chain state to disk only after
- * the network is closed. Measured at 2.0-4.1s over 21 mainnet shutdowns, deliberately kept clear of
- * that since an unclosed libuv handle is what stops the worker exiting */
+ * the network is closed. Measured at ~2-4s on mainnet, deliberately kept clear of that since an
+ * unclosed libuv handle is what stops the worker exiting */
 const NETWORK_CORE_CLOSE_TIMEOUT_MS = 5000;
 
 /**
