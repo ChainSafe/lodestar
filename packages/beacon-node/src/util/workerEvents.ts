@@ -118,14 +118,18 @@ export function wireEventsOnMainThread<EventData>(
  * caller has to decide how to proceed without it.
  */
 /**
- * Process-wide record that some worker thread could not be terminated. It is a property of the
- * process, not of any one instance, and `process.exit()` joins every worker regardless of which
- * one is stuck, so the caller only needs to know that it happened at all.
+ * How many worker threads are believed to be still running after termination failed. It is a
+ * property of the process, not of any one instance, since `process.exit()` joins every worker
+ * regardless of which one is stuck.
+ *
+ * A count rather than a flag so that a worker terminating late, after its own attempt gave up but
+ * while the rest of the shutdown is still running, does not clear the record for a different
+ * worker that really is stuck.
  */
-let someWorkerTerminationFailed = false;
+let unterminatedWorkers = 0;
 
 export function hasWorkerTerminationFailed(): boolean {
-  return someWorkerTerminationFailed;
+  return unterminatedWorkers > 0;
 }
 
 export async function terminateWorkerThread({
@@ -162,6 +166,12 @@ export async function terminateWorkerThread({
   }
 
   logger?.debug(`Worker thread failed to terminate in ${retryCount * retryMs}ms`);
-  someWorkerTerminationFailed = true;
+  unterminatedWorkers++;
+  // It may still terminate while the rest of the shutdown runs, in which case it can no longer
+  // block `process.exit()` and there is nothing to force
+  void terminated.then(() => {
+    unterminatedWorkers--;
+    logger?.debug("Worker thread terminated after the deadline");
+  });
   return false;
 }
