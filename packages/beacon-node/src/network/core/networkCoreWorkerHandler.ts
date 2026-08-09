@@ -59,9 +59,9 @@ type WorkerNetworkCoreModules = WorkerNetworkCoreInitModules & {
 
 const NETWORK_WORKER_EXIT_TIMEOUT_MS = 1000;
 const NETWORK_WORKER_EXIT_RETRY_COUNT = 3;
-/** Unbounded RPC into the worker, and `BeaconNode.close()` archives chain state to disk only after
- * the network is closed. Measured at ~2-4s on mainnet, deliberately kept clear of that since an
- * unclosed libuv handle is what stops the worker exiting */
+/** `getApi().close()` is an unbounded RPC into the worker and runs before `BeaconNode.close()`
+ * archives chain state to disk, so it is bounded here. Set well above the ~2-4s a close takes on
+ * mainnet, tripping it leaves libp2p half torn down */
 const NETWORK_CORE_CLOSE_TIMEOUT_MS = 5000;
 
 /**
