@@ -19,5 +19,4 @@ export {type NodeJsLibp2pOpts, createNodeJsLibp2p} from "./network/index.js";
 export * from "./node/index.js";
 // Export type util for CLI - TEMP move to lodestar-types eventually
 export {getStateSlotFromBytes, getStateTypeFromBytes} from "./util/multifork.js";
-
 export {hasWorkerTerminationFailed} from "./util/workerEvents.js";

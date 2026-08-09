@@ -159,10 +159,9 @@ export async function beaconHandler(args: BeaconArgs & GlobalArgs): Promise<void
             // pid 1 that have no handler installed, including SIGKILL, so this is expected when
             // running as pid 1 in a container without an init. `process.exit()` below then still
             // blocks on the join, which is no worse than before this branch existed.
-            logger.error(
-              "Could not force exit, run with an init (docker --init, tini) so the process is not pid 1",
-              {pid: process.pid}
-            );
+            logger.error("Could not force exit, run with an init (docker --init, tini) so the process is not pid 1", {
+              pid: process.pid,
+            });
           }
           // Explicitly exit until active handles issue is resolved
           // See https://github.com/ChainSafe/lodestar/issues/5642
