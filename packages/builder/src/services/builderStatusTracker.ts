@@ -25,7 +25,7 @@ export class BuilderStatusTracker {
     const builderStatus = await getBuilderStatus(this.api, this.logger, this.index);
     if (builderStatus !== null) {
       if (this.status !== undefined && this.status !== builderStatus.status) {
-        this.logger.warn("Builder status changed", {from: this.status, to: builderStatus.status});
+        this.logger.info("Builder status changed", {from: this.status, to: builderStatus.status});
       }
       this.status = builderStatus.status;
       this.balanceGwei = builderStatus.balance;
