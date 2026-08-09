@@ -1,9 +1,8 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {routes} from "@lodestar/api";
-import {ssz} from "@lodestar/types";
 import {BuilderStatusTracker} from "../../../src/services/builderStatusTracker.js";
-import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "../utils/apiStub.js";
+import {getApiClientStub, mockApiErrorResponse} from "../utils/apiStub.js";
 import {getMockedLogger} from "../utils/logger.js";
+import {mockGetStateBuildersResponse} from "../utils/mocks.js";
 
 describe("BuilderStatusTracker", () => {
   const logger = getMockedLogger();
@@ -12,21 +11,9 @@ describe("BuilderStatusTracker", () => {
 
   let builderStatusTracker: BuilderStatusTracker;
 
-  function getMockedApiResponse(
-    status: routes.beacon.BuilderStatus = "active",
-    balance = 1
-  ): Awaited<ReturnType<typeof api.beacon.getStateBuilders>> {
-    const builder = ssz.gloas.Builder.defaultValue();
-    builder.balance = balance;
-    return mockApiResponse({
-      data: [{index: builderIndex, status, builder}],
-      meta: {executionOptimistic: true, finalized: false},
-    });
-  }
-
   beforeEach(() => {
     builderStatusTracker = new BuilderStatusTracker(api, logger, builderIndex);
-    api.beacon.getStateBuilders.mockResolvedValue(getMockedApiResponse());
+    api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex));
   });
 
   afterEach(() => {
@@ -55,7 +42,7 @@ describe("BuilderStatusTracker", () => {
     expect(balance).toEqual(1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
-    api.beacon.getStateBuilders.mockResolvedValue(getMockedApiResponse("active", 2));
+    api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex, "active", 2));
     await builderStatusTracker.poll();
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
     expect(newStatus).toEqual("active");
@@ -71,7 +58,7 @@ describe("BuilderStatusTracker", () => {
     expect(balance).toEqual(1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
-    api.beacon.getStateBuilders.mockResolvedValue(getMockedApiResponse("exited", 1));
+    api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex, "exited", 1));
     await builderStatusTracker.poll();
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
     expect(newStatus).toEqual("exited");
