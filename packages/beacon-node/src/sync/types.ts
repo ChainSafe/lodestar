@@ -62,7 +62,19 @@ export type PendingRootHex = {
 
 export type BlockInputSyncCacheItem = PendingBlockInput | PendingRootHex;
 
-export type PendingPayloadInput = {
+/**
+ * Retry bookkeeping shared by every payload sync cache shape. A root that cannot currently be
+ * served (no peer has it, or every peer is already at `MAX_CONCURRENT_REQUESTS`) is backed off
+ * instead of being retried on every scheduler pass.
+ */
+export type PayloadRetryMeta = {
+  /** Consecutive failed download attempts, reset on any successful download. */
+  failedDownloads?: number;
+  /** Epoch ms before which the scheduler must not retry this root. */
+  nextRetryAtMs?: number;
+};
+
+export type PendingPayloadInput = PayloadRetryMeta & {
   status:
     | PendingPayloadInputStatus.pending
     | PendingPayloadInputStatus.fetching
@@ -74,7 +86,7 @@ export type PendingPayloadInput = {
   peerIdStrings: Set<string>;
 };
 
-export type PendingPayloadRootHex = {
+export type PendingPayloadRootHex = PayloadRetryMeta & {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
   // message slot hint, may be missing when resolving a parent payload
@@ -84,7 +96,7 @@ export type PendingPayloadRootHex = {
   peerIdStrings: Set<string>;
 };
 
-export type PendingPayloadEnvelope = {
+export type PendingPayloadEnvelope = PayloadRetryMeta & {
   status: PendingPayloadInputStatus.waitingForBlock;
   envelope: SignedExecutionPayloadEnvelope;
   timeAddedSec: number;

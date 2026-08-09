@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas} from "@lodestar/types";
@@ -20,7 +20,12 @@ import {PeerIdStr} from "../util/peerId.js";
 import {shuffle} from "../util/shuffle.js";
 import {sortBy} from "../util/sortBy.js";
 import {wrapError} from "../util/wrapError.js";
-import {MAX_CONCURRENT_REQUESTS} from "./constants.js";
+import {
+  MAX_CONCURRENT_REQUESTS,
+  MAX_PENDING_PAYLOAD_AGE_EPOCHS,
+  MAX_PENDING_PAYLOAD_RETRY_BACKOFF_MS,
+  PENDING_PAYLOAD_RETRY_BACKOFF_MS,
+} from "./constants.js";
 import {SyncOptions} from "./options.js";
 import {
   BlockInputSyncCacheItem,
@@ -115,6 +120,7 @@ export class BlockInputSync {
   private subscribedToNetworkEvents = false;
   private peerBalancer: UnknownBlockPeerBalancer;
   private rateLimitBackoffTimeout: NodeJS.Timeout | undefined;
+  private payloadBackoffTimeout: NodeJS.Timeout | undefined;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -165,6 +171,7 @@ export class BlockInputSync {
   unsubscribeFromNetwork(): void {
     this.logger.verbose("BlockInputSync disabled.");
     this.clearRateLimitBackoffTimer();
+    this.clearPayloadBackoffTimer();
     this.chain.emitter.off(ChainEvent.unknownBlockRoot, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.unknownEnvelopeBlockRoot, this.onUnknownEnvelopeBlockRoot);
     this.chain.emitter.off(ChainEvent.incompleteBlockInput, this.onIncompleteBlockInput);
@@ -547,6 +554,8 @@ export class BlockInputSync {
       return;
     }
 
+    this.prunePendingPayloads();
+
     // If the node loses all peers with pending unknown blocks or payloads, the sync will stall
     const connectedPeers = this.network.getConnectedPeers();
     const hasConnectedPeers = connectedPeers.length > 0;
@@ -599,7 +608,11 @@ export class BlockInputSync {
     }
 
     // Blocks can unblock payloads and payloads can unblock blocks, so every scheduler pass services both queues.
-    for (const payload of Array.from(this.pendingPayloads.values())) {
+    // Service the newest roots first: peers are capped at MAX_CONCURRENT_REQUESTS, so whatever is
+    // walked first claims the peer slots. Map insertion order is roughly slot-ascending, which would
+    // hand every slot to the oldest (and least useful) roots and leave the head-adjacent root, the one
+    // fork choice is actually waiting on, unable to find a peer.
+    for (const payload of this.getPayloadsByPriority()) {
       if (isPendingPayloadInput(payload) && payload.status === PendingPayloadInputStatus.downloaded) {
         this.processPayload(payload).catch((e) => {
           this.logger.debug("Unexpected error - process downloaded payload", {}, e);
@@ -621,15 +634,119 @@ export class BlockInputSync {
         continue;
       }
 
+      // Roots that just failed are backing off, do not re-issue a request for them on this pass
+      if (payload.nextRetryAtMs !== undefined && Date.now() < payload.nextRetryAtMs) {
+        continue;
+      }
+
       this.downloadPayload(payload).catch((e) => {
         this.logger.debug("Unexpected error - downloadPayload", {root: getPayloadSyncCacheItemRootHex(payload)}, e);
       });
     }
 
+    this.schedulePayloadBackoffRetry();
+
     if (shouldRerunBlockSearch) {
       this.triggerUnknownBlockSearch();
     }
   };
+
+  /**
+   * Pending payloads ordered by descending slot so the roots closest to the head get first claim on
+   * the limited per-peer request slots. Entries whose slot is not known yet were only just learned
+   * about from gossip, so they sort with the current slot.
+   */
+  private getPayloadsByPriority(): PayloadSyncCacheItem[] {
+    const currentSlot = this.chain.clock.currentSlot;
+    return sortBy(Array.from(this.pendingPayloads.values()), (payload) => {
+      const slot = getPayloadSyncCacheItemSlot(payload);
+      return -(typeof slot === "number" ? slot : currentSlot);
+    });
+  }
+
+  /**
+   * Drop payload roots that no peer can serve any more, so they cannot occupy the queue (which is
+   * capped at `maxPendingBlocks`) and starve roots that are still relevant.
+   *
+   * - below the finalized slot: fork choice can never need this payload again, and peers stop
+   *   serving envelopes for pruned blocks. Without this rule such roots are only evicted once
+   *   `pruneSetToMax` rotates them out, which took hours on a busy node. The finalized slot itself
+   *   is kept, its payload is still the anchor that descendants are validated against.
+   * - slot still unknown after `MAX_PENDING_PAYLOAD_AGE_EPOCHS`: the finalized rule can never apply
+   *   to them, so bound them by age instead.
+   */
+  private prunePendingPayloads(): void {
+    if (this.pendingPayloads.size === 0) {
+      return;
+    }
+
+    const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
+    const maxAgeSec = MAX_PENDING_PAYLOAD_AGE_EPOCHS * SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT;
+    const nowSec = Date.now() / 1000;
+    let prunedFinalized = 0;
+    let prunedStale = 0;
+
+    for (const [rootHex, payload] of this.pendingPayloads.entries()) {
+      const slot = getPayloadSyncCacheItemSlot(payload);
+
+      if (typeof slot === "number") {
+        if (slot < finalizedSlot) {
+          this.pendingPayloads.delete(rootHex);
+          prunedFinalized++;
+        }
+        continue;
+      }
+
+      if (nowSec - payload.timeAddedSec > maxAgeSec) {
+        this.pendingPayloads.delete(rootHex);
+        prunedStale++;
+      }
+    }
+
+    if (prunedFinalized > 0 || prunedStale > 0) {
+      this.logger.verbose("Pruned unservable roots from BlockInputSync.pendingPayloads", {
+        finalized: prunedFinalized,
+        stale: prunedStale,
+        finalizedSlot,
+        pendingPayloads: this.pendingPayloads.size,
+      });
+    }
+  }
+
+  /**
+   * Wake the scheduler when the earliest backed-off payload becomes retryable. Without this a root
+   * that fails while the chain is quiet would only be retried on the next unrelated event.
+   */
+  private schedulePayloadBackoffRetry(): void {
+    if (this.payloadBackoffTimeout !== undefined || !this.subscribedToNetworkEvents) {
+      return;
+    }
+
+    const now = Date.now();
+    let earliestRetryAt: number | undefined;
+    for (const payload of this.pendingPayloads.values()) {
+      const {nextRetryAtMs} = payload;
+      if (nextRetryAtMs !== undefined && nextRetryAtMs > now) {
+        earliestRetryAt = Math.min(earliestRetryAt ?? nextRetryAtMs, nextRetryAtMs);
+      }
+    }
+
+    if (earliestRetryAt === undefined) {
+      return;
+    }
+
+    this.payloadBackoffTimeout = setTimeout(() => {
+      this.payloadBackoffTimeout = undefined;
+      this.triggerUnknownBlockSearch();
+    }, earliestRetryAt - now);
+  }
+
+  private clearPayloadBackoffTimer(): void {
+    if (this.payloadBackoffTimeout !== undefined) {
+      clearTimeout(this.payloadBackoffTimeout);
+      this.payloadBackoffTimeout = undefined;
+    }
+  }
 
   private scheduleRateLimitBackoffRetry(): void {
     this.clearRateLimitBackoffTimer();
@@ -969,6 +1086,9 @@ export class BlockInputSync {
     const res = await wrapError(this.fetchPayloadInput(payload));
     if (!res.err) {
       const pendingPayload = res.result;
+      // Progress was made, drop any accumulated backoff so the next pass retries immediately
+      pendingPayload.failedDownloads = 0;
+      pendingPayload.nextRetryAtMs = undefined;
       this.pendingPayloads.set(getPayloadSyncCacheItemRootHex(pendingPayload), pendingPayload);
 
       if (isPendingPayloadEnvelope(pendingPayload)) {
@@ -979,7 +1099,16 @@ export class BlockInputSync {
       return;
     }
 
-    this.logger.debug("Ignoring unknown payload root after failed download", logCtx, res.err);
+    // Back off before retrying. Re-arming as `pending` with no delay means every subsequent
+    // scheduler pass re-issues this request, which is what turns a queue of unservable roots into a
+    // request storm that occupies every peer's MAX_CONCURRENT_REQUESTS slots.
+    const failedDownloads = (payload.failedDownloads ?? 0) + 1;
+    payload.failedDownloads = failedDownloads;
+    payload.nextRetryAtMs =
+      Date.now() +
+      Math.min(PENDING_PAYLOAD_RETRY_BACKOFF_MS * 2 ** (failedDownloads - 1), MAX_PENDING_PAYLOAD_RETRY_BACKOFF_MS);
+
+    this.logger.debug("Ignoring unknown payload root after failed download", {...logCtx, failedDownloads}, res.err);
     if (!isPendingPayloadEnvelope(payload)) {
       payload.status = PendingPayloadInputStatus.pending;
     }

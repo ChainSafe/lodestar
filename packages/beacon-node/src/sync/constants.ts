@@ -74,3 +74,22 @@ export const MAX_CONCURRENT_REQUESTS = 2;
  * so having this constant too big is a waste of resources and peers may rate limit us.
  */
 export const MAX_LOOK_AHEAD_EPOCHS = 2;
+
+/**
+ * Max age of a payload sync entry whose slot is not known yet (by-root or envelope-only entries).
+ * Entries older than this are dropped: their slot never resolved, so the finalized-slot rule cannot
+ * prune them and they would otherwise occupy the queue forever.
+ */
+export const MAX_PENDING_PAYLOAD_AGE_EPOCHS = 2;
+
+/**
+ * Backoff applied to a payload root after a failed download attempt, doubled per consecutive
+ * failure and capped at `MAX_PENDING_PAYLOAD_RETRY_BACKOFF_MS`.
+ *
+ * Without a backoff every `triggerUnknownBlockSearch()` pass re-issues a request for every pending
+ * root. That runs on block import, peer connect and each unknown-root gossip event, so a queue of
+ * unservable roots becomes a request storm that holds every peer at `MAX_CONCURRENT_REQUESTS` and
+ * starves the roots actually needed at the head.
+ */
+export const PENDING_PAYLOAD_RETRY_BACKOFF_MS = 400;
+export const MAX_PENDING_PAYLOAD_RETRY_BACKOFF_MS = 12_000;
