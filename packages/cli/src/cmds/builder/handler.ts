@@ -15,7 +15,7 @@ const ZERO_ADDRESS = "0x" + "0".repeat(40);
 export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
 
-  if (config.forks.gloas.epoch === Infinity) {
+  if (config.GLOAS_FORK_EPOCH === Infinity) {
     throw Error(`Gloas must be scheduled via GLOAS_FORK_EPOCH (network: ${network})`);
   }
 

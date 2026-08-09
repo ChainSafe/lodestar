@@ -47,7 +47,7 @@ export async function logNodeVersion(api: ApiClient, logger: Logger): Promise<vo
   try {
     const versionRes = await api.node.getNodeVersionV2();
     const version = versionRes.value();
-    logger.info("Node version", {
+    logger.info("Connected node version", {
       beaconNode: `${version.beaconNode.name}/${version.beaconNode.version}`,
       executionClient: version.executionClient
         ? `${version.executionClient.name}/${version.executionClient.version}`
