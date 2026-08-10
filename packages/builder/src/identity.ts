@@ -51,11 +51,6 @@ async function fetchBuilder(api: ApiClient, id: routes.beacon.BuilderId): Promis
     builderIds: [id],
   });
 
-  if (!builderRes.ok) {
-    await builderRes.errorBody();
-    throw Error(`Failed to get builder state from beacon node: ${builderRes.status} - ${builderRes.error()?.message}`);
-  }
-
   const builders = builderRes.value();
 
   if (builders.length === 0) {
