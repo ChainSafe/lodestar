@@ -61,7 +61,7 @@ export class Builder {
   static async init(opts: BuilderOptions): Promise<Builder> {
     const {api, logger} = opts;
     const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
-    logger.info("Genesis fetched from the beacon node", {genesisValidatorsRoot: toHex(genesis.genesisValidatorsRoot)});
+    logger.info("Genesis fetched from the beacon node", {genesisValidatorsRoot: toRootHex(genesis.genesisValidatorsRoot)});
 
     const specRes = await api.config.getSpec();
     assertEqualParams(opts.config, specRes.value());
