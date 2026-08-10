@@ -54,19 +54,14 @@ function getExecutionBlockHash(block: ProtoBlock): RootHex {
     return HEX_ZERO_HASH;
   }
 
-  // Widen the correlated fields so the runtime invariant is still checked for malformed input.
-  const executionPayloadBlockHash: RootHex | null = block.executionPayloadBlockHash;
-  const executionStatus: ExecutionStatus = block.executionStatus;
-  if (executionPayloadBlockHash === null) {
-    if (executionStatus !== ExecutionStatus.PreMerge) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.MISSING_EXECUTION_PAYLOAD_BLOCK_HASH,
-        root: block.blockRoot,
-        slot: block.slot,
-      });
-    }
-    return HEX_ZERO_HASH;
+  const {blockRoot, slot} = block;
+  if (block.executionPayloadBlockHash === null && block.executionStatus !== ExecutionStatus.PreMerge) {
+    throw new ForkChoiceError({
+      code: ForkChoiceErrorCode.MISSING_EXECUTION_PAYLOAD_BLOCK_HASH,
+      root: blockRoot,
+      slot,
+    });
   }
 
-  return executionPayloadBlockHash;
+  return block.executionPayloadBlockHash ?? HEX_ZERO_HASH;
 }
