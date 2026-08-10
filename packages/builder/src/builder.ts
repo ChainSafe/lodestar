@@ -2,7 +2,7 @@ import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
-import {Logger, toHex} from "@lodestar/utils";
+import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
@@ -61,7 +61,9 @@ export class Builder {
   static async init(opts: BuilderOptions): Promise<Builder> {
     const {api, logger} = opts;
     const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
-    logger.info("Genesis fetched from the beacon node", {genesisValidatorsRoot: toRootHex(genesis.genesisValidatorsRoot)});
+    logger.info("Genesis fetched from the beacon node", {
+      genesisValidatorsRoot: toRootHex(genesis.genesisValidatorsRoot),
+    });
 
     const specRes = await api.config.getSpec();
     assertEqualParams(opts.config, specRes.value());
