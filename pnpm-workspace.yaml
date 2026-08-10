@@ -39,6 +39,7 @@ overrides:
   "@multiformats/multiaddr": "link:./temp-deps/js-libp2p/node_modules/@multiformats/multiaddr"
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
+  interface-datastore: "link:./temp-deps/js-libp2p/node_modules/interface-datastore"
   libp2p: "link:./temp-deps/js-libp2p/packages/libp2p"
   loupe: "^2.3.6"
   nan: "^2.19.0"
@@ -46,6 +47,7 @@ overrides:
   # Remove together with the patch once sigstore-js#1709 ships and is consumed
   # by libnpmpublish/lerna-lite.
   sigstore: "4.0.0"
+  uint8arraylist: "link:./temp-deps/js-libp2p/node_modules/uint8arraylist"
 
 patchedDependencies:
   sigstore@4.0.0: patches/sigstore@4.0.0.patch

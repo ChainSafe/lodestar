@@ -5,7 +5,7 @@ import {fileURLToPath} from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const jsLibp2pRoot = path.join(repoRoot, "temp-deps", "js-libp2p");
 // Prevent caret ranges from resolving package releases newer than this checkout.
-const jsLibp2pDependencyCutoff = "2026-03-27T23:59:59.000Z";
+const jsLibp2pDependencyCutoff = "2026-07-31T23:59:59.000Z";
 // Build the linked packages and their workspace dependencies in dependency order.
 const jsLibp2pPackages = [
   "@libp2p/interface",
@@ -39,7 +39,20 @@ function run(command, args, cwd) {
 }
 
 run("git", ["submodule", "update", "--init", "--recursive", "--remote", "temp-deps/js-libp2p"], repoRoot);
-run("npm", ["install", `--before=${jsLibp2pDependencyCutoff}`, "--no-audit", "--no-fund"], jsLibp2pRoot);
+// Aegir's listr dependency needs an observable implementation resolvable from the workspace root.
+run(
+  "npm",
+  [
+    "install",
+    "rxjs@7.8.2",
+    `--before=${jsLibp2pDependencyCutoff}`,
+    "--no-save",
+    "--package-lock=false",
+    "--no-audit",
+    "--no-fund",
+  ],
+  jsLibp2pRoot
+);
 
 for (const packageName of jsLibp2pPackages) {
   run("npm", ["run", "build", "--workspace", packageName], jsLibp2pRoot);

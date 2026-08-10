@@ -26,10 +26,12 @@ overrides:
   '@multiformats/multiaddr': link:./temp-deps/js-libp2p/node_modules/@multiformats/multiaddr
   dns-over-http-resolver: ^2.1.1
   elliptic: '>=6.6.1'
+  interface-datastore: link:./temp-deps/js-libp2p/node_modules/interface-datastore
   libp2p: link:./temp-deps/js-libp2p/packages/libp2p
   loupe: ^2.3.6
   nan: ^2.19.0
   sigstore: 4.0.0
+  uint8arraylist: link:./temp-deps/js-libp2p/node_modules/uint8arraylist
 
 patchedDependencies:
   sigstore@4.0.0: 0d9fa39ff088202d74fca3bec0d7bc1c2822b4bddcab7cd31627235b21b52b32
@@ -311,8 +313,8 @@ importers:
         specifier: ^5.8.1
         version: 5.8.5
       interface-datastore:
-        specifier: ^9.0.2
-        version: 9.0.2
+        specifier: link:../../temp-deps/js-libp2p/node_modules/interface-datastore
+        version: link:../../temp-deps/js-libp2p/node_modules/interface-datastore
       jwt-simple:
         specifier: 0.5.6
         version: 0.5.6
@@ -335,8 +337,8 @@ importers:
         specifier: ^5.22.9
         version: 5.31.7
       uint8arraylist:
-        specifier: ^2.4.7
-        version: 2.4.8
+        specifier: link:../../temp-deps/js-libp2p/node_modules/uint8arraylist
+        version: link:../../temp-deps/js-libp2p/node_modules/uint8arraylist
       xxhash-wasm:
         specifier: 1.0.2
         version: 1.0.2
@@ -721,8 +723,8 @@ importers:
         specifier: ^2.0.2
         version: 2.0.4
       uint8arraylist:
-        specifier: ^2.4.7
-        version: 2.4.8
+        specifier: link:../../temp-deps/js-libp2p/node_modules/uint8arraylist
+        version: link:../../temp-deps/js-libp2p/node_modules/uint8arraylist
     devDependencies:
       '@chainsafe/ssz':
         specifier: ^1.6.2
@@ -4342,9 +4344,6 @@ packages:
     resolution: {integrity: sha512-3ygAIh8gcZavV9bj6MTdYddG2zPSYswP808fKS46NOwlF0zZljVpnLCHODDqItWJDbDpLb3aouAxGaJbkxoppA==}
     engines: {node: '>=14.18.0'}
 
-  interface-datastore@9.0.2:
-    resolution: {integrity: sha512-jebn+GV/5LTDDoyicNIB4D9O0QszpPqT09Z/MpEWvf3RekjVKpXJCDguM5Au2fwIFxFDAQMZe5bSla0jMamCNg==}
-
   interface-store@7.0.1:
     resolution: {integrity: sha512-OPRRUO3Cs6Jr/t98BrJLQp1jUTPgrRH0PqFfuNoPAqd+J7ABN1tjFVjQdaOBiybYJTS/AyBSZnZVWLPvp3dW3w==}
 
@@ -5982,9 +5981,6 @@ packages:
   uint8-varint@2.0.4:
     resolution: {integrity: sha512-FwpTa7ZGA/f/EssWAb5/YV6pHgVF1fViKdW8cWaEarjB8t7NyofSWBdOTyFPaGuUG4gx3v1O3PQ8etsiOs3lcw==}
 
-  uint8arraylist@2.4.8:
-    resolution: {integrity: sha512-vc1PlGOzglLF0eae1M8mLRTBivsvrGsdmJ5RbK3e+QRvRLOZfZhQROTwH/OfyF3+ZVUg9/8hE8bmKP2CvP9quQ==}
-
   uint8arrays@5.1.0:
     resolution: {integrity: sha512-vA6nFepEmlSKkMBnLBaUMVvAC4G3CTmO58C12y4sq6WPDOR7mOFYOi7GlrQ4djeSbP6JG9Pv9tJDM97PedRSww==}
 
@@ -6857,7 +6853,7 @@ snapshots:
       '@noble/curves': 2.0.1
       '@noble/hashes': 2.0.1
       protons-runtime: 5.6.0
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
@@ -6891,7 +6887,7 @@ snapshots:
       '@multiformats/multiaddr': link:temp-deps/js-libp2p/node_modules/@multiformats/multiaddr
       '@multiformats/multiaddr-matcher': 3.0.2
       race-signal: 1.1.3
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
     optionalDependencies:
       '@chainsafe/libp2p-quic-darwin-arm64': 2.1.3
       '@chainsafe/libp2p-quic-darwin-x64': 2.1.3
@@ -7809,7 +7805,7 @@ snapshots:
       '@noble/hashes': 2.0.1
       multiformats: 14.0.0
       protons-runtime: 6.0.2
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 6.1.1
 
   '@libp2p/gossipsub@16.0.2':
@@ -7826,7 +7822,7 @@ snapshots:
       it-pushable: 3.2.3
       multiformats: 14.0.0
       protons-runtime: 6.0.2
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 6.1.1
 
   '@libp2p/identify@4.0.13':
@@ -7843,7 +7839,7 @@ snapshots:
       it-parallel: 3.0.13
       main-event: 1.0.1
       protons-runtime: 5.6.0
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
 
   '@libp2p/interface-internal@3.1.6':
@@ -7857,7 +7853,7 @@ snapshots:
     dependencies:
       '@libp2p/interface': link:temp-deps/js-libp2p/packages/interface
       '@multiformats/multiaddr': link:temp-deps/js-libp2p/node_modules/@multiformats/multiaddr
-      interface-datastore: 9.0.2
+      interface-datastore: link:temp-deps/js-libp2p/node_modules/interface-datastore
       multiformats: 14.0.0
       weald: 1.1.1
 
@@ -7879,7 +7875,7 @@ snapshots:
       '@libp2p/utils': 7.2.2
       it-pushable: 3.2.3
       uint8-varint: 2.0.4
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
 
   '@libp2p/peer-id@6.0.10':
@@ -7898,7 +7894,7 @@ snapshots:
       multiformats: 13.4.2
       protons-runtime: 5.6.0
       uint8-varint: 2.0.4
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
 
   '@libp2p/prometheus-metrics@5.0.14':
@@ -7931,7 +7927,7 @@ snapshots:
       progress-events: 1.1.0
       race-signal: 2.0.0
       uint8-varint: 2.0.4
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 6.1.1
 
   '@lukeed/ms@2.0.2': {}
@@ -9536,7 +9532,7 @@ snapshots:
   datastore-core@11.0.2:
     dependencies:
       '@libp2p/logger': 6.2.8
-      interface-datastore: 9.0.2
+      interface-datastore: link:temp-deps/js-libp2p/node_modules/interface-datastore
       interface-store: 7.0.1
       it-drain: 3.0.10
       it-filter: 3.1.4
@@ -9549,7 +9545,7 @@ snapshots:
   datastore-level@12.0.2:
     dependencies:
       datastore-core: 11.0.2
-      interface-datastore: 9.0.2
+      interface-datastore: link:temp-deps/js-libp2p/node_modules/interface-datastore
       interface-store: 7.0.1
       it-filter: 3.1.4
       it-map: 3.1.4
@@ -10337,11 +10333,6 @@ snapshots:
       through: 2.3.8
       wrap-ansi: 8.1.0
 
-  interface-datastore@9.0.2:
-    dependencies:
-      interface-store: 7.0.1
-      uint8arrays: 5.1.0
-
   interface-store@7.0.1: {}
 
   ip-address@10.1.0: {}
@@ -10471,7 +10462,7 @@ snapshots:
       it-reader: 6.0.4
       it-stream-types: 2.0.2
       uint8-varint: 2.0.4
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
 
   it-map@3.1.4:
@@ -10507,7 +10498,7 @@ snapshots:
   it-reader@6.0.4:
     dependencies:
       it-stream-types: 2.0.2
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
 
   it-sort@3.0.9:
     dependencies:
@@ -11406,13 +11397,13 @@ snapshots:
   protons-runtime@5.6.0:
     dependencies:
       uint8-varint: 2.0.4
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
 
   protons-runtime@6.0.2:
     dependencies:
       uint8-varint: 2.0.4
-      uint8arraylist: 2.4.8
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
 
   proxy-from-env@1.1.0: {}
@@ -12015,11 +12006,7 @@ snapshots:
 
   uint8-varint@2.0.4:
     dependencies:
-      uint8arraylist: 2.4.8
-      uint8arrays: 5.1.0
-
-  uint8arraylist@2.4.8:
-    dependencies:
+      uint8arraylist: link:temp-deps/js-libp2p/node_modules/uint8arraylist
       uint8arrays: 5.1.0
 
   uint8arrays@5.1.0:
