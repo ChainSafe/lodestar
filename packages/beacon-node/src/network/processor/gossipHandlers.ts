@@ -1232,10 +1232,14 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.payload_attestation_message]: async ({
       gossipData,
       topic,
+      seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.payload_attestation_message>) => {
       const {serializedData} = gossipData;
       const payloadAttestationMessage = sszDeserialize(topic, serializedData);
       const validationResult = await validateGossipPayloadAttestationMessage(chain, payloadAttestationMessage);
+
+      const delaySec = chain.clock.secFromSlot(payloadAttestationMessage.data.slot, seenTimestampSec);
+      metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.gossip}, delaySec);
 
       try {
         const insertOutcome = chain.payloadAttestationPool.add(
@@ -1263,10 +1267,16 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
     [GossipType.execution_payload_bid]: async ({
       gossipData,
       topic,
+      seenTimestampSec,
     }: GossipHandlerParamGeneric<GossipType.execution_payload_bid>) => {
       const {serializedData} = gossipData;
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
+
+      // A bid for `bid.slot` is normally broadcast during the previous slot (`bid.slot - 1`) so the
+      // next-slot proposer can pick it, hence measure elapsed time from the previous slot's start.
+      const delaySec = chain.clock.secFromSlot(executionPayloadBid.message.slot - 1, seenTimestampSec);
+      metrics?.gossipExecutionPayloadBid.elapsedTimeFromPreviousSlot.observe({source: OpSource.gossip}, delaySec);
 
       // Handle valid payload bid by storing in a bid pool
       try {

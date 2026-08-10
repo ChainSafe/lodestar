@@ -908,6 +908,24 @@ export function createLodestarMetrics(
         labelNames: ["error"],
       }),
     },
+    gossipExecutionPayloadBid: {
+      // A bid for `bid.slot` is normally broadcast during the previous slot (`bid.slot - 1`) so the
+      // next-slot proposer can pick it, so this measures elapsed time from the previous slot's start.
+      elapsedTimeFromPreviousSlot: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_execution_payload_bid_elapsed_time_from_previous_slot_seconds",
+        help: "Time elapsed between the previous slot (bid.slot - 1) start and the time the execution payload bid was received",
+        labelNames: ["source"],
+        buckets: [3, 6, 9, 12],
+      }),
+    },
+    gossipPayloadAttestationMessage: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_payload_attestation_message_elapsed_time_till_received_seconds",
+        help: "Time elapsed between slot time and the time the payload attestation message was received",
+        labelNames: ["source"],
+        buckets: [3, 6, 9, 12],
+      }),
+    },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {
       blobsReconstructed: register.counter({
