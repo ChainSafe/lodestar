@@ -76,29 +76,31 @@ export class BlockObserver {
         },
       })
       .catch((error: unknown) => {
-        this.logger.error("Failed to subscribe to block events", {
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.logger.error(
+          "Failed to subscribe to block events",
+          {},
+          error instanceof Error ? error : Error(String(error))
+        );
       });
   }
 
   async processBlockEvent(event: BlockEvent, signal: AbortSignal): Promise<void> {
-    const {slot, block: blockRoot, executionOptimistic} = event;
-
-    if (this.seenBlockRoots.has(blockRoot)) {
-      this.logger.debug("Ignoring duplicate block event", {slot, blockRoot});
-      return;
-    }
-
-    this.seenBlockRoots.add(blockRoot);
-    pruneSetToMax(this.seenBlockRoots, this.maxSeenBlockRoots);
-
-    if (!isForkPostGloas(this.config.getForkName(slot))) {
-      this.logger.debug("Ignoring pre-Gloas block event", {slot, blockRoot});
-      return;
-    }
-
     try {
+      const {slot, block: blockRoot, executionOptimistic} = event;
+
+      if (this.seenBlockRoots.has(blockRoot)) {
+        this.logger.debug("Ignoring duplicate block event", {slot, blockRoot});
+        return;
+      }
+
+      this.seenBlockRoots.add(blockRoot);
+      pruneSetToMax(this.seenBlockRoots, this.maxSeenBlockRoots);
+
+      if (!isForkPostGloas(this.config.getForkName(slot))) {
+        this.logger.debug("Ignoring pre-Gloas block event", {slot, blockRoot});
+        return;
+      }
+
       const response = await retry(
         async () => {
           const result = await this.api.beacon.getBlockV2({blockId: blockRoot}, {signal});
@@ -119,7 +121,22 @@ export class BlockObserver {
             });
           },
         }
-      );
+      ).catch((error: unknown) => {
+        if (isErrorAborted(error)) {
+          return null;
+        }
+
+        this.logger.error(
+          "Failed to retrieve block referenced by block event",
+          {slot, blockRoot},
+          error instanceof Error ? error : Error(String(error))
+        );
+        return null;
+      });
+
+      if (response === null) {
+        return;
+      }
 
       const {version} = response.meta();
       if (!isForkPostGloas(version)) {
@@ -154,26 +171,28 @@ export class BlockObserver {
         parentBlockHash: toRootHex(signedBid.message.parentBlockHash),
       });
 
-      for (const fn of this.fns) {
-        try {
-          await fn(observedBlock);
-        } catch (error) {
-          this.logger.error(
-            "Failed to process observed block",
-            {slot, blockRoot},
-            error instanceof Error ? error : undefined
-          );
-        }
-      }
+      await Promise.all(
+        this.fns.map(async (fn) => {
+          try {
+            await fn(observedBlock);
+          } catch (error) {
+            this.logger.error(
+              "Failed to process observed block",
+              {slot, blockRoot},
+              error instanceof Error ? error : Error(String(error))
+            );
+          }
+        })
+      );
     } catch (error) {
       if (isErrorAborted(error)) {
         return;
       }
 
       this.logger.error(
-        "Failed to retrieve block referenced by block event",
-        {slot, blockRoot},
-        error instanceof Error ? error : undefined
+        "Failed to process block event",
+        {slot: event.slot, blockRoot: event.block},
+        error instanceof Error ? error : Error(String(error))
       );
     }
   }

@@ -179,16 +179,60 @@ describe("BlockObserver", () => {
   });
 
   it("stops silently when aborted during a retry delay", async () => {
-    apiStub.getBlockV2.mockResolvedValue(errorResponse(404));
-    const observer = new BlockObserver(config, logger, apiStub.api, {retries: 5, retryDelay: 100});
+    const firstRequestStarted = promiseWithResolvers<void>();
+    apiStub.getBlockV2.mockImplementation(async () => {
+      firstRequestStarted.resolve(undefined);
+      return errorResponse(404);
+    });
+    const observer = new BlockObserver(config, logger, apiStub.api, {retries: 5, retryDelay: 60_000});
 
     const processing = observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
-    await vi.waitFor(() => expect(apiStub.getBlockV2).toHaveBeenCalledOnce());
+    await firstRequestStarted.promise;
     controller.abort();
     await processing;
 
     expect(apiStub.getBlockV2).toHaveBeenCalledOnce();
     expect(errorLog).not.toHaveBeenCalled();
+  });
+
+  it("does not retry a response metadata decoding failure", async () => {
+    const decodeError = Error("metadata decode failed");
+    apiStub.getBlockV2.mockResolvedValue(decodeErrorResponse("meta", decodeError));
+    const onBlock = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, apiStub.api);
+    observer.runOnBlock(onBlock);
+    const event = blockEvent(rootHex(1));
+
+    await observer.processBlockEvent(event, controller.signal);
+    await observer.processBlockEvent(event, controller.signal);
+
+    expect(apiStub.getBlockV2).toHaveBeenCalledOnce();
+    expect(onBlock).not.toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalledWith(
+      "Failed to process block event",
+      {slot: event.slot, blockRoot: event.block},
+      decodeError
+    );
+  });
+
+  it("does not retry a response value decoding failure", async () => {
+    const decodeError = Error("value decode failed");
+    apiStub.getBlockV2.mockResolvedValue(decodeErrorResponse("value", decodeError));
+    const onBlock = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, apiStub.api);
+    observer.runOnBlock(onBlock);
+    const event = blockEvent(rootHex(1));
+
+    await observer.processBlockEvent(event, controller.signal);
+    await observer.processBlockEvent(event, controller.signal);
+
+    expect(apiStub.getBlockV2).toHaveBeenCalledOnce();
+    expect(onBlock).not.toHaveBeenCalled();
+    expect(errorLog).toHaveBeenCalledWith(
+      "Failed to process block event",
+      {slot: event.slot, blockRoot: event.block},
+      decodeError
+    );
   });
 
   it("does not fetch a locally pre-Gloas block", async () => {
@@ -258,32 +302,47 @@ describe("BlockObserver", () => {
     const observer = new BlockObserver(config, logger, apiStub.api);
     observer.start(controller.signal);
     const {onError, onClose} = apiStub.eventstream.mock.calls[0][0];
+    const streamError = Error("stream failed");
 
-    onError?.(Error("stream failed"));
+    onError?.(streamError);
     onClose?.();
-    expect(errorLog).toHaveBeenCalledOnce();
+    expect(errorLog).toHaveBeenCalledWith("Failed to receive block event", {}, streamError);
 
     const rejectedStub = getApiStub();
-    rejectedStub.eventstream.mockRejectedValue(Error("setup failed"));
+    const setupError = Error("setup failed");
+    rejectedStub.eventstream.mockRejectedValue(setupError);
     new BlockObserver(config, logger, rejectedStub.api).start(controller.signal);
     await vi.waitFor(() => expect(errorLog).toHaveBeenCalledTimes(2));
+    expect(errorLog).toHaveBeenLastCalledWith("Failed to subscribe to block events", {}, setupError);
   });
 
-  it("isolates a callback failure and continues to the next callback", async () => {
+  it("dispatches callbacks concurrently and isolates a callback failure", async () => {
     apiStub.getBlockV2.mockResolvedValue(blockResponse(gloasBlock()));
+    const firstStarted = promiseWithResolvers<void>();
+    const releaseFirst = promiseWithResolvers<void>();
+    const callbackError = Error("consumer failed");
     const first = vi.fn(async (_block: ObservedBlock) => {
-      throw Error("consumer failed");
+      firstStarted.resolve(undefined);
+      await releaseFirst.promise;
+      throw callbackError;
     });
     const second = vi.fn(async (_block: ObservedBlock) => {});
     const observer = new BlockObserver(config, logger, apiStub.api);
     observer.runOnBlock(first);
     observer.runOnBlock(second);
 
-    await observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
+    const processing = observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
 
-    expect(first).toHaveBeenCalledOnce();
+    await firstStarted.promise;
     expect(second).toHaveBeenCalledOnce();
-    expect(errorLog).toHaveBeenCalledOnce();
+    releaseFirst.resolve(undefined);
+    await processing;
+
+    expect(errorLog).toHaveBeenCalledWith(
+      "Failed to process observed block",
+      {slot: 0, blockRoot: rootHex(1)},
+      callbackError
+    );
   });
 
   it("uses the same abort signal for the stream and block request", async () => {
@@ -330,6 +389,26 @@ function errorResponse(status: number): GetBlockV2Response {
   return {
     assertOk: () => {
       throw new ApiError("request failed", status, "getBlockV2");
+    },
+  } as unknown as GetBlockV2Response;
+}
+
+function decodeErrorResponse(accessor: "meta" | "value", error: Error): GetBlockV2Response {
+  return {
+    assertOk: () => {},
+    meta: () => {
+      if (accessor === "meta") {
+        throw error;
+      }
+
+      return {executionOptimistic: false, finalized: false, version: ForkName.gloas};
+    },
+    value: () => {
+      if (accessor === "value") {
+        throw error;
+      }
+
+      return gloasBlock();
     },
   } as unknown as GetBlockV2Response;
 }
