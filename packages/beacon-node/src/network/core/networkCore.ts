@@ -285,6 +285,9 @@ export class NetworkCore implements INetworkCore {
 
     this.clock.off(ClockEvent.epoch, this.onEpoch);
 
+    await this.peerManager.quiesce();
+    this.logger.debug("network peerManager quiesced");
+
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     this.logger.debug("network sent goodbye to all peers");

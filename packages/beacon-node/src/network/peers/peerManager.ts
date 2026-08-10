@@ -164,6 +164,7 @@ export class PeerManager {
   private connectedPeers: Map<PeerIdStr, PeerData>;
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
+  private quiesced = false;
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts, discovery: PeerDiscovery | null) {
     const {networkConfig} = modules;
@@ -228,15 +229,23 @@ export class PeerManager {
     return new PeerManager(modules, opts, discovery);
   }
 
-  async close(): Promise<void> {
+  async quiesce(): Promise<void> {
+    if (this.quiesced) return;
+
+    for (const interval of this.intervals) clearInterval(interval);
+    this.intervals = [];
     await this.discovery?.stop();
+    this.quiesced = true;
+  }
+
+  async close(): Promise<void> {
+    await this.quiesce();
     this.libp2p.services.components.events.removeEventListener(Libp2pEvent.connectionOpen, this.onLibp2pPeerConnect);
     this.libp2p.services.components.events.removeEventListener(
       Libp2pEvent.connectionClose,
       this.onLibp2pPeerDisconnect
     );
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
-    for (const interval of this.intervals) clearInterval(interval);
   }
 
   /**
