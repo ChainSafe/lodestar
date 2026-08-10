@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "preinstall": "node scripts/prepare-libp2p-deps.mjs",
     "clean": "rm -rf ./packages/*/lib ./packages/*/*.tsbuildinfo",
     "clean:nm": "rm -rf ./packages/*/node_modules ./node_modules",
     "build": "pnpm -r build",
