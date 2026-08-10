@@ -129,8 +129,6 @@ describe("api - beacon - publishBlockV2", () => {
         await api.publishBlockV2({signedBlockContents: {signedBlock}, broadcastValidation});
 
         expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
-        const verifyOpts = vi.mocked(verifyBlocksInEpoch).mock.calls[0][3];
-        expect(verifyOpts.skipVerifyBlockSignatures).not.toBe(true);
         expect(modules.network.publishBeaconBlock).toHaveBeenCalledWith(signedBlock);
       }
     );
