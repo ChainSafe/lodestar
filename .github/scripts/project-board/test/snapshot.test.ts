@@ -2,15 +2,33 @@ import assert from "node:assert/strict";
 import {test} from "node:test";
 import {buildSnapshot, pickProjectItem, type PrNode} from "../src/snapshot.ts";
 
-function prNode(overrides: Partial<PrNode>): PrNode {
+type PrNodeOverrides = Partial<Omit<PrNode, "reviewRequests" | "reviews" | "timelineItems" | "projectItems">> & {
+  reviewRequests?: Omit<PrNode["reviewRequests"], "pageInfo"> & {pageInfo?: PrNode["reviewRequests"]["pageInfo"]};
+  reviews?: Omit<PrNode["reviews"], "pageInfo"> & {pageInfo?: PrNode["reviews"]["pageInfo"]};
+  timelineItems?: Omit<PrNode["timelineItems"], "pageInfo"> & {pageInfo?: PrNode["timelineItems"]["pageInfo"]};
+  projectItems?: Omit<PrNode["projectItems"], "pageInfo"> & {pageInfo?: PrNode["projectItems"]["pageInfo"]};
+};
+
+function prNode(overrides: PrNodeOverrides): PrNode {
   return {
-    state: "OPEN",
-    isDraft: false,
-    reviewRequests: {nodes: []},
-    reviews: {nodes: []},
-    timelineItems: {nodes: []},
-    projectItems: {nodes: []},
-    ...overrides,
+    state: overrides.state ?? "OPEN",
+    isDraft: overrides.isDraft ?? false,
+    reviewRequests: {
+      pageInfo: overrides.reviewRequests?.pageInfo ?? {hasNextPage: false},
+      nodes: overrides.reviewRequests?.nodes ?? [],
+    },
+    reviews: {
+      pageInfo: overrides.reviews?.pageInfo ?? {hasPreviousPage: false},
+      nodes: overrides.reviews?.nodes ?? [],
+    },
+    timelineItems: {
+      pageInfo: overrides.timelineItems?.pageInfo ?? {hasPreviousPage: false},
+      nodes: overrides.timelineItems?.nodes ?? [],
+    },
+    projectItems: {
+      pageInfo: overrides.projectItems?.pageInfo ?? {hasNextPage: false},
+      nodes: overrides.projectItems?.nodes ?? [],
+    },
   };
 }
 

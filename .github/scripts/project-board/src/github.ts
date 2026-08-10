@@ -22,12 +22,37 @@ export interface ProjectConfig {
   optionIds: Map<string, string>;
 }
 
+export const TRUNCATED_CONNECTION_ERROR_CODE = "PROJECT_BOARD_GRAPHQL_CONNECTION_TRUNCATED";
+
+export class TruncatedConnectionError extends Error {
+  readonly code = TRUNCATED_CONNECTION_ERROR_CODE;
+  readonly metadata: {resource: string; connection: string};
+
+  constructor(resource: string, connection: string) {
+    const metadata = {resource, connection};
+    super(`${TRUNCATED_CONNECTION_ERROR_CODE}: refusing to reconcile incomplete data; context=${JSON.stringify(metadata)}`);
+    this.name = "TruncatedConnectionError";
+    this.metadata = metadata;
+  }
+}
+
+export function assertConnectionComplete(
+  resource: string,
+  connection: string,
+  pageInfo: {hasNextPage?: boolean; hasPreviousPage?: boolean},
+): void {
+  if (pageInfo.hasNextPage || pageInfo.hasPreviousPage) {
+    throw new TruncatedConnectionError(resource, connection);
+  }
+}
+
 const PROJECT_QUERY = `
 query ($org: String!, $number: Int!) {
   organization(login: $org) {
     projectV2(number: $number) {
       id
       fields(first: 50) {
+        pageInfo { hasNextPage }
         nodes {
           ... on ProjectV2SingleSelectField { id name options { id name } }
         }
@@ -41,7 +66,10 @@ export async function resolveProjectConfig(token: string, org: string, number: n
     organization: {
       projectV2: {
         id: string;
-        fields: {nodes: Array<{id?: string; name?: string; options?: Array<{id: string; name: string}>}>};
+        fields: {
+          pageInfo: {hasNextPage: boolean};
+          nodes: Array<{id?: string; name?: string; options?: Array<{id: string; name: string}>}>;
+        };
       } | null;
     } | null;
   };
@@ -49,6 +77,7 @@ export async function resolveProjectConfig(token: string, org: string, number: n
   if (!data.organization) throw new Error(`organization "${org}" not found or token lacks access`);
   const project = data.organization.projectV2;
   if (!project) throw new Error(`project ${org}#${number} not found or token lacks Projects access`);
+  assertConnectionComplete(`${org} project #${number}`, "fields", project.fields.pageInfo);
   const status = project.fields.nodes.find((f) => f.name === "Status");
   if (!status?.id || !status.options) throw new Error(`project ${org}#${number} has no single-select "Status" field`);
   return {
@@ -59,9 +88,8 @@ export async function resolveProjectConfig(token: string, org: string, number: n
 }
 
 // Selection set must stay in sync with PrNode in snapshot.ts.
-// `last:` windows: newest 100 reviews / request events are what the Model's
-// "latest signal wins" comparison needs; older history is irrelevant except
-// for pathological PRs (logged via the epoch fallback in snapshot.ts).
+// Fixed windows are guarded by pageInfo. Refuse to compute from truncated data
+// instead of silently producing a potentially incorrect lane.
 const PR_QUERY = `
 query ($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
@@ -69,15 +97,18 @@ query ($owner: String!, $repo: String!, $number: Int!) {
       state
       isDraft
       reviewRequests(first: 100) {
+        pageInfo { hasNextPage }
         nodes { requestedReviewer { __typename ... on User { login } } }
       }
       reviews(last: 100) {
+        pageInfo { hasPreviousPage }
         nodes { state submittedAt author { __typename login } }
       }
       timelineItems(
         last: 100
         itemTypes: [REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT, READY_FOR_REVIEW_EVENT, REOPENED_EVENT]
       ) {
+        pageInfo { hasPreviousPage }
         nodes {
           __typename
           ... on ReviewRequestedEvent {
@@ -93,6 +124,7 @@ query ($owner: String!, $repo: String!, $number: Int!) {
         }
       }
       projectItems(first: 20) {
+        pageInfo { hasNextPage }
         nodes {
           id
           project { id number }
@@ -108,7 +140,15 @@ query ($owner: String!, $repo: String!, $number: Int!) {
 export async function fetchPr(token: string, owner: string, repo: string, number: number): Promise<PrNode | null> {
   type Res = {repository: {pullRequest: PrNode | null} | null};
   const data = await gql<Res>(token, PR_QUERY, {owner, repo, number});
-  return data.repository?.pullRequest ?? null;
+  const pr = data.repository?.pullRequest ?? null;
+  if (!pr) return null;
+
+  const resource = `${owner}/${repo}#${number}`;
+  assertConnectionComplete(resource, "reviewRequests", pr.reviewRequests.pageInfo);
+  assertConnectionComplete(resource, "reviews", pr.reviews.pageInfo);
+  assertConnectionComplete(resource, "timelineItems", pr.timelineItems.pageInfo);
+  assertConnectionComplete(resource, "projectItems", pr.projectItems.pageInfo);
+  return pr;
 }
 
 const UPDATE_MUTATION = `

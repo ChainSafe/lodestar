@@ -5,14 +5,26 @@ interface Actor {
   login?: string;
 }
 
+interface ForwardPageInfo {
+  hasNextPage: boolean;
+}
+
+interface BackwardPageInfo {
+  hasPreviousPage: boolean;
+}
+
 /** Shape produced by PR_QUERY in github.ts — keep the two in sync. */
 export interface PrNode {
   state: "OPEN" | "MERGED" | "CLOSED";
   isDraft: boolean;
-  reviewRequests: {nodes: Array<{requestedReviewer: Actor | null}>};
-  reviews: {nodes: Array<{state: ReviewInfo["state"]; submittedAt: string | null; author: Actor | null}>};
+  reviewRequests: {pageInfo: ForwardPageInfo; nodes: Array<{requestedReviewer: Actor | null}>};
+  reviews: {
+    pageInfo: BackwardPageInfo;
+    nodes: Array<{state: ReviewInfo["state"]; submittedAt: string | null; author: Actor | null}>;
+  };
   /** Review request and lifecycle events, newest last (query uses `last:`). */
   timelineItems: {
+    pageInfo: BackwardPageInfo;
     nodes: Array<
       | {
           __typename: "ReviewRequestedEvent" | "ReviewRequestRemovedEvent";
@@ -23,6 +35,7 @@ export interface PrNode {
     >;
   };
   projectItems: {
+    pageInfo: ForwardPageInfo;
     nodes: Array<{id: string; project: {id: string; number: number}; fieldValueByName: {name: string} | null}>;
   };
 }

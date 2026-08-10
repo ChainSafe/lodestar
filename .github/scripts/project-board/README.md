@@ -53,6 +53,8 @@ Events do not map directly to moves. Every relevant event (and the sweep) trigge
 
 Request timestamps are not exposed on pending requests. They are reconstructed from `REVIEW_REQUESTED_EVENT` and `REVIEW_REQUEST_REMOVED_EVENT` timeline items. A request remains a signal after its reviewer responds because an approval with another reviewer pending is a no-op. An explicit removal cancels only that reviewer's latest request signal. Request signals are ignored when no user-level requests remain pending.
 
+GraphQL connections use bounded windows sized above the board's observed usage. Every window requests `pageInfo`; if a limit is reached, reconciliation fails with `PROJECT_BOARD_GRAPHQL_CONNECTION_TRUNCATED` instead of computing from incomplete data.
+
 ## Implementation
 
 - The full logic lives in a **reusable workflow** in `ChainSafe/lodestar` (`workflow_call`). Each accessory repo managed by the board adds an identical thin caller workflow — behavior is uniform across all repos by construction.
