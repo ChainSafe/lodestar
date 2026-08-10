@@ -30,7 +30,7 @@ describe("Identity", () => {
   });
 
   it("fails to fetch the builder status", async () => {
-    api.beacon.getStateBuilders.mockResolvedValue(mockApiErrorResponse(500));
+    api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(500));
     const res = await getBuilderStatus(api, logger, builderIndex);
     expect(res).toBeNull();
     expect(logger.warn).toHaveBeenCalledOnce();
@@ -76,9 +76,7 @@ describe("Identity", () => {
 
   it("throws on beacon node 500", async () => {
     const resStatus = 500;
-    api.beacon.getStateBuilders.mockResolvedValue(mockApiErrorResponse(resStatus));
-    await expect(resolveBuilderIdentity(api, logger, builderPubkey)).rejects.toThrow(
-      `Failed to get builder state from beacon node: ${resStatus}`
-    );
+    api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(resStatus));
+    await expect(resolveBuilderIdentity(api, logger, builderPubkey)).rejects.toThrow(/status 500/);
   });
 });

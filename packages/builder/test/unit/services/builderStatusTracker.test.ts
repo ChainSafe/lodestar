@@ -74,7 +74,7 @@ describe("BuilderStatusTracker", () => {
     expect(balance).toEqual(1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
-    api.beacon.getStateBuilders.mockResolvedValue(mockApiErrorResponse(500));
+    api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(500));
     // poll should resolve when beacon node throws 500
     await builderStatusTracker.poll();
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
