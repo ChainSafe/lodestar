@@ -15,7 +15,7 @@ export type ForkChoiceStateGetter = (
   opts: {stateRoot: RootHex; checkpoint?: never} | {stateRoot?: never; checkpoint: CheckpointWithHex}
 ) => IBeaconStateView | null;
 
-type IFastConfirmationSpecStore = {
+export type IFastConfirmationSpecStore = {
   confirmedRoot: RootHex;
   previousEpochObservedJustifiedCheckpoint: CheckpointWithHex;
   currentEpochObservedJustifiedCheckpoint: CheckpointWithHex;
