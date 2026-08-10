@@ -15,7 +15,6 @@ async function isNodeReady(api: ApiClient, logger: Logger): Promise<boolean> {
     const syncingStatusRes = await api.node.getSyncingStatus();
 
     if (!syncingStatusRes.ok) {
-      await syncingStatusRes.errorBody();
       logger.warn("Cannot get node sync status", {
         status: syncingStatusRes.status,
         message: syncingStatusRes.error()?.message,
