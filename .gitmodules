@@ -1,0 +1,4 @@
+[submodule "temp-deps/js-libp2p"]
+	path = temp-deps/js-libp2p
+	url = https://github.com/matthewkeil/js-libp2p.git
+	branch = mkeil/fix-shutdown-hang
