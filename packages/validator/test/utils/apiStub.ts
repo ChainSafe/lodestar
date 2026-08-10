@@ -64,6 +64,9 @@ export function mockApiResponse<T, M, E extends Endpoint<any, any, any, T, M>>({
   return apiResponse;
 }
 
-export function mockApiErrorResponse<E extends Endpoint>(status: HttpStatusCode): ApiResponse<E> {
-  return new ApiResponse<E>({} as any, null, new Response(null, {status}));
+export async function mockApiErrorResponse<E extends Endpoint>(status: HttpStatusCode): Promise<ApiResponse<E>> {
+  const res = new ApiResponse<E>({} as any, null, new Response(null, {status}));
+  // Mimic the http client which populates the error body before returning the response
+  await res.errorBody();
+  return res;
 }
