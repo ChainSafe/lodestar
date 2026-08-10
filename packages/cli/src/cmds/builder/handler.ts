@@ -16,7 +16,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   const {config, network} = getBeaconConfigFromArgs(args);
 
   if (config.GLOAS_FORK_EPOCH === Infinity) {
-    throw Error(`Gloas must be scheduled via GLOAS_FORK_EPOCH (network: ${network})`);
+    throw Error(`Gloas must be scheduled via GLOAS_FORK_EPOCH for network=${network}`);
   }
 
   const globalPaths = getGlobalPaths(args, network);
