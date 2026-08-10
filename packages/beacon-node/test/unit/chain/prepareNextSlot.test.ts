@@ -139,7 +139,7 @@ describe("PrepareNextSlot scheduler", () => {
     expect(chainStub.recomputeForkChoiceHead).toHaveBeenCalledOnce();
     expect(regenStub.getBlockSlotState).toHaveBeenCalledOnce();
     expect(updateBuilderStatus).toHaveBeenCalledOnce();
-    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledOnce();
+    expect(forkChoiceStub.getFinalizedBlock).toHaveBeenCalledTimes(2);
     expect(executionEngineStub.notifyForkchoiceUpdate).toHaveBeenCalledTimes(1);
     expect(spy).toHaveBeenCalledTimes(1);
   });
