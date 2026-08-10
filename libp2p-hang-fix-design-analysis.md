@@ -51,6 +51,8 @@ The design does not assume that Phase C proved an inbound connection or a post-s
 3. `fix(connection-manager): reject work during shutdown`
 4. `test(transports): type shutdown fixtures`
 5. `fix(tcp): await listener close completion`
+6. `fix(connection-manager): clean up partial starts`
+7. `fix(transports): close listeners admitted during shutdown`
 
 ### Lodestar dependency branch
 
@@ -61,7 +63,7 @@ The design does not assume that Phase C proved an inbound connection or a post-s
 
 ### Lodestar integration branch
 
-`mkeil/fix-libp2p-hang-2` branches from the dependency branch. It contains this design record and is the branch intended for fleet testing of the implementation.
+`mkeil/fix-libp2p-hang-2` branches from the dependency branch. It contains the final js-libp2p commit pin and this design record, and is the branch intended for fleet testing of the implementation.
 
 No Lodestar networking source change is required for this version. Lodestar continues to call the same libp2p stop API. The bounded network-worker termination already present on `unstable` remains independent containment for Node, addons, and other shutdown failures.
 
@@ -266,8 +268,8 @@ Deferred. The reviewed source does not demonstrate the TCP path that inserts a w
 - `@libp2p/interface` lint and build.
 - `@libp2p/tcp` lint, dependency check, build, and 41 Node tests.
 - `libp2p` lint and build.
-- 11 transport-manager tests.
-- 22 connection-manager tests.
+- 12 transport-manager tests.
+- 23 connection-manager tests.
 
 The added regressions cover:
 
@@ -279,7 +281,9 @@ The added regressions cover:
 - Dial rejection after shutdown.
 - Early listener admission stop without early upgrade abort.
 - Stable cleanup of multiple listeners after close events mutate the runtime cache.
+- Cleanup of a listener created by a transport that reenters shutdown.
 - Connection-manager rejection during shutdown.
+- Queue cleanup when connection-manager startup did not complete.
 
 ### Lodestar
 
