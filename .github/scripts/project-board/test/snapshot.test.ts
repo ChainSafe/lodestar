@@ -151,20 +151,22 @@ test("reviews without submittedAt are dropped", () => {
   assert.equal(buildSnapshot(node).reviews.length, 0);
 });
 
-test("pickProjectItem filters by project number and reads the current lane", () => {
+test("pickProjectItem distinguishes projects with the same number by id", () => {
   const node = prNode({
     projectItems: {
       nodes: [
-        {id: "ITEM_OTHER", project: {number: 12}, fieldValueByName: {name: "Done"}},
-        {id: "ITEM_75", project: {number: 75}, fieldValueByName: {name: "In Progress"}},
+        {id: "ITEM_OTHER", project: {id: "PROJECT_OTHER", number: 75}, fieldValueByName: {name: "Done"}},
+        {id: "ITEM_75", project: {id: "PROJECT_75", number: 75}, fieldValueByName: {name: "In Progress"}},
       ],
     },
   });
-  assert.deepEqual(pickProjectItem(node, 75), {itemId: "ITEM_75", currentLane: "In Progress"});
-  assert.equal(pickProjectItem(node, 99), null);
+  assert.deepEqual(pickProjectItem(node, "PROJECT_75"), {itemId: "ITEM_75", currentLane: "In Progress"});
+  assert.equal(pickProjectItem(node, "PROJECT_MISSING"), null);
 });
 
 test("pickProjectItem handles a card with no status set", () => {
-  const node = prNode({projectItems: {nodes: [{id: "ITEM_75", project: {number: 75}, fieldValueByName: null}]}});
-  assert.deepEqual(pickProjectItem(node, 75), {itemId: "ITEM_75", currentLane: null});
+  const node = prNode({
+    projectItems: {nodes: [{id: "ITEM_75", project: {id: "PROJECT_75", number: 75}, fieldValueByName: null}]},
+  });
+  assert.deepEqual(pickProjectItem(node, "PROJECT_75"), {itemId: "ITEM_75", currentLane: null});
 });

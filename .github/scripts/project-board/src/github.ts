@@ -95,7 +95,7 @@ query ($owner: String!, $repo: String!, $number: Int!) {
       projectItems(first: 20) {
         nodes {
           id
-          project { number }
+          project { id number }
           fieldValueByName(name: "Status") {
             ... on ProjectV2ItemFieldSingleSelectValue { name }
           }

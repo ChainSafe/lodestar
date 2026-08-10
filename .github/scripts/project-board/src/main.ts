@@ -26,7 +26,7 @@ async function reconcilePr(ctx: Ctx, owner: string, repo: string, number: number
     return;
   }
   const lane = STATUS_TO_LANE[status];
-  const item = pickProjectItem(prNode, ctx.projectNumber);
+  const item = pickProjectItem(prNode, ctx.cfg.projectId);
   if (!item) {
     console.log(`${label}: not on project #${ctx.projectNumber}; waiting for project auto-add`);
     return;

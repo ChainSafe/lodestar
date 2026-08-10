@@ -23,7 +23,7 @@ export interface PrNode {
     >;
   };
   projectItems: {
-    nodes: Array<{id: string; project: {number: number}; fieldValueByName: {name: string} | null}>;
+    nodes: Array<{id: string; project: {id: string; number: number}; fieldValueByName: {name: string} | null}>;
   };
 }
 
@@ -90,9 +90,9 @@ export function buildSnapshot(pr: PrNode): PrSnapshot {
 
 export function pickProjectItem(
   pr: PrNode,
-  projectNumber: number,
+  projectId: string,
 ): {itemId: string; currentLane: string | null} | null {
-  const item = pr.projectItems.nodes.find((n) => n.project.number === projectNumber);
+  const item = pr.projectItems.nodes.find((n) => n.project.id === projectId);
   if (!item) return null;
   return {itemId: item.id, currentLane: item.fieldValueByName?.name ?? null};
 }
