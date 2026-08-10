@@ -35,6 +35,7 @@ import {CommitteeSubscription, IAttnetsService, computeNodeId} from "../subnets/
 import {SyncnetsService} from "../subnets/syncnetsService.js";
 import {getConnectionsMap} from "../util.js";
 import {NetworkCoreMetrics, createNetworkCoreMetrics} from "./metrics.js";
+import {stopAndDrainOutboundDials} from "./shutdown.js";
 import {INetworkCore, MultiaddrStr} from "./types.js";
 
 type Mods = {
@@ -285,11 +286,14 @@ export class NetworkCore implements INetworkCore {
 
     this.clock.off(ClockEvent.epoch, this.onEpoch);
 
-    // Must goodbye and disconnect before stopping libp2p
-    await this.peerManager.goodbyeAndDisconnectAllPeers();
-    this.logger.debug("network sent goodbye to all peers");
+    // Stop peer discovery and heartbeat work before aborting and draining outbound dials. A dial-created
+    // TCP socket that races worker teardown can leave Node's CleanupHandles() waiting forever (#9744).
     await this.peerManager.close();
     this.logger.debug("network peerManager closed");
+    await stopAndDrainOutboundDials(this.libp2p.services.components.connectionManager, this.logger);
+    // Established connections remain open while the dial queue is stopped, so peers can still receive goodbye.
+    await this.peerManager.goodbyeAndDisconnectAllPeers();
+    this.logger.debug("network sent goodbye to all peers");
     await this.gossip.stop();
     this.logger.debug("network gossip closed");
     await this.reqResp.stop();
