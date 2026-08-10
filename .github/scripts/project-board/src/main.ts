@@ -1,6 +1,12 @@
 import {readFileSync} from "node:fs";
 import {parseArgs} from "node:util";
 import {computeStatus} from "./compute-status.ts";
+import {
+  buildEventContext,
+  missingTokenSkipReason,
+  ProjectBoardConfigurationError,
+  type EventContext,
+} from "./event-context.ts";
 import {fetchPr, listOpenBoardPrs, resolveProjectConfig, updateItemLane, type ProjectConfig} from "./github.ts";
 import {buildSnapshot, pickProjectItem} from "./snapshot.ts";
 import {STATUS_TO_LANE} from "./types.ts";
@@ -43,15 +49,15 @@ async function reconcilePr(ctx: Ctx, owner: string, repo: string, number: number
   console.log(`${label}: moved "${item.currentLane ?? "(none)"}" -> "${lane}"`);
 }
 
-function prFromEventPayload(): {owner: string; repo: string; number: number} | null {
+function eventContext(): EventContext {
   const path = process.env.GITHUB_EVENT_PATH;
-  if (!path) return null;
-  const payload = JSON.parse(readFileSync(path, "utf8"));
-  const number = payload.pull_request?.number;
-  const full = payload.repository?.full_name;
-  if (typeof number !== "number" || typeof full !== "string") return null;
-  const [owner, repo] = full.split("/");
-  return {owner, repo, number};
+  const payload: unknown = path ? JSON.parse(readFileSync(path, "utf8")) : null;
+  return buildEventContext(
+    process.env.GITHUB_EVENT_NAME ?? "",
+    process.env.GITHUB_ACTOR ?? "",
+    process.env.GITHUB_REPOSITORY ?? "",
+    payload,
+  );
 }
 
 async function main(): Promise<void> {
@@ -59,11 +65,19 @@ async function main(): Promise<void> {
     options: {pr: {type: "string"}, sweep: {type: "boolean", default: false}},
   });
 
-  const token = process.env.PROJECT_BOARD_TOKEN ?? "";
+  const event = eventContext();
+  const token = process.env.PROJECT_BOARD_TOKEN?.trim() ?? "";
   if (!token) {
-    // Expected for pull_request_review runs on fork PRs (no secrets); the sweep reconciles those.
-    console.warn("PROJECT_BOARD_TOKEN is empty; skipping (fork-PR event or misconfigured secret)");
-    return;
+    const skipReason = missingTokenSkipReason(event);
+    if (skipReason) {
+      console.warn("PROJECT_BOARD_TOKEN is unavailable for this untrusted PR event; the sweep will reconcile it", {
+        eventName: event.eventName,
+        repository: event.repository,
+        reason: skipReason,
+      });
+      return;
+    }
+    throw new ProjectBoardConfigurationError(event);
   }
   const org = process.env.PROJECT_ORG || "ChainSafe";
   const projectNumber = Number(process.env.PROJECT_NUMBER || "75");
@@ -84,8 +98,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  const eventName = process.env.GITHUB_EVENT_NAME ?? "";
-  if (values.sweep || eventName === "schedule" || eventName === "workflow_dispatch") {
+  if (values.sweep || event.eventName === "schedule" || event.eventName === "workflow_dispatch") {
     const prs = await listOpenBoardPrs(token, org, projectNumber);
     console.log(`sweep: ${prs.length} open PR card(s) on project #${projectNumber}`);
     for (const pr of prs) {
@@ -94,9 +107,10 @@ async function main(): Promise<void> {
     return;
   }
 
-  const pr = prFromEventPayload();
-  if (!pr) throw new Error(`event ${eventName} has no pull_request payload and no --pr/--sweep flag given`);
-  await reconcilePr(ctx, pr.owner, pr.repo, pr.number);
+  if (!event.pullRequest) {
+    throw new Error(`event ${event.eventName} has no pull_request payload and no --pr/--sweep flag given`);
+  }
+  await reconcilePr(ctx, event.pullRequest.owner, event.pullRequest.repo, event.pullRequest.number);
 }
 
 await main();

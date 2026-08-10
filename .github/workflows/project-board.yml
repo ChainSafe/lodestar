@@ -13,7 +13,7 @@ on:
       - review_requested
       - review_request_removed
       - reopened
-  # No secrets on fork PRs for this event; main.ts exits 0 and the sweep reconciles instead.
+  # No Actions secrets on external-fork reviews; main.ts verifies the payload before skipping.
   pull_request_review:
     types:
       - submitted
