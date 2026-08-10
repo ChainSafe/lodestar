@@ -4,11 +4,13 @@ import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
+import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
   builderSigner: BuilderSigner;
+  blockObserver: BlockObserver;
   clock: IClock;
 };
 
@@ -26,15 +28,18 @@ export type BuilderOptions = {
  */
 export class Builder {
   readonly builderSigner: BuilderSigner;
+  private readonly blockObserver: BlockObserver;
   private readonly controller: AbortController;
   private readonly clock: IClock;
 
-  constructor({opts, builderSigner, clock}: BuilderModules) {
+  constructor({opts, builderSigner, blockObserver, clock}: BuilderModules) {
     this.builderSigner = builderSigner;
+    this.blockObserver = blockObserver;
     this.clock = clock;
     this.controller = opts.abortController;
 
     this.clock.start(this.controller.signal);
+    this.blockObserver.start(this.controller.signal);
   }
 
   static async init(opts: BuilderOptions): Promise<Builder> {
@@ -76,8 +81,9 @@ export class Builder {
     }
 
     const clock = new Clock(config, opts.logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
+    const blockObserver = new BlockObserver(config, opts.logger, opts.api);
 
-    return new Builder({opts, builderSigner, clock});
+    return new Builder({opts, builderSigner, blockObserver, clock});
   }
 
   async close(): Promise<void> {
