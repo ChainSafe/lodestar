@@ -932,6 +932,7 @@ export function getValidatorApi(
         randaoReveal,
         graffiti: graffitiBytes,
         feeRecipient,
+        strictFeeRecipientCheck,
         commonBlockBodyPromise,
       };
 
@@ -955,16 +956,6 @@ export function getValidatorApi(
       const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
         chain.produceBlock(baseAttrs)
       ).then((engineBlock) => {
-        if (strictFeeRecipientCheck && feeRecipient) {
-          const blockFeeRecipient = toHex(
-            (engineBlock.block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message.feeRecipient
-          );
-          if (blockFeeRecipient !== feeRecipient) {
-            throw Error(
-              `Invalid feeRecipient set in execution payload bid expected=${feeRecipient} actual=${blockFeeRecipient}`
-            );
-          }
-        }
         // No need to wait for the bid block if the engine block will always be selected due to
         // suspected builder censorship or a builder boost factor of 0
         if (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {

@@ -161,20 +161,19 @@ describe("api/validator - produceBlockV4", () => {
   });
 
   it("uses a builder bid as fallback when the local fee recipient does not match", async () => {
-    const expectedFeeRecipient = Buffer.from(feeRecipient.slice(2), "hex");
-    const mismatchedFeeRecipient = Buffer.alloc(20, 0xdd);
-    const localBlock = ssz.gloas.BeaconBlock.defaultValue();
-    localBlock.body.signedExecutionPayloadBid.message.feeRecipient = mismatchedFeeRecipient;
     const builderBlock = ssz.gloas.BeaconBlock.defaultValue();
-    builderBlock.body.signedExecutionPayloadBid.message.feeRecipient = expectedFeeRecipient;
 
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
-    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
-      block: attrs.builderBid !== undefined ? builderBlock : localBlock,
-      executionPayloadValue: BigInt(0),
-      consensusBlockValue: BigInt(0),
-    }));
+    modules.chain.produceBlock.mockImplementation(
+      async (attrs: {builderBid?: unknown; strictFeeRecipientCheck?: boolean}) => {
+        if (attrs.builderBid === undefined && attrs.strictFeeRecipientCheck) {
+          throw new Error("Invalid feeRecipient set in engine payload");
+        }
+
+        return {block: builderBlock, executionPayloadValue: BigInt(0), consensusBlockValue: BigInt(0)};
+      }
+    );
 
     const {data: block} = await api.produceBlockV4({
       slot,
@@ -187,36 +186,7 @@ describe("api/validator - produceBlockV4", () => {
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
-    expect(block).toEqual(builderBlock);
-  });
-
-  it("does not recheck the fee recipient of a validated builder bid", async () => {
-    const expectedFeeRecipient = Buffer.from(feeRecipient.slice(2), "hex");
-    const mismatchedFeeRecipient = Buffer.alloc(20, 0xdd);
-    const localBlock = ssz.gloas.BeaconBlock.defaultValue();
-    localBlock.body.signedExecutionPayloadBid.message.feeRecipient = expectedFeeRecipient;
-    const builderBlock = ssz.gloas.BeaconBlock.defaultValue();
-    builderBlock.body.signedExecutionPayloadBid.message.feeRecipient = mismatchedFeeRecipient;
-
-    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
-    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
-    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
-      block: attrs.builderBid !== undefined ? builderBlock : localBlock,
-      executionPayloadValue: BigInt(0),
-      consensusBlockValue: BigInt(0),
-    }));
-
-    const {data: block} = await api.produceBlockV4({
-      slot,
-      randaoReveal,
-      graffiti,
-      feeRecipient,
-      strictFeeRecipientCheck: true,
-      includePayload: false,
-      builderBoostFactor: maxBuilderBoostFactor,
-    });
-
-    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({strictFeeRecipientCheck: true}));
     expect(block).toEqual(builderBlock);
   });
 
