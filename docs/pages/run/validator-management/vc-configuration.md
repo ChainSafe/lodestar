@@ -80,7 +80,7 @@ If you would like to set unique proposer metadata (e.g. fee recipient address) f
 
 ### Configure your builder selection and/or builder boost factor
 
-These validator configurations signal whether the beacon node should prefer a builder bid or a local execution payload. Before Gloas, builder bids require configured builder relays. Starting with Gloas, builder bids are received in-protocol over p2p.
+These validator configurations signal whether the beacon node should prefer a builder bid or a local execution payload. Before Gloas, builder bids require configured builder relays. Starting with Gloas, builder bids are in-protocol and may be received over p2p or through a builder API.
 
 With produceBlockV3 introduced in Deneb hard fork, the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
 
