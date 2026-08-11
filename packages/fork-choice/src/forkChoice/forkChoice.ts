@@ -50,7 +50,7 @@ import {
   FastConfirmationSteps,
   type IFastConfirmationRule,
   type IFastConfirmationSpecStore,
-} from "./fastConfirmation/fastConfirmationRule.ts";
+} from "./fastConfirmation/fastConfirmationRule.js";
 import {
   AncestorResult,
   AncestorStatus,

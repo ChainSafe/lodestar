@@ -1,8 +1,8 @@
 import {EffectiveBalanceIncrements, IBeaconStateView} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
-import {ProtoBlock} from "../../protoArray/interface.ts";
-import {CheckpointWithHex} from "../store.ts";
+import {ProtoBlock} from "../../protoArray/interface.js";
+import {CheckpointWithHex} from "../store.js";
 
 export type FastConfirmationBalanceSource = {
   state: IBeaconStateView | null;
