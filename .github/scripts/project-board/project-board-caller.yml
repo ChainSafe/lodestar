@@ -33,4 +33,5 @@ concurrency:
 jobs:
   project-board:
     uses: ChainSafe/lodestar/.github/workflows/project-board.yml@unstable
-    secrets: inherit
+    secrets:
+      PROJECT_BOARD_TOKEN: ${{ secrets.PROJECT_BOARD_TOKEN }}

@@ -28,6 +28,11 @@ on:
         type: string
   # Entry point for accessory repos (thin callers; see .github/specs/project-board-caller.yml)
   workflow_call:
+    secrets:
+      # Optional because GitHub withholds Actions secrets from external-fork review events.
+      # main.ts validates every other missing-token context.
+      PROJECT_BOARD_TOKEN:
+        required: false
 
 permissions: {}
 
