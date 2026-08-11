@@ -52,6 +52,7 @@ import {SyncCommitteeCache} from "../cache/syncCommitteeCache.js";
 import {SyncCommitteeWitness} from "../lightClient/types.js";
 import {StateTransitionModules, StateTransitionOpts} from "../stateTransition.js";
 import {EpochShuffling} from "../util/epochShuffling.js";
+import {PreVerifyBuilderDepositsResult} from "../util/preVerifyBuilderDeposits.js";
 
 /**
  * A read-only view of the BeaconState.
@@ -242,6 +243,13 @@ export interface IBeaconStateViewElectra extends IBeaconStateViewDeneb {
 export interface IBeaconStateViewFulu extends IBeaconStateViewElectra {
   forkName: ForkPostFulu;
   proposerLookahead: fulu.ProposerLookahead;
+  /**
+   * Pre-verify a slice of builder-prefix pending deposits and cache the results on the underlying
+   * `BuilderDepositSignatureCache` (Fulu is the fork immediately before Gloas).
+   */
+  preVerifyBuilderDepositsPreGloas(maxBuilderDeposits: number, maxDurationMs: number): PreVerifyBuilderDepositsResult;
+  /** Drop the pre-Gloas builder-deposit signature cache (called once the Gloas fork is finalized). */
+  clearPreGloasBuilderDepositCache(): void;
 }
 
 /** Gloas+ state fields — use isStatePostGloas() guard */

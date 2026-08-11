@@ -122,7 +122,8 @@ describe("PrepareNextSlot scheduler", () => {
     getForkStub.mockReturnValue(ForkName.bellatrix);
     chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
-    forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
+    forkChoiceStub.getConfirmedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    forkChoiceStub.getFinalizedBlock.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
     updateBuilderStatus.mockReturnValue(void 0);
     const state = generateCachedBellatrixState();
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);

@@ -1,6 +1,11 @@
 import {BitArray} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {IForkChoice, ProtoBlock, getSafeExecutionBlockHash} from "@lodestar/fork-choice";
+import {
+  IForkChoice,
+  ProtoBlock,
+  getFinalizedExecutionBlockHash,
+  getSafeExecutionBlockHash,
+} from "@lodestar/fork-choice";
 import {
   BUILDER_INDEX_SELF_BUILD,
   ForkName,
@@ -265,8 +270,8 @@ export async function produceBlockBody<T extends BlockType>(
     // TODO GLOAS: support non self-building here, the block type differentiation between
     // full and blinded no longer makes sense in gloas, it might be a good idea to move
     // this into a completely separate function and have pre/post gloas more separated
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
     // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
     // ProposerPreferencesPool. Consider using this unified cache instead
     // see https://github.com/ChainSafe/lodestar/issues/9379
@@ -411,8 +416,8 @@ export async function produceBlockBody<T extends BlockType>(
       throw new Error("Expected Bellatrix state for execution block production");
     }
 
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
     const feeRecipientType = requestedFeeRecipient
       ? "requested"
@@ -1037,7 +1042,7 @@ export async function produceCommonBlockBody<T extends BlockType>(
     graffiti,
     // Eth1 data voting is no longer required since electra
     eth1Data: currentState.eth1Data,
-    proposerSlashings,
+    proposerSlashings: this.opts.disableProposerSlashings === true ? [] : proposerSlashings,
     attesterSlashings,
     attestations,
     // Since electra, deposits are processed by the execution layer,

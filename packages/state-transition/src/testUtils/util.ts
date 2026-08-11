@@ -1,25 +1,28 @@
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {createBeaconConfig, createChainForkConfig} from "@lodestar/config";
+import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {
+  BUILDER_WITHDRAWAL_PREFIX,
+  DOMAIN_DEPOSIT,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
   ForkSeq,
+  GENESIS_SLOT,
   MAX_ATTESTATIONS,
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@lodestar/params";
-import {BeaconState, Slot, phase0, ssz} from "@lodestar/types";
+import {BeaconState, Slot, electra, phase0, ssz} from "@lodestar/types";
 import {getEffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
+import {ZERO_HASH} from "../constants/index.js";
 import {
   computeCommitteeCount,
   computeEpochAtSlot,
   createCachedBeaconState,
   createPubkeyCache,
-  interopSecretKey,
   newFilledArray,
   processSlots,
 } from "../index.js";
@@ -32,6 +35,9 @@ import {
   CachedBeaconStateElectra,
   CachedBeaconStatePhase0,
 } from "../types.js";
+import {computeDomain} from "../util/domain.js";
+import {interopSecretKey} from "../util/interop.js";
+import {computeSigningRoot} from "../util/signingRoot.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {getActiveValidatorIndices} from "../util/validator.js";
 import {interopPubkeysCached} from "./interop.js";
@@ -540,4 +546,68 @@ export function generateTestCachedBeaconStateOnlyValidators({
     },
     {skipSyncPubkeys: true}
   );
+}
+
+/**
+ * Generate `count` validly-signed builder pending deposits with distinct interop pubkeys
+ * [startIndex, startIndex + count). Withdrawal credentials carry the BUILDER_WITHDRAWAL_PREFIX so
+ * `isBuilderWithdrawalCredential` recognizes them. Used to exercise the pre-Gloas builder-deposit
+ * pre-verify scanner and the fork-transition onboarding path.
+ */
+export function generateBuilderPendingDeposits(
+  config: BeaconConfig,
+  count: number,
+  startIndex: number
+): electra.PendingDeposit[] {
+  // Deposits use a fork-agnostic domain, see `isValidDepositSignature`
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const amount = 1_000_000_000; // 1 ETH in Gwei
+  const deposits: electra.PendingDeposit[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const sk = interopSecretKey(startIndex + i);
+    const pubkey = sk.toPublicKey().toBytes();
+
+    const withdrawalCredentials = Buffer.alloc(32, 0);
+    withdrawalCredentials[0] = BUILDER_WITHDRAWAL_PREFIX;
+    // bytes [12, 32) hold the 20-byte builder execution address
+    withdrawalCredentials.fill((startIndex + i) & 0xff, 12, 32);
+
+    const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+
+    deposits.push({
+      pubkey,
+      withdrawalCredentials,
+      amount,
+      signature: sk.sign(signingRoot).toBytes(),
+      slot: GENESIS_SLOT,
+    });
+  }
+
+  return deposits;
+}
+
+/**
+ * Generate a validly-signed *validator* (0x00-prefix) pending deposit for interop key `keyIndex`.
+ * Shares its pubkey with `generateBuilderPendingDeposits(config, 1, keyIndex)`, so it stands in for a
+ * validator deposit competing with a builder deposit for the same pubkey (the `hasPendingValidator`
+ * path). `amount` lets callers build otherwise-identical-but-distinct deposit value objects.
+ */
+export function generateValidatorPendingDeposit(
+  config: BeaconConfig,
+  keyIndex: number,
+  amount = 32_000_000_000
+): electra.PendingDeposit {
+  const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
+  const sk = interopSecretKey(keyIndex);
+  const pubkey = sk.toPublicKey().toBytes();
+  const withdrawalCredentials = Buffer.alloc(32, 0); // 0x00 prefix → validator, not a builder
+  const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
+  return {
+    pubkey,
+    withdrawalCredentials,
+    amount,
+    signature: sk.sign(signingRoot).toBytes(),
+    slot: GENESIS_SLOT,
+  };
 }

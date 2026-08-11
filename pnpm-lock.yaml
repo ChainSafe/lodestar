@@ -198,8 +198,8 @@ importers:
         specifier: ^17.0.0
         version: 17.0.0
       '@chainsafe/libp2p-quic':
-        specifier: ^2.1.1
-        version: 2.1.1
+        specifier: ^2.1.3
+        version: 2.1.3
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
         version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b82750f6c3ec3d57ed63fe31c2f968d4527ce0a5
@@ -371,7 +371,7 @@ importers:
         version: 16.4.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
       rimraf:
         specifier: ^4.4.1
         version: 4.4.1
@@ -504,7 +504,7 @@ importers:
         version: 9.1.5
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
       proper-lockfile:
         specifier: ^4.1.2
         version: 4.1.2
@@ -687,7 +687,7 @@ importers:
         version: 1.13.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
 
   packages/reqresp:
     dependencies:
@@ -864,7 +864,7 @@ importers:
         version: 1.6.3
       js-yaml:
         specifier: ^4.1.0
-        version: 4.3.0
+        version: 4.3.1
     devDependencies:
       '@types/js-yaml':
         specifier: ^4.0.5
@@ -1191,54 +1191,54 @@ packages:
   '@chainsafe/libp2p-noise@17.0.0':
     resolution: {integrity: sha512-vwrmY2Y+L1xYhIDiEpl61KHxwrLCZoXzTpwhyk34u+3+6zCAZPL3GxH3i2cs+u5IYNoyLptORdH17RKFXy7upA==}
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.1.1':
-    resolution: {integrity: sha512-jUxEUbuRTWw2BcuYE6C++gD/vZDeTKjZ5RFIDleLpRFy8vWJKzgh2E/wLjQK4TbcQ8yUWdhJymjGxibtV2DskA==}
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.3':
+    resolution: {integrity: sha512-nJxyHltv7t7BdeqjMAlcX6j+3H9P9YyYoQToIzaXlcphivY02vlHa31SDPA+h978DD0qo6o+yfJ6XjDgud4ZTg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.1.1':
-    resolution: {integrity: sha512-/uz4+fgFUsQu7OSiKp8REPMQi+CgqMcjhG2Db7KNGTtp/+A/ZIatCHCm9vCnvZYYFsxrQsXBZGPQ/DF1puKpPg==}
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.3':
+    resolution: {integrity: sha512-EvihuEoI+1XSTBUac13w3T/A2VySiCYEnminziK0gC2GWJKBxAvi9faWlj3YgZX5WEV4VSsRNnGWQFWlyWlA7A==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.1':
-    resolution: {integrity: sha512-dymikFtG3tLkbB3LFseKK15klwt24K11PAjFyq5n8GFaMSEZnQID8m8jZklCXjmn5NcqFeteYPW09Hs+4V+DlQ==}
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.3':
+    resolution: {integrity: sha512-8fuB0EfjMImGLz1p9h0GwURdnX/DtZi+go4MKMml0ZzG7LxfAebh5OOvyprmjxq7d7IY63TtNzEJnRCClpVo0Q==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.1':
-    resolution: {integrity: sha512-TkcLWClJswvnVhiSYONhC34OwfIfeBLi409aGtJL3mr/6Jx6BKJ7DRdR5bq1EPgUS8XKSVlcw6mSQxZksSlnpw==}
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.3':
+    resolution: {integrity: sha512-4EKUkNDTZdEHCAwUxvm27cV9q6SMv0+CFni3XoPFSm6nIJGtb50RX/YqSqz7/SbnvYsI40sbvt/qXL0KN1TSKg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.1':
-    resolution: {integrity: sha512-d//DAkxp+TsWFm4zxoQreyHNutH3aooLLO0sH2CtNgsbxo1VbRZQX/OW8b+LDxYMsb6gXFKp1C8yQ5dRwjFkBA==}
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.3':
+    resolution: {integrity: sha512-DF+bYVkcDrf1FMVGS4xhqOgQDASIj8p1YzpwJWJ8udIBzMmqXaW/3zoCrzjf8U2Cdnw6mCIUNNFLSNIGhxCALA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.1':
-    resolution: {integrity: sha512-1X26YZY1hmM7x/JcFms4HbbnvAEtHzscc6eXL9z2zUWiAU7eZzA6Sa7K3SnAnF0NHfGZ3B/bgOmIXW1sof8BIw==}
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.3':
+    resolution: {integrity: sha512-RCd4u87CwwfJDBsJzDQymhDj76vsvz+/+zHR9h5RJXDuqiH7Mr4JLyb8tzeD7pVTRt7MKNSJJFylUl5Tt9pTHQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.1':
-    resolution: {integrity: sha512-8i7IsFFkU67WIJS1U9JsIxhj6VdHmD7cCkoiLOyvduXd2SkWf2zhWVX+Xokjcnmqbx1GmYaW7W1cUNtKXkaeEw==}
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.3':
+    resolution: {integrity: sha512-IjdpofioPIcvht7AtYlLEYEHXB9htg50vSbRfNXcUwlYT+JsIbca7dt63CuAtfHRxIA//zjxzqP/GpxJ2+8aiA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@chainsafe/libp2p-quic@2.1.1':
-    resolution: {integrity: sha512-S+IG3yJNLz/bFfOl4V5iGUBupoQlWYo/n1XiK/iCCX4WdoqIbvSYDbWfUYWKLt5EbXjUexa2jJctwZzXMYmhaw==}
+  '@chainsafe/libp2p-quic@2.1.3':
+    resolution: {integrity: sha512-y+diflUZN1hEnGhPnTPk3DUjtPigiGNf6bfXPuRSDwoB2obat0BHW7J2ZncayYTE0TAlel1sr66lLaLEO4VAdQ==}
     engines: {node: '>= 22'}
 
   '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b82750f6c3ec3d57ed63fe31c2f968d4527ce0a5':
@@ -4585,8 +4585,8 @@ packages:
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
 
-  js-yaml@4.3.0:
-    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
+  js-yaml@4.3.1:
+    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
   json-parse-even-better-errors@5.0.0:
@@ -5317,9 +5317,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.61.1:
-    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
-    engines: {node: '>=18'}
+  playwright-core@1.62.1:
+    resolution: {integrity: sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==}
+    engines: {node: '>=20'}
     hasBin: true
 
   playwright@1.60.0:
@@ -5327,9 +5327,9 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright@1.61.1:
-    resolution: {integrity: sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ==}
-    engines: {node: '>=18'}
+  playwright@1.62.1:
+    resolution: {integrity: sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==}
+    engines: {node: '>=20'}
     hasBin: true
 
   pngjs@7.0.0:
@@ -6882,28 +6882,28 @@ snapshots:
       uint8arrays: 5.1.0
       wherearewe: 2.0.1
 
-  '@chainsafe/libp2p-quic-darwin-arm64@2.1.1':
+  '@chainsafe/libp2p-quic-darwin-arm64@2.1.3':
     optional: true
 
-  '@chainsafe/libp2p-quic-darwin-x64@2.1.1':
+  '@chainsafe/libp2p-quic-darwin-x64@2.1.3':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.1':
+  '@chainsafe/libp2p-quic-linux-arm64-gnu@2.1.3':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.1':
+  '@chainsafe/libp2p-quic-linux-arm64-musl@2.1.3':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.1':
+  '@chainsafe/libp2p-quic-linux-x64-gnu@2.1.3':
     optional: true
 
-  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.1':
+  '@chainsafe/libp2p-quic-linux-x64-musl@2.1.3':
     optional: true
 
-  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.1':
+  '@chainsafe/libp2p-quic-win32-x64-msvc@2.1.3':
     optional: true
 
-  '@chainsafe/libp2p-quic@2.1.1':
+  '@chainsafe/libp2p-quic@2.1.3':
     dependencies:
       '@libp2p/crypto': 5.1.19
       '@libp2p/interface': 3.2.3
@@ -6914,13 +6914,13 @@ snapshots:
       race-signal: 1.1.3
       uint8arraylist: 2.4.8
     optionalDependencies:
-      '@chainsafe/libp2p-quic-darwin-arm64': 2.1.1
-      '@chainsafe/libp2p-quic-darwin-x64': 2.1.1
-      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.1.1
-      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.1
-      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.1
-      '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.1
-      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.1
+      '@chainsafe/libp2p-quic-darwin-arm64': 2.1.3
+      '@chainsafe/libp2p-quic-darwin-x64': 2.1.3
+      '@chainsafe/libp2p-quic-linux-arm64-gnu': 2.1.3
+      '@chainsafe/libp2p-quic-linux-arm64-musl': 2.1.3
+      '@chainsafe/libp2p-quic-linux-x64-gnu': 2.1.3
+      '@chainsafe/libp2p-quic-linux-x64-musl': 2.1.3
+      '@chainsafe/libp2p-quic-win32-x64-msvc': 2.1.3
 
   '@chainsafe/lodestar-z@https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b82750f6c3ec3d57ed63fe31c2f968d4527ce0a5':
     dependencies:
@@ -8870,11 +8870,11 @@ snapshots:
       - utf-8-validate
       - vite
 
-  '@vitest/browser-playwright@4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
+  '@vitest/browser-playwright@4.0.7(playwright@1.62.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)':
     dependencies:
       '@vitest/browser': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
       '@vitest/mocker': 4.0.7(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))
-      playwright: 1.61.1
+      playwright: 1.62.1
       tinyrainbow: 3.0.3
       vitest: 4.0.7(@types/node@25.4.0)(@vitest/browser-playwright@4.0.7)(tsx@4.23.1)(yaml@2.8.2)
     transitivePeerDependencies:
@@ -10660,7 +10660,7 @@ snapshots:
 
   js-tokens@9.0.1: {}
 
-  js-yaml@4.3.0:
+  js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
@@ -11480,7 +11480,7 @@ snapshots:
 
   playwright-core@1.60.0: {}
 
-  playwright-core@1.61.1:
+  playwright-core@1.62.1:
     optional: true
 
   playwright@1.60.0:
@@ -11489,9 +11489,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  playwright@1.61.1:
+  playwright@1.62.1:
     dependencies:
-      playwright-core: 1.61.1
+      playwright-core: 1.62.1
     optionalDependencies:
       fsevents: 2.3.2
     optional: true
@@ -12407,7 +12407,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.4.0
-      '@vitest/browser-playwright': 4.0.7(playwright@1.61.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
+      '@vitest/browser-playwright': 4.0.7(playwright@1.62.1)(vite@6.1.6(@types/node@25.4.0)(tsx@4.23.1)(yaml@2.8.2))(vitest@4.0.7)
     transitivePeerDependencies:
       - jiti
       - less
