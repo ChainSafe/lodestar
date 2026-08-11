@@ -17,18 +17,18 @@ Automates the Status field for PR cards on [Lodestar Team Coordination](https://
 
 ## Transitions
 
-| Event                                     | Condition                                                                       | Status           |
-| ----------------------------------------- | ------------------------------------------------------------------------------- | ---------------- |
-| PR opened / reopened / converted to draft | draft                                                                           | In Progress      |
-| PR opened / reopened / marked ready       | non-draft, no user-level reviewers requested                                    | In Progress      |
-| Review requested (or re-requested)        | non-draft, user-level request                                                   | Review Requested |
-| PR reopened / marked ready                | user-level reviewers already requested                                          | Review Requested |
+| Event                                         | Condition                                                                       | Status           |
+| --------------------------------------------- | ------------------------------------------------------------------------------- | ---------------- |
+| PR opened / reopened / converted to draft     | draft                                                                           | In Progress      |
+| PR opened / reopened / marked ready           | non-draft, no user-level reviewers requested                                    | In Progress      |
+| Review requested (or re-requested)            | non-draft, user-level request                                                   | Review Requested |
+| PR reopened / marked ready                    | user-level reviewers already requested                                          | Review Requested |
 | Submitted review: changes requested/commented | counted reviewers only — even with other reviewers pending, including drive-bys | Awaiting Author  |
-| Review: approved                          | other user-level review requests still pending                                  | no change        |
-| Review: approved                          | no pending user-level review requests left                                      | Awaiting Author  |
-| Commits pushed                            | always                                                                          | no change        |
-| Review request removed / review dismissed | recompute (see Model)                                                           | per invariants   |
-| PR merged/closed                          | always (built-in project workflow)                                              | Done             |
+| Review: approved                              | other user-level review requests still pending                                  | no change        |
+| Review: approved                              | no pending user-level review requests left                                      | Awaiting Author  |
+| Commits pushed                                | always                                                                          | no change        |
+| Review request removed / review dismissed     | recompute (see Model)                                                           | per invariants   |
+| PR merged/closed                              | always (built-in project workflow)                                              | Done             |
 
 The reconciler owns the `reopened` transition. The project's built-in **Item reopened** workflow must remain disabled to avoid competing status writes.
 
