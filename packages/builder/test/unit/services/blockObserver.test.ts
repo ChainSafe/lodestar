@@ -5,7 +5,7 @@ import {getConfig} from "@lodestar/config/test-utils";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
-import {ErrorAborted, LogLevel, Logger, TimeoutError, toRootHex} from "@lodestar/utils";
+import {ErrorAborted, LogLevel, Logger, TimeoutError, defer, toRootHex} from "@lodestar/utils";
 import {BlockObserver, ObservedBlock, isRetryableBlockRetrievalError} from "../../../src/services/blockObserver.js";
 
 const {EventType} = routes.events;
@@ -123,7 +123,7 @@ describe("BlockObserver", () => {
   });
 
   it("suppresses a concurrent duplicate while retrieval is in flight", async () => {
-    const deferred = promiseWithResolvers<GetBlockV2Response>();
+    const deferred = defer<GetBlockV2Response>();
     apiStub.getBlockV2.mockReturnValue(deferred.promise);
     const onBlock = vi.fn(async (_block: ObservedBlock) => {});
     const observer = new BlockObserver(config, logger, apiStub.api);
@@ -154,6 +154,18 @@ describe("BlockObserver", () => {
     expect(onBlock).toHaveBeenCalledOnce();
   });
 
+  it("retries a server error before succeeding", async () => {
+    apiStub.getBlockV2.mockResolvedValueOnce(errorResponse(503)).mockResolvedValueOnce(blockResponse(gloasBlock()));
+    const onBlock = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, apiStub.api, {retries: 1, retryDelay: 0});
+    observer.runOnBlock(onBlock);
+
+    await observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
+
+    expect(apiStub.getBlockV2).toHaveBeenCalledTimes(2);
+    expect(onBlock).toHaveBeenCalledOnce();
+  });
+
   it("retains a root after persistent not-found exhaustion", async () => {
     apiStub.getBlockV2.mockResolvedValue(errorResponse(404));
     const onBlock = vi.fn(async (_block: ObservedBlock) => {});
@@ -179,7 +191,7 @@ describe("BlockObserver", () => {
   });
 
   it("stops silently when aborted during a retry delay", async () => {
-    const firstRequestStarted = promiseWithResolvers<void>();
+    const firstRequestStarted = defer<void>();
     apiStub.getBlockV2.mockImplementation(async () => {
       firstRequestStarted.resolve(undefined);
       return errorResponse(404);
@@ -272,6 +284,27 @@ describe("BlockObserver", () => {
     expect(onBlock).not.toHaveBeenCalled();
   });
 
+  it("logs and stops when the returned block slot does not match the event", async () => {
+    const block = gloasBlock();
+    block.message.slot = 1;
+    apiStub.getBlockV2.mockResolvedValue(blockResponse(block));
+    const onBlock = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, apiStub.api);
+    observer.runOnBlock(onBlock);
+    const event = blockEvent(rootHex(1));
+
+    await observer.processBlockEvent(event, controller.signal);
+    await observer.processBlockEvent(event, controller.signal);
+
+    expect(apiStub.getBlockV2).toHaveBeenCalledOnce();
+    expect(errorLog).toHaveBeenCalledWith("Block response slot does not match block event", {
+      slot: event.slot,
+      blockRoot: event.block,
+      blockSlot: block.message.slot,
+    });
+    expect(onBlock).not.toHaveBeenCalled();
+  });
+
   it("reopens the oldest root after bounded-set eviction", async () => {
     apiStub.getBlockV2.mockResolvedValue(blockResponse(gloasBlock()));
     const onBlock = vi.fn(async (_block: ObservedBlock) => {});
@@ -318,8 +351,8 @@ describe("BlockObserver", () => {
 
   it("dispatches callbacks concurrently and isolates a callback failure", async () => {
     apiStub.getBlockV2.mockResolvedValue(blockResponse(gloasBlock()));
-    const firstStarted = promiseWithResolvers<void>();
-    const releaseFirst = promiseWithResolvers<void>();
+    const firstStarted = defer<void>();
+    const releaseFirst = defer<void>();
     const callbackError = Error("consumer failed");
     const first = vi.fn(async (_block: ObservedBlock) => {
       firstStarted.resolve(undefined);
@@ -433,18 +466,4 @@ function rootHex(id: number): RootHex {
 
 function rootBytes(id: number): Uint8Array {
   return Uint8Array.from({length: 32}, () => id);
-}
-
-function promiseWithResolvers<T>(): {
-  promise: Promise<T>;
-  resolve: (value: T) => void;
-  reject: (error: Error) => void;
-} {
-  let resolve: (value: T) => void = () => {};
-  let reject: (error: Error) => void = () => {};
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return {promise, resolve, reject};
 }

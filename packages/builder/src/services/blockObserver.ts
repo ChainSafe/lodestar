@@ -150,6 +150,15 @@ export class BlockObserver {
         return;
       }
 
+      if (block.message.slot !== slot) {
+        this.logger.error("Block response slot does not match block event", {
+          slot,
+          blockRoot,
+          blockSlot: block.message.slot,
+        });
+        return;
+      }
+
       const postGloasBlock = block as SignedBeaconBlock<ForkPostGloas>;
       const signedBid = postGloasBlock.message.body.signedExecutionPayloadBid;
       const observedBlock: ObservedBlock = {
