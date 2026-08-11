@@ -32,6 +32,7 @@ import {ProtoArrayError, ProtoArrayErrorCode} from "../protoArray/errors.js";
 import {
   BlockExecutionStatus,
   ExecutionStatus,
+  FORK_CHOICE_WEIGHT_SCALE,
   HEX_ZERO_HASH,
   LVHExecResponse,
   NULL_VOTE_INDEX,
@@ -635,20 +636,9 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
   }
 
-  /**
-   * weight is in EFFECTIVE_BALANCE_INCREMENTS not gwei.
-   * For compliance test use only
-   */
+  /** For compliance test use only. Weight is in scaled effective-balance increments. */
   getViableHeads(): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
     return this.protoArray.getViableHeads(this.fcStore.currentSlot);
-  }
-
-  /**
-   * The cached justified total active balance, in EFFECTIVE_BALANCE_INCREMENT units.
-   * For compliance test use only
-   */
-  getJustifiedTotalActiveBalanceByIncrement(): number {
-    return this.fcStore.justified.totalBalance;
   }
 
   /** This is for the debug API only */
@@ -1636,7 +1626,7 @@ export class ForkChoice implements IForkChoice {
               // the justified state) - fall back to the head state's effective balance
               balance = state.effectiveBalanceIncrements[validatorIndex];
             }
-            headWeight += balance;
+            headWeight += balance * FORK_CHOICE_WEIGHT_SCALE;
           }
         }
       }
@@ -2209,12 +2199,14 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-// Approximate https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#calculate_committee_fraction
+// https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/phase0/fork-choice.md#calculate_committee_fraction
 // Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
-export function getCommitteeFraction(
+function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,
   config: {slotsPerEpoch: number; committeePercent: number}
 ): number {
-  const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
+  const committeeWeight = Math.floor(
+    (justifiedTotalActiveBalanceByIncrement * FORK_CHOICE_WEIGHT_SCALE) / config.slotsPerEpoch
+  );
   return Math.floor((committeeWeight * config.committeePercent) / 100);
 }

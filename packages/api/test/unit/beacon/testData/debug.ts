@@ -6,6 +6,7 @@ import {GenericServerTestCases} from "../../../utils/genericServerTest.js";
 
 const root = new Uint8Array(32).fill(1);
 const rootHex = toHexString(root);
+const scaledWeightBeyondUint32 = 2 ** 32;
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getDebugChainHeadsV2: {
@@ -123,7 +124,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
           unrealizedFinalizedEpoch: 1,
           unrealizedFinalizedRoot: rootHex,
           parent: "1",
-          weight: 1,
+          weight: scaledWeightBeyondUint32,
           bestChild: "1",
           bestDescendant: "1",
           timeliness: false,

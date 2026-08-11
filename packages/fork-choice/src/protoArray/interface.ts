@@ -1,3 +1,4 @@
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot, UintNum64} from "@lodestar/types";
 
@@ -11,6 +12,12 @@ export const HEX_ZERO_HASH = "0x000000000000000000000000000000000000000000000000
  * The number of proto nodes will never exceed this value because it represents (0xffffffff / 365 / 24 / 60 / 5), ie > 1634 years of non-finalized network.
  */
 export const NULL_VOTE_INDEX = 0xffffffff;
+
+/**
+ * Fork-choice weights are scaled effective-balance increments. The scale preserves the
+ * SLOTS_PER_EPOCH and percentage denominators used by proposer boost and reorg thresholds.
+ */
+export const FORK_CHOICE_WEIGHT_SCALE = SLOTS_PER_EPOCH * 100;
 
 /**
  * A vote index is a non-negative integer from 0 to NULL_VOTE_INDEX inclusive, and it will never be undefined.
@@ -160,10 +167,10 @@ export type ProtoBlock = BlockExtraMeta & {
  */
 export type ProtoNode = ProtoBlock & {
   parent?: number;
-  /** Total weight, ie. attestationScore plus the proposer boost credited to this node */
+  /** Total scaled weight, ie. attestationScore plus the proposer boost credited to this node */
   weight: number;
   /**
-   * Weight from attester votes only, excluding proposer boost.
+   * Scaled weight from attester votes only, excluding proposer boost.
    * Spec: get_attestation_score
    */
   attestationScore: number;

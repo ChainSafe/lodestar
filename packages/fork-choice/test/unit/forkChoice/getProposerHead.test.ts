@@ -8,6 +8,7 @@ import {toHex} from "@lodestar/utils";
 import {NotReorgedReason} from "../../../src/forkChoice/interface.js";
 import {
   ExecutionStatus,
+  FORK_CHOICE_WEIGHT_SCALE,
   ForkChoice,
   IForkChoiceStore,
   PayloadStatus,
@@ -276,7 +277,11 @@ describe("Forkchoice / GetProposerHead", () => {
       const currentSlot = proposalSlot ?? headBlock.slot + 1;
       const currentSecFromSlot = secFromSlot ?? 0;
       protoArr.applyScoreChanges({
-        attestationDeltas: [0, parentBlock.weight, headBlock.weight],
+        attestationDeltas: [
+          0,
+          parentBlock.weight * FORK_CHOICE_WEIGHT_SCALE,
+          headBlock.weight * FORK_CHOICE_WEIGHT_SCALE,
+        ],
         proposerBoost: null,
         justifiedEpoch: genesisEpoch,
         justifiedRoot: genesisRoot,

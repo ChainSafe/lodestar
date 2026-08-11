@@ -1581,7 +1581,7 @@ export class ProtoArray {
     return correctJustified && correctFinalized;
   }
 
-  /** Weights are in EFFECTIVE_BALANCE_INCREMENT units (NOT Gwei); callers scale as needed. */
+  /** Weights use the scaled effective-balance units supplied by ForkChoice. */
   getViableHeads(currentSlot: Slot): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
     // Mirror the spec's `get_filtered_block_tree`, which is rooted at the store's justified
     // checkpoint: a viable head is a leaf (no viable descendant, i.e. `bestChild === undefined`)

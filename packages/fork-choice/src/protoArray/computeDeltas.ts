@@ -1,7 +1,7 @@
 import {EffectiveBalanceIncrements} from "@lodestar/state-transition";
 import {ValidatorIndex} from "@lodestar/types";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
-import {NULL_VOTE_INDEX, VoteIndex} from "./interface.js";
+import {FORK_CHOICE_WEIGHT_SCALE, NULL_VOTE_INDEX, VoteIndex} from "./interface.js";
 
 // reuse arrays to avoid memory reallocation and gc
 const attestationDeltas = new Array<number>();
@@ -80,7 +80,7 @@ export function computeDeltas(
           });
         }
         oldBalance = oldBalances[vIndex] ?? 0;
-        attestationDeltas[currentIndex] -= oldBalance;
+        attestationDeltas[currentIndex] -= oldBalance * FORK_CHOICE_WEIGHT_SCALE;
       }
       voteCurrentIndices[vIndex] = NULL_VOTE_INDEX;
       equivocatingIndex++;
@@ -125,7 +125,7 @@ export function computeDeltas(
           });
         }
 
-        attestationDeltas[currentIndex] -= oldBalance;
+        attestationDeltas[currentIndex] -= oldBalance * FORK_CHOICE_WEIGHT_SCALE;
       }
 
       // We ignore the vote if it is not known in `indices .
@@ -138,7 +138,7 @@ export function computeDeltas(
           });
         }
 
-        attestationDeltas[nextIndex] += newBalance;
+        attestationDeltas[nextIndex] += newBalance * FORK_CHOICE_WEIGHT_SCALE;
       }
       voteCurrentIndices[vIndex] = nextIndex;
       newVoteValidators++;

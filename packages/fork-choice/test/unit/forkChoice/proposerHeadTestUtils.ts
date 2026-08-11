@@ -4,6 +4,7 @@ import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transiti
 import {RootHex, Slot, ValidatorIndex} from "@lodestar/types";
 import {
   ExecutionStatus,
+  FORK_CHOICE_WEIGHT_SCALE,
   ForkChoice,
   IForkChoiceStore,
   PayloadStatus,
@@ -153,12 +154,13 @@ export function setup({
   const canonicalVariant = isGloas ? PayloadStatus.PENDING : PayloadStatus.FULL;
   const attestationDeltas = protoArray.nodes.map((node) =>
     // credit the votes to each block's canonical (boostable) variant only
-    node.payloadStatus === canonicalVariant ? (votesByRoot.get(node.blockRoot) ?? 0) : 0
+    node.payloadStatus === canonicalVariant ? (votesByRoot.get(node.blockRoot) ?? 0) * FORK_CHOICE_WEIGHT_SCALE : 0
   );
 
   protoArray.applyScoreChanges({
     attestationDeltas,
-    proposerBoost,
+    proposerBoost:
+      proposerBoost === null ? null : {root: proposerBoost.root, score: proposerBoost.score * FORK_CHOICE_WEIGHT_SCALE},
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,

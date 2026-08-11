@@ -41,7 +41,8 @@ const ProtoNodeType = new ContainerType(
     unrealizedFinalizedEpoch: ssz.Epoch,
     unrealizedFinalizedRoot: stringType,
     parent: stringType,
-    weight: ssz.Uint32,
+    /** Weight in effective-balance increments scaled by SLOTS_PER_EPOCH * 100. */
+    weight: ssz.UintNum64,
     bestChild: stringType,
     bestDescendant: stringType,
   },
@@ -63,6 +64,7 @@ const ForkChoiceNodeType = new ContainerType(
     parentRoot: stringType,
     justifiedEpoch: ssz.Epoch,
     finalizedEpoch: ssz.Epoch,
+    /** Weight in effective-balance increments scaled by SLOTS_PER_EPOCH * 100. */
     weight: ssz.UintNum64,
     validity: new StringType<"valid" | "invalid" | "optimistic">(),
     executionBlockHash: stringType,
@@ -100,6 +102,7 @@ const ForkChoiceNodeV2Type = new ContainerType(
     slot: ssz.Slot,
     blockRoot: stringType,
     parentRoot: stringType,
+    /** Weight in effective-balance increments scaled by SLOTS_PER_EPOCH * 100. */
     weight: ssz.UintNum64,
     validity: new StringType<"valid" | "invalid" | "optimistic">(),
     executionBlockHash: stringType,

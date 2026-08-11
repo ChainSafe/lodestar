@@ -17,7 +17,7 @@ export {
   type IFastConfirmationStore,
   getFastConfirmationMetrics,
 } from "./forkChoice/fastConfirmation/fastConfirmationRule.ts";
-export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt, getCommitteeFraction} from "./forkChoice/forkChoice.js";
+export {ForkChoice, type ForkChoiceOpts, UpdateHeadOpt} from "./forkChoice/forkChoice.js";
 export {
   type AncestorResult,
   AncestorStatus,
@@ -44,5 +44,5 @@ export type {
   ProtoBlock,
   ProtoNode,
 } from "./protoArray/interface.js";
-export {ExecutionStatus, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
+export {ExecutionStatus, FORK_CHOICE_WEIGHT_SCALE, PayloadStatus, isGloasBlock} from "./protoArray/interface.js";
 export {ProtoArray} from "./protoArray/protoArray.js";

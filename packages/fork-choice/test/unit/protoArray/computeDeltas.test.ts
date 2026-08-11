@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {getEffectiveBalanceIncrementsZeroed} from "@lodestar/state-transition";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
-import {NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
+import {FORK_CHOICE_WEIGHT_SCALE, NULL_VOTE_INDEX} from "../../../src/protoArray/interface.js";
 
 describe("computeDeltas", () => {
   it("zero hash", () => {
@@ -68,7 +68,7 @@ describe("computeDeltas", () => {
 
     for (const [i, delta] of deltas.entries()) {
       if (i === 0) {
-        expect(delta.toString()).toBe((balance * validatorCount).toString());
+        expect(delta.toString()).toBe((balance * validatorCount * FORK_CHOICE_WEIGHT_SCALE).toString());
       } else {
         expect(delta.toString()).toBe("0");
       }
@@ -105,7 +105,7 @@ describe("computeDeltas", () => {
     expect(deltas.length).toEqual(validatorCount);
 
     for (const delta of deltas) {
-      expect(delta.toString()).toBe(balance.toString());
+      expect(delta.toString()).toBe((balance * FORK_CHOICE_WEIGHT_SCALE).toString());
     }
   });
 
@@ -138,7 +138,7 @@ describe("computeDeltas", () => {
 
     expect(deltas.length).toEqual(validatorCount);
 
-    const totalDelta = balance * validatorCount;
+    const totalDelta = balance * validatorCount * FORK_CHOICE_WEIGHT_SCALE;
 
     for (const [i, delta] of deltas.entries()) {
       if (i === 0) {
@@ -183,9 +183,9 @@ describe("computeDeltas", () => {
 
     for (const [i, delta] of deltas.entries()) {
       if (i === 0) {
-        expect(delta.toString()).toBe((0 - oldBalance * validatorCount).toString());
+        expect(delta.toString()).toBe((0 - oldBalance * validatorCount * FORK_CHOICE_WEIGHT_SCALE).toString());
       } else if (i === 1) {
-        expect(delta.toString()).toBe((newBalance * validatorCount).toString());
+        expect(delta.toString()).toBe((newBalance * validatorCount * FORK_CHOICE_WEIGHT_SCALE).toString());
       } else {
         expect(delta.toString()).toBe("0");
       }
@@ -223,8 +223,8 @@ describe("computeDeltas", () => {
 
     expect(deltas.length).toEqual(2);
 
-    expect(deltas[0].toString()).toEqual((0 - balance).toString());
-    expect(deltas[1].toString()).toEqual((balance * 2).toString());
+    expect(deltas[0].toString()).toEqual((0 - balance * FORK_CHOICE_WEIGHT_SCALE).toString());
+    expect(deltas[1].toString()).toEqual((balance * 2 * FORK_CHOICE_WEIGHT_SCALE).toString());
 
     for (let i = 0; i < voteCurrentIndices.length; i++) {
       expect(voteCurrentIndices[i]).toBe(voteNextIndices[i]);
@@ -261,8 +261,8 @@ describe("computeDeltas", () => {
 
     expect(deltas.length).toEqual(2);
 
-    expect(deltas[0].toString()).toEqual((0 - balance * 2).toString());
-    expect(deltas[1].toString()).toEqual(balance.toString());
+    expect(deltas[0].toString()).toEqual((0 - balance * 2 * FORK_CHOICE_WEIGHT_SCALE).toString());
+    expect(deltas[1].toString()).toEqual((balance * FORK_CHOICE_WEIGHT_SCALE).toString());
 
     for (let i = 0; i < voteCurrentIndices.length; i++) {
       expect(voteCurrentIndices[i]).toBe(voteNextIndices[i]);
@@ -294,10 +294,13 @@ describe("computeDeltas", () => {
       equivocatingIndices
     );
     expect(deltas[0]).toBeWithMessage(
-      -1 * (firstBalance + secondBalance),
+      -1 * (firstBalance + secondBalance) * FORK_CHOICE_WEIGHT_SCALE,
       "should disregard the 1st validator due to attester slashing"
     );
-    expect(deltas[1]).toBeWithMessage(secondBalance, "should move 2nd balance from 1st root to 2nd root");
+    expect(deltas[1]).toBeWithMessage(
+      secondBalance * FORK_CHOICE_WEIGHT_SCALE,
+      "should move 2nd balance from 1st root to 2nd root"
+    );
     deltas = computeDeltas(
       indices.size,
       voteCurrentIndices,
@@ -337,7 +340,7 @@ describe("computeDeltas", () => {
     // The slashed higher-index validator V1 must be discounted, even though a lower-index
     // slashed validator V0 has no live vote.
     expect(deltas[1]).toBeWithMessage(
-      balance,
+      balance * FORK_CHOICE_WEIGHT_SCALE,
       "slashed higher-index validator must be discounted despite a voteless lower-index equivocator"
     );
   });
@@ -365,7 +368,7 @@ describe("computeDeltas", () => {
     );
 
     expect(deltas[1]).toBeWithMessage(
-      balance,
+      balance * FORK_CHOICE_WEIGHT_SCALE,
       "only the honest validator counts; all slashed validators must be discounted"
     );
   });

@@ -46,7 +46,7 @@ function initProtoArray(): ProtoArray {
 }
 
 describe("ProtoArray.getViableHeads", () => {
-  it("returns every viable leaf with increment-unit weight", () => {
+  it("returns every viable leaf with its caller-supplied weight", () => {
     const fc = initProtoArray();
     // 1 <- 2 <- 3 and 1 <- 4 (two competing leaves)
     fc.onBlock(blockFields({slot: 1, blockRoot: "2", parentRoot: "1"}), 1, null);

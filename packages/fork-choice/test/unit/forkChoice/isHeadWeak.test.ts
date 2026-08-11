@@ -30,6 +30,20 @@ describe("Forkchoice / isHeadWeak", () => {
       expect(isHeadWeak(forkChoice, headRoot)).toBe(false);
     });
 
+    it("preserves a fractional effective-balance increment in the threshold", () => {
+      const store = makeStore();
+      store.justified.balances[0] += 1;
+      store.justified.totalBalance += 1;
+      const {forkChoice, headRoot} = setup({
+        isGloas: false,
+        config: defaultConfig,
+        headVotes: REORG_THRESHOLD,
+        store,
+      });
+
+      expect(isHeadWeak(forkChoice, headRoot)).toBe(true);
+    });
+
     it("counts proposer boost towards the weight, per phase0 get_weight", () => {
       // Attester votes alone are weak, but the boost carries the block over the threshold
       const {forkChoice, headRoot} = setup({
