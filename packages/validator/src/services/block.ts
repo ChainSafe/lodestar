@@ -190,11 +190,19 @@ export class BlockProposingService {
     const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
     const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
     const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+    const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
     const {broadcastValidation, payloadLocal} = this.opts;
     const {selection: builderSelection, boostFactor: builderBoostFactor} =
       this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
 
-    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, payloadLocal, builderSelection});
+    this.logger.debug("Producing block", {
+      ...debugLogCtx,
+      feeRecipient,
+      strictFeeRecipientCheck,
+      payloadLocal,
+      builderSelection,
+      builderBoostFactor,
+    });
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
     // Step 1: Produce beacon block with execution payload bid
@@ -204,6 +212,7 @@ export class BlockProposingService {
         randaoReveal,
         graffiti,
         feeRecipient,
+        strictFeeRecipientCheck,
         includePayload: !payloadLocal,
         builderBoostFactor,
       })

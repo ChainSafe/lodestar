@@ -851,7 +851,15 @@ export function getValidatorApi(
       return {data, meta};
     },
 
-    async produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload, builderBoostFactor}) {
+    async produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      strictFeeRecipientCheck,
+      includePayload,
+      builderBoostFactor,
+    }) {
       const fork = config.getForkName(slot);
 
       if (!isForkPostGloas(fork)) {
@@ -899,7 +907,9 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
-        builderBoostFactor,
+        // winston logger doesn't like bigint
+        builderBoostFactor: `${builderBoostFactor}`,
+        strictFeeRecipientCheck,
         circuitBreakerActive,
         ...(builderBid !== null
           ? {
@@ -926,6 +936,19 @@ export function getValidatorApi(
         commonBlockBodyPromise,
       };
 
+      const assertFeeRecipient = (block: BeaconBlock): void => {
+        if (strictFeeRecipientCheck && feeRecipient) {
+          const blockFeeRecipient = toHex(
+            (block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message.feeRecipient
+          );
+          if (blockFeeRecipient !== feeRecipient) {
+            throw Error(
+              `Invalid feeRecipient set in execution payload bid expected=${feeRecipient} actual=${blockFeeRecipient}`
+            );
+          }
+        }
+      };
+
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
       if (builderBid !== null) {
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
@@ -946,6 +969,7 @@ export function getValidatorApi(
       const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
         chain.produceBlock(baseAttrs)
       ).then((engineBlock) => {
+        assertFeeRecipient(engineBlock.block);
         // No need to wait for the bid block if the engine block will always be selected due to
         // suspected builder censorship or a builder boost factor of 0
         if (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {
@@ -955,7 +979,12 @@ export function getValidatorApi(
       });
       const bidPromise: ReturnType<typeof chain.produceBlock> =
         builderBid !== null
-          ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}))
+          ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid})).then(
+              (bidBlock) => {
+                assertFeeRecipient(bidBlock.block);
+                return bidBlock;
+              }
+            )
           : Promise.reject(new Error("No builder bid available"));
 
       const [engineResult, bidResult] = await resolveOrRacePromises([enginePromise, bidPromise], {
@@ -1043,7 +1072,10 @@ export function getValidatorApi(
         root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
-        void chain.persistBlock(block, "produced_engine_block");
+        void chain.persistBlock(
+          block,
+          source === ProducedBlockSource.builder ? "produced_builder_block" : "produced_engine_block"
+        );
       }
 
       // Include the payload for self-builds unless disabled (stateless flow)

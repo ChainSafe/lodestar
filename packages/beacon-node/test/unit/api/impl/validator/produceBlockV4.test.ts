@@ -160,6 +160,66 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(bidBlock);
   });
 
+  it("uses a builder bid as fallback when the local fee recipient does not match", async () => {
+    const expectedFeeRecipient = Buffer.from(feeRecipient.slice(2), "hex");
+    const mismatchedFeeRecipient = Buffer.alloc(20, 0xdd);
+    const localBlock = ssz.gloas.BeaconBlock.defaultValue();
+    localBlock.body.signedExecutionPayloadBid.message.feeRecipient = mismatchedFeeRecipient;
+    const builderBlock = ssz.gloas.BeaconBlock.defaultValue();
+    builderBlock.body.signedExecutionPayloadBid.message.feeRecipient = expectedFeeRecipient;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+      block: attrs.builderBid !== undefined ? builderBlock : localBlock,
+      executionPayloadValue: BigInt(0),
+      consensusBlockValue: BigInt(0),
+    }));
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      strictFeeRecipientCheck: true,
+      includePayload: false,
+      builderBoostFactor: BigInt(0),
+    });
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(block).toEqual(builderBlock);
+  });
+
+  it("uses the local payload as fallback when the builder fee recipient does not match", async () => {
+    const expectedFeeRecipient = Buffer.from(feeRecipient.slice(2), "hex");
+    const mismatchedFeeRecipient = Buffer.alloc(20, 0xdd);
+    const localBlock = ssz.gloas.BeaconBlock.defaultValue();
+    localBlock.body.signedExecutionPayloadBid.message.feeRecipient = expectedFeeRecipient;
+    const builderBlock = ssz.gloas.BeaconBlock.defaultValue();
+    builderBlock.body.signedExecutionPayloadBid.message.feeRecipient = mismatchedFeeRecipient;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
+      block: attrs.builderBid !== undefined ? builderBlock : localBlock,
+      executionPayloadValue: BigInt(0),
+      consensusBlockValue: BigInt(0),
+    }));
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      strictFeeRecipientCheck: true,
+      includePayload: false,
+      builderBoostFactor: maxBuilderBoostFactor,
+    });
+
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(block).toEqual(localBlock);
+  });
+
   it("produces local block when no bid is available", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(null);
@@ -203,6 +263,25 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(bidBlock);
+  });
+
+  it("persists a builder bid block with the builder source", async () => {
+    const persistBlock = vi.fn();
+    Object.defineProperty(modules.chain, "persistBlock", {value: persistBlock});
+    modules.chain.opts.persistProducedBlocks = true;
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+    });
+
+    expect(block).toEqual(bidBlock);
+    expect(persistBlock).toHaveBeenCalledWith(bidBlock, "produced_builder_block");
   });
 
   it("rejects block production if parent block is optimistic", async () => {

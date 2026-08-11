@@ -35,6 +35,7 @@ export function getApiClientStub(): ApiClientStub {
       getPtcDuties: vi.fn(),
       prepareBeaconCommitteeSubnet: vi.fn(),
       produceBlockV3: vi.fn(),
+      produceBlockV4: vi.fn(),
       getSyncCommitteeDuties: vi.fn(),
       prepareSyncCommitteeSubnets: vi.fn(),
       produceSyncCommitteeContribution: vi.fn(),

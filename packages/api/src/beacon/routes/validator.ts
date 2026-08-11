@@ -76,6 +76,12 @@ export type ExtraProduceBlockOpts = {
   blindedLocal?: boolean;
 };
 
+/** Lodestar-specific (non-standardized) options */
+export type ExtraProduceBlockV4Opts = {
+  feeRecipient?: string;
+  strictFeeRecipientCheck?: boolean;
+};
+
 export const ProduceBlockV3MetaType = new ContainerType(
   {
     ...VersionType.fields,
@@ -446,7 +452,7 @@ export type Endpoints = {
       builderBoostFactor?: UintBn64;
       /** Include execution payload envelope and blobs in the response when self-building */
       includePayload: boolean;
-    } & Omit<ExtraProduceBlockOpts, "blindedLocal" | "builderSelection">,
+    } & ExtraProduceBlockV4Opts,
     {
       params: {slot: number};
       query: {
