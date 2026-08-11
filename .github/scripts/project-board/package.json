@@ -10,10 +10,10 @@
   "scripts": {
     "check": "pnpm run lint && pnpm run check-types && pnpm run test",
     "check-types": "tsc --project tsconfig.json",
-    "format": "biome format --write .",
-    "format:check": "biome format .",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write .",
+    "format": "biome format --config-path=biome.project.jsonc --write .",
+    "format:check": "biome format --config-path=biome.project.jsonc .",
+    "lint": "biome check --config-path=biome.project.jsonc .",
+    "lint:fix": "biome check --config-path=biome.project.jsonc --write .",
     "test": "vitest run",
     "test:watch": "vitest"
   },
