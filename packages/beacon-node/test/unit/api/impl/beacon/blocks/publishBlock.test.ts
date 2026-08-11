@@ -8,11 +8,18 @@ import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBlock.js";
+import {BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
+import {validateGossipBlock} from "../../../../../../src/chain/validation/block.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyBlock.js");
+// Partial mock: keep verifyBlockProposerSignature (used by the consensus paths), override validateGossipBlock
+vi.mock("../../../../../../src/chain/validation/block.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../../../../src/chain/validation/block.js")>()),
+  validateGossipBlock: vi.fn(),
+}));
 
 describe("api - beacon - publishBlockV2", () => {
   const config = createBeaconConfig(configDef, Buffer.alloc(32, 1));
@@ -65,6 +72,42 @@ describe("api - beacon - publishBlockV2", () => {
       expect(verifyBlocksInEpoch).toHaveBeenCalledOnce();
       expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
       expect(modules.chain.processBlock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("broadcast_validation=gossip", () => {
+    it("imports a REPEAT_PROPOSAL (equivocating) block into fork choice but does not re-publish it", async () => {
+      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = 1;
+      signedBlock.message.proposerIndex = 2;
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      const blockInput = BlockInputPreData.createFromBlock({
+        forkName: ForkName.phase0,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      });
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+      // Default (gossip) broadcast validation runs validateGossipBlock; simulate an equivocating proposal
+      vi.mocked(validateGossipBlock).mockRejectedValue(
+        new BlockGossipError(GossipAction.IGNORE, {
+          code: BlockErrorCode.REPEAT_PROPOSAL,
+          proposerIndex: signedBlock.message.proposerIndex,
+          root: blockRoot,
+        })
+      );
+
+      const api = getBeaconBlockApi(modules);
+      await api.publishBlockV2({signedBlockContents: {signedBlock}});
+
+      // Imported into fork choice so LMD-GHOST can weigh it ...
+      expect(modules.chain.processBlock).toHaveBeenCalledWith(blockInput, {});
+      // ... but not re-published to the network
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
     });
   });
 

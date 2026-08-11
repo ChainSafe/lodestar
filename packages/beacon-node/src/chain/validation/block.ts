@@ -95,7 +95,11 @@ export async function validateGossipBlock(
       await verifyBlockProposerSignature(chain, signedBlock, blockRoot, {verifyOnMainThread: false});
       chain.seenBlockProposers.observeBlockRoot(blockSlot, proposerIndex, blockRoot, signedBlockHeader);
     }
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.REPEAT_PROPOSAL,
+      proposerIndex,
+      root: blockRoot,
+    });
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
@@ -301,7 +305,11 @@ export async function validateGossipBlock(
 
   // Check again after all async validation and the early-block delay so concurrent proposals cannot both pass
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    throw new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.REPEAT_PROPOSAL,
+      proposerIndex,
+      root: blockRoot,
+    });
   }
 
   chain.seenBlockProposers.add(blockSlot, proposerIndex);

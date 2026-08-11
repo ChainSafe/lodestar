@@ -208,6 +208,10 @@ export function getBeaconBlockApi({
     const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
+    // For a REPEAT_PROPOSAL (equivocating) block we still import it into fork choice but must not
+    // re-publish it (or its sidecars) to the network; this flag gates the publish thunks below.
+    let skipPublish = false;
+
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
@@ -215,17 +219,18 @@ export function getBeaconBlockApi({
             await validateGossipBlock(config, chain, signedBlock, fork);
           } catch (error) {
             if (error instanceof BlockGossipError) {
-              switch (error.type.code) {
-                case BlockErrorCode.ALREADY_KNOWN:
-                  // Block has already been seen, e.g. via gossip racing the publish API. Benign.
-                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
-                  return;
-                case BlockErrorCode.REPEAT_PROPOSAL:
-                  // The proposer already produced a block for this slot. For a solo setup this is a
-                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
-                  // expected on every block where another node published first.
-                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
-                  return;
+              if (error.type.code === BlockErrorCode.ALREADY_KNOWN) {
+                // Block has already been seen, e.g. via gossip racing the publish API. Benign.
+                chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                return;
+              }
+              if (error.type.code === BlockErrorCode.REPEAT_PROPOSAL) {
+                // the proposer already produced a block for this slot
+                // Spec: do NOT re-publish it, but we should still import because each node may receive different block
+                // and this block may become canonical
+                chain.logger.warn("Importing repeat-proposal block without publishing", valLogMeta);
+                skipPublish = true;
+                break;
               }
             }
 
@@ -371,9 +376,15 @@ export function getBeaconBlockApi({
       //     b) getting block first allows nodes to use getBlobs from local ELs and save
       //        import latency and hopefully bandwidth
       //
-      () => network.publishBeaconBlock(signedBlock),
-      ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
-      ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
+      // For a REPEAT_PROPOSAL (equivocating) block we still import it (below) but do not re-publish
+      // it or its sidecars to the network.
+      ...(skipPublish
+        ? []
+        : [
+            () => network.publishBeaconBlock(signedBlock),
+            ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),
+            ...blobSidecars.map((blobSidecar) => () => network.publishBlobSidecar(blobSidecar)),
+          ]),
       () =>
         // there is no rush to persist block since we published it to gossip anyway
         chain
