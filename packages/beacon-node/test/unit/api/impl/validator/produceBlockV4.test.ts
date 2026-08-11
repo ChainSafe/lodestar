@@ -2,12 +2,22 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
+import {
+  BeaconStateGloas,
+  BeaconStateView,
+  createCachedBeaconState,
+  createPubkeyCache,
+} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
+import {BeaconChain} from "../../../../../src/chain/chain.js";
+import {BlockType, produceBlockBody} from "../../../../../src/chain/produceBlock/index.js";
+import {PayloadIdCache} from "../../../../../src/execution/index.js";
 import {SyncState} from "../../../../../src/sync/interface.js";
 import {ApiTestModules, getApiTestModules} from "../../../../utils/api.js";
-import {zeroProtoBlock} from "../../../../utils/state.js";
+import {generateState, zeroProtoBlock} from "../../../../utils/state.js";
 
 describe("api/validator - produceBlockV4", () => {
   let modules: ApiTestModules;
@@ -188,6 +198,66 @@ describe("api/validator - produceBlockV4", () => {
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({strictFeeRecipientCheck: true}));
     expect(block).toEqual(builderBlock);
+  });
+
+  it("accepts a mixed-case local fee recipient with strict checking", async () => {
+    const requestedFeeRecipient = "0xCcCcCcCcCcCcCcCcCcCcCcCcCcCcCcCcCcCcCcAa";
+    const executionPayload = ssz.gloas.ExecutionPayload.defaultValue();
+    executionPayload.feeRecipient = fromHex(requestedFeeRecipient);
+
+    const state = generateState({slot}, chainConfig) as BeaconStateGloas;
+    state.latestExecutionPayloadBid.blockHash = new Uint8Array(32).fill(1);
+    const stateView = new BeaconStateView(
+      createCachedBeaconState(state, {
+        config,
+        pubkeyCache: createPubkeyCache(),
+      })
+    );
+    const blockBody = ssz.gloas.BeaconBlockBody.defaultValue();
+
+    modules.chain.forkChoice.shouldBuildOnFull.mockReturnValue(false);
+    modules.chain.forkChoice.getConfirmedBlock.mockReturnValue(zeroProtoBlock);
+    modules.chain.forkChoice.getFinalizedBlock.mockReturnValue(zeroProtoBlock);
+    modules.chain.forkChoice.getBlockHexDefaultStatus.mockReturnValue(null);
+    modules.chain.forkChoice.getBlockHexAndBlockHash.mockReturnValue({
+      ...zeroProtoBlock,
+      executionPayloadBlockHash: zeroProtoBlock.blockRoot,
+      executionPayloadGasLimit: 30_000_000,
+    } as ProtoBlock);
+    modules.chain["executionEngine"].payloadIdCache = new PayloadIdCache();
+    modules.chain.executionEngine.notifyForkchoiceUpdate.mockResolvedValue("0x01");
+    modules.chain.executionEngine.getPayload.mockResolvedValue({
+      executionPayload,
+      executionPayloadValue: BigInt(0),
+      blobsBundle: {commitments: [], proofs: [], blobs: []},
+      executionRequests: ssz.gloas.ExecutionRequests.defaultValue(),
+    });
+    modules.chain.payloadAttestationPool.getPayloadAttestationsForBlock = vi.fn().mockReturnValue([]);
+
+    await expect(
+      produceBlockBody.call(modules.chain as unknown as BeaconChain, BlockType.Full, stateView, {
+        randaoReveal,
+        graffiti: blockBody.graffiti,
+        slot,
+        feeRecipient: requestedFeeRecipient,
+        strictFeeRecipientCheck: true,
+        parentBlock,
+        proposerIndex: 0,
+        proposerPubKey: new Uint8Array(48),
+        commonBlockBodyPromise: Promise.resolve({
+          randaoReveal: blockBody.randaoReveal,
+          eth1Data: blockBody.eth1Data,
+          graffiti: blockBody.graffiti,
+          proposerSlashings: blockBody.proposerSlashings,
+          attesterSlashings: blockBody.attesterSlashings,
+          attestations: blockBody.attestations,
+          deposits: blockBody.deposits,
+          voluntaryExits: blockBody.voluntaryExits,
+          syncAggregate: blockBody.syncAggregate,
+          blsToExecutionChanges: blockBody.blsToExecutionChanges,
+        }),
+      })
+    ).resolves.toMatchObject({executionPayloadValue: BigInt(0)});
   });
 
   it("produces local block when no bid is available", async () => {

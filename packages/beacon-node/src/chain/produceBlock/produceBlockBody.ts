@@ -337,13 +337,14 @@ export async function produceBlockBody<T extends BlockType>(
     executionPayloadValue = payloadRes.executionPayloadValue;
     shouldOverrideBuilder = payloadRes.shouldOverrideBuilder;
 
-    if (strictFeeRecipientCheck && requestedFeeRecipient) {
-      const payloadFeeRecipient = toHex(executionPayload.feeRecipient);
-      if (payloadFeeRecipient !== requestedFeeRecipient) {
-        throw Error(
-          `Invalid feeRecipient set in engine payload expected=${requestedFeeRecipient} actual=${payloadFeeRecipient}`
-        );
-      }
+    if (
+      strictFeeRecipientCheck &&
+      requestedFeeRecipient &&
+      !byteArrayEquals(executionPayload.feeRecipient, fromHex(requestedFeeRecipient))
+    ) {
+      throw Error(
+        `Invalid feeRecipient set in engine payload expected=${requestedFeeRecipient} actual=${toHex(executionPayload.feeRecipient)}`
+      );
     }
 
     if (blobsBundle === undefined) {
