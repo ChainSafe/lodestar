@@ -896,6 +896,7 @@ export function getValidatorApi(
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
       const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
+      // Only the circuit breaker disables builder bids; a zero boost factor still keeps the best bid as a fallback.
       const builderBid = circuitBreakerActive
         ? null
         : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
