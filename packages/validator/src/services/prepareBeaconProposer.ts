@@ -70,6 +70,8 @@ export function pollBuilderValidatorRegistration(
   validatorStore: ValidatorStore,
   _metrics: Metrics | null
 ): void {
+  let activeScheduledGasLimit: number | undefined;
+
   async function registerValidator(epoch: Epoch): Promise<void> {
     // Don't send validator registrations pre-genesis as mev-boost-relay will reject
     // those registrations anyways if timestamp is before genesis time and we wanna
@@ -78,6 +80,13 @@ export function pollBuilderValidatorRegistration(
 
     // Before bellatrix we don't need to update this data on bn/builder
     if (epoch < config.BELLATRIX_FORK_EPOCH - 1) return;
+
+    const scheduledGasLimit = config.getScheduledGasLimit(epoch);
+    if (scheduledGasLimit !== undefined && scheduledGasLimit !== activeScheduledGasLimit) {
+      logger.info("Gas limit schedule active", {epoch, gasLimit: scheduledGasLimit});
+      activeScheduledGasLimit = scheduledGasLimit;
+    }
+
     const slot = epoch * SLOTS_PER_EPOCH;
 
     // registerValidator is not as time sensitive as attesting.
