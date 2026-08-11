@@ -80,16 +80,18 @@ If you would like to set unique proposer metadata (e.g. fee recipient address) f
 
 ### Configure your builder selection and/or builder boost factor
 
-If you are running a beacon node with connected builder relays, you may use these validator configurations to signal which block (builder vs. local execution) the beacon node should produce.
+These validator configurations signal whether the beacon node should prefer a builder bid or a local execution payload. Before Gloas, builder bids require configured builder relays. Starting with Gloas, builder bids are received in-protocol over p2p.
 
 With produceBlockV3 introduced in Deneb hard fork, the [`--builder.boostFactor`](./validator-cli.md#--builderboostfactor) is a percentage multiplier the block producing beacon node must apply to boost (&gt;100) or dampen (&lt;100) builder block value for selection against execution block. The multiplier is ignored if [`--builder.selection`](./validator-cli.md#--builderselection) is set to anything other than `maxprofit`. Even though this is set on the validator client, the calculation is requested and applied on the beacon node itself. For more information, see the [produceBlockV3 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV3).
+
+With produceBlockV4 introduced in Gloas, the validator client converts [`--builder.selection`](./validator-cli.md#--builderselection) aliases to a standard `builder_boost_factor`. A value of `0` prefers the local payload but uses a viable builder bid if local production fails or is delayed. A value of `100` selects by profit, and `18446744073709551615` (2\*\*64 - 1) prefers the builder bid with local production as fallback. For more information, see the [produceBlockV4 Beacon API](https://ethereum.github.io/beacon-APIs/#/ValidatorRequiredApi/produceBlockV4).
 
 With Lodestar's [`--builder.selection`](./validator-cli.md#--builderselection) validator options, you can select:
 
 - `default`: Default setting for Lodestar set at `--builder.boostFactor=90`. This default setting will have a local block boost of ~10%. Note that this value might change in the future depending on what we think is the most appropriate value to help improve censorship resistance of Ethereum.
 - `maxprofit`: An alias of `--builder.boostFactor=100`, which will always choose the more profitable block. Using this option, you may customize your `--builder.boostFactor` to your preference. Examples of its usage are below.
 - `executionalways`: An alias of `--builder.boostFactor=0`, which will select the local execution block, unless it fails to produce due to an error or a delay in the response from the execution client.
-- `executiononly`: Beacon node will be requested to produce local execution block even if builder relays are configured. This option will always select the local execution block and will error if it couldn't produce one.
+- `executiononly`: Pre-Gloas only. The beacon node will produce a local execution block even if builder relays are configured and will error if it cannot produce one. Starting with Gloas, this is treated as `executionalways` so a viable builder bid can prevent a missed proposal when local production fails or is delayed.
 - `builderalways`: An alias of `--builder.boostFactor=18446744073709551615` (2\*\*64 - 1), which will select the builder block, unless the builder block fails to produce. The builder block may fail to produce if it's not available, not timely or there is an indication of censorship via `shouldOverrideBuilder` from the execution payload response.
 
 #### Calculating builder boost factor with examples

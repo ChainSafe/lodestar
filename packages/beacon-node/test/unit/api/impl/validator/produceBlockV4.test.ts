@@ -1,5 +1,4 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {routes} from "@lodestar/api";
 import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lodestar/config";
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
@@ -30,6 +29,7 @@ describe("api/validator - produceBlockV4", () => {
   const slot = 1;
   const feeRecipient = "0xccccccccccccccccccccccccccccccccccccccaa";
   const graffiti = "a".repeat(32);
+  const maxBuilderBoostFactor = 2n ** 64n - 1n;
 
   const engineBlock = ssz.gloas.BeaconBlock.defaultValue();
   engineBlock.slot = slot;
@@ -117,7 +117,7 @@ describe("api/validator - produceBlockV4", () => {
     expect(meta.executionPayloadValue).toBe(BigInt(2e9));
   });
 
-  it("skips builder bids with executiononly selection", async () => {
+  it("prefers the local payload with a zero builder boost factor", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
 
@@ -127,12 +127,37 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+      builderBoostFactor: BigInt(0),
     });
 
-    expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
-    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(engineBlock);
+  });
+
+  it("uses a builder bid as fallback when local production fails with a zero boost factor", async () => {
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
+    modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => {
+      if (attrs.builderBid === undefined) {
+        throw new Error("Local block production failed");
+      }
+
+      return {block: bidBlock, executionPayloadValue: BigInt(0), consensusBlockValue: BigInt(0)};
+    });
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderBoostFactor: BigInt(0),
+    });
+
+    expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
+    expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
+    expect(block).toEqual(bidBlock);
   });
 
   it("produces local block when no bid is available", async () => {
@@ -157,10 +182,10 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(engineBlock);
   });
 
-  it("treats deprecated builderonly selection as builderalways", async () => {
+  it("prefers the builder bid with the maximum builder boost factor", async () => {
     modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
     modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(builderBid);
-    // Bid (1 gwei) is preferred over the higher local payload value (2 gwei) since builderalways
+    // Bid (1 gwei) is preferred over the higher local payload value (2 gwei)
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
       block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
       executionPayloadValue: BigInt(2e9),
@@ -173,12 +198,9 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderSelection: routes.validator.BuilderSelection.BuilderOnly,
+      builderBoostFactor: maxBuilderBoostFactor,
     });
 
-    expect(modules.logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining("Builder selection builderonly is no longer supported")
-    );
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(bidBlock);
   });

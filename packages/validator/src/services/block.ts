@@ -205,7 +205,6 @@ export class BlockProposingService {
         graffiti,
         feeRecipient,
         includePayload: !payloadLocal,
-        builderSelection,
         builderBoostFactor,
       })
       .catch((e: Error) => {
