@@ -136,6 +136,11 @@ export type CustodyInfo = {
   custodyColumns: number[];
 };
 
+export type CheckpointHex = {
+  rootHex: RootHex;
+  epoch: Epoch;
+};
+
 export type FastConfirmationInfo = {
   confirmed: {
     rootHex: RootHex | null;
@@ -145,14 +150,14 @@ export type FastConfirmationInfo = {
     rootHex: RootHex;
     slot: Slot;
   };
-  justifiedCheckpoint: {
-    rootHex: RootHex;
-    epoch: Epoch;
-  };
-  finalizedCheckpoint: {
-    rootHex: RootHex;
-    epoch: Epoch;
-  };
+  justifiedCheckpoint: CheckpointHex;
+  finalizedCheckpoint: CheckpointHex;
+  // Spec `FastConfirmationStore` variables, as maintained by `update_fast_confirmation_variables`
+  previousEpochObservedJustifiedCheckpoint: CheckpointHex;
+  currentEpochObservedJustifiedCheckpoint: CheckpointHex;
+  previousEpochGreatestUnrealizedCheckpoint: CheckpointHex;
+  previousSlotHead: RootHex;
+  currentSlotHead: RootHex;
 };
 
 export type Endpoints = {

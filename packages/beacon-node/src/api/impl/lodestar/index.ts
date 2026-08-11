@@ -21,6 +21,7 @@ import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/pro
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
+import {toCheckpointHex} from "../utils.js";
 import {getAttesterSlashingsFromIndexedAttestations} from "./attesterSlashing.js";
 
 export function getLodestarApi({
@@ -280,7 +281,7 @@ export function getLodestarApi({
     },
 
     async getFastConfirmationInfo() {
-      const confirmedRoot = chain.forkChoice.getConfirmedRoot();
+      const fcrStore = chain.forkChoice.getFastConfirmationStore();
       const confirmedBlock = chain.forkChoice.getConfirmedBlock();
       const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
       const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
@@ -290,21 +291,22 @@ export function getLodestarApi({
       return {
         data: {
           confirmed: {
-            rootHex: confirmedRoot,
+            rootHex: fcrStore.confirmedRoot,
             slot: confirmedBlock?.slot ?? null,
           },
           head: {
             rootHex: headRoot,
             slot: head.slot,
           },
-          justifiedCheckpoint: {
-            rootHex: justifiedCheckpoint.rootHex,
-            epoch: justifiedCheckpoint.epoch,
-          },
-          finalizedCheckpoint: {
-            rootHex: finalizedCheckpoint.rootHex,
-            epoch: finalizedCheckpoint.epoch,
-          },
+          justifiedCheckpoint: toCheckpointHex(justifiedCheckpoint),
+          finalizedCheckpoint: toCheckpointHex(finalizedCheckpoint),
+          previousEpochObservedJustifiedCheckpoint: toCheckpointHex(fcrStore.previousEpochObservedJustifiedCheckpoint),
+          currentEpochObservedJustifiedCheckpoint: toCheckpointHex(fcrStore.currentEpochObservedJustifiedCheckpoint),
+          previousEpochGreatestUnrealizedCheckpoint: toCheckpointHex(
+            fcrStore.previousEpochGreatestUnrealizedCheckpoint
+          ),
+          previousSlotHead: fcrStore.previousSlotHead,
+          currentSlotHead: fcrStore.currentSlotHead,
         },
       };
     },
