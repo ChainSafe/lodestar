@@ -1,5 +1,5 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
+import {PublicKey, SecretKey, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
@@ -14,13 +14,19 @@ describe("chain / bls / multithread queue", () => {
   const sets: ISignatureSet[] = [];
   const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
+  // Base index of this file's keys in the process-wide native cache
+  let baseIndex = 0;
+  const workerResolvedSets: ISignatureSet[] = [];
 
   beforeAll(() => {
+    baseIndex = pubkeyCache.size;
+    const sks: SecretKey[] = [];
     for (let i = 0; i < 3; i++) {
       const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
       const msg = Buffer.alloc(32, i + 1);
       const pk = sk.toPublicKey();
       const sig = sk.sign(msg);
+      sks.push(sk);
       sets.push({
         type: SignatureSetType.single,
         pubkey: pk,
@@ -33,6 +39,24 @@ describe("chain / bls / multithread queue", () => {
       });
       pubkeyCache.append(pubkeyCache.size, pk.toBytes());
     }
+
+    // Indexed set: worker must resolve baseIndex+1 from the shared cache
+    const indexedMsg = Buffer.alloc(32, 50);
+    workerResolvedSets.push({
+      type: SignatureSetType.indexed,
+      index: baseIndex + 1,
+      signingRoot: indexedMsg,
+      signature: sks[1].sign(indexedMsg).toBytes(),
+    });
+
+    // Aggregate set: worker must sum baseIndex..baseIndex+2 from the shared cache
+    const aggMsg = Buffer.alloc(32, 60);
+    workerResolvedSets.push({
+      type: SignatureSetType.aggregate,
+      indices: [baseIndex, baseIndex + 1, baseIndex + 2],
+      signingRoot: aggMsg,
+      signature: aggregateSignatures(sks.map((sk) => sk.sign(aggMsg))).toBytes(),
+    });
   });
 
   beforeEach(() => {
@@ -129,4 +153,34 @@ describe("chain / bls / multithread queue", () => {
       await pool.close();
     });
   }
+
+  for (const batchable of [true, false]) {
+    it(`Should verify indexed and aggregate sets resolved in the worker batchable=${batchable}`, async () => {
+      const pool = await initializePool();
+
+      expect(await pool.verifySignatureSets(workerResolvedSets, {batchable})).toBe(true);
+
+      await pool.close();
+    });
+  }
+
+  it("Should reject only the request with an unknown validator index", async () => {
+    const pool = await initializePool();
+
+    const unknownIndexSet: ISignatureSet = {
+      type: SignatureSetType.indexed,
+      index: 10_000_000, // never in the cache
+      signingRoot: Buffer.alloc(32, 70),
+      signature: sets[0].signature,
+    };
+
+    // The bad request rejects; concurrent valid requests are unaffected
+    const badPromise = pool.verifySignatureSets([unknownIndexSet], {batchable: true});
+    const goodPromise = pool.verifySignatureSets(workerResolvedSets, {batchable: true});
+
+    await expect(badPromise).rejects.toThrow(/index 10000000 not found/);
+    expect(await goodPromise).toBe(true);
+
+    await pool.close();
+  });
 });
