@@ -9,6 +9,7 @@ import {
 } from "./event-context.ts";
 import {fetchPr, listOpenBoardPrs, resolveProjectConfig, updateItemLane, type ProjectConfig} from "./github.ts";
 import {buildSnapshot, pickProjectItem} from "./snapshot.ts";
+import {reconcileSweep} from "./sweep.ts";
 import {STATUS_TO_LANE} from "./types.ts";
 
 interface Ctx {
@@ -101,9 +102,7 @@ async function main(): Promise<void> {
   if (values.sweep || event.eventName === "schedule" || event.eventName === "workflow_dispatch") {
     const prs = await listOpenBoardPrs(token, org, projectNumber);
     console.log(`sweep: ${prs.length} open PR card(s) on project #${projectNumber}`);
-    for (const pr of prs) {
-      await reconcilePr(ctx, pr.owner, pr.repo, pr.number);
-    }
+    await reconcileSweep(prs, (pr) => reconcilePr(ctx, pr.owner, pr.repo, pr.number));
     return;
   }
 

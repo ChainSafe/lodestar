@@ -39,4 +39,4 @@ jobs:
         run: pnpm exec tsc -p .github/scripts/project-board/tsconfig.json
 
       - name: Test reconciler
-        run: node --test .github/scripts/project-board/test/compute-status.test.ts .github/scripts/project-board/test/snapshot.test.ts
+        run: node --test .github/scripts/project-board/test/*.test.ts
