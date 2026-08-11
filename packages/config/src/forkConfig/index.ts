@@ -211,6 +211,10 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
     },
     getScheduledGasLimit(epoch: Epoch): number | undefined {
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        return undefined;
+      }
+
       for (const entry of gasLimitScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
           return entry.GAS_LIMIT;

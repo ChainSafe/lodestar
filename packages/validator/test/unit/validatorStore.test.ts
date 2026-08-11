@@ -139,6 +139,13 @@ describe("ValidatorStore", () => {
       api,
       {
         ...chainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 2,
         GAS_LIMIT_SCHEDULE: [
           {EPOCH: 2, GAS_LIMIT: 75_000_000},
           {EPOCH: 3, GAS_LIMIT: 90_000_000},
@@ -159,7 +166,17 @@ describe("ValidatorStore", () => {
     const scheduleStore = await initValidatorStore(
       secretKeys,
       api,
-      {...chainConfig, GAS_LIMIT_SCHEDULE: [{EPOCH: 0, GAS_LIMIT: recommendedGasLimit}]},
+      {
+        ...chainConfig,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        GAS_LIMIT_SCHEDULE: [{EPOCH: 0, GAS_LIMIT: recommendedGasLimit}],
+      },
       {defaultConfig: {builder: {gasLimit: configuredGasLimit}}, proposerConfig: {}}
     );
     const pubkey = toHexString(pubkeys[0]);

@@ -84,18 +84,31 @@ describe("getMaxBlobsPerBlock", () => {
 });
 
 describe("getScheduledGasLimit", () => {
-  it("returns undefined when no schedule entry is active", () => {
+  it("returns undefined before Gloas even when a schedule entry is active", () => {
     const config = createForkConfig({
       ...chainConfig,
-      GAS_LIMIT_SCHEDULE: [{EPOCH: 10, GAS_LIMIT: 60_000_000}],
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [{EPOCH: 0, GAS_LIMIT: 60_000_000}],
     });
 
     expect(config.getScheduledGasLimit(9)).toBeUndefined();
+    expect(config.getScheduledGasLimit(10)).toBe(60_000_000);
+  });
+
+  it("returns undefined when no schedule entry is active post-Gloas", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
+      GAS_LIMIT_SCHEDULE: [{EPOCH: 20, GAS_LIMIT: 60_000_000}],
+    });
+
+    expect(config.getScheduledGasLimit(19)).toBeUndefined();
   });
 
   it("selects the latest active entry regardless of input order", () => {
     const config = createForkConfig({
       ...chainConfig,
+      GLOAS_FORK_EPOCH: 10,
       GAS_LIMIT_SCHEDULE: [
         {EPOCH: 20, GAS_LIMIT: 75_000_000},
         {EPOCH: 10, GAS_LIMIT: 60_000_000},
