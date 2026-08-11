@@ -49,12 +49,16 @@ export class BlockObserver {
     this.maxSeenBlockRoots = maxSeenBlockRoots;
   }
 
+  /**
+   * Register a block consumer. Consumers that require complete observation must register before {@link start}, because
+   * roots observed before registration remain consumed until normal FIFO eviction.
+   */
   runOnBlock(fn: RunOnBlockFn): void {
     this.fns.push(fn);
   }
 
   start(signal: AbortSignal): void {
-    this.logger.info("Block observer started");
+    this.logger.info("Subscribing to block events");
 
     this.api.events
       .eventstream({

@@ -28,6 +28,7 @@ describe("BlockObserver", () => {
   const logger: Logger = testLogger("BlockObserver", {level: LogLevel.error});
   let debugLog: Mock<Logger[LogLevel.debug]>;
   let errorLog: Mock<Logger[LogLevel.error]>;
+  let infoLog: Mock<Logger[LogLevel.info]>;
   let warnLog: Mock<Logger[LogLevel.warn]>;
   let apiStub: ApiStub;
 
@@ -36,6 +37,7 @@ describe("BlockObserver", () => {
     config = getConfig(ForkName.gloas);
     debugLog = vi.spyOn(logger, LogLevel.debug).mockImplementation(() => {});
     errorLog = vi.spyOn(logger, LogLevel.error).mockImplementation(() => {});
+    infoLog = vi.spyOn(logger, LogLevel.info).mockImplementation(() => {});
     warnLog = vi.spyOn(logger, LogLevel.warn).mockImplementation(() => {});
     apiStub = getApiStub();
   });
@@ -58,6 +60,7 @@ describe("BlockObserver", () => {
       onError: expect.any(Function),
       onClose: expect.any(Function),
     });
+    expect(infoLog).toHaveBeenCalledWith("Subscribing to block events");
   });
 
   it("ignores an unexpected non-block event defensively", () => {
