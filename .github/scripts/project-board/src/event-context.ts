@@ -51,9 +51,7 @@ export function buildEventContext(
   const repositoryName = repositoryParts(repository);
   const pullRequestNumber = pullRequestNode?.number;
   const pullRequest =
-    repositoryName && typeof pullRequestNumber === "number"
-      ? {...repositoryName, number: pullRequestNumber}
-      : null;
+    repositoryName && typeof pullRequestNumber === "number" ? {...repositoryName, number: pullRequestNumber} : null;
 
   const headRepository = stringValue(headRepositoryNode?.full_name);
   const baseRepository = stringValue(baseRepositoryNode?.full_name) ?? stringValue(repositoryNode?.full_name);

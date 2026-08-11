@@ -77,3 +77,22 @@ Every PR targeting a participating ChainSafe repository is in scope, including P
 - **Closed and merged PRs are excluded:** the project's built-in close, merge, and archive workflows own their final status and removal from the board.
 
 The Status field is 100% automation-owned for open PR cards. The same workflow will be deployed identically to every participating ChainSafe repository.
+
+## Local development
+
+This directory is an isolated pnpm project. It has its own dependency manifest, lockfile, Biome configuration, TypeScript configuration, and Vitest configuration. It does not inherit dependencies or tooling configuration from the Lodestar workspace.
+
+Install dependencies from this directory:
+
+```bash
+cd .github/scripts/project-board
+pnpm install --frozen-lockfile
+```
+
+Before pushing any change to this project, run:
+
+```bash
+pnpm run prepush
+```
+
+This checks Biome formatting and lint rules, TypeScript types, and the complete Vitest suite. Use `pnpm run lint:fix` to apply safe Biome fixes and `pnpm run test:watch` during development.

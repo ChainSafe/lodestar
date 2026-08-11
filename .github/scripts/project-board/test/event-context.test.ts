@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
+import {test} from "vitest";
 import {
   buildEventContext,
-  missingTokenSkipReason,
   MISSING_TOKEN_ERROR_CODE,
+  missingTokenSkipReason,
   ProjectBoardConfigurationError,
 } from "../src/event-context.ts";
 

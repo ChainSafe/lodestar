@@ -30,7 +30,9 @@ export class TruncatedConnectionError extends Error {
 
   constructor(resource: string, connection: string) {
     const metadata = {resource, connection};
-    super(`${TRUNCATED_CONNECTION_ERROR_CODE}: refusing to reconcile incomplete data; context=${JSON.stringify(metadata)}`);
+    super(
+      `${TRUNCATED_CONNECTION_ERROR_CODE}: refusing to reconcile incomplete data; context=${JSON.stringify(metadata)}`,
+    );
     this.name = "TruncatedConnectionError";
     this.metadata = metadata;
   }

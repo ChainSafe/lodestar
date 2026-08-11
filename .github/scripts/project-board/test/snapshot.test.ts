@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
-import {buildSnapshot, pickProjectItem, type PrNode} from "../src/snapshot.ts";
+import {test} from "vitest";
+import {buildSnapshot, type PrNode, pickProjectItem} from "../src/snapshot.ts";
 
 type PrNodeOverrides = Partial<Omit<PrNode, "reviewRequests" | "reviews" | "timelineItems" | "projectItems">> & {
   reviewRequests?: Omit<PrNode["reviewRequests"], "pageInfo"> & {pageInfo?: PrNode["reviewRequests"]["pageInfo"]};
@@ -159,7 +159,10 @@ test("bot and deleted review authors are marked fromUser=false", () => {
     },
   });
   const snap = buildSnapshot(node);
-  assert.deepEqual(snap.reviews.map((r) => r.fromUser), [false, false, true]);
+  assert.deepEqual(
+    snap.reviews.map((r) => r.fromUser),
+    [false, false, true],
+  );
 });
 
 test("reviews without submittedAt are dropped", () => {

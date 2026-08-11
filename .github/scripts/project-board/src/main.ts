@@ -3,11 +3,11 @@ import {parseArgs} from "node:util";
 import {computeStatus} from "./compute-status.ts";
 import {
   buildEventContext,
+  type EventContext,
   missingTokenSkipReason,
   ProjectBoardConfigurationError,
-  type EventContext,
 } from "./event-context.ts";
-import {fetchPr, listOpenBoardPrs, resolveProjectConfig, updateItemLane, type ProjectConfig} from "./github.ts";
+import {fetchPr, listOpenBoardPrs, type ProjectConfig, resolveProjectConfig, updateItemLane} from "./github.ts";
 import {buildSnapshot, pickProjectItem} from "./snapshot.ts";
 import {reconcileSweep} from "./sweep.ts";
 import {STATUS_TO_LANE} from "./types.ts";

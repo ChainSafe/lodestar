@@ -1,4 +1,27 @@
 {
+  "name": "project-board-automation",
+  "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": "^24.13.0"
+  },
+  "packageManager": "pnpm@11.0.0",
+  "scripts": {
+    "check": "pnpm run lint && pnpm run check-types && pnpm run test",
+    "check-types": "tsc --project tsconfig.json",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "prepush": "pnpm run check",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8",
+    "@types/node": "24.13.3",
+    "typescript": "6.0.3",
+    "vitest": "4.1.10"
+  }
 }

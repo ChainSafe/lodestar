@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
-import {test} from "node:test";
-import {
-  assertConnectionComplete,
-  TRUNCATED_CONNECTION_ERROR_CODE,
-  TruncatedConnectionError,
-} from "../src/github.ts";
+import {test} from "vitest";
+import {assertConnectionComplete, TRUNCATED_CONNECTION_ERROR_CODE, TruncatedConnectionError} from "../src/github.ts";
 
 test("complete GraphQL windows are accepted", () => {
   assert.doesNotThrow(() => assertConnectionComplete("ChainSafe/lodestar#9732", "reviews", {hasPreviousPage: false}));

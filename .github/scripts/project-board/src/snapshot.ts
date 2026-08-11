@@ -101,10 +101,7 @@ export function buildSnapshot(pr: PrNode): PrSnapshot {
   };
 }
 
-export function pickProjectItem(
-  pr: PrNode,
-  projectId: string,
-): {itemId: string; currentLane: string | null} | null {
+export function pickProjectItem(pr: PrNode, projectId: string): {itemId: string; currentLane: string | null} | null {
   const item = pr.projectItems.nodes.find((n) => n.project.id === projectId);
   if (!item) return null;
   return {itemId: item.id, currentLane: item.fieldValueByName?.name ?? null};
