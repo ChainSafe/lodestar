@@ -1,15 +1,13 @@
 import {describe, expect, it, vi} from "vitest";
-import {createBeaconConfig} from "@lodestar/config";
+import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {pollBuilderValidatorRegistration} from "../../../src/services/prepareBeaconProposer.js";
-import {getApiClientStub} from "../../utils/apiStub.js";
+import {pollGasLimitSchedule} from "../../../src/services/gasLimitSchedule.js";
 import {ClockMock} from "../../utils/clock.js";
 import {getMockedLogger} from "../../utils/logger.js";
-import {initValidatorStore} from "../../utils/validatorStore.js";
 
-describe("pollBuilderValidatorRegistration", () => {
+describe("pollGasLimitSchedule", () => {
   it("logs when a scheduled gas limit becomes active", async () => {
-    const customChainConfig = {
+    const config = createChainForkConfig({
       ...chainConfig,
       ALTAIR_FORK_EPOCH: 0,
       BELLATRIX_FORK_EPOCH: 0,
@@ -22,15 +20,12 @@ describe("pollBuilderValidatorRegistration", () => {
         {EPOCH: 2, GAS_LIMIT: 75_000_000},
         {EPOCH: 3, GAS_LIMIT: 90_000_000},
       ],
-    };
-    const config = createBeaconConfig(customChainConfig, new Uint8Array(32));
-    const api = getApiClientStub();
+    });
     const clock = new ClockMock();
     const logger = {...getMockedLogger(), isSyncing: vi.fn()};
-    const validatorStore = await initValidatorStore([], api, customChainConfig);
     const signal = new AbortController().signal;
 
-    pollBuilderValidatorRegistration(config, logger, api, clock, validatorStore, null);
+    pollGasLimitSchedule(config, logger, clock);
 
     await clock.tickEpochFns(1, signal);
     expect(logger.info).not.toHaveBeenCalled();
