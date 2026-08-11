@@ -934,19 +934,6 @@ export function getValidatorApi(
         commonBlockBodyPromise,
       };
 
-      const assertFeeRecipient = (block: BeaconBlock): void => {
-        if (strictFeeRecipientCheck && feeRecipient) {
-          const blockFeeRecipient = toHex(
-            (block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message.feeRecipient
-          );
-          if (blockFeeRecipient !== feeRecipient) {
-            throw Error(
-              `Invalid feeRecipient set in execution payload bid expected=${feeRecipient} actual=${blockFeeRecipient}`
-            );
-          }
-        }
-      };
-
       metrics?.blockProductionRequests.inc({source: ProducedBlockSource.engine});
       if (builderBid !== null) {
         metrics?.blockProductionRequests.inc({source: ProducedBlockSource.builder});
@@ -967,7 +954,16 @@ export function getValidatorApi(
       const enginePromise: ReturnType<typeof chain.produceBlock> = timed(ProducedBlockSource.engine, () =>
         chain.produceBlock(baseAttrs)
       ).then((engineBlock) => {
-        assertFeeRecipient(engineBlock.block);
+        if (strictFeeRecipientCheck && feeRecipient) {
+          const blockFeeRecipient = toHex(
+            (engineBlock.block as gloas.BeaconBlock).body.signedExecutionPayloadBid.message.feeRecipient
+          );
+          if (blockFeeRecipient !== feeRecipient) {
+            throw Error(
+              `Invalid feeRecipient set in execution payload bid expected=${feeRecipient} actual=${blockFeeRecipient}`
+            );
+          }
+        }
         // No need to wait for the bid block if the engine block will always be selected due to
         // suspected builder censorship or a builder boost factor of 0
         if (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {
@@ -977,12 +973,7 @@ export function getValidatorApi(
       });
       const bidPromise: ReturnType<typeof chain.produceBlock> =
         builderBid !== null
-          ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid})).then(
-              (bidBlock) => {
-                assertFeeRecipient(bidBlock.block);
-                return bidBlock;
-              }
-            )
+          ? timed(ProducedBlockSource.builder, () => chain.produceBlock({...baseAttrs, builderBid}))
           : Promise.reject(new Error("No builder bid available"));
 
       const [engineResult, bidResult] = await resolveOrRacePromises([enginePromise, bidPromise], {

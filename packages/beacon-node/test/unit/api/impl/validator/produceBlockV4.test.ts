@@ -190,7 +190,7 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(builderBlock);
   });
 
-  it("uses the local payload as fallback when the builder fee recipient does not match", async () => {
+  it("does not recheck the fee recipient of a validated builder bid", async () => {
     const expectedFeeRecipient = Buffer.from(feeRecipient.slice(2), "hex");
     const mismatchedFeeRecipient = Buffer.alloc(20, 0xdd);
     const localBlock = ssz.gloas.BeaconBlock.defaultValue();
@@ -217,7 +217,7 @@ describe("api/validator - produceBlockV4", () => {
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
-    expect(block).toEqual(localBlock);
+    expect(block).toEqual(builderBlock);
   });
 
   it("produces local block when no bid is available", async () => {
