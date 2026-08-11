@@ -82,3 +82,31 @@ describe("getMaxBlobsPerBlock", () => {
     expect(config.getMaxBlobsPerBlock(0)).toEqual(defaultConfig.MAX_BLOBS_PER_BLOCK_ELECTRA);
   });
 });
+
+describe("getScheduledGasLimit", () => {
+  it("returns undefined when no schedule entry is active", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GAS_LIMIT_SCHEDULE: [{EPOCH: 10, GAS_LIMIT: 60_000_000}],
+    });
+
+    expect(config.getScheduledGasLimit(9)).toBeUndefined();
+  });
+
+  it("selects the latest active entry regardless of input order", () => {
+    const config = createForkConfig({
+      ...chainConfig,
+      GAS_LIMIT_SCHEDULE: [
+        {EPOCH: 20, GAS_LIMIT: 75_000_000},
+        {EPOCH: 10, GAS_LIMIT: 60_000_000},
+        {EPOCH: 30, GAS_LIMIT: 90_000_000},
+      ],
+    });
+
+    expect(config.getScheduledGasLimit(10)).toBe(60_000_000);
+    expect(config.getScheduledGasLimit(19)).toBe(60_000_000);
+    expect(config.getScheduledGasLimit(20)).toBe(75_000_000);
+    expect(config.getScheduledGasLimit(30)).toBe(90_000_000);
+    expect(config.getScheduledGasLimit(100)).toBe(90_000_000);
+  });
+});

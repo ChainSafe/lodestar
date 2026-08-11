@@ -248,8 +248,9 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   defaultGasLimit: {
-    description: "Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.",
-    defaultDescription: `${defaultOptions.defaultGasLimit}`,
+    description:
+      "Override the fork-scheduled gas limit preference sent to the engine/builder. If unset, the network GAS_LIMIT_SCHEDULE applies per duty, with the legacy default used before its first entry.",
+    defaultDescription: `GAS_LIMIT_SCHEDULE (legacy fallback: ${defaultOptions.defaultGasLimit})`,
     type: "number",
   },
 

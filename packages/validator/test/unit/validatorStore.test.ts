@@ -4,9 +4,11 @@ import {SecretKey} from "@chainsafe/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
+import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {bellatrix} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
+import {getMockedLogger} from "../utils/logger.js";
 import {initValidatorStore} from "../utils/validatorStore.js";
 
 describe("ValidatorStore", () => {
@@ -129,6 +131,47 @@ describe("ValidatorStore", () => {
       expect(JSON.stringify(val2)).toEqual(JSON.stringify(valReg));
       expect(validatorStore.signValidatorRegistration).toHaveBeenCalledOnce();
     }
+  });
+
+  it("resolves an unconfigured gas limit from the schedule per duty", async () => {
+    const scheduleStore = await initValidatorStore(
+      secretKeys,
+      api,
+      {
+        ...chainConfig,
+        GAS_LIMIT_SCHEDULE: [
+          {EPOCH: 2, GAS_LIMIT: 75_000_000},
+          {EPOCH: 3, GAS_LIMIT: 90_000_000},
+        ],
+      },
+      {defaultConfig: {builder: {}}, proposerConfig: {}}
+    );
+    const pubkey = toHexString(pubkeys[0]);
+
+    expect(scheduleStore.getGasLimit(pubkey, 2 * SLOTS_PER_EPOCH - 1)).toBe(60_000_000);
+    expect(scheduleStore.getGasLimit(pubkey, 2 * SLOTS_PER_EPOCH)).toBe(75_000_000);
+    expect(scheduleStore.getGasLimit(pubkey, 3 * SLOTS_PER_EPOCH)).toBe(90_000_000);
+  });
+
+  it("honors and warns about a configured gas limit above the scheduled recommendation", async () => {
+    const configuredGasLimit = 90_000_000;
+    const recommendedGasLimit = 75_000_000;
+    const scheduleStore = await initValidatorStore(
+      secretKeys,
+      api,
+      {...chainConfig, GAS_LIMIT_SCHEDULE: [{EPOCH: 0, GAS_LIMIT: recommendedGasLimit}]},
+      {defaultConfig: {builder: {gasLimit: configuredGasLimit}}, proposerConfig: {}}
+    );
+    const pubkey = toHexString(pubkeys[0]);
+    const logger = {...getMockedLogger(), isSyncing: vi.fn()};
+
+    expect(scheduleStore.getGasLimit(pubkey, 0, logger)).toBe(configuredGasLimit);
+    expect(logger.warn).toHaveBeenCalledWith("Configured gas limit exceeds recommended maximum", {
+      pubkey,
+      slot: 0,
+      configuredGasLimit,
+      recommendedGasLimit,
+    });
   });
 });
 

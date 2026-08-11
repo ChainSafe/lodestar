@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {MAX_BLOB_COMMITMENTS_PER_BLOCK} from "@lodestar/params";
 import {chainConfig} from "../../src/default.js";
-import {BlobSchedule, chainConfigFromJson, chainConfigToJson} from "../../src/index.js";
+import {BlobSchedule, GasLimitSchedule, chainConfigFromJson, chainConfigToJson} from "../../src/index.js";
 
 describe("chainConfig JSON", () => {
   it("Convert to and from JSON", () => {
@@ -60,5 +60,39 @@ describe("chainConfig JSON", () => {
     const json = chainConfigToJson(configWithCustomBlobSchedule);
 
     expect(() => chainConfigFromJson(json)).toThrow();
+  });
+
+  it("Custom gas limit schedule", () => {
+    const gasLimitSchedule: GasLimitSchedule = [
+      {EPOCH: 10, GAS_LIMIT: 60_000_000},
+      {EPOCH: 20, GAS_LIMIT: 75_000_000},
+      {EPOCH: Infinity, GAS_LIMIT: 90_000_000},
+    ];
+    const configWithCustomGasLimitSchedule = {...chainConfig, GAS_LIMIT_SCHEDULE: gasLimitSchedule};
+
+    const json = chainConfigToJson(configWithCustomGasLimitSchedule);
+    const chainConfigRes = chainConfigFromJson(json);
+
+    expect(chainConfigRes).toEqual(configWithCustomGasLimitSchedule);
+  });
+
+  it("Gas limit schedule in wrong order", () => {
+    const gasLimitSchedule: GasLimitSchedule = [
+      {EPOCH: 20, GAS_LIMIT: 75_000_000},
+      {EPOCH: 10, GAS_LIMIT: 60_000_000},
+    ];
+    const json = chainConfigToJson({...chainConfig, GAS_LIMIT_SCHEDULE: gasLimitSchedule});
+
+    expect(() => chainConfigFromJson(json)).toThrow("Invalid GAS_LIMIT_SCHEDULE");
+  });
+
+  it("Gas limit schedule entries with the same epoch value", () => {
+    const gasLimitSchedule: GasLimitSchedule = [
+      {EPOCH: 10, GAS_LIMIT: 60_000_000},
+      {EPOCH: 10, GAS_LIMIT: 75_000_000},
+    ];
+    const json = chainConfigToJson({...chainConfig, GAS_LIMIT_SCHEDULE: gasLimitSchedule});
+
+    expect(() => chainConfigFromJson(json)).toThrow("same epoch value");
   });
 });

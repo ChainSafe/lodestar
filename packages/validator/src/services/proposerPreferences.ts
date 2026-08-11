@@ -98,7 +98,7 @@ export class ProposerPreferencesService {
             duty,
             dependentRootBytes,
             this.validatorStore.getFeeRecipient(pubkeyHex),
-            this.validatorStore.getGasLimit(pubkeyHex),
+            this.validatorStore.getGasLimit(pubkeyHex, duty.slot, this.logger),
             slot
           );
           batch.push(signed);

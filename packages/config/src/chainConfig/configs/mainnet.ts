@@ -222,6 +222,10 @@ export const chainConfig: ChainConfig = {
     },
   ],
 
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [],
+
   // Fast Confirmation Rule
   // ---------------------------------------------------------------
   CONFIRMATION_BYZANTINE_THRESHOLD: 25,

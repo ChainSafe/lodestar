@@ -1,14 +1,18 @@
 import {fromHex, toHex} from "@lodestar/utils";
 import {validateBlobSchedule} from "../utils/validateBlobSchedule.js";
+import {validateGasLimitSchedule} from "../utils/validateGasLimitSchedule.js";
 import {
   BlobSchedule,
   BlobScheduleEntry,
   ChainConfig,
+  GasLimitSchedule,
+  GasLimitScheduleEntry,
   SpecJson,
   SpecValue,
   SpecValueTypeName,
   chainConfigTypes,
   isBlobSchedule,
+  isGasLimitSchedule,
 } from "./types.js";
 
 const MAX_UINT64_JSON = "18446744073709551615";
@@ -56,13 +60,14 @@ export function toSpecValueTypeName(value: SpecValue): SpecValueTypeName {
   if (typeof value === "bigint") return "bigint";
   if (typeof value === "string") return "string";
   if (isBlobSchedule(value)) return "blob_schedule";
+  if (isGasLimitSchedule(value)) return "gas_limit_schedule";
   throw Error(`Unknown value type ${value}`);
 }
 
 export function serializeSpecValue(
   value: SpecValue,
   typeName: SpecValueTypeName
-): string | Record<keyof BlobScheduleEntry, string>[] {
+): string | Record<keyof BlobScheduleEntry, string>[] | Record<keyof GasLimitScheduleEntry, string>[] {
   switch (typeName) {
     case "number":
       if (typeof value !== "number") {
@@ -100,12 +105,25 @@ export function serializeSpecValue(
         EPOCH: EPOCH === Infinity ? MAX_UINT64_JSON : EPOCH.toString(10),
         MAX_BLOBS_PER_BLOCK: MAX_BLOBS_PER_BLOCK === Infinity ? MAX_UINT64_JSON : MAX_BLOBS_PER_BLOCK.toString(10),
       }));
+
+    case "gas_limit_schedule":
+      if (!isGasLimitSchedule(value)) {
+        throw Error(`Invalid value ${value.toString()} expected GasLimitSchedule`);
+      }
+
+      return value.map(({EPOCH, GAS_LIMIT}) => ({
+        EPOCH: EPOCH === Infinity ? MAX_UINT64_JSON : EPOCH.toString(10),
+        GAS_LIMIT: GAS_LIMIT === Infinity ? MAX_UINT64_JSON : GAS_LIMIT.toString(10),
+      }));
   }
 }
 
 export function deserializeSpecValue(valueStr: unknown, typeName: SpecValueTypeName, keyName: string): SpecValue {
   if (typeName === "blob_schedule") {
     return deserializeBlobSchedule(valueStr);
+  }
+  if (typeName === "gas_limit_schedule") {
+    return deserializeGasLimitSchedule(valueStr);
   }
 
   if (typeof valueStr !== "string") {
@@ -172,4 +190,48 @@ export function deserializeBlobSchedule(input: unknown): BlobSchedule {
   validateBlobSchedule(blobSchedule);
 
   return blobSchedule;
+}
+
+export function deserializeGasLimitSchedule(input: unknown): GasLimitSchedule {
+  if (!Array.isArray(input)) {
+    throw Error(`Invalid GAS_LIMIT_SCHEDULE value ${input} expected array`);
+  }
+
+  const gasLimitSchedule = input.map((entry, i) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw Error(`Invalid GAS_LIMIT_SCHEDULE[${i}] entry ${entry} expected object`);
+    }
+
+    const out = {} as GasLimitScheduleEntry;
+
+    for (const key of ["EPOCH", "GAS_LIMIT"] as Array<keyof GasLimitScheduleEntry>) {
+      const value = entry[key];
+
+      if (value === undefined) {
+        throw Error(`Invalid GAS_LIMIT_SCHEDULE[${i}] entry ${JSON.stringify(entry)} missing ${key}`);
+      }
+
+      if (typeof value !== "string") {
+        throw Error(`Invalid GAS_LIMIT_SCHEDULE[${i}].${key} value ${value} expected string`);
+      }
+
+      if (value === MAX_UINT64_JSON) {
+        out[key] = Infinity;
+      } else {
+        const parsed = parseInt(value, 10);
+
+        if (Number.isNaN(parsed)) {
+          throw Error(`Invalid GAS_LIMIT_SCHEDULE[${i}].${key} value ${value} expected number`);
+        }
+
+        out[key] = parsed;
+      }
+    }
+
+    return out;
+  });
+
+  validateGasLimitSchedule(gasLimitSchedule);
+
+  return gasLimitSchedule;
 }
