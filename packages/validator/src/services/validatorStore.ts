@@ -327,6 +327,10 @@ export class ValidatorStore {
     );
   }
 
+  getConfiguredDefaultGasLimit(): number | undefined {
+    return this.defaultProposerConfig.builder.gasLimit;
+  }
+
   getGasLimit(pubkeyHex: PubkeyHex, slot?: Slot, logger?: LoggerVc): number {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {

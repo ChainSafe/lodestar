@@ -134,7 +134,13 @@ export class ProposerPreferencesService {
   private runEveryEpochTask = async (epoch: Epoch): Promise<void> => {
     const scheduledGasLimit = this.config.getScheduledGasLimit(epoch);
     if (scheduledGasLimit !== undefined && scheduledGasLimit !== this.activeScheduledGasLimit) {
-      this.logger.info("Gas limit schedule active", {epoch, gasLimit: scheduledGasLimit});
+      const configuredDefaultGasLimit = this.validatorStore.getConfiguredDefaultGasLimit();
+      this.logger.info("Gas limit schedule active", {
+        epoch,
+        recommendedGasLimit: scheduledGasLimit,
+        effectiveDefaultGasLimit: configuredDefaultGasLimit ?? scheduledGasLimit,
+        defaultGasLimitSource: configuredDefaultGasLimit === undefined ? "schedule" : "operator",
+      });
       this.activeScheduledGasLimit = scheduledGasLimit;
     }
 
