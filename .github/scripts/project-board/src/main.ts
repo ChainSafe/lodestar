@@ -12,8 +12,6 @@ import {buildSnapshot, pickProjectItem} from "./snapshot.ts";
 import {reconcileSweep} from "./sweep.ts";
 import {STATUS_TO_LANE} from "./types.ts";
 
-const DRY_RUN = true;
-
 interface Ctx {
   token: string;
   org: string;
@@ -84,14 +82,15 @@ async function main(): Promise<void> {
   }
   const org = process.env.PROJECT_ORG || "ChainSafe";
   const projectNumber = Number(process.env.PROJECT_NUMBER || "75");
-  console.log(`mode: ${DRY_RUN ? "DRY RUN" : "LIVE"} — org=${org} project=#${projectNumber}`);
+  const dryRun = !["0", "false"].includes((process.env.DRY_RUN ?? "").trim().toLowerCase());
+  console.log(`mode: ${dryRun ? "DRY RUN" : "LIVE"} — org=${org} project=#${projectNumber}`);
   const cfg = await resolveProjectConfig(token, org, projectNumber);
   for (const lane of Object.values(STATUS_TO_LANE)) {
     if (!cfg.optionIds.has(lane)) {
       throw new Error(`board is missing the "${lane}" status option; found: ${[...cfg.optionIds.keys()].join(", ")}`);
     }
   }
-  const ctx: Ctx = {token, org, projectNumber, dryRun: DRY_RUN, cfg};
+  const ctx: Ctx = {token, org, projectNumber, dryRun, cfg};
 
   if (values.pr) {
     const match = /^([^/]+)\/([^#]+)#(\d+)$/.exec(values.pr);
