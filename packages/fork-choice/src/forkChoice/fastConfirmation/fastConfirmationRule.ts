@@ -1,19 +1,19 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {Logger, withObservedDuration} from "@lodestar/utils";
-import {buildFastConfirmationSnapshot, createFastConfirmationCache} from "./data.ts";
-import {FastConfirmationMetrics, FastConfirmationSteps} from "./metrics.ts";
-import {runFastConfirmationRules} from "./rules.ts";
+import {buildFastConfirmationSnapshot, createFastConfirmationCache} from "./data.js";
+import {FastConfirmationMetrics, FastConfirmationSteps} from "./metrics.js";
+import {runFastConfirmationRules} from "./rules.js";
 import {
   FastConfirmationContext,
   FastConfirmationResult,
   FastConfirmationRunResult,
   IFastConfirmationRule,
   IFastConfirmationStore,
-} from "./types.ts";
+} from "./types.js";
 
-export * from "./metrics.ts";
-export * from "./types.ts";
+export * from "./metrics.js";
+export * from "./types.js";
 
 export class FastConfirmationRule implements IFastConfirmationRule {
   constructor(
