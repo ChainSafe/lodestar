@@ -95,4 +95,15 @@ describe("chainConfig JSON", () => {
 
     expect(() => chainConfigFromJson(json)).toThrow("same epoch value");
   });
+
+  it.each([
+    ["max uint64", "18446744073709551615"],
+    ["above max safe integer", (BigInt(Number.MAX_SAFE_INTEGER) + 1n).toString()],
+    ["negative", "-1"],
+  ])("Gas limit schedule rejects %s GAS_LIMIT", (_name, gasLimit) => {
+    const json = chainConfigToJson(chainConfig);
+    json.GAS_LIMIT_SCHEDULE = [{EPOCH: "10", GAS_LIMIT: gasLimit}];
+
+    expect(() => chainConfigFromJson(json)).toThrow("expected non-negative safe integer");
+  });
 });

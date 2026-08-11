@@ -215,13 +215,16 @@ export function deserializeGasLimitSchedule(input: unknown): GasLimitSchedule {
         throw Error(`Invalid GAS_LIMIT_SCHEDULE[${i}].${key} value ${value} expected string`);
       }
 
-      if (value === MAX_UINT64_JSON) {
+      if (value === MAX_UINT64_JSON && key === "EPOCH") {
         out[key] = Infinity;
       } else {
-        const parsed = parseInt(value, 10);
+        const parsed = key === "GAS_LIMIT" ? Number(value) : parseInt(value, 10);
 
         if (Number.isNaN(parsed)) {
           throw Error(`Invalid GAS_LIMIT_SCHEDULE[${i}].${key} value ${value} expected number`);
+        }
+        if (key === "GAS_LIMIT" && (!/^\d+$/.test(value) || !Number.isSafeInteger(parsed))) {
+          throw Error(`Invalid GAS_LIMIT_SCHEDULE[${i}].GAS_LIMIT value ${value} expected non-negative safe integer`);
         }
 
         out[key] = parsed;
