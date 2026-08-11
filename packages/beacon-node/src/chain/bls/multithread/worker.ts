@@ -1,5 +1,6 @@
 import worker from "node:worker_threads";
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {expose} from "@chainsafe/threads/worker";
 import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
 import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
@@ -38,7 +39,16 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
     const workReq = workReqArr[i];
-    const sets = workReq.sets.map(deserializeSet);
+
+    let sets: SignatureSetDeserialized[];
+    try {
+      sets = workReq.sets.map(resolveSet);
+    } catch (e) {
+      // An unknown validator index must fail only this request, never the
+      // batch it would have joined.
+      results[i] = {code: WorkResultCode.error, error: e as Error};
+      continue;
+    }
 
     if (workReq.opts.batchable) {
       batchableSets.push({idx: i, sets});
@@ -105,10 +115,19 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   };
 }
 
-function deserializeSet(set: SerializedSet): SignatureSetDeserialized {
-  return {
-    publicKey: PublicKey.fromBytes(set.publicKey),
-    message: set.message,
-    signature: set.signature,
-  };
+/**
+ * Resolve a shipped descriptor to a verifiable set. Indexed and aggregate
+ * sets read the process-wide native pubkey cache (populated by the main
+ * thread; the native singleton is shared across worker threads). Throws on
+ * an unknown validator index — callers must scope that to one request.
+ */
+function resolveSet(set: SerializedSet): SignatureSetDeserialized {
+  switch (set.type) {
+    case "single":
+      return {publicKey: PublicKey.fromBytes(set.publicKey), message: set.message, signature: set.signature};
+    case "indexed":
+      return {publicKey: pubkeyCache.getOrThrow(set.index), message: set.message, signature: set.signature};
+    case "aggregate":
+      return {publicKey: pubkeyCache.aggregate(set.indices), message: set.message, signature: set.signature};
+  }
 }

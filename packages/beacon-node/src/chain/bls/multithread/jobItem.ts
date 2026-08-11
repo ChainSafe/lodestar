@@ -1,11 +1,9 @@
 import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/metrics.js";
 import {LinkedList} from "../../../util/array.js";
 import {VerifySignatureOpts} from "../interface.js";
-import {getAggregatedPubkey} from "../utils.js";
-import {BlsWorkReq} from "./types.js";
+import {BlsWorkReq, SerializedSet} from "./types.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
 
@@ -46,27 +44,35 @@ export function jobItemSigSets(job: JobQueueItem): number {
 }
 
 /**
- * Prepare BlsWorkReq from JobQueueItem
- * WARNING: May throw with untrusted user input
+ * Prepare BlsWorkReq from JobQueueItem.
+ * Indexed and aggregate sets ship validator indices; the worker resolves
+ * them from the shared native pubkey cache. Only the sameMessage case can
+ * throw here (signature aggregation of untrusted input).
  */
-export async function jobItemWorkReq(
-  job: JobQueueItem,
-  pubkeyCache: PubkeyCache,
-  metrics: Metrics | null
-): Promise<BlsWorkReq> {
+export async function jobItemWorkReq(job: JobQueueItem, metrics: Metrics | null): Promise<BlsWorkReq> {
   switch (job.type) {
     case JobQueueItemType.default:
       return {
         opts: job.opts,
-        sets: job.sets.map((set) => ({
-          // this can throw, handled in the consumer code
-          publicKey: getAggregatedPubkey(set, pubkeyCache, metrics).toBytes(),
-          signature: set.signature,
-          message: set.signingRoot,
-        })),
+        sets: job.sets.map((set): SerializedSet => {
+          switch (set.type) {
+            case SignatureSetType.single:
+              return {
+                type: "single",
+                publicKey: set.pubkey.toBytes(),
+                message: set.signingRoot,
+                signature: set.signature,
+              };
+            case SignatureSetType.indexed:
+              return {type: "indexed", index: set.index, message: set.signingRoot, signature: set.signature};
+            case SignatureSetType.aggregate:
+              return {type: "aggregate", indices: set.indices, message: set.signingRoot, signature: set.signature};
+          }
+        }),
       };
     case JobQueueItemType.sameMessage: {
       const timer = metrics?.blsThreadPool.aggregateWithRandomnessAsyncDuration.startTimer();
+      // this can throw, handled in the consumer code
       const {pk, sig} = await asyncAggregateWithRandomness(
         job.sets.map((set) => ({pk: set.publicKey, sig: set.signature}))
       );
@@ -76,6 +82,7 @@ export async function jobItemWorkReq(
         opts: job.opts,
         sets: [
           {
+            type: "single",
             publicKey: pk.toBytes(),
             signature: sig.toBytes(),
             message: job.message,
