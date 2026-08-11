@@ -3,9 +3,8 @@
 # (org-level, or per-repo until the org secret exists).
 # Project #75 must also have an enabled auto-add workflow for this repository
 # whose filter matches every PR.
-# The PROJECT_BOARD_DRY_RUN Actions variable resolves from THIS repo (the caller),
-# not from ChainSafe/lodestar — set it to true for a dry-run rollout in this repo;
-# unset or false runs live.
+# Dry-run mode is configured once in the reconciler source in ChainSafe/lodestar
+# and applies to this caller automatically.
 # Spec: ChainSafe/lodestar/.github/scripts/project-board/README.md
 name: Project board
 

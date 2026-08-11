@@ -61,4 +61,3 @@ jobs:
         env:
           PR: ${{ inputs.pr }}
           PROJECT_BOARD_TOKEN: ${{ secrets.PROJECT_BOARD_TOKEN }}
-          DRY_RUN: ${{ vars.PROJECT_BOARD_DRY_RUN }}
