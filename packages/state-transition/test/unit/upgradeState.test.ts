@@ -162,7 +162,7 @@ describe("upgradeState", () => {
 
     const fuluState = createCachedBeaconState(
       fuluStateView,
-      {config: beaconConfig, pubkeyCache: createPubkeyCache()},
+      {config: beaconConfig, pubkeyCache},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     ) as CachedBeaconStateFulu;
 

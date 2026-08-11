@@ -1,4 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
@@ -14,7 +15,6 @@ vi.mock("../../../src/block/processDeposit.js", async (importOriginal) => {
   return {...actual, isValidDepositSignature: isValidDepositSignatureSpy};
 });
 
-const {createPubkeyCache} = await import("../../../src/cache/pubkeyCache.js");
 const {createCachedBeaconState} = await import("../../../src/cache/stateCache.js");
 const {upgradeStateToGloas} = await import("../../../src/slot/upgradeStateToGloas.js");
 const {generateBuilderPendingDeposits} = await import("../../../src/testUtils/util.js");
@@ -49,7 +49,7 @@ function buildFuluState(): CachedBeaconStateFulu {
   stateView.commit();
   return createCachedBeaconState(
     stateView,
-    {config, pubkeyCache: createPubkeyCache()},
+    {config, pubkeyCache},
     {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
   ) as CachedBeaconStateFulu;
 }
@@ -124,7 +124,7 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
 
     const fuluState = createCachedBeaconState(
       fuluStateView,
-      {config, pubkeyCache: createPubkeyCache()},
+      {config, pubkeyCache},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     ) as CachedBeaconStateFulu;
 
