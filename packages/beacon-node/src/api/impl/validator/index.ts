@@ -582,8 +582,7 @@ export function getValidatorApi(
       builderSelection,
       isBuilderEnabled,
       strictFeeRecipientCheck,
-      // winston logger doesn't like bigint
-      builderBoostFactor: `${builderBoostFactor}`,
+      builderBoostFactor,
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
@@ -907,8 +906,7 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
-        // winston logger doesn't like bigint
-        builderBoostFactor: `${builderBoostFactor}`,
+        builderBoostFactor,
         strictFeeRecipientCheck,
         circuitBreakerActive,
         ...(builderBid !== null
