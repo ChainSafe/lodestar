@@ -36,6 +36,7 @@ type SubmittedAtEpoch = {dependentRoot: RootHex; slots: Set<Slot>};
  */
 export class ProposerPreferencesService {
   private readonly submitted = new Map<Epoch, SubmittedAtEpoch>();
+  private activeScheduledGasLimit: number | undefined;
 
   constructor(
     private readonly config: ChainForkConfig,
@@ -47,7 +48,7 @@ export class ProposerPreferencesService {
     _metrics: Metrics | null
   ) {
     clock.runEverySlot(this.runProposerPreferencesTask);
-    clock.runEveryEpoch(this.pruneSubmitted);
+    clock.runEveryEpoch(this.runEveryEpochTask);
   }
 
   private runProposerPreferencesTask = async (slot: Slot): Promise<void> => {
@@ -130,8 +131,14 @@ export class ProposerPreferencesService {
     }
   };
 
-  /** Drop tracking for past epochs; only currentEpoch and currentEpoch + 1 are ever processed. */
-  private pruneSubmitted = async (epoch: Epoch): Promise<void> => {
+  private runEveryEpochTask = async (epoch: Epoch): Promise<void> => {
+    const scheduledGasLimit = this.config.getScheduledGasLimit(epoch);
+    if (scheduledGasLimit !== undefined && scheduledGasLimit !== this.activeScheduledGasLimit) {
+      this.logger.info("Gas limit schedule active", {epoch, gasLimit: scheduledGasLimit});
+      this.activeScheduledGasLimit = scheduledGasLimit;
+    }
+
+    // Drop tracking for past epochs; only currentEpoch and currentEpoch + 1 are ever processed.
     for (const trackedEpoch of this.submitted.keys()) {
       if (trackedEpoch < epoch) {
         this.submitted.delete(trackedEpoch);

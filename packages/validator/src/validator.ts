@@ -20,7 +20,6 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
-import {pollGasLimitSchedule} from "./services/gasLimitSchedule.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
 import {ProposerPreferencesService} from "./services/proposerPreferences.js";
@@ -230,7 +229,6 @@ export class Validator {
       signers,
       valProposerConfig
     );
-    pollGasLimitSchedule(config, loggerVc, clock);
     pollPrepareBeaconProposer(config, loggerVc, api, clock, validatorStore, metrics);
     pollBuilderValidatorRegistration(config, loggerVc, api, clock, validatorStore, metrics);
     pollExternalSignerPubkeys(config, loggerVc, controller.signal, validatorStore, opts.externalSigner);

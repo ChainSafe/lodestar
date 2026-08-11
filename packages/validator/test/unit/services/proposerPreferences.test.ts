@@ -1,11 +1,17 @@
 import {describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {chainConfig} from "@lodestar/config/default";
-import {pollGasLimitSchedule} from "../../../src/services/gasLimitSchedule.js";
+import {BlockDutiesService} from "../../../src/services/blockDuties.js";
+import {ProposerPreferencesService} from "../../../src/services/proposerPreferences.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
 import {ClockMock} from "../../utils/clock.js";
 import {getMockedLogger} from "../../utils/logger.js";
 
-describe("pollGasLimitSchedule", () => {
+vi.mock("../../../src/services/blockDuties.js");
+vi.mock("../../../src/services/validatorStore.js");
+
+describe("ProposerPreferencesService", () => {
   it("logs when a scheduled gas limit becomes active", async () => {
     const config = createChainForkConfig({
       ...chainConfig,
@@ -23,9 +29,14 @@ describe("pollGasLimitSchedule", () => {
     });
     const clock = new ClockMock();
     const logger = {...getMockedLogger(), isSyncing: vi.fn()};
+    const api = getApiClientStub();
+    // @ts-expect-error - Mocked class does not need parameters
+    const validatorStore = vi.mocked(new ValidatorStore({}, {defaultConfig: {}}));
+    // @ts-expect-error - Mocked class does not need parameters
+    const blockDutiesService = vi.mocked(new BlockDutiesService());
     const signal = new AbortController().signal;
 
-    pollGasLimitSchedule(config, logger, clock);
+    new ProposerPreferencesService(config, logger, api, clock, validatorStore, blockDutiesService, null);
 
     await clock.tickEpochFns(1, signal);
     expect(logger.info).not.toHaveBeenCalled();
