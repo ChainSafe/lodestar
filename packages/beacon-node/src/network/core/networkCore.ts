@@ -305,6 +305,10 @@ export class NetworkCore implements INetworkCore {
     // a handle that never closes and `Worker.terminate()` then never resolves. Diffing this list
     // between a clean and a stuck shutdown should narrow down which handle it is
     this.logger.debug("network lib2p closed", {activeResources: formatActiveResources()});
+    const processReport = process.report.getReport() as {libuv: Array<{type: string}>};
+    this.logger.debug("network lib2p tcp handles", {
+      handles: JSON.stringify(processReport.libuv.filter((handle) => handle.type === "tcp")),
+    });
 
     this.closed = true;
   }
