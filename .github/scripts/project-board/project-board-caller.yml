@@ -6,7 +6,7 @@
 # The PROJECT_BOARD_DRY_RUN Actions variable resolves from THIS repo (the caller),
 # not from ChainSafe/lodestar — set it to true for a dry-run rollout in this repo;
 # unset or false runs live.
-# Spec: ChainSafe/lodestar/.github/specs/project-automation.md
+# Spec: ChainSafe/lodestar/.github/scripts/project-board/README.md
 name: Project board
 
 on:

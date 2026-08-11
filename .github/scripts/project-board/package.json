@@ -14,7 +14,6 @@
     "format:check": "biome format .",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "prepush": "pnpm run check",
     "test": "vitest run",
     "test:watch": "vitest"
   },

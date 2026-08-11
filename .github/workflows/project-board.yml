@@ -1,7 +1,7 @@
 name: Project board
 
 # Keeps the ChainSafe org project's Status lanes in sync with PR state.
-# Spec: .github/specs/project-automation.md
+# Spec: .github/scripts/project-board/README.md
 # Safe with pull_request_target: this workflow never checks out or executes PR code —
 # it only checks out ChainSafe/lodestar@unstable for the reconciler script.
 on:
@@ -26,7 +26,7 @@ on:
         description: "owner/repo#number to reconcile (empty = sweep the whole board)"
         required: false
         type: string
-  # Entry point for accessory repos (thin callers; see .github/specs/project-board-caller.yml)
+  # Entry point for accessory repos (thin callers; see .github/scripts/project-board/project-board-caller.yml)
   workflow_call:
     secrets:
       # Optional because GitHub withholds Actions secrets from external-fork review events.

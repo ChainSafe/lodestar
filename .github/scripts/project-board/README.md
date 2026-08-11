@@ -5,13 +5,14 @@ Automates the Status field for PR cards on [Lodestar Team Coordination](https://
 ## What counts as a signal
 
 - **Review requests:** only **user-level** requests count. Team-level requests are ignored — CODEOWNERS auto-requests `@ChainSafe/lodestar` on every PR and team requests never clear when members review (verified live + docs). Requesting/re-requesting a **specific person** is the signal. (A PR to remove CODEOWNERS is open; this automation strengthens the case, but the filter makes it work either way.)
-- **Reviews:** only reviews from **User-type** accounts count. Reviews from **Bot-type** accounts (GitHub Apps: codex, gemini, etc. — they comment on every PR) are ignored. Machine accounts that are regular users (e.g. `lodekeeper`) intentionally count as users: they only review when explicitly asked, so their reviews are treated like any teammate's.
+- **Reviews:** only submitted `PullRequestReview` records from **User-type** accounts count. The automation uses their `APPROVED`, `CHANGES_REQUESTED`, or `COMMENTED` state; it does not read review text. Reviews from **Bot-type** accounts (GitHub Apps: codex, gemini, etc. — they comment on every PR) are ignored. Machine accounts that are regular users (e.g. `lodekeeper`) intentionally count as users: they only review when explicitly asked, so their reviews are treated like any teammate's.
+- **Comments:** a submitted comment review (`PullRequestReview` with state `COMMENTED`) counts as feedback. Top-level PR conversation comments (`IssueComment`), individual line-comment records (`PullRequestReviewComment`), and pending reviews are not queried and do not affect Status. Line comments affect Status only when submitting them produces a counted `PullRequestReview`.
 
 ## Invariants
 
 1. Draft PR → always **In Progress**, even with reviewers requested.
 2. **Review Requested** ⟺ non-draft AND ≥1 pending user-level review request (unless a counted review is newer — see Model).
-3. **Awaiting Author** = author owes action: changes requested, comments left, or fully approved and awaiting merge.
+3. **Awaiting Author** = author owes action: changes requested in a submitted review, a submitted comment review, or full approval awaiting merge.
 4. Merged/closed → **Done** (handled natively by the project's built-in workflows; the automation does nothing here).
 
 ## Transitions
@@ -22,7 +23,7 @@ Automates the Status field for PR cards on [Lodestar Team Coordination](https://
 | PR opened / reopened / marked ready       | non-draft, no user-level reviewers requested                                    | In Progress      |
 | Review requested (or re-requested)        | non-draft, user-level request                                                   | Review Requested |
 | PR reopened / marked ready                | user-level reviewers already requested                                          | Review Requested |
-| Review: changes requested / commented     | counted reviewers only — even with other reviewers pending, including drive-bys | Awaiting Author  |
+| Submitted review: changes requested/commented | counted reviewers only — even with other reviewers pending, including drive-bys | Awaiting Author  |
 | Review: approved                          | other user-level review requests still pending                                  | no change        |
 | Review: approved                          | no pending user-level review requests left                                      | Awaiting Author  |
 | Commits pushed                            | always                                                                          | no change        |
@@ -31,11 +32,11 @@ Automates the Status field for PR cards on [Lodestar Team Coordination](https://
 
 The reconciler owns the `reopened` transition. The project's built-in **Item reopened** workflow must remain disabled to avoid competing status writes.
 
-**Team convention:** reviewers normally submit **comment** reviews rather than "request changes" (a changes-requested review blocks merging until re-reviewed, which causes stale-review friction). The automation treats both identically, so the convention is optional as far as the board is concerned.
+**Team convention:** reviewers normally submit a **comment review** rather than "request changes" (a changes-requested review blocks merging until re-reviewed, which causes stale-review friction). The automation treats both review states identically, so the convention is optional as far as the board is concerned.
 
 **Pushing commits never moves the card.** The author addressing feedback stays in Awaiting Author until the author clicks **re-request review** (or requests an additional reviewer) — that click is the only "please look again" signal.
 
-**Why changes/comments move immediately:** reviewing code that's about to change wastes the second reviewer's time. Author addresses feedback, then **re-request review** flips it back to Review Requested — that click is the explicit "please look again" signal.
+**Why submitted feedback moves immediately:** reviewing code that's about to change wastes the second reviewer's time. Author addresses feedback, then **re-request review** flips it back to Review Requested — that click is the explicit "please look again" signal.
 
 **Why approval is conditional:** one approval must not silence the "reviewer still needed" signal while others owe reviews.
 
@@ -65,8 +66,7 @@ GraphQL connections use bounded windows sized above the board's observed usage. 
   - `pull_request_review` (submitted, dismissed) — **no secrets for fork PRs** (documented GitHub restriction), so review-driven moves on fork PRs are picked up by the sweep instead (≤15 min latency). Same-repo PRs move instantly.
   - `schedule` — sweep every 15 minutes: recompute every open PR card on the board, including statusless and incorrectly placed cards; self-heals fork-PR reviews, missed events, auto-add races, and manual drags. A failure on one PR is logged without blocking the remaining cards; the job fails with an aggregate summary after all cards are attempted.
 - Concurrency: one group per PR, `cancel-in-progress: false`. GitHub keeps only the newest pending run per group; coalescing is safe because the reconciler recomputes from full state.
-- Auth: the default `GITHUB_TOKEN` cannot access org projects (documented). Interim: fine-grained PAT (resource owner ChainSafe; org **Projects: read/write**, repo **Pull requests: read** + **Metadata: read**) stored as an Actions secret. Target: an org-owned GitHub App — swapping replaces the secret with an `actions/create-github-app-token` step; logic unchanged. A missing token is tolerated only when the event payload confirms an external-fork review or a Dependabot-triggered PR event; every other context fails with `PROJECT_BOARD_CONFIG_TOKEN_MISSING`.
-- **To verify empirically before rollout:** that re-requesting review from someone who already reviewed fires `review_requested` — universally observed, but not documented by GitHub.
+- Auth: the default `GITHUB_TOKEN` cannot access org projects (documented). Interim: fine-grained PAT (resource owner ChainSafe; org **Projects: read/write**, repo **Pull requests: read** + **Metadata: read**) stored as the `PROJECT_BOARD_TOKEN` repository secret in Lodestar and every caller repository. Target: an org-owned GitHub App — swapping replaces the secret with an `actions/create-github-app-token` step; logic unchanged. A missing token is tolerated only when the event payload confirms an external-fork review or a Dependabot-triggered PR event; every other context fails with `PROJECT_BOARD_CONFIG_TOKEN_MISSING`.
 
 ## Scope
 
@@ -77,6 +77,19 @@ Every PR targeting a participating ChainSafe repository is in scope, including P
 - **Closed and merged PRs are excluded:** the project's built-in close, merge, and archive workflows own their final status and removal from the board.
 
 The Status field is 100% automation-owned for open PR cards. The same workflow will be deployed identically to every participating ChainSafe repository.
+
+## Rollout checklist
+
+Complete this checklist for Lodestar and every participating repository:
+
+- **Project workflows:** enable an auto-add workflow that matches every PR from the repository. Keep the native close and merge workflows responsible for `Done`. Configure auto-archive so only closed or merged PRs disappear. Keep the native **Item reopened** workflow disabled because the reconciler owns reopened PRs.
+- **Project schema:** verify the Status field contains `In Progress`, `Review Requested`, and `Awaiting Author` with those exact names.
+- **Token scope:** create a fine-grained PAT owned by ChainSafe with organization **Projects: read/write** and repository **Pull requests: read** plus **Metadata: read** for every participating repository. Store it as the `PROJECT_BOARD_TOKEN` repository secret in Lodestar and each caller repository.
+- **Caller selection:** copy [`project-board-caller.yml`](./project-board-caller.yml) only into repositories covered by the project's auto-add workflows. Confirm that its `@unstable` workflow reference matches the protected, audited rollout branch.
+- **Dry run:** set `PROJECT_BOARD_DRY_RUN=true` in Lodestar and each caller repository. Exercise representative open, ready, draft, review-request, review, dismissal, and reopen events. Confirm the logs show the expected lane without changing Status. Confirm the scheduled Lodestar sweep covers cards from every participating repository.
+- **Enable writes:** unset `PROJECT_BOARD_DRY_RUN` (or set it to `false`) in Lodestar and each caller repository. Exercise one representative PR before broad rollout and confirm both event-driven updates and the scheduled sweep.
+- **Monitoring:** monitor Actions logs during rollout for `PROJECT_BOARD_CONFIG_TOKEN_MISSING`, `PROJECT_BOARD_GRAPHQL_CONNECTION_TRUNCATED`, `PROJECT_BOARD_PR_RECONCILIATION_FAILED`, and aggregate sweep failures. Verify secretless external-fork review events are repaired by the next scheduled sweep.
+- **Rollback:** set `PROJECT_BOARD_DRY_RUN=true` or disable the caller workflow in affected repositories. Leave native auto-add, close, merge, and archive workflows enabled so project membership and terminal states continue to work. Re-enable the reconciler and run a sweep after correcting the issue.
 
 ## Local development
 
@@ -92,7 +105,7 @@ pnpm install --frozen-lockfile
 Before pushing any change to this project, run:
 
 ```bash
-pnpm run prepush
+pnpm run check
 ```
 
 This checks Biome formatting and lint rules, TypeScript types, and the complete Vitest suite. Use `pnpm run lint:fix` to apply safe Biome fixes and `pnpm run test:watch` during development.
