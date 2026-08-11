@@ -51,6 +51,11 @@ export enum ChainEvent {
    */
   publishBlobSidecars = "publishBlobSidecars",
   /**
+   * This event signals that a proposer slashing has been produced from an observed equivocation
+   * and is ready to be published.
+   */
+  publishProposerSlashing = "publishProposerSlashing",
+  /**
    * Trigger an update of status so reqresp by peers have current earliestAvailableSlot
    */
   updateStatus = "updateStatus",
@@ -109,6 +114,8 @@ export type IChainEvents = ApiEvents & {
   [ChainEvent.publishDataColumns]: (sidecars: DataColumnSidecar[]) => void;
 
   [ChainEvent.publishBlobSidecars]: (sidecars: deneb.BlobSidecar[]) => void;
+
+  [ChainEvent.publishProposerSlashing]: (proposerSlashing: phase0.ProposerSlashing) => void;
 
   [ChainEvent.updateStatus]: () => void;
 

@@ -263,6 +263,9 @@ export interface IBeaconChain {
   /** Process execution payload envelope: verify, import to fork choice, and persist to DB */
   processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void>;
 
+  /** Produce and publish a proposer slashing from an observed equivocation. Does not throw, only logs errors */
+  processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void;
+
   getStatus(): Status;
 
   recomputeForkChoiceHead(caller: ForkchoiceCaller): ProtoBlock;

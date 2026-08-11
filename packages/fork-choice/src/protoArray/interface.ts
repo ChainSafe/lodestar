@@ -48,7 +48,7 @@ export enum PayloadStatus {
 /**
  * Check if a block is in the Gloas fork (ePBS enabled)
  */
-export function isGloasBlock(block: ProtoBlock): boolean {
+export function isGloasBlock(block: ProtoBlock): block is ProtoBlock & {parentBlockHash: RootHex} {
   return block.parentBlockHash !== null;
 }
 
