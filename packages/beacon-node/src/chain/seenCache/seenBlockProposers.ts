@@ -3,7 +3,7 @@ import {Epoch, RootHex, Slot, ValidatorIndex, phase0} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
 /** Two distinct block roots signed by the same proposer for the same slot are sufficient to establish an equivocation */
-const MAX_BLOCK_ROOTS_PER_PROPOSAL = 2;
+const MIN_EQUIVOCATION_BLOCK_ROOTS_PER_PROPOSAL = 2;
 
 /**
  * Keeps a cache to filter block proposals from the same validator in the same slot.
@@ -36,7 +36,8 @@ export class SeenBlockProposers {
 
   isEquivocating(blockSlot: Slot, proposerIndex: ValidatorIndex): boolean {
     return (
-      (this.signedBlockHeadersBySlot.get(blockSlot)?.get(proposerIndex)?.size ?? 0) >= MAX_BLOCK_ROOTS_PER_PROPOSAL
+      (this.signedBlockHeadersBySlot.get(blockSlot)?.get(proposerIndex)?.size ?? 0) >=
+      MIN_EQUIVOCATION_BLOCK_ROOTS_PER_PROPOSAL
     );
   }
 
@@ -53,7 +54,10 @@ export class SeenBlockProposers {
     proposerIndex: ValidatorIndex
   ): [phase0.SignedBeaconBlockHeader, phase0.SignedBeaconBlockHeader] | null {
     const signedBlockHeaderByRoot = this.signedBlockHeadersBySlot.get(blockSlot)?.get(proposerIndex);
-    if (signedBlockHeaderByRoot === undefined || signedBlockHeaderByRoot.size < MAX_BLOCK_ROOTS_PER_PROPOSAL) {
+    if (
+      signedBlockHeaderByRoot === undefined ||
+      signedBlockHeaderByRoot.size < MIN_EQUIVOCATION_BLOCK_ROOTS_PER_PROPOSAL
+    ) {
       return null;
     }
     const [signedHeader1, signedHeader2] = signedBlockHeaderByRoot.values();
@@ -72,7 +76,10 @@ export class SeenBlockProposers {
     }
 
     const signedBlockHeaderByRoot = this.signedBlockHeadersBySlot.getOrDefault(blockSlot).getOrDefault(proposerIndex);
-    if (signedBlockHeaderByRoot.size < MAX_BLOCK_ROOTS_PER_PROPOSAL && !signedBlockHeaderByRoot.has(blockRoot)) {
+    if (
+      signedBlockHeaderByRoot.size < MIN_EQUIVOCATION_BLOCK_ROOTS_PER_PROPOSAL &&
+      !signedBlockHeaderByRoot.has(blockRoot)
+    ) {
       signedBlockHeaderByRoot.set(blockRoot, signedBlockHeader);
     }
   }

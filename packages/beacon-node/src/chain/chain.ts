@@ -1217,7 +1217,12 @@ export class BeaconChain implements IBeaconChain {
       this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
       this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
       this.metrics?.opPool.proposerSlashingsProduced.inc();
-      this.logger.info("Produced proposer slashing from observed equivocation", {slot: blockSlot, proposerIndex});
+      this.logger.info("Produced proposer slashing from observed equivocation", {
+        slot: blockSlot,
+        proposerIndex,
+        header1Root: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header1.message)),
+        header2Root: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header2.message)),
+      });
     } finally {
       this.producingProposerSlashing.delete(proposerIndex);
     }

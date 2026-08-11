@@ -86,8 +86,6 @@ export type BlockProcessOpts = {
   verifyOnly?: boolean;
   /** Used to specify to skip execution payload validation */
   skipVerifyExecutionPayload?: boolean;
-  /** Used to specify to skip block signatures validation */
-  skipVerifyBlockSignatures?: boolean;
 };
 
 export type PoolOpts = {
