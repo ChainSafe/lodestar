@@ -21,7 +21,7 @@ import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/pro
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {toCheckpointHex} from "../utils.js";
+import {toApiCheckpointHex} from "../utils.js";
 import {getAttesterSlashingsFromIndexedAttestations} from "./attesterSlashing.js";
 
 export function getLodestarApi({
@@ -298,11 +298,13 @@ export function getLodestarApi({
             rootHex: headRoot,
             slot: head.slot,
           },
-          justifiedCheckpoint: toCheckpointHex(justifiedCheckpoint),
-          finalizedCheckpoint: toCheckpointHex(finalizedCheckpoint),
-          previousEpochObservedJustifiedCheckpoint: toCheckpointHex(fcrStore.previousEpochObservedJustifiedCheckpoint),
-          currentEpochObservedJustifiedCheckpoint: toCheckpointHex(fcrStore.currentEpochObservedJustifiedCheckpoint),
-          previousEpochGreatestUnrealizedCheckpoint: toCheckpointHex(
+          justifiedCheckpoint: toApiCheckpointHex(justifiedCheckpoint),
+          finalizedCheckpoint: toApiCheckpointHex(finalizedCheckpoint),
+          previousEpochObservedJustifiedCheckpoint: toApiCheckpointHex(
+            fcrStore.previousEpochObservedJustifiedCheckpoint
+          ),
+          currentEpochObservedJustifiedCheckpoint: toApiCheckpointHex(fcrStore.currentEpochObservedJustifiedCheckpoint),
+          previousEpochGreatestUnrealizedCheckpoint: toApiCheckpointHex(
             fcrStore.previousEpochGreatestUnrealizedCheckpoint
           ),
           previousSlotHead: fcrStore.previousSlotHead,

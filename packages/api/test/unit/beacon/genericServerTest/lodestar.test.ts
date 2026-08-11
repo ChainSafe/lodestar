@@ -12,7 +12,7 @@ import {WireFormat} from "../../../../src/utils/wireFormat.js";
 import {getMockApi, getTestServer} from "../../../utils/utils.js";
 
 describe("beacon / lodestar", () => {
-  describe("get HistoricalSummaries as json", () => {
+  describe("json only endpoints", () => {
     const mockApi = getMockApi<Endpoints>(getDefinitions(config));
     let baseUrl: string;
     let server: FastifyInstance;
@@ -28,6 +28,41 @@ describe("beacon / lodestar", () => {
 
     afterAll(async () => {
       if (server !== undefined) await server.close();
+    });
+
+    it("getFastConfirmationInfo", async () => {
+      mockApi.getFastConfirmationInfo.mockResolvedValue({
+        data: {
+          confirmed: {rootHex: "0xaa", slot: 100},
+          head: {rootHex: "0xbb", slot: 102},
+          justifiedCheckpoint: {rootHex: "0xcc", epoch: 3},
+          finalizedCheckpoint: {rootHex: "0xdd", epoch: 2},
+          previousEpochObservedJustifiedCheckpoint: {rootHex: "0xee", epoch: 2},
+          currentEpochObservedJustifiedCheckpoint: {rootHex: "0xff", epoch: 3},
+          previousEpochGreatestUnrealizedCheckpoint: {rootHex: "0x11", epoch: 2},
+          previousSlotHead: "0x22",
+          currentSlotHead: "0x33",
+        },
+      });
+
+      const httpClient = new HttpClient({baseUrl});
+      const client = getClient(config, httpClient);
+
+      const res = await client.getFastConfirmationInfo();
+
+      expect(res.ok).toBe(true);
+      expect(res.wireFormat()).toBe(WireFormat.json);
+      expect(res.json().data).toStrictEqual({
+        confirmed: {root_hex: "0xaa", slot: 100},
+        head: {root_hex: "0xbb", slot: 102},
+        justified_checkpoint: {root_hex: "0xcc", epoch: 3},
+        finalized_checkpoint: {root_hex: "0xdd", epoch: 2},
+        previous_epoch_observed_justified_checkpoint: {root_hex: "0xee", epoch: 2},
+        current_epoch_observed_justified_checkpoint: {root_hex: "0xff", epoch: 3},
+        previous_epoch_greatest_unrealized_checkpoint: {root_hex: "0x11", epoch: 2},
+        previous_slot_head: "0x22",
+        current_slot_head: "0x33",
+      });
     });
 
     it("getHistoricalSummaries", async () => {
