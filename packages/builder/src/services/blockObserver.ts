@@ -1,7 +1,7 @@
 import {ApiClient, ApiError, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {ForkPostGloas, isForkPostGloas} from "@lodestar/params";
-import {RootHex, SignedBeaconBlock, Slot, gloas, isGloasBeaconBlock} from "@lodestar/types";
+import {RootHex, SignedBeaconBlock, Slot, isGloasBeaconBlock} from "@lodestar/types";
 import {Logger, isErrorAborted, pruneSetToMax, retry, toRootHex} from "@lodestar/utils";
 
 const {EventType} = routes.events;
@@ -20,7 +20,7 @@ export type ObservedBlock = {
   executionOptimistic: boolean;
   version: ForkPostGloas;
   block: SignedBeaconBlock<ForkPostGloas>;
-  signedBid: gloas.SignedExecutionPayloadBid;
+  signedBid: SignedBeaconBlock<ForkPostGloas>["message"]["body"]["signedExecutionPayloadBid"];
 };
 
 type RunOnBlockFn = (block: ObservedBlock) => Promise<void>;
@@ -72,7 +72,11 @@ export class BlockObserver {
           this.logger.error("Failed to receive block event", {}, error);
         },
         onClose: () => {
-          this.logger.debug("Closed stream for block events");
+          if (signal.aborted) {
+            this.logger.debug("Closed stream for block events");
+          } else {
+            this.logger.error("Block event stream closed unexpectedly", {});
+          }
         },
       })
       .catch((error: unknown) => {
@@ -185,6 +189,10 @@ export class BlockObserver {
           try {
             await fn(observedBlock);
           } catch (error) {
+            if (isErrorAborted(error)) {
+              return;
+            }
+
             this.logger.error(
               "Failed to process observed block",
               {slot, blockRoot},

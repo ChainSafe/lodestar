@@ -26,6 +26,7 @@ describe("BlockObserver", () => {
   let controller: AbortController;
   let config: ChainForkConfig;
   const logger: Logger = testLogger("BlockObserver", {level: LogLevel.error});
+  let debugLog: Mock<Logger[LogLevel.debug]>;
   let errorLog: Mock<Logger[LogLevel.error]>;
   let warnLog: Mock<Logger[LogLevel.warn]>;
   let apiStub: ApiStub;
@@ -33,6 +34,7 @@ describe("BlockObserver", () => {
   beforeEach(() => {
     controller = new AbortController();
     config = getConfig(ForkName.gloas);
+    debugLog = vi.spyOn(logger, LogLevel.debug).mockImplementation(() => {});
     errorLog = vi.spyOn(logger, LogLevel.error).mockImplementation(() => {});
     warnLog = vi.spyOn(logger, LogLevel.warn).mockImplementation(() => {});
     apiStub = getApiStub();
@@ -106,6 +108,25 @@ describe("BlockObserver", () => {
     });
     expect(observed.block).toBe(block);
     expect(observed.signedBid).toBe(block.message.body.signedExecutionPayloadBid);
+  });
+
+  it("preserves the exact fork-specific Heze signed bid", async () => {
+    config = getConfig(ForkName.heze);
+    const block = hezeBlock();
+    const event = blockEvent(rootHex(1));
+    apiStub.getBlockV2.mockResolvedValue(blockResponse(block, ForkName.heze));
+    const onBlock = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, apiStub.api);
+    observer.runOnBlock(onBlock);
+
+    await observer.processBlockEvent(event, controller.signal);
+
+    expect(onBlock).toHaveBeenCalledOnce();
+    const observed = onBlock.mock.calls[0][0];
+    expect(observed.version).toBe(ForkName.heze);
+    expect(observed.block).toBe(block);
+    expect(observed.signedBid).toBe(block.message.body.signedExecutionPayloadBid);
+    expect(block.message.body.signedExecutionPayloadBid.message.inclusionListBits.get(0)).toBe(true);
   });
 
   it("suppresses sequential duplicate block roots", async () => {
@@ -334,11 +355,10 @@ describe("BlockObserver", () => {
   it("logs event stream and subscription failures", async () => {
     const observer = new BlockObserver(config, logger, apiStub.api);
     observer.start(controller.signal);
-    const {onError, onClose} = apiStub.eventstream.mock.calls[0][0];
+    const {onError} = apiStub.eventstream.mock.calls[0][0];
     const streamError = Error("stream failed");
 
     onError?.(streamError);
-    onClose?.();
     expect(errorLog).toHaveBeenCalledWith("Failed to receive block event", {}, streamError);
 
     const rejectedStub = getApiStub();
@@ -347,6 +367,21 @@ describe("BlockObserver", () => {
     new BlockObserver(config, logger, rejectedStub.api).start(controller.signal);
     await vi.waitFor(() => expect(errorLog).toHaveBeenCalledTimes(2));
     expect(errorLog).toHaveBeenLastCalledWith("Failed to subscribe to block events", {}, setupError);
+  });
+
+  it("reports an unexpected stream close and treats shutdown closure as debug", () => {
+    const observer = new BlockObserver(config, logger, apiStub.api);
+    observer.start(controller.signal);
+    const {onClose} = apiStub.eventstream.mock.calls[0][0];
+
+    onClose?.();
+    expect(errorLog).toHaveBeenCalledWith("Block event stream closed unexpectedly", {});
+
+    errorLog.mockClear();
+    controller.abort();
+    onClose?.();
+    expect(errorLog).not.toHaveBeenCalled();
+    expect(debugLog).toHaveBeenCalledWith("Closed stream for block events");
   });
 
   it("dispatches callbacks concurrently and isolates a callback failure", async () => {
@@ -376,6 +411,23 @@ describe("BlockObserver", () => {
       {slot: 0, blockRoot: rootHex(1)},
       callbackError
     );
+  });
+
+  it("isolates callback cancellation without terminal error noise", async () => {
+    apiStub.getBlockV2.mockResolvedValue(blockResponse(gloasBlock()));
+    const canceled = vi.fn(async (_block: ObservedBlock) => {
+      throw new ErrorAborted("consumer");
+    });
+    const second = vi.fn(async (_block: ObservedBlock) => {});
+    const observer = new BlockObserver(config, logger, apiStub.api);
+    observer.runOnBlock(canceled);
+    observer.runOnBlock(second);
+
+    await observer.processBlockEvent(blockEvent(rootHex(1)), controller.signal);
+
+    expect(canceled).toHaveBeenCalledOnce();
+    expect(second).toHaveBeenCalledOnce();
+    expect(errorLog).not.toHaveBeenCalled();
   });
 
   it("uses the same abort signal for the stream and block request", async () => {
@@ -453,6 +505,17 @@ function gloasBlock(builderIndex = 7): SignedBeaconBlock<typeof ForkName.gloas> 
   bid.value = 1_000_000;
   bid.blockHash = rootBytes(10);
   bid.parentBlockHash = rootBytes(11);
+  return block;
+}
+
+function hezeBlock(): SignedBeaconBlock<typeof ForkName.heze> {
+  const block = ssz.heze.SignedBeaconBlock.defaultValue();
+  const bid = block.message.body.signedExecutionPayloadBid.message;
+  bid.builderIndex = 7;
+  bid.value = 1_000_000;
+  bid.blockHash = rootBytes(10);
+  bid.parentBlockHash = rootBytes(11);
+  bid.inclusionListBits.set(0, true);
   return block;
 }
 
