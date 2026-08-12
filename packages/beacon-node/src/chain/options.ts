@@ -51,7 +51,10 @@ export type IChainOptions = BlockProcessOpts &
     nativeStateView?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
-    /** Allowed unrevealed payloads within the fault inspection window */
+    /**
+     * Allowed missed slots pre-Gloas. Post-Gloas, sets the tolerated unrevealed payload rate as
+     * allowedFaults / faultInspectionWindow.
+     */
     allowedFaults?: number;
   };
 
