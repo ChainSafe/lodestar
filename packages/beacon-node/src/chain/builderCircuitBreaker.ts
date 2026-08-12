@@ -21,8 +21,9 @@ const MIN_BLOCKS_TO_DEACTIVATE = 4;
 /**
  * Post-gloas circuit breaker for builder bids. The beacon block is produced by the proposer
  * regardless of bid source, so missed blocks are not a useful builder health signal. Instead
- * count blocks whose payload was never revealed and stop selecting builder bids while the
- * non-reveal rate in the fault inspection window is too high.
+ * count blocks whose payload was never revealed. Activate when the non-reveal rate exceeds the
+ * fault budget, and resume selecting builder bids only when the observed blocks are within budget
+ * and meet the minimum recovery sample size.
  */
 export class BuilderCircuitBreaker {
   readonly faultInspectionWindow: number;
@@ -65,7 +66,7 @@ export class BuilderCircuitBreaker {
     if (exceedsFaultBudget) {
       this.active = true;
     } else if (blocksPresent >= MIN_BLOCKS_TO_DEACTIVATE) {
-      // Require a small healthy sample before accepting builder bids again
+      // Require a minimum sample within the fault budget before accepting builder bids again
       this.active = false;
     }
 
