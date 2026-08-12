@@ -1,5 +1,4 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
-import {IBlsVerifier} from "../../src/chain/bls/index.js";
+import {IBlsVerifier, SameMessageSignatureSet} from "../../src/chain/bls/index.js";
 
 export class BlsVerifierMock implements IBlsVerifier {
   constructor(private readonly isValidResult: boolean) {}
@@ -8,7 +7,7 @@ export class BlsVerifierMock implements IBlsVerifier {
     return this.isValidResult;
   }
 
-  async verifySignatureSetsSameMessage(sets: {publicKey: PublicKey; signature: Uint8Array}[]): Promise<boolean[]> {
+  async verifySignatureSetsSameMessage(sets: SameMessageSignatureSet[]): Promise<boolean[]> {
     return sets.map(() => this.isValidResult);
   }
 

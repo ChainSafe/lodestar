@@ -439,7 +439,6 @@ const fastConfirmationTest =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls

@@ -25,7 +25,7 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
   getIndexedAttestation,
   getPayloadAttestationDataSigningRoot,
   isExecutionStateType,
@@ -298,12 +298,8 @@ export const forkChoiceTestRunner =
                   // bls_setting !== 1: compliance fixtures use placeholder signatures (bls_setting: 2), so the
                   // spec reference runner does not verify. Mirror the block-import accommodation (`validSignatures`).
                   if (testcase.meta?.bls_setting === BigInt(1)) {
-                    const validatorPubkey = pubkeyCache.get(payloadAttestationMessage.validatorIndex);
-                    if (!validatorPubkey) {
-                      throw Error(`Unknown validator index ${payloadAttestationMessage.validatorIndex}`);
-                    }
-                    const signatureSet = createSingleSignatureSetFromComponents(
-                      validatorPubkey,
+                    const signatureSet = createIndexedSignatureSetFromComponents(
+                      payloadAttestationMessage.validatorIndex,
                       getPayloadAttestationDataSigningRoot(beaconConfig, payloadAttestationMessage.data),
                       payloadAttestationMessage.signature
                     );
@@ -564,7 +560,6 @@ export const forkChoiceTestRunner =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls

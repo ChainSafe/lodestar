@@ -1,19 +1,29 @@
-import {VerifySignatureOpts} from "../interface.js";
+import {type BlsSignatureSet} from "@chainsafe/lodestar-z/bls-verifier";
+import {SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
 
 export type WorkerData = {
   workerId: number;
 };
 
-export type SerializedSet = {
-  publicKey: Uint8Array;
-  message: Uint8Array;
-  signature: Uint8Array;
+export enum JobQueueItemType {
+  default = "default",
+  sameMessage = "same_message",
+}
+
+export type BlsWorkReqDefault = {
+  type: JobQueueItemType.default;
+  opts: VerifySignatureOpts;
+  sets: BlsSignatureSet[];
 };
 
-export type BlsWorkReq = {
+export type BlsWorkReqSameMessage = {
+  type: JobQueueItemType.sameMessage;
   opts: VerifySignatureOpts;
-  sets: SerializedSet[];
+  sets: SameMessageSignatureSet[];
+  message: Uint8Array;
 };
+
+export type BlsWorkReq = BlsWorkReqDefault | BlsWorkReqSameMessage;
 
 export enum WorkResultCode {
   success = "success",
@@ -34,5 +44,5 @@ export type BlsWorkResult = {
   workerStartTime: [number, number];
   /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */
   workerEndTime: [number, number];
-  results: WorkResult<boolean>[];
+  results: WorkResult<boolean[]>[];
 };

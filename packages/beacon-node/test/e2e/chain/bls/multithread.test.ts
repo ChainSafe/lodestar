@@ -1,5 +1,5 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
@@ -12,7 +12,7 @@ describe("chain / bls / multithread queue", () => {
   let controller: AbortController;
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   const sets: ISignatureSet[] = [];
-  const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
+  const sameMessageSets: {index: number; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
 
   beforeAll(() => {
@@ -23,15 +23,16 @@ describe("chain / bls / multithread queue", () => {
       const sig = sk.sign(msg);
       sets.push({
         type: SignatureSetType.single,
-        pubkey: pk,
+        pubkey: pk.toBytes(),
         signingRoot: msg,
         signature: sig.toBytes(),
       });
+      const index = pubkeyCache.size;
       sameMessageSets.push({
-        publicKey: pk,
+        index,
         signature: sk.sign(sameMessage).toBytes(),
       });
-      pubkeyCache.append(pubkeyCache.size, pk.toBytes());
+      pubkeyCache.append(index, pk.toBytes());
     }
   });
 
@@ -49,7 +50,7 @@ describe("chain / bls / multithread queue", () => {
   });
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
-    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null, pubkeyCache});
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
     // await terminating all workers
     afterEachCallbacks.push(() => pool.close());
     // Wait until initialized

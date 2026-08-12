@@ -18,7 +18,7 @@ export enum SignatureSetType {
  */
 export type SingleSignatureSet = {
   type: SignatureSetType.single;
-  pubkey: PublicKey;
+  pubkey: Uint8Array;
   signingRoot: Root;
   signature: Uint8Array;
 };
@@ -54,7 +54,7 @@ export type ISignatureSet = SingleSignatureSet | IndexedSignatureSet | Aggregate
 export function getSignatureSetPubkey(signatureSet: ISignatureSet, pubkeyCache: PubkeyCache): PublicKey {
   switch (signatureSet.type) {
     case SignatureSetType.single:
-      return signatureSet.pubkey;
+      return PublicKey.fromBytes(signatureSet.pubkey, true);
 
     case SignatureSetType.indexed: {
       return pubkeyCache.getOrThrow(signatureSet.index);
@@ -82,7 +82,7 @@ export function verifySignatureSet(signatureSet: ISignatureSet, pubkeyCache?: Pu
 
   switch (signatureSet.type) {
     case SignatureSetType.single:
-      return verify(signatureSet.signingRoot, signatureSet.pubkey, signature);
+      return verify(signatureSet.signingRoot, PublicKey.fromBytes(signatureSet.pubkey, true), signature);
 
     case SignatureSetType.indexed: {
       if (!pubkeyCache) {
@@ -108,7 +108,7 @@ export function verifySignatureSet(signatureSet: ISignatureSet, pubkeyCache?: Pu
 }
 
 export function createSingleSignatureSetFromComponents(
-  pubkey: PublicKey,
+  pubkey: Uint8Array,
   signingRoot: Root,
   signature: Uint8Array
 ): SingleSignatureSet {

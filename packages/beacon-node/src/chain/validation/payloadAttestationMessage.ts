@@ -1,6 +1,6 @@
 import {
   computeEpochAtSlot,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
   getPayloadAttestationDataSigningRoot,
   isStatePostGloas,
 } from "@lodestar/state-transition";
@@ -114,16 +114,8 @@ async function validatePayloadAttestationMessage(
   }
 
   // [REJECT] `payload_attestation_message.signature` is valid with respect to the validator's public key.
-  const validatorPubkey = chain.pubkeyCache.get(validatorIndex);
-  if (!validatorPubkey) {
-    throw new PayloadAttestationError(GossipAction.REJECT, {
-      code: PayloadAttestationErrorCode.INVALID_ATTESTER,
-      attesterIndex: validatorIndex,
-    });
-  }
-
-  const signatureSet = createSingleSignatureSetFromComponents(
-    validatorPubkey,
+  const signatureSet = createIndexedSignatureSetFromComponents(
+    validatorIndex,
     getPayloadAttestationDataSigningRoot(chain.config, data),
     payloadAttestationMessage.signature
   );

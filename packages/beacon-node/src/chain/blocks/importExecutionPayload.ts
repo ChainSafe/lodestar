@@ -180,7 +180,6 @@ export async function importExecutionPayload(
       : verifyExecutionPayloadEnvelopeSignature(
           this.config,
           blockState,
-          this.pubkeyCache,
           signedEnvelope,
           payloadInput.proposerIndex,
           this.bls

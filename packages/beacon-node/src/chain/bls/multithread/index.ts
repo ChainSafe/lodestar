@@ -1,5 +1,4 @@
 import path from "node:path";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Worker, spawn} from "@chainsafe/threads";
 
 // `threads` library creates self global variable which breaks `timeout-abort-controller` https://github.com/jacobheun/timeout-abort-controller/issues/9
@@ -7,26 +6,21 @@ import {Worker, spawn} from "@chainsafe/threads";
 // biome-ignore lint/suspicious/noGlobalAssign: We need the global `self` to reassign module properties later
 self = undefined;
 
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../../metrics/index.js";
 import {LinkedList} from "../../../util/array.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
-import {IBlsVerifier, VerifySignatureOpts} from "../interface.js";
-import {verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {getAggregatedPubkey, getAggregatedPubkeysCount} from "../utils.js";
+import {IBlsVerifier, SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
 import {
-  JobQueueItem,
-  JobQueueItemSameMessage,
-  JobQueueItemType,
-  jobItemSameMessageToMultiSet,
-  jobItemSigSets,
-  jobItemWorkReq,
-} from "./jobItem.js";
+  chunkSameMessageSignatureSets,
+  getAggregatedPubkeysCount,
+  verifySignatureSetsInNativeBatches,
+} from "../utils.js";
+import {JobQueueItem, jobItemSigSets, jobItemWorkReq} from "./jobItem.js";
 import {defaultPoolSize} from "./poolSize.js";
-import {BlsWorkReq, BlsWorkResult, WorkResultCode, WorkResultError, WorkerData} from "./types.js";
+import {BlsWorkReq, BlsWorkResult, JobQueueItemType, WorkResultCode, WorkResultError, WorkerData} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 // Worker constructor consider the path relative to the current working directory
@@ -35,7 +29,6 @@ const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/m
 export type BlsMultiThreadWorkerPoolModules = {
   logger: Logger;
   metrics: Metrics | null;
-  pubkeyCache: PubkeyCache;
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
@@ -115,7 +108,6 @@ type WorkerDescriptor = {
 export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private readonly logger: Logger;
   private readonly metrics: Metrics | null;
-  private readonly pubkeyCache: PubkeyCache;
 
   private readonly workers: WorkerDescriptor[];
   private readonly jobs = new LinkedList<JobQueueItem>();
@@ -131,15 +123,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   private workersBusy = 0;
 
   constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
-    const {logger, metrics, pubkeyCache} = modules;
+    const {logger, metrics} = modules;
     this.logger = logger;
     this.metrics = metrics;
-    this.pubkeyCache = pubkeyCache;
     this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
-    // Use compressed for herumi for now.
-    // THe worker is not able to deserialize from uncompressed
-    // `Error: err _wrapDeserialize`
     this.workers = this.createWorkers(blsPoolSize);
 
     if (metrics) {
@@ -159,7 +147,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
-    // Pubkeys are aggregated in the main thread regardless if verified in workers or in main thread
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
     this.metrics?.blsThreadPool.totalSigSets.inc(sets.length);
     if (opts.priority) {
@@ -172,13 +159,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
       try {
-        return verifySignatureSetsMaybeBatch(
-          sets.map((set) => ({
-            publicKey: getAggregatedPubkey(set, this.pubkeyCache),
-            message: set.signingRoot.valueOf(),
-            signature: set.signature,
-          }))
-        );
+        return verifySignatureSetsInNativeBatches(sets);
       } finally {
         if (timer) timer();
       }
@@ -214,27 +195,27 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Verify signature sets of the same message, only supports worker verification.
    */
   async verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    sets: SameMessageSignatureSet[],
     message: Uint8Array,
     opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {
-    // chunkify so that it reduce the risk of retrying when there is at least one invalid signature
-    const results = await Promise.all(
-      chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map(
-        (setsChunk) =>
-          new Promise<boolean[]>((resolve, reject) => {
-            this.queueBlsWork({
-              type: JobQueueItemType.sameMessage,
-              resolve,
-              reject,
-              addedTimeMs: Date.now(),
-              opts,
-              sets: setsChunk,
-              message,
-            });
-          })
-      )
-    );
+    const promises: Promise<boolean[]>[] = [];
+    for (const setsChunk of chunkSameMessageSignatureSets(sets)) {
+      promises.push(
+        new Promise<boolean[]>((resolve, reject) => {
+          this.queueBlsWork({
+            type: JobQueueItemType.sameMessage,
+            resolve,
+            reject,
+            addedTimeMs: Date.now(),
+            opts,
+            sets: setsChunk,
+            message,
+          });
+        })
+      );
+    }
+    const results = await Promise.all(promises);
 
     return results.flat();
   }
@@ -396,23 +377,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
         let workReq: BlsWorkReq;
         try {
-          // Note: This can throw, must be handled per-job.
-          // Pubkey and signature aggregation is defered here
-          workReq = await jobItemWorkReq(job, this.pubkeyCache, this.metrics);
+          workReq = jobItemWorkReq(job);
         } catch (e) {
-          this.metrics?.blsThreadPool.errorAggregateSignatureSetsCount.inc({type: job.type});
-
-          switch (job.type) {
-            case JobQueueItemType.default:
-              job.reject(e as Error);
-              break;
-
-            case JobQueueItemType.sameMessage:
-              // there could be an invalid pubkey/signature, retry each individually
-              this.retryJobItemSameMessage(job);
-              break;
-          }
-
+          this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(jobItemSigSets(job));
+          job.reject(e as Error);
           continue;
         }
         // Re-push all jobs with matching workReq for easier accounting of results
@@ -429,6 +397,13 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       }
 
       const startedSigSets = startedSetsDefault + startedSetsSameMessage;
+      if (workReqs.length === 0) {
+        worker.status = {code: WorkerStatusCode.idle, workerApi};
+        this.workersBusy--;
+        callInNextEventLoop(this.runJob);
+        return;
+      }
+
       this.metrics?.blsThreadPool.totalJobsGroupsStarted.inc(1);
       this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.default}, startedJobsDefault);
       this.metrics?.blsThreadPool.totalJobsStarted.inc({type: JobQueueItemType.sameMessage}, startedJobsSameMessage);
@@ -462,26 +437,25 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
             if (!jobResult || jobResult.code !== WorkResultCode.success) {
               job.reject(getJobResultError(jobResult, i));
               errorCount += sigSetCount;
+            } else if (jobResult.result.length !== 1 || jobResult.result[0] === undefined) {
+              job.reject(getInvalidResultLengthError(i, 1, jobResult.result.length));
+              errorCount += sigSetCount;
             } else {
-              job.resolve(jobResult.result);
+              job.resolve(jobResult.result[0]);
               successCount += sigSetCount;
             }
             break;
 
-          // handle result of the verification of aggregated signature against aggregated pubkeys
           case JobQueueItemType.sameMessage:
             if (!jobResult || jobResult.code !== WorkResultCode.success) {
               job.reject(getJobResultError(jobResult, i));
-              errorCount += 1;
+              errorCount += sigSetCount;
+            } else if (jobResult.result.length !== sigSetCount) {
+              job.reject(getInvalidResultLengthError(i, sigSetCount, jobResult.result.length));
+              errorCount += sigSetCount;
             } else {
-              if (jobResult.result) {
-                // All are valid, most of the time it goes here
-                job.resolve(job.sets.map(() => true));
-              } else {
-                // Retry each individually
-                this.retryJobItemSameMessage(job);
-              }
-              successCount += 1;
+              job.resolve(jobResult.result);
+              successCount += sigSetCount;
             }
             break;
         }
@@ -553,19 +527,6 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
   };
 
-  private retryJobItemSameMessage(job: JobQueueItemSameMessage): void {
-    // Create new jobs for each pubkey set, and Promise.all all the results
-    for (const j of jobItemSameMessageToMultiSet(job)) {
-      if (j.opts.priority) {
-        this.jobs.unshift(j);
-      } else {
-        this.jobs.push(j);
-      }
-    }
-    this.metrics?.blsThreadPool.sameMessageRetryJobs.inc(1);
-    this.metrics?.blsThreadPool.sameMessageRetrySets.inc(job.sets.length);
-  }
-
   /** For testing */
   protected async waitTillInitialized(): Promise<void> {
     await Promise.all(
@@ -582,4 +543,8 @@ function getJobResultError(jobResult: WorkResultError | null, i: number): Error 
   const workerError = jobResult ? Error(jobResult.error.message) : Error(`No jobResult for index ${i}`);
   if (jobResult?.error?.stack) workerError.stack = jobResult.error.stack;
   return workerError;
+}
+
+function getInvalidResultLengthError(index: number, expected: number, actual: number): Error {
+  return Error(`Invalid BLS worker result length for index ${index}: expected ${expected}, got ${actual}`);
 }

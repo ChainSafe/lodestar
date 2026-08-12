@@ -1,8 +1,11 @@
 import worker from "node:worker_threads";
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {
+  type BlsSignatureSet,
+  verifySignatureSets as verifySignatureSetsNative,
+  verifySignatureSetsSameMessage as verifySignatureSetsSameMessageNative,
+} from "@chainsafe/lodestar-z/bls-verifier";
 import {expose} from "@chainsafe/threads/worker";
-import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
+import {BlsWorkReq, BlsWorkResult, JobQueueItemType, WorkResult, WorkResultCode, WorkerData} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -27,23 +30,35 @@ expose({
 
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
-  const results: WorkResult<boolean>[] = [];
+  const results: WorkResult<boolean[]>[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
-  const batchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
-  const nonBatchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
+  const batchableSets: {idx: number; sets: BlsSignatureSet[]}[] = [];
+  const nonBatchableSets: {idx: number; sets: BlsSignatureSet[]}[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
     const workReq = workReqArr[i];
-    const sets = workReq.sets.map(deserializeSet);
-
-    if (workReq.opts.batchable) {
-      batchableSets.push({idx: i, sets});
-    } else {
-      nonBatchableSets.push({idx: i, sets});
+    switch (workReq.type) {
+      case JobQueueItemType.default: {
+        const {sets} = workReq;
+        if (workReq.opts.batchable) {
+          batchableSets.push({idx: i, sets});
+        } else {
+          nonBatchableSets.push({idx: i, sets});
+        }
+        break;
+      }
+      case JobQueueItemType.sameMessage:
+        try {
+          const result = verifySignatureSetsSameMessageNative(workReq.sets, workReq.message);
+          results[i] = {code: WorkResultCode.success, result};
+        } catch (e) {
+          results[i] = {code: WorkResultCode.error, error: e as Error};
+        }
+        break;
     }
   }
 
@@ -52,7 +67,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     const batchableChunks = chunkifyMaximizeChunkSize(batchableSets, BATCHABLE_MIN_PER_CHUNK);
 
     for (const batchableChunk of batchableChunks) {
-      const allSets: SignatureSetDeserialized[] = [];
+      const allSets: BlsSignatureSet[] = [];
       for (const {sets} of batchableChunk) {
         for (const set of sets) {
           allSets.push(set);
@@ -61,13 +76,13 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = verifySignatureSetsMaybeBatch(allSets);
+        const isValid = verifySignatureSetsNative(allSets);
 
         if (isValid) {
           // The entire batch is valid, return success to all
           for (const {idx, sets} of batchableChunk) {
             batchSigsSuccess += sets.length;
-            results[idx] = {code: WorkResultCode.success, result: isValid};
+            results[idx] = {code: WorkResultCode.success, result: [isValid]};
           }
         } else {
           batchRetries++;
@@ -86,8 +101,8 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
   for (const {idx, sets} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSetsMaybeBatch(sets);
-      results[idx] = {code: WorkResultCode.success, result: isValid};
+      const isValid = verifySignatureSetsNative(sets);
+      results[idx] = {code: WorkResultCode.success, result: [isValid]};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};
     }
@@ -102,13 +117,5 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
     results,
-  };
-}
-
-function deserializeSet(set: SerializedSet): SignatureSetDeserialized {
-  return {
-    publicKey: PublicKey.fromBytes(set.publicKey),
-    message: set.message,
-    signature: set.signature,
   };
 }

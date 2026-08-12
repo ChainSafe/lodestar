@@ -412,11 +412,6 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_success_jobs_signature_sets_count",
         help: "Count of total verified signature sets",
       }),
-      errorAggregateSignatureSetsCount: register.gauge<{type: JobQueueItemType}>({
-        name: "lodestar_bls_thread_pool_error_aggregate_signature_sets_count",
-        help: "Count of error when aggregating pubkeys or signatures",
-        labelNames: ["type"],
-      }),
       errorJobsSignatureSetsCount: register.gauge({
         name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
         help: "Count of total error-ed signature sets",
@@ -458,14 +453,6 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_batch_sigs_success_total",
         help: "Count of total batches that failed and had to be verified again.",
       }),
-      sameMessageRetryJobs: register.gauge({
-        name: "lodestar_bls_thread_pool_same_message_jobs_retries_total",
-        help: "Count of total same message jobs that failed and had to be verified again.",
-      }),
-      sameMessageRetrySets: register.gauge({
-        name: "lodestar_bls_thread_pool_same_message_sets_retries_total",
-        help: "Count of total same message sets that failed and had to be verified again.",
-      }),
       // To measure the time cost of main thread <-> worker message passing
       latencyToWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_to_worker",
@@ -500,16 +487,6 @@ export function createLodestarMetrics(
       batchableSigSets: register.gauge({
         name: "lodestar_bls_thread_pool_batchable_sig_sets_total",
         help: "Count of total batchable signature sets",
-      }),
-      aggregateWithRandomnessAsyncDuration: register.histogram({
-        name: "lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds",
-        help: "Total time performing aggregateWithRandomness async",
-        buckets: [0.001, 0.005, 0.01, 0.1, 0.3],
-      }),
-      pubkeysAggregationMainThreadDuration: register.histogram({
-        name: "lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds",
-        help: "Total time spent aggregating pubkeys on main thread",
-        buckets: [0.001, 0.005, 0.01, 0.1],
       }),
     },
 

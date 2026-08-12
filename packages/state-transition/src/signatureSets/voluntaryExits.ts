@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
@@ -81,7 +80,7 @@ export function getBuilderVoluntaryExitSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: PublicKey.fromBytes(builder.pubkey),
+    pubkey: builder.pubkey,
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };
