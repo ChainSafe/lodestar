@@ -704,7 +704,7 @@ export class ProtoArray {
       if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
         continue;
       }
-      // Genesis is always EMPTY
+      // Genesis block is always EMPTY
       if (node.slot === GENESIS_SLOT) {
         continue;
       }
