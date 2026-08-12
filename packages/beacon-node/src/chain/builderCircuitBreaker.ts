@@ -15,6 +15,7 @@ export type BuilderCircuitBreakerModules = {
   metrics: Metrics | null;
 };
 
+/** Four observations is the minimum useful recovery sample for the default ~25% fault budget */
 const MIN_BLOCKS_TO_DEACTIVATE = 4;
 
 /**
