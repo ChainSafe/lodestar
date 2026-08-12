@@ -704,7 +704,8 @@ export class ProtoArray {
       if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
         continue;
       }
-      // Skip anchor nodes (no parent), they are seeded without payload data and cannot be assessed
+      // Skip roots without a retained parent. This includes the anchor, which is seeded without
+      // payload data, and stale branch roots disconnected by pruning.
       if (node.parent === undefined) {
         continue;
       }
