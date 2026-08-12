@@ -1,24 +1,20 @@
 import fs from "node:fs";
 import {ChainForkConfig} from "@lodestar/config";
-import {DataColumnSidecar, RootHex, Slot, deneb} from "@lodestar/types";
+import {DataColumnSidecar, RootHex, Slot} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
-import type {BlobSidecarsWrapper} from "../repositories/blobSidecars.js";
-import {blobSidecarsWrapperSsz} from "../repositories/blobSidecars.js";
-import {BlobStore} from "./blobStore.js";
 import {ColumnStore} from "./columnStore.js";
 import {ExistenceCache} from "./existenceCache.js";
 import type {IFlatFileStore} from "./interface.js";
-import {type FlatFileStoreMetrics, FlatFileStoreType} from "./metrics.js";
+import type {FlatFileStoreMetrics} from "./metrics.js";
 import {removeSlotDirectories} from "./slotDirectory.js";
 
 /**
- * Filesystem storage for blob sidecars and data columns, keyed by slot and block root.
+ * Filesystem storage for data columns, keyed by slot and block root.
  * Hot and finalized data share the same layout. On startup, unfinalized directories are
  * removed and the in-memory existence cache is rebuilt from the remaining files.
  */
 export class FlatFileStore implements IFlatFileStore {
   private readonly cache: ExistenceCache;
-  private readonly blobStore: BlobStore;
   private readonly columnStore: ColumnStore;
 
   constructor(
@@ -28,45 +24,35 @@ export class FlatFileStore implements IFlatFileStore {
     private readonly metrics: FlatFileStoreMetrics | null = null
   ) {
     this.cache = new ExistenceCache();
-    this.blobStore = new BlobStore(dataDir, this.cache, metrics);
     this.columnStore = new ColumnStore(dataDir, config, this.cache, metrics);
   }
 
-  async init(finalizedCheckpointSlot: Slot): Promise<void> {
+  async init(finalizedBlockSlot: Slot): Promise<void> {
     const endTimer = this.metrics?.startupDuration.startTimer();
     try {
       // Ensure directories exist
-      await fs.promises.mkdir(this.blobStore.dir, {recursive: true});
       await fs.promises.mkdir(this.columnStore.dir, {recursive: true});
 
       // Hot data is refetched after restart. Remove it before rebuilding the cache so roots
       // from the previous unfinalized fork cannot survive canonical cleanup.
-      const [hotBlobSlots, hotColumnSlots] = await Promise.all([
-        removeSlotDirectories(this.blobStore.dir, (slot) => slot > finalizedCheckpointSlot),
-        removeSlotDirectories(this.columnStore.dir, (slot) => slot > finalizedCheckpointSlot),
-      ]);
-      this.metrics?.prunedDirectories.inc({store: FlatFileStoreType.blob}, hotBlobSlots);
-      this.metrics?.prunedDirectories.inc({store: FlatFileStoreType.column}, hotColumnSlots);
-      if (hotBlobSlots > 0 || hotColumnSlots > 0) {
+      const hotColumnSlots = await removeSlotDirectories(this.columnStore.dir, (slot) => slot > finalizedBlockSlot);
+      this.metrics?.prunedDirectories.inc(hotColumnSlots);
+      if (hotColumnSlots > 0) {
         this.logger.info("Removed hot flat file data", {
-          finalizedCheckpointSlot,
-          blobSlots: hotBlobSlots,
+          finalizedBlockSlot,
           columnSlots: hotColumnSlots,
         });
       }
 
       // Rebuild existence cache from disk
-      const stats = await this.cache.rebuildFromDisk(this.blobStore.dir, this.columnStore.dir);
-      this.metrics?.files.set({store: FlatFileStoreType.blob}, this.cache.getBlobFileCount());
-      this.metrics?.files.set({store: FlatFileStoreType.column}, this.cache.getColumnFileCount());
-      if (stats.ignoredBlobEntries > 0 || stats.ignoredColumnEntries > 0) {
+      const stats = await this.cache.rebuildFromDisk(this.columnStore.dir);
+      this.metrics?.files.set(this.cache.getColumnFileCount());
+      if (stats.ignoredColumnEntries > 0) {
         this.logger.warn("Ignored non-canonical flat file store entries", {
-          blobEntries: stats.ignoredBlobEntries,
           columnEntries: stats.ignoredColumnEntries,
         });
       }
       this.logger.info("Flat file store initialized", {
-        blobFiles: stats.blobFiles,
         columnFiles: stats.columnFiles,
       });
     } catch (e) {
@@ -78,35 +64,7 @@ export class FlatFileStore implements IFlatFileStore {
   }
 
   async close(): Promise<void> {
-    // Nothing to close — all operations are stateless file I/O
-  }
-
-  // --- Blobs ---
-
-  async getBlobSidecars(slot: Slot, blockRoot: RootHex): Promise<BlobSidecarsWrapper | null> {
-    const data = await this.blobStore.getBinary(slot, blockRoot);
-    if (!data) return null;
-    return blobSidecarsWrapperSsz.deserialize(data);
-  }
-
-  async getBlobSidecarsBinary(slot: Slot, blockRoot: RootHex): Promise<Uint8Array | null> {
-    return this.blobStore.getBinary(slot, blockRoot);
-  }
-
-  async getBlobSidecarsBinaryBySlot(slot: Slot): Promise<Uint8Array | null> {
-    return this.blobStore.getBinaryBySlot(slot);
-  }
-
-  async putBlobSidecars(slot: Slot, blockRoot: RootHex, blobSidecars: deneb.BlobSidecars): Promise<void> {
-    await this.putBlobSidecarsBinary(
-      slot,
-      blockRoot,
-      blobSidecarsWrapperSsz.serialize({blockRoot: fromHex(blockRoot), slot, blobSidecars})
-    );
-  }
-
-  async putBlobSidecarsBinary(slot: Slot, blockRoot: RootHex, data: Uint8Array): Promise<void> {
-    await this.blobStore.put(slot, blockRoot, data);
+    // All operations are stateless file I/O.
   }
 
   // --- Columns ---
@@ -127,18 +85,11 @@ export class FlatFileStore implements IFlatFileStore {
     await this.columnStore.putColumnsBinary(slot, blockRoot, fromHex(blockRoot), columns);
   }
 
-  async getDataColumnsBinaryBySlot(slot: Slot, indices: number[]): Promise<(Uint8Array | undefined)[]> {
-    return this.columnStore.getColumnsBinaryBySlot(slot, indices);
-  }
-
   // --- Pruning ---
 
   async deleteNonCanonical(items: {slot: Slot; blockRoot: RootHex}[]): Promise<void> {
     const results = await Promise.allSettled(
-      items.flatMap(({slot, blockRoot}) => [
-        this.blobStore.delete(slot, blockRoot),
-        this.columnStore.delete(slot, blockRoot),
-      ])
+      items.map(({slot, blockRoot}) => this.columnStore.delete(slot, blockRoot))
     );
     const errors = results
       .filter((result): result is PromiseRejectedResult => result.status === "rejected")
@@ -146,10 +97,6 @@ export class FlatFileStore implements IFlatFileStore {
     if (errors.length > 0) {
       throw new AggregateError(errors, "Failed to delete non-canonical flat file data");
     }
-  }
-
-  async pruneBlobsBeforeSlot(slot: Slot): Promise<void> {
-    await this.blobStore.pruneBeforeSlot(slot);
   }
 
   async pruneColumnsBeforeSlot(slot: Slot): Promise<void> {

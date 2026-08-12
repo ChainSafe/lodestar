@@ -12,6 +12,14 @@ import {MockedBeaconChain, getMockedBeaconChain} from "../../../mocks/mockedBeac
 import {MockedBeaconDb, getMockedBeaconDb} from "../../../mocks/mockedBeaconDb.js";
 import {generateProtoBlock} from "../../../utils/typeGenerator.js";
 
+function toAsyncIterable<T>(items: T[]): AsyncIterable<T> {
+  return {
+    async *[Symbol.asyncIterator]() {
+      for (const item of items) yield item;
+    },
+  };
+}
+
 describe("block archiver task", () => {
   const logger = testLogger();
 
@@ -27,6 +35,10 @@ describe("block archiver task", () => {
 
     vi.spyOn(dbStub.blockArchive, "batchPutBinary");
     vi.spyOn(dbStub.block, "batchDelete");
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "putManyBinary");
+    vi.spyOn(dbStub.dataColumnSidecar, "deleteMany");
+    vi.spyOn(dbStub.blobSidecarsArchive, "keys").mockResolvedValue([]);
+    vi.spyOn(dbStub.dataColumnSidecarArchive, "keys").mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -84,9 +96,125 @@ describe("block archiver task", () => {
     );
     // delete non canonical blocks
     expect(dbStub.block.batchDelete).toBeCalledWith([blocks[2]].map((summary) => fromHexString(summary.blockRoot)));
+    expect(dbStub.flatFileStore.deleteNonCanonical).not.toHaveBeenCalled();
+  });
+
+  it("should archive legacy data column sidecars for finalized blocks", async () => {
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
+    });
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+    const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+    const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
+
+    vi.spyOn(dbStub.block, "getBinary").mockResolvedValue(blockBytes);
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(
+      toAsyncIterable([{id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes}])
+    );
+
+    const blocks = Array.from({length: 5}, (_, i) =>
+      generateProtoBlock({
+        slot: i + 1,
+        blockRoot: toHexString(Buffer.alloc(32, i + 1)),
+        payloadStatus: PayloadStatus.FULL,
+      })
+    );
+    const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
+    const nonCanonicalBlocks = [blocks[2]];
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: canonicalBlocks,
+      nonAncestors: nonCanonicalBlocks,
+    });
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+      2
+    );
+
+    for (const canonicalBlock of canonicalBlocks) {
+      expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(canonicalBlock.slot, [
+        {key: dataColumn.index, value: dataColumnBytes},
+      ]);
+    }
+    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith(
+      canonicalBlocks.map((canonicalBlock) => fromHexString(canonicalBlock.blockRoot))
+    );
+    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith(
+      nonCanonicalBlocks.map((nonCanonicalBlock) => fromHexString(nonCanonicalBlock.blockRoot))
+    );
+  });
+
+  it("should retry legacy columns for an already archived boundary block", async () => {
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      FULU_FORK_EPOCH: 0,
+      MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 4,
+    });
+    const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+    const blockBytes = ssz.fulu.SignedBeaconBlock.serialize(block);
+    const dataColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+    const dataColumnBytes = ssz.fulu.DataColumnSidecar.serialize(dataColumn);
+    const newAncestor = generateProtoBlock({
+      slot: 4,
+      blockRoot: toHexString(Buffer.alloc(32, 4)),
+      payloadStatus: PayloadStatus.FULL,
+    });
+    const boundary = generateProtoBlock({
+      slot: 2,
+      blockRoot: toHexString(Buffer.alloc(32, 2)),
+      payloadStatus: PayloadStatus.FULL,
+    });
+
+    vi.spyOn(dbStub.block, "getBinary").mockImplementation(async (root: Uint8Array) =>
+      toHexString(root) === newAncestor.blockRoot ? Buffer.from(blockBytes) : null
+    );
+    vi.spyOn(dbStub.dataColumnSidecar, "valuesStreamBinary").mockReturnValue(
+      toAsyncIterable([{id: dataColumn.index, prefix: block.message.stateRoot, value: dataColumnBytes}])
+    );
+    vi.spyOn(forkChoiceStub, "getAllAncestorAndNonAncestorBlocksDefaultStatus").mockReturnValue({
+      ancestors: [newAncestor, boundary],
+      nonAncestors: [],
+    });
+
+    await archiveBlocks(
+      config,
+      dbStub,
+      forkChoiceStub,
+      lightclientServer,
+      logger,
+      {epoch: 1, root: fromHexString(ZERO_HASH_HEX), rootHex: ZERO_HASH_HEX},
+      1
+    );
+
+    expect(dbStub.blockArchive.batchPutBinary).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0]).toHaveLength(1);
+    expect(vi.mocked(dbStub.blockArchive.batchPutBinary).mock.calls[0][0][0].slot).toBe(newAncestor.slot);
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(newAncestor.slot, [
+      {key: dataColumn.index, value: dataColumnBytes},
+    ]);
+    expect(dbStub.dataColumnSidecarArchive.putManyBinary).toHaveBeenCalledWith(boundary.slot, [
+      {key: dataColumn.index, value: dataColumnBytes},
+    ]);
+    expect(dbStub.dataColumnSidecar.deleteMany).toHaveBeenCalledWith([
+      fromHexString(newAncestor.blockRoot),
+      fromHexString(boundary.blockRoot),
+    ]);
   });
 
   it("should delete sidecars only for non-canonical FULL payload variants", async () => {
+    const config = createChainForkConfig({
+      ...defaultConfig,
+      DENEB_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+    });
     const fullRoot = toHexString(Buffer.alloc(32, 1));
     const emptyRoot = toHexString(Buffer.alloc(32, 2));
     const canonicalFull = generateProtoBlock({slot: 3, blockRoot: fullRoot, payloadStatus: PayloadStatus.FULL});
@@ -99,7 +227,7 @@ describe("block archiver task", () => {
     });
 
     await archiveBlocks(
-      defaultConfig,
+      config,
       dbStub,
       forkChoiceStub,
       lightclientServer,
@@ -138,6 +266,7 @@ describe("block archiver task", () => {
   });
 
   it("should retain non-canonical blocks when flat file cleanup fails", async () => {
+    const config = createChainForkConfig({...defaultConfig, FULU_FORK_EPOCH: 0});
     const block = generateProtoBlock({
       slot: 3,
       blockRoot: toHexString(Buffer.alloc(32, 3)),
@@ -152,7 +281,7 @@ describe("block archiver task", () => {
 
     await expect(
       archiveBlocks(
-        defaultConfig,
+        config,
         dbStub,
         forkChoiceStub,
         lightclientServer,
@@ -168,12 +297,11 @@ describe("block archiver task", () => {
     expect(dbStub.block.batchDelete).not.toHaveBeenCalled();
   });
 
-  it("should prune flat file store blobs and columns by retained sidecar window", async () => {
+  it("should prune flat file columns by the retained sidecar window", async () => {
     const config = createChainForkConfig({
       ...defaultConfig,
       DENEB_FORK_EPOCH: 0,
       FULU_FORK_EPOCH: 0,
-      MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS: 4,
       MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS: 2,
     });
 
@@ -210,11 +338,9 @@ describe("block archiver task", () => {
       currentEpoch
     );
 
-    const blobsPruneSlot = computeStartSlotAtEpoch(currentEpoch - config.MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS);
     const columnsPruneSlot = computeStartSlotAtEpoch(
       currentEpoch - config.MIN_EPOCHS_FOR_DATA_COLUMN_SIDECARS_REQUESTS
     );
-    expect(dbStub.flatFileStore.pruneBlobsBeforeSlot).toHaveBeenCalledWith(blobsPruneSlot);
     expect(dbStub.flatFileStore.pruneColumnsBeforeSlot).toHaveBeenCalledWith(columnsPruneSlot);
   });
 });

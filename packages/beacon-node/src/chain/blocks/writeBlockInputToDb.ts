@@ -55,8 +55,8 @@ async function writeBlockAndBlobsToDb(this: BeaconChain, blockInput: IBlockInput
           await blockInput.waitForAllData(BLOB_AVAILABILITY_TIMEOUT);
         }
         const blobSidecars = blockInput.getBlobs();
-        await this.db.flatFileStore.putBlobSidecars(slot, blockRootHex, blobSidecars);
-        this.logger.debug("Persisted blobSidecars", {
+        await this.db.blobSidecars.add({blockRoot, slot, blobSidecars});
+        this.logger.debug("Persisted blobSidecars to hot DB", {
           slot,
           root: blockRootHex,
           numBlobs: blobSidecars.length,

@@ -5,7 +5,7 @@ import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {ColumnIndex, Epoch, fulu} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
+import {fromHex, toRootHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {prettyPrintPeerId} from "../../util.js";
@@ -67,17 +67,33 @@ export async function* onDataColumnSidecarsByRange(
     const archiveEnd = Math.min(endSlot, archiveMaxSlot + 1);
     for (let slot = startSlot; slot < archiveEnd; slot++) {
       const canonicalBlock = slot >= oldestForkChoiceSlot ? canonicalBlocksBySlot.get(slot) : undefined;
+      let unavailabilityBlockRoot: Uint8Array | undefined;
       let dataColumnSidecars: (Uint8Array | undefined)[];
       if (slot >= oldestForkChoiceSlot) {
         // Post-Gloas, only the FULL variant has columns. EMPTY and PENDING variants may share its block root.
         if (!canonicalBlock || canonicalBlock.payloadStatus !== PayloadStatus.FULL) continue;
-        dataColumnSidecars = await db.flatFileStore.getDataColumnsBinary(
+        unavailabilityBlockRoot = fromHex(canonicalBlock.blockRoot);
+        dataColumnSidecars = await chain.getSerializedDataColumnSidecars(
           slot,
           canonicalBlock.blockRoot,
           availableColumns
         );
       } else {
-        dataColumnSidecars = await db.flatFileStore.getDataColumnsBinaryBySlot(slot, availableColumns);
+        const canonicalBlockResult = await chain.getCanonicalBlockAtSlot(slot);
+        if (!canonicalBlockResult) continue;
+        const blockRootHex = toRootHex(
+          chain.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(canonicalBlockResult.block.message)
+        );
+        if (chain.config.getForkSeq(slot) >= ForkSeq.gloas) {
+          const blockRoot = fromHex(blockRootHex);
+          if (!chain.seenPayloadEnvelopeInputCache.hasPayload(blockRootHex)) {
+            const hotEnvelopeBytes = await db.executionPayloadEnvelope.getBinary(blockRoot);
+            const envelopeBytes = hotEnvelopeBytes ?? (await db.executionPayloadEnvelopeArchive.getBinary(slot));
+            if (!envelopeBytes) continue;
+          }
+          unavailabilityBlockRoot = blockRoot;
+        }
+        dataColumnSidecars = await chain.getSerializedDataColumnSidecars(slot, blockRootHex, availableColumns);
       }
 
       const unavailableColumnIndices: ColumnIndex[] = [];
@@ -103,7 +119,8 @@ export async function* onDataColumnSidecarsByRange(
           db,
           metrics: chain.metrics,
           unavailableColumnIndices,
-          blockRoot: canonicalBlock ? fromHex(canonicalBlock.blockRoot) : undefined,
+          blockRoot: unavailabilityBlockRoot,
+          finalized: true,
           slot,
           requestedColumns,
           availableColumns,
@@ -162,6 +179,8 @@ export async function* onDataColumnSidecarsByRange(
             metrics: chain.metrics,
             unavailableColumnIndices,
             blockRoot: fromHex(block.blockRoot),
+            // At Gloas the beacon-finalized boundary stays in this section until its payload finalizes.
+            finalized: block.slot <= finalizedSlot,
             slot: block.slot,
             requestedColumns,
             availableColumns,

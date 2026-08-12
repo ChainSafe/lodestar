@@ -5833,7 +5833,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "95th percentile duration of flat-file operations by store and operation.",
+      "description": "95th percentile duration of flat-file operations by operation.",
       "fieldConfig": {
         "defaults": {
           "unit": "s"
@@ -5866,8 +5866,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (le, instance, store, operation) (rate(lodestar_flat_file_store_operation_duration_seconds_bucket{job=~\"$beacon_job|beacon\"}[$rate_interval])))",
-          "legendFormat": "{{instance}} {{store}} {{operation}} p95",
+          "expr": "histogram_quantile(0.95, sum by (le, instance, operation) (rate(lodestar_flat_file_store_operation_duration_seconds_bucket{job=~\"$beacon_job|beacon\"}[$rate_interval])))",
+          "legendFormat": "{{instance}} {{operation}} p95",
           "range": true,
           "refId": "A"
         }
@@ -5880,7 +5880,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Rate of failed flat-file operations by store and operation.",
+      "description": "Rate of failed flat-file operations by operation.",
       "fieldConfig": {
         "defaults": {
           "unit": "ops"
@@ -5913,8 +5913,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance, store, operation) (rate(lodestar_flat_file_store_operation_errors_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
-          "legendFormat": "{{instance}} {{store}} {{operation}}",
+          "expr": "sum by (instance, operation) (rate(lodestar_flat_file_store_operation_errors_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
+          "legendFormat": "{{instance}} {{operation}}",
           "range": true,
           "refId": "A"
         }
@@ -5960,8 +5960,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance, store) (rate(lodestar_flat_file_store_read_bytes_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
-          "legendFormat": "{{instance}} {{store}} read",
+          "expr": "sum by (instance) (rate(lodestar_flat_file_store_read_bytes_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
+          "legendFormat": "{{instance}} read",
           "range": true,
           "refId": "A"
         },
@@ -5971,8 +5971,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance, store) (rate(lodestar_flat_file_store_write_bytes_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
-          "legendFormat": "{{instance}} {{store}} write",
+          "expr": "sum by (instance) (rate(lodestar_flat_file_store_write_bytes_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
+          "legendFormat": "{{instance}} write",
           "range": true,
           "refId": "B"
         }
@@ -6018,8 +6018,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (instance, store) (lodestar_flat_file_store_files{job=~\"$beacon_job|beacon\"})",
-          "legendFormat": "{{instance}} {{store}}",
+          "expr": "sum by (instance) (lodestar_flat_file_store_files{job=~\"$beacon_job|beacon\"})",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
@@ -6065,8 +6065,8 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "60 * sum by (instance, store) (rate(lodestar_flat_file_store_pruned_directories_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
-          "legendFormat": "{{instance}} {{store}}",
+          "expr": "60 * sum by (instance) (rate(lodestar_flat_file_store_pruned_directories_total{job=~\"$beacon_job|beacon\"}[$rate_interval]))",
+          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
@@ -6166,53 +6166,6 @@
         }
       ],
       "title": "Flat file startup errors",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "description": "Legacy sidecar migration write attempts by store and result in the current process.",
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 235
-      },
-      "id": 572,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "sum by (instance, store, result) (lodestar_flat_file_store_migration_writes_total{job=~\"$beacon_job|beacon\"})",
-          "legendFormat": "{{instance}} {{store}} {{result}}",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Flat file migration writes",
       "type": "timeseries"
     }
   ],

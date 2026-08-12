@@ -3,6 +3,7 @@ import {BLOB_SIDECAR_FIXED_SIZE, GENESIS_SLOT} from "@lodestar/params";
 import {RespStatus, ResponseError, ResponseOutgoing} from "@lodestar/reqresp";
 import {computeEpochAtSlot} from "@lodestar/state-transition";
 import {Epoch, Slot, deneb} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {IBeaconChain} from "../../../chain/index.js";
 import {IBeaconDb} from "../../../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../db/repositories/blobSidecars.js";
@@ -16,36 +17,31 @@ export async function* onBlobSidecarsByRange(
   const {startSlot, count} = validateBlobSidecarsByRangeRequest(chain.config, chain.clock.currentEpoch, request);
   const endSlot = startSlot + count;
 
+  const finalized = db.blobSidecarsArchive;
+  const unfinalized = db.blobSidecars;
   const finalizedSlot = chain.forkChoice.getFinalizedBlock().slot;
+  // Blobs are migrated to blobSidecarsArchive at finalization (including the finalized block
+  // itself), so the archive loop serves up to AND INCLUDING finalizedSlot and the headChain
+  // loop starts above it to avoid duplicate yields. See archiveBlocks.ts for the migration logic.
   const archiveMaxSlot = finalizedSlot;
-  const headBlock = chain.forkChoice.getHead();
-  // The canonical walk reaches back to the previous finalized boundary. Within that range fork choice is
-  // authoritative: a missing block means the canonical chain skipped the slot, not that storage should choose a root.
-  const headChain = chain.forkChoice.getAllAncestorBlocks(headBlock.blockRoot, headBlock.payloadStatus);
-  const canonicalBlocksBySlot = new Map(headChain.map((block) => [block.slot, block]));
-  const oldestForkChoiceSlot = headChain.at(-1)?.slot ?? Number.POSITIVE_INFINITY;
 
   // Finalized range of blobs
   if (startSlot <= archiveMaxSlot) {
-    for (let slot = startSlot; slot < Math.min(endSlot, archiveMaxSlot + 1); slot++) {
-      let blobSideCarsBytesWrapped: Uint8Array | null;
-      if (slot >= oldestForkChoiceSlot) {
-        const canonicalBlock = canonicalBlocksBySlot.get(slot);
-        if (!canonicalBlock) continue;
-        blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinary(slot, canonicalBlock.blockRoot);
-      } else {
-        blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinaryBySlot(slot);
-      }
-      if (!blobSideCarsBytesWrapped) {
-        continue;
-      }
-      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, slot);
+    // Chain of blobs won't change
+    for await (const {key, value: blobSideCarsBytesWrapped} of finalized.binaryEntriesStream({
+      gte: startSlot,
+      lt: Math.min(endSlot, archiveMaxSlot + 1),
+    })) {
+      yield* iterateBlobBytesFromWrapper(chain, blobSideCarsBytesWrapped, finalized.decodeKey(key));
     }
   }
 
   // Non-finalized range of blobs
   if (endSlot > archiveMaxSlot) {
+    const headBlock = chain.forkChoice.getHead();
+    const headRoot = headBlock.blockRoot;
     // TODO DENEB: forkChoice should mantain an array of canonical blocks, and change only on reorg
+    const headChain = chain.forkChoice.getAllAncestorBlocks(headRoot, headBlock.payloadStatus);
     // `getAllAncestorBlocks` includes both the head and the previous-finalized boundary.
 
     // Iterate head chain with ascending block numbers
@@ -60,7 +56,7 @@ export async function* onBlobSidecarsByRange(
         // re-org there's no need to abort the request
         // Spec: https://github.com/ethereum/consensus-specs/blob/a1e46d1ae47dd9d097725801575b46907c12a1f8/specs/eip4844/p2p-interface.md#blobssidecarsbyrange-v1
 
-        const blobSideCarsBytesWrapped = await db.flatFileStore.getBlobSidecarsBinary(block.slot, block.blockRoot);
+        const blobSideCarsBytesWrapped = await unfinalized.getBinary(fromHex(block.blockRoot));
         if (!blobSideCarsBytesWrapped) {
           // Handle the same to onBeaconBlocksByRange
           throw new ResponseError(RespStatus.SERVER_ERROR, `No item for root ${block.blockRoot} slot ${block.slot}`);

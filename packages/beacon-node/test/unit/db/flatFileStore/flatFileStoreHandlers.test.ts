@@ -6,13 +6,17 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {type ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config as defaultConfig} from "@lodestar/config/default";
 import {PayloadStatus} from "@lodestar/fork-choice";
-import {BLOB_SIDECAR_FIXED_SIZE, NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {NUMBER_OF_COLUMNS} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {fromHex, toRootHex} from "@lodestar/utils";
+import {DAType} from "../../../../src/chain/blocks/blockInput/types.js";
+import {BeaconChain} from "../../../../src/chain/chain.js";
 import type {IBeaconChain} from "../../../../src/chain/interface.js";
 import {FlatFileStore} from "../../../../src/db/flatFileStore/flatFileStore.js";
 import type {IBeaconDb} from "../../../../src/db/interface.js";
-import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../../../../src/db/repositories/blobSidecars.js";
-import {onBlobSidecarsByRange} from "../../../../src/network/reqresp/handlers/blobSidecarsByRange.js";
 import {onDataColumnSidecarsByRange} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRange.js";
+import {onDataColumnSidecarsByRoot} from "../../../../src/network/reqresp/handlers/dataColumnSidecarsByRoot.js";
+import {handleColumnSidecarUnavailability} from "../../../../src/network/reqresp/utils/dataColumnResponseValidation.js";
 
 const testLogger = {
   info: () => {},
@@ -24,19 +28,6 @@ const testLogger = {
 
 const ROOT_A = "0x" + "aa".repeat(32);
 const ROOT_B = "0x" + "bb".repeat(32);
-
-/** Build a fake BlobSidecarsWrapper binary with N blobs of BLOB_SIDECAR_FIXED_SIZE each. */
-function buildBlobWrapper(numBlobs: number, fillByte: number): Uint8Array {
-  // 44 bytes of wrapper prefix (blockRoot=32 + slot=8 + offset=4) + N * BLOB_SIDECAR_FIXED_SIZE
-  const wrapperSize = BLOB_SIDECARS_IN_WRAPPER_INDEX + numBlobs * BLOB_SIDECAR_FIXED_SIZE;
-  const buf = new Uint8Array(wrapperSize);
-  // Fill the blob data area so we can verify it's returned
-  for (let i = 0; i < numBlobs; i++) {
-    const start = BLOB_SIDECARS_IN_WRAPPER_INDEX + i * BLOB_SIDECAR_FIXED_SIZE;
-    buf.fill(fillByte + i, start, start + BLOB_SIDECAR_FIXED_SIZE);
-  }
-  return buf;
-}
 
 async function collectAsync<T>(iterable: AsyncIterable<T>): Promise<T[]> {
   const result: T[] = [];
@@ -61,139 +52,6 @@ describe("FlatFileStore reqresp handler integration", () => {
     await fs.promises.rm(tmpDir, {recursive: true, force: true});
   });
 
-  describe("onBlobSidecarsByRange with flatFileStore", () => {
-    const denebConfig = createChainForkConfig({
-      ...defaultConfig,
-      DENEB_FORK_EPOCH: 0,
-    });
-
-    function makeMockChainAndDb(opts: {finalizedSlot: number; headChain?: {slot: number; blockRoot: string}[]}) {
-      const chain = {
-        config: denebConfig,
-        clock: {currentEpoch: 10},
-        forkChoice: {
-          getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
-          getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
-          getAllAncestorBlocks: () =>
-            (opts.headChain ?? []).map((block) => ({...block, payloadStatus: PayloadStatus.FULL})),
-        },
-      } as unknown as IBeaconChain;
-
-      const db = {
-        flatFileStore: store,
-        blobSidecars: {},
-        blobSidecarsArchive: {},
-      } as unknown as IBeaconDb;
-
-      return {chain, db};
-    }
-
-    it("should serve finalized blobs from flat file store", async () => {
-      // Put a blob wrapper with 2 blobs at slot 100
-      const wrapper = buildBlobWrapper(2, 0x10);
-      await store.putBlobSidecarsBinary(100, ROOT_A, wrapper);
-
-      const {chain, db} = makeMockChainAndDb({finalizedSlot: 200});
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
-
-      // Should yield 2 individual blob sidecars
-      expect(responses.length).toBe(2);
-      expect(responses[0].data.length).toBe(BLOB_SIDECAR_FIXED_SIZE);
-      expect(responses[1].data.length).toBe(BLOB_SIDECAR_FIXED_SIZE);
-      // Verify data content
-      expect(responses[0].data[0]).toBe(0x10);
-      expect(responses[1].data[0]).toBe(0x11);
-    });
-
-    it("should serve multiple finalized slots from flat file store", async () => {
-      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x20));
-      await store.putBlobSidecarsBinary(101, ROOT_B, buildBlobWrapper(1, 0x30));
-
-      const {chain, db} = makeMockChainAndDb({finalizedSlot: 200});
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 2}, chain, db));
-
-      expect(responses.length).toBe(2);
-      expect(responses[0].data[0]).toBe(0x20);
-      expect(responses[1].data[0]).toBe(0x30);
-    });
-
-    it("should serve unfinalized blobs from flat file store", async () => {
-      // Put a blob at slot 300 (unfinalized, finalized is at 200)
-      const wrapper = buildBlobWrapper(1, 0x40);
-      await store.putBlobSidecarsBinary(300, ROOT_A, wrapper);
-
-      const {chain, db} = makeMockChainAndDb({
-        finalizedSlot: 200,
-        headChain: [{slot: 300, blockRoot: ROOT_A}],
-      });
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 300, count: 1}, chain, db));
-
-      expect(responses.length).toBe(1);
-      expect(responses[0].data[0]).toBe(0x40);
-    });
-
-    it("should not duplicate boundary slot between finalized and unfinalized paths", async () => {
-      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x41));
-      await store.putBlobSidecarsBinary(101, ROOT_B, buildBlobWrapper(1, 0x42));
-
-      const {chain, db} = makeMockChainAndDb({
-        finalizedSlot: 100,
-        headChain: [{slot: 101, blockRoot: ROOT_B}],
-      });
-
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 2}, chain, db));
-      expect(responses.length).toBe(2);
-      expect(responses[0].data[0]).toBe(0x41);
-      expect(responses[1].data[0]).toBe(0x42);
-    });
-
-    it("should return empty for slot range with no blobs", async () => {
-      const {chain, db} = makeMockChainAndDb({finalizedSlot: 200});
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
-      expect(responses.length).toBe(0);
-    });
-
-    it("should resolve root from existence cache without readdir", async () => {
-      // Put blobs — this populates the existence cache
-      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x70));
-
-      const {chain, db} = makeMockChainAndDb({finalizedSlot: 200});
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
-
-      expect(responses.length).toBe(1);
-      expect(responses[0].data[0]).toBe(0x70);
-    });
-
-    it("should use the canonical root while finalization cleanup is pending", async () => {
-      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0x80));
-      await store.putBlobSidecarsBinary(100, ROOT_B, buildBlobWrapper(1, 0x90));
-
-      const {chain, db} = makeMockChainAndDb({
-        finalizedSlot: 100,
-        headChain: [{slot: 100, blockRoot: ROOT_B}],
-      });
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
-
-      expect(responses).toHaveLength(1);
-      expect(responses[0].data[0]).toBe(0x90);
-    });
-
-    it("should not serve a losing-fork blob at a canonically skipped slot", async () => {
-      await store.putBlobSidecarsBinary(100, ROOT_A, buildBlobWrapper(1, 0xa0));
-
-      const {chain, db} = makeMockChainAndDb({
-        finalizedSlot: 100,
-        headChain: [
-          {slot: 101, blockRoot: ROOT_B},
-          {slot: 99, blockRoot: ROOT_A},
-        ],
-      });
-      const responses = await collectAsync(onBlobSidecarsByRange({startSlot: 100, count: 1}, chain, db));
-
-      expect(responses).toHaveLength(0);
-    });
-  });
-
   describe("onDataColumnSidecarsByRange with flatFileStore", () => {
     // Use a config with fulu enabled at epoch 0 to avoid fork-related filtering
     const fuluConfig = createChainForkConfig({
@@ -208,29 +66,86 @@ describe("FlatFileStore reqresp handler integration", () => {
       GLOAS_FORK_EPOCH: 0,
     });
 
+    function getArchivedBlock(slot: number) {
+      const block = ssz.fulu.SignedBeaconBlock.defaultValue();
+      block.message.slot = slot;
+      return block;
+    }
+
+    function getArchivedRoot(slot: number): string {
+      const block = getArchivedBlock(slot);
+      return toRootHex(fuluConfig.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message));
+    }
+
     function makeMockChainAndDb(opts: {
       config?: ChainForkConfig;
       finalizedSlot: number;
       custodyColumns: number[];
       earliestAvailableSlot?: number;
       headChain?: {slot: number; blockRoot: string; payloadStatus?: PayloadStatus}[];
+      forkChoiceBlockByRoot?: {slot: number; blockRoot: string; payloadStatus: PayloadStatus} | null;
+      archivedBlockSlotsByRoot?: ReadonlyMap<string, number>;
       getSerializedDataColumnSidecars?: (
         slot: number,
         root: string,
         indices: number[]
       ) => Promise<(Uint8Array | undefined)[]>;
+      getHotDataColumnSidecars?: (root: Uint8Array, indices: number[]) => Promise<(Uint8Array | undefined)[]>;
+      getArchivedDataColumnSidecars?: (slot: number, indices: number[]) => Promise<(Uint8Array | undefined)[]>;
+      hotBlockBytes?: Uint8Array;
+      archivedBlockBytes?: Uint8Array;
+      hotExecutionPayloadEnvelopeBytes?: Uint8Array;
+      archivedExecutionPayloadEnvelopeBytes?: Uint8Array;
+      hasCachedPayloadEnvelope?: boolean;
+      getCanonicalBlockAtSlot?: IBeaconChain["getCanonicalBlockAtSlot"];
+      missingCustodyColumnsInc?: (value: number) => void;
     }) {
+      const config = opts.config ?? fuluConfig;
       const custodyColumnsIndex = new Uint8Array(NUMBER_OF_COLUMNS);
       for (const column of opts.custodyColumns) {
         custodyColumnsIndex[column] = 1;
       }
 
+      const archivedSlotsByRoot = new Map(opts.archivedBlockSlotsByRoot);
+      const db = {
+        flatFileStore: store,
+        dataColumnSidecar: {
+          getManyBinary:
+            opts.getHotDataColumnSidecars ??
+            (async (_root: Uint8Array, indices: number[]) => indices.map(() => undefined)),
+        },
+        dataColumnSidecarArchive: {
+          getManyBinary:
+            opts.getArchivedDataColumnSidecars ??
+            (async (_slot: number, indices: number[]) => indices.map(() => undefined)),
+        },
+        block: {getBinary: vi.fn().mockResolvedValue(opts.hotBlockBytes ?? null)},
+        blockArchive: {
+          getBinary: vi.fn().mockResolvedValue(opts.archivedBlockBytes ?? null),
+          getSlotByRoot: vi.fn(async (root: Uint8Array) => archivedSlotsByRoot.get(toRootHex(root)) ?? null),
+        },
+        executionPayloadEnvelope: {
+          getBinary: vi.fn().mockResolvedValue(opts.hotExecutionPayloadEnvelopeBytes ?? null),
+        },
+        executionPayloadEnvelopeArchive: {
+          getBinary: vi.fn().mockResolvedValue(opts.archivedExecutionPayloadEnvelopeBytes ?? null),
+        },
+      } as unknown as IBeaconDb;
+
+      const fallbackChain = {
+        config,
+        seenBlockInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        db,
+      } as unknown as BeaconChain;
+
       const chain = {
-        config: opts.config ?? fuluConfig,
+        config,
         clock: {currentEpoch: 10},
         forkChoice: {
           getFinalizedBlock: () => ({slot: opts.finalizedSlot}),
           getHead: () => ({blockRoot: ROOT_A, payloadStatus: PayloadStatus.FULL}),
+          getBlockHexDefaultStatus: vi.fn().mockReturnValue(opts.forkChoiceBlockByRoot ?? null),
           getAllAncestorBlocks: () =>
             (opts.headChain ?? []).map((block) => ({
               ...block,
@@ -242,17 +157,25 @@ describe("FlatFileStore reqresp handler integration", () => {
           custodyColumnsIndex,
         },
         earliestAvailableSlot: opts.earliestAvailableSlot ?? 0,
+        seenPayloadEnvelopeInputCache: {
+          hasPayload: vi.fn().mockReturnValue(opts.hasCachedPayloadEnvelope ?? false),
+        },
         logger: testLogger,
-        metrics: null,
-        getSerializedDataColumnSidecars: opts.getSerializedDataColumnSidecars ?? vi.fn().mockResolvedValue([]),
+        metrics: opts.missingCustodyColumnsInc
+          ? {dataColumns: {missingCustodyColumns: {inc: opts.missingCustodyColumnsInc}}}
+          : null,
+        getCanonicalBlockAtSlot:
+          opts.getCanonicalBlockAtSlot ??
+          (async (slot: number) => {
+            const block = getArchivedBlock(slot);
+            archivedSlotsByRoot.set(toRootHex(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block.message)), slot);
+            return {block, executionOptimistic: false, finalized: true};
+          }),
+        getSerializedDataColumnSidecars:
+          opts.getSerializedDataColumnSidecars ??
+          ((slot: number, root: string, indices: number[]) =>
+            BeaconChain.prototype.getSerializedDataColumnSidecars.call(fallbackChain, slot, root, indices)),
       } as unknown as IBeaconChain;
-
-      const db = {
-        flatFileStore: store,
-        dataColumnSidecarArchive: {},
-        block: {getBinary: vi.fn().mockResolvedValue(null)},
-        blockArchive: {getBinary: vi.fn().mockResolvedValue(null)},
-      } as unknown as IBeaconDb;
 
       return {chain, db};
     }
@@ -263,7 +186,7 @@ describe("FlatFileStore reqresp handler integration", () => {
     it("should serve finalized columns from flat file store", async () => {
       const col0Data = new Uint8Array(100).fill(0x01);
       const col5Data = new Uint8Array(100).fill(0x05);
-      await store.putDataColumnsBinary(10, ROOT_A, [
+      await store.putDataColumnsBinary(10, getArchivedRoot(10), [
         {index: 0, data: col0Data},
         {index: 5, data: col5Data},
       ]);
@@ -282,8 +205,163 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(new Uint8Array(responses[1].data)).toEqual(col5Data);
     });
 
+    it("should fill finalized flat file misses from the LevelDB archive", async () => {
+      const flatFileData = new Uint8Array(32).fill(0x01);
+      const archivedData = new Uint8Array(32).fill(0x02);
+      await store.putDataColumnsBinary(10, getArchivedRoot(10), [{index: 0, data: flatFileData}]);
+      const getArchivedDataColumnSidecars = vi.fn(async (_slot: number, indices: number[]) =>
+        indices.map((index) => (index === 1 ? archivedData : undefined))
+      );
+
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        custodyColumns: [0, 1],
+        getArchivedDataColumnSidecars,
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0, 1]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses.map(({data}) => new Uint8Array(data))).toEqual([flatFileData, archivedData]);
+      expect(getArchivedDataColumnSidecars).toHaveBeenCalledWith(10, [1]);
+    });
+
+    it("should fill root-aware flat file misses from hot then archived LevelDB", async () => {
+      const flatFileData = new Uint8Array(32).fill(0x11);
+      const hotData = new Uint8Array(32).fill(0x22);
+      const archivedData = new Uint8Array(32).fill(0x33);
+      await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: flatFileData}]);
+
+      const getHotDataColumnSidecars = vi.fn(async (_root: Uint8Array, indices: number[]) =>
+        indices.map((index) => (index === 1 ? hotData : undefined))
+      );
+      const getArchivedDataColumnSidecars = vi.fn(async (_slot: number, indices: number[]) =>
+        indices.map((index) => (index === 2 ? archivedData : undefined))
+      );
+      const chain = {
+        config: fuluConfig,
+        seenBlockInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        db: {
+          flatFileStore: store,
+          dataColumnSidecar: {getManyBinary: getHotDataColumnSidecars},
+          dataColumnSidecarArchive: {getManyBinary: getArchivedDataColumnSidecars},
+          blockArchive: {getSlotByRoot: vi.fn().mockResolvedValue(10)},
+        },
+      } as unknown as BeaconChain;
+
+      const dataColumnSidecars = await BeaconChain.prototype.getSerializedDataColumnSidecars.call(
+        chain,
+        10,
+        ROOT_A,
+        [0, 1, 2]
+      );
+
+      expect(dataColumnSidecars).toEqual([flatFileData, hotData, archivedData]);
+      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [1, 2]);
+      expect(getArchivedDataColumnSidecars).toHaveBeenCalledWith(10, [2]);
+    });
+
+    it("should fill partial cache misses from flat file and LevelDB", async () => {
+      const cachedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+      cachedColumn.index = 0;
+      const cachedData = ssz.fulu.DataColumnSidecar.serialize(cachedColumn);
+      const flatFileData = new Uint8Array(32).fill(0x52);
+      const hotData = new Uint8Array(32).fill(0x53);
+      await store.putDataColumnsBinary(10, ROOT_A, [{index: 1, data: flatFileData}]);
+      const getHotDataColumnSidecars = vi.fn(async (_root: Uint8Array, indices: number[]) =>
+        indices.map((index) => (index === 2 ? hotData : undefined))
+      );
+      const chain = {
+        config: fuluConfig,
+        seenBlockInputCache: {
+          get: vi.fn().mockReturnValue({
+            type: DAType.Columns,
+            forkName: "fulu",
+            getColumn: (index: number) => (index === cachedColumn.index ? cachedColumn : undefined),
+          }),
+        },
+        seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        serializedCache: new WeakMap<object, Uint8Array>(),
+        db: {
+          flatFileStore: store,
+          dataColumnSidecar: {getManyBinary: getHotDataColumnSidecars},
+          dataColumnSidecarArchive: {getManyBinary: vi.fn()},
+          blockArchive: {getSlotByRoot: vi.fn()},
+        },
+      } as unknown as BeaconChain;
+
+      const dataColumnSidecars = await BeaconChain.prototype.getSerializedDataColumnSidecars.call(
+        chain,
+        10,
+        ROOT_A,
+        [0, 1, 2]
+      );
+
+      expect(dataColumnSidecars).toEqual([cachedData, flatFileData, hotData]);
+      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [2]);
+    });
+
+    it("should not mix slot-keyed archive columns into a non-canonical root", async () => {
+      const getArchivedDataColumnSidecars = vi.fn().mockResolvedValue([new Uint8Array(32).fill(0x44)]);
+      const chain = {
+        config: fuluConfig,
+        seenBlockInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        db: {
+          flatFileStore: store,
+          dataColumnSidecar: {
+            getManyBinary: vi.fn(async (_root: Uint8Array, indices: number[]) => indices.map(() => undefined)),
+          },
+          dataColumnSidecarArchive: {getManyBinary: getArchivedDataColumnSidecars},
+          blockArchive: {getSlotByRoot: vi.fn().mockResolvedValue(null)},
+        },
+      } as unknown as BeaconChain;
+
+      const dataColumnSidecars = await BeaconChain.prototype.getSerializedDataColumnSidecars.call(
+        chain,
+        10,
+        ROOT_A,
+        [0]
+      );
+
+      expect(dataColumnSidecars).toEqual([undefined]);
+      expect(getArchivedDataColumnSidecars).not.toHaveBeenCalled();
+    });
+
+    it("should merge deserialized flat file, hot, and archived LevelDB columns by index", async () => {
+      const flatColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+      flatColumn.index = 0;
+      const duplicateHotColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+      duplicateHotColumn.index = 0;
+      const hotColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+      hotColumn.index = 1;
+      const duplicateArchivedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+      duplicateArchivedColumn.index = 1;
+      const archivedColumn = ssz.fulu.DataColumnSidecar.defaultValue();
+      archivedColumn.index = 2;
+
+      const chain = {
+        config: fuluConfig,
+        seenBlockInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        seenPayloadEnvelopeInputCache: {get: vi.fn().mockReturnValue(undefined)},
+        db: {
+          flatFileStore: {getDataColumns: vi.fn().mockResolvedValue([flatColumn])},
+          dataColumnSidecar: {values: vi.fn().mockResolvedValue([duplicateHotColumn, hotColumn])},
+          dataColumnSidecarArchive: {
+            values: vi.fn().mockResolvedValue([duplicateArchivedColumn, archivedColumn]),
+          },
+          blockArchive: {getSlotByRoot: vi.fn().mockResolvedValue(10)},
+        },
+      } as unknown as BeaconChain;
+
+      const dataColumnSidecars = await BeaconChain.prototype.getDataColumnSidecars.call(chain, 10, ROOT_A);
+
+      expect(dataColumnSidecars).toEqual([flatColumn, hotColumn, archivedColumn]);
+    });
+
     it("should serve only requested columns from flat file store", async () => {
-      await store.putDataColumnsBinary(10, ROOT_A, [
+      await store.putDataColumnsBinary(10, getArchivedRoot(10), [
         {index: 0, data: new Uint8Array(80).fill(0xaa)},
         {index: 1, data: new Uint8Array(80).fill(0xbb)},
         {index: 2, data: new Uint8Array(80).fill(0xcc)},
@@ -304,8 +382,8 @@ describe("FlatFileStore reqresp handler integration", () => {
     });
 
     it("should serve columns across multiple finalized slots", async () => {
-      await store.putDataColumnsBinary(10, ROOT_A, [{index: 3, data: new Uint8Array(60).fill(0x10)}]);
-      await store.putDataColumnsBinary(11, ROOT_B, [{index: 3, data: new Uint8Array(60).fill(0x11)}]);
+      await store.putDataColumnsBinary(10, getArchivedRoot(10), [{index: 3, data: new Uint8Array(60).fill(0x10)}]);
+      await store.putDataColumnsBinary(11, getArchivedRoot(11), [{index: 3, data: new Uint8Array(60).fill(0x11)}]);
 
       const {chain, db} = makeMockChainAndDb({
         finalizedSlot: 100,
@@ -333,7 +411,7 @@ describe("FlatFileStore reqresp handler integration", () => {
         headChain: [{slot: 11, blockRoot: ROOT_B}],
         getSerializedDataColumnSidecars: vi
           .fn()
-          .mockImplementation(async (slot: number) => (slot === 11 ? [unfinalizedData] : [undefined])),
+          .mockImplementation(async (slot: number) => (slot === 10 ? [finalizedData] : [unfinalizedData])),
       });
 
       const responses = await collectAsync(
@@ -403,8 +481,101 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(responses.length).toBe(0);
     });
 
+    it("should account for missing finalized columns using the archived block", async () => {
+      const block = getArchivedBlock(10);
+      block.message.body.blobKzgCommitments = [new Uint8Array(48)];
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        custodyColumns: [0],
+        archivedBlockBytes: ssz.fulu.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(db.block.getBinary).not.toHaveBeenCalled();
+      expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
+    });
+
+    it("should account for missing finalized columns using the hot block while archival is pending", async () => {
+      const block = getArchivedBlock(10);
+      block.message.body.blobKzgCommitments = [new Uint8Array(48)];
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        headChain: [{slot: 10, blockRoot: ROOT_A}],
+        hotBlockBytes: ssz.fulu.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.blockArchive.getBinary).not.toHaveBeenCalled();
+      expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
+    });
+
+    it("should account for missing finalized columns after the boundary block is archived", async () => {
+      const block = getArchivedBlock(10);
+      block.message.body.blobKzgCommitments = [new Uint8Array(48)];
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        headChain: [{slot: 10, blockRoot: ROOT_A}],
+        archivedBlockBytes: ssz.fulu.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
+    });
+
+    it("should account for missing Gloas boundary columns after the beacon block is archived", async () => {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 10;
+      block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = [new Uint8Array(48)];
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        config: gloasConfig,
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        headChain: [{slot: 10, blockRoot: ROOT_A}],
+        getSerializedDataColumnSidecars: vi.fn().mockResolvedValue([undefined]),
+        hotExecutionPayloadEnvelopeBytes: new Uint8Array([1]),
+        archivedBlockBytes: ssz.gloas.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
+    });
+
     it("should not serve columns for non-custody indices", async () => {
-      await store.putDataColumnsBinary(10, ROOT_A, [
+      await store.putDataColumnsBinary(10, getArchivedRoot(10), [
         {index: 0, data: new Uint8Array(50).fill(0x01)},
         {index: 5, data: new Uint8Array(50).fill(0x05)},
       ]);
@@ -442,6 +613,28 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(new Uint8Array(responses[0].data)).toEqual(canonicalData);
     });
 
+    it("should ignore a stale flat file root outside the fork-choice window", async () => {
+      const staleData = new Uint8Array(32).fill(0x67);
+      const canonicalData = new Uint8Array(32).fill(0x68);
+      await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: staleData}]);
+      const getHotDataColumnSidecars = vi.fn(async (_root: Uint8Array, indices: number[]) =>
+        indices.map((index) => (index === 0 ? canonicalData : undefined))
+      );
+
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 100,
+        custodyColumns: [0],
+        getHotDataColumnSidecars,
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(1);
+      expect(new Uint8Array(responses[0].data)).toEqual(canonicalData);
+      expect(getHotDataColumnSidecars).toHaveBeenCalledWith(expect.any(Uint8Array), [0]);
+    });
+
     it("should not serve losing-fork columns at a canonically skipped slot", async () => {
       await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: new Uint8Array(32).fill(0x77)}]);
 
@@ -460,24 +653,166 @@ describe("FlatFileStore reqresp handler integration", () => {
       expect(responses).toHaveLength(0);
     });
 
-    it("should not serve columns for an archived canonical Gloas EMPTY block", async () => {
-      await store.putDataColumnsBinary(10, ROOT_A, [{index: 0, data: new Uint8Array(32).fill(0x88)}]);
+    it("should not serve old finalized Gloas columns without an execution payload envelope", async () => {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 10;
+      const blockRootHex = toRootHex(gloasConfig.getForkTypes(10).BeaconBlock.hashTreeRoot(block.message));
+      await store.putDataColumnsBinary(10, blockRootHex, [{index: 0, data: new Uint8Array(32).fill(0x88)}]);
 
       const {chain, db} = makeMockChainAndDb({
         config: gloasConfig,
         finalizedSlot: 11,
         custodyColumns: [0],
-        headChain: [
-          {slot: 11, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL},
-          {slot: 10, blockRoot: ROOT_A, payloadStatus: PayloadStatus.EMPTY},
-          {slot: 9, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL},
-        ],
+        headChain: [{slot: 11, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL}],
+        getCanonicalBlockAtSlot: async () => ({block, executionOptimistic: false, finalized: true}),
       });
       const responses = await collectAsync(
         onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
       );
 
       expect(responses).toHaveLength(0);
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex));
+      expect(db.executionPayloadEnvelopeArchive.getBinary).toHaveBeenCalledWith(10);
+    });
+
+    it("should serve old finalized Gloas columns while the payload envelope is still hot", async () => {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 10;
+      const blockRootHex = toRootHex(gloasConfig.getForkTypes(10).BeaconBlock.hashTreeRoot(block.message));
+      const columnBytes = new Uint8Array(32).fill(0x89);
+      await store.putDataColumnsBinary(10, blockRootHex, [{index: 0, data: columnBytes}]);
+
+      const {chain, db} = makeMockChainAndDb({
+        config: gloasConfig,
+        finalizedSlot: 11,
+        custodyColumns: [0],
+        headChain: [{slot: 11, blockRoot: ROOT_B, payloadStatus: PayloadStatus.FULL}],
+        hotExecutionPayloadEnvelopeBytes: new Uint8Array([1]),
+        getCanonicalBlockAtSlot: async () => ({block, executionOptimistic: false, finalized: true}),
+      });
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRange({startSlot: 10, count: 1, columns: [0]}, chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(1);
+      expect(new Uint8Array(responses[0].data)).toEqual(columnBytes);
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(blockRootHex));
+      expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
+    });
+
+    it("should not account for unavailable unfinalized Gloas columns without a payload envelope", async () => {
+      const block = getArchivedBlock(10);
+      block.message.body.blobKzgCommitments = [new Uint8Array(48)];
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        config: gloasConfig,
+        finalizedSlot: 9,
+        custodyColumns: [0],
+        hotBlockBytes: ssz.fulu.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      await handleColumnSidecarUnavailability({
+        chain,
+        db,
+        metrics: chain.metrics,
+        unavailableColumnIndices: [0],
+        requestedColumns: [0],
+        availableColumns: [0],
+        blockRoot: fromHex(ROOT_A),
+        finalized: false,
+        slot: 10,
+      });
+
+      expect(db.executionPayloadEnvelope.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(db.executionPayloadEnvelopeArchive.getBinary).not.toHaveBeenCalled();
+      expect(db.block.getBinary).not.toHaveBeenCalled();
+      expect(missingCustodyColumnsInc).not.toHaveBeenCalled();
+    });
+
+    it("should account for unavailable Gloas columns while the payload envelope write is pending", async () => {
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 10;
+      block.message.body.signedExecutionPayloadBid.message.blobKzgCommitments = [new Uint8Array(48)];
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        config: gloasConfig,
+        finalizedSlot: 9,
+        custodyColumns: [0],
+        hasCachedPayloadEnvelope: true,
+        hotBlockBytes: ssz.gloas.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      await handleColumnSidecarUnavailability({
+        chain,
+        db,
+        metrics: chain.metrics,
+        unavailableColumnIndices: [0],
+        requestedColumns: [0],
+        availableColumns: [0],
+        blockRoot: fromHex(ROOT_A),
+        finalized: false,
+        slot: 10,
+      });
+
+      expect(chain.seenPayloadEnvelopeInputCache.hasPayload).toHaveBeenCalledWith(ROOT_A);
+      expect(db.executionPayloadEnvelope.getBinary).not.toHaveBeenCalled();
+      expect(db.block.getBinary).toHaveBeenCalledWith(fromHex(ROOT_A));
+      expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
+    });
+
+    it("should account for missing columns by root when a fork-choice-known block is already archived", async () => {
+      const block = getArchivedBlock(10);
+      block.message.body.blobKzgCommitments = [new Uint8Array(48)];
+      const blockRootHex = toRootHex(fuluConfig.getForkTypes(10).BeaconBlock.hashTreeRoot(block.message));
+      const blockRoot = fromHex(blockRootHex);
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        forkChoiceBlockByRoot: {slot: 10, blockRoot: blockRootHex, payloadStatus: PayloadStatus.FULL},
+        archivedBlockSlotsByRoot: new Map([[blockRootHex, 10]]),
+        getSerializedDataColumnSidecars: vi.fn().mockResolvedValue([undefined]),
+        archivedBlockBytes: ssz.fulu.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRoot([{blockRoot, columns: [0]}], chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
+      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot);
+      expect(db.block.getBinary).toHaveBeenCalledWith(blockRoot);
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
+    });
+
+    it("should account for missing columns by root for a block known only to the archive", async () => {
+      const block = getArchivedBlock(10);
+      block.message.body.blobKzgCommitments = [new Uint8Array(48)];
+      const blockRootHex = toRootHex(fuluConfig.getForkTypes(10).BeaconBlock.hashTreeRoot(block.message));
+      const blockRoot = fromHex(blockRootHex);
+      const missingCustodyColumnsInc = vi.fn();
+      const {chain, db} = makeMockChainAndDb({
+        finalizedSlot: 10,
+        custodyColumns: [0],
+        archivedBlockSlotsByRoot: new Map([[blockRootHex, 10]]),
+        getSerializedDataColumnSidecars: vi.fn().mockResolvedValue([undefined]),
+        archivedBlockBytes: ssz.fulu.SignedBeaconBlock.serialize(block),
+        missingCustodyColumnsInc,
+      });
+
+      const responses = await collectAsync(
+        onDataColumnSidecarsByRoot([{blockRoot, columns: [0]}], chain, db, mockPeerId, "test-client")
+      );
+
+      expect(responses).toHaveLength(0);
+      expect(db.blockArchive.getSlotByRoot).toHaveBeenCalledWith(blockRoot);
+      expect(db.block.getBinary).toHaveBeenCalledWith(blockRoot);
+      expect(db.blockArchive.getBinary).toHaveBeenCalledWith(10);
+      expect(missingCustodyColumnsInc).toHaveBeenCalledWith(1);
     });
   });
 });

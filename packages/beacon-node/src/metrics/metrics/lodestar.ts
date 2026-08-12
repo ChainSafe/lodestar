@@ -17,11 +17,7 @@ import {ReprocessStatus} from "../../chain/reprocess.js";
 import {RejectReason} from "../../chain/seenCache/seenAttestationData.js";
 import {CacheItemType} from "../../chain/stateCache/types.js";
 import {OpSource} from "../../chain/validatorMonitor.js";
-import type {
-  FlatFileStoreMigrationResult,
-  FlatFileStoreOperation,
-  FlatFileStoreType,
-} from "../../db/flatFileStore/metrics.js";
+import type {FlatFileStoreOperation} from "../../db/flatFileStore/metrics.js";
 import {ExecutionPayloadStatus} from "../../execution/index.js";
 import {GossipType} from "../../network/index.js";
 import {CannotAcceptWorkReason, ReprocessRejectReason} from "../../network/processor/index.js";
@@ -1943,36 +1939,32 @@ export function createLodestarMetrics(
     },
 
     flatFileStore: {
-      operationDuration: register.histogram<{store: FlatFileStoreType; operation: FlatFileStoreOperation}>({
+      operationDuration: register.histogram<{operation: FlatFileStoreOperation}>({
         name: "lodestar_flat_file_store_operation_duration_seconds",
         help: "Duration of flat file store operations in seconds",
-        labelNames: ["store", "operation"],
+        labelNames: ["operation"],
         buckets: [0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 30],
       }),
-      operationErrors: register.counter<{store: FlatFileStoreType; operation: FlatFileStoreOperation}>({
+      operationErrors: register.counter<{operation: FlatFileStoreOperation}>({
         name: "lodestar_flat_file_store_operation_errors_total",
         help: "Total count of failed flat file store operations",
-        labelNames: ["store", "operation"],
+        labelNames: ["operation"],
       }),
-      readBytes: register.counter<{store: FlatFileStoreType}>({
+      readBytes: register.counter({
         name: "lodestar_flat_file_store_read_bytes_total",
         help: "Total bytes read from flat file storage",
-        labelNames: ["store"],
       }),
-      writeBytes: register.counter<{store: FlatFileStoreType}>({
+      writeBytes: register.counter({
         name: "lodestar_flat_file_store_write_bytes_total",
         help: "Total bytes written to flat file storage",
-        labelNames: ["store"],
       }),
-      files: register.gauge<{store: FlatFileStoreType}>({
+      files: register.gauge({
         name: "lodestar_flat_file_store_files",
         help: "Current number of complete files tracked in flat file storage",
-        labelNames: ["store"],
       }),
-      prunedDirectories: register.counter<{store: FlatFileStoreType}>({
+      prunedDirectories: register.counter({
         name: "lodestar_flat_file_store_pruned_directories_total",
         help: "Total count of slot directories pruned from flat file storage",
-        labelNames: ["store"],
       }),
       startupDuration: register.histogram({
         name: "lodestar_flat_file_store_startup_duration_seconds",
@@ -1982,11 +1974,6 @@ export function createLodestarMetrics(
       startupErrors: register.counter({
         name: "lodestar_flat_file_store_startup_errors_total",
         help: "Total count of flat file store startup failures",
-      }),
-      migrationWrites: register.counter<{store: FlatFileStoreType; result: FlatFileStoreMigrationResult}>({
-        name: "lodestar_flat_file_store_migration_writes_total",
-        help: "Total count of legacy sidecar flat file write attempts by result",
-        labelNames: ["store", "result"],
       }),
     },
 

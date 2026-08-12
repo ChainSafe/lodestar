@@ -28,44 +28,37 @@ describe("FlatFileStore metrics", () => {
     const store = new FlatFileStore(tmpDir, config, logger, metrics.flatFileStore);
     await store.init(Number.MAX_SAFE_INTEGER);
 
-    const blobData = new Uint8Array([1, 2, 3, 4]);
-    await store.putBlobSidecarsBinary(100, ROOT, blobData);
-    await store.getBlobSidecarsBinary(100, ROOT);
-
     await store.putDataColumnsBinary(100, ROOT, [{index: 0, data: new Uint8Array(50).fill(0xaa)}]);
     await store.getDataColumnsBinary(100, ROOT, [0]);
 
     const readError = Object.assign(new Error("read failed"), {code: "EIO"});
-    const readSpy = vi.spyOn(fs.promises, "readFile").mockRejectedValueOnce(readError);
+    const readSpy = vi.spyOn(fs.promises, "open").mockRejectedValueOnce(readError);
     try {
-      await expect(store.getBlobSidecarsBinary(100, ROOT)).rejects.toBe(readError);
+      await expect(store.getDataColumnsBinary(100, ROOT, [0])).rejects.toBe(readError);
     } finally {
       readSpy.mockRestore();
     }
 
-    await store.pruneBlobsBeforeSlot(200);
     await store.pruneColumnsBeforeSlot(200);
 
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_write_bytes_total")
-    ).resolves.toContain('lodestar_flat_file_store_write_bytes_total{store="blob"} 4');
+    ).resolves.toContain("lodestar_flat_file_store_write_bytes_total ");
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_read_bytes_total")
-    ).resolves.toContain('lodestar_flat_file_store_read_bytes_total{store="blob"} 4');
+    ).resolves.toContain("lodestar_flat_file_store_read_bytes_total ");
     await expect(metrics.register.getSingleMetricAsString("lodestar_flat_file_store_files")).resolves.toContain(
-      'lodestar_flat_file_store_files{store="blob"} 0'
+      "lodestar_flat_file_store_files 0"
     );
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_pruned_directories_total")
-    ).resolves.toContain('lodestar_flat_file_store_pruned_directories_total{store="column"} 1');
+    ).resolves.toContain("lodestar_flat_file_store_pruned_directories_total 1");
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_operation_errors_total")
-    ).resolves.toContain('lodestar_flat_file_store_operation_errors_total{store="blob",operation="read"} 1');
+    ).resolves.toContain('lodestar_flat_file_store_operation_errors_total{operation="read"} 1');
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_operation_duration_seconds")
-    ).resolves.toContain(
-      'lodestar_flat_file_store_operation_duration_seconds_count{store="column",operation="write"} 1'
-    );
+    ).resolves.toContain('lodestar_flat_file_store_operation_duration_seconds_count{operation="write"} 1');
     await expect(
       metrics.register.getSingleMetricAsString("lodestar_flat_file_store_startup_duration_seconds")
     ).resolves.toContain("lodestar_flat_file_store_startup_duration_seconds_count 1");

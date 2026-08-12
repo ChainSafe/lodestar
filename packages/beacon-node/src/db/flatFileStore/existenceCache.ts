@@ -5,32 +5,18 @@ import {isFsNotFoundError} from "./errors.js";
 import {isValidRootHex, padSlot} from "./path.js";
 
 export type ExistenceCacheRebuildStats = {
-  blobFiles: number;
   columnFiles: number;
-  ignoredBlobEntries: number;
   ignoredColumnEntries: number;
 };
 
 /**
  * In-memory existence cache to avoid filesystem stat()/read calls.
  *
- * - Blob presence: Map<Slot, Set<RootHex>> — knows which (slot, root) have blob files
- * - Column presence: Map<Slot, Set<RootHex>> — knows which (slot, root) have column files
+ * Column presence is tracked as Map<Slot, Set<RootHex>>.
  */
 export class ExistenceCache {
-  private blobPresence = new Map<Slot, Set<RootHex>>();
   private columnPresence = new Map<Slot, Set<RootHex>>();
-  private blobFileCount = 0;
   private columnFileCount = 0;
-
-  private trackBlobSlot(slot: Slot): Set<RootHex> {
-    let roots = this.blobPresence.get(slot);
-    if (!roots) {
-      roots = new Set();
-      this.blobPresence.set(slot, roots);
-    }
-    return roots;
-  }
 
   private trackColumnSlot(slot: Slot): Set<RootHex> {
     let roots = this.columnPresence.get(slot);
@@ -41,20 +27,8 @@ export class ExistenceCache {
     return roots;
   }
 
-  getBlobSlotsBefore(minSlot: Slot): Slot[] {
-    return getSlotsBefore(this.blobPresence, minSlot);
-  }
-
   getColumnSlotsBefore(minSlot: Slot): Slot[] {
     return getSlotsBefore(this.columnPresence, minSlot);
-  }
-
-  removeBlobSlot(slot: Slot): void {
-    const roots = this.blobPresence.get(slot);
-    if (roots) {
-      this.blobFileCount -= roots.size;
-      this.blobPresence.delete(slot);
-    }
   }
 
   removeColumnSlot(slot: Slot): void {
@@ -65,49 +39,9 @@ export class ExistenceCache {
     }
   }
 
-  getBlobFileCount(): number {
-    return this.blobFileCount;
-  }
-
   getColumnFileCount(): number {
     return this.columnFileCount;
   }
-
-  // --- Slot → Root resolution (for finalized canonical lookups) ---
-
-  /**
-   * Return the blob root only when exactly one root is known at this slot.
-   * Multiple roots can coexist until finalization cleanup completes, so choosing
-   * an arbitrary root could return sidecars from a non-canonical block.
-   */
-  getUniqueBlobRootForSlot(slot: Slot): RootHex | null {
-    return getOnlyValue(this.blobPresence.get(slot)?.values());
-  }
-
-  /**
-   * Return the column root only when exactly one root is known at this slot.
-   */
-  getUniqueColumnRootForSlot(slot: Slot): RootHex | null {
-    return getOnlyValue(this.columnPresence.get(slot)?.values());
-  }
-
-  // --- Blobs ---
-
-  setBlobPresent(slot: Slot, rootHex: RootHex): void {
-    const roots = this.trackBlobSlot(slot);
-    if (!roots.has(rootHex)) {
-      roots.add(rootHex);
-      this.blobFileCount++;
-    }
-  }
-
-  removeBlobPresent(slot: Slot, rootHex: RootHex): void {
-    if (this.blobPresence.get(slot)?.delete(rootHex)) {
-      this.blobFileCount--;
-    }
-  }
-
-  // --- Column files ---
 
   setColumnPresent(slot: Slot, rootHex: RootHex): void {
     const roots = this.trackColumnSlot(slot);
@@ -124,28 +58,19 @@ export class ExistenceCache {
   }
 
   /**
-   * Rebuild cache from disk by scanning blob and column directories.
+   * Rebuild cache from disk by scanning the column directory.
    * Only canonical slot directories and root filenames are cached. Unknown
    * entries are left untouched on disk and reported to the caller.
    */
-  async rebuildFromDisk(blobsDir: string, columnsDir: string): Promise<ExistenceCacheRebuildStats> {
-    const blobStats = await scanStoreDirectory(
-      blobsDir,
-      ".ssz",
-      (slot) => this.trackBlobSlot(slot),
-      (slot, rootHex) => this.setBlobPresent(slot, rootHex)
-    );
+  async rebuildFromDisk(columnsDir: string): Promise<ExistenceCacheRebuildStats> {
     const columnStats = await scanStoreDirectory(
       columnsDir,
-      ".dcol",
       (slot) => this.trackColumnSlot(slot),
       (slot, rootHex) => this.setColumnPresent(slot, rootHex)
     );
 
     return {
-      blobFiles: blobStats.files,
       columnFiles: columnStats.files,
-      ignoredBlobEntries: blobStats.ignoredEntries,
       ignoredColumnEntries: columnStats.ignoredEntries,
     };
   }
@@ -153,7 +78,6 @@ export class ExistenceCache {
 
 async function scanStoreDirectory(
   dir: string,
-  extension: ".ssz" | ".dcol",
   trackSlot: (slot: Slot) => void,
   setPresent: (slot: Slot, rootHex: RootHex) => void
 ): Promise<{files: number; ignoredEntries: number}> {
@@ -172,8 +96,8 @@ async function scanStoreDirectory(
       trackSlot(slot);
       const slotEntries = await fs.promises.readdir(path.join(dir, entry.name), {withFileTypes: true});
       for (const file of slotEntries) {
-        const rootHex = file.name.slice(0, -extension.length);
-        if (!file.isFile() || !file.name.endsWith(extension) || !isValidRootHex(rootHex)) {
+        const rootHex = file.name.slice(0, -".dcol".length);
+        if (!file.isFile() || !file.name.endsWith(".dcol") || !isValidRootHex(rootHex)) {
           ignoredEntries++;
           continue;
         }
@@ -195,13 +119,4 @@ function getSlotsBefore(presence: Map<Slot, Set<RootHex>>, minSlot: Slot): Slot[
     if (slot < minSlot) slots.push(slot);
   }
   return slots;
-}
-
-function getOnlyValue(values: IterableIterator<RootHex> | undefined): RootHex | null {
-  if (!values) return null;
-
-  const first = values.next();
-  if (first.done || !values.next().done) return null;
-
-  return first.value;
 }

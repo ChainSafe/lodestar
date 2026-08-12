@@ -9,7 +9,7 @@ import {config as minimalConfig} from "@lodestar/config/default";
 import {LevelDbController} from "@lodestar/db/controller/level";
 import {LoggerNode} from "@lodestar/logger/node";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {GENESIS_SLOT} from "@lodestar/params";
+import {ForkSeq, GENESIS_SLOT} from "@lodestar/params";
 import {
   BeaconStateAllForks,
   BeaconStateView,
@@ -19,7 +19,7 @@ import {
   createPubkeyCache,
   syncPubkeys,
 } from "@lodestar/state-transition";
-import {phase0} from "@lodestar/types";
+import {phase0, ssz} from "@lodestar/types";
 import {RecursivePartial, isPlainObject} from "@lodestar/utils";
 import {initStateFromDb} from "../../../src/chain/initState.js";
 import {BeaconDb} from "../../../src/db/index.js";
@@ -87,6 +87,12 @@ export async function getDevBeaconNode(
       const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
       block.message.stateRoot = anchorState.hashTreeRoot();
       await db.blockArchive.add(block);
+
+      if (config.getForkSeq(GENESIS_SLOT) >= ForkSeq.deneb) {
+        const blobSidecars = ssz.deneb.BlobSidecars.defaultValue();
+        const blockRoot = config.getForkTypes(GENESIS_SLOT).BeaconBlock.hashTreeRoot(block.message);
+        await db.blobSidecars.add({blobSidecars, slot: GENESIS_SLOT, blockRoot});
+      }
     }
   }
 

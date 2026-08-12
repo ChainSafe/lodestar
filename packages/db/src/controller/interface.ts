@@ -63,7 +63,4 @@ export interface DatabaseController<K, V> {
 
   entriesStream(opts?: FilterOptions<K>): AsyncIterable<KeyValue<K, V>>;
   entries(opts?: FilterOptions<K>): Promise<KeyValue<K, V>[]>;
-
-  /** Manually compact the database key range [start, end). */
-  compactRange(start: K, end: K): Promise<void>;
 }

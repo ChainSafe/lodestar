@@ -248,12 +248,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
   }
 
-  async *entriesStreamBinary(prefix?: P | P[]): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
-    if (prefix === undefined) {
-      yield* this.binaryEntriesStream();
-      return;
-    }
-
+  async *entriesStreamBinary(prefix: P | P[]): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
     for (const v of Array.isArray(prefix) ? prefix : [prefix]) {
       for await (const {key, value} of this.db.entriesStream({
         gte: this.wrapKey(this.getMinKeyRaw(v)),
@@ -271,21 +266,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     }
   }
 
-  async *binaryEntriesStream(
-    opts?: FilterOptions<{prefix: P; id: I}>
-  ): AsyncIterable<{prefix: P; id: I; value: Uint8Array}> {
-    for await (const {key, value} of this.db.entriesStream(this.dbFilterOptions(opts))) {
-      const {prefix, id} = this.decodeKeyRaw(this.unwrapKey(key));
-      yield {prefix, id, value};
-    }
-  }
-
   async keys(opts?: FilterOptions<{prefix: P; id: I}>): Promise<{prefix: P; id: I}[]> {
-    const data = await this.db.keys(this.dbFilterOptions(opts));
-    return (data ?? []).map((data) => this.decodeKeyRaw(this.unwrapKey(data)));
-  }
-
-  private dbFilterOptions(opts?: FilterOptions<{prefix: P; id: I}>): FilterOptions<Uint8Array> {
     const optsBuff: FilterOptions<Uint8Array> = {
       bucketId: this.bucketId,
     };
@@ -309,6 +290,7 @@ export abstract class PrefixedRepository<P, I extends Id, T> {
     if (opts?.reverse !== undefined) optsBuff.reverse = opts.reverse;
     if (opts?.limit !== undefined) optsBuff.limit = opts.limit;
 
-    return optsBuff;
+    const data = await this.db.keys(optsBuff);
+    return (data ?? []).map((data) => this.decodeKeyRaw(this.unwrapKey(data)));
   }
 }
