@@ -1,6 +1,6 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {BitArray} from "@chainsafe/ssz";
-import {PTC_SIZE} from "@lodestar/params";
+import {GENESIS_SLOT, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
 import {ExecutionStatus, PayloadStatus, ProtoArray, ProtoBlock, ProtoNode} from "../../../src/index.js";
@@ -227,19 +227,37 @@ describe("Gloas Fork Choice", () => {
       });
     });
 
-    it("does not count the anchor block seeded at initialization", () => {
-      const currentSlot = gloasForkSlot + 1;
-      // Gloas anchor is seeded as PENDING without payload data, as after checkpoint sync or gloas genesis
-      const protoArray = ProtoArray.initialize(
-        createTestBlock(gloasForkSlot, genesisRoot, "0x00", "0x00"),
-        currentSlot
-      );
+    it("does not count the genesis block", () => {
+      const currentSlot = GENESIS_SLOT + 1;
+      const protoArray = ProtoArray.initialize(createTestBlock(GENESIS_SLOT, genesisRoot, "0x00", "0x00"), currentSlot);
 
-      protoArray.onBlock(createTestBlock(gloasForkSlot + 1, "0x02", genesisRoot, genesisRoot), currentSlot, null);
+      protoArray.onBlock(createTestBlock(currentSlot, "0x02", genesisRoot, genesisRoot), currentSlot, null);
+
+      expect(protoArray.getPayloadRevealCounts(GENESIS_SLOT, currentSlot)).toEqual({
+        blocksPresent: 1,
+        payloadsRevealed: 0,
+      });
+    });
+
+    it("counts a non-genesis anchor block seeded at initialization", () => {
+      const anchorRoot = "0x02";
+      const currentSlot = gloasForkSlot + 1;
+      const protoArray = ProtoArray.initialize(createTestBlock(gloasForkSlot, anchorRoot, "0x00", "0x00"), currentSlot);
+
+      protoArray.onExecutionPayload(
+        anchorRoot,
+        currentSlot,
+        "0x02ff",
+        1,
+        30000000,
+        null,
+        ExecutionStatus.Valid,
+        DataAvailabilityStatus.Available
+      );
 
       expect(protoArray.getPayloadRevealCounts(gloasForkSlot, currentSlot)).toEqual({
         blocksPresent: 1,
-        payloadsRevealed: 0,
+        payloadsRevealed: 1,
       });
     });
   });

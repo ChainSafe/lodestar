@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
@@ -691,8 +691,8 @@ export class ProtoArray {
   }
 
   /**
-   * Count Gloas blocks with a retained parent and fromSlot <= slot <= toSlot, and how many of them
-   * have a revealed payload (FULL variant exists). Used by the builder circuit breaker.
+   * Count Gloas blocks with fromSlot <= slot <= toSlot, and how many of them have a revealed payload
+   * (FULL variant exists). Used by the builder circuit breaker.
    */
   getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
     let blocksPresent = 0;
@@ -704,9 +704,8 @@ export class ProtoArray {
       if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
         continue;
       }
-      // Skip roots without a retained parent. This includes the anchor, which is seeded without
-      // payload data, and stale branch roots disconnected by pruning.
-      if (node.parent === undefined) {
+      // Genesis is always EMPTY
+      if (node.slot === GENESIS_SLOT) {
         continue;
       }
       blocksPresent++;
