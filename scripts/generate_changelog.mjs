@@ -39,6 +39,7 @@ const knownAuthors = {
   "258435968+lodekeeper@users.noreply.github.com": "lodekeeper",
   "markolazic01@gmail.com": "markolazic01",
   "56925051+Alleysira@users.noreply.github.com": "Alleysira",
+  "spiralladder@fastmail.com": "spiral-ladder",
 };
 
 const fromTag = process.argv[2];
