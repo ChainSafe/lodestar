@@ -80,7 +80,7 @@ export class NoBidReceived extends Error {
  * e.g. on mainnet SLOTS_PER_EPOCH is 32, so FAULT_INSPECTION_WINDOW is between 32 and 63,
  * and a window of 40 results in ALLOWED_FAULTS = 10.
  *
- * The tolerated fault rate is ~25% on every node, but the randomized window keeps the exact
+ * The default tolerated fault rate is ~25%, but the randomized window keeps the exact
  * slots under inspection unpredictable per node, so a builder cannot tell when past faults
  * age out of a given proposer's window and time withholding around trip or recovery points.
  */
