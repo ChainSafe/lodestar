@@ -1,23 +1,9 @@
-import {GENESIS_SLOT, ZERO_HASH_HEX} from "@lodestar/params";
-import {Root, RootHex} from "@lodestar/types";
-import {LogLevel, Logger, fromHex} from "@lodestar/utils";
-import {HEX_ZERO_HASH, ProtoBlock, isGloasBlock} from "../protoArray/interface.js";
+import {GENESIS_SLOT} from "@lodestar/params";
+import {RootHex} from "@lodestar/types";
+import {LogLevel, Logger} from "@lodestar/utils";
+import {ExecutionStatus, HEX_ZERO_HASH, ProtoBlock, isGloasBlock} from "../protoArray/interface.js";
+import {ForkChoiceError, ForkChoiceErrorCode} from "./errors.js";
 import {IForkChoice} from "./interface.js";
-
-/**
- * Under honest majority and certain network synchronicity assumptions there exists a block
- * that is safe from re-orgs. Normally this block is pretty close to the head of canonical
- * chain which makes it valuable to expose a safe block to users.
- *
- * @deprecated The merged fast-confirmation spec only defines `get_safe_execution_block_hash`.
- */
-export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
-  const confirmedRoot = fc.getConfirmedRoot();
-  if (confirmedRoot && fc.hasBlockHex(confirmedRoot)) {
-    return fromHex(confirmedRoot);
-  }
-  return fc.getJustifiedCheckpoint().root;
-}
 
 /**
  * Get execution payload hash to report as `safeBlockHash` in `engine_forkchoiceUpdated`.
@@ -29,16 +15,21 @@ export function getSafeBeaconBlockRoot(fc: IForkChoice): Root {
  *
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/bellatrix/fast-confirmation.md#new-get_safe_execution_block_hash
  */
-export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.warn>): RootHex {
+export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.debug>): RootHex {
+  const confirmedRoot = forkChoice.getConfirmedRoot();
   const confirmedBlock = forkChoice.getConfirmedBlock();
   if (confirmedBlock === null) {
-    logger?.warn("Confirmed block not found, using zero safe execution block hash", {
-      confirmedRoot: forkChoice.getConfirmedRoot(),
-    });
-    return ZERO_HASH_HEX;
+    throw new ForkChoiceError({code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK, root: confirmedRoot});
   }
 
-  return getExecutionBlockHash(confirmedBlock, logger);
+  if (confirmedBlock.blockRoot === forkChoice.getFinalizedBlock().blockRoot) {
+    logger?.debug("Confirmed block is the finalized block", {
+      blockRoot: confirmedBlock.blockRoot,
+      slot: confirmedBlock.slot,
+    });
+  }
+
+  return getExecutionBlockHash(confirmedBlock);
 }
 
 /**
@@ -47,11 +38,11 @@ export function getSafeExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick
  *
  * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/gloas/fork-choice.md#notify_forkchoice_updated
  */
-export function getFinalizedExecutionBlockHash(forkChoice: IForkChoice, logger?: Pick<Logger, LogLevel.warn>): RootHex {
-  return getExecutionBlockHash(forkChoice.getFinalizedBlock(), logger);
+export function getFinalizedExecutionBlockHash(forkChoice: IForkChoice): RootHex {
+  return getExecutionBlockHash(forkChoice.getFinalizedBlock());
 }
 
-function getExecutionBlockHash(block: ProtoBlock, logger?: Pick<Logger, LogLevel.warn>): RootHex {
+function getExecutionBlockHash(block: ProtoBlock): RootHex {
   if (isGloasBlock(block)) {
     return block.parentBlockHash;
   }
@@ -63,13 +54,14 @@ function getExecutionBlockHash(block: ProtoBlock, logger?: Pick<Logger, LogLevel
     return HEX_ZERO_HASH;
   }
 
-  if (block.executionPayloadBlockHash === null) {
-    logger?.warn("Execution payload block hash not found, using zero hash", {
-      blockRoot: block.blockRoot,
-      slot: block.slot,
+  const {blockRoot, slot} = block;
+  if (block.executionPayloadBlockHash === null && block.executionStatus !== ExecutionStatus.PreMerge) {
+    throw new ForkChoiceError({
+      code: ForkChoiceErrorCode.MISSING_EXECUTION_PAYLOAD_BLOCK_HASH,
+      root: blockRoot,
+      slot,
     });
-    return HEX_ZERO_HASH;
   }
 
-  return block.executionPayloadBlockHash;
+  return block.executionPayloadBlockHash ?? HEX_ZERO_HASH;
 }

@@ -186,11 +186,11 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/discv5':
-        specifier: ^12.0.1
-        version: 12.0.1
+        specifier: ^12.0.2
+        version: 12.0.2
       '@chainsafe/enr':
-        specifier: ^6.0.1
-        version: 6.0.1
+        specifier: ^6.0.2
+        version: 6.0.2
       '@chainsafe/libp2p-noise':
         specifier: ^17.0.0
         version: 17.0.0
@@ -425,11 +425,11 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0
       '@chainsafe/discv5':
-        specifier: ^12.0.1
-        version: 12.0.1
+        specifier: ^12.0.2
+        version: 12.0.2
       '@chainsafe/enr':
-        specifier: ^6.0.1
-        version: 6.0.1
+        specifier: ^6.0.2
+        version: 6.0.2
       '@chainsafe/persistent-merkle-tree':
         specifier: ^1.3.0
         version: 1.3.0
@@ -1164,11 +1164,11 @@ packages:
     resolution: {integrity: sha512-Q8Z2JdvLmZizhQr+bzsJHgYk16VQR4thZw6Z56NEKoiHjVKkC3LKcMntaXs9TII2Bb/OiNtaPyZP9BinY3v8Bw==}
     hasBin: true
 
-  '@chainsafe/discv5@12.0.1':
-    resolution: {integrity: sha512-isFDtl+DiBOD6R0cV4+4Zch25zlj5mv5nytw2x6c+eR6xDte7xlB6+/UutjfnSScMH/CwysytQCiOi8/pMxrTg==}
+  '@chainsafe/discv5@12.0.2':
+    resolution: {integrity: sha512-9iD+6I/tWjqjabhWWcgp4PUrgJ9lDWpDX8x880Zhq2cIBDai4Hkky5uZbKZa8W5fKW8R2OP6bA3ZzWspCE0AVg==}
 
-  '@chainsafe/enr@6.0.1':
-    resolution: {integrity: sha512-AoPgLrFAtsnIgyGx6ATzb7dRZkUmHBxA2wXAqf3sLlBeojeoaNprePcYXnU0UxB1E9Y8ZWgF7PI567sF+VrDQw==}
+  '@chainsafe/enr@6.0.2':
+    resolution: {integrity: sha512-k423uUNbsWzNhvFoJBHFs7lXwHjWfa8hlMz0SlU+germUDEKkTkZbkeFW5utR8L7sbCMDum6g2tQ3PBmfsTKYQ==}
 
   '@chainsafe/fast-crc32c@4.2.0':
     resolution: {integrity: sha512-wbVJ3q1DBuYqs1VGwLe9o5VIDQtxGpSVzr7UY9Hq2SQ283fU6AouII/pwioS9MbiiIK42jDxtY0uLFmTuenb0g==}
@@ -6855,9 +6855,9 @@ snapshots:
       execa: 6.1.0
       globby: 13.2.2
 
-  '@chainsafe/discv5@12.0.1':
+  '@chainsafe/discv5@12.0.2':
     dependencies:
-      '@chainsafe/enr': 6.0.1
+      '@chainsafe/enr': 6.0.2
       '@ethereumjs/rlp': 10.1.1
       '@libp2p/crypto': 5.1.19
       '@libp2p/interface': 3.2.3
@@ -6870,7 +6870,7 @@ snapshots:
       strict-event-emitter-types: 2.0.0
       weald: 1.1.1
 
-  '@chainsafe/enr@6.0.1':
+  '@chainsafe/enr@6.0.2':
     dependencies:
       '@ethereumjs/rlp': 10.1.1
       '@libp2p/crypto': 5.1.19
