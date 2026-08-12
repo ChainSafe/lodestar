@@ -52,9 +52,8 @@ export type IChainOptions = BlockProcessOpts &
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
     /**
-     * Missed slots tolerated within `faultInspectionWindow` pre-Gloas. Post-Gloas, activates when
-     * `unrevealedPayloads * faultInspectionWindow > allowedFaults * blocksPresent` and deactivates
-     * after at least four blocks within budget. Defaults to and is capped at `faultInspectionWindow / 4`.
+     * Missed slots allowed pre-Gloas; post-Gloas, unrevealed payloads allowed per
+     * `faultInspectionWindow` observed blocks.
      */
     allowedFaults?: number;
   };
