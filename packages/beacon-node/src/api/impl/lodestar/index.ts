@@ -21,7 +21,7 @@ import {ProfileThread, profileThread, writeHeapSnapshot} from "../../../util/pro
 import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError} from "../errors.js";
 import {ApiModules} from "../types.js";
-import {toApiCheckpointHex} from "../utils.js";
+import {toCheckpoint} from "../utils.js";
 import {getAttesterSlashingsFromIndexedAttestations} from "./attesterSlashing.js";
 
 export function getLodestarApi({
@@ -291,22 +291,18 @@ export function getLodestarApi({
       return {
         data: {
           confirmed: {
-            rootHex: fcrStore.confirmedRoot,
+            root: fcrStore.confirmedRoot,
             slot: confirmedBlock?.slot ?? null,
           },
           head: {
-            rootHex: headRoot,
+            root: headRoot,
             slot: head.slot,
           },
-          justifiedCheckpoint: toApiCheckpointHex(justifiedCheckpoint),
-          finalizedCheckpoint: toApiCheckpointHex(finalizedCheckpoint),
-          previousEpochObservedJustifiedCheckpoint: toApiCheckpointHex(
-            fcrStore.previousEpochObservedJustifiedCheckpoint
-          ),
-          currentEpochObservedJustifiedCheckpoint: toApiCheckpointHex(fcrStore.currentEpochObservedJustifiedCheckpoint),
-          previousEpochGreatestUnrealizedCheckpoint: toApiCheckpointHex(
-            fcrStore.previousEpochGreatestUnrealizedCheckpoint
-          ),
+          justifiedCheckpoint: toCheckpoint(justifiedCheckpoint),
+          finalizedCheckpoint: toCheckpoint(finalizedCheckpoint),
+          previousEpochObservedJustifiedCheckpoint: toCheckpoint(fcrStore.previousEpochObservedJustifiedCheckpoint),
+          currentEpochObservedJustifiedCheckpoint: toCheckpoint(fcrStore.currentEpochObservedJustifiedCheckpoint),
+          previousEpochGreatestUnrealizedCheckpoint: toCheckpoint(fcrStore.previousEpochGreatestUnrealizedCheckpoint),
           previousSlotHead: fcrStore.previousSlotHead,
           currentSlotHead: fcrStore.currentSlotHead,
         },

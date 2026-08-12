@@ -33,13 +33,13 @@ describe("beacon / lodestar", () => {
     it("getFastConfirmationInfo", async () => {
       mockApi.getFastConfirmationInfo.mockResolvedValue({
         data: {
-          confirmed: {rootHex: "0xaa", slot: 100},
-          head: {rootHex: "0xbb", slot: 102},
-          justifiedCheckpoint: {rootHex: "0xcc", epoch: 3},
-          finalizedCheckpoint: {rootHex: "0xdd", epoch: 2},
-          previousEpochObservedJustifiedCheckpoint: {rootHex: "0xee", epoch: 2},
-          currentEpochObservedJustifiedCheckpoint: {rootHex: "0xff", epoch: 3},
-          previousEpochGreatestUnrealizedCheckpoint: {rootHex: "0x11", epoch: 2},
+          confirmed: {root: "0xaa", slot: 100},
+          head: {root: "0xbb", slot: 102},
+          justifiedCheckpoint: {root: "0xcc", epoch: 3},
+          finalizedCheckpoint: {root: "0xdd", epoch: 2},
+          previousEpochObservedJustifiedCheckpoint: {root: "0xee", epoch: 2},
+          currentEpochObservedJustifiedCheckpoint: {root: "0xff", epoch: 3},
+          previousEpochGreatestUnrealizedCheckpoint: {root: "0x11", epoch: 2},
           previousSlotHead: "0x22",
           currentSlotHead: "0x33",
         },
@@ -53,13 +53,13 @@ describe("beacon / lodestar", () => {
       expect(res.ok).toBe(true);
       expect(res.wireFormat()).toBe(WireFormat.json);
       expect(res.json().data).toStrictEqual({
-        confirmed: {root_hex: "0xaa", slot: 100},
-        head: {root_hex: "0xbb", slot: 102},
-        justified_checkpoint: {root_hex: "0xcc", epoch: 3},
-        finalized_checkpoint: {root_hex: "0xdd", epoch: 2},
-        previous_epoch_observed_justified_checkpoint: {root_hex: "0xee", epoch: 2},
-        current_epoch_observed_justified_checkpoint: {root_hex: "0xff", epoch: 3},
-        previous_epoch_greatest_unrealized_checkpoint: {root_hex: "0x11", epoch: 2},
+        confirmed: {root: "0xaa", slot: 100},
+        head: {root: "0xbb", slot: 102},
+        justified_checkpoint: {root: "0xcc", epoch: 3},
+        finalized_checkpoint: {root: "0xdd", epoch: 2},
+        previous_epoch_observed_justified_checkpoint: {root: "0xee", epoch: 2},
+        current_epoch_observed_justified_checkpoint: {root: "0xff", epoch: 3},
+        previous_epoch_greatest_unrealized_checkpoint: {root: "0x11", epoch: 2},
         previous_slot_head: "0x22",
         current_slot_head: "0x33",
       });

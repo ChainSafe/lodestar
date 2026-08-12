@@ -76,6 +76,6 @@ export function assertUniqueItems(array: unknown[] | undefined, message: string)
   }
 }
 
-export function toApiCheckpointHex({rootHex, epoch}: CheckpointWithHex): routes.lodestar.CheckpointHex {
-  return {rootHex, epoch};
+export function toCheckpoint({rootHex, epoch}: CheckpointWithHex): routes.lodestar.Checkpoint {
+  return {root: rootHex, epoch};
 }
