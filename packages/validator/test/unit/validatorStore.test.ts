@@ -59,7 +59,7 @@ describe("ValidatorStore", () => {
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[0]))).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].strictFeeRecipientCheck
     );
-    expect(validatorStore.getGasLimit(toHexString(pubkeys[0]))).toBe(
+    expect(validatorStore.getGasLimit(toHexString(pubkeys[0]), 0)).toBe(
       valProposerConfig.proposerConfig[toHexString(pubkeys[0])].builder?.gasLimit
     );
 
@@ -69,7 +69,9 @@ describe("ValidatorStore", () => {
     expect(validatorStore.strictFeeRecipientCheck(toHexString(pubkeys[1]))).toBe(
       valProposerConfig.defaultConfig.strictFeeRecipientCheck
     );
-    expect(validatorStore.getGasLimit(toHexString(pubkeys[1]))).toBe(valProposerConfig.defaultConfig.builder?.gasLimit);
+    expect(validatorStore.getGasLimit(toHexString(pubkeys[1]), 0)).toBe(
+      valProposerConfig.defaultConfig.builder?.gasLimit
+    );
   });
 
   it("getBuilderSelectionParams honors explicit selection and resolves fork-aware default", async () => {

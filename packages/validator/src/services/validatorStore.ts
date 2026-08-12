@@ -331,15 +331,14 @@ export class ValidatorStore {
     return this.defaultProposerConfig.builder.gasLimit;
   }
 
-  getGasLimit(pubkeyHex: PubkeyHex, slot?: Slot, logger?: LoggerVc): number {
+  getGasLimit(pubkeyHex: PubkeyHex, slot: Slot, logger?: LoggerVc): number {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
 
     const configuredGasLimit = validatorData.builder?.gasLimit ?? this.defaultProposerConfig.builder.gasLimit;
-    const scheduledGasLimit =
-      slot === undefined ? undefined : this.config.getScheduledGasLimit(computeEpochAtSlot(slot));
+    const scheduledGasLimit = this.config.getScheduledGasLimit(computeEpochAtSlot(slot));
 
     if (configuredGasLimit !== undefined) {
       if (scheduledGasLimit !== undefined && configuredGasLimit > scheduledGasLimit) {
