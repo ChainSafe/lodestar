@@ -534,7 +534,11 @@ export class ForkChoice implements IForkChoice {
    * Run the fork choice rule to determine the head.
    * Update the head cache.
    *
-   * Very expensive function (400ms / run as of Aug 2021). Call when the head really needs to be re-calculated.
+   * Cost is dominated by the `computeDeltas()` scan over every validator, so it is flat no matter how
+   * many votes actually changed: ~4.6ms at 1M validators, ~9.5ms at 2M, plus ~30% if the proto-array
+   * has grown to a day of non-finality (measured Aug 2026 on a M3 Mac, see
+   * `test/perf/forkChoice/updateHead.test.ts`). Only call when the head really needs to be
+   * re-calculated.
    *
    * ## Specification
    *
@@ -759,12 +763,17 @@ export class ForkChoice implements IForkChoice {
     // The store field `this.proposerBoostRoot` and `updateCheckpoints()` are mutated only after
     // `protoArray.onBlock()` succeeds
     const isTimely = this.isBlockTimely(block, blockDelaySec);
-    const isProposerBoostBlock =
+    const isProposerBoostCandidate =
       this.opts?.proposerBoost === true &&
       isTimely &&
       // only boost the first block we see
-      this.proposerBoostRoot === null &&
-      this.isProposerBoostSameDependentRoot(this.head.blockRoot, parentRootHex);
+      this.proposerBoostRoot === null;
+    const isProposerBoostBlock =
+      isProposerBoostCandidate &&
+      // Cached `this.head` may be stale especially after epoch transition.
+      // Need to updateHead() here to get the correct head
+      // This code only executes when block is timely. So minimal exposure to minor regression
+      this.isProposerBoostSameDependentRoot(this.updateHead().blockRoot, parentRootHex);
     // Candidate boost root used for protoArray.onBlock's best-child weighting. Committed to the
     // store only after the insertion succeeds.
     const proposerBoostRoot = isProposerBoostBlock ? blockRootHex : this.proposerBoostRoot;
