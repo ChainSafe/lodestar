@@ -15,6 +15,8 @@ export type BuilderCircuitBreakerModules = {
   metrics: Metrics | null;
 };
 
+const MIN_BLOCKS_TO_DEACTIVATE = 4;
+
 /**
  * Post-gloas circuit breaker for builder bids. The beacon block is produced by the proposer
  * regardless of bid source, so missed blocks are not a useful builder health signal. Instead
@@ -57,10 +59,13 @@ export class BuilderCircuitBreaker {
     const faults = blocksPresent - payloadsRevealed;
 
     const wasActive = this.active;
-    // Keep the previous state if the window has no blocks, there is no data to assess builder health
-    if (blocksPresent > 0) {
-      // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
-      this.active = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
+    const exceedsFaultBudget = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    if (exceedsFaultBudget) {
+      this.active = true;
+    } else if (blocksPresent >= MIN_BLOCKS_TO_DEACTIVATE) {
+      // Require a small healthy sample before accepting builder bids again
+      this.active = false;
     }
 
     this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);

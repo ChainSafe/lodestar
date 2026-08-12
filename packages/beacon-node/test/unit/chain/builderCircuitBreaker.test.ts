@@ -27,6 +27,7 @@ describe("BuilderCircuitBreaker", () => {
     ["full window, faults above budget", {blocksPresent: 32, payloadsRevealed: 23}, true],
     ["sparse window, faults within scaled budget", {blocksPresent: 8, payloadsRevealed: 6}, false],
     ["sparse window, faults above scaled budget", {blocksPresent: 8, payloadsRevealed: 5}, true],
+    ["single unrevealed payload", {blocksPresent: 1, payloadsRevealed: 0}, true],
     ["sparse window, all payloads unrevealed", {blocksPresent: 4, payloadsRevealed: 0}, true],
   ];
 
@@ -43,15 +44,18 @@ describe("BuilderCircuitBreaker", () => {
     expect(getPayloadRevealCounts).toHaveBeenCalledWith(100 - faultInspectionWindow, 99);
   });
 
-  it("keeps previous state while window has no blocks", () => {
-    const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 8, payloadsRevealed: 0});
+  it("requires a minimum sample to deactivate", () => {
+    const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 1, payloadsRevealed: 0});
     expect(breaker.isActive(100)).toBe(true);
 
     getPayloadRevealCounts.mockReturnValue({blocksPresent: 0, payloadsRevealed: 0});
     expect(breaker.isActive(101)).toBe(true);
 
-    getPayloadRevealCounts.mockReturnValue({blocksPresent: 8, payloadsRevealed: 8});
-    expect(breaker.isActive(102)).toBe(false);
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 3, payloadsRevealed: 3});
+    expect(breaker.isActive(102)).toBe(true);
+
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 4, payloadsRevealed: 3});
+    expect(breaker.isActive(103)).toBe(false);
   });
 
   it("only updates once per slot", () => {
