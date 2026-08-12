@@ -445,7 +445,7 @@ export async function importBlock(
      * zero block hash (pre TTD)
      */
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
-    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(
