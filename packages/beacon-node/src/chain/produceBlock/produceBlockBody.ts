@@ -271,7 +271,7 @@ export async function produceBlockBody<T extends BlockType>(
     // full and blinded no longer makes sense in gloas, it might be a good idea to move
     // this into a completely separate function and have pre/post gloas more separated
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
-    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     // TODO GLOAS: post-Gloas, proposer feeRecipient is also carried (signed) in
     // ProposerPreferencesPool. Consider using this unified cache instead
     // see https://github.com/ChainSafe/lodestar/issues/9379
@@ -417,7 +417,7 @@ export async function produceBlockBody<T extends BlockType>(
     }
 
     const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
-    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice);
     const feeRecipient = requestedFeeRecipient ?? this.beaconProposerCache.getOrDefault(proposerIndex);
     const feeRecipientType = requestedFeeRecipient
       ? "requested"
