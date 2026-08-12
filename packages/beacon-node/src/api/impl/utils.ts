@@ -1,5 +1,3 @@
-import {routes} from "@lodestar/api";
-import {CheckpointWithHex} from "@lodestar/fork-choice";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import type {IBeaconChain} from "../../chain/index.js";
 import {SyncState} from "../../sync/index.js";
@@ -74,8 +72,4 @@ export function assertUniqueItems(array: unknown[] | undefined, message: string)
   if (duplicateItems.length) {
     throw new ApiError(400, `${message}: ${duplicateItems.join(", ")}`);
   }
-}
-
-export function toCheckpoint({rootHex, epoch}: CheckpointWithHex): routes.lodestar.Checkpoint {
-  return {root: rootHex, epoch};
 }

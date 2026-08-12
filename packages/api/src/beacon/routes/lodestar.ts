@@ -15,6 +15,7 @@ import {
 import {
   EmptyArgs,
   EmptyMeta,
+  EmptyMetaCodec,
   EmptyRequest,
   EmptyRequestCodec,
   EmptyResponseCodec,
@@ -136,29 +137,25 @@ export type CustodyInfo = {
   custodyColumns: number[];
 };
 
-export type Checkpoint = {
-  root: RootHex;
-  epoch: Epoch;
-};
+const BlockInfoType = new ContainerType({root: ssz.Root, slot: ssz.Slot});
 
-export type FastConfirmationInfo = {
-  confirmed: {
-    root: RootHex | null;
-    slot: Slot | null;
-  };
-  head: {
-    root: RootHex;
-    slot: Slot;
-  };
-  justifiedCheckpoint: Checkpoint;
-  finalizedCheckpoint: Checkpoint;
-  // Spec `FastConfirmationStore` variables, as maintained by `update_fast_confirmation_variables`
-  previousEpochObservedJustifiedCheckpoint: Checkpoint;
-  currentEpochObservedJustifiedCheckpoint: Checkpoint;
-  previousEpochGreatestUnrealizedCheckpoint: Checkpoint;
-  previousSlotHead: RootHex;
-  currentSlotHead: RootHex;
-};
+export const FastConfirmationInfoType = new ContainerType(
+  {
+    confirmed: BlockInfoType,
+    head: BlockInfoType,
+    justifiedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    // Spec `FastConfirmationStore` variables, as maintained by `update_fast_confirmation_variables`
+    previousEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    currentEpochObservedJustifiedCheckpoint: ssz.phase0.Checkpoint,
+    previousEpochGreatestUnrealizedCheckpoint: ssz.phase0.Checkpoint,
+    previousSlotHead: ssz.Root,
+    currentSlotHead: ssz.Root,
+  },
+  {jsonCase: "eth2"}
+);
+
+export type FastConfirmationInfo = ValueOf<typeof FastConfirmationInfoType>;
 
 export type Endpoints = {
   /** Trigger to write a heapdump to disk at `dirpath`. May take > 1min */
@@ -662,7 +659,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v1/lodestar/fast_confirmation",
       method: "GET",
       req: EmptyRequestCodec,
-      resp: JsonOnlyResponseCodec,
+      resp: {
+        data: FastConfirmationInfoType,
+        meta: EmptyMetaCodec,
+      },
     },
     getAttesterSlashingsFromBlocks: {
       url: "/eth/v1/lodestar/blocks/attester_slashings",
