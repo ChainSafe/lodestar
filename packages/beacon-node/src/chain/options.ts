@@ -51,10 +51,7 @@ export type IChainOptions = BlockProcessOpts &
     nativeStateView?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
-    /**
-     * Missed slots allowed pre-Gloas; post-Gloas, unrevealed payloads allowed per
-     * `faultInspectionWindow` observed blocks.
-     */
+    /** Unrevealed payloads allowed per `faultInspectionWindow` observed blocks post-Gloas */
     allowedFaults?: number;
   };
 
