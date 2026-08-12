@@ -408,7 +408,8 @@ export function getBeaconBlockApi({
       publishPromises
     );
 
-    if (isForkPostGloas(fork)) {
+    if (skipPublish || isForkPostGloas(fork)) {
+      // For a REPEAT_PROPOSAL block we published nothing, so there are no sent-peers metrics to record.
       // After gloas, data columns are not published with the block but when publishing the execution payload envelope
     } else if (isForkPostFulu(fork)) {
       let columnsPublishedWithZeroPeers = 0;
