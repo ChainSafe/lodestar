@@ -1,7 +1,7 @@
 {
   "name": "@lodestar/test-utils",
   "private": true,
-  "version": "1.45.0",
+  "version": "1.46.0",
   "description": "Test utilities reused across other packages",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -12,12 +12,12 @@
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./doubles": {
-      "bun": "./src/doubles.ts",
+      "typescript": "./src/doubles.ts",
       "types": "./lib/doubles.d.ts",
       "import": "./lib/doubles.js"
     }
@@ -29,15 +29,15 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:release": "pnpm clean && pnpm build",
     "build:watch": "pnpm run build --watch",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/",
     "lint:fix": "pnpm run lint --write",
     "test:unit": "echo 'No unit tests for @lodestar/test-utils'",
-    "check-readme": "pnpm exec ts-node ../../scripts/check_readme.ts"
+    "check-readme": "pnpm exec tsx ../../scripts/check_readme.ts"
   },
   "repository": {
     "type": "git",

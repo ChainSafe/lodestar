@@ -2,11 +2,11 @@ import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {
   AncestorStatus,
-  EpochDifference,
   ExecutionStatus,
   ForkChoiceError,
   ForkChoiceErrorCode,
   NotReorgedReason,
+  getFinalizedExecutionBlockHash,
   getSafeExecutionBlockHash,
 } from "@lodestar/fork-choice";
 import {
@@ -21,7 +21,6 @@ import {
   IBeaconStateView,
   RootCache,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   computeTimeAtSlot,
   isStartSlotOfEpoch,
   isStatePostAltair,
@@ -301,21 +300,6 @@ export async function importBlock(
     // Set head state as strong reference
     this.regen.updateHeadState(newHead, postState);
 
-    try {
-      this.emitter.emit(routes.events.EventType.head, {
-        block: newHead.blockRoot,
-        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(newHead.slot)) === newHead.slot,
-        slot: newHead.slot,
-        state: newHead.stateRoot,
-        previousDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.previous),
-        currentDutyDependentRoot: this.forkChoice.getDependentRoot(newHead, EpochDifference.current),
-        executionOptimistic: isOptimisticBlock(newHead),
-      });
-    } catch (e) {
-      // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
-      this.logger.debug("Error emitting head event", {slot: newHead.slot, root: newHead.blockRoot}, e as Error);
-    }
-
     const delaySec = this.clock.secFromSlot(newHead.slot);
     this.logger.verbose("New chain head", {
       slot: newHead.slot,
@@ -460,8 +444,8 @@ export async function importBlock(
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
-    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice);
-    const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash ?? ZERO_HASH_HEX;
+    const safeBlockHash = getSafeExecutionBlockHash(this.forkChoice, this.logger);
+    const finalizedBlockHash = getFinalizedExecutionBlockHash(this.forkChoice, this.logger);
     if (headBlockHash !== ZERO_HASH_HEX) {
       this.executionEngine
         .notifyForkchoiceUpdate(

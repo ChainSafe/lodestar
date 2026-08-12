@@ -5,6 +5,7 @@ import {LodestarError, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lo
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {ZERO_HASH} from "../../constants/constants.js";
@@ -64,6 +65,7 @@ export type DownloadSuccessState = {
   status: BatchStatus.AwaitingProcessing;
   blocks: IBlockInput[];
   payloadEnvelopes: Map<Slot, PayloadEnvelopeInput> | null;
+  attempt: Attempt;
 };
 
 export type BatchState =
@@ -589,7 +591,11 @@ export class Batch {
     }
 
     if (allComplete) {
-      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes};
+      const attempt: Attempt = {
+        peers: this.getSuccessfulPeers(),
+        hash: hashBlocks(blocks, this.config),
+      };
+      this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes, attempt};
     } else {
       this.state = {status: BatchStatus.AwaitingDownload, blocks, payloadEnvelopes: newPayloadEnvelopes};
       this.requests = this.getRequests(blocks);
@@ -646,15 +652,11 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
-    const blocks = this.state.blocks;
-    const payloadEnvelopes = this.state.payloadEnvelopes;
-    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
-    // Reset successfulDownloads in case another download attempt needs to be made. When Attempt is successful or not
-    // the peers that the data came from will be handled by the Attempt that goes for processing.
-    const peers = this.getSuccessfulPeers();
+    const {blocks, payloadEnvelopes, attempt} = this.state;
+    // No need to track successfulDownloads anymore, the batch goes to Processing status.
     this.successfulDownloads.clear();
-    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt: {peers, hash}};
-    return {blocks, payloadEnvelopes, peers};
+    this.state = {status: BatchStatus.Processing, blocks, payloadEnvelopes, attempt};
+    return {blocks, payloadEnvelopes, peers: attempt.peers};
   }
 
   /**
@@ -674,6 +676,26 @@ export class Batch {
   }
 
   /**
+   * Processing -> AwaitingProcessing
+   *
+   * The batch's own blocks are valid but processing failed because a previous batch did not
+   * deliver the parent. Keep the downloaded blocks and process them again once the previous
+   * batch is repaired.
+   */
+  retainForReprocessing(): void {
+    if (this.state.status !== BatchStatus.Processing) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
+    }
+
+    this.state = {
+      status: BatchStatus.AwaitingProcessing,
+      blocks: this.state.blocks,
+      payloadEnvelopes: this.state.payloadEnvelopes,
+      attempt: this.state.attempt,
+    };
+  }
+
+  /**
    * Processing -> AwaitingDownload
    */
   processingError(err: Error): void {
@@ -681,7 +703,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    if (isExecutionEngineError(err)) {
       this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);
@@ -696,7 +718,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    if (isExecutionEngineError(err)) {
       this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);
@@ -750,7 +772,7 @@ export enum BatchErrorCode {
   INVALID_COUNT = "BATCH_ERROR_INVALID_COUNT",
   MAX_DOWNLOAD_ATTEMPTS = "BATCH_ERROR_MAX_DOWNLOAD_ATTEMPTS",
   MAX_PROCESSING_ATTEMPTS = "BATCH_ERROR_MAX_PROCESSING_ATTEMPTS",
-  MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
+  MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "BATCH_ERROR_MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
 }
 
 type BatchErrorType =
@@ -766,3 +788,19 @@ type BatchErrorMetadata = {
 };
 
 export class BatchError extends LodestarError<BatchErrorType & BatchErrorMetadata> {}
+
+function isExecutionEngineError(err: Error): boolean {
+  if (!(err instanceof BlockError)) {
+    return false;
+  }
+
+  if (err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    return true;
+  }
+
+  return (
+    err.type.code === BlockErrorCode.BEACON_CHAIN_ERROR &&
+    err.type.error instanceof PayloadError &&
+    err.type.error.type.code === PayloadErrorCode.EXECUTION_ENGINE_ERROR
+  );
+}

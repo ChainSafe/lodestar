@@ -35,7 +35,6 @@ describe("BlockDutiesService", () => {
     const secretKeys = Array.from({length: 2}, (_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
 
-    // vi.mock does not automock all objects in Bun runtime, so we have to explicitly spy on needed methods
     vi.spyOn(validatorStore, "votingPubkeys");
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
@@ -71,6 +70,7 @@ describe("BlockDutiesService", () => {
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: false,
+      payloadLocal: false,
     });
 
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
@@ -153,6 +153,7 @@ describe("BlockDutiesService", () => {
     const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, dutiesService, null, {
       broadcastValidation: routes.beacon.BroadcastValidation.consensus,
       blindedLocal: true,
+      payloadLocal: false,
     });
 
     const signedBlock = ssz.bellatrix.SignedBlindedBeaconBlock.defaultValue();

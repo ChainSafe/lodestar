@@ -1,8 +1,17 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
 import {Type} from "@chainsafe/ssz";
+import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
-import {CheckpointWithHex, ForkChoiceStateGetter, IForkChoice, ProtoBlock, UpdateHeadOpt} from "@lodestar/fork-choice";
+import {
+  CheckpointWithHex,
+  EpochDifference,
+  ForkChoiceStateGetter,
+  IForkChoice,
+  PayloadStatus,
+  ProtoBlock,
+  UpdateHeadOpt,
+} from "@lodestar/fork-choice";
 import {LoggerNode} from "@lodestar/logger/node";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -121,6 +130,7 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
+import {validateApiProposerSlashing} from "./validation/proposerSlashing.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -191,6 +201,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenBlockProposers = new SeenBlockProposers();
+  /** Proposer indexes with an in-flight proposer slashing production */
+  private readonly producingProposerSlashing = new Set<ValidatorIndex>();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
@@ -1154,6 +1166,63 @@ export class BeaconChain implements IBeaconChain {
     return this.payloadEnvelopeProcessor.processPayloadEnvelopeJob(payloadInput, opts);
   }
 
+  processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
+    this.produceProposerSlashing(blockSlot, proposerIndex).catch((e) => {
+      this.logger.debug("Error producing proposer slashing", {slot: blockSlot, proposerIndex}, e as Error);
+    });
+  }
+
+  /** Produce a proposer slashing from two conflicting signed block headers observed for the same slot and proposer */
+  private async produceProposerSlashing(blockSlot: Slot, proposerIndex: ValidatorIndex): Promise<void> {
+    if (this.opts.disableProposerSlashings === true || this.producingProposerSlashing.has(proposerIndex)) {
+      return;
+    }
+
+    if (this.opPool.hasSeenProposerSlashing(proposerIndex)) {
+      this.logger.debug("Not producing proposer slashing, already in the op pool", {
+        slot: blockSlot,
+        proposerIndex,
+      });
+      return;
+    }
+
+    const headers = this.seenBlockProposers.getEquivocationHeaders(blockSlot, proposerIndex);
+    if (headers === null) {
+      return;
+    }
+
+    this.producingProposerSlashing.add(proposerIndex);
+    try {
+      const [header1, header2] = headers;
+      // ProposerSlashing uses the bigint variant of the signed block header, see types package for details
+      const proposerSlashing: phase0.ProposerSlashing = {
+        signedHeader1: {
+          message: {...header1.message, slot: BigInt(header1.message.slot)},
+          signature: header1.signature,
+        },
+        signedHeader2: {
+          message: {...header2.message, slot: BigInt(header2.message.slot)},
+          signature: header2.signature,
+        },
+      };
+
+      try {
+        await validateApiProposerSlashing(this, proposerSlashing);
+      } catch (e) {
+        this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);
+        return;
+      }
+
+      this.opPool.insertProposerSlashing(proposerSlashing);
+      this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
+      this.metrics?.opPool.proposerSlashingsProduced.inc();
+      this.logger.info("Produced proposer slashing from observed equivocation", {slot: blockSlot, proposerIndex});
+    } finally {
+      this.producingProposerSlashing.delete(proposerIndex);
+    }
+  }
+
   getStatus(): Status {
     const head = this.forkChoice.getHead();
     const finalizedCheckpoint = this.forkChoice.getFinalizedCheckpoint();
@@ -1179,7 +1248,56 @@ export class BeaconChain implements IBeaconChain {
     const timer = this.metrics?.forkChoice.findHead.startTimer({caller});
 
     try {
-      return this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+      const prevHead = this.forkChoice.getHead();
+      const head = this.forkChoice.updateAndGetHead({mode: UpdateHeadOpt.GetCanonicalHead}).head;
+
+      const headRootChanged = head.blockRoot !== prevHead.blockRoot;
+
+      if (!headRootChanged && prevHead.payloadStatus === head.payloadStatus) {
+        return head;
+      }
+
+      try {
+        const previousDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.previous);
+        const currentDutyDependentRoot = this.forkChoice.getDependentRoot(head, EpochDifference.current);
+        const epochTransition = computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot;
+        const executionOptimistic = isOptimisticBlock(head);
+
+        if (headRootChanged) {
+          this.emitter.emit(routes.events.EventType.head, {
+            block: head.blockRoot,
+            epochTransition,
+            slot: head.slot,
+            state: head.stateRoot,
+            previousDutyDependentRoot,
+            currentDutyDependentRoot,
+            executionOptimistic,
+          });
+        }
+
+        this.emitter.emit(routes.events.EventType.headV2, {
+          version: this.config.getForkName(head.slot),
+          data: {
+            slot: head.slot,
+            block: head.blockRoot,
+            state: head.stateRoot,
+            payloadStatus: head.payloadStatus === PayloadStatus.FULL ? "full" : "empty",
+            epochTransition,
+            currentEpochDependentRoot: previousDutyDependentRoot,
+            nextEpochDependentRoot: currentDutyDependentRoot,
+            executionOptimistic,
+          },
+        });
+      } catch (e) {
+        // getDependentRoot() may fail with error: "No block for root" as we can see in holesky non-finality issue
+        this.logger.debug(
+          "Error emitting head/head_v2 event",
+          {slot: head.slot, root: head.blockRoot, headRootChanged},
+          e as Error
+        );
+      }
+
+      return head;
     } catch (e) {
       this.metrics?.forkChoice.errors.inc({entrypoint: UpdateHeadOpt.GetCanonicalHead});
       throw e;
@@ -1209,6 +1327,7 @@ export class BeaconChain implements IBeaconChain {
     const secFromSlot = this.clock.secFromSlot(slot);
 
     try {
+      // Do not emit head event here, when proposing we rely on the one emitted when importing our own block
       const {head, isHeadTimely, notReorgedReason} = this.forkChoice.updateAndGetHead({
         mode: UpdateHeadOpt.GetProposerHead,
         secFromSlot,

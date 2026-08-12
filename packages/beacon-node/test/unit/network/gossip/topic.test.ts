@@ -1,11 +1,25 @@
 import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {ATTESTATION_SUBNET_COUNT, ForkName, GENESIS_EPOCH, ZERO_HASH} from "@lodestar/params";
+import {
+  ATTESTATION_SUBNET_COUNT,
+  ForkName,
+  GENESIS_EPOCH,
+  MAX_ATTESTER_SLASHING_SIZE,
+  MAX_DATA_COLUMN_SIDECAR_SIZE,
+  MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+  MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  ZERO_HASH,
+} from "@lodestar/params";
+import {DataTransformSnappy} from "../../../../src/network/gossip/encoding.js";
 import {GossipEncoding, GossipTopicMap, GossipType} from "../../../../src/network/gossip/index.js";
 import {
+  GossipTopicCache,
   getAllowedTopics,
   getCoreTopicsAtFork,
+  getGossipSSZMaxSize,
+  getGossipSSZType,
   parseGossipTopic,
   stringifyGossipTopic,
 } from "../../../../src/network/gossip/topic.js";
@@ -225,6 +239,88 @@ describe("network / gossip / topic", () => {
       expect(() => parseGossipTopic(config, topicStr)).toThrow();
     });
   }
+
+  it("should provide finite gossip size limits for every gossip type", () => {
+    for (const {topic} of Object.values(testCases).flat()) {
+      const maxSize = getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE);
+
+      expect(Number.isFinite(maxSize)).toBe(true);
+      expect(maxSize).toBeGreaterThanOrEqual(getGossipSSZType(topic).minSize);
+    }
+  });
+
+  it("should use preset-defined gossip size limits for Gloas progressive objects", () => {
+    const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
+
+    expect({
+      [GossipType.beacon_block]: getGossipSSZMaxSize(
+        {type: GossipType.beacon_block, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.data_column_sidecar]: getGossipSSZMaxSize(
+        {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.beacon_aggregate_and_proof]: getGossipSSZMaxSize(
+        {type: GossipType.beacon_aggregate_and_proof, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.attester_slashing]: getGossipSSZMaxSize(
+        {type: GossipType.attester_slashing, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+      [GossipType.execution_payload_bid]: getGossipSSZMaxSize(
+        {type: GossipType.execution_payload_bid, boundary, encoding},
+        config.MAX_PAYLOAD_SIZE
+      ),
+    }).toEqual({
+      [GossipType.beacon_block]: config.MAX_PAYLOAD_SIZE,
+      [GossipType.data_column_sidecar]: MAX_DATA_COLUMN_SIDECAR_SIZE,
+      [GossipType.beacon_aggregate_and_proof]: MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
+      [GossipType.attester_slashing]: MAX_ATTESTER_SLASHING_SIZE,
+      [GossipType.execution_payload_bid]: MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
+    });
+  });
+
+  it("should use the Heze bid size limit post-Heze", () => {
+    const boundary = {fork: ForkName.heze, epoch: config.HEZE_FORK_EPOCH};
+
+    expect(
+      getGossipSSZMaxSize({type: GossipType.execution_payload_bid, boundary, encoding}, config.MAX_PAYLOAD_SIZE)
+    ).toBe(MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE);
+  });
+
+  it("should cap Gloas progressive gossip objects below their theoretical SSZ max", () => {
+    const boundary = {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH};
+
+    for (const topic of [
+      {type: GossipType.beacon_block, boundary, encoding},
+      {type: GossipType.beacon_aggregate_and_proof, boundary, encoding},
+      {type: GossipType.attester_slashing, boundary, encoding},
+      {type: GossipType.execution_payload, boundary, encoding},
+      {type: GossipType.execution_payload_bid, boundary, encoding},
+      {type: GossipType.data_column_sidecar, boundary, subnet: 1, encoding},
+    ] as const) {
+      expect(getGossipSSZMaxSize(topic, config.MAX_PAYLOAD_SIZE)).toBeLessThan(getGossipSSZType(topic).maxSize);
+    }
+  });
+
+  it("should reject gossip bytes above the per-topic limit before outbound compression", () => {
+    const topic = {
+      type: GossipType.beacon_aggregate_and_proof,
+      boundary: {fork: ForkName.gloas, epoch: config.GLOAS_FORK_EPOCH},
+      encoding,
+    } as const;
+    const topicStr = stringifyGossipTopic(config, topic);
+    const gossipTopicCache = new GossipTopicCache(config);
+    const transform = new DataTransformSnappy(gossipTopicCache, config.MAX_PAYLOAD_SIZE, null);
+
+    gossipTopicCache.setTopic(topicStr, topic);
+
+    expect(() =>
+      transform.outboundTransform(topicStr, new Uint8Array(MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE + 1))
+    ).toThrow(`ssz_snappy encoded data length ${MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE + 1}`);
+  });
 
   describe("getAllowedTopics", () => {
     // A config with every fork scheduled so all fork boundaries (and their topics) are present

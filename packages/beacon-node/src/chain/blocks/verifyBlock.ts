@@ -1,7 +1,13 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
-import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
+import {
+  DataAvailabilityStatus,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
+import {IndexedAttestation, Slot, deneb, ssz} from "@lodestar/types";
+import {toRootHex} from "@lodestar/utils";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
@@ -13,6 +19,7 @@ import {ImportBlockOpts} from "./types.js";
 import {DENEB_BLOWFISH_BANNER} from "./utils/blowfishBanner.js";
 import {ELECTRA_GIRAFFE_BANNER} from "./utils/giraffeBanner.js";
 import {CAPELLA_OWL_BANNER} from "./utils/ownBanner.js";
+import {GLOAS_POLAR_BEAR_BANNER} from "./utils/polarBearBanner.js";
 import {FULU_ZEBRA_BANNER} from "./utils/zebraBanner.js";
 import {verifyBlocksDataAvailability} from "./verifyBlocksDataAvailability.js";
 import {SegmentExecStatus, verifyBlocksExecutionPayload} from "./verifyBlocksExecutionPayloads.js";
@@ -203,6 +210,20 @@ export async function verifyBlocksInEpoch(
       // maybe chain with the above verifyBlocksSignatures()
     ]);
 
+    if (opts.skipVerifyBlockSignatures !== true) {
+      for (const block of blocks) {
+        const {slot, proposerIndex} = block.message;
+        const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
+        const blockRoot = toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedBlockHeader.message));
+        this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockRoot, signedBlockHeader);
+        // Only produce a slashing while importing the block. A block that is verified before it is published
+        // must not be treated as equivocation evidence since it may never be seen by the network
+        if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+          this.processProposerEquivocation(slot, proposerIndex);
+        }
+      }
+    }
+
     if (opts.verifyOnly !== true) {
       const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));
       const toForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(lastBlock.message.slot));
@@ -228,6 +249,11 @@ export async function verifyBlocksInEpoch(
           case ForkName.fulu:
             this.logger.info(FULU_ZEBRA_BANNER);
             this.logger.info("Activating peerDAS", {epoch: this.config.FULU_FORK_EPOCH});
+            break;
+
+          case ForkName.gloas:
+            this.logger.info(GLOAS_POLAR_BEAR_BANNER);
+            this.logger.info("Activating ePBS", {epoch: this.config.GLOAS_FORK_EPOCH});
             break;
 
           default:

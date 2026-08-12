@@ -10,9 +10,8 @@ import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
-  forkPostAltair,
-  highestFork,
   isForkPostElectra,
+  isForkPostGloas,
 } from "@lodestar/params";
 import {
   type IBeaconStateViewAltair,
@@ -44,7 +43,6 @@ import {
   electra,
   phase0,
   ssz,
-  sszTypesFor,
 } from "@lodestar/types";
 import {Logger, MapDef, byteArrayEquals, pruneSetToMax, toRootHex} from "@lodestar/utils";
 import {ZERO_HASH} from "../../constants/index.js";
@@ -230,8 +228,8 @@ export class LightClientServer {
     this.signal = signal;
 
     this.zero = {
-      // Assign the hightest fork's default value because it can always be typecasted down to correct fork
-      finalizedHeader: sszTypesFor(highestFork(forkPostAltair)).LightClientHeader.defaultValue(),
+      // Assign the highest pre-Gloas light-client header because post-Gloas light-client updates are skipped for now.
+      finalizedHeader: ssz.electra.LightClientHeader.defaultValue(),
       // Electra finalityBranch has fixed length of 5 whereas altair has 4. The fifth element will be ignored
       // when serializing as altair LightClientUpdate
       finalityBranch: ssz.electra.LightClientUpdate.fields.finalityBranch.defaultValue(),
@@ -658,10 +656,17 @@ export class LightClientServer {
 
     const attestedFork = this.config.getForkName(attestedHeader.beacon.slot);
     const numWitness = syncCommitteeWitness.witness.length;
-    if (isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS_ELECTRA) {
+    if (
+      isForkPostGloas(attestedFork) &&
+      (syncCommitteeWitness.currentSyncCommitteeBranch === undefined ||
+        syncCommitteeWitness.nextSyncCommitteeBranch === undefined)
+    ) {
+      throw Error("Expected post-Gloas sync committee branches");
+    }
+    if (!isForkPostGloas(attestedFork) && isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS_ELECTRA) {
       throw Error(`Expected ${NUM_WITNESS_ELECTRA} witnesses in post-Electra numWitness=${numWitness}`);
     }
-    if (!isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS) {
+    if (!isForkPostGloas(attestedFork) && !isForkPostElectra(attestedFork) && numWitness !== NUM_WITNESS) {
       throw Error(`Expected ${NUM_WITNESS} witnesses in pre-Electra numWitness=${numWitness}`);
     }
 

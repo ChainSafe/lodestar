@@ -32,9 +32,8 @@ export function getLodestarApi({
 }: Pick<ApiModules, "chain" | "config" | "db" | "network" | "sync">): ApplicationMethods<routes.lodestar.Endpoints> {
   let writingHeapdump = false;
   let writingProfile = false;
-  // for NodeJS, profile the whole epoch
-  // for Bun, profile 1 slot. Otherwise it will either crash the app, and/or inspector cannot render the profile
-  const defaultProfileMs = globalThis.Bun ? config.SLOT_DURATION_MS : SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
+  // profile the whole epoch by default
+  const defaultProfileMs = SLOTS_PER_EPOCH * config.SLOT_DURATION_MS;
 
   return {
     async writeHeapdump({thread = "main", dirpath = "."}) {

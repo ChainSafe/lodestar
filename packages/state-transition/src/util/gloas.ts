@@ -18,7 +18,6 @@ import {AttestationData} from "@lodestar/types/phase0";
 import {byteArrayEquals} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {getBlockRootAtSlot} from "./blockRoot.js";
 import {computeDomain} from "./domain.js";
 import {computeEpochAtSlot} from "./epoch.js";
 import {computeEpochShuffling} from "./epochShuffling.js";
@@ -32,11 +31,13 @@ export function isBuilderWithdrawalCredential(withdrawalCredentials: Uint8Array)
 }
 
 export function getBuilderPaymentQuorumThreshold(state: CachedBeaconStateGloas): number {
-  const quorum =
-    Math.floor((state.epochCtx.totalActiveBalanceIncrements * EFFECTIVE_BALANCE_INCREMENT) / SLOTS_PER_EPOCH) *
-    BUILDER_PAYMENT_THRESHOLD_NUMERATOR;
+  // total active balance exceeds Number.MAX_SAFE_INTEGER at mainnet scale, keep the intermediate math in bigint
+  const perSlotBalance =
+    (BigInt(state.epochCtx.totalActiveBalanceIncrements) * BigInt(EFFECTIVE_BALANCE_INCREMENT)) /
+    BigInt(SLOTS_PER_EPOCH);
+  const quorum = perSlotBalance * BigInt(BUILDER_PAYMENT_THRESHOLD_NUMERATOR);
 
-  return Math.floor(quorum / BUILDER_PAYMENT_THRESHOLD_DENOMINATOR);
+  return Number(quorum / BigInt(BUILDER_PAYMENT_THRESHOLD_DENOMINATOR));
 }
 
 function hasBuilderIndexFlag(index: number): boolean {
@@ -86,15 +87,19 @@ export function isActiveBuilder(builder: gloas.Builder, finalizedEpoch: Epoch): 
  * From https://github.com/ethereum/EIPs/blob/master/EIPS/eip-1559.md
  */
 export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: number): number {
-  const maxGasLimitDifference = Math.max(Math.floor(parentGasLimit / 1024), 1) - 1;
+  return Number(getExpectedGasLimitBigint(BigInt(parentGasLimit), BigInt(targetGasLimit)));
+}
+
+export function getExpectedGasLimitBigint(parentGasLimit: bigint, targetGasLimit: bigint): bigint {
+  const maxGasLimitDifference = (parentGasLimit / 1024n > 1n ? parentGasLimit / 1024n : 1n) - 1n;
 
   if (targetGasLimit > parentGasLimit) {
     const gasDiff = targetGasLimit - parentGasLimit;
-    return parentGasLimit + Math.min(gasDiff, maxGasLimitDifference);
+    return parentGasLimit + (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
   }
 
   const gasDiff = parentGasLimit - targetGasLimit;
-  return parentGasLimit - Math.min(gasDiff, maxGasLimitDifference);
+  return parentGasLimit - (gasDiff < maxGasLimitDifference ? gasDiff : maxGasLimitDifference);
 }
 
 /**
@@ -103,8 +108,8 @@ export function getExpectedGasLimit(parentGasLimit: number, targetGasLimit: numb
  * adjustment step of the parent, otherwise it must hit the clamped boundary.
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/builder.md#new-is_gas_limit_target_compatible
  */
-export function isGasLimitTargetCompatible(parentGasLimit: number, gasLimit: number, targetGasLimit: number): boolean {
-  return gasLimit === getExpectedGasLimit(parentGasLimit, targetGasLimit);
+export function isGasLimitTargetCompatible(parentGasLimit: bigint, gasLimit: bigint, targetGasLimit: bigint): boolean {
+  return gasLimit === getExpectedGasLimitBigint(parentGasLimit, targetGasLimit);
 }
 
 /**
@@ -188,15 +193,9 @@ export function findBuilderIndexByPubkey(state: CachedBeaconStateGloas, pubkey: 
   return null;
 }
 
-export function isAttestationSameSlot(state: CachedBeaconStateGloas, data: AttestationData): boolean {
-  if (data.slot === 0) return true;
-
-  const isMatchingBlockRoot = byteArrayEquals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot));
-  const isCurrentBlockRoot = !byteArrayEquals(data.beaconBlockRoot, getBlockRootAtSlot(state, data.slot - 1));
-
-  return isMatchingBlockRoot && isCurrentBlockRoot;
-}
-
+/**
+ * Use cached block roots to avoid repeated state root lookups while matching the spec's is_attestation_same_slot behavior.
+ */
 export function isAttestationSameSlotRootCache(rootCache: RootCache, data: AttestationData): boolean {
   if (data.slot === 0) return true;
 
