@@ -59,27 +59,27 @@ export class BuilderCircuitBreaker {
       Math.max(clockSlot - this.faultInspectionWindow, 0),
       clockSlot - 1
     );
-    const blocksPresent = full + empty;
+    const canonicalBlocks = full + empty;
     const faults = empty;
 
     const wasActive = this.active;
-    // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
-    const exceedsFaultBudget = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    // Scale the fault budget by canonical blocks so sparse windows still trigger on high EMPTY rates
+    const exceedsFaultBudget = faults * this.faultInspectionWindow > this.allowedFaults * canonicalBlocks;
     if (exceedsFaultBudget) {
       this.active = true;
-    } else if (blocksPresent >= MIN_BLOCKS_TO_DEACTIVATE) {
+    } else if (canonicalBlocks >= MIN_BLOCKS_TO_DEACTIVATE) {
       // Require a minimum sample within the fault budget before accepting builder bids again
       this.active = false;
     }
 
     this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);
-    this.modules.metrics?.builderCircuitBreaker.faults.set(faults);
-    this.modules.metrics?.builderCircuitBreaker.blocksPresent.set(blocksPresent);
-    this.modules.metrics?.builderCircuitBreaker.payloadsFull.set(full);
+    this.modules.metrics?.builderCircuitBreaker.canonicalBlocks.set(canonicalBlocks);
+    this.modules.metrics?.builderCircuitBreaker.fullBlocks.set(full);
+    this.modules.metrics?.builderCircuitBreaker.emptyBlocks.set(empty);
 
     const logCtx = {
       clockSlot,
-      blocksPresent,
+      canonicalBlocks,
       faults,
       faultInspectionWindow: this.faultInspectionWindow,
       allowedFaults: this.allowedFaults,
