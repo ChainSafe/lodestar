@@ -208,6 +208,15 @@ describe("Gloas Fork Choice", () => {
         }
       );
     });
+
+    it("does not count the genesis block as EMPTY", () => {
+      const protoArray = ProtoArray.initialize(createTestBlock(0, genesisRoot, "0x00", "0x00"), 0);
+
+      expect(protoArray.getCanonicalPayloadCounts(0, 0, genesisRoot, PayloadStatus.EMPTY)).toEqual({
+        full: 0,
+        empty: 0,
+      });
+    });
   });
 
   describe("Pre-Gloas (Fulu) behavior", () => {
