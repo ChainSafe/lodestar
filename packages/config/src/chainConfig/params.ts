@@ -319,7 +319,6 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     VALIDATOR_CUSTODY_REQUIREMENT: fuluForkRelevant,
     BALANCE_PER_ADDITIONAL_CUSTODY_GROUP: fuluForkRelevant,
     BLOB_SCHEDULE: fuluForkRelevant,
-    GAS_LIMIT_SCHEDULE: false,
 
     // GLOAS
     ATTESTATION_DUE_BPS_GLOAS: gloasForkRelevant,
@@ -339,6 +338,7 @@ function getSpecCriticalParams(localConfig: ChainConfig): Record<keyof ConfigWit
     MAX_PARTIAL_DATA_COLUMN_SIDECAR_SIZE: false,
     MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE: false,
     MIN_BUILDER_WITHDRAWABILITY_DELAY: gloasForkRelevant,
+    GAS_LIMIT_SCHEDULE: false,
 
     // HEZE
     INCLUSION_LIST_DUE_BPS: hezeForkRelevant,
