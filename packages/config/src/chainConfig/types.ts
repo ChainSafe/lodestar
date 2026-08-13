@@ -10,6 +10,7 @@ export type ChainConfig = {
    * canonical network names include:
    * * 'mainnet' - there can be only one
    * * 'hoodi' - testnet
+   * * 'plataberget' - testnet
    * Must match the regex: [a-z0-9\-]
    */
   CONFIG_NAME: string;
