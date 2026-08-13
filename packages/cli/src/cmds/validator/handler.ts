@@ -183,6 +183,8 @@ export async function validatorHandler(args: IValidatorCliArgs & GlobalArgs): Pr
       adversarialEquivocateBlockProposal: args["adversarial.equivocate.blockProposal"],
       adversarialEquivocateBuilderBlockPeersBps: args["adversarial.equivocate.builderBlockPeersBps"],
       adversarialWithholdExecutionPayload: args["adversarial.withhold.executionPayload"],
+      adversarialDelayExecutionPayload: args["adversarial.delay.executionPayload"],
+      adversarialDelayExecutionPayloadBps: args["adversarial.delay.executionPayloadBps"],
       externalSigner: {
         urls: args["externalSigner.urls"],
         fetch: args["externalSigner.fetch"],

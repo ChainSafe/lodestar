@@ -50,7 +50,11 @@ describe("BlockDutiesService", () => {
   });
   afterEach(() => controller.abort());
 
-  function setupGloasSelfBuild(opts: {adversarialWithholdExecutionPayload?: boolean}): {
+  function setupGloasSelfBuild(opts: {
+    adversarialWithholdExecutionPayload?: boolean;
+    adversarialDelayExecutionPayload?: boolean;
+    adversarialDelayExecutionPayloadBps?: number;
+  }): {
     blockService: BlockProposingService;
     clock: ClockMock;
     block: ReturnType<typeof ssz.gloas.BeaconBlock.defaultValue>;
@@ -429,5 +433,33 @@ describe("BlockDutiesService", () => {
     expect(api.validator.getExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(validatorStore.signExecutionPayloadEnvelope).not.toHaveBeenCalled();
     expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+  });
+
+  it("Should publish a self-built execution payload at the configured point in the slot", async () => {
+    vi.useFakeTimers();
+    try {
+      const slot = 1;
+      const delayBps = 8000;
+      const {blockService, clock} = setupGloasSelfBuild({
+        adversarialDelayExecutionPayload: true,
+        adversarialDelayExecutionPayloadBps: delayBps,
+      });
+      const targetMs = config.getSlotComponentDurationMs(delayBps);
+      vi.spyOn(clock, "msFromSlot").mockReturnValue(targetMs - 1000);
+
+      const proposal = blockService["createAndPublishBlockGloas"](pubkeys[0], slot);
+      await vi.advanceTimersByTimeAsync(999);
+
+      expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+      expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      await proposal;
+
+      expect(api.validator.getExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+      expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

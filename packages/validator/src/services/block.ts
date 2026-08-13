@@ -14,7 +14,7 @@ import {
   Slot,
   isBlindedSignedBeaconBlock,
 } from "@lodestar/types";
-import {extendError, prettyBytes, prettyWeiToEth, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {extendError, prettyBytes, prettyWeiToEth, sleep, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
 import {IClock, LoggerVc} from "../util/index.js";
@@ -25,6 +25,7 @@ import {ValidatorStore} from "./validatorStore.js";
 // during a proposer equivocation. Kept below half so the self-built block still wins fork choice while the
 // seeded minority forms a competing (split-view) fork that gets orphaned.
 const DEFAULT_EQUIVOCATION_BUILDER_BLOCK_PEERS_BPS = 4000;
+const DEFAULT_EXECUTION_PAYLOAD_DELAY_BPS = 8000;
 
 // The following combination of blocks and blobs can be produced
 //  i) a full block contents (eg block and all related data-layer data)
@@ -49,6 +50,8 @@ type BlockProposalOpts = {
   adversarialEquivocateBlockProposal?: boolean;
   adversarialEquivocateBuilderBlockPeersBps?: number;
   adversarialWithholdExecutionPayload?: boolean;
+  adversarialDelayExecutionPayload?: boolean;
+  adversarialDelayExecutionPayloadBps?: number;
 };
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -374,6 +377,22 @@ export class BlockProposingService {
           blockRoot: blockRootHex,
         });
         return;
+      }
+
+      if (this.opts.adversarialDelayExecutionPayload) {
+        const delayBps = this.opts.adversarialDelayExecutionPayloadBps ?? DEFAULT_EXECUTION_PAYLOAD_DELAY_BPS;
+        const delay = Math.max(this.config.getSlotComponentDurationMs(delayBps) - this.clock.msFromSlot(slot), 0);
+        this.logger.warn("ADVERSARIAL: Delaying execution payload reveal", {
+          ...logCtx,
+          blockRoot: blockRootHex,
+          delayBps,
+          delayMs: delay,
+          payloadDueBps: this.config.PAYLOAD_DUE_BPS,
+          payloadAttestationDueBps: this.config.PAYLOAD_ATTESTATION_DUE_BPS,
+        });
+        if (delay > 0) {
+          await sleep(delay);
+        }
       }
 
       // Self-build: proposer is responsible for building and publishing the execution payload envelope

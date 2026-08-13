@@ -1,6 +1,6 @@
 # ePBS (gloas) Adversarial Node: Potential Features
 
-Status: catalog. Six features shipped so far (Tier 1 #1, #4, #4b, #4c, #4d, and Tier 2 #6,
+Status: catalog. Seven features shipped so far (Tier 1 #1, #2, #4, #4b, #4c, #4d, and Tier 2 #6,
 see Conventions); the rest are planned.
 
 Purpose: a list of adversarial behaviors we could build into a test-only "deathstar"
@@ -56,7 +56,11 @@ sets, gossiping a valid self-built block to the majority and the builder block t
 the minority so the view splits and resolves to the self-built block, sized by
 `--adversarial.equivocate.builderBlockPeersBps` (default 4000 = 40%); default false).
 Sixth: `--adversarial.withhold.executionPayload` (Tier 1 #1, publish a self-built
-beacon block but never its execution payload envelope; default false).
+beacon block but never its execution payload envelope; default false). Seventh:
+`--adversarial.delay.executionPayload` (Tier 1 #2, publish a self-built beacon
+block immediately but hold its envelope until
+`--adversarial.delay.executionPayloadBps`, default 8000 basis points into the
+slot; default false).
 
 ## How ePBS changes the threat model
 
@@ -123,14 +127,21 @@ Publish the beacon block and winning bid, then never publish the
 
 ### 2. Late payload reveal (timing straddle)
 
-Reveal the envelope right at the PTC attestation deadline but still inside
-`MAXIMUM_GOSSIP_CLOCK_DISPARITY`, so roughly half the PTC sees it as timely and
-half as late.
+Implemented as `--adversarial.delay.executionPayload`, with the target publish
+time selected by `--adversarial.delay.executionPayloadBps`. The target is a
+fraction of the slot, not an additional sleep, so production time is accounted
+for. Set it after `PAYLOAD_DUE_BPS` and before 10000 to make honest PTC members
+vote `payloadPresent=false` while still giving the next proposer time to receive
+the late payload. The envelope may arrive before `PAYLOAD_ATTESTATION_DUE_BPS`;
+timeliness is determined from its recorded arrival time against
+`PAYLOAD_DUE_BPS`. A target at or after `PAYLOAD_ATTESTATION_DUE_BPS` additionally
+exercises the race where PTC members vote before the envelope arrives.
 
 - Injection point: configurable delay before the publish call in #1.
-- Effect: PTC YES votes land near `PTC_SIZE / 2`, so `isPayloadTimely` resolves
-  differently across nodes, producing network-wide EMPTY-vs-FULL head
-  disagreement (split view). Highest-value liveness stressor.
+- Effect: after `PAYLOAD_DUE_BPS`, honest PTC members vote NO and the next
+  proposer should extend EMPTY even though the late FULL payload remains locally
+  available. Targets near either timing boundary can additionally stress
+  inconsistent arrival views across nodes.
 
 ### 3. Dishonest PTC voting
 

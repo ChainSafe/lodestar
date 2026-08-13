@@ -1,9 +1,10 @@
 import {WireFormat, defaultInit} from "@lodestar/api";
+import {BASIS_POINTS} from "@lodestar/params";
 import {CliCommandOptions} from "@lodestar/utils";
 import {defaultOptions} from "@lodestar/validator";
 import {coerceCors, enabledAllBashFriendly} from "../../options/beaconNodeOptions/api.js";
 import {LogArgs, logOptions} from "../../options/logOptions.js";
-import {ensure0xPrefix, parseRange} from "../../util/index.js";
+import {YargsError, ensure0xPrefix, parseRange} from "../../util/index.js";
 import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
@@ -57,6 +58,8 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "adversarial.equivocate.blockProposal"?: boolean;
     "adversarial.equivocate.builderBlockPeersBps"?: number;
     "adversarial.withhold.executionPayload"?: boolean;
+    "adversarial.delay.executionPayload"?: boolean;
+    "adversarial.delay.executionPayloadBps"?: number;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -327,6 +330,30 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "ADVERSARIAL (devnet test only): for self-built Gloas blocks, publish the beacon block but never publish its execution payload envelope",
     default: false,
+    group: "adversarial",
+  },
+
+  "adversarial.delay.executionPayload": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "ADVERSARIAL (devnet test only): for self-built Gloas blocks, delay publishing the execution payload envelope until the configured point in the slot",
+    default: false,
+    group: "adversarial",
+  },
+
+  "adversarial.delay.executionPayloadBps": {
+    hidden: true,
+    type: "number",
+    description:
+      "ADVERSARIAL (devnet test only): target time within the slot for delayed execution payload publication, in basis points of the slot duration",
+    default: 8000,
+    coerce: (value: number): number => {
+      if (!Number.isInteger(value) || value < 0 || value >= BASIS_POINTS) {
+        throw new YargsError(`adversarial.delay.executionPayloadBps must be an integer from 0 to ${BASIS_POINTS - 1}`);
+      }
+      return value;
+    },
     group: "adversarial",
   },
 

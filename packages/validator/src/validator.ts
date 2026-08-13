@@ -70,6 +70,8 @@ export type ValidatorOptions = {
   adversarialEquivocateBlockProposal?: boolean;
   adversarialEquivocateBuilderBlockPeersBps?: number;
   adversarialWithholdExecutionPayload?: boolean;
+  adversarialDelayExecutionPayload?: boolean;
+  adversarialDelayExecutionPayloadBps?: number;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -266,6 +268,8 @@ export class Validator {
         adversarialEquivocateBlockProposal: opts.adversarialEquivocateBlockProposal ?? false,
         adversarialEquivocateBuilderBlockPeersBps: opts.adversarialEquivocateBuilderBlockPeersBps,
         adversarialWithholdExecutionPayload: opts.adversarialWithholdExecutionPayload ?? false,
+        adversarialDelayExecutionPayload: opts.adversarialDelayExecutionPayload ?? false,
+        adversarialDelayExecutionPayloadBps: opts.adversarialDelayExecutionPayloadBps,
       }
     );
 
