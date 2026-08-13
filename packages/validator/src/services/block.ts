@@ -48,6 +48,7 @@ type BlockProposalOpts = {
   payloadLocal: boolean;
   adversarialEquivocateBlockProposal?: boolean;
   adversarialEquivocateBuilderBlockPeersBps?: number;
+  adversarialWithholdExecutionPayload?: boolean;
 };
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -367,6 +368,14 @@ export class BlockProposingService {
     this.metrics?.blocksPublished.inc();
 
     if (isSelfBuild) {
+      if (this.opts.adversarialWithholdExecutionPayload) {
+        this.logger.warn("ADVERSARIAL: Withholding execution payload", {
+          ...logCtx,
+          blockRoot: blockRootHex,
+        });
+        return;
+      }
+
       // Self-build: proposer is responsible for building and publishing the execution payload envelope
       const flow = executionPayloadIncluded ? "stateless" : "stateful";
       if (executionPayloadIncluded) {

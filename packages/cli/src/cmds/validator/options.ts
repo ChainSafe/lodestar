@@ -56,6 +56,7 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     payloadLocal?: boolean;
     "adversarial.equivocate.blockProposal"?: boolean;
     "adversarial.equivocate.builderBlockPeersBps"?: number;
+    "adversarial.withhold.executionPayload"?: boolean;
 
     importKeystores?: string[];
     importKeystoresPassword?: string;
@@ -317,6 +318,15 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "ADVERSARIAL (devnet test only): fraction of peers (basis points) to seed with the builder block during a proposer equivocation; keep it below 5000 (half) so the self-built block still wins fork choice while the seeded minority forms a split-view fork",
     default: 4000,
+    group: "adversarial",
+  },
+
+  "adversarial.withhold.executionPayload": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "ADVERSARIAL (devnet test only): for self-built Gloas blocks, publish the beacon block but never publish its execution payload envelope",
+    default: false,
     group: "adversarial",
   },
 

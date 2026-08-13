@@ -1,6 +1,6 @@
 # ePBS (gloas) Adversarial Node: Potential Features
 
-Status: catalog. Five features shipped so far (Tier 1 #4, #4b, #4c, #4d, and Tier 2 #6,
+Status: catalog. Six features shipped so far (Tier 1 #1, #4, #4b, #4c, #4d, and Tier 2 #6,
 see Conventions); the rest are planned.
 
 Purpose: a list of adversarial behaviors we could build into a test-only "deathstar"
@@ -55,6 +55,8 @@ proposer selects an external builder bid, split the network into two disjoint pe
 sets, gossiping a valid self-built block to the majority and the builder block to
 the minority so the view splits and resolves to the self-built block, sized by
 `--adversarial.equivocate.builderBlockPeersBps` (default 4000 = 40%); default false).
+Sixth: `--adversarial.withhold.executionPayload` (Tier 1 #1, publish a self-built
+beacon block but never its execution payload envelope; default false).
 
 ## How ePBS changes the threat model
 
@@ -98,6 +100,11 @@ are genuinely new attack surfaces:
 ## Tier 1: Core ePBS safety / liveness (highest impact, most spec-relevant)
 
 ### 1. Payload withholding (the canonical ePBS attack)
+
+Implemented as the validator-client flag
+`--adversarial.withhold.executionPayload`. It applies only to self-built Gloas
+blocks and returns after publishing the signed beacon block, before retrieving,
+signing, or publishing its envelope.
 
 Publish the beacon block and winning bid, then never publish the
 `SignedExecutionPayloadEnvelope`.

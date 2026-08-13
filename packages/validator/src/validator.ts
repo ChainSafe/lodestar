@@ -69,6 +69,7 @@ export type ValidatorOptions = {
   payloadLocal?: boolean;
   adversarialEquivocateBlockProposal?: boolean;
   adversarialEquivocateBuilderBlockPeersBps?: number;
+  adversarialWithholdExecutionPayload?: boolean;
   externalSigner?: ExternalSignerOptions;
   clock?: ClockOptions;
 };
@@ -264,6 +265,7 @@ export class Validator {
         payloadLocal: opts.payloadLocal ?? api.httpClient.urlsInits.length <= 1,
         adversarialEquivocateBlockProposal: opts.adversarialEquivocateBlockProposal ?? false,
         adversarialEquivocateBuilderBlockPeersBps: opts.adversarialEquivocateBuilderBlockPeersBps,
+        adversarialWithholdExecutionPayload: opts.adversarialWithholdExecutionPayload ?? false,
       }
     );
 

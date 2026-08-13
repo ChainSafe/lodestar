@@ -50,6 +50,86 @@ describe("BlockDutiesService", () => {
   });
   afterEach(() => controller.abort());
 
+  function setupGloasSelfBuild(opts: {adversarialWithholdExecutionPayload?: boolean}): {
+    blockService: BlockProposingService;
+    clock: ClockMock;
+    block: ReturnType<typeof ssz.gloas.BeaconBlock.defaultValue>;
+  } {
+    const slot = 1;
+    const gloasConfig = createChainForkConfig({
+      ...mainnetConfig,
+      ALTAIR_FORK_EPOCH: 0,
+      BELLATRIX_FORK_EPOCH: 0,
+      CAPELLA_FORK_EPOCH: 0,
+      DENEB_FORK_EPOCH: 0,
+      ELECTRA_FORK_EPOCH: 0,
+      FULU_FORK_EPOCH: 0,
+      GLOAS_FORK_EPOCH: 0,
+    });
+    const clock = new ClockMock();
+    const dutiesService = new BlockDutiesService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      null
+    );
+    const blockService = new BlockProposingService(
+      gloasConfig,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      dutiesService,
+      null,
+      {
+        broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        blindedLocal: false,
+        payloadLocal: true,
+        ...opts,
+      }
+    );
+
+    const block = ssz.gloas.BeaconBlock.defaultValue();
+    block.slot = slot;
+    block.body.signedExecutionPayloadBid.message.builderIndex = BUILDER_INDEX_SELF_BUILD;
+    const envelope = ssz.gloas.ExecutionPayloadEnvelope.defaultValue();
+    const {signature} = ssz.gloas.SignedBeaconBlock.defaultValue();
+
+    validatorStore.signRandao.mockResolvedValue(block.body.randaoReveal);
+    validatorStore.signBlock.mockImplementation(async (_pubkey, signableBlock) => ({
+      message: signableBlock,
+      signature,
+    }));
+    validatorStore.signExecutionPayloadEnvelope.mockResolvedValue({message: envelope, signature});
+    validatorStore.getBuilderSelectionParams.mockReturnValue({
+      selection: routes.validator.BuilderSelection.ExecutionOnly,
+      boostFactor: BigInt(0),
+    });
+    validatorStore.getGraffiti.mockReturnValue("deathstar");
+    validatorStore.getFeeRecipient.mockReturnValue("0x00");
+    api.validator.produceBlockV4.mockResolvedValue(
+      mockApiResponse({
+        data: block,
+        meta: {
+          version: ForkName.gloas,
+          executionPayloadValue: BigInt(0),
+          consensusBlockValue: BigInt(0),
+          executionPayloadIncluded: false,
+        },
+      })
+    );
+    api.validator.getExecutionPayloadEnvelope.mockResolvedValue(
+      mockApiResponse({data: envelope, meta: {version: ForkName.gloas}})
+    );
+    api.beacon.publishBlockV2.mockResolvedValue(mockApiResponse({}));
+    api.beacon.publishExecutionPayloadEnvelope.mockResolvedValue(mockApiResponse({}));
+
+    return {blockService, clock, block};
+  }
+
   it("Should produce, sign, and publish a block", async () => {
     // Reply with some duties
     const slot = 0; // genesisTime is right now, so test with slot = currentSlot
@@ -337,5 +417,17 @@ describe("BlockDutiesService", () => {
     expect(api.lodestar.publishBlockEquivocation).not.toHaveBeenCalled();
     expect(validatorStore.signBlockForEquivocation).not.toHaveBeenCalled();
     expect(api.beacon.publishExecutionPayloadEnvelope).toHaveBeenCalledOnce();
+  });
+
+  it("Should publish a self-built beacon block without revealing its execution payload", async () => {
+    const slot = 1;
+    const {blockService} = setupGloasSelfBuild({adversarialWithholdExecutionPayload: true});
+
+    await blockService["createAndPublishBlockGloas"](pubkeys[0], slot);
+
+    expect(api.beacon.publishBlockV2).toHaveBeenCalledOnce();
+    expect(api.validator.getExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(validatorStore.signExecutionPayloadEnvelope).not.toHaveBeenCalled();
+    expect(api.beacon.publishExecutionPayloadEnvelope).not.toHaveBeenCalled();
   });
 });
