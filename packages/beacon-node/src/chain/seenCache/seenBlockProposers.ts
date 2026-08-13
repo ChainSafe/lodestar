@@ -19,7 +19,9 @@ const MIN_EQUIVOCATION_BLOCK_ROOTS_PER_PROPOSAL = 2;
  * The cache is pruned on finalization and bounds the number of roots stored per proposer and slot
  */
 export class SeenBlockProposers {
-  private readonly proposerIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
+  private readonly proposerIndexesBySlot = new MapDef<Slot, Map<ValidatorIndex, RootHex>>(
+    () => new Map<ValidatorIndex, RootHex>()
+  );
   private readonly signedBlockHeadersBySlot = new MapDef<
     Slot,
     MapDef<ValidatorIndex, Map<RootHex, phase0.SignedBeaconBlockHeader>>
@@ -28,6 +30,14 @@ export class SeenBlockProposers {
 
   isKnown(blockSlot: Slot, proposerIndex: ValidatorIndex): boolean {
     return this.proposerIndexesBySlot.get(blockSlot)?.has(proposerIndex) === true;
+  }
+
+  /**
+   * The block proposer is known at slot with a different root.
+   */
+  isRepeatProposal(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): boolean {
+    const knownRoot = this.proposerIndexesBySlot.get(blockSlot)?.get(proposerIndex);
+    return knownRoot !== undefined && knownRoot !== blockRoot;
   }
 
   hasBlockRoot(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): boolean {
@@ -85,12 +95,12 @@ export class SeenBlockProposers {
   }
 
   /** Mark a block as known from gossip or another block import path */
-  add(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
+  add(blockSlot: Slot, proposerIndex: ValidatorIndex, blockRoot: RootHex): void {
     if (blockSlot < this.finalizedSlot) {
       throw Error(`blockSlot ${blockSlot} < finalizedSlot ${this.finalizedSlot}`);
     }
 
-    this.proposerIndexesBySlot.getOrDefault(blockSlot).add(proposerIndex);
+    this.proposerIndexesBySlot.getOrDefault(blockSlot).set(proposerIndex, blockRoot);
   }
 
   prune(finalizedSlot: Slot): void {
