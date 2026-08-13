@@ -21,9 +21,9 @@ const MIN_BLOCKS_TO_DEACTIVATE = 4;
 /**
  * Post-gloas circuit breaker for builder bids. The beacon block is produced by the proposer
  * regardless of bid source, so missed blocks are not a useful builder health signal. Instead
- * count canonical blocks selected as EMPTY. Activate when the proportion of EMPTY blocks exceeds
- * the fault budget, and resume selecting builder bids only when the observed blocks are within
- * budget and meet the minimum recovery sample size.
+ * count blocks whose payload was never revealed. Activate when the non-reveal rate exceeds the
+ * fault budget, and resume selecting builder bids only when the observed blocks are within budget
+ * and meet the minimum recovery sample size.
  */
 export class BuilderCircuitBreaker {
   readonly faultInspectionWindow: number;
@@ -39,7 +39,6 @@ export class BuilderCircuitBreaker {
     const {faultInspectionWindow, allowedFaults} = getFaultInspectionParams(opts);
     this.faultInspectionWindow = faultInspectionWindow;
     this.allowedFaults = allowedFaults;
-    this.modules.logger.info("Builder circuit breaker initialized", {faultInspectionWindow, allowedFaults});
   }
 
   /** Whether builder bids must be ignored for a block produced at clockSlot */
@@ -54,13 +53,12 @@ export class BuilderCircuitBreaker {
     }
     this.lastUpdatedSlot = clockSlot;
 
-    // Exclude clockSlot itself, its payload status may still be unresolved
-    const {full, empty} = this.modules.forkChoice.getCanonicalPayloadCounts(
+    // Exclude clockSlot itself, its payload reveal may still be in flight
+    const {blocksPresent, payloadsRevealed} = this.modules.forkChoice.getPayloadRevealCounts(
       Math.max(clockSlot - this.faultInspectionWindow, 0),
       clockSlot - 1
     );
-    const blocksPresent = full + empty;
-    const faults = empty;
+    const faults = blocksPresent - payloadsRevealed;
 
     const wasActive = this.active;
     // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
@@ -75,7 +73,7 @@ export class BuilderCircuitBreaker {
     this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);
     this.modules.metrics?.builderCircuitBreaker.faults.set(faults);
     this.modules.metrics?.builderCircuitBreaker.blocksPresent.set(blocksPresent);
-    this.modules.metrics?.builderCircuitBreaker.payloadsFull.set(full);
+    this.modules.metrics?.builderCircuitBreaker.payloadsRevealed.set(payloadsRevealed);
 
     const logCtx = {
       clockSlot,

@@ -246,8 +246,11 @@ export interface IForkChoice {
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
-  /** Count canonical Gloas blocks selected as FULL or EMPTY in the inclusive slot range. */
-  getCanonicalPayloadCounts(fromSlot: Slot, toSlot: Slot): {full: number; empty: number};
+  /**
+   * Count Gloas blocks with fromSlot <= slot <= toSlot, and how many of them have a revealed payload
+   * (FULL variant exists). Used by the builder circuit breaker.
+   */
+  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number};
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
   getPTCVoteCounts(blockRootHex: RootHex): {

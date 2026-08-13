@@ -4,32 +4,31 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BuilderCircuitBreaker} from "../../../src/chain/builderCircuitBreaker.js";
 import {getFaultInspectionParams} from "../../../src/execution/builder/http.js";
-import {getMockedLogger} from "../../mocks/loggerMock.js";
 
 describe("BuilderCircuitBreaker", () => {
   const faultInspectionWindow = 32;
   const allowedFaults = 8;
   const logger = testLogger("builderCircuitBreaker");
 
-  function setup(counts: {full: number; empty: number}) {
-    const getCanonicalPayloadCounts = vi.fn().mockReturnValue(counts);
-    const forkChoice = {getCanonicalPayloadCounts} as unknown as IForkChoice;
+  function setup(stats: {blocksPresent: number; payloadsRevealed: number}) {
+    const getPayloadRevealCounts = vi.fn().mockReturnValue(stats);
+    const forkChoice = {getPayloadRevealCounts} as unknown as IForkChoice;
     const breaker = new BuilderCircuitBreaker(
       {faultInspectionWindow, allowedFaults},
       {forkChoice, logger, metrics: null}
     );
-    return {breaker, getCanonicalPayloadCounts};
+    return {breaker, getPayloadRevealCounts};
   }
 
-  const testCases: [string, {full: number; empty: number}, boolean][] = [
-    ["empty window keeps initial state", {full: 0, empty: 0}, false],
-    ["full window, no faults", {full: 32, empty: 0}, false],
-    ["full window, faults at budget", {full: 24, empty: 8}, false],
-    ["full window, faults above budget", {full: 23, empty: 9}, true],
-    ["sparse window, faults within scaled budget", {full: 6, empty: 2}, false],
-    ["sparse window, faults above scaled budget", {full: 5, empty: 3}, true],
-    ["single EMPTY block", {full: 0, empty: 1}, true],
-    ["sparse window, all blocks EMPTY", {full: 0, empty: 4}, true],
+  const testCases: [string, {blocksPresent: number; payloadsRevealed: number}, boolean][] = [
+    ["empty window keeps initial state", {blocksPresent: 0, payloadsRevealed: 0}, false],
+    ["full window, no faults", {blocksPresent: 32, payloadsRevealed: 32}, false],
+    ["full window, faults at budget", {blocksPresent: 32, payloadsRevealed: 24}, false],
+    ["full window, faults above budget", {blocksPresent: 32, payloadsRevealed: 23}, true],
+    ["sparse window, faults within scaled budget", {blocksPresent: 8, payloadsRevealed: 6}, false],
+    ["sparse window, faults above scaled budget", {blocksPresent: 8, payloadsRevealed: 5}, true],
+    ["single unrevealed payload", {blocksPresent: 1, payloadsRevealed: 0}, true],
+    ["sparse window, all payloads unrevealed", {blocksPresent: 4, payloadsRevealed: 0}, true],
   ];
 
   for (const [name, stats, expected] of testCases) {
@@ -39,54 +38,36 @@ describe("BuilderCircuitBreaker", () => {
     });
   }
 
-  it("logs the resolved configuration on initialization", () => {
-    const logger = getMockedLogger();
-
-    new BuilderCircuitBreaker(
-      {faultInspectionWindow, allowedFaults},
-      {
-        forkChoice: {getCanonicalPayloadCounts: vi.fn()} as unknown as IForkChoice,
-        logger,
-        metrics: null,
-      }
-    );
-
-    expect(logger.info).toHaveBeenCalledWith("Builder circuit breaker initialized", {
-      faultInspectionWindow,
-      allowedFaults,
-    });
-  });
-
   it("inspects the window excluding the current slot", () => {
-    const {breaker, getCanonicalPayloadCounts} = setup({full: 32, empty: 0});
+    const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 32, payloadsRevealed: 32});
     breaker.isActive(100);
-    expect(getCanonicalPayloadCounts).toHaveBeenCalledWith(100 - faultInspectionWindow, 99);
+    expect(getPayloadRevealCounts).toHaveBeenCalledWith(100 - faultInspectionWindow, 99);
   });
 
   it("requires a minimum sample to deactivate", () => {
-    const {breaker, getCanonicalPayloadCounts} = setup({full: 0, empty: 1});
+    const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 1, payloadsRevealed: 0});
     expect(breaker.isActive(100)).toBe(true);
 
-    getCanonicalPayloadCounts.mockReturnValue({full: 0, empty: 0});
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 0, payloadsRevealed: 0});
     expect(breaker.isActive(101)).toBe(true);
 
-    getCanonicalPayloadCounts.mockReturnValue({full: 3, empty: 0});
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 3, payloadsRevealed: 3});
     expect(breaker.isActive(102)).toBe(true);
 
-    getCanonicalPayloadCounts.mockReturnValue({full: 3, empty: 1});
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 4, payloadsRevealed: 3});
     expect(breaker.isActive(103)).toBe(false);
   });
 
   it("only updates once per slot", () => {
-    const {breaker, getCanonicalPayloadCounts} = setup({full: 32, empty: 0});
+    const {breaker, getPayloadRevealCounts} = setup({blocksPresent: 32, payloadsRevealed: 32});
     expect(breaker.isActive(100)).toBe(false);
 
-    getCanonicalPayloadCounts.mockReturnValue({full: 0, empty: 32});
+    getPayloadRevealCounts.mockReturnValue({blocksPresent: 32, payloadsRevealed: 0});
     expect(breaker.isActive(100)).toBe(false);
-    expect(getCanonicalPayloadCounts).toHaveBeenCalledTimes(1);
+    expect(getPayloadRevealCounts).toHaveBeenCalledTimes(1);
 
     expect(breaker.isActive(101)).toBe(true);
-    expect(getCanonicalPayloadCounts).toHaveBeenCalledTimes(2);
+    expect(getPayloadRevealCounts).toHaveBeenCalledTimes(2);
   });
 
   describe("getFaultInspectionParams", () => {
