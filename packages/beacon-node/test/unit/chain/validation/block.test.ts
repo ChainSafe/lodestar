@@ -119,6 +119,27 @@ describe("gossip block validation", () => {
       setupChain(gloasConfig);
     });
 
+    it("ignores a same-root duplicate as ALREADY_KNOWN, not REPEAT_PROPOSAL", async () => {
+      const forkTypes = gloasConfig.getForkTypes(clockSlot);
+      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
+      signedBlock.message.slot = clockSlot;
+      signedBlock.message.proposerIndex = proposerIndex;
+      const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
+      chain.seenBlockProposers.observeBlockRoot(
+        clockSlot,
+        proposerIndex,
+        blockRoot,
+        signedBlockToSignedHeader(gloasConfig, signedBlock)
+      );
+      chain.seenBlockProposers.add(clockSlot, proposerIndex, blockRoot);
+
+      // Re-submitting the SAME block (same root) is a benign duplicate, not an equivocation
+      await expectRejectedWithLodestarError(
+        validateGossipBlock(gloasConfig, chain, signedBlock, ForkName.gloas),
+        BlockErrorCode.ALREADY_KNOWN
+      );
+    });
+
     it("records a conflicting block root after verifying the proposer signature", async () => {
       const forkTypes = gloasConfig.getForkTypes(clockSlot);
       const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
@@ -131,7 +152,7 @@ describe("gossip block validation", () => {
         blockRoot,
         signedBlockToSignedHeader(gloasConfig, signedBlock)
       );
-      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+      chain.seenBlockProposers.add(clockSlot, proposerIndex, blockRoot);
 
       const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
       conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
@@ -191,7 +212,7 @@ describe("gossip block validation", () => {
         blockRoot,
         signedBlockToSignedHeader(gloasConfig, signedBlock)
       );
-      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+      chain.seenBlockProposers.add(clockSlot, proposerIndex, blockRoot);
 
       const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
       conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
@@ -223,7 +244,7 @@ describe("gossip block validation", () => {
         toRootHex(Buffer.alloc(32, 1)),
         ssz.phase0.SignedBeaconBlockHeader.defaultValue()
       );
-      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+      chain.seenBlockProposers.add(clockSlot, proposerIndex, blockRoot);
 
       const additionalBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
       additionalBlock.message.stateRoot = Buffer.alloc(32, 2);
@@ -261,7 +282,8 @@ describe("gossip block validation", () => {
         await vi.advanceTimersByTimeAsync(0);
         expect(vi.getTimerCount()).toBe(1);
 
-        chain.seenBlockProposers.add(clockSlot, proposerIndex);
+        // A different proposal (different root) becomes known during the delay -> genuine repeat proposal
+        chain.seenBlockProposers.add(clockSlot, proposerIndex, toRootHex(Buffer.alloc(32, 0xff)));
         await vi.advanceTimersByTimeAsync(100);
         await validation;
       } finally {

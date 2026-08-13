@@ -110,7 +110,7 @@ export async function processBlocks(
 
     for (const blockInput of relevantBlocks) {
       const block = blockInput.getBlock().message;
-      this.seenBlockProposers.add(block.slot, block.proposerIndex);
+      this.seenBlockProposers.add(block.slot, block.proposerIndex, blockInput.blockRootHex);
     }
 
     const {executionStatuses} = segmentExecStatus;
