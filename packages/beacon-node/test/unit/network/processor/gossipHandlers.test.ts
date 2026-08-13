@@ -8,6 +8,7 @@ import {toRootHex} from "@lodestar/utils";
 import {BlockInputBlobs} from "../../../../src/chain/blocks/blockInput/blockInput.js";
 import {BlockInputSource} from "../../../../src/chain/blocks/blockInput/types.js";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors/blockError.js";
+import {BlockGossipError, GossipAction} from "../../../../src/chain/errors/index.js";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain/index.js";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache/seenBlockProposers.js";
 import {SeenBlockInput} from "../../../../src/chain/seenCache/seenGossipBlockInput.js";
@@ -61,6 +62,22 @@ describe("getGossipHandlers", () => {
 
     expect(core.reportPeer).toHaveBeenCalledOnce();
     expect(core.reportPeer).toHaveBeenCalledWith(peerIdStr, PeerAction.LowToleranceError, "ExecutionEngineInvalid");
+  });
+
+  it("imports a signature-verified REPEAT_PROPOSAL (equivocating) block into fork choice but keeps IGNORE", async () => {
+    const {processBlock, threw} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: true});
+
+    // imported so LMD-GHOST can weigh it ...
+    expect(processBlock).toHaveBeenCalledOnce();
+    // ... but the gossip result stays IGNORE (handler re-throws), so the message is not forwarded
+    expect(threw).toBe(true);
+  });
+
+  it("does not import a REPEAT_PROPOSAL block whose root was not recorded (unverified 3rd+ proposal)", async () => {
+    const {processBlock, threw} = await runBeaconBlockRepeatProposal(denebConfig, {recorded: false});
+
+    expect(processBlock).not.toHaveBeenCalled();
+    expect(threw).toBe(true);
   });
 });
 
@@ -136,6 +153,103 @@ async function runBeaconBlockProcessingError(
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   return {core, peerIdStr};
+}
+
+async function runBeaconBlockRepeatProposal(
+  config: BeaconConfig,
+  {recorded}: {recorded: boolean}
+): Promise<{processBlock: ReturnType<typeof vi.fn>; threw: boolean}> {
+  const logger = testLogger();
+  const peerIdStr = "16Uiu2HAmTestGossipPeer" as PeerIdStr;
+  const signedBlock = ssz.deneb.SignedBeaconBlock.defaultValue();
+  signedBlock.message.slot = 1;
+  signedBlock.message.proposerIndex = 3;
+  const blockRootHex = toRootHex(ssz.deneb.BeaconBlock.hashTreeRoot(signedBlock.message));
+  const blockInput = BlockInputBlobs.createFromBlock({
+    block: signedBlock,
+    blockRootHex,
+    forkName: ForkName.deneb,
+    daOutOfRange: false,
+    source: BlockInputSource.gossip,
+    seenTimestampSec: 0,
+    peerIdStr,
+  });
+
+  // gossip validation rejects the 2nd distinct block for this (proposer, slot) with REPEAT_PROPOSAL
+  vi.mocked(validateGossipBlock).mockRejectedValue(
+    new BlockGossipError(GossipAction.IGNORE, {
+      code: BlockErrorCode.REPEAT_PROPOSAL,
+      proposerIndex: signedBlock.message.proposerIndex,
+      root: blockRootHex,
+    })
+  );
+
+  const seenBlockProposers = new SeenBlockProposers();
+  if (recorded) {
+    // observeBlockRoot runs only after the proposer signature is verified, so hasBlockRoot(root)
+    // being true is the handler's proof the signature was checked (the 2nd distinct block)
+    seenBlockProposers.observeBlockRoot(
+      signedBlock.message.slot,
+      signedBlock.message.proposerIndex,
+      blockRootHex,
+      ssz.phase0.SignedBeaconBlockHeader.defaultValue()
+    );
+  }
+
+  const processBlock = vi.fn().mockResolvedValue(undefined);
+  const chain = {
+    clock: new ClockStopped(1),
+    custodyConfig: {sampledColumns: [], custodyColumns: []} as unknown as CustodyConfig,
+    emitter: new ChainEventEmitter(),
+    getBlobsTracker: {triggerGetBlobs: vi.fn()},
+    logger,
+    processBlock,
+    processProposerEquivocation: vi.fn(),
+    seenBlockProposers,
+    seenBlockInputCache: {
+      getByBlock: vi.fn().mockReturnValue(blockInput),
+      get: vi.fn().mockReturnValue(blockInput),
+      prune: vi.fn(),
+    } as unknown as SeenBlockInput,
+    seenPayloadEnvelopeInputCache: {
+      add: vi.fn(),
+      get: vi.fn().mockReturnValue(undefined),
+      prune: vi.fn(),
+    } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+    serializedCache: {set: vi.fn()},
+  } as unknown as IBeaconChain;
+
+  const handlers = getGossipHandlers(
+    {
+      aggregatorTracker: {} as AggregatorTracker,
+      chain,
+      config,
+      core: {reportPeer: vi.fn()} as unknown as INetworkCore,
+      events: new NetworkEventBus(),
+      logger,
+      metrics: null,
+    },
+    {}
+  );
+  const beaconBlockHandler = handlers[GossipType.beacon_block] as SequentialGossipHandler<GossipType.beacon_block>;
+
+  let threw = false;
+  try {
+    await beaconBlockHandler({
+      gossipData: {serializedData: ssz.deneb.SignedBeaconBlock.serialize(signedBlock)},
+      peerIdStr,
+      seenTimestampSec: 0,
+      topic: {
+        boundary: {fork: ForkName.deneb, epoch: 0},
+        type: GossipType.beacon_block,
+      },
+    });
+  } catch {
+    threw = true;
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  return {processBlock, threw};
 }
 
 function getExecutionBlockError(
