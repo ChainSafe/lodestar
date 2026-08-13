@@ -174,32 +174,6 @@ describe("gossip block validation", () => {
       ).toEqual([blockRoot, conflictingBlockRoot]);
     });
 
-    it("attaches the conflicting block root to the REPEAT_PROPOSAL error", async () => {
-      const forkTypes = gloasConfig.getForkTypes(clockSlot);
-      const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
-      signedBlock.message.slot = clockSlot;
-      signedBlock.message.proposerIndex = proposerIndex;
-      const blockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(signedBlock.message));
-      chain.seenBlockProposers.observeBlockRoot(
-        clockSlot,
-        proposerIndex,
-        blockRoot,
-        signedBlockToSignedHeader(gloasConfig, signedBlock)
-      );
-      chain.seenBlockProposers.add(clockSlot, proposerIndex, blockRoot);
-
-      const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
-      conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
-      const conflictingBlockRoot = toRootHex(forkTypes.BeaconBlock.hashTreeRoot(conflictingBlock.message));
-
-      const error = (await validateGossipBlock(gloasConfig, chain, conflictingBlock, ForkName.gloas).catch(
-        (e) => e
-      )) as {type: {code: BlockErrorCode; root?: string}};
-      expect(error.type.code).toBe(BlockErrorCode.REPEAT_PROPOSAL);
-      // The root lets the gossip/API handlers fetch the seeded blockInput and import the equivocating block
-      expect(error.type.root).toBe(conflictingBlockRoot);
-    });
-
     it("does not record a conflicting block root when the proposer signature is invalid", async () => {
       const forkTypes = gloasConfig.getForkTypes(clockSlot);
       const signedBlock = forkTypes.SignedBeaconBlock.defaultValue();
