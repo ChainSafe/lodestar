@@ -86,5 +86,15 @@ async function fetchBuilder(
     return null;
   }
 
-  return builders[0];
+  const builder = builders[0];
+
+  if (typeof id === "number") {
+    if (id !== builder.index) {
+      throw Error(`Index mismatch: got=${builder.index} expected=${id}`);
+    }
+  } else if (id !== toHex(builder.builder.pubkey)) {
+    throw Error(`Pubkey mismatch: got=${toHex(builder.builder.pubkey)} expected=${id}`);
+  }
+
+  return builder;
 }
