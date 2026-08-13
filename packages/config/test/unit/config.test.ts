@@ -1,6 +1,17 @@
 import {beforeAll, describe, expect, it} from "vitest";
 import {chainConfig} from "../../src/default.js";
-import {ChainConfig, createForkConfig} from "../../src/index.js";
+import {ChainConfig, createChainConfig, createForkConfig} from "../../src/index.js";
+
+describe("createChainConfig", () => {
+  it("rejects gas limit schedule entries before Gloas", () => {
+    expect(() =>
+      createChainConfig({
+        GLOAS_FORK_EPOCH: 10,
+        GAS_LIMIT_SCHEDULE: [{EPOCH: 9, GAS_LIMIT: 60_000_000}],
+      })
+    ).toThrow("must be greater than or equal to GLOAS_FORK_EPOCH 10");
+  });
+});
 
 describe("getMaxBlobsPerBlock", () => {
   let defaultConfig: ChainConfig;
