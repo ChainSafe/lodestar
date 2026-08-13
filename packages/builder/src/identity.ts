@@ -13,10 +13,6 @@ export async function resolveBuilderIdentity(
 ): Promise<BuilderIndex> {
   const builderEntry = await waitForBuilder(api, logger, id, signal);
 
-  if (builderEntry.status !== "active") {
-    throw Error(`Builder not active: ${builderEntry.status}`);
-  }
-
   if (builderEntry.builder.version !== PAYLOAD_BUILDER_VERSION) {
     throw Error(`Builder version mismatch: got ${builderEntry.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`);
   }
@@ -60,10 +56,17 @@ async function waitForBuilder(
 ): Promise<routes.beacon.BuilderResponse> {
   while (true) {
     const builder = await fetchBuilder(api, id);
-    if (builder !== null) {
+    if (builder?.status === "active") {
       return builder;
     }
-    logger.info("Waiting for builder to be known to the beacon node", {id});
+    if (builder?.status === "exited") {
+      throw Error(`Builder exited: id=${id}`);
+    }
+    if (builder?.status === "pending") {
+      logger.info("Waiting for builder deposit to be finalized", {id});
+    } else {
+      logger.info("Waiting for builder to be known to the beacon node", {id});
+    }
     await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
   }
 }

@@ -63,11 +63,10 @@ describe("Identity", () => {
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [builderPubkey]}));
   });
 
-  it("throws on builder not active", async () => {
-    const inactiveStatus = "exited";
-    api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex, inactiveStatus));
+  it("throws on builder status exited", async () => {
+    api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex, "exited"));
     await expect(resolveBuilderIdentity(api, logger, builderPubkey, abortController.signal)).rejects.toThrow(
-      `Builder not active: ${inactiveStatus}`
+      `Builder exited: id=${builderPubkey}`
     );
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [builderPubkey]}));
   });
@@ -76,6 +75,20 @@ describe("Identity", () => {
     vi.useFakeTimers();
     api.beacon.getStateBuilders.mockResolvedValueOnce(
       mockApiResponse({data: [], meta: {executionOptimistic: true, finalized: false}})
+    );
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(builderIndex, builderStatus, builderBalance, builderVersion)
+    );
+    const promise = resolveBuilderIdentity(api, logger, builderPubkey, abortController.signal);
+    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    expect(await promise).toEqual(builderIndex);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
+  });
+
+  it("waits for a pending builder to become active", async () => {
+    vi.useFakeTimers();
+    api.beacon.getStateBuilders.mockResolvedValueOnce(
+      mockGetStateBuildersResponse(builderIndex, "pending", builderBalance, builderVersion)
     );
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(builderIndex, builderStatus, builderBalance, builderVersion)
