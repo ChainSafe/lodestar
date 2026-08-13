@@ -186,7 +186,7 @@ describe("gossip block validation", () => {
         blockRoot,
         signedBlockToSignedHeader(gloasConfig, signedBlock)
       );
-      chain.seenBlockProposers.add(clockSlot, proposerIndex);
+      chain.seenBlockProposers.add(clockSlot, proposerIndex, blockRoot);
 
       const conflictingBlock = forkTypes.SignedBeaconBlock.clone(signedBlock);
       conflictingBlock.message.stateRoot = Buffer.alloc(32, 1);
