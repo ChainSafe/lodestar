@@ -75,7 +75,7 @@ export class Builder {
     await waitForNodeReady(api, logger, opts.abortController.signal);
     await logNodeVersion(api, logger);
 
-    const index = await resolveBuilderIdentity(api, logger, builderSigner.getPubkeyHex());
+    const index = await resolveBuilderIdentity(api, logger, builderSigner.getPubkeyHex(), opts.abortController.signal);
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 

@@ -1,14 +1,17 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {BuilderIndex, BuilderStatus} from "@lodestar/types";
-import {Logger, toHex} from "@lodestar/utils";
+import {Logger, sleep, toHex} from "@lodestar/utils";
+
+export const WAITING_FOR_BUILDER_POLL_MS = 10 * 1000;
 
 export async function resolveBuilderIdentity(
   api: ApiClient,
   logger: Logger,
-  id: routes.beacon.BuilderId
+  id: routes.beacon.BuilderId,
+  signal: AbortSignal
 ): Promise<BuilderIndex> {
-  const builderEntry = await fetchBuilder(api, id);
+  const builderEntry = await waitForBuilder(api, logger, id, signal);
 
   if (builderEntry.status !== "active") {
     throw Error(`Builder not active: ${builderEntry.status}`);
@@ -35,17 +38,40 @@ export async function getBuilderStatus(
 ): Promise<{status: BuilderStatus; balance: number} | null> {
   try {
     const builderEntry = await fetchBuilder(api, id);
-    return {
-      status: builderEntry.status,
-      balance: builderEntry.builder.balance,
-    };
+    if (builderEntry) {
+      return {
+        status: builderEntry.status,
+        balance: builderEntry.builder.balance,
+      };
+    }
+    logger.warn("Builder status not available in beacon node");
+    return null;
   } catch (e) {
     logger.warn("Couldn't fetch the builder", {}, e as Error);
     return null;
   }
 }
 
-async function fetchBuilder(api: ApiClient, id: routes.beacon.BuilderId): Promise<routes.beacon.BuilderResponse> {
+async function waitForBuilder(
+  api: ApiClient,
+  logger: Logger,
+  id: routes.beacon.BuilderId,
+  signal: AbortSignal
+): Promise<routes.beacon.BuilderResponse> {
+  while (true) {
+    const builder = await fetchBuilder(api, id);
+    if (builder !== null) {
+      return builder;
+    }
+    logger.info("Waiting for builder to be known to the beacon node", {id});
+    await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
+  }
+}
+
+async function fetchBuilder(
+  api: ApiClient,
+  id: routes.beacon.BuilderId
+): Promise<routes.beacon.BuilderResponse | null> {
   const builderRes = await api.beacon.getStateBuilders({
     stateId: "head",
     builderIds: [id],
@@ -54,7 +80,7 @@ async function fetchBuilder(api: ApiClient, id: routes.beacon.BuilderId): Promis
   const builders = builderRes.value();
 
   if (builders.length === 0) {
-    throw Error(`Builder not known to the beacon node: ${id}`);
+    return null;
   }
 
   return builders[0];
