@@ -215,6 +215,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
         return undefined;
       }
 
+      // Find the latest applicable value from gas limit schedule
       for (const entry of gasLimitScheduleDescendingEpochOrder) {
         if (epoch >= entry.EPOCH) {
           return entry.GAS_LIMIT;
