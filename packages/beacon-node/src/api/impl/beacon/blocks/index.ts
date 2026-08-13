@@ -220,12 +220,6 @@ export function getBeaconBlockApi({
                   // Block has already been seen, e.g. via gossip racing the publish API. Benign.
                   chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
                   return;
-                case BlockErrorCode.REPEAT_PROPOSAL:
-                  // The proposer already produced a block for this slot. For a solo setup this is a
-                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
-                  // expected on every block where another node published first.
-                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
-                  return;
               }
             }
 
