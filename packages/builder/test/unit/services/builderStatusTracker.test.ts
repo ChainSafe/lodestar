@@ -42,7 +42,9 @@ describe("BuilderStatusTracker", () => {
     expect(balance).toEqual(1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
-    api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex, {status: "active", balance: 2}));
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(builderIndex, {status: "active", balance: 2})
+    );
     await builderStatusTracker.poll();
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
     expect(newStatus).toEqual("active");
@@ -58,7 +60,9 @@ describe("BuilderStatusTracker", () => {
     expect(balance).toEqual(1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledOnce();
 
-    api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex, {status: "exited", balance: 1}));
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(builderIndex, {status: "exited", balance: 1})
+    );
     await builderStatusTracker.poll();
     const {status: newStatus, balance: newBalance} = builderStatusTracker.getStatus();
     expect(newStatus).toEqual("exited");

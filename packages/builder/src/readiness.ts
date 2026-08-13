@@ -25,11 +25,14 @@ async function isNodeReady(api: ApiClient, logger: Logger): Promise<boolean> {
     const syncingStatus = syncingStatusRes.value();
 
     if (syncingStatus.isSyncing || syncingStatus.elOffline) {
-      logger.info("Beacon node is not ready yet", {
-        headSlot: syncingStatus.headSlot,
-        syncDistance: syncingStatus.syncDistance,
-        elOffline: syncingStatus.elOffline,
-      });
+      logger.info(
+        syncingStatus.elOffline ? "Beacon node EL is offline, unable to submit bids" : "Beacon node is not ready yet",
+        {
+          headSlot: syncingStatus.headSlot,
+          syncDistance: syncingStatus.syncDistance,
+          elOffline: syncingStatus.elOffline,
+        }
+      );
       return false;
     }
 
