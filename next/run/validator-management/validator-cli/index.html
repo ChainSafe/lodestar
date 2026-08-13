@@ -9,7 +9,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://chainsafe.github.io/lodestar/images/favicon-512x512.png">
 <script src="https://plausible.io/js/script.js" defer="defer" data-domain="chainsafe.github.io/lodestar"></script><link rel="stylesheet" href="/lodestar/assets/css/styles.78a93a4a.css">
-<script src="/lodestar/assets/js/runtime~main.f86941cd.js" defer="defer"></script>
+<script src="/lodestar/assets/js/runtime~main.feb1ca2c.js" defer="defer"></script>
 <script src="/lodestar/assets/js/main.2d397d47.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -124,9 +124,9 @@
 <p>Enable strict checking of the validator&#x27;s <code>feeRecipient</code> with the one returned by engine</p>
 <p>type: <code>boolean</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--defaultgaslimit"><code>--defaultGasLimit</code><a href="#--defaultgaslimit" class="hash-link" aria-label="Direct link to --defaultgaslimit" title="Direct link to --defaultgaslimit">​</a></h4>
-<p>Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.</p>
+<p>Override the gas limit preference sent to the engine/builder. If unset, the network GAS_LIMIT_SCHEDULE is evaluated for each duty epoch from Gloas, with the current default used before Gloas or its first entry.</p>
 <p>type: <code>number</code></p>
-<p>default: <code>60000000</code></p>
+<p>default: <code>GAS_LIMIT_SCHEDULE from Gloas (current default: 60000000)</code></p>
 <h4 class="anchor anchorWithStickyNavbar_d3C5" id="--builder"><code>--builder</code><a href="#--builder" class="hash-link" aria-label="Direct link to --builder" title="Direct link to --builder">​</a></h4>
 <p>An alias for <code>--builder.selection default</code> for the builder flow, ignored if <code>--builder.selection</code> is explicitly provided</p>
 <p>type: <code>boolean</code></p>
