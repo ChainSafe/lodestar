@@ -98,7 +98,7 @@ export class Validator {
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
-  private readonly clock: IClock;
+  readonly clock: IClock;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   readonly syncingStatusTracker: SyncingStatusTracker;
   private readonly logger: Logger;
