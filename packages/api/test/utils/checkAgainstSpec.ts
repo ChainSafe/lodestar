@@ -7,7 +7,6 @@ import {JsonSchema, OpenApiJson, applyRecursively, parseOpenApiSpec} from "./par
 
 // Current Ajv package is a commonjs package which cause problem
 // when we have moduleResolution set to node16
-// This syntax works and tested with Node and Bun both
 const Ajv = ajvPkg.default;
 
 const ajv = new Ajv({

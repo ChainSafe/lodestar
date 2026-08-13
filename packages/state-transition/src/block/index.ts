@@ -1,5 +1,5 @@
 import {ForkPostGloas, ForkSeq} from "@lodestar/params";
-import {BeaconBlock, BlindedBeaconBlock, altair, capella} from "@lodestar/types";
+import {BeaconBlock, BlindedBeaconBlock, Slot, altair, capella} from "@lodestar/types";
 import {BeaconStateTransitionMetrics} from "../metrics.js";
 import {
   CachedBeaconStateAllForks,
@@ -86,8 +86,9 @@ export function processBlock(
     processExecutionPayload(fork, state as CachedBeaconStateBellatrix, block.body, externalData);
   }
 
+  let parentSlot: Slot | null = null;
   if (fork >= ForkSeq.gloas) {
-    processExecutionPayloadBid(
+    parentSlot = processExecutionPayloadBid(
       state as CachedBeaconStateGloas,
       (block as BeaconBlock<ForkPostGloas>).body.signedExecutionPayloadBid
     );
@@ -95,7 +96,7 @@ export function processBlock(
 
   processRandao(state, block, verifySignatures);
   processEth1Data(state, block.body.eth1Data);
-  processOperations(fork, state, block.body, opts, metrics);
+  processOperations(fork, state, block.body, parentSlot, opts, metrics);
   if (fork >= ForkSeq.altair) {
     processSyncAggregate(state, block as altair.BeaconBlock, verifySignatures);
   }

@@ -53,6 +53,9 @@ export const chainConfig: ChainConfig = {
   // GLOAS
   GLOAS_FORK_VERSION: b("0x07000001"),
   GLOAS_FORK_EPOCH: Infinity,
+  // HEZE
+  HEZE_FORK_VERSION: b("0x08000001"),
+  HEZE_FORK_EPOCH: Infinity,
 
   // Time parameters
   // ---------------------------------------------------------------
@@ -70,6 +73,8 @@ export const chainConfig: ChainConfig = {
   SHARD_COMMITTEE_PERIOD: 64,
   // [customized] process deposits more quickly, but insecure
   ETH1_FOLLOW_DISTANCE: 16,
+  // 67% of `SLOT_DURATION_MS`
+  INCLUSION_LIST_DUE_BPS: 6667,
   // 1667 basis points, ~17% of SLOT_DURATION_MS
   PROPOSER_REORG_CUTOFF_BPS: 1667,
   // 3333 basis points, ~33% of SLOT_DURATION_MS
@@ -192,6 +197,18 @@ export const chainConfig: ChainConfig = {
   // Blob Scheduling
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
+
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [],
+
+  // HEZE
+  // 2**4 (= 16)
+  MAX_REQUEST_INCLUSION_LIST: 16,
+  // 1 slots
+  MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1,
+  // 2**13 (=8192)
+  MAX_BYTES_PER_INCLUSION_LIST: 8192,
 
   // Fast Confirmation Rule
   // ---------------------------------------------------------------

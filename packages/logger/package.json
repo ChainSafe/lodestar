@@ -11,36 +11,36 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "1.45.0",
+  "version": "1.46.0",
   "type": "module",
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
     },
     "./browser": {
-      "bun": "./src/browser.ts",
+      "typescript": "./src/browser.ts",
       "types": "./lib/browser.d.ts",
       "import": "./lib/browser.js"
     },
     "./env": {
-      "bun": "./src/env.ts",
+      "typescript": "./src/env.ts",
       "types": "./lib/env.d.ts",
       "import": "./lib/env.js"
     },
     "./node": {
-      "bun": "./src/node.ts",
+      "typescript": "./src/node.ts",
       "types": "./lib/node.d.ts",
       "import": "./lib/node.js"
     },
     "./empty": {
-      "bun": "./src/empty.ts",
+      "typescript": "./src/empty.ts",
       "types": "./lib/empty.d.ts",
       "import": "./lib/empty.js"
     },
     "./test-utils": {
-      "bun": "./src/testUtils.ts",
+      "typescript": "./src/testUtils.ts",
       "types": "./lib/testUtils.d.ts",
       "import": "./lib/testUtils.js"
     }
@@ -52,11 +52,11 @@
   ],
   "scripts": {
     "clean": "rm -rf lib && rm -f *.tsbuildinfo",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json",
     "build:watch": "pnpm run build --watch",
     "build:release": "pnpm clean && pnpm build",
     "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
-    "check-types": "tsgo",
+    "check-types": "tsc",
     "lint": "biome check src/ test/",
     "lint:fix": "pnpm run lint --write",
     "test": "pnpm test:unit && pnpm test:e2e",

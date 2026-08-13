@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
 import {BUILDER_INDEX_SELF_BUILD, ForkPostGloas, isForkPostGloas} from "@lodestar/params";
+import {IClock} from "@lodestar/state-transition";
 import {
   BLSPubkey,
   BLSSignature,
@@ -17,7 +18,7 @@ import {
 import {extendError, prettyBytes, prettyWeiToEth, sleep, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {PubkeyHex} from "../types.js";
-import {IClock, LoggerVc} from "../util/index.js";
+import {LoggerVc} from "../util/index.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 import {ValidatorStore} from "./validatorStore.js";
 
@@ -201,11 +202,19 @@ export class BlockProposingService {
     const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
     const graffiti = this.validatorStore.getGraffiti(pubkeyHex);
     const feeRecipient = this.validatorStore.getFeeRecipient(pubkeyHex);
+    const strictFeeRecipientCheck = this.validatorStore.strictFeeRecipientCheck(pubkeyHex);
     const {broadcastValidation, payloadLocal} = this.opts;
     const {selection: builderSelection, boostFactor: builderBoostFactor} =
       this.validatorStore.getBuilderSelectionParams(pubkeyHex, slot);
 
-    this.logger.debug("Producing block", {...debugLogCtx, feeRecipient, payloadLocal, builderSelection});
+    this.logger.debug("Producing block", {
+      ...debugLogCtx,
+      feeRecipient,
+      strictFeeRecipientCheck,
+      payloadLocal,
+      builderSelection,
+      builderBoostFactor,
+    });
     this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
     // Step 1: Produce beacon block with execution payload bid
@@ -215,8 +224,8 @@ export class BlockProposingService {
         randaoReveal,
         graffiti,
         feeRecipient,
+        strictFeeRecipientCheck,
         includePayload: !payloadLocal,
-        builderSelection,
         builderBoostFactor,
       })
       .catch((e: Error) => {
@@ -257,8 +266,9 @@ export class BlockProposingService {
           randaoReveal,
           graffiti,
           feeRecipient,
+          strictFeeRecipientCheck,
           includePayload: !payloadLocal,
-          builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
+          // A zero boost factor always selects the local block, no bid is considered
           builderBoostFactor: BigInt(0),
         });
         const selfBuildBlockOrContents = selfBuildRes.value();

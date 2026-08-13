@@ -1,8 +1,14 @@
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName, ForkSeq, isForkPostFulu} from "@lodestar/params";
-import {DataAvailabilityStatus, IBeaconStateView, computeEpochAtSlot} from "@lodestar/state-transition";
+import {
+  DataAvailabilityStatus,
+  IBeaconStateView,
+  computeEpochAtSlot,
+  signedBlockToSignedHeader,
+} from "@lodestar/state-transition";
 import {IndexedAttestation, Slot, deneb} from "@lodestar/types";
 import {getBlobKzgCommitments} from "../../util/dataColumns.js";
+import {callInNextEventLoop} from "../../util/eventLoop.js";
 import type {BeaconChain} from "../chain.js";
 import {BlockError, BlockErrorCode} from "../errors/index.js";
 import {BlockProcessOpts} from "../options.js";
@@ -187,22 +193,32 @@ export async function verifyBlocksInEpoch(
       ),
 
       // All signatures at once
-      opts.skipVerifyBlockSignatures !== true
-        ? verifyBlocksSignatures(
-            this.config,
-            this.bls,
-            this.logger,
-            this.metrics,
-            preState0,
-            blocks,
-            indexedAttestationsByBlock,
-            opts
-          )
-        : Promise.resolve({verifySignaturesTime: Date.now()}),
+      verifyBlocksSignatures(
+        this.config,
+        this.bls,
+        this.logger,
+        this.metrics,
+        preState0,
+        blocks,
+        indexedAttestationsByBlock,
+        opts
+      ),
 
       // TODO GLOAS: can verify payload signatures in batch too
       // maybe chain with the above verifyBlocksSignatures()
     ]);
+
+    for (const blockInput of blockInputs) {
+      const block = blockInput.getBlock();
+      const {slot, proposerIndex} = block.message;
+      const signedBlockHeader = signedBlockToSignedHeader(this.config, block);
+      this.seenBlockProposers.observeBlockRoot(slot, proposerIndex, blockInput.blockRootHex, signedBlockHeader);
+      // Only produce a slashing while importing the block. A block that is verified before it is published
+      // must not be treated as equivocation evidence since it may never be seen by the network
+      if (opts.verifyOnly !== true && this.seenBlockProposers.isEquivocating(slot, proposerIndex)) {
+        callInNextEventLoop(() => this.processProposerEquivocation(slot, proposerIndex));
+      }
+    }
 
     if (opts.verifyOnly !== true) {
       const fromForkBoundary = this.config.getForkBoundaryAtEpoch(computeEpochAtSlot(parentBlock.slot));

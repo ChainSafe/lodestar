@@ -271,6 +271,20 @@ describe("AggregatedAttestationPool - get packed attestations - Electra", () => 
   }
 });
 
+describe("AggregatedAttestationPool.getAll", () => {
+  const config = createBeaconConfig(chainConfigDefault, Buffer.alloc(32, 0xaa));
+
+  it("returns empty array for a slot with no attestations", () => {
+    const pool = new AggregatedAttestationPool(config);
+    expect(pool.getAll(123)).toEqual([]);
+  });
+
+  it("returns empty array when called without slot filter on empty pool", () => {
+    const pool = new AggregatedAttestationPool(config);
+    expect(pool.getAll()).toEqual([]);
+  });
+});
+
 describe("MatchingDataAttestationGroup.add()", () => {
   const config = createBeaconConfig(chainConfigDefault, Buffer.alloc(32, 0xaa));
 

@@ -257,8 +257,8 @@ reason, see git history).
 - Effect: tests block dedup, proposer slashing, split-view fork choice (a real
   competing fork that must lose), and how the bid-to-envelope binding copes with a
   revealed-but-orphaned builder payload.
-- Injection point: produce the self-built sibling through `produceBlockV4` with
-  `BuilderSelection.ExecutionOnly` and sign the builder block bypassing slashing
+- Injection point: produce the self-built sibling through `produceBlockV4` with a
+  zero builder boost factor and sign the builder block bypassing slashing
   protection in `packages/validator/src/services/block.ts`; both blocks are handed
   to the hidden `lodestar.publishBlockEquivocation` route, which imports the
   self-built block locally (required so its payload envelope can be revealed) and

@@ -148,7 +148,7 @@ Lodestar uses [Biome](https://biomejs.dev/) for linting and formatting.
 
 Imports are auto-sorted by Biome in this order:
 
-1. Node.js/Bun built-ins
+1. Node.js built-ins
 2. External packages
 3. `@chainsafe/*` and `@lodestar/*` packages
 4. Relative paths

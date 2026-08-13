@@ -49,7 +49,8 @@ import {
   FastConfirmationRule,
   FastConfirmationSteps,
   type IFastConfirmationRule,
-} from "./fastConfirmation/fastConfirmationRule.ts";
+  type IFastConfirmationSpecStore,
+} from "./fastConfirmation/fastConfirmationRule.js";
 import {
   AncestorResult,
   AncestorStatus,
@@ -232,6 +233,17 @@ export class ForkChoice implements IForkChoice {
     return this.fastConfirmationRule?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
   }
 
+  getFastConfirmationStore(): IFastConfirmationSpecStore {
+    return {
+      confirmedRoot: this.getConfirmedRoot(),
+      previousEpochObservedJustifiedCheckpoint: this.fcStore.previousEpochObservedJustifiedCheckpoint,
+      currentEpochObservedJustifiedCheckpoint: this.fcStore.currentEpochObservedJustifiedCheckpoint,
+      previousEpochGreatestUnrealizedCheckpoint: this.fcStore.previousEpochGreatestUnrealizedCheckpoint,
+      previousSlotHead: this.fcStore.previousSlotHead,
+      currentSlotHead: this.fcStore.currentSlotHead,
+    };
+  }
+
   getConfirmedBlock(): ProtoBlock | null {
     return this.getBlockHexDefaultStatus(this.getConfirmedRoot());
   }
@@ -392,7 +404,7 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 
-  /** Spec: should_build_on_full(store, head) */
+  /** Spec: should_build_on_full(store, head, slot) */
   shouldBuildOnFull(head: ProtoBlock, slot: Slot): boolean {
     // ADVERSARIAL (devnet test only): always reorg the parent payload by building on EMPTY
     if (this.opts?.adversarialReorgBuildOnEmpty) return false;

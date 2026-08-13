@@ -94,7 +94,12 @@ import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {notWhileSyncing} from "../utils.js";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
+import {
+  computeSubnetForCommitteesAtSlot,
+  getPubkeysForIndices,
+  selectBlockProductionSource,
+  selectBlockProductionSourceByBoostFactor,
+} from "./utils.js";
 
 /**
  * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve.
@@ -357,12 +362,13 @@ export function getValidatorApi(
    * Following activities should be skipped on an Optimistic head (with Syncing status):
    * 1. Attestation if targetRoot is optimistic
    * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
-   * 3. ProduceBlock if the parentRoot (chain's current head is optimistic). However this doesn't
-   *    need to be checked/aborted here as assembleBody would call EL's api for the latest
-   *    executionStatus of the parentRoot. If still not validated, produceBlock will throw error.
-   *
-   * TODO/PENDING: SyncCommitteeSignatures should also be aborted, the best way to address this
-   *   is still in flux and will be updated as and when other CL's figure this out.
+   * 3. ProduceBlock if the parentRoot (chain's current head) is optimistic. Must be checked
+   *    explicitly as only local payload production consults the EL, blinded blocks from an
+   *    external builder or bid based blocks (gloas) can be produced without a synced EL.
+   * 4. SyncCommitteeSignature (base sync committee message) is aborted in the validator client
+   *    (see SyncCommitteeService) when the head root it would sign is optimistic, since it is
+   *    produced from the head root without a beacon-node produce endpoint to gate here. Spec:
+   *    https://github.com/ethereum/consensus-specs/blob/v1.6.1/sync/optimistic.md#participating-in-sync-committees
    */
 
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
@@ -563,6 +569,12 @@ export function getValidatorApi(
     const parentBlock = chain.getProposerHead(slot);
     const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
     const parentBlockRoot = fromHex(parentBlockRootHex);
+    // An optimistic validator MUST NOT produce a block
+    if (isOptimisticBlock(parentBlock)) {
+      throw new NodeIsSyncing(
+        `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
+      );
+    }
     notOnOutOfRangeData(parentBlockRoot);
     metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
@@ -588,8 +600,7 @@ export function getValidatorApi(
       builderSelection,
       isBuilderEnabled,
       strictFeeRecipientCheck,
-      // winston logger doesn't like bigint
-      builderBoostFactor: `${builderBoostFactor}`,
+      builderBoostFactor,
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
@@ -862,8 +873,8 @@ export function getValidatorApi(
       randaoReveal,
       graffiti,
       feeRecipient,
+      strictFeeRecipientCheck,
       includePayload,
-      builderSelection,
       builderBoostFactor,
     }) {
       const fork = config.getForkName(slot);
@@ -872,11 +883,6 @@ export function getValidatorApi(
         throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
       }
 
-      builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
-      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        logger.warn("Builder selection builderonly is no longer supported, treating as builderalways");
-        builderSelection = routes.validator.BuilderSelection.BuilderAlways;
-      }
       builderBoostFactor = builderBoostFactor ?? BigInt(100);
       if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
         throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
@@ -888,6 +894,12 @@ export function getValidatorApi(
       const parentBlock = chain.getProposerHead(slot);
       const {blockRoot: parentBlockRootHex, slot: parentSlot} = parentBlock;
       const parentBlockRoot = fromHex(parentBlockRootHex);
+      // An optimistic validator MUST NOT produce a block
+      if (isOptimisticBlock(parentBlock)) {
+        throw new NodeIsSyncing(
+          `Parent block's execution payload not yet validated, executionPayloadBlockHash=${parentBlock.executionPayloadBlockHash}`
+        );
+      }
       notOnOutOfRangeData(parentBlockRoot);
       metrics?.blockProductionSlotDelta.set(slot - parentSlot);
 
@@ -901,14 +913,11 @@ export function getValidatorApi(
       // TODO GLOAS: add external builder api support when it is implemented
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      // Bids are only skipped entirely with executiononly or while the circuit breaker is active,
-      // other engine-preferring selections still build a block with the best bid as fallback in
-      // case local production fails
       const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
-      const builderBid =
-        builderSelection === routes.validator.BuilderSelection.ExecutionOnly || circuitBreakerActive
-          ? null
-          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+      // Keep a builder bid as fallback unless the circuit breaker is active
+      const builderBid = circuitBreakerActive
+        ? null
+        : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       const logCtx = {
         slot,
@@ -916,8 +925,8 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
-        builderSelection,
         builderBoostFactor,
+        strictFeeRecipientCheck,
         circuitBreakerActive,
         ...(builderBid !== null
           ? {
@@ -941,6 +950,7 @@ export function getValidatorApi(
         randaoReveal,
         graffiti: graffitiBytes,
         feeRecipient,
+        strictFeeRecipientCheck,
         commonBlockBodyPromise,
       };
 
@@ -965,12 +975,8 @@ export function getValidatorApi(
         chain.produceBlock(baseAttrs)
       ).then((engineBlock) => {
         // No need to wait for the bid block if the engine block will always be selected due to
-        // suspected builder censorship, a builder boost factor of 0 or executionalways selection
-        if (
-          engineBlock.shouldOverrideBuilder ||
-          builderBoostFactor === BigInt(0) ||
-          builderSelection === routes.validator.BuilderSelection.ExecutionAlways
-        ) {
+        // suspected builder censorship or a builder boost factor of 0
+        if (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {
           controller.abort();
         }
         return engineBlock;
@@ -999,8 +1005,7 @@ export function getValidatorApi(
         });
         logger.warn("Selected local block: censorship suspected in builder bid", logCtx);
       } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
-        const result = selectBlockProductionSource({
-          builderSelection,
+        const result = selectBlockProductionSourceByBoostFactor({
           builderBoostFactor,
           engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
           // The bid value is the payment to the proposer, in Gwei
@@ -1066,7 +1071,10 @@ export function getValidatorApi(
         root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
-        void chain.persistBlock(block, "produced_engine_block");
+        void chain.persistBlock(
+          block,
+          source === ProducedBlockSource.builder ? "produced_builder_block" : "produced_engine_block"
+        );
       }
 
       // Include the payload for self-builds unless disabled (stateless flow)
@@ -1826,7 +1834,7 @@ export function getValidatorApi(
       const filteredRegistrations = registrations.filter((registration) => {
         const {pubkey} = registration.message;
         const validatorIndex = chain.pubkeyCache.getIndex(pubkey);
-        if (validatorIndex === null) return false;
+        if (validatorIndex === null || validatorIndex >= headState.validatorCount) return false;
 
         const validator = headState.getValidator(validatorIndex);
         const status = getValidatorStatus(validator, currentEpoch);
