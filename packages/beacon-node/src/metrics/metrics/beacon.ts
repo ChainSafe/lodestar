@@ -144,15 +144,15 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
         help: "Whether the builder circuit breaker is active (1) causing builder bids to be ignored",
       }),
       faults: register.gauge({
-        name: "beacon_builder_circuit_breaker_faults",
+        name: "beacon_builder_circuit_breaker_empty_blocks",
         help: "Count of canonical EMPTY blocks in the fault inspection window",
       }),
       blocksPresent: register.gauge({
-        name: "beacon_builder_circuit_breaker_blocks_present",
+        name: "beacon_builder_circuit_breaker_observed_blocks",
         help: "Count of canonical FULL and EMPTY blocks in the fault inspection window",
       }),
       payloadsFull: register.gauge({
-        name: "beacon_builder_circuit_breaker_payloads_full",
+        name: "beacon_builder_circuit_breaker_full_blocks",
         help: "Count of canonical FULL blocks in the fault inspection window",
       }),
     },
