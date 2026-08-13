@@ -1143,7 +1143,7 @@ describe("Gloas Fork Choice", () => {
     });
   });
 
-  describe("shouldBuildOnFull() — Spec: should_build_on_full(store, head)", () => {
+  describe("shouldBuildOnFull() - Spec: should_build_on_full(store, head, slot)", () => {
     let protoArray: ProtoArray;
 
     beforeEach(() => {

@@ -3,6 +3,7 @@ import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
 import {StateCloneSource, StateHashTreeRootSource} from "./stateTransition.js";
 import {CachedBeaconStateAllForks} from "./types.js";
+import {isViewDUNodesPopulated} from "./util/ssz.js";
 
 export type BeaconStateTransitionMetrics = ReturnType<typeof getMetrics>;
 
@@ -159,9 +160,9 @@ export function onPostStateMetrics(postState: CachedBeaconStateAllForks, metrics
 // This cache is populated during epoch transition, and should be preserved for performance.
 // If the cache is missing too often, means that our clone strategy is not working well.
 function isValidatorsNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  return (state.validators as unknown as {nodesPopulated?: boolean}).nodesPopulated === true;
+  return isViewDUNodesPopulated(state.validators);
 }
 
 function isBalancesNodesPopulated(state: CachedBeaconStateAllForks): boolean {
-  return (state.balances as unknown as {nodesPopulated?: boolean}).nodesPopulated === true;
+  return isViewDUNodesPopulated(state.balances);
 }

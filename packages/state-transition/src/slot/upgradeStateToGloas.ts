@@ -70,7 +70,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
   stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
-  stateGloasView.latestExecutionPayloadBid.gasLimit = stateFulu.latestExecutionPayloadHeader.gasLimit;
+  stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
   stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
     ssz.gloas.ExecutionRequests.defaultValue()
   );
@@ -172,8 +172,8 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
   const pendingDeposits = ssz.gloas.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
 
-  for (let i = 0; i < state.pendingDeposits.length; i++) {
-    const deposit = state.pendingDeposits.getReadonly(i);
+  for (const deposit of state.pendingDeposits.getAllReadonly()) {
+    const depositValue = deposit.toValue();
 
     const validatorIndex = state.epochCtx.getValidatorIndex(deposit.pubkey);
     const pubkeyHex = toPubkeyHex(deposit.pubkey);
@@ -181,7 +181,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     // Deposits for existing validators stay in the pending queue
     if (isValidatorKnown(state, validatorIndex)) {
       pendingDeposits.push(deposit);
-      pendingDepositsLookup.add(deposit, pubkeyHex);
+      pendingDepositsLookup.add(depositValue, pubkeyHex);
       continue;
     }
 
@@ -202,26 +202,33 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     // can pick it up later.
     if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
       pendingDeposits.push(deposit);
-      pendingDepositsLookup.add(deposit, pubkeyHex);
+      pendingDepositsLookup.add(depositValue, pubkeyHex);
       continue;
     }
-    if (pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex)) {
+    if (
+      pendingDepositsLookup.hasPendingValidator(state.config, pubkeyHex, state.epochCtx.builderDepositSignatureCache)
+    ) {
       pendingDeposits.push(deposit);
-      pendingDepositsLookup.add(deposit, pubkeyHex);
+      pendingDepositsLookup.add(depositValue, pubkeyHex);
       continue;
     }
 
     // Verify the deposit signature (proof of possession). If invalid the deposit is silently
     // dropped — stake is forfeited, matching the validator deposit contract behavior.
-    if (
-      !isValidDepositSignature(
+    //
+    // The prepareNextSlot scheduler pre-verifies these signatures in the epochs before the fork
+    // A cache miss falls back to verifying this one deposit — no worse than pre-cache.
+    const cached = state.epochCtx.builderDepositSignatureCache.getSignatureValidity(depositValue);
+    const isValid =
+      cached ??
+      isValidDepositSignature(
         state.config,
         deposit.pubkey,
         deposit.withdrawalCredentials,
         deposit.amount,
         deposit.signature
-      )
-    ) {
+      );
+    if (!isValid) {
       continue;
     }
 

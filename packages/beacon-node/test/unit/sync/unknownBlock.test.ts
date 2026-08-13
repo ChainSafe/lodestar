@@ -1157,7 +1157,7 @@ describe("UnknownBlockSync", () => {
         peers: [{peerId: peer}],
       }));
 
-      // tsgo overload-resolution miss when emit is reached through a closure that captures emitter
+      // tsc overload-resolution miss when emit is reached through a closure that captures emitter
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys (see #9491).
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,
@@ -1257,7 +1257,7 @@ describe("UnknownBlockSync", () => {
         emitter.emit(routes.events.EventType.block, {slot: 1, block: blockRootHex, executionOptimistic: false});
       });
 
-      // tsgo overload-resolution miss when emit is reached through a closure that captures emitter
+      // tsc overload-resolution miss when emit is reached through a closure that captures emitter
       // first; cast re-anchors the StrictEventEmitter overload for ChainEvent keys.
       (emitter as ChainEventEmitter).emit(ChainEvent.unknownEnvelopeBlockRoot, {
         rootHex: blockRootHex,

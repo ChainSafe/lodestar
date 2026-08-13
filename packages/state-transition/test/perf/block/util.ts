@@ -140,7 +140,7 @@ export function getBlockPhase0(
         randaoReveal: Buffer.alloc(96, 0xdd),
         eth1Data: {
           depositRoot: rootA,
-          depositCount: 1000,
+          depositCount: 1000n,
           blockHash: rootB,
         },
         graffiti: rootA,
@@ -199,7 +199,7 @@ export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAlt
  */
 function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0.Deposit[] {
   const depositRootViewDU = ssz.phase0.DepositDataRootList.toViewDU([]);
-  const depositCount = preState.eth1Data.depositCount;
+  const depositCount = Number(preState.eth1Data.depositCount);
   const withdrawalCredentials = Buffer.alloc(32, 0xee);
 
   const depositsData: phase0.DepositData[] = [];
@@ -239,7 +239,7 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0
 
   // Write eth1Data to state
   if (count > 0) {
-    preState.eth1Data.depositCount = depositCount + count;
+    preState.eth1Data.depositCount = BigInt(depositCount + count);
     preState.eth1Data.depositRoot = depositRootViewDU.hashTreeRoot();
   }
 

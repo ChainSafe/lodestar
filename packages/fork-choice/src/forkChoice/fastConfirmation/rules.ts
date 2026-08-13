@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, isStartSlotOfEpoch} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
-import {equalCheckpointWithHex} from "../store.ts";
+import {equalCheckpointWithHex} from "../store.js";
 import {
   FastConfirmationCache,
   FastConfirmationContext,
@@ -11,8 +11,8 @@ import {
   FastConfirmationSnapshot,
   IFastConfirmationStore,
   isResetReason,
-} from "./types.ts";
-import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.ts";
+} from "./types.js";
+import {findLatestConfirmedDescendant, getBlock, isAncestor, isConfirmedChainSafe} from "./utils.js";
 
 export const resetIfConfirmedUnavailable: FastConfirmationRule = (snapshot, ctx, _store, cache, decision) => {
   const confirmedBlock = getBlock(ctx, cache, decision.confirmedRoot);

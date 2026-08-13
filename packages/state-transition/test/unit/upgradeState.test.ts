@@ -8,6 +8,7 @@ import {CachedBeaconStateFulu, createCachedBeaconState} from "../../src/cache/st
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
 import {upgradeStateToElectra} from "../../src/slot/upgradeStateToElectra.js";
 import {upgradeStateToGloas} from "../../src/slot/upgradeStateToGloas.js";
+import {generateBuilderPendingDeposits} from "../../src/testUtils/util.js";
 
 describe("upgradeState", () => {
   it("upgradeStateToDeneb", () => {
@@ -131,6 +132,61 @@ describe("upgradeState", () => {
     expect(() => gloasState.hashTreeRoot()).not.toThrow();
     expect(() => gloasState.toValue()).not.toThrow();
   });
+
+  it("upgradeStateToGloas onboards builders using the pre-verified signature cache", () => {
+    const forkConfig = getConfig(ForkName.fulu);
+    const beaconConfig = createBeaconConfig(forkConfig, ZERO_HASH);
+
+    const fuluStateView = ssz.fulu.BeaconState.defaultViewDU();
+    // Some active validators so shuffling / PTC-window init have a non-empty set.
+    for (let i = 0; i < 64; i++) {
+      const validator = ssz.phase0.Validator.defaultValue();
+      validator.pubkey = Buffer.alloc(48, i + 1);
+      validator.withdrawalCredentials = Buffer.alloc(32, i + 1);
+      validator.effectiveBalance = 32e9;
+      validator.activationEligibilityEpoch = 0;
+      validator.activationEpoch = 0;
+      validator.exitEpoch = FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      fuluStateView.validators.push(ssz.phase0.Validator.toViewDU(validator));
+      fuluStateView.balances.push(32e9);
+    }
+
+    // 3 validly-signed builder deposits (distinct interop pubkeys). We drive each down a different
+    // consumption path via the cache: [0] cached true, [1] cached false, [2] a cache miss.
+    const builderDeposits = generateBuilderPendingDeposits(beaconConfig, 3, 1000);
+    for (const deposit of builderDeposits) {
+      fuluStateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
+    }
+    fuluStateView.commit();
+
+    const fuluState = createCachedBeaconState(
+      fuluStateView,
+      {config: beaconConfig, pubkeyCache},
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    ) as CachedBeaconStateFulu;
+
+    // Pre-populate the cache by value-object identity — the same node.value the migration carries
+    // into the gloas pendingDeposits, so onboardBuildersFromPendingDeposits hits by identity.
+    const cache = fuluState.epochCtx.builderDepositSignatureCache;
+    const [d0, d1] = fuluState.pendingDeposits.getAllReadonlyValues();
+    cache.setSignatureValidity(d0, true); // cached valid → onboard without re-verifying
+    cache.setSignatureValidity(d1, false); // cached invalid → dropped
+    // builderDeposits[2] left uncached → miss → fallback verifies its (valid) signature → onboard
+
+    const gloasState = upgradeStateToGloas(fuluState);
+
+    // [0] (cached true) and [2] (miss, valid) onboarded; [1] (cached false) dropped
+    const onboarded = gloasState.builders.getAllReadonlyValues().map((b) => Buffer.from(b.pubkey).toString("hex"));
+    expect(onboarded).toContain(Buffer.from(builderDeposits[0].pubkey).toString("hex"));
+    expect(onboarded).toContain(Buffer.from(builderDeposits[2].pubkey).toString("hex"));
+    expect(onboarded).not.toContain(Buffer.from(builderDeposits[1].pubkey).toString("hex"));
+    expect(gloasState.builders.length).toBe(2);
+    // all builder deposits consumed from the pending queue
+    expect(gloasState.pendingDeposits.length).toBe(0);
+    // (d) the fork transition does NOT clear the cache — prepareNextSlot drops it on finalization
+    expect(cache.cachedDepositCount).toBe(2);
+  });
 });
 
 const ZERO_HASH = Buffer.alloc(32, 0);
@@ -187,6 +243,17 @@ function getConfig(fork: ForkName, forkEpoch = 0): ChainForkConfig {
         ELECTRA_FORK_EPOCH: 0,
         FULU_FORK_EPOCH: 0,
         GLOAS_FORK_EPOCH: forkEpoch,
+      });
+    case ForkName.heze:
+      return createChainForkConfig({
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: 0,
+        CAPELLA_FORK_EPOCH: 0,
+        DENEB_FORK_EPOCH: 0,
+        ELECTRA_FORK_EPOCH: 0,
+        FULU_FORK_EPOCH: 0,
+        GLOAS_FORK_EPOCH: 0,
+        HEZE_FORK_EPOCH: forkEpoch,
       });
   }
 }
