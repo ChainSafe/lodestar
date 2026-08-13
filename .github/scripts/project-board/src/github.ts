@@ -1,4 +1,5 @@
 import type {PrNode} from "./snapshot.ts";
+import {isSweepLane} from "./types.ts";
 
 const API = "https://api.github.com/graphql";
 
@@ -179,6 +180,9 @@ query ($org: String!, $number: Int!, $cursor: String) {
             __typename
             ... on PullRequest { number state repository { name owner { login } } }
           }
+          fieldValueByName(name: "Status") {
+            ... on ProjectV2ItemFieldSingleSelectValue { name }
+          }
         }
       }
     }
@@ -191,8 +195,8 @@ export interface BoardPr {
   number: number;
 }
 
-/** All OPEN pull request cards on the board, regardless of their current lane. */
-export async function listOpenBoardPrs(token: string, org: string, projectNumber: number): Promise<BoardPr[]> {
+/** Open PR cards already in a lane owned by the scheduled sweep. */
+export async function listOpenManagedBoardPrs(token: string, org: string, projectNumber: number): Promise<BoardPr[]> {
   type Item = {
     content: {
       __typename: string;
@@ -200,6 +204,7 @@ export async function listOpenBoardPrs(token: string, org: string, projectNumber
       state?: string;
       repository?: {name: string; owner: {login: string}};
     } | null;
+    fieldValueByName: {name: string} | null;
   };
   type Res = {
     organization: {
@@ -213,7 +218,14 @@ export async function listOpenBoardPrs(token: string, org: string, projectNumber
     const page = data.organization.projectV2.items;
     for (const item of page.nodes) {
       const c = item.content;
-      if (c?.__typename === "PullRequest" && c.state === "OPEN" && c.repository && c.number !== undefined) {
+      const lane = item.fieldValueByName?.name ?? null;
+      if (
+        isSweepLane(lane) &&
+        c?.__typename === "PullRequest" &&
+        c.state === "OPEN" &&
+        c.repository &&
+        c.number !== undefined
+      ) {
         prs.push({owner: c.repository.owner.login, repo: c.repository.name, number: c.number});
       }
     }

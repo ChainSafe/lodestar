@@ -7,10 +7,10 @@ import {
   missingTokenSkipReason,
   ProjectBoardConfigurationError,
 } from "./event-context.ts";
-import {fetchPr, listOpenBoardPrs, type ProjectConfig, resolveProjectConfig, updateItemLane} from "./github.ts";
+import {fetchPr, listOpenManagedBoardPrs, type ProjectConfig, resolveProjectConfig, updateItemLane} from "./github.ts";
 import {buildSnapshot, pickProjectItem} from "./snapshot.ts";
 import {reconcileSweep} from "./sweep.ts";
-import {STATUS_TO_LANE} from "./types.ts";
+import {isSweepLane, STATUS_TO_LANE} from "./types.ts";
 
 interface Ctx {
   token: string;
@@ -20,7 +20,13 @@ interface Ctx {
   cfg: ProjectConfig;
 }
 
-async function reconcilePr(ctx: Ctx, owner: string, repo: string, number: number): Promise<void> {
+async function reconcilePr(
+  ctx: Ctx,
+  owner: string,
+  repo: string,
+  number: number,
+  source: "event" | "sweep",
+): Promise<void> {
   const label = `${owner}/${repo}#${number}`;
   const prNode = await fetchPr(ctx.token, owner, repo, number);
   if (!prNode) {
@@ -36,6 +42,10 @@ async function reconcilePr(ctx: Ctx, owner: string, repo: string, number: number
   const item = pickProjectItem(prNode, ctx.cfg.projectId);
   if (!item) {
     console.log(`${label}: not on project #${ctx.projectNumber}; waiting for project auto-add`);
+    return;
+  }
+  if (source === "sweep" && !isSweepLane(item.currentLane)) {
+    console.log(`${label}: status "${item.currentLane ?? "(none)"}" is outside sweep scope; skipping`);
     return;
   }
   if (item.currentLane === lane) {
@@ -95,21 +105,21 @@ async function main(): Promise<void> {
   if (values.pr) {
     const match = /^([^/]+)\/([^#]+)#(\d+)$/.exec(values.pr);
     if (!match) throw new Error(`--pr expects owner/repo#number, got: ${values.pr}`);
-    await reconcilePr(ctx, match[1], match[2], Number(match[3]));
+    await reconcilePr(ctx, match[1], match[2], Number(match[3]), "event");
     return;
   }
 
   if (values.sweep || event.eventName === "schedule" || event.eventName === "workflow_dispatch") {
-    const prs = await listOpenBoardPrs(token, org, projectNumber);
-    console.log(`sweep: ${prs.length} open PR card(s) on project #${projectNumber}`);
-    await reconcileSweep(prs, (pr) => reconcilePr(ctx, pr.owner, pr.repo, pr.number));
+    const prs = await listOpenManagedBoardPrs(token, org, projectNumber);
+    console.log(`sweep: ${prs.length} managed open PR card(s) on project #${projectNumber}`);
+    await reconcileSweep(prs, (pr) => reconcilePr(ctx, pr.owner, pr.repo, pr.number, "sweep"));
     return;
   }
 
   if (!event.pullRequest) {
     throw new Error(`event ${event.eventName} has no pull_request payload and no --pr/--sweep flag given`);
   }
-  await reconcilePr(ctx, event.pullRequest.owner, event.pullRequest.repo, event.pullRequest.number);
+  await reconcilePr(ctx, event.pullRequest.owner, event.pullRequest.repo, event.pullRequest.number, "event");
 }
 
 await main();
