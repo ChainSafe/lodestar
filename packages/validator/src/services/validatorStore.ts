@@ -293,8 +293,9 @@ export class ValidatorStore {
       this.defaultProposerConfig.builder.selection ??
       defaultSelection;
 
-    // Post-Gloas block production uses the standardized builder boost factor. Normalize legacy
-    // "only" selections to their fallback-safe "always" equivalents before deriving that factor.
+    // Post-Gloas block production uses standard builder boost factor. Need to normalize the
+    // gloas-deprecated "builderonly" to the gloas fallback "builderalways" equivalent before
+    // deriving the boost factor.
     if (isPostGloas) {
       if (selection === routes.validator.BuilderSelection.BuilderOnly) {
         selection = routes.validator.BuilderSelection.BuilderAlways;
