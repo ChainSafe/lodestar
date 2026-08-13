@@ -26,6 +26,7 @@ export type ChainArgs = {
   "chain.fastConfirmation"?: boolean;
   "chain.assertCorrectProgressiveBalances"?: boolean;
   "chain.maxSkipSlots"?: number;
+  "chain.disableProposerSlashings"?: boolean;
   emitPayloadAttributes?: boolean;
   broadcastValidationStrictness?: string;
   "chain.minSameMessageSignatureSetsToBatch"?: number;
@@ -67,6 +68,7 @@ export function parseArgs(args: ChainArgs & CircuitBreakerArgs): IBeaconNodeOpti
     fastConfirmation: args["chain.fastConfirmation"],
     assertCorrectProgressiveBalances: args["chain.assertCorrectProgressiveBalances"],
     maxSkipSlots: args["chain.maxSkipSlots"],
+    disableProposerSlashings: args["chain.disableProposerSlashings"],
     emitPayloadAttributes: args.emitPayloadAttributes,
     broadcastValidationStrictness: args.broadcastValidationStrictness,
     minSameMessageSignatureSetsToBatch:
@@ -239,6 +241,15 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "number",
     description: "Refuse to skip more than this many slots when processing a block or attestation",
+    group: "chain",
+  },
+
+  "chain.disableProposerSlashings": {
+    hidden: true,
+    type: "boolean",
+    description:
+      "Do not produce proposer slashings from observed equivocations and do not include proposer slashings in produced blocks",
+    defaultDescription: String(defaultOptions.chain.disableProposerSlashings),
     group: "chain",
   },
 

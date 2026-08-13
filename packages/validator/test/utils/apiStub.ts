@@ -35,6 +35,7 @@ export function getApiClientStub(): ApiClientStub {
       getPtcDuties: vi.fn(),
       prepareBeaconCommitteeSubnet: vi.fn(),
       produceBlockV3: vi.fn(),
+      produceBlockV4: vi.fn(),
       getSyncCommitteeDuties: vi.fn(),
       prepareSyncCommitteeSubnets: vi.fn(),
       produceSyncCommitteeContribution: vi.fn(),
@@ -64,6 +65,8 @@ export function mockApiResponse<T, M, E extends Endpoint<any, any, any, T, M>>({
   return apiResponse;
 }
 
-export function mockApiErrorResponse<E extends Endpoint>(status: HttpStatusCode): ApiResponse<E> {
-  return new ApiResponse<E>({} as any, null, new Response(null, {status}));
+export async function mockApiErrorResponse<E extends Endpoint>(status: HttpStatusCode): Promise<ApiResponse<E>> {
+  const res = new ApiResponse<E>({} as any, null, new Response(null, {status}));
+  await res.errorBody();
+  return res;
 }

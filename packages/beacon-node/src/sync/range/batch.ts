@@ -593,7 +593,7 @@ export class Batch {
     if (allComplete) {
       const attempt: Attempt = {
         peers: this.getSuccessfulPeers(),
-        hash: hashBlocks(blocks, this.config),
+        hash: hashBlocks(blocks, payloadEnvelopes),
       };
       this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes, attempt};
     } else {

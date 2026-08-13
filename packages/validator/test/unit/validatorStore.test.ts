@@ -70,9 +70,9 @@ describe("ValidatorStore", () => {
     expect(validatorStore.getGasLimit(toHexString(pubkeys[1]))).toBe(valProposerConfig.defaultConfig.builder?.gasLimit);
   });
 
-  it("getBuilderSelectionParams honors explicit selection and resolves fork-aware default", async () => {
+  it("getBuilderSelectionParams resolves fork-aware defaults and aliases", async () => {
     const preGloasSlot = 0;
-    // pubkeys[0] explicitly configured executiononly, honored regardless of fork
+    // pubkeys[0] explicitly configured executiononly, honored pre-gloas
     expect(validatorStore.getBuilderSelectionParams(toHexString(pubkeys[0]), preGloasSlot)).toEqual({
       selection: routes.validator.BuilderSelection.ExecutionOnly,
       boostFactor: BigInt(0),
@@ -104,9 +104,9 @@ describe("ValidatorStore", () => {
       selection: routes.validator.BuilderSelection.Default,
       boostFactor: BigInt(90),
     });
-    // Explicit executiononly is still honored post-gloas
+    // Post-gloas executiononly is a backwards-compatible alias for executionalways
     expect(gloasStore.getBuilderSelectionParams(toHexString(pubkeys[0]), gloasSlot)).toEqual({
-      selection: routes.validator.BuilderSelection.ExecutionOnly,
+      selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
     });
   });

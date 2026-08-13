@@ -76,6 +76,12 @@ export type ExtraProduceBlockOpts = {
   blindedLocal?: boolean;
 };
 
+/** Lodestar-specific (non-standardized) options */
+export type ExtraProduceBlockV4Opts = {
+  feeRecipient?: string;
+  strictFeeRecipientCheck?: boolean;
+};
+
 export const ProduceBlockV3MetaType = new ContainerType(
   {
     ...VersionType.fields,
@@ -446,7 +452,7 @@ export type Endpoints = {
       builderBoostFactor?: UintBn64;
       /** Include execution payload envelope and blobs in the response when self-building */
       includePayload: boolean;
-    } & Omit<ExtraProduceBlockOpts, "blindedLocal">,
+    } & ExtraProduceBlockV4Opts,
     {
       params: {slot: number};
       query: {
@@ -454,7 +460,6 @@ export type Endpoints = {
         graffiti?: string;
         skip_randao_verification?: string;
         fee_recipient?: string;
-        builder_selection?: string;
         builder_boost_factor?: string;
         strict_fee_recipient_check?: boolean;
         include_payload: boolean;
@@ -918,7 +923,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           graffiti,
           skipRandaoVerification,
           feeRecipient,
-          builderSelection,
           builderBoostFactor,
           strictFeeRecipientCheck,
           includePayload,
@@ -929,7 +933,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             graffiti: toGraffitiHex(graffiti),
             skip_randao_verification: writeSkipRandaoVerification(skipRandaoVerification),
             fee_recipient: feeRecipient,
-            builder_selection: builderSelection,
             builder_boost_factor: builderBoostFactor?.toString(),
             strict_fee_recipient_check: strictFeeRecipientCheck,
             include_payload: includePayload,
@@ -941,7 +944,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           graffiti: fromGraffitiHex(query.graffiti),
           skipRandaoVerification: parseSkipRandaoVerification(query.skip_randao_verification),
           feeRecipient: query.fee_recipient,
-          builderSelection: query.builder_selection as BuilderSelection,
           builderBoostFactor: parseBuilderBoostFactor(query.builder_boost_factor),
           strictFeeRecipientCheck: query.strict_fee_recipient_check,
           includePayload: query.include_payload,
@@ -953,7 +955,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             graffiti: Schema.String,
             skip_randao_verification: Schema.String,
             fee_recipient: Schema.String,
-            builder_selection: Schema.String,
             builder_boost_factor: Schema.String,
             strict_fee_recipient_check: Schema.Boolean,
             include_payload: Schema.BooleanRequired,
