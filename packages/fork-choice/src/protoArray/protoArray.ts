@@ -690,7 +690,7 @@ export class ProtoArray {
     this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot, proposerBoostRoot);
   }
 
-  /** Count Gloas blocks selected as FULL or EMPTY by the supplied head chain in the inclusive slot range. */
+  /** Count blocks selected as FULL or EMPTY by the supplied head chain in the inclusive slot range. */
   getCanonicalPayloadCounts(
     fromSlot: Slot,
     toSlot: Slot,
