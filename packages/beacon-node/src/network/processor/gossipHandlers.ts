@@ -731,6 +731,8 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
           const blockInput = chain.seenBlockInputCache.get(e.type.root);
           if (blockInput) {
             chain.serializedCache.set(signedBlock, serializedData);
+            // this is technically not a valid gossip block but gossip validation is a cheap subset of checks
+            // this runs the full state transition, so importing an equivocating-but-valid block here is safe.
             handleValidBeaconBlock(blockInput, peerIdStr, seenTimestampSec);
           }
         }
