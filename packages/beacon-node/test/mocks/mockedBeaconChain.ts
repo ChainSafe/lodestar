@@ -78,7 +78,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getBlockSummariesAtSlot: vi.fn(),
       notifyPtcMessages: vi.fn(),
       shouldBuildOnFull: vi.fn(),
-      getPayloadRevealCounts: vi.fn(),
+      getCanonicalPayloadCounts: vi.fn(),
     };
   });
 
