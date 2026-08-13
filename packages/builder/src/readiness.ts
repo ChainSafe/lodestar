@@ -36,11 +36,12 @@ async function isNodeReady(api: ApiClient, logger: Logger): Promise<boolean> {
       return false;
     }
 
-    logger.info("Beacon node is ready", {headSlot: syncingStatus.headSlot});
-
     if (syncingStatus.isOptimistic) {
-      logger.warn("Beacon node head is optimistic, execution payloads are not yet verified");
+      logger.warn("Beacon node head is optimistic, execution payloads are not yet verified - unable to submit bids");
+      return false;
     }
+
+    logger.info("Beacon node is ready", {headSlot: syncingStatus.headSlot});
 
     return true;
   } catch (e) {
