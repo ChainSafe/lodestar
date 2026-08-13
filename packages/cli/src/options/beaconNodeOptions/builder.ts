@@ -55,14 +55,14 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   "builder.faultInspectionWindow": {
     type: "number",
     description:
-      "Window to inspect missed slots (pre-gloas) or unrevealed payloads (post-gloas) for enabling/disabling builder circuit breaker",
+      "Window to inspect missed slots (pre-gloas) or canonical blocks selected as FULL/EMPTY (post-gloas) for enabling/disabling builder circuit breaker",
     group: "builder",
   },
 
   "builder.allowedFaults": {
     type: "number",
     description:
-      "Number of missed slots allowed within `faultInspectionWindow` before ignoring the external builder (pre-gloas). Post-gloas, sets the tolerated rate of unrevealed payloads, defined as `allowedFaults` out of `faultInspectionWindow` and applied to blocks observed in the window",
+      "Number of missed slots allowed within `faultInspectionWindow` before ignoring the external builder (pre-gloas). Post-gloas, sets the tolerated rate of canonical blocks resolved EMPTY, defined as `allowedFaults` out of `faultInspectionWindow` and applied to resolved blocks in the window",
     group: "builder",
   },
 };
