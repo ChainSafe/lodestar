@@ -12,6 +12,8 @@ import {HEX_ZERO_HASH} from "../../../src/protoArray/interface.js";
  *          2B
  */
 const ANCHOR = "0";
+const INC_GWEI = 1_000_000_000n;
+const gwei = (increments: number, remainderGwei = 0): bigint => BigInt(increments) * INC_GWEI + BigInt(remainderGwei);
 const CHAIN: {slot: number; root: RootHex; parent: RootHex}[] = [
   {slot: 1, root: "1A", parent: ANCHOR},
   {slot: 2, root: "2A", parent: "1A"},
@@ -55,10 +57,10 @@ function setupProtoArray(): ProtoArray {
   return protoArray;
 }
 
-type ProposerBoost = {root: RootHex; score: number} | null;
+type ProposerBoost = {root: RootHex; score: bigint} | null;
 
 /** Mirror of a ProtoNode, driven by the naive oracle */
-type OracleNode = {blockRoot: RootHex; parent?: number; weight: number; invalid?: boolean};
+type OracleNode = {blockRoot: RootHex; parent?: number; weight: bigint; invalid?: boolean};
 
 /**
  * applyScoreChanges() reads executionStatus straight off the node, so flip it in place. Driving this
@@ -95,11 +97,17 @@ function applyScoreChanges(protoArray: ProtoArray, {deltas, proposerBoost}: Roun
 
 /** node weights keyed by blockRoot */
 function weights(protoArray: ProtoArray): Record<RootHex, number> {
-  return Object.fromEntries(protoArray.nodes.map((node) => [node.blockRoot, node.weight]));
+  return Object.fromEntries(protoArray.nodes.map((node) => [node.blockRoot, Number(node.weight / INC_GWEI)]));
 }
 
 function attestationScores(protoArray: ProtoArray): Record<RootHex, number> {
-  return Object.fromEntries(protoArray.nodes.map((node) => [node.blockRoot, node.attestationScore]));
+  return Object.fromEntries(protoArray.nodes.map((node) => [node.blockRoot, Number(node.attestationScore / INC_GWEI)]));
+}
+
+function exactWeight(protoArray: ProtoArray, root: RootHex): bigint {
+  const node = protoArray.nodes.find((item) => item.blockRoot === root);
+  if (node === undefined) throw Error(`Missing node ${root}`);
+  return node.weight;
 }
 
 describe("ProtoArray attestationScore", () => {
@@ -117,16 +125,18 @@ describe("ProtoArray attestationScore", () => {
       const node = nodes[nodeIndex];
       if (node.blockRoot === HEX_ZERO_HASH) continue;
 
-      const currentBoost = proposerBoost && proposerBoost.root === node.blockRoot ? proposerBoost.score : 0;
+      const currentBoost = proposerBoost && proposerBoost.root === node.blockRoot ? proposerBoost.score : 0n;
       const previousBoost =
-        previousProposerBoost && previousProposerBoost.root === node.blockRoot ? previousProposerBoost.score : 0;
+        previousProposerBoost && previousProposerBoost.root === node.blockRoot ? previousProposerBoost.score : 0n;
 
       // an invalid node drops its whole weight, boost included, and stays at 0 from then on
-      const nodeDelta = node.invalid ? -node.weight : deltas[nodeIndex] + currentBoost - previousBoost;
+      const nodeDelta = node.invalid
+        ? -node.weight
+        : BigInt(deltas[nodeIndex]) * INC_GWEI + currentBoost - previousBoost;
       node.weight += nodeDelta;
 
       if (node.parent !== undefined) {
-        deltas[node.parent] += nodeDelta;
+        deltas[node.parent] += Number(nodeDelta / INC_GWEI);
       }
     }
   }
@@ -137,7 +147,7 @@ describe("ProtoArray attestationScore", () => {
     const oracleNodes: OracleNode[] = protoArray.nodes.map((node) => ({
       blockRoot: node.blockRoot,
       parent: node.parent,
-      weight: 0,
+      weight: 0n,
     }));
 
     // Deterministic pseudo-random deltas, so a failure is reproducible
@@ -149,11 +159,11 @@ describe("ProtoArray attestationScore", () => {
 
     const boostable: ProposerBoost[] = [
       null,
-      {root: "3A", score: 100},
-      {root: "2A", score: 100},
+      {root: "3A", score: gwei(100)},
+      {root: "2A", score: gwei(100)},
       // boost moves to a sibling fork: the case previousBoost has to cancel on the old branch
-      {root: "2B", score: 100},
-      {root: "3A", score: 70},
+      {root: "2B", score: gwei(100)},
+      {root: "3A", score: gwei(70)},
       null,
     ];
 
@@ -177,7 +187,7 @@ describe("ProtoArray attestationScore", () => {
 
       for (const oracleNode of oracleNodes) {
         expect(weights(protoArray)[oracleNode.blockRoot]).toBeWithMessage(
-          oracleNode.weight,
+          Number(oracleNode.weight / INC_GWEI),
           `weight of ${oracleNode.blockRoot} must match the pre-split implementation`
         );
       }
@@ -197,7 +207,7 @@ describe("ProtoArray attestationScore", () => {
     // Boost 3A. It is credited to 3A and to every ancestor, but attestationScore must not move.
     applyScoreChanges(protoArray, {
       deltas: protoArray.nodes.map(() => 0),
-      proposerBoost: {root: "3A", score: 100},
+      proposerBoost: {root: "3A", score: gwei(100)},
     });
 
     expect(attestationScores(protoArray)).toEqualWithMessage(
@@ -215,7 +225,7 @@ describe("ProtoArray attestationScore", () => {
 
     applyScoreChanges(protoArray, {
       deltas: protoArray.nodes.map(() => 0),
-      proposerBoost: {root: "3A", score: 100},
+      proposerBoost: {root: "3A", score: gwei(100)},
     });
 
     // 2B forks off 1A, so it is not an ancestor of 3A
@@ -223,22 +233,70 @@ describe("ProtoArray attestationScore", () => {
     expect(attestationScores(protoArray)["2B"]).toBe(0);
   });
 
+  it("preserves an exact boost through score and root changes", () => {
+    const protoArray = setupProtoArray();
+    const initialScore = gwei(100, 250_000_000);
+    const updatedScore = gwei(101, 750_000_000);
+
+    applyScoreChanges(protoArray, {
+      deltas: protoArray.nodes.map(() => 0),
+      proposerBoost: {root: "3A", score: initialScore},
+    });
+    applyScoreChanges(protoArray, {
+      deltas: protoArray.nodes.map(() => 0),
+      proposerBoost: {root: "3A", score: updatedScore},
+    });
+    expect(exactWeight(protoArray, "3A")).toBe(updatedScore);
+
+    applyScoreChanges(protoArray, {
+      deltas: protoArray.nodes.map(() => 0),
+      proposerBoost: {root: "2B", score: updatedScore},
+    });
+
+    expect(exactWeight(protoArray, ANCHOR)).toBe(updatedScore);
+    expect(exactWeight(protoArray, "1A")).toBe(updatedScore);
+    expect(exactWeight(protoArray, "2A")).toBe(0n);
+    expect(exactWeight(protoArray, "3A")).toBe(0n);
+    expect(exactWeight(protoArray, "2B")).toBe(updatedScore);
+
+    applyScoreChanges(protoArray, {deltas: protoArray.nodes.map(() => 0), proposerBoost: null});
+    for (const node of protoArray.nodes) {
+      expect(node.weight).toBeWithMessage(0n, `boost must be removed from ${node.blockRoot}`);
+    }
+  });
+
+  it("prefers a branch with one additional Gwei before applying the root tiebreaker", () => {
+    const protoArray = setupProtoArray();
+    const deltas = protoArray.nodes.map((node) => (node.blockRoot === "3A" || node.blockRoot === "2B" ? 10 : 0));
+
+    applyScoreChanges(protoArray, {
+      deltas,
+      proposerBoost: {root: "2B", score: 1n},
+    });
+
+    expect(protoArray.findHead(ANCHOR, 3).blockRoot).toBe("2B");
+  });
+
   it("zeroes both channels of an invalid node and unwinds both from its ancestors", () => {
     const protoArray = setupProtoArray();
 
     // 10 votes on 3A and 5 on 2B, plus a boost on 3A
     const deltas = protoArray.nodes.map((node) => (node.blockRoot === "3A" ? 10 : node.blockRoot === "2B" ? 5 : 0));
-    applyScoreChanges(protoArray, {deltas, proposerBoost: {root: "3A", score: 100}});
+    applyScoreChanges(protoArray, {
+      deltas,
+      proposerBoost: {root: "3A", score: gwei(100, 250_000_000)},
+    });
 
     expect(attestationScores(protoArray)).toEqual({[ANCHOR]: 15, "1A": 15, "2A": 10, "3A": 10, "2B": 5});
     expect(weights(protoArray)).toEqual({[ANCHOR]: 115, "1A": 115, "2A": 110, "3A": 110, "2B": 5});
+    expect(exactWeight(protoArray, "3A")).toBe(gwei(110, 250_000_000));
 
     // 3A goes invalid while still boosted. The invalid branch derives the boost to remove as
     // `weight - attestationScore`, so both channels have to unwind on 3A and on 2A/1A/anchor.
     markInvalid(protoArray, [], "3A");
     applyScoreChanges(protoArray, {
       deltas: protoArray.nodes.map(() => 0),
-      proposerBoost: {root: "3A", score: 100},
+      proposerBoost: {root: "3A", score: gwei(100, 250_000_000)},
     });
 
     expect(attestationScores(protoArray)).toEqualWithMessage(
@@ -249,18 +307,22 @@ describe("ProtoArray attestationScore", () => {
       {[ANCHOR]: 5, "1A": 5, "2A": 0, "3A": 0, "2B": 5},
       "the invalid node's boost must be removed alongside its votes, leaving only 2B's votes"
     );
+    expect(exactWeight(protoArray, "3A")).toBe(0n);
   });
 
   it("keeps an invalid node at zero on later rounds without double-unwinding its boost", () => {
     const protoArray = setupProtoArray();
 
     const deltas = protoArray.nodes.map((node) => (node.blockRoot === "3A" ? 10 : node.blockRoot === "2B" ? 5 : 0));
-    applyScoreChanges(protoArray, {deltas, proposerBoost: {root: "3A", score: 100}});
+    applyScoreChanges(protoArray, {
+      deltas,
+      proposerBoost: {root: "3A", score: gwei(100, 250_000_000)},
+    });
 
     markInvalid(protoArray, [], "3A");
     applyScoreChanges(protoArray, {
       deltas: protoArray.nodes.map(() => 0),
-      proposerBoost: {root: "3A", score: 100},
+      proposerBoost: {root: "3A", score: gwei(100, 250_000_000)},
     });
 
     // The boost is cleared on the next tick. 3A is still invalid, so its deltas must compute to 0
@@ -272,13 +334,14 @@ describe("ProtoArray attestationScore", () => {
       {[ANCHOR]: 5, "1A": 5, "2A": 0, "3A": 0, "2B": 5},
       "clearing the boost must not unwind it a second time through the invalid node"
     );
+    expect(exactWeight(protoArray, "3A")).toBe(0n);
   });
 
   it("weight returns to attestationScore once the boost is cleared", () => {
     const protoArray = setupProtoArray();
 
     const deltas = protoArray.nodes.map((node) => (node.blockRoot === "3A" ? 10 : 0));
-    applyScoreChanges(protoArray, {deltas, proposerBoost: {root: "3A", score: 100}});
+    applyScoreChanges(protoArray, {deltas, proposerBoost: {root: "3A", score: gwei(100)}});
     expect(weights(protoArray)["3A"]).toBe(110);
 
     // onTick clears proposerBoostRoot at the start of a slot, so the next round applies a null boost
