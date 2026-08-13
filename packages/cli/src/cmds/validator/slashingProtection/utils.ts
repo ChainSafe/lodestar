@@ -4,7 +4,7 @@ import {LevelDbController} from "@lodestar/db/controller/level";
 import {Root} from "@lodestar/types";
 import {Logger, fromHex} from "@lodestar/utils";
 import {MetaDataRepository, SlashingProtection} from "@lodestar/validator";
-import {getBeaconConfigFromArgs} from "../../../config/index.js";
+import {getBeaconConfigFromArgs} from "../../../config/beaconParams.js";
 import {GlobalArgs} from "../../../options/index.js";
 import {getValidatorPaths} from "../paths.js";
 import {ISlashingProtectionArgs} from "./options.js";
@@ -35,22 +35,21 @@ export async function getGenesisValidatorsRoot(args: GlobalArgs & ISlashingProte
   const server = args.beaconNodes[0];
 
   const networkGenesis = genesisData[args.network as NetworkName];
-  if (networkGenesis !== undefined) {
+  if (networkGenesis?.genesisValidatorsRoot != null) {
     return fromHex(networkGenesis.genesisValidatorsRoot);
   }
 
   const {config} = getBeaconConfigFromArgs(args);
   const api = getClient({baseUrl: server}, {config});
-  const genesis = await api.beacon.getGenesis();
 
   try {
+    const genesis = await api.beacon.getGenesis();
     genesis.assertOk();
+    return genesis.value().genesisValidatorsRoot;
   } catch (e) {
     if (args.force) {
       return Buffer.alloc(32, 0);
     }
     throw e;
   }
-
-  return genesis.value().genesisValidatorsRoot;
 }

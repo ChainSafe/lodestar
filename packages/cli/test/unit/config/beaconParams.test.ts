@@ -2,7 +2,8 @@ import fs from "node:fs";
 import yaml from "js-yaml";
 import {afterAll, beforeAll, describe, expect, it} from "vitest";
 import {toHexString} from "@chainsafe/ssz";
-import {getBeaconParams} from "../../../src/config/index.js";
+import {ephemeryChainConfig} from "@lodestar/config/networks";
+import {getBeaconParams} from "../../../src/config/beaconParams.js";
 import {getTestdirPath} from "../../utils.js";
 
 describe("config / beaconParams", () => {
@@ -64,5 +65,13 @@ describe("config / beaconParams", () => {
   it.each(testCases)("$id", ({kwargs, GENESIS_FORK_VERSION}) => {
     const params = getBeaconParams(kwargs);
     expect(toHexString(params.GENESIS_FORK_VERSION)).toBe(GENESIS_FORK_VERSION);
+  });
+
+  it("returns the current dynamic ephemery chain config", () => {
+    const params = getBeaconParams({network: "ephemery", additionalParamsCli: {}});
+
+    expect(params.MIN_GENESIS_TIME).toBe(ephemeryChainConfig.MIN_GENESIS_TIME);
+    expect(params.DEPOSIT_CHAIN_ID).toBe(ephemeryChainConfig.DEPOSIT_CHAIN_ID);
+    expect(params.DEPOSIT_NETWORK_ID).toBe(ephemeryChainConfig.DEPOSIT_NETWORK_ID);
   });
 });

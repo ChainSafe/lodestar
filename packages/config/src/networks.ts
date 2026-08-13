@@ -27,7 +27,7 @@ export const networksChainConfig: Record<NetworkName, ChainConfig> = {
 
 export type GenesisData = {
   genesisTime: number;
-  genesisValidatorsRoot: string;
+  genesisValidatorsRoot: string | null;
 };
 
 export const genesisData: Record<NetworkName, GenesisData> = {
@@ -53,6 +53,6 @@ export const genesisData: Record<NetworkName, GenesisData> = {
   },
   ephemery: {
     genesisTime: ephemeryChainConfig.MIN_GENESIS_TIME + ephemeryChainConfig.GENESIS_DELAY,
-    genesisValidatorsRoot: "0x0000000000000000000000000000000000000000000000000000000000000000",
+    genesisValidatorsRoot: null,
   },
 };
