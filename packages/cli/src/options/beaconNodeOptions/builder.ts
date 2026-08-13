@@ -55,7 +55,7 @@ export const options: CliCommandOptions<ExecutionBuilderArgs> = {
   "builder.faultInspectionWindow": {
     type: "number",
     description:
-      "Window to inspect missed slots (pre-gloas) or canonical blocks selected as FULL/EMPTY (post-gloas) for enabling/disabling builder circuit breaker",
+      "Window used to inspect missed slots (pre-gloas) or calculate the canonical EMPTY block rate (post-gloas) for enabling/disabling the builder circuit breaker",
     group: "builder",
   },
 
