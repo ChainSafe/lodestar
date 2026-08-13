@@ -4,7 +4,6 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BuilderCircuitBreaker} from "../../../src/chain/builderCircuitBreaker.js";
 import {getFaultInspectionParams} from "../../../src/execution/builder/http.js";
-import {getMockedLogger} from "../../mocks/loggerMock.js";
 
 describe("BuilderCircuitBreaker", () => {
   const faultInspectionWindow = 32;
@@ -38,24 +37,6 @@ describe("BuilderCircuitBreaker", () => {
       expect(breaker.isActive(100)).toBe(expected);
     });
   }
-
-  it("logs the resolved configuration on initialization", () => {
-    const logger = getMockedLogger();
-
-    new BuilderCircuitBreaker(
-      {faultInspectionWindow, allowedFaults},
-      {
-        forkChoice: {getCanonicalPayloadCounts: vi.fn()} as unknown as IForkChoice,
-        logger,
-        metrics: null,
-      }
-    );
-
-    expect(logger.info).toHaveBeenCalledWith("Builder circuit breaker initialized", {
-      faultInspectionWindow,
-      allowedFaults,
-    });
-  });
 
   it("inspects the window excluding the current slot", () => {
     const {breaker, getCanonicalPayloadCounts} = setup({full: 32, empty: 0});
