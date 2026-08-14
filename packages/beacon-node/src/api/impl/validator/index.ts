@@ -895,7 +895,7 @@ export function getValidatorApi(
       // TODO GLOAS: add external builder api support when it is implemented
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
+      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
       // Keep a builder bid as fallback unless the circuit breaker is active
       const builderBid = circuitBreakerActive
         ? null

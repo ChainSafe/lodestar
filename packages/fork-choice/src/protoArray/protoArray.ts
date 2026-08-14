@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
@@ -690,26 +690,42 @@ export class ProtoArray {
     this.maybeUpdateBestChildAndDescendant(pendingIndex, fullIndex, currentSlot, proposerBoostRoot);
   }
 
-  /**
-   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
-   * payload (FULL variant exists). Used by the builder circuit breaker.
-   */
-  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
-    let blocksPresent = 0;
-    let payloadsRevealed = 0;
-    // Full scan, nodes are in import order not slot order (an old block can be imported after newer
-    // ones during sync or reorg resolution), so we cannot stop early on an out-of-window slot
-    for (const node of this.nodes) {
-      // Count each gloas block once via its PENDING variant, pre-gloas nodes are FULL only
-      if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
-        continue;
+  /** Count blocks selected as FULL or EMPTY by the supplied head chain in the inclusive slot range. */
+  getCanonicalPayloadCounts(
+    fromSlot: Slot,
+    toSlot: Slot,
+    headRoot: RootHex,
+    headPayloadStatus: PayloadStatus
+  ): {full: number; empty: number} {
+    let full = 0;
+    let empty = 0;
+
+    // Walk the canonical chain newest-first from the head, following ancestors via `getParentNodeIndex`.
+    // Ancestors are strictly slot-descending, so we stop as soon as a node falls below `fromSlot`
+    // instead of materializing the whole chain back to the anchor as `getAllAncestorNodes` does.
+    // This keeps the scan O(window) rather than O(chain-to-anchor), relevant under prolonged non-finality.
+    const headIndex = this.getNodeIndexByRootAndStatus(headRoot, headPayloadStatus);
+    let node = headIndex !== undefined ? this.nodes[headIndex] : undefined;
+
+    while (node !== undefined && node.slot >= fromSlot) {
+      if (
+        node.slot !== GENESIS_SLOT &&
+        node.slot <= toSlot &&
+        isGloasBlock(node) &&
+        node.payloadStatus !== PayloadStatus.PENDING
+      ) {
+        if (node.payloadStatus === PayloadStatus.FULL) {
+          full++;
+        } else {
+          empty++;
+        }
       }
-      blocksPresent++;
-      if (this.hasPayload(node.blockRoot)) {
-        payloadsRevealed++;
-      }
+
+      const parentIndex = this.getParentNodeIndex(node);
+      node = parentIndex === undefined ? undefined : this.nodes[parentIndex];
     }
-    return {blocksPresent, payloadsRevealed};
+
+    return {full, empty};
   }
 
   /**

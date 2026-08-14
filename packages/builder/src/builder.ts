@@ -1,17 +1,22 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient} from "@lodestar/api";
 import {ChainForkConfig, assertEqualParams, createBeaconConfig} from "@lodestar/config";
-import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {Clock, ClockOptions, IClock} from "@lodestar/state-transition";
-import {Logger} from "@lodestar/utils";
+import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
+import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
+import {resolveBuilderIdentity} from "./identity.js";
+import {logNodeVersion, waitForNodeReady} from "./readiness.js";
 import {BlockObserver} from "./services/blockObserver.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
+import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
 
 export type BuilderModules = {
   opts: BuilderOptions;
   builderSigner: BuilderSigner;
   blockObserver: BlockObserver;
+  builderStatusTracker: BuilderStatusTracker;
   clock: IClock;
+  index: BuilderIndex;
 };
 
 export type BuilderOptions = {
@@ -21,6 +26,7 @@ export type BuilderOptions = {
   abortController: AbortController;
   api: ApiClient;
   clock?: ClockOptions;
+  executionFeeRecipient: ExecutionAddress;
 };
 
 /**
@@ -29,61 +35,59 @@ export type BuilderOptions = {
 export class Builder {
   readonly builderSigner: BuilderSigner;
   private readonly blockObserver: BlockObserver;
+  private readonly builderStatusTracker: BuilderStatusTracker;
   private readonly controller: AbortController;
   private readonly clock: IClock;
+  private readonly index: BuilderIndex;
+  private readonly logger: Logger;
+  private readonly executionFeeRecipient: ExecutionAddress;
 
-  constructor({opts, builderSigner, blockObserver, clock}: BuilderModules) {
+  constructor({opts, builderSigner, blockObserver, builderStatusTracker, clock, index}: BuilderModules) {
     this.builderSigner = builderSigner;
     this.blockObserver = blockObserver;
+    this.builderStatusTracker = builderStatusTracker;
     this.clock = clock;
     this.controller = opts.abortController;
+    this.logger = opts.logger;
+    this.index = index;
 
+    this.executionFeeRecipient = opts.executionFeeRecipient;
+
+    this.clock.runEveryEpoch(() => this.builderStatusTracker.poll());
     this.clock.start(this.controller.signal);
     this.blockObserver.start(this.controller.signal);
+
+    this.logger.info("Builder client initialized", {
+      index: this.index,
+      executionFeeRecipient: toHex(this.executionFeeRecipient),
+    });
   }
 
   static async init(opts: BuilderOptions): Promise<Builder> {
-    const genesis = await waitForGenesis(opts.api, opts.logger, opts.abortController.signal);
-    opts.logger.info("Genesis fetched from the beacon node");
+    const {api, logger} = opts;
+    const genesis = await waitForGenesis(api, logger, opts.abortController.signal);
+    logger.info("Genesis fetched from the beacon node", {
+      genesisValidatorsRoot: toRootHex(genesis.genesisValidatorsRoot),
+    });
 
-    const specRes = await opts.api.config.getSpec();
+    const specRes = await api.config.getSpec();
     assertEqualParams(opts.config, specRes.value());
-    opts.logger.info("Verified connected beacon node and builder have the same config");
+    logger.info("Verified connected beacon node and builder have the same config");
 
     const config = createBeaconConfig(opts.config, genesis.genesisValidatorsRoot);
     const builderSigner = new BuilderSigner(config, opts.keypair);
 
-    const builderRes = await opts.api.beacon.getStateBuilders({
-      stateId: "head",
-      builderIds: [builderSigner.getPubkeyHex()],
-    });
+    await waitForNodeReady(api, logger, opts.abortController.signal);
+    await logNodeVersion(api, logger);
 
-    if (!builderRes.ok) {
-      throw Error(`Getting state builders from BN failed: ${builderRes.status}`);
-    }
+    const index = await resolveBuilderIdentity(api, logger, builderSigner.getPubkeyHex(), opts.abortController.signal);
 
-    const builders = builderRes.value();
+    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
 
-    if (builders.length === 0) {
-      throw Error(`Builder not registered: ${builderSigner.getPubkeyHex()}`);
-    }
+    const builderStatusTracker = new BuilderStatusTracker(api, logger, index);
+    const blockObserver = new BlockObserver(config, logger, api);
 
-    const builderStatus: routes.beacon.BuilderResponse = builders[0];
-
-    if (builderStatus.status !== "active") {
-      throw Error(`Builder not active: ${builderStatus.status}`);
-    }
-
-    if (builderStatus.builder.version !== PAYLOAD_BUILDER_VERSION) {
-      throw Error(
-        `Builder version mismatch: got ${builderStatus.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`
-      );
-    }
-
-    const clock = new Clock(config, opts.logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
-    const blockObserver = new BlockObserver(config, opts.logger, opts.api);
-
-    return new Builder({opts, builderSigner, blockObserver, clock});
+    return new Builder({opts, builderSigner, blockObserver, builderStatusTracker, clock, index});
   }
 
   async close(): Promise<void> {

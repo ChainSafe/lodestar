@@ -20,14 +20,16 @@ import * as ephemery from "./ephemery.js";
 import * as gnosis from "./gnosis.js";
 import * as hoodi from "./hoodi.js";
 import * as mainnet from "./mainnet.js";
+import * as plataberget from "./plataberget.js";
 import * as sepolia from "./sepolia.js";
 
-export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "hoodi" | "chiado" | "ephemery";
+export type NetworkName = "mainnet" | "dev" | "gnosis" | "sepolia" | "hoodi" | "plataberget" | "chiado" | "ephemery";
 export const networkNames: NetworkName[] = [
   "mainnet",
   "gnosis",
   "sepolia",
   "hoodi",
+  "plataberget",
   "chiado",
   "ephemery",
 
@@ -65,6 +67,8 @@ export function getNetworkData(network: NetworkName): {
       return sepolia;
     case "hoodi":
       return hoodi;
+    case "plataberget":
+      return plataberget;
     case "chiado":
       return chiado;
     case "ephemery":

@@ -7,6 +7,7 @@ import {BUILDER_INDEX_SELF_BUILD, ForkName} from "@lodestar/params";
 import {RootHex, SignedBeaconBlock, ssz} from "@lodestar/types";
 import {ErrorAborted, LogLevel, Logger, TimeoutError, defer, toRootHex} from "@lodestar/utils";
 import {BlockObserver, ObservedBlock, isRetryableBlockRetrievalError} from "../../../src/services/blockObserver.js";
+import {ApiClientStub, getApiClientStub} from "../utils/apiStub.js";
 
 const {EventType} = routes.events;
 
@@ -17,9 +18,9 @@ type Eventstream = ApiClient["events"]["eventstream"];
 type EventstreamResponse = Awaited<ReturnType<Eventstream>>;
 
 type ApiStub = {
-  api: ApiClient;
-  getBlockV2: ReturnType<typeof vi.fn<GetBlockV2>>;
-  eventstream: ReturnType<typeof vi.fn<Eventstream>>;
+  api: ApiClientStub;
+  getBlockV2: ApiClientStub["beacon"]["getBlockV2"];
+  eventstream: ApiClientStub["events"]["eventstream"];
 };
 
 describe("BlockObserver", () => {
@@ -448,15 +449,13 @@ describe("BlockObserver", () => {
 });
 
 function getApiStub(): ApiStub {
-  const getBlockV2 = vi.fn<GetBlockV2>();
-  const eventstream = vi.fn<Eventstream>();
+  const api = getApiClientStub();
+  const getBlockV2 = api.beacon.getBlockV2;
+  const eventstream = api.events.eventstream;
   eventstream.mockResolvedValue({} as unknown as EventstreamResponse);
 
   return {
-    api: {
-      beacon: {getBlockV2},
-      events: {eventstream},
-    } as unknown as ApiClient,
+    api,
     getBlockV2,
     eventstream,
   };

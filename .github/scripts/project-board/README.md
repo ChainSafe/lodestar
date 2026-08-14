@@ -42,7 +42,7 @@ The reconciler owns the `reopened` transition. The project's built-in **Item reo
 
 ## Model: reconciler, not event rules
 
-Events do not map directly to moves. Every relevant event (and the sweep) triggers a recompute of the correct lane from the PR's **current full state** — draft flag, pending user-level review requests, non-dismissed counted reviews — and writes it. This makes the automation idempotent, self-healing (missed webhooks, coalesced events, and manual drags get corrected), and handles removed requests / dismissed reviews with no special cases. An event run reconciles only the PR that triggered it. Project membership is owned by the project's built-in auto-add workflows. If auto-add has not created the card when an event runs, the event skips it and the sweep places it after auto-add completes.
+Events do not map directly to moves. Every relevant event triggers a recompute of the correct lane from the PR's **current full state** — draft flag, pending user-level review requests, non-dismissed counted reviews — and writes it. The sweep does the same only for cards already in an automated lane. This makes the automation idempotent, self-healing (missed webhooks, coalesced events, and manual drags within automated lanes get corrected), and handles removed requests / dismissed reviews with no special cases. An event run reconciles only the PR that triggered it. Project membership and initial Status are owned by the project's built-in workflows. If auto-add has not created the card when an event runs, the event skips it and the native project workflow places it.
 
 `computeStatus(pr)` precedence:
 
@@ -64,19 +64,19 @@ GraphQL connections use bounded windows sized above the board's observed usage. 
 - Triggers:
   - `pull_request_target` (opened, ready_for_review, converted_to_draft, review_requested, review_request_removed, reopened) — runs with secrets even for fork PRs; safe because the workflow never checks out or executes PR code.
   - `pull_request_review` (submitted, dismissed) — **no secrets for fork PRs** (documented GitHub restriction), so review-driven moves on fork PRs are picked up by the sweep instead (≤15 min latency). Same-repo PRs move instantly.
-  - `schedule` — sweep every 15 minutes: recompute every open PR card on the board, including statusless and incorrectly placed cards; self-heals fork-PR reviews, missed events, auto-add races, and manual drags. A failure on one PR is logged without blocking the remaining cards; the job fails with an aggregate summary after all cards are attempted.
+  - `schedule` — sweep every 15 minutes: recompute open PR cards already in `In Progress`, `Review Requested`, or `Awaiting Author`; self-heals fork-PR reviews, missed events, and manual drags within those lanes. Statusless cards and cards in Backlog/Ready/Done are left alone. A failure on one PR is logged without blocking the remaining cards; the job fails with an aggregate summary after all cards are attempted.
 - Concurrency: one group per PR, `cancel-in-progress: false`. GitHub keeps only the newest pending run per group; coalescing is safe because the reconciler recomputes from full state.
-- Auth: the default `GITHUB_TOKEN` cannot access org projects (documented). Interim: fine-grained PAT (resource owner ChainSafe; org **Projects: read/write**, repo **Pull requests: read** + **Metadata: read**) stored as the `PROJECT_BOARD_TOKEN` repository secret in Lodestar and every caller repository. Target: an org-owned GitHub App — swapping replaces the secret with an `actions/create-github-app-token` step; logic unchanged. A missing token is tolerated only when the event payload confirms an external-fork review or a Dependabot-triggered PR event; every other context fails with `PROJECT_BOARD_CONFIG_TOKEN_MISSING`.
+- Auth: the default `GITHUB_TOKEN` cannot access org projects (documented). Interim: fine-grained PAT (resource owner ChainSafe; org **Projects: read/write** + **Members: read**, repo **Pull requests: read** + **Metadata: read**) stored as the `PROJECT_BOARD_TOKEN` repository secret in Lodestar and every caller repository. Target: an org-owned GitHub App — swapping replaces the secret with an `actions/create-github-app-token` step; logic unchanged. A missing token is tolerated only when the event payload confirms an external-fork review or a Dependabot-triggered PR event; every other context fails with `PROJECT_BOARD_CONFIG_TOKEN_MISSING`.
 
 ## Scope
 
 Every PR targeting a participating ChainSafe repository is in scope, including PRs from external forks. The project's built-in auto-add workflows add those PRs to project #75. This script only owns the Status field and never adds or removes project items.
 
-- **Event runs are idempotent and unconditional:** a PR event reasserts the computed status no matter which lane the card is in. If auto-add has not created the card yet, the event skips it and the next sweep assigns its status.
-- **The sweep covers every open PR card:** statusless cards and cards in Backlog/Ready/Done are moved to the computed lane. Open PR status is never managed manually.
+- **Event runs are idempotent and unconditional:** a PR event reasserts the computed status no matter which lane the card is in. If auto-add has not created the card yet, the event skips it and the native project workflows own initial placement.
+- **The sweep is scoped:** only open PR cards already in `In Progress`, `Review Requested`, or `Awaiting Author` are reconciled. Statusless cards and cards in Backlog/Ready/Done are never changed by a sweep.
 - **Closed and merged PRs are excluded:** the project's built-in close, merge, and archive workflows own their final status and removal from the board.
 
-The Status field is 100% automation-owned for open PR cards. The same workflow will be deployed identically to every participating ChainSafe repository.
+The three automated lanes are automation-owned for open PR cards. The same workflow will be deployed identically to every participating ChainSafe repository.
 
 ## Rollout checklist
 
@@ -84,9 +84,9 @@ Complete this checklist for Lodestar and every participating repository:
 
 - **Project workflows:** enable an auto-add workflow that matches every PR from the repository. Keep the native close and merge workflows responsible for `Done`. Configure auto-archive so only closed or merged PRs disappear. Keep the native **Item reopened** workflow disabled because the reconciler owns reopened PRs.
 - **Project schema:** verify the Status field contains `In Progress`, `Review Requested`, and `Awaiting Author` with those exact names.
-- **Token scope:** create a fine-grained PAT owned by ChainSafe with organization **Projects: read/write** and repository **Pull requests: read** plus **Metadata: read** for every participating repository. Store it as the `PROJECT_BOARD_TOKEN` repository secret in Lodestar and each caller repository.
+- **Token scope:** create a fine-grained PAT owned by ChainSafe with organization **Projects: read/write** plus **Members: read**, and repository **Pull requests: read** plus **Metadata: read** for every participating repository. Store it as the `PROJECT_BOARD_TOKEN` repository secret in Lodestar and each caller repository.
 - **Caller selection:** copy [`project-board-caller.yml`](./project-board-caller.yml) only into repositories covered by the project's auto-add workflows. Confirm that its `@unstable` workflow reference matches the protected, audited rollout branch.
-- **Dry run:** `PROJECT_BOARD_DRY_RUN` is optional and defaults to `true`. Exercise representative open, ready, draft, review-request, review, dismissal, and reopen events. Confirm the logs show the expected lane without changing Status. Confirm the scheduled Lodestar sweep covers cards from every participating repository.
+- **Dry run:** `PROJECT_BOARD_DRY_RUN` is optional and defaults to `true`. Exercise representative open, ready, draft, review-request, review, dismissal, and reopen events. Confirm the logs show the expected lane without changing Status. Confirm the scheduled Lodestar sweep covers managed-lane cards from every participating repository and skips Ready and statusless cards.
 - **Enable writes:** set the `PROJECT_BOARD_DRY_RUN` Actions repository variable to `false` in Lodestar and each caller repository. Only `false` or `0` enables writes. Exercise one representative PR before broad rollout and confirm both event-driven updates and the scheduled sweep.
 - **Monitoring:** monitor Actions logs during rollout for `PROJECT_BOARD_CONFIG_TOKEN_MISSING`, `PROJECT_BOARD_GRAPHQL_CONNECTION_TRUNCATED`, `PROJECT_BOARD_PR_RECONCILIATION_FAILED`, and aggregate sweep failures. Verify secretless external-fork review events are repaired by the next scheduled sweep.
 - **Rollback:** unset `PROJECT_BOARD_DRY_RUN`, set it to `true`, or disable the caller workflow in affected repositories. Leave native auto-add, close, merge, and archive workflows enabled so project membership and terminal states continue to work. Re-enable the reconciler and run a sweep after correcting the issue.

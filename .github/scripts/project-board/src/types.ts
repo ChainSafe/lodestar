@@ -8,6 +8,13 @@ export const STATUS_TO_LANE: Record<Status, string> = {
   "Awaiting Author": "Awaiting Author",
 };
 
+const SWEEP_LANES: ReadonlySet<string> = new Set(Object.values(STATUS_TO_LANE));
+
+/** Whether the scheduled sweep owns the card's current Status lane. */
+export function isSweepLane(lane: string | null): boolean {
+  return lane !== null && SWEEP_LANES.has(lane);
+}
+
 export interface ReviewInfo {
   authorLogin: string;
   /** true only for User-type authors; Bot-type (GitHub Apps) and deleted authors don't count. */
