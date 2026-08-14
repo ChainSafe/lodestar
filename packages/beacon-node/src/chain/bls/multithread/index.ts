@@ -7,7 +7,6 @@ import {Worker, spawn} from "@chainsafe/threads";
 // biome-ignore lint/suspicious/noGlobalAssign: We need the global `self` to reassign module properties later
 self = undefined;
 
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Logger} from "@lodestar/utils";
 import {Metrics} from "../../../metrics/index.js";
@@ -214,7 +213,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
    * Verify signature sets of the same message, only supports worker verification.
    */
   async verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    sets: {index: number; signature: Uint8Array}[],
     message: Uint8Array,
     opts: Omit<VerifySignatureOpts, "verifyOnMainThread"> = {}
   ): Promise<boolean[]> {

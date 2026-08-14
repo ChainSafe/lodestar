@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {ISignatureSet} from "@lodestar/state-transition";
 
 export type VerifySignatureOpts = {
@@ -53,7 +52,7 @@ export interface IBlsVerifier {
    *   - only support `batchable` option
    */
   verifySignatureSetsSameMessage(
-    sets: {publicKey: PublicKey; signature: Uint8Array}[],
+    sets: {index: number; signature: Uint8Array}[],
     messsage: Uint8Array,
     opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;

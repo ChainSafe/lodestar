@@ -1,5 +1,5 @@
 import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
-import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
@@ -12,7 +12,7 @@ describe("chain / bls / multithread queue", () => {
   let controller: AbortController;
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   const sets: ISignatureSet[] = [];
-  const sameMessageSets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
+  const sameMessageSets: {index: number; signature: Uint8Array}[] = [];
   const sameMessage = Buffer.alloc(32, 100);
 
   beforeAll(() => {
@@ -27,11 +27,12 @@ describe("chain / bls / multithread queue", () => {
         signingRoot: msg,
         signature: sig.toBytes(),
       });
+      const index = pubkeyCache.size;
+      pubkeyCache.append(index, pk.toBytes());
       sameMessageSets.push({
-        publicKey: pk,
+        index,
         signature: sk.sign(sameMessage).toBytes(),
       });
-      pubkeyCache.append(pubkeyCache.size, pk.toBytes());
     }
   });
 
