@@ -6,9 +6,11 @@ import {
   Signature,
   aggregatePublicKeys,
   aggregateSignatures,
+  asyncAggregateWithRandomness,
   verify,
   verifyMultipleAggregateSignatures,
 } from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {linspace} from "../../../src/util/numpy.js";
 
 describe("BLS ops", () => {
@@ -123,6 +125,51 @@ describe("BLS ops", () => {
       beforeEach: () => linspace(0, count - 1).map((i) => getKeypair(i).publicKey),
       fn: (pubkeys) => {
         aggregatePublicKeys(pubkeys);
+      },
+    });
+  }
+
+  // ---- by-index variants: keys resolve inside lodestar-z's native pubkey cache ----
+
+  // Seed the process-wide cache once with the benchmark keypairs; the cache is
+  // append-only and rejects duplicates, so resolve-or-append per key.
+  const cacheIndexOf: number[] = [];
+  for (let i = 0; i < 128; i++) {
+    const bytes = getKeypair(i).publicKey.toBytes();
+    const existing = pubkeyCache.getIndex(bytes);
+    if (existing !== null) {
+      cacheIndexOf.push(existing);
+    } else {
+      const index = pubkeyCache.size;
+      pubkeyCache.append(index, bytes);
+      cacheIndexOf.push(index);
+    }
+  }
+
+  // The production same-message path (gossip attestation batches): keys are
+  // referenced by validator index and resolved + randomness-aggregated natively.
+  // Includes the randomness weighting the plain-aggregate bench above omits.
+  for (const count of [3, 8, 32, 64, 128]) {
+    bench({
+      id: `BLS asyncAggregateWithRandomness by index - same message - ${count} - blst`,
+      beforeEach: () =>
+        linspace(0, count - 1).map((i) => ({index: cacheIndexOf[i], sig: getSetSameMessage(i).signature})),
+      fn: async (sets) => {
+        const {pk, sig} = await asyncAggregateWithRandomness(sets);
+        const isValid = verify(seedMessage, pk, sig);
+        if (!isValid) throw Error("Invalid");
+      },
+    });
+  }
+
+  // Counterpart of aggregatePubkeys: resolution + summation in one native call,
+  // no PublicKey objects on the JS side.
+  for (const count of [32, 128]) {
+    bench({
+      id: `BLS aggregatePubkeys by index ${count} - lodestar-z pubkeyCache`,
+      beforeEach: () => linspace(0, count - 1).map((i) => cacheIndexOf[i]),
+      fn: (indices) => {
+        pubkeyCache.aggregate(indices);
       },
     });
   }
