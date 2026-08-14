@@ -45,7 +45,7 @@ async function isNodeReady(api: ApiClient, logger: Logger): Promise<boolean> {
 
     return true;
   } catch (e) {
-    logger.warn("Cannot reach the beacon node", {}, e as Error);
+    logger.error("Cannot reach the beacon node", {}, e as Error);
     return false;
   }
 }
