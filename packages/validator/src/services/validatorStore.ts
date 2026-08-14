@@ -80,8 +80,8 @@ type DefaultProposerConfig = {
   strictFeeRecipientCheck: boolean;
   feeRecipient: ExecutionAddress;
   builder: {
-    gasLimit: number;
     // Left undefined when not configured so the fork-appropriate default can be resolved per slot
+    gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
     boostFactor: bigint;
   };
@@ -182,7 +182,7 @@ export class ValidatorStore {
       strictFeeRecipientCheck: defaultConfig.strictFeeRecipientCheck ?? false,
       feeRecipient: defaultConfig.feeRecipient ?? defaultOptions.suggestedFeeRecipient,
       builder: {
-        gasLimit: defaultConfig.builder?.gasLimit ?? defaultOptions.defaultGasLimit,
+        gasLimit: defaultConfig.builder?.gasLimit,
         selection: defaultConfig.builder?.selection,
         boostFactor: builderBoostFactor,
       },
@@ -283,17 +283,26 @@ export class ValidatorStore {
     pubkeyHex: PubkeyHex,
     slot?: Slot
   ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
-    // Builder bids post-gloas are in-protocol over p2p, so the default strategy uses them
-    // (as if `--builder` was set), unless the validator explicitly opted out. Pre-gloas
-    // there is no in-protocol builder, so the default remains local-only (executiononly).
-    const defaultSelection =
-      slot !== undefined && this.config.getForkSeq(slot) >= ForkSeq.gloas
-        ? defaultOptions.builderAliasSelection
-        : defaultOptions.builderSelection;
-    const selection =
+    // Builder bids post-gloas are in-protocol, so the default strategy uses them regardless of
+    // whether they are received over p2p or through a builder API. Pre-gloas there is no
+    // in-protocol builder, so the default remains local-only (executiononly).
+    const isPostGloas = slot !== undefined && this.config.getForkSeq(slot) >= ForkSeq.gloas;
+    const defaultSelection = isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
+    let selection =
       this.validators.get(pubkeyHex)?.builder?.selection ??
       this.defaultProposerConfig.builder.selection ??
       defaultSelection;
+
+    // Post-Gloas block production uses standard builder boost factor. Need to normalize the
+    // gloas-deprecated "builderonly" and "executiononly" to the gloas fallback "builderalways"
+    // and "executionalways" equivalent before deriving the boost factor.
+    if (isPostGloas) {
+      if (selection === routes.validator.BuilderSelection.BuilderOnly) {
+        selection = routes.validator.BuilderSelection.BuilderAlways;
+      } else if (selection === routes.validator.BuilderSelection.ExecutionOnly) {
+        selection = routes.validator.BuilderSelection.ExecutionAlways;
+      }
+    }
 
     let boostFactor: bigint;
     switch (selection) {
@@ -327,12 +336,33 @@ export class ValidatorStore {
     );
   }
 
-  getGasLimit(pubkeyHex: PubkeyHex): number {
+  getConfiguredDefaultGasLimit(): number | undefined {
+    return this.defaultProposerConfig.builder.gasLimit;
+  }
+
+  getGasLimit(pubkeyHex: PubkeyHex, slot: Slot, logger?: LoggerVc): number {
     const validatorData = this.validators.get(pubkeyHex);
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
-    return validatorData?.builder?.gasLimit ?? this.defaultProposerConfig.builder.gasLimit;
+
+    const configuredGasLimit = validatorData.builder?.gasLimit ?? this.defaultProposerConfig.builder.gasLimit;
+    const scheduledGasLimit = this.config.getScheduledGasLimit(computeEpochAtSlot(slot));
+
+    if (configuredGasLimit !== undefined) {
+      if (scheduledGasLimit !== undefined && configuredGasLimit > scheduledGasLimit) {
+        logger?.warn("Configured gas limit exceeds recommended maximum", {
+          pubkey: pubkeyHex,
+          slot,
+          configuredGasLimit,
+          recommendedGasLimit: scheduledGasLimit,
+        });
+      }
+
+      return configuredGasLimit;
+    }
+
+    return scheduledGasLimit ?? defaultOptions.defaultGasLimit;
   }
 
   setGasLimit(pubkeyHex: PubkeyHex, gasLimit: number): void {

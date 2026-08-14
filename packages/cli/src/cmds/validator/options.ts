@@ -248,8 +248,9 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   },
 
   defaultGasLimit: {
-    description: "Suggested gas limit to the engine/builder for building execution payloads. Only used post merge.",
-    defaultDescription: `${defaultOptions.defaultGasLimit}`,
+    description:
+      "Override the gas limit preference sent to the engine/builder. If unset, the network GAS_LIMIT_SCHEDULE is evaluated for each duty epoch from Gloas, with the current default used before Gloas or its first entry.",
+    defaultDescription: `GAS_LIMIT_SCHEDULE from Gloas (current default: ${defaultOptions.defaultGasLimit})`,
     type: "number",
   },
 
@@ -262,7 +263,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.selection": {
     type: "string",
     description:
-      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or `executiononly`",
+      "Builder block selection strategy `default`, `maxprofit`, `builderalways`, `executionalways`, or pre-Gloas `executiononly`",
     defaultDescription: `${defaultOptions.builderSelection}`,
     group: "builder",
   },
