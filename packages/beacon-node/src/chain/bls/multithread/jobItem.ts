@@ -1,4 +1,4 @@
-import {PublicKey, asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
+import {asyncAggregateWithRandomness} from "@chainsafe/lodestar-z/blst";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {Metrics} from "../../../metrics/metrics.js";
@@ -24,7 +24,7 @@ export type JobQueueItemSameMessage = {
   reject: (error?: Error) => void;
   addedTimeMs: number;
   opts: VerifySignatureOpts;
-  sets: {publicKey: PublicKey; signature: Uint8Array}[];
+  sets: {index: number; signature: Uint8Array}[];
   message: Uint8Array;
 };
 
@@ -68,7 +68,7 @@ export async function jobItemWorkReq(
     case JobQueueItemType.sameMessage: {
       const timer = metrics?.blsThreadPool.aggregateWithRandomnessAsyncDuration.startTimer();
       const {pk, sig} = await asyncAggregateWithRandomness(
-        job.sets.map((set) => ({pk: set.publicKey, sig: set.signature}))
+        job.sets.map((set) => ({index: set.index, sig: set.signature}))
       );
       timer?.();
 
@@ -106,8 +106,8 @@ export function jobItemSameMessageToMultiSet(job: JobQueueItemSameMessage): Link
           opts: {batchable: false, priority: job.opts.priority},
           sets: [
             {
-              type: SignatureSetType.single,
-              pubkey: set.publicKey,
+              type: SignatureSetType.indexed,
+              index: set.index,
               signature: set.signature,
               signingRoot: job.message,
             },

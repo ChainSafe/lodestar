@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from "vitest";
-import {PublicKey, SecretKey, Signature} from "@chainsafe/lodestar-z/blst";
+import {SecretKey, Signature, aggregateSignatures} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
@@ -28,8 +28,8 @@ describe("BlsVerifier ", () => {
           // different signing roots
           const signingRoot = Buffer.alloc(32, i);
           return {
-            type: SignatureSetType.single,
-            pubkey: secretKey.toPublicKey(),
+            type: SignatureSetType.indexed,
+            index: i,
             signingRoot,
             signature: secretKey.sign(signingRoot).toBytes(),
           };
@@ -38,6 +38,28 @@ describe("BlsVerifier ", () => {
 
       it("should verify all signatures", async () => {
         expect(await verifier.verifySignatureSets(sets)).toBe(true);
+      });
+
+      it("should verify a mixed batch of indexed, single, and aggregate sets", async () => {
+        // single: a key that is NOT in the validator registry (deposit /
+        // BLS-to-execution shape) — carried in the set, group-checked at verify.
+        const outsiderSk = SecretKey.fromKeygen(Buffer.alloc(32, 99));
+        const singleRoot = Buffer.alloc(32, 42);
+        // aggregate: registry validators 0 and 1 co-sign one root.
+        const aggRoot = Buffer.alloc(32, 43);
+        const aggSignature = aggregateSignatures([secretKeys[0].sign(aggRoot), secretKeys[1].sign(aggRoot)]).toBytes();
+
+        const mixed: ISignatureSet[] = [
+          ...sets,
+          {
+            type: SignatureSetType.single,
+            pubkey: outsiderSk.toPublicKey(),
+            signingRoot: singleRoot,
+            signature: outsiderSk.sign(singleRoot).toBytes(),
+          },
+          {type: SignatureSetType.aggregate, indices: [0, 1], signingRoot: aggRoot, signature: aggSignature},
+        ];
+        expect(await verifier.verifySignatureSets(mixed)).toBe(true);
       });
 
       it("should return false if at least one signature is invalid", async () => {
@@ -56,14 +78,14 @@ describe("BlsVerifier ", () => {
     });
 
     describe(`${verifier.constructor.name} - verifySignatureSetsSameMessage`, () => {
-      let sets: {publicKey: PublicKey; signature: Uint8Array}[] = [];
+      let sets: {index: number; signature: Uint8Array}[] = [];
       // same signing root for all sets
       const signingRoot = Buffer.alloc(32, 100);
 
       beforeEach(() => {
-        sets = secretKeys.map((secretKey) => {
+        sets = secretKeys.map((secretKey, i) => {
           return {
-            publicKey: secretKey.toPublicKey(),
+            index: i,
             signature: secretKey.sign(signingRoot).toBytes(),
           };
         });

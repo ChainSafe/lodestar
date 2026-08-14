@@ -1,4 +1,3 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {IBlsVerifier} from "../../src/chain/bls/index.js";
 
 export class BlsVerifierMock implements IBlsVerifier {
@@ -8,7 +7,7 @@ export class BlsVerifierMock implements IBlsVerifier {
     return this.isValidResult;
   }
 
-  async verifySignatureSetsSameMessage(sets: {publicKey: PublicKey; signature: Uint8Array}[]): Promise<boolean[]> {
+  async verifySignatureSetsSameMessage(sets: {index: number; signature: Uint8Array}[]): Promise<boolean[]> {
     return sets.map(() => this.isValidResult);
   }
 
