@@ -1,4 +1,4 @@
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {getFaultInspectionParams} from "../execution/builder/http.js";
@@ -43,12 +43,12 @@ export class BuilderCircuitBreaker {
   }
 
   /** Whether builder bids must be ignored for a block produced at clockSlot */
-  isActive(clockSlot: Slot): boolean {
-    this.update(clockSlot);
+  isActive(clockSlot: Slot, head: ProtoBlock): boolean {
+    this.update(clockSlot, head);
     return this.active;
   }
 
-  update(clockSlot: Slot): void {
+  update(clockSlot: Slot, head: ProtoBlock): void {
     if (clockSlot <= this.lastUpdatedSlot) {
       return;
     }
@@ -57,7 +57,8 @@ export class BuilderCircuitBreaker {
     // Exclude clockSlot itself, its payload status may still be unresolved
     const {full, empty} = this.modules.forkChoice.getCanonicalPayloadCounts(
       Math.max(clockSlot - this.faultInspectionWindow, 0),
-      clockSlot - 1
+      clockSlot - 1,
+      head
     );
     const canonicalBlocks = full + empty;
     const faults = empty;

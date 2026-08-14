@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {BuilderCircuitBreaker} from "../../../src/chain/builderCircuitBreaker.js";
@@ -9,6 +9,7 @@ describe("BuilderCircuitBreaker", () => {
   const faultInspectionWindow = 32;
   const allowedFaults = 8;
   const logger = testLogger("builderCircuitBreaker");
+  const head = {} as ProtoBlock;
 
   function setup(counts: {full: number; empty: number}) {
     const getCanonicalPayloadCounts = vi.fn().mockReturnValue(counts);
@@ -34,39 +35,39 @@ describe("BuilderCircuitBreaker", () => {
   for (const [name, stats, expected] of testCases) {
     it(`${name} - active=${expected}`, () => {
       const {breaker} = setup(stats);
-      expect(breaker.isActive(100)).toBe(expected);
+      expect(breaker.isActive(100, head)).toBe(expected);
     });
   }
 
   it("inspects the window excluding the current slot", () => {
     const {breaker, getCanonicalPayloadCounts} = setup({full: 32, empty: 0});
-    breaker.isActive(100);
-    expect(getCanonicalPayloadCounts).toHaveBeenCalledWith(100 - faultInspectionWindow, 99);
+    breaker.isActive(100, head);
+    expect(getCanonicalPayloadCounts).toHaveBeenCalledWith(100 - faultInspectionWindow, 99, head);
   });
 
   it("requires a minimum sample to deactivate", () => {
     const {breaker, getCanonicalPayloadCounts} = setup({full: 0, empty: 1});
-    expect(breaker.isActive(100)).toBe(true);
+    expect(breaker.isActive(100, head)).toBe(true);
 
     getCanonicalPayloadCounts.mockReturnValue({full: 0, empty: 0});
-    expect(breaker.isActive(101)).toBe(true);
+    expect(breaker.isActive(101, head)).toBe(true);
 
     getCanonicalPayloadCounts.mockReturnValue({full: 3, empty: 0});
-    expect(breaker.isActive(102)).toBe(true);
+    expect(breaker.isActive(102, head)).toBe(true);
 
     getCanonicalPayloadCounts.mockReturnValue({full: 3, empty: 1});
-    expect(breaker.isActive(103)).toBe(false);
+    expect(breaker.isActive(103, head)).toBe(false);
   });
 
   it("only updates once per slot", () => {
     const {breaker, getCanonicalPayloadCounts} = setup({full: 32, empty: 0});
-    expect(breaker.isActive(100)).toBe(false);
+    expect(breaker.isActive(100, head)).toBe(false);
 
     getCanonicalPayloadCounts.mockReturnValue({full: 0, empty: 32});
-    expect(breaker.isActive(100)).toBe(false);
+    expect(breaker.isActive(100, head)).toBe(false);
     expect(getCanonicalPayloadCounts).toHaveBeenCalledTimes(1);
 
-    expect(breaker.isActive(101)).toBe(true);
+    expect(breaker.isActive(101, head)).toBe(true);
     expect(getCanonicalPayloadCounts).toHaveBeenCalledTimes(2);
   });
 

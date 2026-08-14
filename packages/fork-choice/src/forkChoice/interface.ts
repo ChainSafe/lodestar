@@ -249,8 +249,8 @@ export interface IForkChoice {
   hasPayloadUnsafe(blockRoot: Root): boolean;
   hasPayloadHexUnsafe(blockRoot: RootHex): boolean;
   getSlotsPresent(windowStart: number): number;
-  /** Count canonical blocks selected as FULL or EMPTY in the inclusive slot range. */
-  getCanonicalPayloadCounts(fromSlot: Slot, toSlot: Slot): {full: number; empty: number};
+  /** Count FULL and EMPTY blocks on the supplied head chain in the inclusive slot range. */
+  getCanonicalPayloadCounts(fromSlot: Slot, toSlot: Slot, head: ProtoBlock): {full: number; empty: number};
   getPTCVotes(blockRootHex: RootHex): (boolean | null)[] | null;
   /** Raw PTC vote tallies for the debug fork choice endpoint; `null` for pre-Gloas roots. */
   getPTCVoteCounts(blockRootHex: RootHex): {
