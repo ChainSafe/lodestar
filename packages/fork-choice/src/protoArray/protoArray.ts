@@ -700,37 +700,29 @@ export class ProtoArray {
     let full = 0;
     let empty = 0;
 
-    const countNode = (node: ProtoNode): void => {
-      if (
-        node.slot === GENESIS_SLOT ||
-        node.slot > toSlot ||
-        !isGloasBlock(node) ||
-        node.payloadStatus === PayloadStatus.PENDING
-      ) {
-        return;
-      }
-
-      if (node.payloadStatus === PayloadStatus.FULL) {
-        full++;
-      } else {
-        empty++;
-      }
-    };
-
-    // Walk the canonical chain newest-first: the resolved head, then its ancestors. Ancestors are
-    // strictly slot-descending, so we can stop as soon as a node falls below `fromSlot` instead of
-    // materializing the whole chain back to the anchor as `getAllAncestorNodes` does. This keeps the
-    // scan O(window) rather than O(chain-to-anchor), which matters under prolonged non-finality.
+    // Walk the canonical chain newest-first (resolved head, then ancestors via getParentNodeIndex).
+    // Ancestors are strictly slot-descending, so we stop as soon as a node falls below `fromSlot`
+    // instead of materializing the whole chain back to the anchor as `getAllAncestorNodes` does.
+    // This keeps the scan O(window) rather than O(chain-to-anchor), relevant under prolonged non-finality.
     const headIndex = this.getNodeIndexByRootAndStatus(headRoot, headPayloadStatus);
-    const head = headIndex !== undefined ? this.nodes[headIndex] : undefined;
-    if (head !== undefined && head.slot >= fromSlot) {
-      countNode(head);
-      for (const node of this.iterateAncestorNodesFromNode(head)) {
-        if (node.slot < fromSlot) {
-          break;
+    let node = headIndex !== undefined ? this.nodes[headIndex] : undefined;
+
+    while (node !== undefined && node.slot >= fromSlot) {
+      if (
+        node.slot !== GENESIS_SLOT &&
+        node.slot <= toSlot &&
+        isGloasBlock(node) &&
+        node.payloadStatus !== PayloadStatus.PENDING
+      ) {
+        if (node.payloadStatus === PayloadStatus.FULL) {
+          full++;
+        } else {
+          empty++;
         }
-        countNode(node);
       }
+
+      const parentIndex = this.getParentNodeIndex(node);
+      node = parentIndex === undefined ? undefined : this.nodes[parentIndex];
     }
 
     return {full, empty};
