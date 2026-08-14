@@ -1,4 +1,4 @@
-import {IForkChoice} from "@lodestar/fork-choice";
+import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {Slot} from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
 import {getFaultInspectionParams} from "../execution/builder/http.js";
@@ -21,9 +21,9 @@ const MIN_BLOCKS_TO_DEACTIVATE = 4;
 /**
  * Post-gloas circuit breaker for builder bids. The beacon block is produced by the proposer
  * regardless of bid source, so missed blocks are not a useful builder health signal. Instead
- * count blocks whose payload was never revealed. Activate when the non-reveal rate exceeds the
- * fault budget, and resume selecting builder bids only when the observed blocks are within budget
- * and meet the minimum recovery sample size.
+ * count canonical blocks selected as EMPTY. Activate when the proportion of EMPTY blocks exceeds
+ * the fault budget, and resume selecting builder bids only when the observed blocks are within
+ * budget and meet the minimum recovery sample size.
  */
 export class BuilderCircuitBreaker {
   readonly faultInspectionWindow: number;
@@ -39,46 +39,49 @@ export class BuilderCircuitBreaker {
     const {faultInspectionWindow, allowedFaults} = getFaultInspectionParams(opts);
     this.faultInspectionWindow = faultInspectionWindow;
     this.allowedFaults = allowedFaults;
+    this.modules.logger.info("Builder circuit breaker initialized", {faultInspectionWindow, allowedFaults});
   }
 
   /** Whether builder bids must be ignored for a block produced at clockSlot */
-  isActive(clockSlot: Slot): boolean {
-    this.update(clockSlot);
+  isActive(clockSlot: Slot, head: ProtoBlock): boolean {
+    this.update(clockSlot, head);
     return this.active;
   }
 
-  update(clockSlot: Slot): void {
+  update(clockSlot: Slot, head: ProtoBlock): void {
     if (clockSlot <= this.lastUpdatedSlot) {
       return;
     }
     this.lastUpdatedSlot = clockSlot;
 
-    // Exclude clockSlot itself, its payload reveal may still be in flight
-    const {blocksPresent, payloadsRevealed} = this.modules.forkChoice.getPayloadRevealCounts(
+    // Exclude clockSlot itself, its payload status may still be unresolved
+    const {full, empty} = this.modules.forkChoice.getCanonicalPayloadCounts(
       Math.max(clockSlot - this.faultInspectionWindow, 0),
-      clockSlot - 1
+      clockSlot - 1,
+      head
     );
-    const faults = blocksPresent - payloadsRevealed;
+    const canonicalBlocks = full + empty;
 
     const wasActive = this.active;
-    // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
-    const exceedsFaultBudget = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    // Scale the fault budget by canonical blocks so sparse windows still trigger on high EMPTY rates
+    const exceedsFaultBudget = empty * this.faultInspectionWindow > this.allowedFaults * canonicalBlocks;
     if (exceedsFaultBudget) {
       this.active = true;
-    } else if (blocksPresent >= MIN_BLOCKS_TO_DEACTIVATE) {
+    } else if (canonicalBlocks >= MIN_BLOCKS_TO_DEACTIVATE) {
       // Require a minimum sample within the fault budget before accepting builder bids again
       this.active = false;
     }
 
     this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);
-    this.modules.metrics?.builderCircuitBreaker.faults.set(faults);
-    this.modules.metrics?.builderCircuitBreaker.blocksPresent.set(blocksPresent);
-    this.modules.metrics?.builderCircuitBreaker.payloadsRevealed.set(payloadsRevealed);
+    this.modules.metrics?.builderCircuitBreaker.canonicalBlocks.set(canonicalBlocks);
+    this.modules.metrics?.builderCircuitBreaker.fullBlocks.set(full);
+    this.modules.metrics?.builderCircuitBreaker.emptyBlocks.set(empty);
 
     const logCtx = {
       clockSlot,
-      blocksPresent,
-      faults,
+      canonicalBlocks,
+      full,
+      empty,
       faultInspectionWindow: this.faultInspectionWindow,
       allowedFaults: this.allowedFaults,
     };
