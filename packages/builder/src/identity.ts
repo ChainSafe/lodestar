@@ -1,7 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {BuilderIndex, BuilderStatus} from "@lodestar/types";
-import {Logger, sleep, toHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
 
 export const WAITING_FOR_BUILDER_POLL_MS = 10 * 1000;
 
@@ -54,7 +54,7 @@ async function waitForBuilder(
   id: routes.beacon.BuilderId,
   signal: AbortSignal
 ): Promise<routes.beacon.BuilderResponse> {
-  while (true) {
+  while (!signal.aborted) {
     const builder = await fetchBuilder(api, id);
     if (builder?.status === "active") {
       return builder;
@@ -69,6 +69,7 @@ async function waitForBuilder(
     }
     await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
   }
+  throw new ErrorAborted("waitForBuilder");
 }
 
 async function fetchBuilder(
