@@ -700,22 +700,29 @@ export class ProtoArray {
     let full = 0;
     let empty = 0;
 
-    for (const node of this.getAllAncestorNodes(headRoot, headPayloadStatus)) {
+    // Walk the canonical chain newest-first (resolved head, then ancestors via getParentNodeIndex).
+    // Ancestors are strictly slot-descending, so we stop as soon as a node falls below `fromSlot`
+    // instead of materializing the whole chain back to the anchor as `getAllAncestorNodes` does.
+    // This keeps the scan O(window) rather than O(chain-to-anchor), relevant under prolonged non-finality.
+    const headIndex = this.getNodeIndexByRootAndStatus(headRoot, headPayloadStatus);
+    let node = headIndex !== undefined ? this.nodes[headIndex] : undefined;
+
+    while (node !== undefined && node.slot >= fromSlot) {
       if (
-        node.slot === GENESIS_SLOT ||
-        node.slot < fromSlot ||
-        node.slot > toSlot ||
-        !isGloasBlock(node) ||
-        node.payloadStatus === PayloadStatus.PENDING
+        node.slot !== GENESIS_SLOT &&
+        node.slot <= toSlot &&
+        isGloasBlock(node) &&
+        node.payloadStatus !== PayloadStatus.PENDING
       ) {
-        continue;
+        if (node.payloadStatus === PayloadStatus.FULL) {
+          full++;
+        } else {
+          empty++;
+        }
       }
 
-      if (node.payloadStatus === PayloadStatus.FULL) {
-        full++;
-      } else {
-        empty++;
-      }
+      const parentIndex = this.getParentNodeIndex(node);
+      node = parentIndex === undefined ? undefined : this.nodes[parentIndex];
     }
 
     return {full, empty};
