@@ -15,6 +15,7 @@ describe("Identity", () => {
   const pubkeyString = toHex(pubkey);
   const balance = 1;
   const version = PAYLOAD_BUILDER_VERSION;
+  const getSlot = () => 1;
 
   let abortController: AbortController;
 
@@ -50,7 +51,7 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
 
-    const builderIndex = await resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal);
+    const builderIndex = await resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, getSlot);
     expect(builderIndex).toEqual(index);
   });
 
@@ -59,7 +60,7 @@ describe("Identity", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version: newVersion})
     );
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal)).rejects.toThrow(
+    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, getSlot)).rejects.toThrow(
       `Builder version mismatch: got ${newVersion}, expected ${version}`
     );
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [pubkeyString]}));
@@ -68,7 +69,7 @@ describe("Identity", () => {
   it("throws on pubkey mismatch", async () => {
     const invalidPubkey = Buffer.alloc(48, 2);
     api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(index, {pubkey: invalidPubkey}));
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal)).rejects.toThrow(
+    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, getSlot)).rejects.toThrow(
       `Pubkey mismatch: got=${toHex(invalidPubkey)} expected=${pubkeyString}`
     );
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [pubkeyString]}));
@@ -76,7 +77,7 @@ describe("Identity", () => {
 
   it("throws on builder status exited", async () => {
     api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(index, {status: "exited", pubkey}));
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal)).rejects.toThrow(
+    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, getSlot)).rejects.toThrow(
       `Builder exited: id=${pubkeyString}`
     );
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [pubkeyString]}));
@@ -90,7 +91,7 @@ describe("Identity", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
-    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal);
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, getSlot);
     await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
@@ -104,7 +105,7 @@ describe("Identity", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
-    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal);
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, getSlot);
     await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
@@ -112,14 +113,14 @@ describe("Identity", () => {
 
   it("rejects without querying the beacon node when the signal is already aborted", async () => {
     const abortSignal = AbortSignal.abort();
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortSignal)).rejects.toThrow(ErrorAborted);
+    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortSignal, getSlot)).rejects.toThrow(ErrorAborted);
     expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
   });
 
   it("throws on beacon node 500", async () => {
     const resStatus = 500;
     api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(resStatus));
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal)).rejects.toThrow(
+    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, getSlot)).rejects.toThrow(
       /status 500/
     );
   });
