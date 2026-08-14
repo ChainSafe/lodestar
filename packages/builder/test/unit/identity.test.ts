@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
-import {toHex} from "@lodestar/utils";
+import {ErrorAborted, toHex} from "@lodestar/utils";
 import {WAITING_FOR_BUILDER_POLL_MS, getBuilderStatus, resolveBuilderIdentity} from "../../src/identity.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "./utils/apiStub.js";
 import {getMockedLogger} from "./utils/logger.js";
@@ -108,6 +108,12 @@ describe("Identity", () => {
     await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects without querying the beacon node when the signal is already aborted", async () => {
+    const abortSignal = AbortSignal.abort();
+    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortSignal)).rejects.toThrow(ErrorAborted);
+    expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
   });
 
   it("throws on beacon node 500", async () => {
