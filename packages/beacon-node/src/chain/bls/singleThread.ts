@@ -63,12 +63,12 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     if (isAllValid) {
       result = sets.map(() => true);
     } else {
-      result = sets.map((_set, i) => {
+      result = sets.map((set, i) => {
         const sig = signatures[i];
         if (sig === null) {
           return false;
         }
-        return verify(message, pubkeys[i], sig);
+        return verify(message, this.pubkeyCache.getOrThrow(set.index), sig);
       });
     }
 
