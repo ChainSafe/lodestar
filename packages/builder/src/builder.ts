@@ -49,7 +49,7 @@ export class Builder {
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
-    this.clock.runEveryEpoch(() => this.builderStatusTracker.poll(this.clock.getCurrentSlot()));
+    this.clock.runEveryEpoch(this.builderStatusTracker.poll);
     this.clock.start(this.controller.signal);
 
     this.logger.info("Builder client initialized", {
