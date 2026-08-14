@@ -69,7 +69,7 @@ describe("BuilderStatusTracker", () => {
     expect(newStatus).toEqual("exited");
     expect(newBalance).toEqual(1);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
-    expect(logger.info).toHaveBeenCalledWith("Builder status changed", {from: "active", to: "exited"});
+    expect(logger.info).toHaveBeenCalledWith("Builder status changed", {from: "active", to: "exited", slot: 1});
   });
 
   it("dismisses beacon api 500", async () => {
