@@ -15,6 +15,7 @@ import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
+import type {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
 import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
@@ -24,7 +25,10 @@ import {progressiveListRootNode} from "../util/ssz.js";
 /**
  * Upgrade a state from Fulu to Gloas.
  */
-export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBeaconStateGloas {
+export function upgradeStateToGloas(
+  stateFulu: CachedBeaconStateFulu,
+  metrics?: BeaconStateTransitionMetrics | null
+): CachedBeaconStateGloas {
   const {config} = stateFulu;
 
   ssz.fulu.BeaconState.commitViewDU(stateFulu);
@@ -106,7 +110,7 @@ export function upgradeStateToGloas(stateFulu: CachedBeaconStateFulu): CachedBea
   const stateGloas = getCachedBeaconState(stateGloasView, stateFulu);
 
   // Process pending builder deposits at the fork boundary
-  onboardBuildersFromPendingDeposits(stateGloas);
+  onboardBuildersFromPendingDeposits(stateGloas, metrics);
 
   stateGloas.commit();
   // Clear cache to ensure the cache of fulu fields is not used by new gloas fields
@@ -164,7 +168,23 @@ function migrateBasicListToGloas<ElementType extends BasicType<unknown>>(
  * Applies any pending deposits for builders to onboard builders during the fork transition
  * Spec: https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.8/specs/gloas/fork.md#new-onboard_builders_from_pending_deposits
  */
-function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void {
+function onboardBuildersFromPendingDeposits(
+  state: CachedBeaconStateGloas,
+  metrics?: BeaconStateTransitionMetrics | null
+): void {
+  const timer = metrics?.gloasOnboardBuildersTime.startTimer();
+
+  // Counted so the duration above is interpretable: this loop walks the whole pending
+  // deposit queue, and its cost is dominated by whichever branch the queue happens to
+  // hit. `verified` signature checks are the ones the pre-verify cache missed, i.e. BLS
+  // running inline on the fork transition's critical path.
+  let onboarded = 0;
+  let topups = 0;
+  let kept = 0;
+  let dropped = 0;
+  let sigFromCache = 0;
+  let sigVerified = 0;
+
   // Track pubkeys of new builders added when applying deposits. `state.builders` starts empty
   // at the fork, so every builder pubkey here is one added in an earlier iteration.
   const builderPubkeys = new Set<string>();
@@ -182,6 +202,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     if (isValidatorKnown(state, validatorIndex)) {
       pendingDeposits.push(deposit);
       pendingDepositsLookup.add(depositValue, pubkeyHex);
+      kept++;
       continue;
     }
 
@@ -194,6 +215,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
           break;
         }
       }
+      topups++;
       continue;
     }
 
@@ -203,6 +225,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     if (!isBuilderWithdrawalCredential(deposit.withdrawalCredentials)) {
       pendingDeposits.push(deposit);
       pendingDepositsLookup.add(depositValue, pubkeyHex);
+      kept++;
       continue;
     }
     if (
@@ -210,6 +233,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     ) {
       pendingDeposits.push(deposit);
       pendingDepositsLookup.add(depositValue, pubkeyHex);
+      kept++;
       continue;
     }
 
@@ -219,6 +243,11 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
     // The prepareNextSlot scheduler pre-verifies these signatures in the epochs before the fork
     // A cache miss falls back to verifying this one deposit — no worse than pre-cache.
     const cached = state.epochCtx.builderDepositSignatureCache.getSignatureValidity(depositValue);
+    if (cached === null) {
+      sigVerified++;
+    } else {
+      sigFromCache++;
+    }
     const isValid =
       cached ??
       isValidDepositSignature(
@@ -229,6 +258,7 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
         deposit.signature
       );
     if (!isValid) {
+      dropped++;
       continue;
     }
 
@@ -241,7 +271,18 @@ function onboardBuildersFromPendingDeposits(state: CachedBeaconStateGloas): void
       deposit.slot
     );
     builderPubkeys.add(pubkeyHex);
+    onboarded++;
   }
 
   state.pendingDeposits = pendingDeposits;
+
+  timer?.();
+  if (metrics) {
+    metrics.gloasOnboardBuildersDeposits.set({outcome: "onboarded"}, onboarded);
+    metrics.gloasOnboardBuildersDeposits.set({outcome: "topup"}, topups);
+    metrics.gloasOnboardBuildersDeposits.set({outcome: "kept"}, kept);
+    metrics.gloasOnboardBuildersDeposits.set({outcome: "dropped"}, dropped);
+    metrics.gloasOnboardBuildersSignatureChecks.set({source: "cache"}, sigFromCache);
+    metrics.gloasOnboardBuildersSignatureChecks.set({source: "verified"}, sigVerified);
+  }
 }

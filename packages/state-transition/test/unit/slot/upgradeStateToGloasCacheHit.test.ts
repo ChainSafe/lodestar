@@ -89,6 +89,80 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
     });
   }
 
+  it("reports deposit outcomes and cache hits through metrics", () => {
+    isValidDepositSignatureSpy.mockClear();
+
+    const deposits = generateBuilderPendingDeposits(config, 3, 3000);
+    // Same pubkey as deposits[0], queued after it, so it lands on the top-up branch rather
+    // than onboarding a second builder.
+    const topup = {...deposits[0], amount: 1_000_000_000};
+
+    const stateView = ssz.fulu.BeaconState.defaultViewDU();
+    for (let i = 0; i < 64; i++) {
+      const validator = ssz.phase0.Validator.defaultValue();
+      validator.pubkey = Buffer.alloc(48, i + 1);
+      validator.withdrawalCredentials = Buffer.alloc(32, i + 1);
+      validator.effectiveBalance = 32e9;
+      validator.activationEligibilityEpoch = 0;
+      validator.activationEpoch = 0;
+      validator.exitEpoch = FAR_FUTURE_EPOCH;
+      validator.withdrawableEpoch = FAR_FUTURE_EPOCH;
+      stateView.validators.push(ssz.phase0.Validator.toViewDU(validator));
+      stateView.balances.push(32e9);
+    }
+    // A deposit for an existing validator: stays in the pending queue → "kept"
+    stateView.pendingDeposits.push(
+      ssz.electra.PendingDeposit.toViewDU({
+        pubkey: Buffer.alloc(48, 1),
+        withdrawalCredentials: Buffer.alloc(32),
+        amount: 32e9,
+        signature: Buffer.alloc(96),
+        slot: 0,
+      })
+    );
+    for (const deposit of deposits) {
+      stateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(deposit));
+    }
+    stateView.pendingDeposits.push(ssz.electra.PendingDeposit.toViewDU(topup));
+    stateView.commit();
+
+    const fuluState = createCachedBeaconState(
+      stateView,
+      {config, pubkeyCache: createPubkeyCache()},
+      {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
+    ) as CachedBeaconStateFulu;
+
+    // Warm the cache for all three builder deposits, marking the last one invalid so it is dropped.
+    const cache = fuluState.epochCtx.builderDepositSignatureCache;
+    const values = fuluState.pendingDeposits.getAllReadonlyValues();
+    cache.setSignatureValidity(values[1], true);
+    cache.setSignatureValidity(values[2], true);
+    cache.setSignatureValidity(values[3], false);
+
+    const outcomes = new Map<string, number>();
+    const sigChecks = new Map<string, number>();
+    const metrics = {
+      gloasOnboardBuildersTime: {startTimer: () => () => {}},
+      gloasOnboardBuildersDeposits: {
+        set: ({outcome}: {outcome: string}, value: number) => outcomes.set(outcome, value),
+      },
+      gloasOnboardBuildersSignatureChecks: {
+        set: ({source}: {source: string}, value: number) => sigChecks.set(source, value),
+      },
+    };
+
+    const gloasState = upgradeStateToGloas(fuluState, metrics as unknown as Parameters<typeof upgradeStateToGloas>[1]);
+
+    expect(Object.fromEntries(outcomes)).toEqual({onboarded: 2, topup: 1, kept: 1, dropped: 1});
+    // Every signature check was served by the cache; the top-up short-circuits before reaching one.
+    expect(Object.fromEntries(sigChecks)).toEqual({cache: 3, verified: 0});
+    expect(isValidDepositSignatureSpy).not.toHaveBeenCalled();
+    expect(gloasState.builders.length).toBe(2);
+    // The top-up landed on the builder onboarded from deposits[0], not on a new entry.
+    expect(gloasState.builders.getReadonly(0).balance).toBe(deposits[0].amount + topup.amount);
+    expect(gloasState.pendingDeposits.length).toBe(1);
+  });
+
   it("Scenario 5: fork resolves same-pubkey validator deposits from the cache (no BLS fallback)", () => {
     isValidDepositSignatureSpy.mockClear();
 
