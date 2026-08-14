@@ -15,11 +15,15 @@ export type BuilderCircuitBreakerModules = {
   metrics: Metrics | null;
 };
 
+/** Four observations is the minimum useful recovery sample for the default ~25% fault budget */
+const MIN_BLOCKS_TO_DEACTIVATE = 4;
+
 /**
  * Post-gloas circuit breaker for builder bids. The beacon block is produced by the proposer
  * regardless of bid source, so missed blocks are not a useful builder health signal. Instead
- * count blocks whose payload was never revealed and stop selecting builder bids while the
- * non-reveal rate in the fault inspection window is too high.
+ * count blocks whose payload was never revealed. Activate when the non-reveal rate exceeds the
+ * fault budget, and resume selecting builder bids only when the observed blocks are within budget
+ * and meet the minimum recovery sample size.
  */
 export class BuilderCircuitBreaker {
   readonly faultInspectionWindow: number;
@@ -58,7 +62,13 @@ export class BuilderCircuitBreaker {
 
     const wasActive = this.active;
     // Scale the fault budget by blocks present so sparse windows still trigger on high non-reveal rates
-    this.active = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    const exceedsFaultBudget = faults * this.faultInspectionWindow > this.allowedFaults * blocksPresent;
+    if (exceedsFaultBudget) {
+      this.active = true;
+    } else if (blocksPresent >= MIN_BLOCKS_TO_DEACTIVATE) {
+      // Require a minimum sample within the fault budget before accepting builder bids again
+      this.active = false;
+    }
 
     this.modules.metrics?.builderCircuitBreaker.active.set(this.active ? 1 : 0);
     this.modules.metrics?.builderCircuitBreaker.faults.set(faults);
@@ -66,6 +76,7 @@ export class BuilderCircuitBreaker {
     this.modules.metrics?.builderCircuitBreaker.payloadsRevealed.set(payloadsRevealed);
 
     const logCtx = {
+      clockSlot,
       blocksPresent,
       faults,
       faultInspectionWindow: this.faultInspectionWindow,

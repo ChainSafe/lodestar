@@ -1,5 +1,5 @@
 import {BitArray} from "@chainsafe/ssz";
-import {GENESIS_EPOCH, PTC_SIZE} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, PTC_SIZE} from "@lodestar/params";
 import {DataAvailabilityStatus, computeEpochAtSlot, computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {Epoch, RootHex, Slot} from "@lodestar/types";
 import {bitCount, toRootHex} from "@lodestar/utils";
@@ -691,8 +691,8 @@ export class ProtoArray {
   }
 
   /**
-   * Count gloas blocks with fromSlot <= slot <= toSlot and how many of them have a revealed
-   * payload (FULL variant exists). Used by the builder circuit breaker.
+   * Count Gloas blocks with fromSlot <= slot <= toSlot, and how many of them have a revealed payload
+   * (FULL variant exists). Used by the builder circuit breaker.
    */
   getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
     let blocksPresent = 0;
@@ -702,6 +702,10 @@ export class ProtoArray {
     for (const node of this.nodes) {
       // Count each gloas block once via its PENDING variant, pre-gloas nodes are FULL only
       if (node.slot < fromSlot || node.slot > toSlot || node.payloadStatus !== PayloadStatus.PENDING) {
+        continue;
+      }
+      // Genesis block is always EMPTY
+      if (node.slot === GENESIS_SLOT) {
         continue;
       }
       blocksPresent++;

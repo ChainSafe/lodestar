@@ -53,7 +53,7 @@ export type IChainOptions = BlockProcessOpts &
     nativeStateView?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
-    /** Allowed unrevealed payloads within the fault inspection window */
+    /** Unrevealed payloads allowed per `faultInspectionWindow` observed blocks */
     allowedFaults?: number;
   };
 
