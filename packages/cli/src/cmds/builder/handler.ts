@@ -2,15 +2,22 @@ import path from "node:path";
 import {getClient} from "@lodestar/api";
 import {Builder} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
+import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
-import {cleanOldLogFiles, onGracefulShutdown, parseLoggerArgs} from "../../util/index.js";
+import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs} from "../../util/index.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs} from "./options.js";
 
+const ZERO_ADDRESS = "0x" + "0".repeat(40);
+
 export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promise<void> {
   const {config, network} = getBeaconConfigFromArgs(args);
+
+  if (config.GLOAS_FORK_EPOCH === Infinity) {
+    throw Error(`Gloas must be scheduled via GLOAS_FORK_EPOCH for network=${network}`);
+  }
 
   const globalPaths = getGlobalPaths(args, network);
   const defaultLogFilepath = path.join(globalPaths.dataDir, "builder.log");
@@ -20,6 +27,12 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     cleanOldLogFiles(args, {defaultLogFilepath});
   } catch (e) {
     logger.debug("Not able to delete log files", {}, e as Error);
+  }
+
+  const executionFeeRecipient = parseFeeRecipient(args.executionFeeRecipient);
+
+  if (executionFeeRecipient === ZERO_ADDRESS) {
+    throw Error("Cannot put zero address as an executionFeeRecipient");
   }
 
   const keypair = await loadBuilderKeypair(args.keystore, args.keystorePassword, args.builderPubkey);
@@ -32,7 +45,12 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   const abortController = new AbortController();
   onGracefulShutdownCbs.push(async () => abortController.abort());
 
-  const api = getClient({urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal}}, {config, logger});
+  const api = getClient(
+    {urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal, timeoutMs: args.requestTimeout}},
+    {config, logger}
+  );
+
+  logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});
 
   const builder = await Builder.init({
     keypair,
@@ -40,6 +58,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     config,
     abortController,
     api,
+    executionFeeRecipient: fromHex(executionFeeRecipient),
   });
 
   onGracefulShutdownCbs.push(() => builder.close());
