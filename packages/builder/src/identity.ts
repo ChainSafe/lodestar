@@ -1,6 +1,7 @@
 import {ApiClient, routes} from "@lodestar/api";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
-import {BuilderIndex, BuilderStatus, Slot} from "@lodestar/types";
+import {IClock} from "@lodestar/state-transition";
+import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
 
 export const WAITING_FOR_BUILDER_POLL_MS = 10 * 1000;
@@ -10,9 +11,9 @@ export async function resolveBuilderIdentity(
   logger: Logger,
   id: routes.beacon.BuilderId,
   signal: AbortSignal,
-  getCurrentSlot: () => Slot
+  clock: IClock
 ): Promise<BuilderIndex> {
-  const builderEntry = await waitForBuilder(api, logger, id, signal, getCurrentSlot);
+  const builderEntry = await waitForBuilder(api, logger, id, signal, clock);
 
   if (builderEntry.builder.version !== PAYLOAD_BUILDER_VERSION) {
     throw Error(`Builder version mismatch: got ${builderEntry.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`);
@@ -23,7 +24,7 @@ export async function resolveBuilderIdentity(
     status: builderEntry.status,
     balanceGwei: builderEntry.builder.balance,
     executionAddress: toHex(builderEntry.builder.executionAddress),
-    slot: getCurrentSlot(),
+    slot: clock.getCurrentSlot(),
   });
 
   return builderEntry.index;
@@ -55,7 +56,7 @@ async function waitForBuilder(
   logger: Logger,
   id: routes.beacon.BuilderId,
   signal: AbortSignal,
-  getCurrentSlot: () => Slot
+  clock: IClock
 ): Promise<routes.beacon.BuilderResponse> {
   while (!signal.aborted) {
     const builder = await fetchBuilder(api, id);
@@ -66,9 +67,9 @@ async function waitForBuilder(
       throw Error(`Builder exited: id=${id}`);
     }
     if (builder?.status === "pending") {
-      logger.info("Waiting for builder deposit to be finalized", {id, slot: getCurrentSlot()});
+      logger.info("Waiting for builder deposit to be finalized", {id, slot: clock.getCurrentSlot()});
     } else {
-      logger.info("Waiting for builder to be known to the beacon node", {id, slot: getCurrentSlot()});
+      logger.info("Waiting for builder to be known to the beacon node", {id, slot: clock.getCurrentSlot()});
     }
     await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
   }

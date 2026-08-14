@@ -82,7 +82,7 @@ export class Builder {
       logger,
       builderSigner.getPubkeyHex(),
       opts.abortController.signal,
-      () => clock.getCurrentSlot()
+      clock
     );
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index);

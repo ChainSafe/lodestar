@@ -29,7 +29,11 @@ export class BuilderStatusTracker {
       }
       this.status = builderStatus.status;
       this.balanceGwei = builderStatus.balance;
-      this.logger.info("Builder status", {status: builderStatus.status, balance: builderStatus.balance, epoch: currentEpoch});
+      this.logger.info("Builder status", {
+        status: builderStatus.status,
+        balance: builderStatus.balance,
+        epoch: currentEpoch,
+      });
     }
   }
 
