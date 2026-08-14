@@ -172,12 +172,14 @@ function onboardBuildersFromPendingDeposits(
   state: CachedBeaconStateGloas,
   metrics?: BeaconStateTransitionMetrics | null
 ): void {
-  const timer = metrics?.gloasOnboardBuildersTime.startTimer();
+  const timer = metrics?.onboardBuildersTime.startTimer();
 
   // Counted so the duration above is interpretable: this loop walks the whole pending
   // deposit queue, and its cost is dominated by whichever branch the queue happens to
   // hit. `verified` signature checks are the ones the pre-verify cache missed, i.e. BLS
-  // running inline on the fork transition's critical path.
+  // running inline on the fork transition's critical path. The signature totals include
+  // the checks hasPendingValidator() does internally, which dominate when a builder
+  // deposit is preceded by same-pubkey validator deposits.
   let onboarded = 0;
   let topups = 0;
   let kept = 0;
@@ -278,11 +280,12 @@ function onboardBuildersFromPendingDeposits(
 
   timer?.();
   if (metrics) {
-    metrics.gloasOnboardBuildersDeposits.set({outcome: "onboarded"}, onboarded);
-    metrics.gloasOnboardBuildersDeposits.set({outcome: "topup"}, topups);
-    metrics.gloasOnboardBuildersDeposits.set({outcome: "kept"}, kept);
-    metrics.gloasOnboardBuildersDeposits.set({outcome: "dropped"}, dropped);
-    metrics.gloasOnboardBuildersSignatureChecks.set({source: "cache"}, sigFromCache);
-    metrics.gloasOnboardBuildersSignatureChecks.set({source: "verified"}, sigVerified);
+    metrics.onboardBuildersDeposits.set({outcome: "onboarded"}, onboarded);
+    metrics.onboardBuildersDeposits.set({outcome: "topup"}, topups);
+    metrics.onboardBuildersDeposits.set({outcome: "kept"}, kept);
+    metrics.onboardBuildersDeposits.set({outcome: "dropped"}, dropped);
+    const lookupChecks = pendingDepositsLookup.signatureChecks;
+    metrics.onboardBuildersSignatureChecks.set({source: "cache"}, sigFromCache + lookupChecks.fromCache);
+    metrics.onboardBuildersSignatureChecks.set({source: "verified"}, sigVerified + lookupChecks.verified);
   }
 }

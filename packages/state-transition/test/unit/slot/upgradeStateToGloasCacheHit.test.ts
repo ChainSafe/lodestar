@@ -142,11 +142,11 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
     const outcomes = new Map<string, number>();
     const sigChecks = new Map<string, number>();
     const metrics = {
-      gloasOnboardBuildersTime: {startTimer: () => () => {}},
-      gloasOnboardBuildersDeposits: {
+      onboardBuildersTime: {startTimer: () => () => {}},
+      onboardBuildersDeposits: {
         set: ({outcome}: {outcome: string}, value: number) => outcomes.set(outcome, value),
       },
-      gloasOnboardBuildersSignatureChecks: {
+      onboardBuildersSignatureChecks: {
         set: ({source}: {source: string}, value: number) => sigChecks.set(source, value),
       },
     };
@@ -207,11 +207,25 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
     preVerifyBuilderDepositsPreGloas(fuluState, MAX_BUILDER_DEPOSITS_PER_SLOT, 60_000);
     preVerifyBuilderDepositsPreGloas(fuluState, MAX_BUILDER_DEPOSITS_PER_SLOT, 60_000);
 
-    const gloasState = upgradeStateToGloas(fuluState);
+    const outcomes = new Map<string, number>();
+    const sigChecks = new Map<string, number>();
+    const metrics = {
+      onboardBuildersTime: {startTimer: () => () => {}},
+      onboardBuildersDeposits: {set: ({outcome}: {outcome: string}, value: number) => outcomes.set(outcome, value)},
+      onboardBuildersSignatureChecks: {
+        set: ({source}: {source: string}, value: number) => sigChecks.set(source, value),
+      },
+    };
+
+    const gloasState = upgradeStateToGloas(fuluState, metrics as unknown as Parameters<typeof upgradeStateToGloas>[1]);
 
     // The builder onboards; hasPendingValidator resolved all 40 validator checks from the cache, so
     // isValidDepositSignature (the BLS fallback) is never called on the transition's critical path.
     expect(gloasState.builders.length).toBe(1);
     expect(isValidDepositSignatureSpy).not.toHaveBeenCalled();
+    // The 40 checks hasPendingValidator did internally are counted, not just the builder deposit's
+    // own one — that scan is the dominant cost in this shape and would otherwise be invisible.
+    expect(Object.fromEntries(sigChecks)).toEqual({cache: 41, verified: 0});
+    expect(Object.fromEntries(outcomes)).toEqual({onboarded: 1, topup: 0, kept: 40, dropped: 0});
   });
 });
