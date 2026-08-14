@@ -61,11 +61,10 @@ export class BuilderCircuitBreaker {
       head
     );
     const canonicalBlocks = full + empty;
-    const faults = empty;
 
     const wasActive = this.active;
     // Scale the fault budget by canonical blocks so sparse windows still trigger on high EMPTY rates
-    const exceedsFaultBudget = faults * this.faultInspectionWindow > this.allowedFaults * canonicalBlocks;
+    const exceedsFaultBudget = empty * this.faultInspectionWindow > this.allowedFaults * canonicalBlocks;
     if (exceedsFaultBudget) {
       this.active = true;
     } else if (canonicalBlocks >= MIN_BLOCKS_TO_DEACTIVATE) {
@@ -81,7 +80,8 @@ export class BuilderCircuitBreaker {
     const logCtx = {
       clockSlot,
       canonicalBlocks,
-      faults,
+      full,
+      empty,
       faultInspectionWindow: this.faultInspectionWindow,
       allowedFaults: this.allowedFaults,
     };
