@@ -5,7 +5,7 @@ import {Logger, sleep} from "@lodestar/utils";
 /** The time between polls when waiting for genesis */
 const WAITING_FOR_GENESIS_POLL_MS = 12 * 1000;
 
-export async function waitForGenesis(api: ApiClient, logger: Logger, signal?: AbortSignal): Promise<Genesis> {
+export async function waitForGenesis(api: ApiClient, logger: Logger, signal: AbortSignal): Promise<Genesis> {
   while (true) {
     try {
       return (await api.beacon.getGenesis()).value();

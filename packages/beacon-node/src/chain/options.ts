@@ -55,7 +55,7 @@ export type IChainOptions = BlockProcessOpts &
     nativeStateView?: boolean;
     /** Builder circuit breaker fault inspection window in slots */
     faultInspectionWindow?: number;
-    /** Allowed unrevealed payloads within the fault inspection window */
+    /** Canonical EMPTY blocks allowed per `faultInspectionWindow` observed blocks */
     allowedFaults?: number;
     /** ADVERSARIAL (devnet test only): omit the parent slot's PTC attestations when building on the EMPTY parent variant */
     adversarialReorgOmitPtcAttestations?: boolean;
