@@ -9,8 +9,6 @@ const randaoReveal = new Uint8Array(96).fill(1);
 const selectionProof = new Uint8Array(96).fill(1);
 const graffiti = "a".repeat(32);
 const feeRecipient = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const executionPayloadValue = 2n ** 64n;
-const consensusBlockValue = executionPayloadValue + 1n;
 
 export const testData: GenericServerTestCases<Endpoints> = {
   getAttesterDuties: {
@@ -74,8 +72,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
       data: ssz.electra.BlockContents.defaultValue(),
       meta: {
         version: ForkName.electra,
-        executionPayloadValue,
-        consensusBlockValue,
+        executionPayloadValue: ssz.Wei.defaultValue(),
+        consensusBlockValue: ssz.Wei.defaultValue(),
         executionPayloadBlinded: false,
         executionPayloadSource: ProducedBlockSource.engine,
       },
@@ -96,8 +94,8 @@ export const testData: GenericServerTestCases<Endpoints> = {
       data: ssz.gloas.BlockContents.defaultValue(),
       meta: {
         version: ForkName.gloas,
-        consensusBlockValue,
-        executionPayloadValue,
+        consensusBlockValue: ssz.Wei.defaultValue(),
+        executionPayloadValue: ssz.Wei.defaultValue(),
         executionPayloadIncluded: true,
       },
     },
