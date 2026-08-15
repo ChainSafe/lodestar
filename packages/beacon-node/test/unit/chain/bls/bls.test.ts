@@ -7,7 +7,7 @@ import {SecretKey, Signature} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
-import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {BlsMultiThreadVerifier} from "../../../../src/chain/bls/multithread/index.js";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
 
 describe("BlsVerifier ", () => {
@@ -20,7 +20,7 @@ describe("BlsVerifier ", () => {
   }
   const verifiers = [
     new BlsSingleThreadVerifier({metrics: null}),
-    new BlsMultiThreadWorkerPool({}, {metrics: null, logger: testLogger()}),
+    new BlsMultiThreadVerifier({}, {metrics: null, logger: testLogger()}),
   ];
 
   for (const verifier of verifiers) {

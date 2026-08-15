@@ -25,6 +25,7 @@ export type IChainOptions = BlockProcessOpts &
   ValidatorMonitorOpts &
   LightClientServerOpts & {
     blsVerifyAllMainThread?: boolean;
+    /** @deprecated Native BLS verification is always asynchronous. */
     blsVerifyAllMultiThread?: boolean;
     blacklistedBlocks?: string[];
     // TODO GLOAS: add similar option for execution payload envelopes?

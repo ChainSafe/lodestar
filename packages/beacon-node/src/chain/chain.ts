@@ -83,7 +83,7 @@ import {PayloadEnvelopeProcessor} from "./blocks/payloadEnvelopeProcessor.js";
 import {ImportPayloadOpts} from "./blocks/types.js";
 import {persistBlockInput} from "./blocks/writeBlockInputToDb.js";
 import {persistPayloadEnvelopeInput} from "./blocks/writePayloadEnvelopeInputToDb.js";
-import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
+import {BlsMultiThreadVerifier, BlsSingleThreadVerifier, IBlsVerifier} from "./bls/index.js";
 import {BuilderCircuitBreaker} from "./builderCircuitBreaker.js";
 import {ColumnReconstructionTracker} from "./ColumnReconstructionTracker.js";
 import {ChainEvent, ChainEventEmitter} from "./emitter.js";
@@ -305,10 +305,10 @@ export class BeaconChain implements IBeaconChain {
     this.executionBuilder = executionBuilder;
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    // by default, verify signatures on both main threads and worker threads
+    // By default, verify signatures on the shared asynchronous native executor.
     const bls = opts.blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier({metrics})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
+      : new BlsMultiThreadVerifier(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 

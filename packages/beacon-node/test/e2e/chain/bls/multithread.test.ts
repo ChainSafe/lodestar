@@ -4,7 +4,8 @@ import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
-import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {BlsMultiThreadVerifier} from "../../../../src/chain/bls/multithread/index.js";
+import {QueueErrorCode} from "../../../../src/util/queue/index.js";
 
 describe("chain / bls / multithread queue", () => {
   const logger = testLogger();
@@ -49,12 +50,9 @@ describe("chain / bls / multithread queue", () => {
     }
   });
 
-  async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
-    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null});
-    // await terminating all workers
+  async function initializePool(): Promise<BlsMultiThreadVerifier> {
+    const pool = new BlsMultiThreadVerifier({}, {logger, metrics: null});
     afterEachCallbacks.push(() => pool.close());
-    // Wait until initialized
-    await pool["waitTillInitialized"]();
     return pool;
   }
 
@@ -87,24 +85,20 @@ describe("chain / bls / multithread queue", () => {
 
   for (const priority of [true, false]) {
     it(`Should verify multiple signatures submitted synchronously priority=${priority}`, async () => {
-      // Given the `setTimeout(this.runJob, 0);` all sets should be verified in a single job an worker
-      // when priority = true, jobs are executed in the reverse order
+      // Calls submitted in one turn are grouped before native execution.
       await testManyValidSignatures({sleep: false}, {priority});
     });
   }
 
   for (const priority of [true, false]) {
     it(`Should verify multiple signatures submitted asynchronously priority=${priority}`, async () => {
-      // Because of the sleep, each sets submitted should be verified in a different job and worker
-      // when priority = true, jobs are executed in the reverse order
+      // Because of the sleep, each set is submitted as a separate native root.
       await testManyValidSignatures({sleep: true}, {priority});
     });
   }
 
   for (const priority of [true, false]) {
-    it(`Should verify multiple signatures batched pririty=${priority}`, async () => {
-      // By setting batchable: true, 5*8 = 40 sig sets should be verified in one job, while 3*8=24 should
-      // be verified in another job
+    it(`Should verify multiple signatures batched priority=${priority}`, async () => {
       await testManyValidSignatures({sleep: true}, {batchable: true, priority});
     });
   }
@@ -130,4 +124,12 @@ describe("chain / bls / multithread queue", () => {
       await pool.close();
     });
   }
+
+  it("rejects buffered requests when closed", async () => {
+    const pool = await initializePool();
+    const result = pool.verifySignatureSets(sets, {batchable: true});
+
+    await pool.close();
+    await expect(result).rejects.toHaveProperty("type.code", QueueErrorCode.QUEUE_ABORTED);
+  });
 });

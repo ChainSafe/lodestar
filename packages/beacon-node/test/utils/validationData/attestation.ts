@@ -14,7 +14,7 @@ import {
   getSecretKeyFromIndexCached,
 } from "@lodestar/state-transition/test-utils";
 import {Slot, SubnetID, phase0, ssz} from "@lodestar/types";
-import {BlsMultiThreadWorkerPool, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
+import {BlsMultiThreadVerifier, BlsSingleThreadVerifier} from "../../../src/chain/bls/index.js";
 import {IBeaconChain} from "../../../src/chain/index.js";
 import {defaultChainOptions} from "../../../src/chain/options.js";
 import {IStateRegenerator} from "../../../src/chain/regen/index.js";
@@ -171,7 +171,7 @@ export function getAttestationValidData(opts: AttestationValidDataOpts): {
     seenAttestationDatas: new SeenAttestationDatas(null, 0, 0),
     bls: blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier({metrics: null})
-      : new BlsMultiThreadWorkerPool({}, {logger: testLogger(), metrics: null}),
+      : new BlsMultiThreadVerifier({}, {logger: testLogger(), metrics: null}),
     waitForBlock: () => Promise.resolve(false),
     pubkeyCache: state.epochCtx.pubkeyCache,
     shufflingCache,

@@ -16,8 +16,8 @@ export type VerifySignatureOpts = {
   batchable?: boolean;
 
   /**
-   * Use main thread to verify signatures, use this with care.
-   * Ignore the batchable option if this is true.
+   * Legacy low-latency hint. The multi-thread verifier treats this as
+   * unbatched priority work without blocking the JavaScript event loop.
    */
   verifyOnMainThread?: boolean;
   /**
@@ -54,7 +54,7 @@ export interface IBlsVerifier {
    * Similar to verifySignatureSets but:
    *   - all signatures have the same message
    *   - return an array of boolean, each element indicates whether the corresponding signature set is valid
-   *   - only support `batchable` option
+   *   - supports `batchable` and `priority` options
    */
   verifySignatureSetsSameMessage(
     sets: SameMessageSignatureSet[],
@@ -62,11 +62,11 @@ export interface IBlsVerifier {
     opts?: Omit<VerifySignatureOpts, "verifyOnMainThread">
   ): Promise<boolean[]>;
 
-  /** For multithread pool awaits terminating all workers */
+  /** Reject queued work and wait for submitted native work to drain. */
   close(): Promise<void>;
 
   /**
-   * Returns true if BLS worker pool is ready to accept more work jobs.
+   * Returns true if the BLS scheduler is ready to accept more work.
    */
   canAcceptWork(): boolean;
 }

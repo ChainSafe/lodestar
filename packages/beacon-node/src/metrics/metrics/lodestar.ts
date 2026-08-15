@@ -405,7 +405,7 @@ export function createLodestarMetrics(
     blsThreadPool: {
       jobsWorkerTime: register.gauge<{workerId: number}>({
         name: "lodestar_bls_thread_pool_time_seconds_sum",
-        help: "Total time spent verifying signature sets measured on the worker",
+        help: "Total wall time of native BLS jobs; native executor uses workerId 0",
         labelNames: ["workerId"],
       }),
       successJobsSignatureSetsCount: register.gauge({
@@ -423,11 +423,11 @@ export function createLodestarMetrics(
       }),
       queueLength: register.gauge({
         name: "lodestar_bls_thread_pool_queue_length",
-        help: "Count of total block processor queue length",
+        help: "Count of queued BLS requests and native jobs",
       }),
       workersBusy: register.gauge({
         name: "lodestar_bls_thread_pool_workers_busy",
-        help: "Count of current busy workers",
+        help: "Count of occupied native BLS scheduler slots",
       }),
       totalJobsGroupsStarted: register.gauge({
         name: "lodestar_bls_thread_pool_job_groups_started_total",
@@ -451,28 +451,27 @@ export function createLodestarMetrics(
       // To count how many sigs are being validated with the optimization of batching them
       batchSigsSuccess: register.gauge({
         name: "lodestar_bls_thread_pool_batch_sigs_success_total",
-        help: "Count of total batches that failed and had to be verified again.",
+        help: "Count of signature sets successfully verified in combined batches",
       }),
-      // To measure the time cost of main thread <-> worker message passing
       latencyToWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_to_worker",
-        help: "Time from sending the job to the worker and the worker receiving it",
+        help: "Time spent waiting in the Lodestar native dispatch queue",
         buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
       }),
       latencyFromWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_from_worker",
-        help: "Time from the worker sending the result and the main thread receiving it",
+        help: "Legacy worker result latency, not observed by the native scheduler",
         buckets: [0.001, 0.003, 0.01, 0.03, 0.1],
       }),
       mainThreadDurationInThreadPool: register.histogram({
         name: "lodestar_bls_thread_pool_main_thread_time_seconds",
-        help: "Time to verify signatures in main thread with thread pool mode",
+        help: "Time spent in the synchronous BLS verifier",
         // Time can vary significantly, so just track usage ratio
         buckets: [0],
       }),
       timePerSigSet: register.histogram({
         name: "lodestar_bls_worker_thread_time_per_sigset_seconds",
-        help: "Time to verify each sigset with worker thread mode",
+        help: "Native BLS job wall time per signature set",
         // Time per sig ~0.9ms on good machines
         buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
       }),
