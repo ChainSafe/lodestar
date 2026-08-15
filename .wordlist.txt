@@ -173,6 +173,7 @@ getNetworkIdentity
 gloas
 gnosis
 gpg
+gwei
 heapdump
 heaptrack
 holesky
