@@ -283,7 +283,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.minBid": {
     type: "string",
     description:
-      "Minimum total payment in gwei accepted from a builder bid, counting the bid value plus its execution payment. Only used post-Gloas",
+      "Minimum total payment in Gwei accepted from a builder bid, counting the bid value plus its execution payment. Only used post-Gloas",
     defaultDescription: `${defaultOptions.builderMinBid}`,
     group: "builder",
   },
@@ -299,7 +299,7 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
   "builder.maxExecutionPayment": {
     type: "string",
     description:
-      "Maximum execution layer payment in gwei the proposer will accept from a builder. A value of 0 means only payments backed by the builder's staked collateral are accepted. Values above 0 require --allowDangerousTrustedPayments. Only used post-Gloas",
+      "Maximum execution layer payment in Gwei the proposer will accept from a builder. A value of 0 means only trustless payments via the builder's staked collateral are accepted. Values above 0 require --allowDangerousTrustedPayments. Only used post-Gloas",
     defaultDescription: `${defaultOptions.builderMaxExecutionPayment}`,
     group: "builder",
   },

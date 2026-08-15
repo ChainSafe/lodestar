@@ -51,6 +51,7 @@ Golang
 Gossipsub
 Grafana
 Grandine
+Gwei
 HTTPS
 HackMD
 Hashicorp
@@ -173,7 +174,6 @@ getNetworkIdentity
 gloas
 gnosis
 gpg
-gwei
 heapdump
 heaptrack
 holesky
@@ -246,6 +246,7 @@ tcp
 testnet
 testnets
 todo
+trustless
 typesafe
 udp
 unpkg
