@@ -134,7 +134,7 @@ export function processAttestationsAltair(
         }
       }
 
-      if (isSameSlotAttestation && flagsNewSet !== 0) {
+      if (isSameSlotAttestation && flags === 0 && flagsNewSet !== 0) {
         paymentWeightToAdd += effectiveBalanceIncrements[validatorIndex];
       }
     }
