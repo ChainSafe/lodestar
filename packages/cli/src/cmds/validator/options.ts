@@ -48,6 +48,10 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     builder?: boolean;
     "builder.selection"?: string;
     "builder.boostFactor"?: string;
+    "builder.minBid"?: string;
+    "builder.urls"?: string[];
+    "builder.maxExecutionPayment"?: string;
+    allowDangerousTrustedPayments?: boolean;
 
     /** @deprecated */
     useProduceBlockV3?: boolean;
@@ -273,6 +277,37 @@ export const validatorOptions: CliCommandOptions<IValidatorCliArgs> = {
     description:
       "Percentage multiplier the block producing beacon node must apply to boost (>100) or dampen (<100) builder block value for selection against execution block. The multiplier is ignored if `--builder.selection` is set to anything other than `maxprofit`",
     defaultDescription: `${defaultOptions.builderBoostFactor}`,
+    group: "builder",
+  },
+
+  "builder.minBid": {
+    type: "string",
+    description:
+      "Minimum total payment in Gwei accepted from a builder bid, counting the bid value plus its execution payment. Only used post-Gloas",
+    defaultDescription: `${defaultOptions.builderMinBid}`,
+    group: "builder",
+  },
+
+  "builder.urls": {
+    description: "URL(s) of external builders to request execution payload bids from. Only used post-Gloas",
+    type: "array",
+    string: true,
+    coerce: (urls: string[]): string[] => urls.flatMap((url) => url.split(",")),
+    group: "builder",
+  },
+
+  "builder.maxExecutionPayment": {
+    type: "string",
+    description:
+      "Maximum execution layer payment in Gwei the proposer will accept from a builder. A value of 0 means only trustless payments via the builder's staked collateral are accepted. Values above 0 require --allowDangerousTrustedPayments. Only used post-Gloas",
+    defaultDescription: `${defaultOptions.builderMaxExecutionPayment}`,
+    group: "builder",
+  },
+
+  allowDangerousTrustedPayments: {
+    type: "boolean",
+    description:
+      "Allow configuring a builder max execution payment above 0. Trusted execution layer payments are only backed by the builder's promise to pay, not by its staked collateral, a builder that fails to pay cannot be penalized in protocol",
     group: "builder",
   },
 

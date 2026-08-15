@@ -36,6 +36,8 @@ default_config:
     boost_factor: "90"
 ```
 
+Starting with Gloas, the builder section additionally supports `min_bid` (floor in Gwei on the total payment accepted from a builder bid) and `max_execution_payment` (ceiling in Gwei on the trusted execution layer payment accepted from a builder, values above `0` require `--allowDangerousTrustedPayments`).
+
 ### Enable Proposer Configuration
 
 After you have configured your proposer configuration YAML file, you can start Lodestar with an additional CLI flag option pointing to the file: `--proposerSettingsFile /path/to/proposer_config.yaml`.

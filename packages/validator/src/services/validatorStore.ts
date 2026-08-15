@@ -1,6 +1,7 @@
 import {SecretKey} from "@chainsafe/blst";
 import {BitArray} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
+import {BuilderConfigData, BuilderEntryConfig} from "@lodestar/api/keymanager";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DOMAIN_AGGREGATE_AND_PROOF,
@@ -12,10 +13,12 @@ import {
   DOMAIN_PROPOSER_PREFERENCES,
   DOMAIN_PTC_ATTESTER,
   DOMAIN_RANDAO,
+  DOMAIN_REQUEST_AUTH,
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   ForkSeq,
+  MAX_DATA_SIZE,
 } from "@lodestar/params";
 import {
   ZERO_HASH,
@@ -46,7 +49,7 @@ import {
   phase0,
   ssz,
 } from "@lodestar/types";
-import {fromHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
+import {fromHex, toHex, toPubkeyHex, toRootHex} from "@lodestar/utils";
 import {Metrics} from "../metrics.js";
 import {ISlashingProtection} from "../slashingProtection/index.js";
 import {PubkeyHex} from "../types.js";
@@ -84,6 +87,9 @@ type DefaultProposerConfig = {
     gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
     boostFactor: bigint;
+    minBid: bigint;
+    maxExecutionPayment: bigint;
+    urls: string[];
   };
 };
 
@@ -95,7 +101,22 @@ export type ProposerConfig = {
     gasLimit?: number;
     selection?: routes.validator.BuilderSelection;
     boostFactor?: bigint;
+    minBid?: bigint;
+    maxExecutionPayment?: bigint;
+    urls?: string[];
+    /** Per-key builder entries set via the keymanager api, replacing the configured builder urls */
+    builders?: BuilderEntryConfig[];
   };
+};
+
+/** A builder entry with every omitted value resolved against the key and validator client defaults */
+export type ResolvedBuilderEntry = {
+  url: string;
+  authData: Uint8Array;
+  builderPubkeys: Uint8Array[];
+  maxExecutionPayment: bigint;
+  minBid: bigint;
+  builderBoostFactor: bigint;
 };
 
 export type ValidatorProposerConfig = {
@@ -132,6 +153,8 @@ export type Signer = SignerLocal | SignerRemote;
 type ValidatorData = ProposerConfig & {
   signer: Signer;
   builderData?: BuilderData;
+  /** Pre-signed request auths keyed by proposal slot and auth data, pruned by proposal slot */
+  requestAuths?: Map<string, gloas.SignedRequestAuth>;
 };
 
 export const defaultOptions = {
@@ -140,6 +163,9 @@ export const defaultOptions = {
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
   builderBoostFactor: BigInt(100),
+  builderMinBid: BigInt(0),
+  // Only trustless payments via the builder's staked collateral are accepted by default
+  builderMaxExecutionPayment: BigInt(0),
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
   // should request fetching the locally produced block in blinded format
@@ -185,6 +211,9 @@ export class ValidatorStore {
         gasLimit: defaultConfig.builder?.gasLimit,
         selection: defaultConfig.builder?.selection,
         boostFactor: builderBoostFactor,
+        minBid: defaultConfig.builder?.minBid ?? defaultOptions.builderMinBid,
+        maxExecutionPayment: defaultConfig.builder?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment,
+        urls: defaultConfig.builder?.urls ?? [],
       },
     };
 
@@ -409,6 +438,145 @@ export class ValidatorStore {
     delete validatorData.builder?.boostFactor;
   }
 
+  getBuilderMinBid(pubkeyHex: PubkeyHex): bigint {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData?.builder?.minBid ?? this.defaultProposerConfig.builder.minBid;
+  }
+
+  getBuilderMaxExecutionPayment(pubkeyHex: PubkeyHex): bigint {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData?.builder?.maxExecutionPayment ?? this.defaultProposerConfig.builder.maxExecutionPayment;
+  }
+
+  getBuilderUrls(pubkeyHex: PubkeyHex): string[] {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    return validatorData?.builder?.urls ?? this.defaultProposerConfig.builder.urls;
+  }
+
+  /**
+   * Resolve the builder entries for this key. Per-key entries set via the keymanager api replace
+   * the configured builder urls, an omitted entry value takes this key's default and then the
+   * validator client's own configuration. An omitted auth data is derived from the entry url.
+   */
+  getResolvedBuilderEntries(pubkeyHex: PubkeyHex, boostFactor?: bigint): ResolvedBuilderEntry[] {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+
+    const keyMinBid = validatorData.builder?.minBid ?? this.defaultProposerConfig.builder.minBid;
+    const keyBoostFactor =
+      boostFactor ?? validatorData.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+    const keyMaxExecutionPayment =
+      validatorData.builder?.maxExecutionPayment ?? this.defaultProposerConfig.builder.maxExecutionPayment;
+
+    const builders = validatorData.builder?.builders;
+    if (builders !== undefined) {
+      return builders.map((entry) => ({
+        url: entry.url,
+        authData: entry.authData !== undefined ? fromHex(entry.authData) : new Uint8Array(Buffer.from(entry.url)),
+        builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
+        maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
+        minBid: entry.minBid ?? keyMinBid,
+        builderBoostFactor: entry.builderBoostFactor ?? keyBoostFactor,
+      }));
+    }
+
+    // The key's defaults apply to the validator client's configured builders all the same
+    return this.getBuilderUrls(pubkeyHex).map((url) => ({
+      url,
+      authData: new Uint8Array(Buffer.from(url)),
+      builderPubkeys: [],
+      maxExecutionPayment: keyMaxExecutionPayment,
+      minBid: keyMinBid,
+      builderBoostFactor: keyBoostFactor,
+    }));
+  }
+
+  /** Return the builder configuration in effect for this key, with omitted values resolved */
+  getBuilderConfig(pubkeyHex: PubkeyHex): BuilderConfigData {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+
+    return {
+      minBid: validatorData.builder?.minBid ?? this.defaultProposerConfig.builder.minBid,
+      builderBoostFactor: validatorData.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor,
+      builders: this.getResolvedBuilderEntries(pubkeyHex).map((entry) => ({
+        url: entry.url,
+        authData: toHex(entry.authData),
+        builderPubkeys: entry.builderPubkeys.map(toPubkeyHex),
+        maxExecutionPayment: entry.maxExecutionPayment,
+        minBid: entry.minBid,
+        builderBoostFactor: entry.builderBoostFactor,
+      })),
+    };
+  }
+
+  /** Set the builder configuration for this key, replacing any stored configuration in full */
+  setBuilderConfig(pubkeyHex: PubkeyHex, config: BuilderConfigData): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+
+    for (const value of [config.minBid, config.builderBoostFactor]) {
+      if (value !== undefined && value > MAX_BUILDER_BOOST_FACTOR) {
+        throw Error(`Invalid builder config value=${value} exceeds uint64`);
+      }
+    }
+
+    // No two entries may share both their url and their auth data, an omitted auth data is
+    // compared as the value derived from the entry url
+    const seenEntries = new Set<string>();
+    for (const entry of config.builders ?? []) {
+      try {
+        new URL(entry.url);
+      } catch {
+        throw Error(`Invalid builder url: ${entry.url}`);
+      }
+      const authData = entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(Buffer.from(entry.url));
+      const entryKey = `${entry.url}|${authData}`;
+      if (seenEntries.has(entryKey)) {
+        throw Error(`Duplicate builder entry url=${entry.url}`);
+      }
+      seenEntries.add(entryKey);
+      for (const value of [entry.maxExecutionPayment, entry.minBid, entry.builderBoostFactor]) {
+        if (value !== undefined && value > MAX_BUILDER_BOOST_FACTOR) {
+          throw Error(`Invalid builder entry value=${value} exceeds uint64`);
+        }
+      }
+    }
+
+    validatorData.builder = {
+      ...validatorData.builder,
+      minBid: config.minBid,
+      boostFactor: config.builderBoostFactor,
+      builders: config.builders,
+    };
+  }
+
+  /** Remove the builder configuration for this key, it then follows the validator client again */
+  deleteBuilderConfig(pubkeyHex: PubkeyHex): void {
+    const validatorData = this.validators.get(pubkeyHex);
+    if (validatorData === undefined) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
+    }
+    delete validatorData.builder?.minBid;
+    delete validatorData.builder?.boostFactor;
+    delete validatorData.builder?.builders;
+  }
+
   /** Return true if `index` is active part of this validator client */
   hasValidatorIndex(index: ValidatorIndex): boolean {
     return this.indicesService.index2pubkey.has(index);
@@ -430,7 +598,11 @@ export class ValidatorStore {
       feeRecipient !== undefined ||
       builder?.gasLimit !== undefined ||
       builder?.selection !== undefined ||
-      builder?.boostFactor !== undefined
+      builder?.boostFactor !== undefined ||
+      builder?.minBid !== undefined ||
+      builder?.maxExecutionPayment !== undefined ||
+      builder?.urls !== undefined ||
+      builder?.builders !== undefined
     ) {
       proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
     }
@@ -877,6 +1049,68 @@ export class ValidatorStore {
       message: validatorRegistration,
       signature: await this.getSignature(pubkeyMaybeHex, signingRoot, signingSlot, signableMessage),
     };
+  }
+
+  async signRequestAuth(
+    pubkeyMaybeHex: BLSPubkeyMaybeHex,
+    data: Uint8Array,
+    proposalSlot: Slot
+  ): Promise<gloas.SignedRequestAuth> {
+    if (data.length === 0 || data.length > MAX_DATA_SIZE) {
+      throw Error(`Invalid request auth data length=${data.length}, must be within 1 and ${MAX_DATA_SIZE} bytes`);
+    }
+
+    const message: gloas.RequestAuth = {data, slot: proposalSlot};
+
+    const signingSlot = 0;
+    const domain = computeDomain(DOMAIN_REQUEST_AUTH, this.config.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.gloas.RequestAuth, message, domain);
+
+    const signableMessage: SignableMessage = {
+      type: SignableMessageType.REQUEST_AUTH,
+      data: message,
+    };
+
+    return {
+      message,
+      signature: await this.getSignature(pubkeyMaybeHex, signingRoot, signingSlot, signableMessage),
+    };
+  }
+
+  /**
+   * Return a pre-signed request auth for the auth data and proposal slot, or sign and cache a new
+   * one. Signing happens off the block proposal hot path when preferences are submitted ahead of
+   * time, cached auths are then used just-in-time when requesting bids at proposal time.
+   */
+  async getRequestAuth(
+    pubkeyMaybeHex: BLSPubkeyMaybeHex,
+    data: Uint8Array,
+    proposalSlot: Slot,
+    currentSlot: Slot
+  ): Promise<gloas.SignedRequestAuth> {
+    const pubkeyHex = typeof pubkeyMaybeHex === "string" ? pubkeyMaybeHex : toPubkeyHex(pubkeyMaybeHex);
+    const authKey = `${proposalSlot}-${toHex(data)}`;
+    const validatorData = this.validators.get(pubkeyHex);
+    const cached = validatorData?.requestAuths?.get(authKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const signedRequestAuth = await this.signRequestAuth(pubkeyMaybeHex, data, proposalSlot);
+
+    if (validatorData !== undefined) {
+      const requestAuths = validatorData.requestAuths ?? new Map<string, gloas.SignedRequestAuth>();
+      // Prune auths for proposal slots that are already in the past
+      for (const key of requestAuths.keys()) {
+        if (Number(key.slice(0, key.indexOf("-"))) < currentSlot) {
+          requestAuths.delete(key);
+        }
+      }
+      requestAuths.set(authKey, signedRequestAuth);
+      validatorData.requestAuths = requestAuths;
+    }
+
+    return signedRequestAuth;
   }
 
   async getValidatorRegistration(

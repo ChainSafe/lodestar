@@ -112,6 +112,39 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {pubkey: pubkeyRand},
     res: undefined,
   },
+  getBuilders: {
+    args: {pubkey: pubkeyRand},
+    res: {
+      data: {
+        minBid: 0n,
+        builderBoostFactor: 100n,
+        builders: [
+          {
+            url: "https://builder.example.com",
+            authData: "0x68747470733a2f2f6275696c6465722e6578616d706c652e636f6d",
+            builderPubkeys: [pubkeyRand],
+            maxExecutionPayment: 0n,
+            minBid: 0n,
+            builderBoostFactor: 100n,
+          },
+        ],
+      },
+    },
+  },
+  setBuilders: {
+    args: {
+      pubkey: pubkeyRand,
+      builderConfig: {
+        minBid: 0n,
+        builders: [{url: "https://builder.example.com", maxExecutionPayment: 0n}],
+      },
+    },
+    res: undefined,
+  },
+  deleteBuilders: {
+    args: {pubkey: pubkeyRand},
+    res: undefined,
+  },
   getProposerConfig: {
     args: {pubkey: pubkeyRand},
     res: {

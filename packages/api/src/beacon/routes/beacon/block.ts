@@ -163,8 +163,17 @@ export type Endpoints = {
     {
       signedBlockContents: SignedBlockContents;
       broadcastValidation?: BroadcastValidation;
+      /**
+       * The url of the winning builder as returned by `produceBlockV4`. The beacon node forwards
+       * the signed block to this builder so it can release the payload without waiting for gossip.
+       */
+      builderUrl?: string;
     },
-    {body: unknown; headers: {[MetaHeader.Version]: string}; query: {broadcast_validation?: string}},
+    {
+      body: unknown;
+      headers: {[MetaHeader.Version]: string; [MetaHeader.BuilderUrl]?: string};
+      query: {broadcast_validation?: string};
+    },
     EmptyResponseData,
     EmptyMeta
   >;
@@ -345,7 +354,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       url: "/eth/v2/beacon/blocks",
       method: "POST",
       req: {
-        writeReqJson: ({signedBlockContents, broadcastValidation}) => {
+        writeReqJson: ({signedBlockContents, broadcastValidation, builderUrl}) => {
           const slot = signedBlockContents.signedBlock.message.slot;
           const fork = config.getForkName(slot);
           return {
@@ -359,6 +368,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                   ),
             headers: {
               [MetaHeader.Version]: fork,
+              ...(builderUrl !== undefined ? {[MetaHeader.BuilderUrl]: builderUrl} : {}),
             },
             query: {broadcast_validation: broadcastValidation},
           };
@@ -371,9 +381,10 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                 ? sszTypesFor(forkName).SignedBlockContents.fromJson(body)
                 : {signedBlock: ssz[forkName].SignedBeaconBlock.fromJson(body)},
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            builderUrl: headers[MetaHeader.BuilderUrl],
           };
         },
-        writeReqSsz: ({signedBlockContents, broadcastValidation}) => {
+        writeReqSsz: ({signedBlockContents, broadcastValidation, builderUrl}) => {
           const slot = signedBlockContents.signedBlock.message.slot;
           const fork = config.getForkName(slot);
 
@@ -388,6 +399,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                   ),
             headers: {
               [MetaHeader.Version]: fork,
+              ...(builderUrl !== undefined ? {[MetaHeader.BuilderUrl]: builderUrl} : {}),
             },
             query: {broadcast_validation: broadcastValidation},
           };
@@ -400,12 +412,13 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                 ? sszTypesFor(forkName).SignedBlockContents.deserialize(body)
                 : {signedBlock: ssz[forkName].SignedBeaconBlock.deserialize(body)},
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
+            builderUrl: headers[MetaHeader.BuilderUrl],
           };
         },
         schema: {
           body: Schema.Object,
           query: {broadcast_validation: Schema.String},
-          headers: {[MetaHeader.Version]: Schema.String},
+          headers: {[MetaHeader.Version]: Schema.String, [MetaHeader.BuilderUrl]: Schema.String},
         },
       },
       resp: EmptyResponseCodec,

@@ -96,6 +96,118 @@ export type GraffitiData = ValueOf<typeof GraffitiDataType>;
 export type GasLimitData = ValueOf<typeof GasLimitDataType>;
 export type BuilderBoostFactorData = ValueOf<typeof BuilderBoostFactorDataType>;
 
+/** One builder a validator public key may source blocks from */
+export type BuilderEntryConfig = {
+  url: string;
+  /** Opaque auth data hex string, defaults to the UTF-8 bytes of the builder url when omitted */
+  authData?: string;
+  /** Builder BLS pubkeys this entry accepts bids from, empty or omitted accepts any builder */
+  builderPubkeys?: string[];
+  maxExecutionPayment?: bigint;
+  minBid?: bigint;
+  builderBoostFactor?: bigint;
+};
+
+/** How a validator public key sources blocks from builders */
+export type BuilderConfigData = {
+  minBid?: bigint;
+  builderBoostFactor?: bigint;
+  /** Omitted means use the validator client's builders, empty means request bids from none */
+  builders?: BuilderEntryConfig[];
+};
+
+const AUTH_DATA_PATTERN = /^0x(?:[a-fA-F0-9]{2}){1,4096}$/;
+const PUBKEY_PATTERN = /^0x[a-fA-F0-9]{96}$/;
+
+function parseGweiAmount(value: unknown, field: string): bigint | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !/^\d+$/.test(value)) {
+    throw Error(`${field} must be a string number without decimals`);
+  }
+  return BigInt(value);
+}
+
+export function builderConfigDataToJson(config: BuilderConfigData): Record<string, unknown> {
+  return {
+    ...(config.minBid !== undefined ? {min_bid: config.minBid.toString()} : {}),
+    ...(config.builderBoostFactor !== undefined ? {builder_boost_factor: config.builderBoostFactor.toString()} : {}),
+    ...(config.builders !== undefined
+      ? {
+          builders: config.builders.map((entry) => ({
+            url: entry.url,
+            ...(entry.authData !== undefined ? {auth_data: entry.authData} : {}),
+            ...(entry.builderPubkeys !== undefined ? {builder_pubkeys: entry.builderPubkeys} : {}),
+            ...(entry.maxExecutionPayment !== undefined
+              ? {max_execution_payment: entry.maxExecutionPayment.toString()}
+              : {}),
+            ...(entry.minBid !== undefined ? {min_bid: entry.minBid.toString()} : {}),
+            ...(entry.builderBoostFactor !== undefined
+              ? {builder_boost_factor: entry.builderBoostFactor.toString()}
+              : {}),
+          })),
+        }
+      : {}),
+  };
+}
+
+export function builderConfigDataFromJson(json: unknown): BuilderConfigData {
+  if (typeof json !== "object" || json === null || Array.isArray(json)) {
+    throw Error("Builder config must be an object");
+  }
+  const {min_bid, builder_boost_factor, builders} = json as Record<string, unknown>;
+
+  let parsedBuilders: BuilderEntryConfig[] | undefined;
+  if (builders !== undefined) {
+    if (!Array.isArray(builders)) {
+      throw Error("builders must be an array");
+    }
+    if (builders.length > 64) {
+      throw Error(`builders must not contain more than 64 entries, got ${builders.length}`);
+    }
+    parsedBuilders = builders.map((entry, i): BuilderEntryConfig => {
+      if (typeof entry !== "object" || entry === null) {
+        throw Error(`builders[${i}] must be an object`);
+      }
+      const {url, auth_data, builder_pubkeys, max_execution_payment} = entry as Record<string, unknown>;
+      if (typeof url !== "string" || url.length === 0) {
+        throw Error(`builders[${i}].url must be a non-empty string`);
+      }
+      if (auth_data !== undefined && (typeof auth_data !== "string" || !AUTH_DATA_PATTERN.test(auth_data))) {
+        throw Error(`builders[${i}].auth_data must be a non-empty hex string of at most 4096 bytes`);
+      }
+      let builderPubkeys: string[] | undefined;
+      if (builder_pubkeys !== undefined) {
+        if (!Array.isArray(builder_pubkeys) || builder_pubkeys.length > 64) {
+          throw Error(`builders[${i}].builder_pubkeys must be an array of at most 64 pubkeys`);
+        }
+        builderPubkeys = builder_pubkeys.map((pubkey) => {
+          if (typeof pubkey !== "string" || !PUBKEY_PATTERN.test(pubkey)) {
+            throw Error(`builders[${i}].builder_pubkeys must contain 48-byte hex pubkeys`);
+          }
+          return pubkey;
+        });
+      }
+      return {
+        url,
+        authData: auth_data as string | undefined,
+        builderPubkeys,
+        maxExecutionPayment: parseGweiAmount(max_execution_payment, `builders[${i}].max_execution_payment`),
+        minBid: parseGweiAmount((entry as Record<string, unknown>).min_bid, `builders[${i}].min_bid`),
+        builderBoostFactor: parseGweiAmount(
+          (entry as Record<string, unknown>).builder_boost_factor,
+          `builders[${i}].builder_boost_factor`
+        ),
+      };
+    });
+  }
+
+  return {
+    minBid: parseGweiAmount(min_bid, "min_bid"),
+    builderBoostFactor: parseGweiAmount(builder_boost_factor, "builder_boost_factor"),
+    builders: parsedBuilders,
+  };
+}
+
 export type SignerDefinition = {
   pubkey: PubkeyHex;
   /**
@@ -366,6 +478,26 @@ export type Endpoints = {
     EmptyResponseData,
     EmptyMeta
   >;
+
+  /** Get the builder configuration in effect for a validator public key, with omitted values resolved */
+  getBuilders: Endpoint<
+    // ⏎
+    "GET",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    BuilderConfigData,
+    EmptyMeta
+  >;
+  /** Set the builder configuration for a validator public key, replacing any stored configuration in full */
+  setBuilders: Endpoint<
+    "POST",
+    {pubkey: PubkeyHex; builderConfig: BuilderConfigData},
+    {params: {pubkey: string}; body: unknown},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+  /** Remove the builder configuration for a validator public key, it then follows the validator client again */
+  deleteBuilders: Endpoint<"DELETE", {pubkey: PubkeyHex}, {params: {pubkey: string}}, EmptyResponseData, EmptyMeta>;
 
   getProposerConfig: Endpoint<
     // ⏎
@@ -644,6 +776,56 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
     },
     deleteBuilderBoostFactor: {
       url: "/eth/v1/validator/{pubkey}/builder_boost_factor",
+      method: "DELETE",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    getBuilders: {
+      url: "/eth/v1/validator/{pubkey}/builders",
+      method: "GET",
+      req: {
+        writeReq: ({pubkey}) => ({params: {pubkey}}),
+        parseReq: ({params: {pubkey}}) => ({pubkey}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+        },
+      },
+      resp: {
+        onlySupport: WireFormat.json,
+        data: {
+          toJson: (data) => builderConfigDataToJson(data),
+          fromJson: (data) => builderConfigDataFromJson(data),
+          serialize: () => {
+            throw Error("SSZ not supported");
+          },
+          deserialize: () => {
+            throw Error("SSZ not supported");
+          },
+        },
+        meta: EmptyMetaCodec,
+      },
+    },
+    setBuilders: {
+      url: "/eth/v1/validator/{pubkey}/builders",
+      method: "POST",
+      req: JsonOnlyReq({
+        writeReqJson: ({pubkey, builderConfig}) => ({params: {pubkey}, body: builderConfigDataToJson(builderConfig)}),
+        parseReqJson: ({params: {pubkey}, body}) => ({pubkey, builderConfig: builderConfigDataFromJson(body)}),
+        schema: {
+          params: {pubkey: Schema.StringRequired},
+          body: Schema.Object,
+        },
+      }),
+      resp: EmptyResponseCodec,
+    },
+    deleteBuilders: {
+      url: "/eth/v1/validator/{pubkey}/builders",
       method: "DELETE",
       req: {
         writeReq: ({pubkey}) => ({params: {pubkey}}),

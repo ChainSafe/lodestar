@@ -58,6 +58,11 @@ const ignoredOperations = [
   // (slot path param -> query param). Pinned v5.0.0-alpha.2 still defines slot as a
   // path param, so ignore this op to avoid a false conformance mismatch until the bump.
   "producePayloadAttestationData",
+  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
+  // (GET -> POST with a required BuilderConfig request body)
+  "produceBlockV4",
+  // TODO: remove once the pinned beacon-APIs spec version includes beacon-APIs#630
+  "submitBuilderPreferences",
 ];
 
 const ignoredProperties: Record<string, IgnoredProperty> = {

@@ -2,6 +2,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/blst";
 import {
   BuilderBoostFactorData,
+  BuilderConfigData,
   DeleteRemoteKeyStatus,
   DeletionStatus,
   FeeRecipientData,
@@ -32,7 +33,8 @@ export class KeymanagerApi implements Api {
     private readonly validator: Validator,
     private readonly persistedKeysBackend: IPersistedKeysBackend,
     private readonly signal: AbortSignal,
-    private readonly proposerConfigWriteDisabled?: boolean
+    private readonly proposerConfigWriteDisabled?: boolean,
+    private readonly allowDangerousTrustedPayments?: boolean
   ) {}
 
   private checkIfProposerWriteEnabled(): void {
@@ -375,6 +377,47 @@ export class KeymanagerApi implements Api {
   async deleteBuilderBoostFactor({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteBuilderBoostFactor"]> {
     this.checkIfProposerWriteEnabled();
     this.validator.validatorStore.deleteBuilderBoostFactor(pubkey);
+    this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 204};
+  }
+
+  async getBuilders({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getBuilders"]> {
+    this.assertValidKnownPubkey(pubkey);
+    return {data: this.validator.validatorStore.getBuilderConfig(pubkey)};
+  }
+
+  async setBuilders({
+    pubkey,
+    builderConfig,
+  }: {
+    pubkey: PubkeyHex;
+    builderConfig: BuilderConfigData;
+  }): ReturnType<Api["setBuilders"]> {
+    this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
+
+    if (
+      this.allowDangerousTrustedPayments !== true &&
+      builderConfig.builders?.some((entry) => (entry.maxExecutionPayment ?? BigInt(0)) > BigInt(0))
+    ) {
+      throw new ApiError(
+        400,
+        "Configuring a builder max execution payment above 0 requires --allowDangerousTrustedPayments"
+      );
+    }
+
+    try {
+      this.validator.validatorStore.setBuilderConfig(pubkey, builderConfig);
+    } catch (e) {
+      throw new ApiError(400, (e as Error).message);
+    }
+    this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
+    return {status: 202};
+  }
+
+  async deleteBuilders({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteBuilders"]> {
+    this.checkIfProposerWriteEnabled();
+    this.validator.validatorStore.deleteBuilderConfig(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 204};
   }

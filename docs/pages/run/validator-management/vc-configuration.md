@@ -110,6 +110,15 @@ Example 2: Setting a `--builder.boostFactor=0` will always prefer the local exec
 
 Example 3: Setting a `--builder.boostFactor=100` is the same as signaling `--builder.selection maxprofit` where the validator will always select the most profitable block between the local execution engine and the builder block from the relay.
 
+### Configure external builders (Gloas)
+
+Starting with Gloas, external builders are configured on the validator client and the beacon node requests bids on its behalf. Use [`--builder.urls`](./validator-cli.md#--builderurls) to name the builders to request bids from. Bids received over p2p are always considered alongside them, governed by the same selection settings.
+
+- [`--builder.minBid`](./validator-cli.md#--builderminbid): minimum total payment in Gwei accepted from a builder bid, counting the bid value plus its execution payment. Bids below the floor are rejected.
+- [`--builder.maxExecutionPayment`](./validator-cli.md#--buildermaxexecutionpayment): maximum execution layer payment in Gwei accepted from a builder. The default of `0` only accepts trustless payments backed by the builder's staked collateral. An execution layer payment is only a promise by the builder to pay as part of the block, so values above `0` require the explicit [`--allowDangerousTrustedPayments`](./validator-cli.md#--allowdangeroustrustedpayments) opt-in.
+
+Builders can also be configured per validator key with per-builder overrides via the [Set Builders keymanager endpoint](https://ethereum.github.io/keymanager-APIs/#/Builders) or the [proposer configuration file](./proposer-config.md).
+
 ### Submit a validator deposit
 
 Please use the official Ethereum Launchpad to perform your deposits. Ensure your deposits are sent to the proper beacon chain deposit address on the correct network.

@@ -7,6 +7,8 @@ import * as keymanager from "./client.js";
 
 export type {
   BuilderBoostFactorData,
+  BuilderConfigData,
+  BuilderEntryConfig,
   Endpoints,
   FeeRecipientData,
   GasLimitData,

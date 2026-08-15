@@ -61,6 +61,7 @@ import {ProcessShutdownCallback} from "@lodestar/validator";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants/index.js";
 import {IBeaconDb} from "../db/index.js";
 import {BLOB_SIDECARS_IN_WRAPPER_INDEX} from "../db/repositories/blobSidecars.js";
+import {BuilderApiClient} from "../execution/builder/apiClient.js";
 import {BuilderStatus} from "../execution/builder/http.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/index.js";
@@ -163,6 +164,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;
@@ -443,6 +445,8 @@ export class BeaconChain implements IBeaconChain {
       {faultInspectionWindow: opts.faultInspectionWindow, allowedFaults: opts.allowedFaults},
       {forkChoice, logger, metrics}
     );
+
+    this.builderApiClient = new BuilderApiClient({}, config, metrics, logger);
 
     this.seenPayloadEnvelopeInputCache = new SeenPayloadEnvelopeInput({
       config,
@@ -1605,6 +1609,7 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);
+    this.builderApiClient.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

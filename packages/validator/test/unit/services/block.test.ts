@@ -39,6 +39,8 @@ describe("BlockDutiesService", () => {
     vi.spyOn(validatorStore, "signRandao");
     vi.spyOn(validatorStore, "signBlock");
     vi.spyOn(validatorStore, "getBuilderSelectionParams");
+    vi.spyOn(validatorStore, "getBuilderMinBid");
+    vi.spyOn(validatorStore, "getResolvedBuilderEntries");
     vi.spyOn(validatorStore, "getGraffiti");
     vi.spyOn(validatorStore, "getFeeRecipient");
     vi.spyOn(validatorStore, "strictFeeRecipientCheck");
@@ -237,6 +239,8 @@ describe("BlockDutiesService", () => {
       selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
     });
+    validatorStore.getBuilderMinBid.mockReturnValue(BigInt(0));
+    validatorStore.getResolvedBuilderEntries.mockReturnValue([]);
     validatorStore.getGraffiti.mockReturnValue("aaaa");
     validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
     validatorStore.strictFeeRecipientCheck.mockReturnValue(true);
@@ -265,7 +269,7 @@ describe("BlockDutiesService", () => {
       feeRecipient,
       strictFeeRecipientCheck: true,
       includePayload: true,
-      builderBoostFactor: BigInt(0),
+      builderConfig: {minBid: BigInt(0), builderBoostFactor: BigInt(0), builders: []},
     });
   });
 });

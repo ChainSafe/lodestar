@@ -17,6 +17,8 @@ type ProposerConfigFileSection = {
     gas_limit?: number;
     selection?: routes.validator.BuilderSelection;
     boost_factor?: bigint;
+    min_bid?: bigint;
+    max_execution_payment?: bigint;
   };
 };
 
@@ -54,7 +56,7 @@ function parseProposerConfigSection(
   overrideConfig?: ProposerConfig
 ): ProposerConfig {
   const {graffiti, strict_fee_recipient_check, fee_recipient, builder} = proposerFileSection;
-  const {gas_limit, selection: builderSelection, boost_factor} = builder || {};
+  const {gas_limit, selection: builderSelection, boost_factor, min_bid, max_execution_payment} = builder || {};
 
   if (graffiti !== undefined && typeof graffiti !== "string") {
     throw Error("graffiti is not 'string");
@@ -79,6 +81,12 @@ function parseProposerConfigSection(
   if (boost_factor !== undefined && typeof boost_factor !== "string") {
     throw Error("boost_factor is not 'string");
   }
+  if (min_bid !== undefined && typeof min_bid !== "string") {
+    throw Error("min_bid is not 'string");
+  }
+  if (max_execution_payment !== undefined && typeof max_execution_payment !== "string") {
+    throw Error("max_execution_payment is not 'string");
+  }
 
   return {
     graffiti: overrideConfig?.graffiti ?? graffiti,
@@ -92,15 +100,32 @@ function parseProposerConfigSection(
             gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
             selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
             boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
+            minBid: overrideConfig?.builder?.minBid ?? parseBuilderMinBid(min_bid),
+            maxExecutionPayment:
+              overrideConfig?.builder?.maxExecutionPayment ?? parseBuilderGweiAmount(max_execution_payment),
+            urls: overrideConfig?.builder?.urls,
           }
         : undefined,
   };
 }
 
-export function readProposerConfigDir(filepath: string, filename: string): ProposerConfigFileSection {
+export function readProposerConfigDir(filepath: string, filename: string): ProposerConfig {
   const proposerConfigStr = fs.readFileSync(path.join(filepath, filename), "utf8");
-  const proposerConfigJSON = JSON.parse(proposerConfigStr) as ProposerConfigFileSection;
-  return proposerConfigJSON;
+  // Persisted via `writeProposerConfig` with BigInt values serialized as strings
+  const persisted = JSON.parse(proposerConfigStr) as ProposerConfig;
+  if (persisted.builder) {
+    const {boostFactor, minBid, maxExecutionPayment, builders} = persisted.builder;
+    persisted.builder.boostFactor = boostFactor !== undefined ? BigInt(boostFactor) : undefined;
+    persisted.builder.minBid = minBid !== undefined ? BigInt(minBid) : undefined;
+    persisted.builder.maxExecutionPayment = maxExecutionPayment !== undefined ? BigInt(maxExecutionPayment) : undefined;
+    persisted.builder.builders = builders?.map((entry) => ({
+      ...entry,
+      maxExecutionPayment: entry.maxExecutionPayment !== undefined ? BigInt(entry.maxExecutionPayment) : undefined,
+      minBid: entry.minBid !== undefined ? BigInt(entry.minBid) : undefined,
+      builderBoostFactor: entry.builderBoostFactor !== undefined ? BigInt(entry.builderBoostFactor) : undefined,
+    }));
+  }
+  return persisted;
 }
 
 export function parseBuilderSelection(builderSelection?: string): routes.validator.BuilderSelection | undefined {
@@ -133,4 +158,37 @@ export function parseBuilderBoostFactor(boostFactor?: string): bigint | undefine
   }
 
   return BigInt(boostFactor);
+}
+
+export function parseBuilderMinBid(minBid?: string | bigint): bigint | undefined {
+  if (minBid === undefined) return;
+
+  if (!/^\d+$/.test(minBid.toString())) {
+    throw Error("Invalid input for builder min bid, must be a valid number without decimals");
+  }
+
+  return BigInt(minBid);
+}
+
+export function parseBuilderGweiAmount(amount?: string | bigint): bigint | undefined {
+  if (amount === undefined) return;
+
+  if (!/^\d+$/.test(amount.toString())) {
+    throw Error("Invalid input for builder Gwei amount, must be a valid number without decimals");
+  }
+
+  return BigInt(amount);
+}
+
+export function parseBuilderUrls(urls?: string[]): string[] | undefined {
+  if (urls === undefined) return undefined;
+
+  for (const url of urls) {
+    try {
+      new URL(url);
+    } catch {
+      throw Error(`Invalid builder url: ${url}`);
+    }
+  }
+  return [...new Set(urls)];
 }

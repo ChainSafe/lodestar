@@ -4,8 +4,9 @@ import {SecretKey} from "@chainsafe/blst";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {chainConfig} from "@lodestar/config/default";
-import {SLOTS_PER_EPOCH} from "@lodestar/params";
-import {bellatrix} from "@lodestar/types";
+import {DOMAIN_REQUEST_AUTH, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {ZERO_HASH, computeDomain, computeSigningRoot} from "@lodestar/state-transition";
+import {bellatrix, ssz} from "@lodestar/types";
 import {ValidatorProposerConfig, ValidatorStore} from "../../src/services/validatorStore.js";
 import {getApiClientStub} from "../utils/apiStub.js";
 import {getMockedLogger} from "../utils/logger.js";
@@ -191,6 +192,80 @@ describe("ValidatorStore", () => {
       configuredGasLimit,
       recommendedGasLimit,
     });
+  });
+
+  it("Should sign request auth with fork-independent domain", async () => {
+    const data = Buffer.from("https://builder.example.com", "utf8");
+    const proposalSlot = 10;
+
+    const signedRequestAuth = await validatorStore.signRequestAuth(pubkeys[0], data, proposalSlot);
+
+    expect(toHexString(signedRequestAuth.message.data)).toBe(toHexString(data));
+    expect(signedRequestAuth.message.slot).toBe(proposalSlot);
+
+    const domain = computeDomain(DOMAIN_REQUEST_AUTH, chainConfig.GENESIS_FORK_VERSION, ZERO_HASH);
+    const signingRoot = computeSigningRoot(ssz.gloas.RequestAuth, signedRequestAuth.message, domain);
+    expect(toHexString(signedRequestAuth.signature)).toBe(toHexString(secretKeys[0].sign(signingRoot).toBytes()));
+
+    // Signing root must bind both the auth data and the proposal slot
+    const otherData = computeSigningRoot(
+      ssz.gloas.RequestAuth,
+      {data: Buffer.from("other"), slot: proposalSlot},
+      domain
+    );
+    const otherSlot = computeSigningRoot(ssz.gloas.RequestAuth, {data, slot: proposalSlot + 1}, domain);
+    expect(toHexString(otherData)).not.toBe(toHexString(signingRoot));
+    expect(toHexString(otherSlot)).not.toBe(toHexString(signingRoot));
+  });
+
+  it("Should reject request auth data with invalid length", async () => {
+    await expect(validatorStore.signRequestAuth(pubkeys[0], new Uint8Array(0), 10)).rejects.toThrow();
+    await expect(validatorStore.signRequestAuth(pubkeys[0], new Uint8Array(4097), 10)).rejects.toThrow();
+  });
+
+  it("Should resolve builder entries against key and validator client defaults", () => {
+    const pubkey = toHexString(pubkeys[0]);
+    const builderUrl = "https://builder.example.com";
+
+    // No per-key config resolves to the validator client's builders (none configured)
+    expect(validatorStore.getResolvedBuilderEntries(pubkey)).toEqual([]);
+
+    validatorStore.setBuilderConfig(pubkey, {
+      minBid: BigInt(10),
+      builders: [
+        {url: builderUrl, maxExecutionPayment: BigInt(5)},
+        {url: builderUrl, authData: "0x1234", minBid: BigInt(20), builderBoostFactor: BigInt(120)},
+      ],
+    });
+
+    const entries = validatorStore.getResolvedBuilderEntries(pubkey);
+    expect(entries).toHaveLength(2);
+    // Omitted auth data derives from the entry url, omitted min bid takes the key default
+    expect(Buffer.from(entries[0].authData).toString("utf8")).toBe(builderUrl);
+    expect(entries[0].minBid).toBe(BigInt(10));
+    expect(entries[0].maxExecutionPayment).toBe(BigInt(5));
+    // Per-entry values win over the key defaults
+    expect(toHexString(entries[1].authData)).toBe("0x1234");
+    expect(entries[1].minBid).toBe(BigInt(20));
+    expect(entries[1].builderBoostFactor).toBe(BigInt(120));
+
+    // GET returns the configuration fully resolved
+    const config = validatorStore.getBuilderConfig(pubkey);
+    expect(config.minBid).toBe(BigInt(10));
+    expect(config.builders?.[0].authData).toBeDefined();
+    expect(config.builders?.[0].builderPubkeys).toEqual([]);
+
+    // Duplicate (url, auth data) entries are rejected, an omitted auth data compares as derived
+    expect(() =>
+      validatorStore.setBuilderConfig(pubkey, {
+        builders: [{url: builderUrl}, {url: builderUrl}],
+      })
+    ).toThrow();
+
+    // Delete reverts the key to the validator client's own configuration
+    validatorStore.deleteBuilderConfig(pubkey);
+    expect(validatorStore.getResolvedBuilderEntries(pubkey)).toEqual([]);
+    expect(validatorStore.getBuilderMinBid(pubkey)).toBe(BigInt(0));
   });
 });
 

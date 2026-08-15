@@ -23,6 +23,7 @@ import {
   rewards,
 } from "@lodestar/types";
 import {Logger} from "@lodestar/utils";
+import {BuilderApiClient} from "../execution/builder/apiClient.js";
 import {IExecutionBuilder, IExecutionEngine} from "../execution/index.js";
 import {Metrics} from "../metrics/metrics.js";
 import {BufferPool} from "../util/bufferPool.js";
@@ -97,6 +98,7 @@ export interface IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   readonly executionBuilder?: IExecutionBuilder;
   readonly builderCircuitBreaker: BuilderCircuitBreaker;
+  readonly builderApiClient: BuilderApiClient;
   // Expose config for convenience in modularized functions
   readonly config: BeaconConfig;
   readonly custodyConfig: CustodyConfig;

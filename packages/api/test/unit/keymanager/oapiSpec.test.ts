@@ -18,5 +18,12 @@ const openApiFile: OpenApiFile = {
   version: RegExp(version),
 };
 
+const ignoredOperations = [
+  // TODO: remove once a keymanager-APIs release includes the builders endpoints (keymanager-APIs#88)
+  "getBuilders",
+  "setBuilders",
+  "deleteBuilders",
+];
+
 const openApiJson = await fetchOpenApiSpec(openApiFile);
-runTestCheckAgainstSpec(openApiJson, getDefinitions(config), testData);
+runTestCheckAgainstSpec(openApiJson, getDefinitions(config), testData, ignoredOperations);
