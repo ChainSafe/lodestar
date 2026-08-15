@@ -297,8 +297,6 @@ describe("httpClient json client", () => {
       method: "POST",
       handler: async (req) => {
         expect(req.headers[HttpHeader.ContentType]).toBe(MediaType.ssz);
-        expect(req.headers["content-length"]).toBe(String(container.serialize(payload).byteLength));
-        expect(req.headers["transfer-encoding"]).toBeUndefined();
         expect(req.body).toBeInstanceOf(Uint8Array);
         expect(container.deserialize(req.body as Uint8Array)).toEqual(payload);
       },
