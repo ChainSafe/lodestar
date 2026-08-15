@@ -367,8 +367,8 @@ export class HttpClient implements IHttpClient {
 
     try {
       this.logger?.debug("API request", {routeId, requestWireFormat, responseWireFormat});
-      const request = createApiRequest(definition, args, init);
-      const response = await this.fetch(request.url, request);
+      const {url, requestInit} = createApiRequest(definition, args, init);
+      const response = await this.fetch(url, requestInit);
       const apiResponse = new ApiResponse(definition, response.body, response);
 
       if (!apiResponse.ok) {
