@@ -1011,7 +1011,14 @@ export function getValidatorApi(
         const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => (boostFactor * totalGwei) / 100n;
         let best: BidCandidate | null = null;
         for (const candidate of candidates) {
-          if (best === null || boostedValue(candidate) > boostedValue(best)) {
+          const candidateIsMaxBoost = candidate.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+          const bestIsMaxBoost = best?.boostFactor === MAX_BUILDER_BOOST_FACTOR;
+          // Preserve max boost preference before comparing bid values
+          if (
+            best === null ||
+            (candidateIsMaxBoost && !bestIsMaxBoost) ||
+            (candidateIsMaxBoost === bestIsMaxBoost && boostedValue(candidate) > boostedValue(best))
+          ) {
             best = candidate;
           }
         }
