@@ -276,7 +276,11 @@ class BuilderUrlType extends ByteListType {
     if (typeof json !== "string") {
       throw Error("Builder url must be a string");
     }
-    return new TextEncoder().encode(json);
+    const value = new TextEncoder().encode(json);
+    if (value.length > this.limitBytes) {
+      throw Error(`Builder url must not exceed ${this.limitBytes} bytes`);
+    }
+    return value;
   }
   toJson(value: Uint8Array): unknown {
     return new TextDecoder().decode(value);
