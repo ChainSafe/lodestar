@@ -332,6 +332,8 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     gasLimit: UintBn64,
     builderIndex: BuilderIndex,
     slot: Slot,
+    // Unlike the unbounded gasLimit/executionPayment, value is capped by the builder's balance
+    // (can_builder_cover_bid REJECT + gossip IGNORE), itself UintNum64, so a number is safe here.
     value: UintNum64,
     // executionPayment is a uint64 with no bound in process_execution_payload_bid, so a block can
     // carry any value; use UintBn64 so the hashTreeRoot matches exact-uint64 clients for values > 2**53.
