@@ -15,8 +15,9 @@ describe("api/validator - submitBuilderPreferences", () => {
   });
 
   it("reports an invalid url by index while submitting the other entries", async () => {
+    const invalidUrl = "not a url";
     const validEntry = getEntry("https://builder.example.com");
-    const invalidEntry = getEntry("");
+    const invalidEntry = getEntry(invalidUrl);
 
     let error: unknown;
     try {
@@ -32,6 +33,11 @@ describe("api/validator - submitBuilderPreferences", () => {
       "https://builder.example.com",
       validEntry.proposerPubkey,
       {preferences: {maxExecutionPayment: 0n}, auth: validEntry.auth}
+    );
+    expect(modules.logger.verbose).toHaveBeenCalledWith(
+      "Error on submitBuilderPreferences [0]",
+      {slot: 1, builder: invalidUrl},
+      expect.any(Error)
     );
   });
 });

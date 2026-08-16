@@ -2027,7 +2027,7 @@ export function getValidatorApi(
       await Promise.all(
         builderPreferences.map(async (entry, i) => {
           const url = Buffer.from(entry.url).toString("utf8");
-          let builder = "<invalid>";
+          let builder = url;
           try {
             new URL(url);
             builder = toPrintableUrl(url);

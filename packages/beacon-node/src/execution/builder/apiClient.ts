@@ -80,7 +80,7 @@ export class BuilderApiClient {
       try {
         new URL(url);
       } catch {
-        this.logger?.warn("Ignoring builder entry with invalid url", {slot, url: "<invalid>"});
+        this.logger?.warn("Ignoring builder entry with invalid url", {slot, url});
         continue;
       }
 

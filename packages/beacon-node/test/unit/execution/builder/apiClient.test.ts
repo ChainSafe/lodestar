@@ -16,15 +16,17 @@ describe("execution/builder/apiClient", () => {
     vi.clearAllMocks();
   });
 
-  it("ignores an entry with an empty url without failing the other entries", async () => {
+  it("ignores an entry with an invalid url without failing the other entries", async () => {
     const slot = 1;
+    const invalidUrl = "not a url";
     const validEntry = getBuilderEntry("https://builder.example.com", slot);
     const signedBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     getExecutionPayloadBid.mockResolvedValue({value: () => signedBid});
 
-    const client = new BuilderApiClient({}, config, null, getMockedLogger());
+    const logger = getMockedLogger();
+    const client = new BuilderApiClient({}, config, null, logger);
     const bids = await client.getExecutionPayloadBids(
-      [getBuilderEntry("", slot), validEntry],
+      [getBuilderEntry(invalidUrl, slot), validEntry],
       slot,
       new Uint8Array(32),
       new Uint8Array(32),
@@ -34,6 +36,7 @@ describe("execution/builder/apiClient", () => {
 
     expect(bids).toEqual([{url: "https://builder.example.com", entry: validEntry, signedBid}]);
     expect(getExecutionPayloadBid).toHaveBeenCalledOnce();
+    expect(logger.warn).toHaveBeenCalledWith("Ignoring builder entry with invalid url", {slot, url: invalidUrl});
   });
 });
 
