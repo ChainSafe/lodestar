@@ -285,15 +285,21 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             [MetaHeader.TimeoutMs]: timeoutMs.toString(),
           },
         }),
-        parseReqJson: ({params, body, headers}) => ({
-          slot: params.slot,
-          parentHash: fromHex(params.parent_hash),
-          parentRoot: fromHex(params.parent_root),
-          proposerPubkey: fromHex(params.proposer_pubkey),
-          requestAuth: ssz.gloas.SignedRequestAuth.fromJson(body),
-          dateMilliseconds: Number(fromHeaders(headers, MetaHeader.DateMilliseconds)),
-          timeoutMs: Number(fromHeaders(headers, MetaHeader.TimeoutMs)),
-        }),
+        parseReqJson: ({params, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            slot: params.slot,
+            parentHash: fromHex(params.parent_hash),
+            parentRoot: fromHex(params.parent_root),
+            proposerPubkey: fromHex(params.proposer_pubkey),
+            requestAuth: ssz.gloas.SignedRequestAuth.fromJson(body),
+            dateMilliseconds: parseRequiredUintHeader(
+              fromHeaders(headers, MetaHeader.DateMilliseconds),
+              MetaHeader.DateMilliseconds
+            ),
+            timeoutMs: parseRequiredUintHeader(fromHeaders(headers, MetaHeader.TimeoutMs), MetaHeader.TimeoutMs),
+          };
+        },
         writeReqSsz: ({slot, parentHash, parentRoot, proposerPubkey, requestAuth, dateMilliseconds, timeoutMs}) => ({
           params: {
             slot,
@@ -308,15 +314,21 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             [MetaHeader.TimeoutMs]: timeoutMs.toString(),
           },
         }),
-        parseReqSsz: ({params, body, headers}) => ({
-          slot: params.slot,
-          parentHash: fromHex(params.parent_hash),
-          parentRoot: fromHex(params.parent_root),
-          proposerPubkey: fromHex(params.proposer_pubkey),
-          requestAuth: ssz.gloas.SignedRequestAuth.deserialize(body),
-          dateMilliseconds: Number(fromHeaders(headers, MetaHeader.DateMilliseconds)),
-          timeoutMs: Number(fromHeaders(headers, MetaHeader.TimeoutMs)),
-        }),
+        parseReqSsz: ({params, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            slot: params.slot,
+            parentHash: fromHex(params.parent_hash),
+            parentRoot: fromHex(params.parent_root),
+            proposerPubkey: fromHex(params.proposer_pubkey),
+            requestAuth: ssz.gloas.SignedRequestAuth.deserialize(body),
+            dateMilliseconds: parseRequiredUintHeader(
+              fromHeaders(headers, MetaHeader.DateMilliseconds),
+              MetaHeader.DateMilliseconds
+            ),
+            timeoutMs: parseRequiredUintHeader(fromHeaders(headers, MetaHeader.TimeoutMs), MetaHeader.TimeoutMs),
+          };
+        },
         schema: {
           params: {
             slot: Schema.UintRequired,
@@ -395,19 +407,25 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
           body: ssz.gloas.BuilderPreferencesRequest.toJson(request),
           headers: {[MetaHeader.Version]: config.getForkName(request.auth.message.slot)},
         }),
-        parseReqJson: ({params, body}) => ({
-          proposerPubkey: fromHex(params.proposer_pubkey),
-          request: ssz.gloas.BuilderPreferencesRequest.fromJson(body),
-        }),
+        parseReqJson: ({params, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            proposerPubkey: fromHex(params.proposer_pubkey),
+            request: ssz.gloas.BuilderPreferencesRequest.fromJson(body),
+          };
+        },
         writeReqSsz: ({proposerPubkey, request}) => ({
           params: {proposer_pubkey: toPubkeyHex(proposerPubkey)},
           body: ssz.gloas.BuilderPreferencesRequest.serialize(request),
           headers: {[MetaHeader.Version]: config.getForkName(request.auth.message.slot)},
         }),
-        parseReqSsz: ({params, body}) => ({
-          proposerPubkey: fromHex(params.proposer_pubkey),
-          request: ssz.gloas.BuilderPreferencesRequest.deserialize(body),
-        }),
+        parseReqSsz: ({params, body, headers}) => {
+          toForkName(fromHeaders(headers, MetaHeader.Version));
+          return {
+            proposerPubkey: fromHex(params.proposer_pubkey),
+            request: ssz.gloas.BuilderPreferencesRequest.deserialize(body),
+          };
+        },
         schema: {
           params: {proposer_pubkey: Schema.StringRequired},
           body: Schema.Object,
@@ -420,4 +438,15 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
       },
     },
   };
+}
+
+function parseRequiredUintHeader(value: string, header: MetaHeader): number {
+  if (!/^\d+$/.test(value)) {
+    throw Error(`${header} must be a non-negative integer`);
+  }
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed)) {
+    throw Error(`${header} must be a safe integer`);
+  }
+  return parsed;
 }
