@@ -103,11 +103,13 @@ export async function validateBuilderApiExecutionPayloadBid(
     parentBlock: ProtoBlock;
     parentBlockHash: RootHex;
     parentBlockRoot: RootHex;
+    /** Fee recipient explicitly requested by the caller, the bid must match it when set */
+    feeRecipient?: Uint8Array;
     entry: routes.validator.BuilderEntry;
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
-  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry} = request;
+  const {slot, parentBlock, parentBlockHash, parentBlockRoot, feeRecipient, entry} = request;
 
   if (bid.slot !== slot) {
     throw Error(`Bid slot=${bid.slot} does not match requested slot=${slot}`);
@@ -119,6 +121,12 @@ export async function validateBuilderApiExecutionPayloadBid(
     throw Error(
       `Bid parent parentBlockHash=${bidParentBlockHash} parentBlockRoot=${bidParentBlockRoot} does not match ` +
         `requested parentBlockHash=${parentBlockHash} parentBlockRoot=${parentBlockRoot}`
+    );
+  }
+
+  if (feeRecipient !== undefined && !byteArrayEquals(bid.feeRecipient, feeRecipient)) {
+    throw Error(
+      `Bid feeRecipient=${toHex(bid.feeRecipient)} does not match requested feeRecipient=${toHex(feeRecipient)}`
     );
   }
 
@@ -170,7 +178,9 @@ export async function validateBuilderApiExecutionPayloadBid(
     throw Error(`Bid has too many KZG commitments len=${blobKzgCommitmentsLen} limit=${maxBlobsPerBlock}`);
   }
 
-  if (!state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
+  // The coverage check only applies to the staked collateral payment, a pure execution
+  // layer payment bid has nothing to cover on-chain
+  if (bid.value > 0 && !state.canBuilderCoverBid(bid.builderIndex, bid.value)) {
     throw Error(`Builder cannot cover bid value=${bid.value} balance=${builder.balance}`);
   }
 

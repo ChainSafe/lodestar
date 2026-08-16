@@ -1,9 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import {routes} from "@lodestar/api";
+import {BuilderEntryConfig, builderConfigDataFromJson} from "@lodestar/api/keymanager";
+import {MAX_BUILDER_ENTRIES, MAX_BUILDER_URL_SIZE} from "@lodestar/params";
+import {fromHex, toHex} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {parseFeeRecipient} from "./feeRecipient.js";
 import {readFile} from "./file.js";
+
+const UINT64_MAX = 2n ** 64n - 1n;
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
@@ -19,6 +24,7 @@ type ProposerConfigFileSection = {
     boost_factor?: bigint;
     min_bid?: bigint;
     max_execution_payment?: bigint;
+    builders?: unknown;
   };
 };
 
@@ -56,7 +62,14 @@ function parseProposerConfigSection(
   overrideConfig?: ProposerConfig
 ): ProposerConfig {
   const {graffiti, strict_fee_recipient_check, fee_recipient, builder} = proposerFileSection;
-  const {gas_limit, selection: builderSelection, boost_factor, min_bid, max_execution_payment} = builder || {};
+  const {
+    gas_limit,
+    selection: builderSelection,
+    boost_factor,
+    min_bid,
+    max_execution_payment,
+    builders,
+  } = builder || {};
 
   if (graffiti !== undefined && typeof graffiti !== "string") {
     throw Error("graffiti is not 'string");
@@ -88,24 +101,31 @@ function parseProposerConfigSection(
     throw Error("max_execution_payment is not 'string");
   }
 
+  const parsedBuilder =
+    overrideConfig?.builder || builder
+      ? {
+          gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
+          selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
+          boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
+          minBid: overrideConfig?.builder?.minBid ?? parseBuilderMinBid(min_bid),
+          maxExecutionPayment:
+            overrideConfig?.builder?.maxExecutionPayment ?? parseBuilderGweiAmount(max_execution_payment),
+          urls: overrideConfig?.builder?.urls,
+          builders: overrideConfig?.builder?.builders ?? parseBuilderEntries(builders),
+        }
+      : undefined;
+
+  if (parsedBuilder?.urls !== undefined && parsedBuilder?.builders !== undefined) {
+    throw Error("Cannot configure both --builder.urls and builders in the proposer settings file");
+  }
+
   return {
     graffiti: overrideConfig?.graffiti ?? graffiti,
     strictFeeRecipientCheck:
       overrideConfig?.strictFeeRecipientCheck ??
       (strict_fee_recipient_check ? stringtoBool(strict_fee_recipient_check) : undefined),
     feeRecipient: overrideConfig?.feeRecipient ?? (fee_recipient ? parseFeeRecipient(fee_recipient) : undefined),
-    builder:
-      overrideConfig?.builder || builder
-        ? {
-            gasLimit: overrideConfig?.builder?.gasLimit ?? (gas_limit !== undefined ? Number(gas_limit) : undefined),
-            selection: overrideConfig?.builder?.selection ?? parseBuilderSelection(builderSelection),
-            boostFactor: overrideConfig?.builder?.boostFactor ?? parseBuilderBoostFactor(boost_factor),
-            minBid: overrideConfig?.builder?.minBid ?? parseBuilderMinBid(min_bid),
-            maxExecutionPayment:
-              overrideConfig?.builder?.maxExecutionPayment ?? parseBuilderGweiAmount(max_execution_payment),
-            urls: overrideConfig?.builder?.urls,
-          }
-        : undefined,
+    builder: parsedBuilder,
   };
 }
 
@@ -156,8 +176,12 @@ export function parseBuilderBoostFactor(boostFactor?: string): bigint | undefine
   if (!/^\d+$/.test(boostFactor)) {
     throw Error("Invalid input for builder boost factor, must be a valid number without decimals");
   }
+  const parsed = BigInt(boostFactor);
+  if (parsed > UINT64_MAX) {
+    throw Error("Invalid input for builder boost factor, must not exceed 2**64 - 1");
+  }
 
-  return BigInt(boostFactor);
+  return parsed;
 }
 
 export function parseBuilderMinBid(minBid?: string | bigint): bigint | undefined {
@@ -166,8 +190,12 @@ export function parseBuilderMinBid(minBid?: string | bigint): bigint | undefined
   if (!/^\d+$/.test(minBid.toString())) {
     throw Error("Invalid input for builder min bid, must be a valid number without decimals");
   }
+  const parsed = BigInt(minBid);
+  if (parsed > UINT64_MAX) {
+    throw Error("Invalid input for builder min bid, must not exceed 2**64 - 1");
+  }
 
-  return BigInt(minBid);
+  return parsed;
 }
 
 export function parseBuilderGweiAmount(amount?: string | bigint): bigint | undefined {
@@ -176,19 +204,60 @@ export function parseBuilderGweiAmount(amount?: string | bigint): bigint | undef
   if (!/^\d+$/.test(amount.toString())) {
     throw Error("Invalid input for builder Gwei amount, must be a valid number without decimals");
   }
+  const parsed = BigInt(amount);
+  if (parsed > UINT64_MAX) {
+    throw Error("Invalid input for builder Gwei amount, must not exceed 2**64 - 1");
+  }
 
-  return BigInt(amount);
+  return parsed;
+}
+
+/**
+ * Parse per-builder entries from the proposer settings file, same shape and validation as the
+ * keymanager builders api. No two entries may share both their url and their auth data, an
+ * omitted auth data is compared as the value derived from the entry url.
+ */
+export function parseBuilderEntries(builders?: unknown): BuilderEntryConfig[] | undefined {
+  if (builders === undefined) return undefined;
+
+  const {builders: entries} = builderConfigDataFromJson({builders});
+  const seenEntries = new Set<string>();
+  for (const entry of entries ?? []) {
+    try {
+      new URL(entry.url);
+    } catch {
+      throw Error(`Invalid builder url: ${entry.url}`);
+    }
+    const authData = entry.authData !== undefined ? toHex(fromHex(entry.authData)) : toHex(Buffer.from(entry.url));
+    const entryKey = `${entry.url}|${authData}`;
+    if (seenEntries.has(entryKey)) {
+      throw Error(`Duplicate builder entry url=${entry.url}`);
+    }
+    seenEntries.add(entryKey);
+  }
+  return entries;
 }
 
 export function parseBuilderUrls(urls?: string[]): string[] | undefined {
   if (urls === undefined) return undefined;
 
+  const seen = new Set<string>();
   for (const url of urls) {
     try {
       new URL(url);
     } catch {
       throw Error(`Invalid builder url: ${url}`);
     }
+    if (Buffer.byteLength(url, "utf8") > MAX_BUILDER_URL_SIZE) {
+      throw Error(`Invalid builder url, must not exceed ${MAX_BUILDER_URL_SIZE} bytes: ${url}`);
+    }
+    if (seen.has(url)) {
+      throw Error(`Duplicate builder url: ${url}`);
+    }
+    seen.add(url);
   }
-  return [...new Set(urls)];
+  if (urls.length > MAX_BUILDER_ENTRIES) {
+    throw Error(`Number of builder urls must not exceed ${MAX_BUILDER_ENTRIES}, got ${urls.length}`);
+  }
+  return urls;
 }

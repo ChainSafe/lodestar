@@ -90,6 +90,7 @@ type DefaultProposerConfig = {
     minBid: bigint;
     maxExecutionPayment: bigint;
     urls: string[];
+    builders?: BuilderEntryConfig[];
   };
 };
 
@@ -162,10 +163,10 @@ export const defaultOptions = {
   defaultGasLimit: 60_000_000,
   builderSelection: routes.validator.BuilderSelection.ExecutionOnly,
   builderAliasSelection: routes.validator.BuilderSelection.Default,
-  builderBoostFactor: BigInt(100),
-  builderMinBid: BigInt(0),
+  builderBoostFactor: 100n,
+  builderMinBid: 0n,
   // Only trustless payments via the builder's staked collateral are accepted by default
-  builderMaxExecutionPayment: BigInt(0),
+  builderMaxExecutionPayment: 0n,
   // spec asks for gossip validation by default
   broadcastValidation: routes.beacon.BroadcastValidation.gossip,
   // should request fetching the locally produced block in blinded format
@@ -214,6 +215,7 @@ export class ValidatorStore {
         minBid: defaultConfig.builder?.minBid ?? defaultOptions.builderMinBid,
         maxExecutionPayment: defaultConfig.builder?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment,
         urls: defaultConfig.builder?.urls ?? [],
+        builders: defaultConfig.builder?.builders,
       },
     };
 
@@ -463,9 +465,9 @@ export class ValidatorStore {
   }
 
   /**
-   * Resolve the builder entries for this key. Per-key entries set via the keymanager api replace
-   * the configured builder urls, an omitted entry value takes this key's default and then the
-   * validator client's own configuration. An omitted auth data is derived from the entry url.
+   * Resolve the builder entries for this key. Per-key entries replace the validator client's
+   * builders, an omitted entry value takes this key's default and then the validator client's
+   * own configuration. An omitted auth data is derived from the entry url.
    */
   getResolvedBuilderEntries(pubkeyHex: PubkeyHex, boostFactor?: bigint): ResolvedBuilderEntry[] {
     const validatorData = this.validators.get(pubkeyHex);
@@ -479,7 +481,7 @@ export class ValidatorStore {
     const keyMaxExecutionPayment =
       validatorData.builder?.maxExecutionPayment ?? this.defaultProposerConfig.builder.maxExecutionPayment;
 
-    const builders = validatorData.builder?.builders;
+    const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders;
     if (builders !== undefined) {
       return builders.map((entry) => ({
         url: entry.url,

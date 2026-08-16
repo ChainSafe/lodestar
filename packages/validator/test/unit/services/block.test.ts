@@ -239,7 +239,7 @@ describe("BlockDutiesService", () => {
       selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
     });
-    validatorStore.getBuilderMinBid.mockReturnValue(BigInt(0));
+    validatorStore.getBuilderMinBid.mockReturnValue(0n);
     validatorStore.getResolvedBuilderEntries.mockReturnValue([]);
     validatorStore.getGraffiti.mockReturnValue("aaaa");
     validatorStore.getFeeRecipient.mockReturnValue(feeRecipient);
@@ -269,7 +269,7 @@ describe("BlockDutiesService", () => {
       feeRecipient,
       strictFeeRecipientCheck: true,
       includePayload: true,
-      builderConfig: {minBid: BigInt(0), builderBoostFactor: BigInt(0), builders: []},
+      builderConfig: {minBid: 0n, builderBoostFactor: 0n, builders: []},
     });
   });
 });

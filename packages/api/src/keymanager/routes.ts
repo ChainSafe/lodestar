@@ -1,5 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
+import {MAX_BUILDER_URL_SIZE} from "@lodestar/params";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
 import {
   EmptyArgs,
@@ -118,13 +119,18 @@ export type BuilderConfigData = {
 
 const AUTH_DATA_PATTERN = /^0x(?:[a-fA-F0-9]{2}){1,4096}$/;
 const PUBKEY_PATTERN = /^0x[a-fA-F0-9]{96}$/;
+const UINT64_MAX = 2n ** 64n - 1n;
 
 function parseGweiAmount(value: unknown, field: string): bigint | undefined {
   if (value === undefined) return undefined;
   if (typeof value !== "string" || !/^\d+$/.test(value)) {
     throw Error(`${field} must be a string number without decimals`);
   }
-  return BigInt(value);
+  const parsed = BigInt(value);
+  if (parsed > UINT64_MAX) {
+    throw Error(`${field} must not exceed 2**64 - 1`);
+  }
+  return parsed;
 }
 
 export function builderConfigDataToJson(config: BuilderConfigData): Record<string, unknown> {
@@ -171,6 +177,9 @@ export function builderConfigDataFromJson(json: unknown): BuilderConfigData {
       const {url, auth_data, builder_pubkeys, max_execution_payment} = entry as Record<string, unknown>;
       if (typeof url !== "string" || url.length === 0) {
         throw Error(`builders[${i}].url must be a non-empty string`);
+      }
+      if (new TextEncoder().encode(url).length > MAX_BUILDER_URL_SIZE) {
+        throw Error(`builders[${i}].url must not exceed ${MAX_BUILDER_URL_SIZE} bytes`);
       }
       if (auth_data !== undefined && (typeof auth_data !== "string" || !AUTH_DATA_PATTERN.test(auth_data))) {
         throw Error(`builders[${i}].auth_data must be a non-empty hex string of at most 4096 bytes`);

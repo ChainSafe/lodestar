@@ -398,7 +398,7 @@ export class KeymanagerApi implements Api {
 
     if (
       this.allowDangerousTrustedPayments !== true &&
-      builderConfig.builders?.some((entry) => (entry.maxExecutionPayment ?? BigInt(0)) > BigInt(0))
+      builderConfig.builders?.some((entry) => (entry.maxExecutionPayment ?? 0n) > 0n)
     ) {
       throw new ApiError(
         400,
@@ -417,6 +417,7 @@ export class KeymanagerApi implements Api {
 
   async deleteBuilders({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteBuilders"]> {
     this.checkIfProposerWriteEnabled();
+    this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.deleteBuilderConfig(pubkey);
     this.persistedKeysBackend.writeProposerConfig(pubkey, this.validator.validatorStore.getProposerConfig(pubkey));
     return {status: 204};

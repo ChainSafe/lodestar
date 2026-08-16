@@ -3,6 +3,7 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
+import {fromHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/chain/validation/executionPayloadBid.js";
@@ -38,7 +39,7 @@ describe("api/validator - produceBlockV4", () => {
   const maxBuilderBoostFactor = 2n ** 64n - 1n;
 
   function getBuilderConfig(overrides: {minBid?: bigint; builderBoostFactor?: bigint} = {}) {
-    return {minBid: BigInt(0), builderBoostFactor: BigInt(100), builders: [], ...overrides};
+    return {minBid: 0n, builderBoostFactor: 100n, builders: [], ...overrides};
   }
 
   const engineBlock = ssz.gloas.BeaconBlock.defaultValue();
@@ -73,8 +74,8 @@ describe("api/validator - produceBlockV4", () => {
     modules.chain.forkChoice.shouldBuildOnFull.mockReturnValue(true);
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
       block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
-      executionPayloadValue: BigInt(0),
-      consensusBlockValue: BigInt(0),
+      executionPayloadValue: 0n,
+      consensusBlockValue: 0n,
     }));
   });
 
@@ -111,8 +112,8 @@ describe("api/validator - produceBlockV4", () => {
     // Local payload value (2 gwei) exceeds the bid value (1 gwei)
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
       block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
-      executionPayloadValue: BigInt(2e9),
-      consensusBlockValue: BigInt(0),
+      executionPayloadValue: 2_000_000_000n,
+      consensusBlockValue: 0n,
     }));
 
     const {data: block, meta} = await api.produceBlockV4({
@@ -126,7 +127,7 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
     expect(block).toEqual(engineBlock);
-    expect(meta.executionPayloadValue).toBe(BigInt(2e9));
+    expect(meta.executionPayloadValue).toBe(2_000_000_000n);
   });
 
   it("prefers the local payload with a zero builder boost factor", async () => {
@@ -139,7 +140,7 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderConfig: getBuilderConfig({builderBoostFactor: BigInt(0)}),
+      builderConfig: getBuilderConfig({builderBoostFactor: 0n}),
     });
 
     expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
@@ -155,7 +156,7 @@ describe("api/validator - produceBlockV4", () => {
         throw new Error("Local block production failed");
       }
 
-      return {block: bidBlock, executionPayloadValue: BigInt(0), consensusBlockValue: BigInt(0)};
+      return {block: bidBlock, executionPayloadValue: 0n, consensusBlockValue: 0n};
     });
 
     const {data: block} = await api.produceBlockV4({
@@ -164,7 +165,7 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderConfig: getBuilderConfig({builderBoostFactor: BigInt(0)}),
+      builderConfig: getBuilderConfig({builderBoostFactor: 0n}),
     });
 
     expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
@@ -183,7 +184,7 @@ describe("api/validator - produceBlockV4", () => {
           throw new Error("Invalid feeRecipient set in engine payload");
         }
 
-        return {block: builderBlock, executionPayloadValue: BigInt(0), consensusBlockValue: BigInt(0)};
+        return {block: builderBlock, executionPayloadValue: 0n, consensusBlockValue: 0n};
       }
     );
 
@@ -194,7 +195,7 @@ describe("api/validator - produceBlockV4", () => {
       feeRecipient,
       strictFeeRecipientCheck: true,
       includePayload: false,
-      builderConfig: getBuilderConfig({builderBoostFactor: BigInt(0)}),
+      builderConfig: getBuilderConfig({builderBoostFactor: 0n}),
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(2);
@@ -208,9 +209,9 @@ describe("api/validator - produceBlockV4", () => {
       url: new TextEncoder().encode(builderUrl),
       auth: ssz.gloas.SignedRequestAuth.defaultValue(),
       builderPubkeys: [],
-      maxExecutionPayment: BigInt(0),
-      minBid: BigInt(0),
-      builderBoostFactor: BigInt(100),
+      maxExecutionPayment: 0n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
     };
     const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     apiBid.message.value = 2;
@@ -230,11 +231,16 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderConfig: {minBid: BigInt(0), builderBoostFactor: BigInt(100), builders: [entry]},
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
     });
 
     expect(modules.chain.builderApiClient.getExecutionPayloadBids).toHaveBeenCalledOnce();
     expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledOnce();
+    expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledWith(
+      modules.chain,
+      apiBid,
+      expect.objectContaining({feeRecipient: fromHex(feeRecipient)})
+    );
     // The bid block commits to the builder API bid since its boosted total (2) beats the p2p bid (1)
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);
@@ -250,9 +256,9 @@ describe("api/validator - produceBlockV4", () => {
       url: new TextEncoder().encode(builderUrl),
       auth: ssz.gloas.SignedRequestAuth.defaultValue(),
       builderPubkeys: [],
-      maxExecutionPayment: BigInt(0),
-      minBid: BigInt(0),
-      builderBoostFactor: BigInt(100),
+      maxExecutionPayment: 0n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
     };
     // Same bid value as the p2p bid, the builder API copy must win the tie
     const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
@@ -272,7 +278,7 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderConfig: {minBid: BigInt(0), builderBoostFactor: BigInt(100), builders: [entry]},
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
@@ -286,9 +292,9 @@ describe("api/validator - produceBlockV4", () => {
       url: new TextEncoder().encode(builderUrl),
       auth: ssz.gloas.SignedRequestAuth.defaultValue(),
       builderPubkeys: [],
-      maxExecutionPayment: BigInt(0),
-      minBid: BigInt(0),
-      builderBoostFactor: BigInt(100),
+      maxExecutionPayment: 0n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
     };
     const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
     apiBid.message.value = 2;
@@ -308,7 +314,7 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderConfig: {minBid: BigInt(0), builderBoostFactor: BigInt(100), builders: [entry]},
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
@@ -327,7 +333,7 @@ describe("api/validator - produceBlockV4", () => {
       graffiti,
       feeRecipient,
       includePayload: false,
-      builderConfig: getBuilderConfig({minBid: BigInt(2)}),
+      builderConfig: getBuilderConfig({minBid: 2n}),
     });
 
     expect(modules.chain.executionPayloadBidPool.getBestBid).toHaveBeenCalledOnce();
@@ -377,8 +383,8 @@ describe("api/validator - produceBlockV4", () => {
     // Bid (1 gwei) is preferred over the higher local payload value (2 gwei)
     modules.chain.produceBlock.mockImplementation(async (attrs: {builderBid?: unknown}) => ({
       block: attrs.builderBid !== undefined ? bidBlock : engineBlock,
-      executionPayloadValue: BigInt(2e9),
-      consensusBlockValue: BigInt(0),
+      executionPayloadValue: 2_000_000_000n,
+      consensusBlockValue: 0n,
     }));
 
     const {data: block} = await api.produceBlockV4({

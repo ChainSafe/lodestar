@@ -908,10 +908,12 @@ export function getValidatorApi(
       // Fire builder API bid requests while the local payload is built, one request per entry.
       // Any entry failure yields no bid and never fails block production.
       let builderApiBidsPromise: Promise<BuilderApiBid[]> = Promise.resolve([]);
+      let requestedFeeRecipient: Uint8Array | undefined;
       if (builderConfig.builders.length > 0 && !circuitBreakerActive) {
         try {
           const proposerIndex = chain.getHeadState().getBeaconProposer(slot);
           const proposerPubkey = chain.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+          requestedFeeRecipient = feeRecipient !== undefined ? fromHex(feeRecipient) : undefined;
           builderApiBidsPromise = chain.builderApiClient.getExecutionPayloadBids(
             builderConfig.builders,
             slot,
@@ -982,6 +984,7 @@ export function getValidatorApi(
                 parentBlock,
                 parentBlockHash: bidParentBlockHash,
                 parentBlockRoot: parentBlockRootHex,
+                feeRecipient: requestedFeeRecipient,
                 entry,
               });
               candidates.push({
@@ -1005,8 +1008,7 @@ export function getValidatorApi(
           });
         }
 
-        const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint =>
-          (boostFactor * totalGwei) / BigInt(100);
+        const boostedValue = ({totalGwei, boostFactor}: BidCandidate): bigint => (boostFactor * totalGwei) / 100n;
         let best: BidCandidate | null = null;
         for (const candidate of candidates) {
           if (best === null || boostedValue(candidate) > boostedValue(best)) {
@@ -1067,10 +1069,7 @@ export function getValidatorApi(
         // No need to wait for the bid block if the engine block will always be selected due to
         // suspected builder censorship, or a boost factor of 0 while no builder API bid may
         // still arrive with its own entry boost factor
-        if (
-          engineBlock.shouldOverrideBuilder ||
-          (builderConfig.builders.length === 0 && builderBoostFactor === BigInt(0))
-        ) {
+        if (engineBlock.shouldOverrideBuilder || (builderConfig.builders.length === 0 && builderBoostFactor === 0n)) {
           controller.abort();
         }
         return engineBlock;
@@ -1114,7 +1113,7 @@ export function getValidatorApi(
           builderBoostFactor: bestCandidate?.boostFactor ?? builderBoostFactor,
           engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
           // The bid total payment is its value plus executionPayment, in Gwei
-          builderExecutionPayloadValue: (bestCandidate?.totalGwei ?? BigInt(0)) * GWEI_TO_WEI,
+          builderExecutionPayloadValue: (bestCandidate?.totalGwei ?? 0n) * GWEI_TO_WEI,
         });
         source = result.source;
         metrics?.blockProductionSelectionResults.inc(result);

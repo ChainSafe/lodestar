@@ -38,6 +38,18 @@ default_config:
 
 Starting with Gloas, the builder section additionally supports `min_bid` (floor in Gwei on the total payment accepted from a builder bid) and `max_execution_payment` (ceiling in Gwei on the trusted execution layer payment accepted from a builder, values above `0` require `--allowDangerousTrustedPayments`).
 
+The builder section also supports a `builders` list with the same per-builder entries as the keymanager builders API. Each entry has a required `url` and optional `auth_data`, `builder_pubkeys`, `max_execution_payment`, `min_bid` and `builder_boost_factor`. Multiple entries may share a `url` only if they have distinct `auth_data`. Per-key entries replace the builders the validator client is configured with; setting both `--builder.urls` and `builders` in `default_config` is an error.
+
+```yaml
+builder:
+  min_bid: "10000000"
+  builders:
+    - url: "https://builder-a.example.com"
+    - url: "https://builder-b.example.com"
+      auth_data: "0x0123"
+      builder_boost_factor: "200"
+```
+
 ### Enable Proposer Configuration
 
 After you have configured your proposer configuration YAML file, you can start Lodestar with an additional CLI flag option pointing to the file: `--proposerSettingsFile /path/to/proposer_config.yaml`.

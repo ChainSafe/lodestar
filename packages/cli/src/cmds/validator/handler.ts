@@ -288,7 +288,12 @@ function getProposerConfigFromArgs(
   // explicit opt-in before any configuration source can set a max execution payment above 0
   if (args.allowDangerousTrustedPayments !== true) {
     const configs = [valProposerConfig.defaultConfig, ...Object.values(valProposerConfig.proposerConfig ?? {})];
-    if (configs.some((config) => (config.builder?.maxExecutionPayment ?? BigInt(0)) > BigInt(0))) {
+    const hasTrustedPayment = configs.some(
+      (config) =>
+        (config.builder?.maxExecutionPayment ?? 0n) > 0n ||
+        (config.builder?.builders ?? []).some((entry) => (entry.maxExecutionPayment ?? 0n) > 0n)
+    );
+    if (hasTrustedPayment) {
       throw new YargsError(
         "Configuring a builder max execution payment above 0 requires --allowDangerousTrustedPayments"
       );
