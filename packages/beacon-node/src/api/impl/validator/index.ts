@@ -2027,8 +2027,10 @@ export function getValidatorApi(
       await Promise.all(
         builderPreferences.map(async (entry, i) => {
           const url = Buffer.from(entry.url).toString("utf8");
+          let builder = "<invalid>";
           try {
             new URL(url);
+            builder = toPrintableUrl(url);
             await chain.builderApiClient.submitBuilderPreferences(url, entry.proposerPubkey, {
               preferences: {maxExecutionPayment: entry.maxExecutionPayment},
               auth: entry.auth,
@@ -2037,7 +2039,7 @@ export function getValidatorApi(
             failures.push({index: i, message: (e as Error).message});
             logger.verbose(
               `Error on submitBuilderPreferences [${i}]`,
-              {slot: entry.auth.message.slot, builder: toPrintableUrl(url)},
+              {slot: entry.auth.message.slot, builder},
               e as Error
             );
           }

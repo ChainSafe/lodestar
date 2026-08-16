@@ -163,6 +163,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       },
       builderApiClient: {
         getExecutionPayloadBids: vi.fn().mockResolvedValue([]),
+        submitBuilderPreferences: vi.fn(),
         submitSignedBeaconBlock: vi.fn(),
         recordBidSource: vi.fn(),
         getBidSource: vi.fn(),

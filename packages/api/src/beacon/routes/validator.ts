@@ -273,8 +273,8 @@ export const SignedProposerPreferencesListType = ArrayOf(
 // The url is UTF-8 bytes on the SSZ wire but a plain string in JSON
 class BuilderUrlType extends ByteListType {
   fromJson(json: unknown): Uint8Array {
-    if (typeof json !== "string" || json.length === 0) {
-      throw Error("Builder url must be a non-empty string");
+    if (typeof json !== "string") {
+      throw Error("Builder url must be a string");
     }
     return new TextEncoder().encode(json);
   }
@@ -1025,7 +1025,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             feeRecipient: query.fee_recipient,
             strictFeeRecipientCheck: query.strict_fee_recipient_check,
             includePayload: query.include_payload,
-            builderConfig: assertValidBuilderConfig(BuilderConfigType.fromJson(body)),
+            builderConfig: BuilderConfigType.fromJson(body),
           };
         },
         writeReqSsz: ({
@@ -1060,7 +1060,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
             feeRecipient: query.fee_recipient,
             strictFeeRecipientCheck: query.strict_fee_recipient_check,
             includePayload: query.include_payload,
-            builderConfig: assertValidBuilderConfig(BuilderConfigType.deserialize(body)),
+            builderConfig: BuilderConfigType.deserialize(body),
           };
         },
         schema: {
@@ -1457,15 +1457,6 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
 
 function parseBuilderBoostFactor(builderBoostFactorInput?: string | number | bigint): bigint | undefined {
   return builderBoostFactorInput !== undefined ? BigInt(builderBoostFactorInput) : undefined;
-}
-
-function assertValidBuilderConfig(builderConfig: BuilderConfig): BuilderConfig {
-  for (const entry of builderConfig.builders) {
-    if (entry.url.length === 0) {
-      throw Error("Builder entry url must not be empty");
-    }
-  }
-  return builderConfig;
 }
 
 function writeSkipRandaoVerification(skipRandaoVerification?: boolean): string | undefined {
