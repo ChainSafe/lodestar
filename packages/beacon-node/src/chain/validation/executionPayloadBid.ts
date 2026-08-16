@@ -198,27 +198,31 @@ export async function validateBuilderApiExecutionPayloadBid(
       return null;
     }
   })();
-  const proposerPreferences =
-    dependentRootHex !== null ? chain.proposerPreferencesPool.get(bid.slot, dependentRootHex) : null;
-  if (proposerPreferences !== null) {
-    if (!byteArrayEquals(bid.feeRecipient, proposerPreferences.message.feeRecipient)) {
-      throw Error(
-        `Bid feeRecipient=${toHex(bid.feeRecipient)} does not match ` +
-          `proposer preferences feeRecipient=${toHex(proposerPreferences.message.feeRecipient)}`
-      );
-    }
+  if (dependentRootHex === null) {
+    throw Error(`Unable to resolve proposer preferences dependent root for bid slot=${bid.slot}`);
+  }
+  const proposerPreferences = chain.proposerPreferencesPool.get(bid.slot, dependentRootHex);
+  if (proposerPreferences === null) {
+    throw Error(`No proposer preferences found for bid slot=${bid.slot} dependentRoot=${dependentRootHex}`);
+  }
+  if (!byteArrayEquals(bid.feeRecipient, proposerPreferences.message.feeRecipient)) {
+    throw Error(
+      `Bid feeRecipient=${toHex(bid.feeRecipient)} does not match ` +
+        `proposer preferences feeRecipient=${toHex(proposerPreferences.message.feeRecipient)}`
+    );
+  }
 
-    const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHash);
-    if (parentPayloadVariant !== null && parentPayloadVariant.executionPayloadBlockHash !== null) {
-      const parentGasLimit = BigInt(parentPayloadVariant.executionPayloadGasLimit);
-      const targetGasLimit = proposerPreferences.message.targetGasLimit;
-      if (!isGasLimitTargetCompatible(parentGasLimit, bid.gasLimit, targetGasLimit)) {
-        throw Error(
-          `Bid gasLimit=${bid.gasLimit} is not compatible with ` +
-            `parentGasLimit=${parentGasLimit} targetGasLimit=${targetGasLimit}`
-        );
-      }
-    }
+  const parentPayloadVariant = chain.forkChoice.getBlockHexAndBlockHash(bidParentBlockRoot, bidParentBlockHash);
+  if (parentPayloadVariant === null || parentPayloadVariant.executionPayloadBlockHash === null) {
+    throw Error(`Unable to resolve parent payload gas limit for bid parentBlockHash=${bidParentBlockHash}`);
+  }
+  const parentGasLimit = BigInt(parentPayloadVariant.executionPayloadGasLimit);
+  const targetGasLimit = proposerPreferences.message.targetGasLimit;
+  if (!isGasLimitTargetCompatible(parentGasLimit, bid.gasLimit, targetGasLimit)) {
+    throw Error(
+      `Bid gasLimit=${bid.gasLimit} is not compatible with ` +
+        `parentGasLimit=${parentGasLimit} targetGasLimit=${targetGasLimit}`
+    );
   }
 
   const signatureSet = createSingleSignatureSetFromComponents(
