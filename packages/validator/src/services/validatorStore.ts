@@ -318,11 +318,22 @@ export class ValidatorStore {
     // whether they are received over p2p or through a builder API. Pre-gloas there is no
     // in-protocol builder, so the default remains local-only (executiononly).
     const isPostGloas = slot !== undefined && this.config.getForkSeq(slot) >= ForkSeq.gloas;
+    return this.resolveBuilderSelectionParams(pubkeyHex, isPostGloas);
+  }
+
+  private resolveBuilderSelectionParams(
+    pubkeyHex: PubkeyHex,
+    isPostGloas: boolean
+  ): {selection: routes.validator.BuilderSelection; boostFactor: bigint} {
+    const validatorBuilder = this.validators.get(pubkeyHex)?.builder;
     const defaultSelection = isPostGloas ? defaultOptions.builderAliasSelection : defaultOptions.builderSelection;
-    let selection =
-      this.validators.get(pubkeyHex)?.builder?.selection ??
-      this.defaultProposerConfig.builder.selection ??
-      defaultSelection;
+    let selection = validatorBuilder?.selection ?? this.defaultProposerConfig.builder.selection ?? defaultSelection;
+
+    // The standard per-key builder config directly controls the post-Gloas boost. It takes
+    // precedence over Lodestar's legacy selection aliases when explicitly configured.
+    if (isPostGloas && validatorBuilder?.boostFactor !== undefined) {
+      return {selection: routes.validator.BuilderSelection.MaxProfit, boostFactor: validatorBuilder.boostFactor};
+    }
 
     // Post-Gloas block production uses standard builder boost factor. Need to normalize the
     // gloas-deprecated "builderonly" and "executiononly" to the gloas fallback "builderalways"
@@ -344,8 +355,7 @@ export class ValidatorStore {
         break;
 
       case routes.validator.BuilderSelection.MaxProfit:
-        boostFactor =
-          this.validators.get(pubkeyHex)?.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
+        boostFactor = validatorBuilder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor;
         break;
 
       case routes.validator.BuilderSelection.BuilderAlways:
@@ -510,11 +520,12 @@ export class ValidatorStore {
     if (validatorData === undefined) {
       throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
+    const {boostFactor} = this.resolveBuilderSelectionParams(pubkeyHex, true);
 
     return {
       minBid: validatorData.builder?.minBid ?? this.defaultProposerConfig.builder.minBid,
-      builderBoostFactor: validatorData.builder?.boostFactor ?? this.defaultProposerConfig.builder.boostFactor,
-      builders: this.getResolvedBuilderEntries(pubkeyHex).map((entry) => ({
+      builderBoostFactor: boostFactor,
+      builders: this.getResolvedBuilderEntries(pubkeyHex, boostFactor).map((entry) => ({
         url: entry.url,
         authData: toHex(entry.authData),
         builderPubkeys: entry.builderPubkeys.map(toPubkeyHex),

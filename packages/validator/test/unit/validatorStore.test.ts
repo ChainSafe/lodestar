@@ -114,6 +114,17 @@ describe("ValidatorStore", () => {
       selection: routes.validator.BuilderSelection.ExecutionAlways,
       boostFactor: BigInt(0),
     });
+
+    // A standard per-key builder config directly sets the Gloas boost, regardless of legacy selection aliases
+    gloasStore.setBuilderConfig(toHexString(pubkeys[0]), {builderBoostFactor: 120n});
+    expect(gloasStore.getBuilderSelectionParams(toHexString(pubkeys[0]), gloasSlot)).toEqual({
+      selection: routes.validator.BuilderSelection.MaxProfit,
+      boostFactor: 120n,
+    });
+    expect(gloasStore.getBuilderConfig(toHexString(pubkeys[0])).builderBoostFactor).toBe(120n);
+
+    // GET resolves an unconfigured key to the effective post-Gloas default
+    expect(gloasStore.getBuilderConfig(toHexString(pubkeys[1])).builderBoostFactor).toBe(90n);
   });
 
   it("Should create/update builder data and return from cache next time", async () => {
