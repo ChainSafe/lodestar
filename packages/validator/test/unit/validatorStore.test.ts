@@ -290,17 +290,23 @@ describe("ValidatorStore", () => {
       },
       defaultConfig: {
         builder: {
-          builders: [{url: builderUrl, builderBoostFactor: 150n}],
+          builders: [
+            {url: builderUrl, builderBoostFactor: 150n},
+            {url: builderUrl, authData: "0x0123"},
+          ],
         },
       },
     });
 
     // A key without its own builders follows the default entries, its key defaults still apply
     const entries = store.getResolvedBuilderEntries(pubkey);
-    expect(entries).toHaveLength(1);
+    expect(entries).toHaveLength(2);
     expect(Buffer.from(entries[0].authData).toString("utf8")).toBe(builderUrl);
     expect(entries[0].minBid).toBe(30n);
     expect(entries[0].builderBoostFactor).toBe(150n);
+    // Explicit auth data (e.g. from a --builder.urls fragment) is used as is
+    expect(toHexString(entries[1].authData)).toBe("0x0123");
+    expect(entries[1].minBid).toBe(30n);
 
     // Per-key builders replace the default entries
     store.setBuilderConfig(pubkey, {builders: []});

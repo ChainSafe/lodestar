@@ -2,13 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import {routes} from "@lodestar/api";
 import {BuilderEntryConfig, builderConfigDataFromJson} from "@lodestar/api/keymanager";
-import {MAX_BUILDER_ENTRIES, MAX_BUILDER_URL_SIZE} from "@lodestar/params";
+import {MAX_BUILDER_ENTRIES, MAX_BUILDER_URL_SIZE, MAX_DATA_SIZE} from "@lodestar/params";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {parseFeeRecipient} from "./feeRecipient.js";
 import {readFile} from "./file.js";
 
 const UINT64_MAX = 2n ** 64n - 1n;
+const AUTH_DATA_PATTERN = new RegExp(`^0x(?:[a-fA-F0-9]{2}){1,${MAX_DATA_SIZE}}$`);
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
@@ -110,12 +111,11 @@ function parseProposerConfigSection(
           minBid: overrideConfig?.builder?.minBid ?? parseBuilderMinBid(min_bid),
           maxExecutionPayment:
             overrideConfig?.builder?.maxExecutionPayment ?? parseBuilderGweiAmount(max_execution_payment),
-          urls: overrideConfig?.builder?.urls,
           builders: overrideConfig?.builder?.builders ?? parseBuilderEntries(builders),
         }
       : undefined;
 
-  if (parsedBuilder?.urls !== undefined && parsedBuilder?.builders !== undefined) {
+  if (overrideConfig?.builder?.builders !== undefined && builders !== undefined) {
     throw Error("Cannot configure both --builder.urls and builders in the proposer settings file");
   }
 
@@ -238,11 +238,20 @@ export function parseBuilderEntries(builders?: unknown): BuilderEntryConfig[] | 
   return entries;
 }
 
-export function parseBuilderUrls(urls?: string[]): string[] | undefined {
+/**
+ * Parse builder urls into builder entries. Auth data agreed with a builder out of band may be
+ * appended as a hex fragment (`https://builder.example.com#0x0123`), it is stripped from the url
+ * and never sent on the wire. Without a fragment the auth data derives from the url.
+ */
+export function parseBuilderUrls(urls?: string[]): BuilderEntryConfig[] | undefined {
   if (urls === undefined) return undefined;
 
-  const seen = new Set<string>();
-  for (const url of urls) {
+  const entries: BuilderEntryConfig[] = [];
+  const seenEntries = new Set<string>();
+  for (const value of urls) {
+    const fragmentIndex = value.indexOf("#");
+    const url = fragmentIndex === -1 ? value : value.slice(0, fragmentIndex);
+    const authData = fragmentIndex === -1 ? undefined : value.slice(fragmentIndex + 1);
     try {
       new URL(url);
     } catch {
@@ -251,13 +260,20 @@ export function parseBuilderUrls(urls?: string[]): string[] | undefined {
     if (Buffer.byteLength(url, "utf8") > MAX_BUILDER_URL_SIZE) {
       throw Error(`Invalid builder url, must not exceed ${MAX_BUILDER_URL_SIZE} bytes: ${url}`);
     }
-    if (seen.has(url)) {
+    if (authData !== undefined && !AUTH_DATA_PATTERN.test(authData)) {
+      throw Error(
+        `Invalid builder url auth data, must be a 0x-prefixed hex string of 1 to ${MAX_DATA_SIZE} bytes: ${url}`
+      );
+    }
+    const entryKey = `${url}|${authData !== undefined ? toHex(fromHex(authData)) : toHex(Buffer.from(url))}`;
+    if (seenEntries.has(entryKey)) {
       throw Error(`Duplicate builder url: ${url}`);
     }
-    seen.add(url);
+    seenEntries.add(entryKey);
+    entries.push({url, authData});
   }
-  if (urls.length > MAX_BUILDER_ENTRIES) {
-    throw Error(`Number of builder urls must not exceed ${MAX_BUILDER_ENTRIES}, got ${urls.length}`);
+  if (entries.length > MAX_BUILDER_ENTRIES) {
+    throw Error(`Number of builder urls must not exceed ${MAX_BUILDER_ENTRIES}, got ${entries.length}`);
   }
-  return urls;
+  return entries;
 }

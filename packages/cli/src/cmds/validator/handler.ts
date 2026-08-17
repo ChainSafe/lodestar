@@ -259,7 +259,7 @@ function getProposerConfigFromArgs(
       boostFactor: parseBuilderBoostFactor(args["builder.boostFactor"]),
       minBid: parseBuilderMinBid(args["builder.minBid"]),
       maxExecutionPayment: parseBuilderGweiAmount(args["builder.maxExecutionPayment"]),
-      urls: parseBuilderUrls(args["builder.urls"]),
+      builders: parseBuilderUrls(args["builder.urls"]),
     },
   };
 

@@ -89,7 +89,6 @@ type DefaultProposerConfig = {
     boostFactor: bigint;
     minBid: bigint;
     maxExecutionPayment: bigint;
-    urls: string[];
     builders?: BuilderEntryConfig[];
   };
 };
@@ -104,8 +103,7 @@ export type ProposerConfig = {
     boostFactor?: bigint;
     minBid?: bigint;
     maxExecutionPayment?: bigint;
-    urls?: string[];
-    /** Per-key builder entries set via the keymanager api, replacing the configured builder urls */
+    /** Per-key builder entries, replacing the validator client's builders */
     builders?: BuilderEntryConfig[];
   };
 };
@@ -214,7 +212,6 @@ export class ValidatorStore {
         boostFactor: builderBoostFactor,
         minBid: defaultConfig.builder?.minBid ?? defaultOptions.builderMinBid,
         maxExecutionPayment: defaultConfig.builder?.maxExecutionPayment ?? defaultOptions.builderMaxExecutionPayment,
-        urls: defaultConfig.builder?.urls ?? [],
         builders: defaultConfig.builder?.builders,
       },
     };
@@ -466,14 +463,6 @@ export class ValidatorStore {
     return validatorData?.builder?.maxExecutionPayment ?? this.defaultProposerConfig.builder.maxExecutionPayment;
   }
 
-  getBuilderUrls(pubkeyHex: PubkeyHex): string[] {
-    const validatorData = this.validators.get(pubkeyHex);
-    if (validatorData === undefined) {
-      throw Error(`Validator pubkey ${pubkeyHex} not known`);
-    }
-    return validatorData?.builder?.urls ?? this.defaultProposerConfig.builder.urls;
-  }
-
   /**
    * Resolve the builder entries for this key. Per-key entries replace the validator client's
    * builders, an omitted entry value takes this key's default and then the validator client's
@@ -491,26 +480,15 @@ export class ValidatorStore {
     const keyMaxExecutionPayment =
       validatorData.builder?.maxExecutionPayment ?? this.defaultProposerConfig.builder.maxExecutionPayment;
 
-    const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders;
-    if (builders !== undefined) {
-      return builders.map((entry) => ({
-        url: entry.url,
-        authData: entry.authData !== undefined ? fromHex(entry.authData) : new Uint8Array(Buffer.from(entry.url)),
-        builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
-        maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
-        minBid: entry.minBid ?? keyMinBid,
-        builderBoostFactor: entry.builderBoostFactor ?? keyBoostFactor,
-      }));
-    }
-
-    // The key's defaults apply to the validator client's configured builders all the same
-    return this.getBuilderUrls(pubkeyHex).map((url) => ({
-      url,
-      authData: new Uint8Array(Buffer.from(url)),
-      builderPubkeys: [],
-      maxExecutionPayment: keyMaxExecutionPayment,
-      minBid: keyMinBid,
-      builderBoostFactor: keyBoostFactor,
+    // The key's defaults apply to the validator client's own builders all the same
+    const builders = validatorData.builder?.builders ?? this.defaultProposerConfig.builder.builders ?? [];
+    return builders.map((entry) => ({
+      url: entry.url,
+      authData: entry.authData !== undefined ? fromHex(entry.authData) : new Uint8Array(Buffer.from(entry.url)),
+      builderPubkeys: (entry.builderPubkeys ?? []).map(fromHex),
+      maxExecutionPayment: entry.maxExecutionPayment ?? keyMaxExecutionPayment,
+      minBid: entry.minBid ?? keyMinBid,
+      builderBoostFactor: entry.builderBoostFactor ?? keyBoostFactor,
     }));
   }
 
@@ -614,7 +592,6 @@ export class ValidatorStore {
       builder?.boostFactor !== undefined ||
       builder?.minBid !== undefined ||
       builder?.maxExecutionPayment !== undefined ||
-      builder?.urls !== undefined ||
       builder?.builders !== undefined
     ) {
       proposerConfig = {graffiti, strictFeeRecipientCheck, feeRecipient, builder};
