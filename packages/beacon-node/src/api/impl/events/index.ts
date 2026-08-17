@@ -14,7 +14,9 @@ export function getEventsApi({
         const handler = (data: any): void => {
           // TODO: What happens if this handler throws? Does it break the other chain.emitter listeners?
 
-          onEvent({type: topic, message: data});
+          // `topic` is the full EventType union, so tsc cannot pair it with a single BeaconEvent
+          // member. The pairing is guaranteed by the emitter's own typing.
+          onEvent({type: topic, message: data} as routes.events.BeaconEvent);
         };
 
         chain.emitter.on(topic, handler);

@@ -9,6 +9,7 @@ import {
   MAX_SIGNED_AGGREGATE_AND_PROOF_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE,
   MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE,
+  MAX_SIGNED_INCLUSION_LIST_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
   isForkPostAltair,
   isForkPostElectra,
@@ -82,6 +83,7 @@ function stringifyGossipTopicType(topic: GossipTopic): string {
     case GossipType.payload_attestation_message:
     case GossipType.execution_payload_bid:
     case GossipType.proposer_preferences:
+    case GossipType.inclusion_list:
       return topic.type;
     case GossipType.beacon_attestation:
     case GossipType.sync_committee:
@@ -135,6 +137,8 @@ export function getGossipSSZType(topic: GossipTopic) {
       return isForkPostGloas(fork) ? sszTypesFor(fork).SignedExecutionPayloadBid : ssz.gloas.SignedExecutionPayloadBid;
     case GossipType.proposer_preferences:
       return ssz.gloas.SignedProposerPreferences;
+    case GossipType.inclusion_list:
+      return ssz.heze.SignedInclusionList;
   }
 }
 
@@ -157,6 +161,8 @@ export function getGossipSSZMaxSize(topic: GossipTopic, maxPayloadSize: number, 
       return maxPayloadSize;
     case GossipType.execution_payload_bid:
       return isForkPostHeze(fork) ? MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE_HEZE : MAX_SIGNED_EXECUTION_PAYLOAD_BID_SIZE;
+    case GossipType.inclusion_list:
+      return MAX_SIGNED_INCLUSION_LIST_SIZE;
     default:
       return (sszType ?? getGossipSSZType(topic)).maxSize;
   }
@@ -239,6 +245,7 @@ export function parseGossipTopic(forkDigestContext: ForkDigestContext, topicStr:
       case GossipType.payload_attestation_message:
       case GossipType.execution_payload_bid:
       case GossipType.proposer_preferences:
+      case GossipType.inclusion_list:
         return {type: gossipTypeStr, boundary, encoding};
     }
 
@@ -294,6 +301,10 @@ export function getCoreTopicsAtFork(
     topics.push({type: GossipType.payload_attestation_message});
     topics.push({type: GossipType.execution_payload_bid});
     topics.push({type: GossipType.proposer_preferences});
+  }
+
+  if (ForkSeq[fork] >= ForkSeq.heze) {
+    topics.push({type: GossipType.inclusion_list});
   }
 
   // After fulu also track data_column_sidecar_{index}
@@ -413,4 +424,5 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.payload_attestation_message]: true,
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
+  [GossipType.inclusion_list]: true,
 };

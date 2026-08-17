@@ -17,6 +17,7 @@ import {
   capella,
   electra,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -136,6 +137,8 @@ export enum EventType {
   proposerPreferences = "proposer_preferences",
   /** The node has received a `PayloadAttestationMessage` (from P2P or API) that passes validation rules of the `payload_attestation_message` topic */
   payloadAttestationMessage = "payload_attestation_message",
+  /** The node has received a `SignedInclusionList` (from P2P or API) that passes gossip validation on the `inclusion_list` topic */
+  inclusionList = "inclusion_list",
   /** The node has executed the Fast Confirmation Rule and produced a confirmed beacon block */
   fastConfirmation = "fast_confirmation",
 }
@@ -165,6 +168,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.executionPayloadBid]: EventType.executionPayloadBid,
   [EventType.proposerPreferences]: EventType.proposerPreferences,
   [EventType.payloadAttestationMessage]: EventType.payloadAttestationMessage,
+  [EventType.inclusionList]: EventType.inclusionList,
   [EventType.fastConfirmation]: EventType.fastConfirmation,
 };
 
@@ -239,6 +243,7 @@ export type EventData = {
   [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
   [EventType.proposerPreferences]: {version: ForkName; data: gloas.SignedProposerPreferences};
   [EventType.payloadAttestationMessage]: {version: ForkName; data: gloas.PayloadAttestationMessage};
+  [EventType.inclusionList]: {version: ForkName; data: heze.SignedInclusionList};
   [EventType.fastConfirmation]: {
     block: RootHex;
     slot: Slot;
@@ -443,6 +448,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
     [EventType.proposerPreferences]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedProposerPreferences),
     [EventType.payloadAttestationMessage]: WithVersion((fork) => getPostGloasForkTypes(fork).PayloadAttestationMessage),
+    [EventType.inclusionList]: WithVersion(() => ssz.heze.SignedInclusionList),
     [EventType.fastConfirmation]: new ContainerType(
       {
         block: stringType,
