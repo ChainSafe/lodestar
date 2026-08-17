@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {ChainForkConfig} from "@lodestar/config";
+import {createChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {ErrorAborted, toHex} from "@lodestar/utils";
 import {WAITING_FOR_BUILDER_POLL_MS, getBuilderStatus, resolveBuilderIdentity} from "../../src/identity.js";
@@ -19,7 +19,7 @@ describe("Identity", () => {
   const balance = 1;
   const version = PAYLOAD_BUILDER_VERSION;
   // ClockMock reports currentEpoch=0, use GLOAS_FORK_EPOCH=0 so tests query the beacon node without waiting for the fork
-  const config = {GLOAS_FORK_EPOCH: 0} as unknown as ChainForkConfig;
+  const config = createChainForkConfig({GLOAS_FORK_EPOCH: 0});
 
   let abortController: AbortController;
 
@@ -118,7 +118,7 @@ describe("Identity", () => {
   it("waits for the Gloas fork before querying the beacon node", async () => {
     vi.useFakeTimers();
     // ClockMock reports currentEpoch=0, so a future fork epoch keeps the builder in the pre-fork wait loop
-    const futureForkConfig = {GLOAS_FORK_EPOCH: 1} as unknown as ChainForkConfig;
+    const futureForkConfig = createChainForkConfig({GLOAS_FORK_EPOCH: 1});
     const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, futureForkConfig);
     await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
 
@@ -147,7 +147,7 @@ describe("Identity", () => {
   it("resolves once the Gloas fork is reached", async () => {
     vi.useFakeTimers();
     const forkClock = new ClockMock();
-    const forkConfig = {GLOAS_FORK_EPOCH: 1} as unknown as ChainForkConfig;
+    const forkConfig = createChainForkConfig({GLOAS_FORK_EPOCH: 1});
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
