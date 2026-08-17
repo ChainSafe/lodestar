@@ -1,6 +1,6 @@
 import {routes} from "@lodestar/api";
 import {ChainForkConfig} from "@lodestar/config";
-import {ForkSeq} from "@lodestar/params";
+import {ForkSeq, isForkPostGloas} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
 import {computeTimeAtSlot} from "@lodestar/state-transition";
 import {RootHex, Slot, gloas} from "@lodestar/types";
@@ -764,9 +764,10 @@ export class BlockInputSync {
     // this prevents unbundling attack
     // see https://lighthouse-blog.sigmaprime.io/mev-unbundling-rpc.html
     const {slot: blockSlot, proposerIndex} = pendingBlock.blockInput.getBlock().message;
+    const blockRootHex = pendingBlock.blockInput.blockRootHex;
     const logCtx = {
       slot: blockSlot,
-      root: pendingBlock.blockInput.blockRootHex,
+      root: blockRootHex,
       delaySec: this.chain.clock.secFromSlot(blockSlot),
     };
     this.logger.verbose("Processing downloaded block", logCtx);
@@ -780,7 +781,7 @@ export class BlockInputSync {
       // eligible for proposer boost to prevent unbundling attack
       this.logger.verbose("Avoid proposer boost for this block of known proposer", {
         slot: blockSlot,
-        root: pendingBlock.blockInput.blockRootHex,
+        root: blockRootHex,
         proposerIndex,
       });
       await sleep(proposerBoostWindowMs);
@@ -807,12 +808,24 @@ export class BlockInputSync {
     if (!res.err) {
       this.logger.verbose("Processed block from unknown sync", logCtx);
       // no need to update status to "processed", delete anyway
-      this.pendingBlocks.delete(pendingBlock.blockInput.blockRootHex);
+      this.pendingBlocks.delete(blockRootHex);
+
+      if (isForkPostGloas(fork)) {
+        const payloadInput = this.chain.seenPayloadEnvelopeInputCache.get(blockRootHex);
+        if (!payloadInput) {
+          this.logger.warn("PayloadEnvelopeInput not seeded during unknown sync processReadyBlock()", logCtx);
+        } else {
+          // Similar to the gossip path: immediately attempt fetch of data columns from the execution engine.
+          // The bid already carries the kzg commitments, so there is no reason to wait for the payload to arrive.
+          this.chain.getBlobsTracker.triggerGetBlobs(payloadInput);
+        }
+      }
+
       // Re-enter the scheduler so descendants blocked on either parent blocks or parent payloads
       // are advanced through the same dependency checks as every other pending item.
       this.triggerUnknownBlockSearch();
     } else {
-      const errorData = {slot: pendingBlock.blockInput.slot, root: pendingBlock.blockInput.blockRootHex};
+      const errorData = {slot: pendingBlock.blockInput.slot, root: blockRootHex};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
           // This cases are already handled with `{ignoreIfKnown: true}`

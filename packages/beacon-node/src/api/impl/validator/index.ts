@@ -92,7 +92,12 @@ import {getStateResponseWithRegen} from "../beacon/state/utils.js";
 import {ApiError, FailureList, IndexedError, NodeIsSyncing, OnlySupportedByDVT} from "../errors.js";
 import {ApiModules} from "../types.js";
 import {notWhileSyncing} from "../utils.js";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, selectBlockProductionSource} from "./utils.js";
+import {
+  computeSubnetForCommitteesAtSlot,
+  getPubkeysForIndices,
+  selectBlockProductionSource,
+  selectBlockProductionSourceByBoostFactor,
+} from "./utils.js";
 
 /**
  * Cutoff time to wait from start of the slot for execution and builder block production apis to resolve.
@@ -577,8 +582,7 @@ export function getValidatorApi(
       builderSelection,
       isBuilderEnabled,
       strictFeeRecipientCheck,
-      // winston logger doesn't like bigint
-      builderBoostFactor: `${builderBoostFactor}`,
+      builderBoostFactor,
     };
 
     logger.verbose("Assembling block with produceEngineOrBuilderBlock", loggerContext);
@@ -851,8 +855,8 @@ export function getValidatorApi(
       randaoReveal,
       graffiti,
       feeRecipient,
+      strictFeeRecipientCheck,
       includePayload,
-      builderSelection,
       builderBoostFactor,
     }) {
       const fork = config.getForkName(slot);
@@ -861,11 +865,6 @@ export function getValidatorApi(
         throw new ApiError(400, `produceBlockV4 not supported for pre-gloas fork=${fork}`);
       }
 
-      builderSelection = builderSelection ?? routes.validator.BuilderSelection.MaxProfit;
-      if (builderSelection === routes.validator.BuilderSelection.BuilderOnly) {
-        logger.warn("Builder selection builderonly is no longer supported, treating as builderalways");
-        builderSelection = routes.validator.BuilderSelection.BuilderAlways;
-      }
       builderBoostFactor = builderBoostFactor ?? BigInt(100);
       if (builderBoostFactor > MAX_BUILDER_BOOST_FACTOR) {
         throw new ApiError(400, `Invalid builderBoostFactor=${builderBoostFactor} > MAX_BUILDER_BOOST_FACTOR`);
@@ -896,14 +895,11 @@ export function getValidatorApi(
       // TODO GLOAS: add external builder api support when it is implemented
       const isBuildingOnFull = chain.forkChoice.shouldBuildOnFull(parentBlock, slot);
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
-      // Bids are only skipped entirely with executiononly or while the circuit breaker is active,
-      // other engine-preferring selections still build a block with the best bid as fallback in
-      // case local production fails
-      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot);
-      const builderBid =
-        builderSelection === routes.validator.BuilderSelection.ExecutionOnly || circuitBreakerActive
-          ? null
-          : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+      const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
+      // Keep a builder bid as fallback unless the circuit breaker is active
+      const builderBid = circuitBreakerActive
+        ? null
+        : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
 
       const logCtx = {
         slot,
@@ -911,8 +907,8 @@ export function getValidatorApi(
         parentBlockRoot: parentBlockRootHex,
         parentBlockHash: parentBlock.executionPayloadBlockHash,
         fork,
-        builderSelection,
         builderBoostFactor,
+        strictFeeRecipientCheck,
         circuitBreakerActive,
         ...(builderBid !== null
           ? {
@@ -936,6 +932,7 @@ export function getValidatorApi(
         randaoReveal,
         graffiti: graffitiBytes,
         feeRecipient,
+        strictFeeRecipientCheck,
         commonBlockBodyPromise,
       };
 
@@ -960,12 +957,8 @@ export function getValidatorApi(
         chain.produceBlock(baseAttrs)
       ).then((engineBlock) => {
         // No need to wait for the bid block if the engine block will always be selected due to
-        // suspected builder censorship, a builder boost factor of 0 or executionalways selection
-        if (
-          engineBlock.shouldOverrideBuilder ||
-          builderBoostFactor === BigInt(0) ||
-          builderSelection === routes.validator.BuilderSelection.ExecutionAlways
-        ) {
+        // suspected builder censorship or a builder boost factor of 0
+        if (engineBlock.shouldOverrideBuilder || builderBoostFactor === BigInt(0)) {
           controller.abort();
         }
         return engineBlock;
@@ -994,8 +987,7 @@ export function getValidatorApi(
         });
         logger.warn("Selected local block: censorship suspected in builder bid", logCtx);
       } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
-        const result = selectBlockProductionSource({
-          builderSelection,
+        const result = selectBlockProductionSourceByBoostFactor({
           builderBoostFactor,
           engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
           // The bid value is the payment to the proposer, in Gwei
@@ -1061,7 +1053,10 @@ export function getValidatorApi(
         root: blockRoot,
       });
       if (chain.opts.persistProducedBlocks) {
-        void chain.persistBlock(block, "produced_engine_block");
+        void chain.persistBlock(
+          block,
+          source === ProducedBlockSource.builder ? "produced_builder_block" : "produced_engine_block"
+        );
       }
 
       // Include the payload for self-builds unless disabled (stateless flow)

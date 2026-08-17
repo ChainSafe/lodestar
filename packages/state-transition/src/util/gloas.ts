@@ -273,7 +273,44 @@ export function addBuilderToRegistry(
     }
   }
 
-  const newBuilder = ssz.gloas.Builder.toViewDU({
+  const newBuilder = createBuilderView(pubkey, version, executionAddress, amount, depositEpoch);
+
+  if (builderIndex < state.builders.length) {
+    state.builders.set(builderIndex, newBuilder);
+  } else {
+    state.builders.push(newBuilder);
+  }
+}
+
+/**
+ * Append a new builder to the registry without scanning for a reusable slot.
+ *
+ * This is only safe to be used at the gloas fork transition.
+ */
+export function appendBuilderToRegistry(
+  state: CachedBeaconStateGloas,
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  slot: number
+): void {
+  const depositEpoch = computeEpochAtSlot(slot);
+  state.builders.push(createBuilderView(pubkey, version, executionAddress, amount, depositEpoch));
+}
+
+/**
+ * Build a Builder view for registry insertion. Shared by the scan-based {@link addBuilderToRegistry}
+ * and the append-only {@link appendBuilderToRegistry} so both paths produce an identical view.
+ */
+function createBuilderView(
+  pubkey: Uint8Array,
+  version: number,
+  executionAddress: Uint8Array,
+  amount: number,
+  depositEpoch: Epoch
+) {
+  return ssz.gloas.Builder.toViewDU({
     pubkey,
     version,
     executionAddress,
@@ -281,12 +318,6 @@ export function addBuilderToRegistry(
     depositEpoch,
     withdrawableEpoch: FAR_FUTURE_EPOCH,
   });
-
-  if (builderIndex < state.builders.length) {
-    state.builders.set(builderIndex, newBuilder);
-  } else {
-    state.builders.push(newBuilder);
-  }
 }
 
 /**

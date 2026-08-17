@@ -31,7 +31,7 @@ describe("SeenBlockProposers", () => {
     expect(cache.hasBlockRoot(slot, proposerIndex, blockRoot)).toBe(true);
     expect(cache.getEquivocationHeaders(slot, proposerIndex)).toBe(null);
 
-    cache.add(slot, proposerIndex);
+    cache.add(slot, proposerIndex, blockRoot);
     cache.observeBlockRoot(slot, proposerIndex, conflictingBlockRoot, header2);
 
     expect(cache.isKnown(slot, proposerIndex)).toBe(true);
@@ -39,6 +39,20 @@ describe("SeenBlockProposers", () => {
     expect(cache.getConflictingBlockRoots(slot, proposerIndex, blockRoot)).toEqual([conflictingBlockRoot]);
     expect(cache.getConflictingBlockRoots(slot, proposerIndex, conflictingBlockRoot)).toEqual([blockRoot]);
     expect(cache.getEquivocationHeaders(slot, proposerIndex)).toEqual([header1, header2]);
+  });
+
+  it("flags a repeat proposal only for a different block root", () => {
+    const cache = new SeenBlockProposers();
+
+    // Not known yet: never a repeat, regardless of root
+    expect(cache.isRepeatProposal(slot, proposerIndex, blockRoot)).toBe(false);
+
+    cache.add(slot, proposerIndex, blockRoot);
+
+    // Known with the same root: a benign duplicate, not a repeat
+    expect(cache.isRepeatProposal(slot, proposerIndex, blockRoot)).toBe(false);
+    // Known with a different root: a genuine equivocation
+    expect(cache.isRepeatProposal(slot, proposerIndex, conflictingBlockRoot)).toBe(true);
   });
 
   it("stores at most two roots per slot and proposer", () => {
@@ -70,7 +84,7 @@ describe("SeenBlockProposers", () => {
   it("prunes known proposals and observed roots", () => {
     const cache = new SeenBlockProposers();
     cache.observeBlockRoot(slot, proposerIndex, blockRoot, header1);
-    cache.add(slot, proposerIndex);
+    cache.add(slot, proposerIndex, blockRoot);
 
     cache.prune(slot + 1);
 
@@ -84,7 +98,7 @@ describe("SeenBlockProposers", () => {
     const cache = new SeenBlockProposers();
     cache.prune(slot + 1);
 
-    expect(() => cache.add(slot, proposerIndex)).toThrow(`blockSlot ${slot} < finalizedSlot ${slot + 1}`);
+    expect(() => cache.add(slot, proposerIndex, blockRoot)).toThrow(`blockSlot ${slot} < finalizedSlot ${slot + 1}`);
     expect(() => cache.observeBlockRoot(slot, proposerIndex, blockRoot, header1)).toThrow(
       `blockSlot ${slot} < finalizedSlot ${slot + 1}`
     );
