@@ -77,8 +77,9 @@ async function waitForBuilder(
     try {
       builder = await fetchBuilder(api, id);
     } catch (e) {
-      // At the fork boundary the head state may still be pre-gloas for a brief window until
-      // the first post-fork state is available, keep polling instead of exiting
+      // The clock gate above uses wall-clock epoch, but getStateBuilders reads the head block's
+      // state which is not advanced to the current slot. At the fork boundary the head is still the
+      // last pre-gloas block until the first gloas block is imported, so tolerate that transient 400.
       if (e instanceof ApiError && e.status === HttpStatusCode.BAD_REQUEST && e.message.includes("pre-gloas")) {
         logger.info("Waiting for Gloas state to be available at head", {
           gloasForkEpoch,
