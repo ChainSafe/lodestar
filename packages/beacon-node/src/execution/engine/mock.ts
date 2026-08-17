@@ -133,10 +133,12 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_newPayloadV3: this.notifyNewPayload.bind(this),
       engine_newPayloadV4: this.notifyNewPayload.bind(this),
       engine_newPayloadV5: this.notifyNewPayload.bind(this),
+      engine_newPayloadV6: this.notifyNewPayload.bind(this),
       engine_forkchoiceUpdatedV1: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV2: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV3: this.notifyForkchoiceUpdate.bind(this),
       engine_forkchoiceUpdatedV4: this.notifyForkchoiceUpdate.bind(this),
+      engine_forkchoiceUpdatedV5: this.notifyForkchoiceUpdate.bind(this),
       engine_getPayloadV1: this.getPayloadV1.bind(this),
       engine_getPayloadV2: this.getPayloadV5.bind(this),
       engine_getPayloadV3: this.getPayloadV5.bind(this),
@@ -148,6 +150,7 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
       engine_getClientVersionV1: this.getClientVersionV1.bind(this),
       engine_getBlobsV1: this.getBlobs.bind(this),
       engine_getBlobsV2: this.getBlobsV2.bind(this),
+      engine_getInclusionListV1: this.getInclusionList.bind(this),
     };
   }
 
@@ -480,6 +483,10 @@ export class ExecutionEngineMockBackend implements JsonRpcBackend {
     _versionedHashes: EngineApiRpcParamTypes["engine_getBlobsV2"][0]
   ): EngineApiRpcReturnTypes["engine_getBlobsV2"] {
     return null;
+  }
+
+  private getInclusionList(): EngineApiRpcReturnTypes["engine_getInclusionListV1"] {
+    return [];
   }
 
   private timestampToFork(timestamp: number): ForkPostBellatrix {

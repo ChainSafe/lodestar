@@ -137,6 +137,7 @@ describe.skip(`getAttestationsForBlock vc=${vc}`, () => {
         },
         justifiedBalancesGetter: () => originalState.epochCtx.effectiveBalanceIncrements,
         equivocatingIndices: new Set(),
+        payloadInclusionListSatisfaction: new Map(),
         confirmedRoot: toHexString(finalizedCheckpoint.root),
         previousEpochObservedJustifiedCheckpoint: {
           ...justifiedCheckpoint,
