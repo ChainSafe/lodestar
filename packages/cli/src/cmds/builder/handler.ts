@@ -39,8 +39,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     throw Error("Cannot put zero address as an executionFeeRecipient");
   }
 
-  const keypair = await loadBuilderKeypair(args.keystore, args.keystorePassword, args.builderPubkey);
-  logger.info("Loaded builder keystore", {pubkey: keypair.publicKey.toHex()});
+  const keypair = await loadBuilderKeypair(logger, args.keystore, args.keystorePassword, args.builderPubkey);
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {

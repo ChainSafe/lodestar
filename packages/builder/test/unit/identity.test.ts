@@ -144,6 +144,26 @@ describe("Identity", () => {
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
+  it("resolves once the Gloas fork is reached", async () => {
+    vi.useFakeTimers();
+    const forkClock = new ClockMock();
+    const forkConfig = {GLOAS_FORK_EPOCH: 1} as unknown as ChainForkConfig;
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
+    );
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, forkClock, forkConfig);
+
+    // Pre-fork: the builder waits without querying the beacon node
+    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
+
+    // Gloas fork reached: the builder queries the beacon node and resolves
+    forkClock.currentEpoch = 1;
+    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    expect(await promise).toEqual(index);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(1);
+  });
+
   it("rejects without querying the beacon node when the signal is already aborted", async () => {
     const abortSignal = AbortSignal.abort();
     await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortSignal, clock, config)).rejects.toThrow(
