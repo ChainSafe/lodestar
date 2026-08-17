@@ -1,13 +1,6 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkName,
-  ForkPostElectra,
-  ForkPreElectra,
-  MAX_PAYLOAD_ATTESTATIONS,
-  PTC_SIZE,
-  isForkPostElectra,
-} from "@lodestar/params";
+import {ForkName, ForkPostElectra, ForkPreElectra, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -44,7 +37,7 @@ const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
-const PayloadAttestationListType = ArrayOf(ssz.gloas.PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS);
+const PayloadAttestationListType = ssz.gloas.PayloadAttestations;
 const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
