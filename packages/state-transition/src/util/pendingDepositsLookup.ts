@@ -22,6 +22,9 @@ type PendingDepositsValidation = {
  * newly-appended tail rather than re-running BLS on previously-invalid entries.
  */
 export class PendingDepositsLookup {
+  private signaturesFromCache = 0;
+  private signaturesVerified = 0;
+
   private constructor(
     private readonly depositsByPubkey: Map<PubkeyHex, electra.PendingDeposit[]>,
     private readonly validationCache: Map<PubkeyHex, PendingDepositsValidation>
@@ -52,6 +55,16 @@ export class PendingDepositsLookup {
    * Most of the time it should hit the BuilderDepositSignatureCache so we don't have to validate
    * signatures here.
    */
+  /**
+   * Signature checks performed inside `hasPendingValidator()`, split by whether the pre-verify
+   * cache served them. These are the scan the caller never sees: when a builder-routed deposit is
+   * preceded by same-pubkey validator deposits this walk dominates, and on a `true` result the
+   * caller skips its own signature check entirely.
+   */
+  get signatureChecks(): {fromCache: number; verified: number} {
+    return {fromCache: this.signaturesFromCache, verified: this.signaturesVerified};
+  }
+
   hasPendingValidator(config: BeaconConfig, pubkeyHex: PubkeyHex, cache: BuilderDepositSignatureCache): boolean {
     const validation = this.validationCache.get(pubkeyHex);
     if (validation?.hasValidSignature === true) {
@@ -73,8 +86,14 @@ export class PendingDepositsLookup {
 
     for (let i = startIndex; i < deposits.length; i++) {
       const deposit = deposits[i];
+      const cached = cache.getSignatureValidity(deposit);
+      if (cached === null) {
+        this.signaturesVerified++;
+      } else {
+        this.signaturesFromCache++;
+      }
       const isValid =
-        cache.getSignatureValidity(deposit) ??
+        cached ??
         isValidDepositSignature(
           config,
           deposit.pubkey,

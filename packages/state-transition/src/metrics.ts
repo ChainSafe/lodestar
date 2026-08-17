@@ -1,3 +1,4 @@
+import {ForkName} from "@lodestar/params";
 import {MetricsRegister} from "@lodestar/utils";
 import {ProposerRewardType} from "./block/types.js";
 import {EpochTransitionStep} from "./epoch/index.js";
@@ -30,6 +31,28 @@ export function getMetrics(register: MetricsRegister) {
       help: "Time to call each step of epoch transition in seconds",
       labelNames: ["step"],
       buckets: [0.01, 0.05, 0.1, 0.2, 0.5, 0.75, 1],
+    }),
+    forkUpgradeTime: register.histogram<{fork: ForkName}>({
+      name: "lodestar_stfn_fork_upgrade_seconds",
+      help: "Time to upgrade the state at a fork boundary in seconds",
+      labelNames: ["fork"],
+      // The gloas upgrade is unbounded (see onboardBuildersTime), hence the long tail
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersTime: register.histogram({
+      name: "lodestar_stfn_gloas_onboard_builders_seconds",
+      help: "Time spent in onboardBuildersFromPendingDeposits at the gloas fork transition",
+      buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30],
+    }),
+    onboardBuildersDeposits: register.gauge<{outcome: "onboarded" | "topup" | "kept" | "dropped"}>({
+      name: "lodestar_stfn_gloas_onboard_builders_deposits",
+      help: "Pending deposits handled at the gloas fork transition, by outcome",
+      labelNames: ["outcome"],
+    }),
+    onboardBuildersSignatureChecks: register.gauge<{source: "cache" | "verified"}>({
+      name: "lodestar_stfn_gloas_onboard_builders_signature_checks",
+      help: "Builder deposit signature checks at the gloas fork transition. `verified` means the pre-verify cache missed and BLS ran inline, on the fork transition's critical path",
+      labelNames: ["source"],
     }),
     processBlockTime: register.histogram({
       name: "lodestar_stfn_process_block_seconds",
