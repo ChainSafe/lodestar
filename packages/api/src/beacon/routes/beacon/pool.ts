@@ -51,6 +51,7 @@ type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
 type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeListType>;
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
+type PayloadAttestationList = ValueOf<typeof ssz.gloas.PayloadAttestations>;
 type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
 
 export type Endpoints = {
@@ -74,7 +75,7 @@ export type Endpoints = {
     "GET",
     {slot?: Slot},
     {query: {slot?: number}},
-    ValueOf<typeof ssz.gloas.PayloadAttestations>,
+    PayloadAttestationList,
     VersionMeta
   >;
 
