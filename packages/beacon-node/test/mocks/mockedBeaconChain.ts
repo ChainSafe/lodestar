@@ -78,7 +78,7 @@ vi.mock("@lodestar/fork-choice", async (importActual) => {
       getBlockSummariesAtSlot: vi.fn(),
       notifyPtcMessages: vi.fn(),
       shouldBuildOnFull: vi.fn(),
-      getPayloadRevealCounts: vi.fn(),
+      getCanonicalPayloadCounts: vi.fn(),
     };
   });
 
@@ -189,6 +189,7 @@ vi.mock("../../src/chain/chain.js", async (importActual) => {
       getStateBySlot: vi.fn(),
       updateBuilderStatus: vi.fn(),
       processBlock: vi.fn(),
+      processProposerEquivocation: vi.fn(),
       persistInvalidSszValue: vi.fn(),
       regenStateForAttestationVerification: vi.fn(),
       close: vi.fn(),

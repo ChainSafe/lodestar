@@ -58,7 +58,7 @@ import {
   ProduceFullGloas,
 } from "../../../../chain/produceBlock/index.js";
 import {RegenCaller} from "../../../../chain/regen/index.js";
-import {validateGossipBlock} from "../../../../chain/validation/block.js";
+import {validateGossipBlock, verifyBlockProposerSignature} from "../../../../chain/validation/block.js";
 import {validateApiExecutionPayloadBid} from "../../../../chain/validation/executionPayloadBid.js";
 import {validateApiExecutionPayloadEnvelope} from "../../../../chain/validation/executionPayloadEnvelope.js";
 import {OpSource} from "../../../../chain/validatorMonitor.js";
@@ -220,12 +220,6 @@ export function getBeaconBlockApi({
                   // Block has already been seen, e.g. via gossip racing the publish API. Benign.
                   chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
                   return;
-                case BlockErrorCode.REPEAT_PROPOSAL:
-                  // The proposer already produced a block for this slot. For a solo setup this is a
-                  // notable signal (duplicate-proposal attempt). For fallback / DVT setups it is
-                  // expected on every block where another node published first.
-                  chain.logger.warn("Ignoring repeat-proposal block during publishing", valLogMeta);
-                  return;
               }
             }
 
@@ -268,7 +262,6 @@ export function getBeaconBlockApi({
             await verifyBlocksInEpoch.call(chain as BeaconChain, parentBlock, [blockForImport], null, {
               ...opts,
               verifyOnly: true,
-              skipVerifyBlockSignatures: true,
               skipVerifyExecutionPayload: true,
               seenTimestampSec,
             });
@@ -285,12 +278,31 @@ export function getBeaconBlockApi({
 
         chain.logger.debug("Consensus validated while publishing block", valLogMeta);
 
-        if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-          const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
-          if (chain.opts.broadcastValidationStrictness === "error") {
-            throw Error(message);
+        // Non-local blocks had their proposer and block-body signatures checked by verifyBlocksInEpoch above
+        // Locally produced blocks already passed block production validation, so only their proposer signature is unchecked
+        // Verify that signature and observe the block root here
+        if (blockLocallyProduced) {
+          try {
+            await verifyBlockProposerSignature(chain, signedBlock, blockRoot);
+            chain.seenBlockProposers.observeBlockRoot(
+              slot,
+              signedBlock.message.proposerIndex,
+              blockRoot,
+              signedBlockToSignedHeader(config, signedBlock)
+            );
+          } catch (e) {
+            chain.logger.error(
+              "Proposer signature validation failed while publishing the block",
+              valLogMeta,
+              e as Error
+            );
+            chain.persistInvalidSszValue(
+              chain.config.getForkTypes(slot).SignedBeaconBlock,
+              signedBlock,
+              "api_reject_consensus_failure"
+            );
+            throw e;
           }
-          chain.logger.warn(message, valLogMeta);
         }
         break;
       }
@@ -316,6 +328,25 @@ export function getBeaconBlockApi({
     if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
       // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
       await sleep(msToBlockSlot);
+    }
+
+    if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+      const conflictingRoots = chain.seenBlockProposers.getConflictingBlockRoots(
+        slot,
+        signedBlock.message.proposerIndex,
+        blockRoot
+      );
+      if (conflictingRoots.length > 0) {
+        chain.logger.warn("Not publishing block due to proposer equivocation", {
+          ...valLogMeta,
+          conflictingRoots: conflictingRoots.join(", "),
+        });
+        throw new ApiError(
+          400,
+          `Block is a proposer equivocation, conflicting block roots: ${conflictingRoots.join(", ")}`
+        );
+      }
+      chain.logger.debug("Equivocation validated while publishing the block", valLogMeta);
     }
 
     // TODO: Validate block
@@ -775,15 +806,6 @@ export function getBeaconBlockApi({
               throw new ApiError(400, (error as Error).message);
             }
             chain.logger.debug("Consensus validated while publishing execution payload envelope", valLogMeta);
-
-            // TODO GLOAS: check the block is not a proposer equivocation before publishing the envelope
-            if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
-              const message = `Equivocation checks not yet implemented for broadcastValidation=${broadcastValidation}`;
-              if (chain.opts.broadcastValidationStrictness === "error") {
-                throw Error(message);
-              }
-              chain.logger.warn(message, valLogMeta);
-            }
             break;
           }
 
@@ -886,6 +908,27 @@ export function getBeaconBlockApi({
         await sleep(msToBlockSlot);
       }
 
+      // Keep this as the final async validation before publishing. A conflicting block may be observed while the
+      // envelope, blob data, or slot timing is being validated above.
+      if (broadcastValidation === routes.beacon.BroadcastValidation.consensusAndEquivocation) {
+        const conflictingRoots = chain.seenBlockProposers.getConflictingBlockRoots(
+          slot,
+          payloadInput.proposerIndex,
+          blockRootHex
+        );
+        if (conflictingRoots.length > 0) {
+          chain.logger.warn("Not publishing execution payload envelope due to proposer equivocation", {
+            ...valLogMeta,
+            conflictingRoots: conflictingRoots.join(", "),
+          });
+          throw new ApiError(
+            400,
+            `Block of execution payload envelope is a proposer equivocation, conflicting block roots: ${conflictingRoots.join(", ")}`
+          );
+        }
+        chain.logger.debug("Equivocation validated while publishing execution payload envelope", valLogMeta);
+      }
+
       if (payloadInput.hasPayloadEnvelope()) {
         // The envelope may have been added while this request was being validated, e.g. via gossip
         chain.logger.debug("Execution payload envelope already added during publishing", valLogMeta);
@@ -983,6 +1026,7 @@ export function getBeaconBlockApi({
     },
 
     async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const seenTimestampSec = Date.now() / 1000;
       const bid = signedExecutionPayloadBid.message;
       const slot = bid.slot;
       const fork = config.getForkName(slot);
@@ -992,6 +1036,9 @@ export function getBeaconBlockApi({
       }
 
       await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+      const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
+      metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
 
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);

@@ -908,6 +908,22 @@ export function createLodestarMetrics(
         labelNames: ["error"],
       }),
     },
+    gossipExecutionPayloadBid: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_execution_payload_bid_elapsed_time_till_received_seconds",
+        help: "Time elapsed between the bid's slot start and the time the execution payload bid was received (negative = received before its slot, broadcast in the previous slot; positive = received during its own slot, late)",
+        labelNames: ["source"],
+        buckets: [-6, -3, -1, 0, 3],
+      }),
+    },
+    gossipPayloadAttestationMessage: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_payload_attestation_message_elapsed_time_till_received_seconds",
+        help: "Time elapsed between slot time and the time the payload attestation message was received",
+        labelNames: ["source"],
+        buckets: [3, 6, 9, 12],
+      }),
+    },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {
       blobsReconstructed: register.counter({
@@ -1178,6 +1194,10 @@ export function createLodestarMetrics(
       proposerSlashingPoolSize: register.gauge({
         name: "lodestar_oppool_proposer_slashing_pool_size",
         help: "Current size of the ProposerSlashingPool",
+      }),
+      proposerSlashingsProduced: register.counter({
+        name: "lodestar_oppool_proposer_slashings_produced_total",
+        help: "Total number of proposer slashings produced from observed equivocations",
       }),
       voluntaryExitPoolSize: register.gauge({
         name: "lodestar_oppool_voluntary_exit_pool_size",
@@ -1705,6 +1725,41 @@ export function createLodestarMetrics(
         name: "lodestar_precompute_next_epoch_transition_duration_seconds",
         help: "Duration of precomputeNextEpochTransition, including epoch transition and hashTreeRoot",
         buckets: [0.2, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3, 10],
+      }),
+    },
+
+    // Pre-verify builder-deposit signatures in the epochs before the Gloas fork (prepareNextSlot).
+    builderDepositPreVerify: {
+      duration: register.histogram({
+        name: "lodestar_builder_deposit_preverify_duration_seconds",
+        help: "Duration of one preVerifyBuilderDepositsPreGloas call (BLS batch verify + scan)",
+        buckets: [1, 2, 3, 4],
+      }),
+      pendingDeposits: register.gauge({
+        name: "lodestar_builder_deposit_preverify_pending_deposits",
+        help: "Current state.pendingDeposits length (backlog to drain before the fork)",
+      }),
+      cachedDeposits: register.gauge({
+        name: "lodestar_builder_deposit_preverify_cached_deposits",
+        help: "Deposit signatures verified & cached so far this pre-fork window (valid + invalid)",
+      }),
+      scannedDeposits: register.gauge({
+        name: "lodestar_builder_deposit_preverify_scanned_deposits",
+        help: "Pending deposits examined by the last pre-verify call (< pending_deposits ⇒ cap hit)",
+      }),
+      builderPubkeys: register.gauge({
+        name: "lodestar_builder_deposit_preverify_builder_pubkeys",
+        help: "Distinct builder pubkeys tracked this window (validator deposits for these are pre-verified)",
+      }),
+      validSignatures: register.counter<{type: "builder" | "validator"}>({
+        name: "lodestar_builder_deposit_preverify_valid_signatures_total",
+        help: "Cumulative deposit signatures whose BLS verification passed (VALID), by credential type",
+        labelNames: ["type"],
+      }),
+      invalidSignatures: register.counter<{type: "builder" | "validator"}>({
+        name: "lodestar_builder_deposit_preverify_invalid_signatures_total",
+        help: "Cumulative deposit signatures whose BLS verification failed (INVALID), by credential type",
+        labelNames: ["type"],
       }),
     },
 

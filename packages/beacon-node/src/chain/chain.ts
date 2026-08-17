@@ -130,6 +130,7 @@ import {CPStateDatastore} from "./stateCache/datastore/types.js";
 import {FIFOBlockStateCache} from "./stateCache/fifoBlockStateCache.js";
 import {PersistentCheckpointStateCache} from "./stateCache/persistentCheckpointsCache.js";
 import {CheckpointStateCache} from "./stateCache/types.js";
+import {validateApiProposerSlashing} from "./validation/proposerSlashing.js";
 import {ValidatorMonitor} from "./validatorMonitor.js";
 
 /**
@@ -200,6 +201,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenAggregatedAttestations: SeenAggregatedAttestations;
   readonly seenExecutionPayloadBids = new SeenExecutionPayloadBids();
   readonly seenBlockProposers = new SeenBlockProposers();
+  /** Proposer indexes with an in-flight proposer slashing production */
+  private readonly producingProposerSlashing = new Set<ValidatorIndex>();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof: SeenContributionAndProof;
   readonly seenAttestationDatas: SeenAttestationDatas;
@@ -1069,6 +1072,7 @@ export class BeaconChain implements IBeaconChain {
       graffiti,
       slot,
       feeRecipient,
+      strictFeeRecipientCheck,
       commonBlockBodyPromise,
       parentBlock,
       builderBid,
@@ -1097,6 +1101,7 @@ export class BeaconChain implements IBeaconChain {
         graffiti,
         slot,
         feeRecipient,
+        strictFeeRecipientCheck,
         parentBlock,
         proposerIndex,
         proposerPubKey,
@@ -1161,6 +1166,68 @@ export class BeaconChain implements IBeaconChain {
 
   async processExecutionPayload(payloadInput: PayloadEnvelopeInput, opts?: ImportPayloadOpts): Promise<void> {
     return this.payloadEnvelopeProcessor.processPayloadEnvelopeJob(payloadInput, opts);
+  }
+
+  processProposerEquivocation(blockSlot: Slot, proposerIndex: ValidatorIndex): void {
+    this.produceProposerSlashing(blockSlot, proposerIndex).catch((e) => {
+      this.logger.debug("Error producing proposer slashing", {slot: blockSlot, proposerIndex}, e as Error);
+    });
+  }
+
+  /** Produce a proposer slashing from two conflicting signed block headers observed for the same slot and proposer */
+  private async produceProposerSlashing(blockSlot: Slot, proposerIndex: ValidatorIndex): Promise<void> {
+    if (this.opts.disableProposerSlashings === true || this.producingProposerSlashing.has(proposerIndex)) {
+      return;
+    }
+
+    if (this.opPool.hasSeenProposerSlashing(proposerIndex)) {
+      this.logger.debug("Not producing proposer slashing, already in the op pool", {
+        slot: blockSlot,
+        proposerIndex,
+      });
+      return;
+    }
+
+    const headers = this.seenBlockProposers.getEquivocationHeaders(blockSlot, proposerIndex);
+    if (headers === null) {
+      return;
+    }
+
+    this.producingProposerSlashing.add(proposerIndex);
+    try {
+      const [header1, header2] = headers;
+      // ProposerSlashing uses the bigint variant of the signed block header, see types package for details
+      const proposerSlashing: phase0.ProposerSlashing = {
+        signedHeader1: {
+          message: {...header1.message, slot: BigInt(header1.message.slot)},
+          signature: header1.signature,
+        },
+        signedHeader2: {
+          message: {...header2.message, slot: BigInt(header2.message.slot)},
+          signature: header2.signature,
+        },
+      };
+
+      try {
+        await validateApiProposerSlashing(this, proposerSlashing);
+      } catch (e) {
+        this.logger.debug("Produced proposer slashing is not valid", {slot: blockSlot, proposerIndex}, e as Error);
+        return;
+      }
+
+      this.opPool.insertProposerSlashing(proposerSlashing);
+      this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
+      this.emitter.emit(ChainEvent.publishProposerSlashing, proposerSlashing);
+      this.metrics?.opPool.proposerSlashingsProduced.inc();
+      this.logger.info("Produced proposer slashing from observed equivocation", {
+        slot: blockSlot,
+        proposerIndex,
+        header1Root: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header1.message)),
+        header2Root: toRootHex(ssz.phase0.BeaconBlockHeader.hashTreeRoot(header2.message)),
+      });
+    } finally {
+      this.producingProposerSlashing.delete(proposerIndex);
+    }
   }
 
   getStatus(): Status {

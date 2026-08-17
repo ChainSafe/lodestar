@@ -108,6 +108,11 @@ export async function processBlocks(
       throw segmentExecStatus.execAborted.execError;
     }
 
+    for (const blockInput of relevantBlocks) {
+      const block = blockInput.getBlock().message;
+      this.seenBlockProposers.add(block.slot, block.proposerIndex, blockInput.blockRootHex);
+    }
+
     const {executionStatuses} = segmentExecStatus;
     const verifiedBlocksBySlot = new Map<Slot, FullyVerifiedBlock>();
     for (let i = 0; i < relevantBlocks.length; i++) {

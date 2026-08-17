@@ -5,6 +5,7 @@ import {LodestarError, byteArrayEquals, prettyPrintIndices, toRootHex} from "@lo
 import {isBlockInputColumns} from "../../chain/blocks/blockInput/blockInput.js";
 import {IBlockInput} from "../../chain/blocks/blockInput/types.js";
 import {isDaOutOfRange} from "../../chain/blocks/blockInput/utils.js";
+import {PayloadError, PayloadErrorCode} from "../../chain/blocks/importExecutionPayload.js";
 import {PayloadEnvelopeInput} from "../../chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {BlockError, BlockErrorCode} from "../../chain/errors/index.js";
 import {ZERO_HASH} from "../../constants/constants.js";
@@ -592,7 +593,7 @@ export class Batch {
     if (allComplete) {
       const attempt: Attempt = {
         peers: this.getSuccessfulPeers(),
-        hash: hashBlocks(blocks, this.config),
+        hash: hashBlocks(blocks, payloadEnvelopes),
       };
       this.state = {status: BatchStatus.AwaitingProcessing, blocks, payloadEnvelopes: newPayloadEnvelopes, attempt};
     } else {
@@ -702,7 +703,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    if (isExecutionEngineError(err)) {
       this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);
@@ -717,7 +718,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    if (err instanceof BlockError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    if (isExecutionEngineError(err)) {
       this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);
@@ -787,3 +788,19 @@ type BatchErrorMetadata = {
 };
 
 export class BatchError extends LodestarError<BatchErrorType & BatchErrorMetadata> {}
+
+function isExecutionEngineError(err: Error): boolean {
+  if (!(err instanceof BlockError)) {
+    return false;
+  }
+
+  if (err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+    return true;
+  }
+
+  return (
+    err.type.code === BlockErrorCode.BEACON_CHAIN_ERROR &&
+    err.type.error instanceof PayloadError &&
+    err.type.error.type.code === PayloadErrorCode.EXECUTION_ENGINE_ERROR
+  );
+}
