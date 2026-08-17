@@ -1043,10 +1043,8 @@ export function getBeaconBlockApi({
 
       await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
 
-      // A bid for `bid.slot` is normally broadcast during the previous slot (`bid.slot - 1`) so the
-      // next-slot proposer can pick it, hence measure elapsed time from the previous slot's start.
-      const delaySec = chain.clock.secFromSlot(slot - 1, seenTimestampSec);
-      metrics?.gossipExecutionPayloadBid.elapsedTimeFromPreviousSlot.observe({source: OpSource.api}, delaySec);
+      const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
+      metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
 
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);

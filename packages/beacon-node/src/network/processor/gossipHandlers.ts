@@ -1273,10 +1273,9 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const executionPayloadBid = sszDeserialize(topic, serializedData);
       const {proposerIndex} = await validateGossipExecutionPayloadBid(chain, executionPayloadBid);
 
-      // A bid for `bid.slot` is normally broadcast during the previous slot (`bid.slot - 1`) so the
-      // next-slot proposer can pick it, hence measure elapsed time from the previous slot's start.
-      const delaySec = chain.clock.secFromSlot(executionPayloadBid.message.slot - 1, seenTimestampSec);
-      metrics?.gossipExecutionPayloadBid.elapsedTimeFromPreviousSlot.observe({source: OpSource.gossip}, delaySec);
+      // this could be negative, because it's most likely the bid of next slot comes at this clock slot
+      const elapsedSec = chain.clock.secFromSlot(executionPayloadBid.message.slot, seenTimestampSec);
+      metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.gossip}, elapsedSec);
 
       // Handle valid payload bid by storing in a bid pool
       try {
