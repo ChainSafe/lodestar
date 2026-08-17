@@ -8,11 +8,17 @@ import {toRootHex} from "@lodestar/utils";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks/index.js";
 import {BlockInputPreData, BlockInputSource} from "../../../../../../src/chain/blocks/blockInput/index.js";
 import {verifyBlocksInEpoch} from "../../../../../../src/chain/blocks/verifyBlock.js";
+import {BlockErrorCode, BlockGossipError, GossipAction} from "../../../../../../src/chain/errors/index.js";
 import {SeenBlockProposers} from "../../../../../../src/chain/seenCache/seenBlockProposers.js";
+import {validateGossipBlock} from "../../../../../../src/chain/validation/block.js";
 import {ApiTestModules, getApiTestModules} from "../../../../../utils/api.js";
 import {generateProtoBlock} from "../../../../../utils/typeGenerator.js";
 
 vi.mock("../../../../../../src/chain/blocks/verifyBlock.js");
+vi.mock("../../../../../../src/chain/validation/block.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../../../../../../src/chain/validation/block.js")>();
+  return {...original, validateGossipBlock: vi.fn()};
+});
 
 describe("api - beacon - publishBlockV2", () => {
   const config = createBeaconConfig(configDef, Buffer.alloc(32, 1));
@@ -26,6 +32,78 @@ describe("api - beacon - publishBlockV2", () => {
     Object.defineProperty(modules.chain, "seenBlockProposers", {value: new SeenBlockProposers()});
     modules.network.publishBeaconBlock = vi.fn();
     modules.chain.processBlock = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(validateGossipBlock).mockResolvedValue({skippedSlots: 0});
+  });
+
+  describe("broadcast_validation=gossip", () => {
+    it("returns successfully for an already-known block", async () => {
+      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      const blockInput = BlockInputPreData.createFromBlock({
+        forkName: ForkName.phase0,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      });
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+      vi.mocked(validateGossipBlock).mockRejectedValueOnce(
+        new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot})
+      );
+
+      const api = getBeaconBlockApi(modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).resolves.toBeUndefined();
+
+      expect(modules.chain.persistInvalidSszValue).not.toHaveBeenCalled();
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      expect(modules.chain.processBlock).not.toHaveBeenCalled();
+    });
+
+    it("rejects a repeat proposal", async () => {
+      const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
+      const blockRoot = toRootHex(
+        modules.config.getForkTypes(signedBlock.message.slot).BeaconBlock.hashTreeRoot(signedBlock.message)
+      );
+      const blockInput = BlockInputPreData.createFromBlock({
+        forkName: ForkName.phase0,
+        block: signedBlock,
+        blockRootHex: blockRoot,
+        source: BlockInputSource.api,
+        seenTimestampSec: 0,
+        daOutOfRange: false,
+      });
+      const error = new BlockGossipError(GossipAction.IGNORE, {
+        code: BlockErrorCode.REPEAT_PROPOSAL,
+        proposerIndex: signedBlock.message.proposerIndex,
+        root: blockRoot,
+      });
+      modules.chain.seenBlockInputCache.getByBlock.mockReturnValue(blockInput);
+      vi.mocked(validateGossipBlock).mockRejectedValueOnce(error);
+
+      const api = getBeaconBlockApi(modules);
+      await expect(
+        api.publishBlockV2({
+          signedBlockContents: {signedBlock},
+          broadcastValidation: routes.beacon.BroadcastValidation.gossip,
+        })
+      ).rejects.toBe(error);
+
+      expect(modules.chain.persistInvalidSszValue).toHaveBeenCalledWith(
+        modules.config.getForkTypes(signedBlock.message.slot).SignedBeaconBlock,
+        signedBlock,
+        "api_reject_gossip_failure"
+      );
+      expect(modules.network.publishBeaconBlock).not.toHaveBeenCalled();
+      expect(modules.chain.processBlock).not.toHaveBeenCalled();
+    });
   });
 
   describe("broadcast_validation=consensus_and_equivocation", () => {
