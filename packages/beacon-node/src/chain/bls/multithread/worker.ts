@@ -1,8 +1,8 @@
 import worker from "node:worker_threads";
 import {
   type BlsSignatureSet,
-  verifySignatureSets as verifySignatureSetsNative,
-  verifySignatureSetsSameMessage as verifySignatureSetsSameMessageNative,
+  verifySignatureSets,
+  verifySignatureSetsSameMessage,
 } from "@chainsafe/lodestar-z/bls-verifier";
 import {expose} from "@chainsafe/threads/worker";
 import {BlsWorkReq, BlsWorkResult, JobQueueItemType, WorkResult, WorkResultCode, WorkerData} from "./types.js";
@@ -53,7 +53,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
       }
       case JobQueueItemType.sameMessage:
         try {
-          const result = verifySignatureSetsSameMessageNative(workReq.sets, workReq.message);
+          const result = verifySignatureSetsSameMessage(workReq.sets, workReq.message);
           results[i] = {code: WorkResultCode.success, result};
         } catch (e) {
           results[i] = {code: WorkResultCode.error, error: e as Error};
@@ -76,7 +76,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = verifySignatureSetsNative(allSets);
+        const isValid = verifySignatureSets(allSets);
 
         if (isValid) {
           // The entire batch is valid, return success to all
@@ -101,7 +101,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
   for (const {idx, sets} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSetsNative(sets);
+      const isValid = verifySignatureSets(sets);
       results[idx] = {code: WorkResultCode.success, result: [isValid]};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};

@@ -69,7 +69,6 @@
     "@chainsafe/bls": "8.2.0",
     "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/persistent-merkle-tree": "^1.3.0",
-    "@chainsafe/pubkey-index-map": "^3.0.0",
     "@chainsafe/ssz": "^1.6.2",
     "@chainsafe/swap-or-not-shuffle": "^1.2.1",
     "@lodestar/config": "workspace:^",

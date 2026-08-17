@@ -13,11 +13,7 @@ import {LinkedList} from "../../../util/array.js";
 import {callInNextEventLoop} from "../../../util/eventLoop.js";
 import {QueueError, QueueErrorCode} from "../../../util/queue/index.js";
 import {IBlsVerifier, SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
-import {
-  chunkSameMessageSignatureSets,
-  getAggregatedPubkeysCount,
-  verifySignatureSetsInNativeBatches,
-} from "../utils.js";
+import {chunkSameMessageSignatureSets, getAggregatedPubkeysCount, verifySignatureSetsInBatches} from "../utils.js";
 import {JobQueueItem, jobItemSigSets, jobItemWorkReq} from "./jobItem.js";
 import {defaultPoolSize} from "./poolSize.js";
 import {BlsWorkReq, BlsWorkResult, JobQueueItemType, WorkResultCode, WorkResultError, WorkerData} from "./types.js";
@@ -159,7 +155,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
       try {
-        return verifySignatureSetsInNativeBatches(sets);
+        return verifySignatureSetsInBatches(sets);
       } finally {
         if (timer) timer();
       }
