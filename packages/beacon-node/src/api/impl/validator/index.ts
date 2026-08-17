@@ -908,12 +908,10 @@ export function getValidatorApi(
       // Fire builder API bid requests while the local payload is built, one request per entry.
       // Any entry failure yields no bid and never fails block production.
       let builderApiBidsPromise: Promise<BuilderApiBid[]> = Promise.resolve([]);
-      let requestedFeeRecipient: Uint8Array | undefined;
       if (builderConfig.builders.length > 0 && !circuitBreakerActive) {
         try {
           const proposerIndex = chain.getHeadState().getBeaconProposer(slot);
           const proposerPubkey = chain.pubkeyCache.getOrThrow(proposerIndex).toBytes();
-          requestedFeeRecipient = feeRecipient !== undefined ? fromHex(feeRecipient) : undefined;
           builderApiBidsPromise = chain.builderApiClient.getExecutionPayloadBids(
             builderConfig.builders,
             slot,
@@ -984,7 +982,6 @@ export function getValidatorApi(
                 parentBlock,
                 parentBlockHash: bidParentBlockHash,
                 parentBlockRoot: parentBlockRootHex,
-                feeRecipient: requestedFeeRecipient,
                 entry,
               });
               candidates.push({

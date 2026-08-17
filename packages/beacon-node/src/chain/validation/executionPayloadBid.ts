@@ -103,13 +103,11 @@ export async function validateBuilderApiExecutionPayloadBid(
     parentBlock: ProtoBlock;
     parentBlockHash: RootHex;
     parentBlockRoot: RootHex;
-    /** Fee recipient explicitly requested by the caller, the bid must match it when set */
-    feeRecipient?: Uint8Array;
     entry: routes.validator.BuilderEntry;
   }
 ): Promise<void> {
   const bid = signedExecutionPayloadBid.message;
-  const {slot, parentBlock, parentBlockHash, parentBlockRoot, feeRecipient, entry} = request;
+  const {slot, parentBlock, parentBlockHash, parentBlockRoot, entry} = request;
 
   if (bid.slot !== slot) {
     throw Error(`Bid slot=${bid.slot} does not match requested slot=${slot}`);
@@ -121,12 +119,6 @@ export async function validateBuilderApiExecutionPayloadBid(
     throw Error(
       `Bid parent parentBlockHash=${bidParentBlockHash} parentBlockRoot=${bidParentBlockRoot} does not match ` +
         `requested parentBlockHash=${parentBlockHash} parentBlockRoot=${parentBlockRoot}`
-    );
-  }
-
-  if (feeRecipient !== undefined && !byteArrayEquals(bid.feeRecipient, feeRecipient)) {
-    throw Error(
-      `Bid feeRecipient=${toHex(bid.feeRecipient)} does not match requested feeRecipient=${toHex(feeRecipient)}`
     );
   }
 

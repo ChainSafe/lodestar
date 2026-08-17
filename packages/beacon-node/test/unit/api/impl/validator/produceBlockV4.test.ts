@@ -3,7 +3,6 @@ import {createBeaconConfig, createChainForkConfig, defaultChainConfig} from "@lo
 import {ExecutionStatus, ProtoBlock} from "@lodestar/fork-choice";
 import {ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {fromHex} from "@lodestar/utils";
 import {getValidatorApi} from "../../../../../src/api/impl/validator/index.js";
 import {defaultApiOptions} from "../../../../../src/api/options.js";
 import {validateBuilderApiExecutionPayloadBid} from "../../../../../src/chain/validation/executionPayloadBid.js";
@@ -236,11 +235,6 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.builderApiClient.getExecutionPayloadBids).toHaveBeenCalledOnce();
     expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledOnce();
-    expect(validateBuilderApiExecutionPayloadBid).toHaveBeenCalledWith(
-      modules.chain,
-      apiBid,
-      expect.objectContaining({feeRecipient: fromHex(feeRecipient)})
-    );
     // The bid block commits to the builder API bid since its boosted total (2) beats the p2p bid (1)
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);
