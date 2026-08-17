@@ -824,7 +824,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Average signatures per set. This number is decided by the time of object submitted to the pool:\n- Sync blocks: 128\n- Aggregates: 3\n- Attestations: 1",
+      "description": "Average signature sets per job, split by job type.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -881,7 +881,7 @@
           "calcs": [],
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": false
+          "showLegend": true
         },
         "tooltip": {
           "mode": "multi",
@@ -895,13 +895,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "rate(lodestar_bls_thread_pool_sig_sets_started_total[$rate_interval])/(rate(lodestar_bls_thread_pool_jobs_started_total[$rate_interval])>0)",
+          "expr": "sum by (type) (rate(lodestar_bls_thread_pool_sig_sets_started_total[$rate_interval])) / sum by (type) (rate(lodestar_bls_thread_pool_jobs_started_total[$rate_interval]))",
           "interval": "",
-          "legendFormat": "pool",
+          "legendFormat": "{{type}}",
           "refId": "A"
         }
       ],
-      "title": "BLS worker pool - sigs per set",
+      "title": "BLS worker pool - signature sets per job",
       "type": "timeseries"
     },
     {
@@ -981,38 +981,6 @@
                 "value": "right"
               }
             ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "same_message_job_retries"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ops"
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "same_message_set_retries"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "ops"
-              },
-              {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              }
-            ]
           }
         ]
       },
@@ -1059,30 +1027,6 @@
           "interval": "",
           "legendFormat": "batch_retries",
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_bls_thread_pool_same_message_jobs_retries_total[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "same_message_job_retries",
-          "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "exemplar": false,
-          "expr": "rate(lodestar_bls_thread_pool_same_message_sets_retries_total[$rate_interval])",
-          "hide": false,
-          "interval": "",
-          "legendFormat": "same_message_set_retries",
-          "refId": "D"
         }
       ],
       "title": "BLS thread pool - Error rates",
@@ -1093,7 +1037,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Average sets per job. A set may contain +1 signatures. This number should be higher than 1 to reduce communication costs",
+      "description": "Average jobs included in each worker call. Values above 1 show that queue batching amortizes worker communication overhead.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1164,284 +1108,14 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "rate(lodestar_bls_thread_pool_jobs_started_total[$rate_interval])/rate(lodestar_bls_thread_pool_job_groups_started_total[$rate_interval])",
+          "expr": "sum(rate(lodestar_bls_thread_pool_jobs_started_total[$rate_interval])) / sum(rate(lodestar_bls_thread_pool_job_groups_started_total[$rate_interval]))",
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"
         }
       ],
-      "title": "BLS worker pool - sets per job",
+      "title": "BLS worker pool - jobs per worker call",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 42
-      },
-      "id": 520,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_sum[$rate_interval]) * 384",
-          "instant": false,
-          "legendFormat": "aggregate_with_randomness",
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "rate(lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds_sum[$rate_interval]) * 384",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "pubkey_aggregation",
-          "range": true,
-          "refId": "B"
-        }
-      ],
-      "title": "BLS jobItemWorkReq cpu time per epoch",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 42
-      },
-      "id": 521,
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "color": {
-          "exponent": 0.5,
-          "fill": "dark-orange",
-          "mode": "scheme",
-          "reverse": false,
-          "scale": "exponential",
-          "scheme": "Magma",
-          "steps": 128
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "mode": "single",
-          "showColorScale": false,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "decimals": 3,
-          "reverse": false,
-          "unit": "short"
-        }
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(lodestar_bls_thread_pool_aggregate_with_randomness_async_time_seconds_bucket[$rate_interval])",
-          "format": "heatmap",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "{{le}}",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Async AggregateWithRandomness Time",
-      "type": "heatmap"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 50
-      },
-      "id": 522,
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "color": {
-          "exponent": 0.5,
-          "fill": "dark-orange",
-          "mode": "scheme",
-          "reverse": false,
-          "scale": "exponential",
-          "scheme": "Magma",
-          "steps": 128
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1e-9
-        },
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "mode": "single",
-          "showColorScale": false,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "decimals": 3,
-          "reverse": false,
-          "unit": "short"
-        }
-      },
-      "pluginVersion": "10.4.1",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "rate(lodestar_bls_thread_pool_pubkeys_aggregation_main_thread_time_seconds_bucket[$rate_interval])",
-          "format": "heatmap",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "{{le}}",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Main Thread Public Key Aggregation Time",
-      "type": "heatmap"
     }
   ],
   "refresh": "10s",
