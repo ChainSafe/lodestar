@@ -39,11 +39,22 @@ export enum BatchStatus {
   AwaitingValidation = "AwaitingValidation",
 }
 
+/** Identity of one download attempt*/
 export type Attempt = {
   /** The peer that made the attempt */
   peers: PeerIdStr[];
   /** The hash of the blocks of the attempt */
   hash: RootHex;
+};
+
+/**
+ * A failed attempt that has been classified for blame.
+ */
+export type FailedAttempt = Attempt & {
+  /**
+   * True when the failure is evidence the peers served bad data, so they may be downscored..
+   */
+  peerAttributable: boolean;
 };
 
 type TrackedRequest = {
@@ -108,10 +119,12 @@ export type BatchMetadata = {
   // Retry counters
   downloadAttempts: number;
   processingAttempts: number;
+  executionErrorAttempts: number;
 
   // Cumulative peer attribution for failed attempts (only present when non-empty)
   failedDownloadPeers?: string;
   failedProcessingPeers?: string;
+  executionErrorPeers?: string;
 };
 
 function formatRangeReq(req: {startSlot: Slot; count: number}): string {
@@ -152,10 +165,10 @@ export class Batch {
   state: BatchState = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
   /** Peers that provided good data, with column coverage for by_range requests */
   private readonly successfulDownloads = new Map<PeerIdStr, TrackedRequest>();
-  /** The `Attempts` that have been made and failed to send us this batch. */
-  readonly failedProcessingAttempts: Attempt[] = [];
-  /** The `Attempts` that have been made and failed because of execution malfunction. */
-  readonly executionErrorAttempts: Attempt[] = [];
+  /** The attempts that have been made and failed to send us this batch. */
+  readonly failedProcessingAttempts: FailedAttempt[] = [];
+  /** The attempts that have been made and failed because of execution malfunction. */
+  readonly executionErrorAttempts: FailedAttempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerIdStr[] = [];
   private readonly config: ChainForkConfig;
@@ -419,10 +432,18 @@ export class Batch {
   }
 
   /**
-   * Gives a list of peers from which this batch has had a failed download or processing attempt.
+   * Gives a list of peers from which this batch has had a failed download attempt, or a
+   * peer-attributable failed processing/execution attempt.
    */
   getFailedPeers(): PeerIdStr[] {
-    return [...this.failedDownloadAttempts, ...this.failedProcessingAttempts.flatMap((a) => a.peers)];
+    return [...this.failedDownloadAttempts, ...this.getPeerAttributableAttempts().flatMap((a) => a.peers)];
+  }
+
+  /**
+   * Attempts whose failure is peer-attributable, across both the processing and execution error
+   */
+  getPeerAttributableAttempts(): FailedAttempt[] {
+    return [...this.failedProcessingAttempts, ...this.executionErrorAttempts].filter((a) => a.peerAttributable);
   }
 
   /**
@@ -457,6 +478,7 @@ export class Batch {
   getMetadata(): BatchMetadata {
     const {blocksRequest, blobsRequest, columnsRequest, envelopesRequest} = this.requests;
     const failedProcessingPeerList = this.failedProcessingAttempts.flatMap((a) => a.peers);
+    const executionErrorPeerList = this.executionErrorAttempts.flatMap((a) => a.peers);
     return {
       startEpoch: this.startEpoch,
       startSlot: this.startSlot,
@@ -468,11 +490,15 @@ export class Batch {
       ...(envelopesRequest && {envelopesReq: formatRangeReq(envelopesRequest)}),
       downloadAttempts: this.failedDownloadAttempts.length,
       processingAttempts: this.failedProcessingAttempts.length,
+      executionErrorAttempts: this.executionErrorAttempts.length,
       ...(this.failedDownloadAttempts.length > 0 && {
         failedDownloadPeers: this.failedDownloadAttempts.join(","),
       }),
       ...(failedProcessingPeerList.length > 0 && {
         failedProcessingPeers: failedProcessingPeerList.join(","),
+      }),
+      ...(executionErrorPeerList.length > 0 && {
+        executionErrorPeers: executionErrorPeerList.join(","),
       }),
     };
   }
@@ -703,11 +729,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (isExecutionEngineError(err)) {
-      this.onExecutionEngineError(this.state.attempt);
-    } else {
-      this.onProcessingError(this.state.attempt);
-    }
+    this.routeProcessingFailure(err, this.state.attempt);
   }
 
   /**
@@ -718,10 +740,17 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    if (isExecutionEngineError(err)) {
-      this.onExecutionEngineError(this.state.attempt);
+    this.routeProcessingFailure(err, this.state.attempt);
+  }
+
+  private routeProcessingFailure(err: Error, attempt: Attempt): void {
+    const code = err instanceof BlockError || err instanceof PayloadError ? err.type.code : null;
+    const failedAttempt: FailedAttempt = {...attempt, peerAttributable: isPeerAttributableFailure(code)};
+
+    if (isExecutionEngineFailure(code)) {
+      this.onExecutionEngineError(failedAttempt);
     } else {
-      this.onProcessingError(this.state.attempt);
+      this.onProcessingError(failedAttempt);
     }
   }
 
@@ -735,7 +764,7 @@ export class Batch {
     return this.state.attempt;
   }
 
-  private onExecutionEngineError(attempt: Attempt): void {
+  private onExecutionEngineError(attempt: FailedAttempt): void {
     this.executionErrorAttempts.push(attempt);
     if (this.executionErrorAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}));
@@ -746,7 +775,7 @@ export class Batch {
     this.state = {status: BatchStatus.AwaitingDownload, blocks: [], payloadEnvelopes: null};
   }
 
-  private onProcessingError(attempt: Attempt): void {
+  private onProcessingError(attempt: FailedAttempt): void {
     this.failedProcessingAttempts.push(attempt);
     if (this.failedProcessingAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
       throw new BatchError(this.errorType({code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}));
@@ -789,18 +818,44 @@ type BatchErrorMetadata = {
 
 export class BatchError extends LodestarError<BatchErrorType & BatchErrorMetadata> {}
 
-function isExecutionEngineError(err: Error): boolean {
-  if (!(err instanceof BlockError)) {
-    return false;
-  }
-
-  if (err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
-    return true;
-  }
-
+/**
+ * Whether a processing failure is an execution-engine failure. INVALID and local ERROR share one
+ * retry budget (executionErrorAttempts) — the remedy is the same, re-download from another peer —
+ * so this only selects the bucket, not blame. Everything else is a plain processing failure.
+ */
+function isExecutionEngineFailure(code: BlockErrorCode | PayloadErrorCode | null): boolean {
   return (
-    err.type.code === BlockErrorCode.BEACON_CHAIN_ERROR &&
-    err.type.error instanceof PayloadError &&
-    err.type.error.type.code === PayloadErrorCode.EXECUTION_ENGINE_ERROR
+    code === BlockErrorCode.EXECUTION_ENGINE_INVALID ||
+    code === BlockErrorCode.EXECUTION_ENGINE_ERROR ||
+    code === PayloadErrorCode.EXECUTION_ENGINE_INVALID ||
+    code === PayloadErrorCode.EXECUTION_ENGINE_ERROR
   );
+}
+
+/**
+ * Based on an error code, return if peer is attributable for FailedAttempt.
+ */
+function isPeerAttributableFailure(code: BlockErrorCode | PayloadErrorCode | null): boolean {
+  switch (code) {
+    // EL returned a definitive INVALID verdict on the payload
+    case BlockErrorCode.EXECUTION_ENGINE_INVALID:
+    case PayloadErrorCode.EXECUTION_ENGINE_INVALID:
+    // a block or envelope signature is invalid
+    case BlockErrorCode.INVALID_SIGNATURE:
+    case PayloadErrorCode.INVALID_SIGNATURE:
+    // the block's state transition produced an invalid state root
+    case BlockErrorCode.INVALID_STATE_ROOT:
+    // the segment this peer served is internally inconsistent (in-segment link breaks, see PR #9684)
+    case BlockErrorCode.NON_LINEAR_SLOTS:
+    case BlockErrorCode.NON_LINEAR_PARENT_ROOTS:
+    case BlockErrorCode.NON_LINEAR_PAYLOAD_ROOTS:
+    // the envelope references a mismatched block root, or fails field verification
+    case BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH:
+    case PayloadErrorCode.ENVELOPE_VERIFICATION_ERROR:
+    // the peer served a block we have explicitly blacklisted
+    case BlockErrorCode.BLACKLISTED_BLOCK:
+      return true;
+    default:
+      return false;
+  }
 }

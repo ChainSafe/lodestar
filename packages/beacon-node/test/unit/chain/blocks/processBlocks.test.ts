@@ -7,6 +7,7 @@ import {DataAvailabilityStatus, IBeaconStateView} from "@lodestar/state-transiti
 import {ssz} from "@lodestar/types";
 import {toRootHex} from "@lodestar/utils";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
+import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {processBlocks} from "../../../../src/chain/blocks/index.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
@@ -117,5 +118,34 @@ describe("chain / blocks / processBlocks", () => {
 
     expect(seenBlockProposers.isKnown(slot, proposerIndex)).toBe(true);
     expect(importBlock).toHaveBeenCalledOnce();
+  });
+
+  // The gloas payload import throws a PayloadError. Range sync relies on it arriving intact so it can
+  // read the INVALID/ERROR code and decide peer attribution — getBlockOrPayloadError must pass it
+  // through, not flatten it into a generic BEACON_CHAIN_ERROR. (The origin is mocked here; what matters
+  // is that a PayloadError raised anywhere in the pipeline is re-thrown unwrapped.)
+  it("re-throws a PayloadError unwrapped, without flattening it into BEACON_CHAIN_ERROR", async () => {
+    const payloadError = new PayloadError({
+      code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
+      execStatus: ExecutionPayloadStatus.INVALID,
+      errorMessage: "bad payload",
+    });
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(payloadError);
+
+    await expect(processBlocks.call(chain, [blockInput], null, {})).rejects.toBe(payloadError);
+  });
+
+  // Contrast: a plain error (not a Block/Payload error) IS wrapped, which is why the passthrough above
+  // has to be selective.
+  it("wraps a non-Block/Payload error into BEACON_CHAIN_ERROR", async () => {
+    const internalError = new Error("regen boom");
+    vi.mocked(verifyBlocksInEpoch).mockRejectedValue(internalError);
+
+    const err = await processBlocks.call(chain, [blockInput], null, {}).then(
+      () => null,
+      (e) => e
+    );
+    expect(err).toBeInstanceOf(BlockError);
+    expect((err as BlockError).type.code).toBe(BlockErrorCode.BEACON_CHAIN_ERROR);
   });
 });
