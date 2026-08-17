@@ -83,7 +83,7 @@ export class Builder {
       builderSigner.getPubkeyHex(),
       opts.abortController.signal,
       clock,
-      config.GLOAS_FORK_EPOCH
+      config
     );
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index);

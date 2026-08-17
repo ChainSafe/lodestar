@@ -1,7 +1,8 @@
 import {ApiClient, ApiError, HttpStatusCode, routes} from "@lodestar/api";
+import {ChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
-import {BuilderIndex, BuilderStatus, Epoch} from "@lodestar/types";
+import {BuilderIndex, BuilderStatus} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
 
 export const WAITING_FOR_BUILDER_POLL_MS = 10 * 1000;
@@ -12,9 +13,9 @@ export async function resolveBuilderIdentity(
   id: routes.beacon.BuilderId,
   signal: AbortSignal,
   clock: IClock,
-  gloasForkEpoch: Epoch
+  config: ChainForkConfig
 ): Promise<BuilderIndex> {
-  const builderEntry = await waitForBuilder(api, logger, id, signal, clock, gloasForkEpoch);
+  const builderEntry = await waitForBuilder(api, logger, id, signal, clock, config);
 
   if (builderEntry.builder.version !== PAYLOAD_BUILDER_VERSION) {
     throw Error(`Builder version mismatch: got ${builderEntry.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`);
@@ -58,8 +59,9 @@ async function waitForBuilder(
   id: routes.beacon.BuilderId,
   signal: AbortSignal,
   clock: IClock,
-  gloasForkEpoch: Epoch
+  config: ChainForkConfig
 ): Promise<routes.beacon.BuilderResponse> {
+  const gloasForkEpoch = config.GLOAS_FORK_EPOCH;
   while (!signal.aborted) {
     const currentEpoch = clock.getCurrentEpoch();
     if (currentEpoch < gloasForkEpoch) {
@@ -77,10 +79,11 @@ async function waitForBuilder(
     try {
       builder = await fetchBuilder(api, id);
     } catch (e) {
-      // The clock gate above uses wall-clock epoch, but getStateBuilders reads the head block's
-      // state which is not advanced to the current slot. At the fork boundary the head is still the
-      // last pre-gloas block until the first gloas block is imported, so tolerate that transient 400.
-      if (e instanceof ApiError && e.status === HttpStatusCode.BAD_REQUEST && e.message.includes("pre-gloas")) {
+      // The clock gate above uses wall-clock epoch, but getStateBuilders reads the head block's state
+      // which is not advanced to the current slot. Right after the fork epoch the head can still be the
+      // last pre-gloas block until the first gloas block is imported; treat a bad-request here as that
+      // transient and keep polling (avoids differentiating on client-specific error text).
+      if (e instanceof ApiError && e.status === HttpStatusCode.BAD_REQUEST) {
         logger.info("Waiting for Gloas state to be available at head", {
           gloasForkEpoch,
           currentEpoch,
