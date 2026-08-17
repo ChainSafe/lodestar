@@ -478,6 +478,10 @@ export class BeaconStateView implements IBeaconStateViewLatestFork {
     return this.cachedState.epochCtx.getBeaconCommittee(slot, index);
   }
 
+  getInclusionListCommittee(slot: Slot): Uint32Array {
+    return this.cachedState.epochCtx.getInclusionListCommittee(slot);
+  }
+
   getBeaconCommitteeCountPerSlot(epoch: Epoch): number {
     return this.cachedState.epochCtx.getCommitteeCountPerSlot(epoch);
   }

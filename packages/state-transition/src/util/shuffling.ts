@@ -200,7 +200,15 @@ export function getBeaconCommittee(epochShuffling: EpochShuffling, slot: Slot, i
  * Return the inclusion list committee at slot, cycling over the slot's concatenated beacon committees.
  */
 export function getInclusionListCommittee(epochShuffling: EpochShuffling, slot: Slot): Uint32Array {
-  const slotCommittees = epochShuffling.committees[slot % SLOTS_PER_EPOCH];
+  return computeInclusionListCommittee(epochShuffling.committees[slot % SLOTS_PER_EPOCH]);
+}
+
+/**
+ * Cycle over the concatenated beacon committees of a single slot to fill INCLUSION_LIST_COMMITTEE_SIZE
+ * entries. Split from getInclusionListCommittee so callers holding committees without an
+ * EpochShuffling (e.g. a native state view) can reuse the same derivation.
+ */
+export function computeInclusionListCommittee(slotCommittees: Uint32Array[]): Uint32Array {
   let totalLen = 0;
   for (const committee of slotCommittees) {
     totalLen += committee.length;
