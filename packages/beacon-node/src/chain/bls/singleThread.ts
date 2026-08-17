@@ -1,8 +1,8 @@
-import {verifySignatureSetsSameMessage as verifySignatureSetsSameMessageNative} from "@chainsafe/lodestar-z/bls-verifier";
+import {verifySignatureSetsSameMessage} from "@chainsafe/lodestar-z/bls-verifier";
 import {ISignatureSet} from "@lodestar/state-transition";
 import {Metrics} from "../../metrics/index.js";
 import {IBlsVerifier, SameMessageSignatureSet} from "./interface.js";
-import {chunkSameMessageSignatureSets, getAggregatedPubkeysCount, verifySignatureSetsInNativeBatches} from "./utils.js";
+import {chunkSameMessageSignatureSets, getAggregatedPubkeysCount, verifySignatureSetsInBatches} from "./utils.js";
 
 export class BlsSingleThreadVerifier implements IBlsVerifier {
   private readonly metrics: Metrics | null;
@@ -14,7 +14,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     this.metrics?.bls.aggregatedPubkeys.inc(getAggregatedPubkeysCount(sets));
 
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
-    const isValid = verifySignatureSetsInNativeBatches(sets);
+    const isValid = verifySignatureSetsInBatches(sets);
 
     // Don't use a try/catch, only count run without exceptions
     if (timer) {
@@ -28,7 +28,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
     const result: boolean[] = [];
     for (const setsChunk of chunkSameMessageSignatureSets(sets)) {
-      result.push(...verifySignatureSetsSameMessageNative(setsChunk, message));
+      result.push(...verifySignatureSetsSameMessage(setsChunk, message));
     }
     timer?.();
     return result;

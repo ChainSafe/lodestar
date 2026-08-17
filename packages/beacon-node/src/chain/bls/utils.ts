@@ -3,7 +3,7 @@ import {
   BLS_VERIFIER_MAX_SAME_MESSAGE_BATCH_SIZE,
   BLS_VERIFIER_SET_TYPE,
   type BlsSignatureSet,
-  verifySignatureSets as verifySignatureSetsNative,
+  verifySignatureSets,
 } from "@chainsafe/lodestar-z/bls-verifier";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {SameMessageSignatureSet} from "./interface.js";
@@ -48,14 +48,14 @@ export function toBlsSignatureSet(signatureSet: ISignatureSet): BlsSignatureSet 
   }
 }
 
-export function verifySignatureSetsInNativeBatches(signatureSets: ISignatureSet[]): boolean {
+export function verifySignatureSetsInBatches(signatureSets: ISignatureSet[]): boolean {
   if (signatureSets.length === 0) {
     return false;
   }
 
   for (let start = 0; start < signatureSets.length; start += BLS_VERIFIER_MAX_BATCH_SIZE) {
     const sets = signatureSets.slice(start, start + BLS_VERIFIER_MAX_BATCH_SIZE).map(toBlsSignatureSet);
-    if (!verifySignatureSetsNative(sets)) {
+    if (!verifySignatureSets(sets)) {
       return false;
     }
   }
