@@ -25,6 +25,7 @@ import {validateApiPayloadAttestationMessage} from "../../../../chain/validation
 import {validateApiProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
 import {validateApiSyncCommittee} from "../../../../chain/validation/syncCommittee.js";
 import {validateApiVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {OpSource} from "../../../../chain/validatorMonitor.js";
 import {validateGossipFnRetryUnknownRoot} from "../../../../network/processor/gossipHandlers.js";
 import {ApiError, FailureList, IndexedError} from "../../errors.js";
 import {ApiModules} from "../../types.js";
@@ -211,6 +212,7 @@ export function getBeaconPoolApi({
     },
 
     async submitPayloadAttestationMessages({payloadAttestationMessages}) {
+      const seenTimestampSec = Date.now() / 1000;
       const failures: FailureList = [];
 
       await Promise.all(
@@ -225,6 +227,9 @@ export function getBeaconPoolApi({
               slot,
               beaconBlockRoot
             );
+
+            const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
+            metrics?.gossipPayloadAttestationMessage.elapsedTimeTillReceived.observe({source: OpSource.api}, delaySec);
 
             const insertOutcome = chain.payloadAttestationPool.add(
               payloadAttestationMessage,

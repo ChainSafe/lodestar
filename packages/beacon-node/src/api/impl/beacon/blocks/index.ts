@@ -1026,6 +1026,7 @@ export function getBeaconBlockApi({
     },
 
     async publishExecutionPayloadBid({signedExecutionPayloadBid}) {
+      const seenTimestampSec = Date.now() / 1000;
       const bid = signedExecutionPayloadBid.message;
       const slot = bid.slot;
       const fork = config.getForkName(slot);
@@ -1035,6 +1036,9 @@ export function getBeaconBlockApi({
       }
 
       await validateApiExecutionPayloadBid(chain, signedExecutionPayloadBid);
+
+      const elapsedSec = chain.clock.secFromSlot(slot, seenTimestampSec);
+      metrics?.gossipExecutionPayloadBid.elapsedTimeTillReceived.observe({source: OpSource.api}, elapsedSec);
 
       try {
         const insertOutcome = chain.executionPayloadBidPool.add(signedExecutionPayloadBid);
