@@ -174,6 +174,7 @@ Add a comment only when the code cannot carry important information, such as:
 
 - A precondition not visible in the signature
 - A non-obvious consensus or protocol rule
+- Design, invariants, or non-obvious algorithms of a public or self-contained module
 - An ordering or workaround that looks unnecessary but is correctness-critical
 - Rationale needed to prevent a future regression
 
