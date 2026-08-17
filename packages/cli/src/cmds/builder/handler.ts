@@ -40,8 +40,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   }
 
   const keypair = await loadBuilderKeypair(args.keystore, args.keystorePassword, args.builderPubkey);
-  logger.info("Builder keystore");
-  logger.info(keypair.publicKey.toHex());
+  logger.info("Loaded builder keystore", {pubkey: keypair.publicKey.toHex()});
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
