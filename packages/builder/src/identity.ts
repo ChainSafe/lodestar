@@ -79,12 +79,8 @@ async function waitForBuilder(
     try {
       builder = await fetchBuilder(api, id);
     } catch (e) {
-      // The clock gate above uses wall-clock epoch, but getStateBuilders reads the head block's post-state
-      // (by root, not advanced to the current slot), so its fork follows the head block's slot rather than
-      // wall-clock. Right at the boundary, while the head block is still in the last fulu epoch, that state
-      // is pre-gloas and the endpoint returns a bad request even though wall-clock is already in gloas; it
-      // only becomes gloas once a gloas-epoch block is head. Treat that as the transient and keep polling
-      // (avoids differentiating on client-specific error text).
+      // At the fork boundary getStateBuilders("head") can still 400: it serves the head block's
+      // post-state, which stays pre-gloas until a gloas-epoch block is head. Keep polling on the transient.
       if (e instanceof ApiError && e.status === HttpStatusCode.BAD_REQUEST) {
         logger.info("Waiting for Gloas state to be available at head", {
           gloasForkEpoch,
