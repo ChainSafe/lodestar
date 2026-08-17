@@ -3,6 +3,7 @@ APIs
 Andreas
 Antonopoulos
 AssemblyScript
+Auth
 BLS
 BeaconNode
 Besu
@@ -119,6 +120,7 @@ addons
 api
 args
 async
+auth
 backfill
 beaconcha
 blockRoot
