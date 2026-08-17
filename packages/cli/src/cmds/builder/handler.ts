@@ -7,6 +7,7 @@ import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
 import {GlobalArgs} from "../../options/index.js";
 import {getGlobalPaths} from "../../paths/global.js";
 import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs} from "../../util/index.js";
+import {getVersionData} from "../../util/version.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
 import {IBuilderCliArgs} from "./options.js";
 
@@ -29,13 +30,16 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     logger.debug("Not able to delete log files", {}, e as Error);
   }
 
+  const {version, commit} = getVersionData();
+  logger.info("Lodestar", {network, version, commit});
+
   const executionFeeRecipient = parseFeeRecipient(args.executionFeeRecipient);
 
   if (executionFeeRecipient === ZERO_ADDRESS) {
     throw Error("Cannot put zero address as an executionFeeRecipient");
   }
 
-  const keypair = await loadBuilderKeypair(args.keystore, args.keystorePassword, args.builderPubkey);
+  const keypair = await loadBuilderKeypair(logger, args.keystore, args.keystorePassword, args.builderPubkey);
 
   const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {

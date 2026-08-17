@@ -91,9 +91,9 @@ export const ProduceBlockV3MetaType = new ContainerType(
     /** Specifies whether the response contains full or blinded block */
     executionPayloadBlinded: ssz.Boolean,
     /** Execution payload value in Wei */
-    executionPayloadValue: ssz.UintBn64,
+    executionPayloadValue: ssz.Wei,
     /** Consensus rewards paid to the proposer for this block, in Wei */
-    consensusBlockValue: ssz.UintBn64,
+    consensusBlockValue: ssz.Wei,
   },
   {jsonCase: "eth2"}
 );
@@ -107,9 +107,9 @@ export const ProduceBlockV4MetaType = new ContainerType(
   {
     ...VersionType.fields,
     /** Consensus rewards paid to the proposer for this block, in Wei */
-    consensusBlockValue: ssz.UintBn64,
+    consensusBlockValue: ssz.Wei,
     /** Local execution payload value when self-building, or builder bid value when committing to a bid, in Wei */
-    executionPayloadValue: ssz.UintBn64,
+    executionPayloadValue: ssz.Wei,
     /** Specifies whether the response contains full block contents or only the beacon block */
     executionPayloadIncluded: ssz.Boolean,
   },
