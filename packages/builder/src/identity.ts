@@ -1,7 +1,7 @@
-import {ApiClient, routes} from "@lodestar/api";
+import {ApiClient, ApiError, HttpStatusCode, routes} from "@lodestar/api";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
-import {BuilderIndex, BuilderStatus} from "@lodestar/types";
+import {BuilderIndex, BuilderStatus, Epoch} from "@lodestar/types";
 import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
 
 export const WAITING_FOR_BUILDER_POLL_MS = 10 * 1000;
@@ -11,9 +11,10 @@ export async function resolveBuilderIdentity(
   logger: Logger,
   id: routes.beacon.BuilderId,
   signal: AbortSignal,
-  clock: IClock
+  clock: IClock,
+  gloasForkEpoch: Epoch
 ): Promise<BuilderIndex> {
-  const builderEntry = await waitForBuilder(api, logger, id, signal, clock);
+  const builderEntry = await waitForBuilder(api, logger, id, signal, clock, gloasForkEpoch);
 
   if (builderEntry.builder.version !== PAYLOAD_BUILDER_VERSION) {
     throw Error(`Builder version mismatch: got ${builderEntry.builder.version}, expected ${PAYLOAD_BUILDER_VERSION}`);
@@ -56,10 +57,40 @@ async function waitForBuilder(
   logger: Logger,
   id: routes.beacon.BuilderId,
   signal: AbortSignal,
-  clock: IClock
+  clock: IClock,
+  gloasForkEpoch: Epoch
 ): Promise<routes.beacon.BuilderResponse> {
   while (!signal.aborted) {
-    const builder = await fetchBuilder(api, id);
+    const currentEpoch = clock.getCurrentEpoch();
+    if (currentEpoch < gloasForkEpoch) {
+      // Builders only exist post-gloas, the beacon node returns an error for pre-gloas state
+      logger.info("Waiting for Gloas fork before resolving builder identity", {
+        gloasForkEpoch,
+        currentEpoch,
+        slot: clock.getCurrentSlot(),
+      });
+      await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
+      continue;
+    }
+
+    let builder: routes.beacon.BuilderResponse | null = null;
+    try {
+      builder = await fetchBuilder(api, id);
+    } catch (e) {
+      // At the fork boundary the head state may still be pre-gloas for a brief window until
+      // the first post-fork state is available, keep polling instead of exiting
+      if (e instanceof ApiError && e.status === HttpStatusCode.BAD_REQUEST && e.message.includes("pre-gloas")) {
+        logger.info("Waiting for Gloas state to be available at head", {
+          gloasForkEpoch,
+          currentEpoch,
+          slot: clock.getCurrentSlot(),
+        });
+        await sleep(WAITING_FOR_BUILDER_POLL_MS, signal);
+        continue;
+      }
+      throw e;
+    }
+
     if (builder?.status === "active") {
       return builder;
     }

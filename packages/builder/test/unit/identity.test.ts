@@ -17,6 +17,8 @@ describe("Identity", () => {
   const pubkeyString = toHex(pubkey);
   const balance = 1;
   const version = PAYLOAD_BUILDER_VERSION;
+  // ClockMock reports currentEpoch=0, use 0 so tests query the beacon node without waiting for the fork
+  const gloasForkEpoch = 0;
 
   let abortController: AbortController;
 
@@ -52,7 +54,14 @@ describe("Identity", () => {
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
 
-    const builderIndex = await resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock);
+    const builderIndex = await resolveBuilderIdentity(
+      api,
+      logger,
+      pubkeyString,
+      abortController.signal,
+      clock,
+      gloasForkEpoch
+    );
     expect(builderIndex).toEqual(index);
   });
 
@@ -61,26 +70,26 @@ describe("Identity", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version: newVersion})
     );
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock)).rejects.toThrow(
-      `Builder version mismatch: got ${newVersion}, expected ${version}`
-    );
+    await expect(
+      resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, gloasForkEpoch)
+    ).rejects.toThrow(`Builder version mismatch: got ${newVersion}, expected ${version}`);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [pubkeyString]}));
   });
 
   it("throws on pubkey mismatch", async () => {
     const invalidPubkey = Buffer.alloc(48, 2);
     api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(index, {pubkey: invalidPubkey}));
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock)).rejects.toThrow(
-      `Pubkey mismatch: got=${toHex(invalidPubkey)} expected=${pubkeyString}`
-    );
+    await expect(
+      resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, gloasForkEpoch)
+    ).rejects.toThrow(`Pubkey mismatch: got=${toHex(invalidPubkey)} expected=${pubkeyString}`);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [pubkeyString]}));
   });
 
   it("throws on builder status exited", async () => {
     api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(index, {status: "exited", pubkey}));
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock)).rejects.toThrow(
-      `Builder exited: id=${pubkeyString}`
-    );
+    await expect(
+      resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, gloasForkEpoch)
+    ).rejects.toThrow(`Builder exited: id=${pubkeyString}`);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledWith(expect.objectContaining({builderIds: [pubkeyString]}));
   });
 
@@ -92,7 +101,7 @@ describe("Identity", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
-    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock);
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, gloasForkEpoch);
     await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
@@ -106,23 +115,49 @@ describe("Identity", () => {
     api.beacon.getStateBuilders.mockResolvedValue(
       mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
     );
-    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock);
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, gloasForkEpoch);
     await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
     expect(await promise).toEqual(index);
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
+  it("waits for the Gloas fork before querying the beacon node", async () => {
+    vi.useFakeTimers();
+    // ClockMock reports currentEpoch=0, so a future fork epoch keeps the builder in the pre-fork wait loop
+    const futureGloasForkEpoch = 1;
+    const promise = resolveBuilderIdentity(
+      api,
+      logger,
+      pubkeyString,
+      abortController.signal,
+      clock,
+      futureGloasForkEpoch
+    );
+    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+
+    expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
+    expect(logger.info).toHaveBeenCalledWith(
+      "Waiting for Gloas fork before resolving builder identity",
+      expect.objectContaining({gloasForkEpoch: futureGloasForkEpoch, currentEpoch: 0})
+    );
+
+    abortController.abort();
+    await expect(promise).rejects.toThrow(ErrorAborted);
+  });
+
   it("rejects without querying the beacon node when the signal is already aborted", async () => {
     const abortSignal = AbortSignal.abort();
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortSignal, clock)).rejects.toThrow(ErrorAborted);
+    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortSignal, clock, gloasForkEpoch)).rejects.toThrow(
+      ErrorAborted
+    );
     expect(api.beacon.getStateBuilders).not.toHaveBeenCalled();
   });
 
   it("throws on beacon node 500", async () => {
     const resStatus = 500;
     api.beacon.getStateBuilders.mockResolvedValue(await mockApiErrorResponse(resStatus));
-    await expect(resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock)).rejects.toThrow(
-      /status 500/
-    );
+    await expect(
+      resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, gloasForkEpoch)
+    ).rejects.toThrow(/status 500/);
   });
 });
