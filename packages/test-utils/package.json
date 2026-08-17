@@ -1,7 +1,7 @@
 {
   "name": "@lodestar/test-utils",
   "private": true,
-  "version": "1.45.0",
+  "version": "1.46.0",
   "description": "Test utilities reused across other packages",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -15,6 +15,11 @@
       "typescript": "./src/index.ts",
       "types": "./lib/index.d.ts",
       "import": "./lib/index.js"
+    },
+    "./apiStub": {
+      "typescript": "./src/apiStub.ts",
+      "types": "./lib/apiStub.d.ts",
+      "import": "./lib/apiStub.js"
     },
     "./doubles": {
       "typescript": "./src/doubles.ts",
@@ -52,6 +57,7 @@
   "dependencies": {
     "@chainsafe/bls-keystore": "^3.1.0",
     "@chainsafe/blst": "^2.2.0",
+    "@lodestar/api": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/utils": "workspace:^",
     "axios": "^1.13.2",
