@@ -17,7 +17,7 @@ import {isValidDepositSignature} from "../block/processDeposit.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import type {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {appendBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {progressiveListRootNode} from "../util/ssz.js";
@@ -264,7 +264,7 @@ function onboardBuildersFromPendingDeposits(
       continue;
     }
 
-    addBuilderToRegistry(
+    appendBuilderToRegistry(
       state,
       deposit.pubkey,
       PAYLOAD_BUILDER_VERSION,

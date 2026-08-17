@@ -334,6 +334,12 @@ export const ExecutionPayloadBid = new ProgressiveContainerType(
     gasLimit: UintBn64,
     builderIndex: BuilderIndex,
     slot: Slot,
+    // Unlike gasLimit/executionPayment (gossip-checked only, so a valid block can still carry any
+    // uint64), a non-self-build value is rejected during processing unless covered by the builder's
+    // balance (can_builder_cover_bid), and self-build bids are forced to 0. Balance itself isn't
+    // structurally bounded, but reaching 2**53 gwei would need ~9M ETH deposited, which is
+    // economically infeasible, so a number is safe here in practice — an economic bound, not a
+    // type-level guarantee.
     value: UintNum64,
     // executionPayment is a uint64 with no bound in process_execution_payload_bid, so a block can
     // carry any value; use UintBn64 so the hashTreeRoot matches exact-uint64 clients for values > 2**53.
