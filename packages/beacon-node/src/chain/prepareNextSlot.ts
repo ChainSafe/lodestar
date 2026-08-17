@@ -169,7 +169,7 @@ export class PrepareNextSlotScheduler {
           }
 
           if (isForkPostGloas(fork)) {
-            this.chain.builderCircuitBreaker.update(clockSlot);
+            this.chain.builderCircuitBreaker.update(clockSlot, updatedHead);
           } else {
             // Update the builder status, if enabled shoot an api call to check status
             this.chain.updateBuilderStatus(clockSlot);

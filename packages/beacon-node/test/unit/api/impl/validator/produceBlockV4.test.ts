@@ -206,7 +206,7 @@ describe("api/validator - produceBlockV4", () => {
 
     const {data: block} = await api.produceBlockV4({slot, randaoReveal, graffiti, feeRecipient, includePayload: false});
 
-    expect(modules.chain.builderCircuitBreaker.isActive).toHaveBeenCalledWith(slot);
+    expect(modules.chain.builderCircuitBreaker.isActive).toHaveBeenCalledWith(slot, parentBlock);
     expect(modules.chain.executionPayloadBidPool.getBestBid).not.toHaveBeenCalled();
     expect(modules.chain.produceBlock).toHaveBeenCalledTimes(1);
     expect(block).toEqual(engineBlock);

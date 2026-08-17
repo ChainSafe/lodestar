@@ -180,8 +180,10 @@ describe("PrepareNextSlot scheduler", () => {
 
   it("gloas - should update builder circuit breaker instead of builder status", async () => {
     getForkStub.mockReturnValue(ForkName.gloas);
-    chainStub.recomputeForkChoiceHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
-    chainStub.predictProposerHead.mockReturnValue({...zeroProtoBlock, slot: SLOTS_PER_EPOCH - 3} as ProtoBlock);
+    const headBlock = {...zeroProtoBlock, blockRoot: "0xhead", slot: SLOTS_PER_EPOCH - 3} as ProtoBlock;
+    const proposerHead = {...zeroProtoBlock, blockRoot: "0xparent", slot: SLOTS_PER_EPOCH - 4} as ProtoBlock;
+    chainStub.recomputeForkChoiceHead.mockReturnValue(headBlock);
+    chainStub.predictProposerHead.mockReturnValue(proposerHead);
     forkChoiceStub.getFinalizedBlock.mockReturnValue({} as ProtoBlock);
     const state = generateCachedBellatrixState();
     vi.spyOn(state.epochCtx, "getBeaconProposer").mockReturnValue(proposerIndex);
@@ -196,7 +198,7 @@ describe("PrepareNextSlot scheduler", () => {
       vi.advanceTimersByTimeAsync((config.SLOT_DURATION_MS * 2) / 3),
     ]);
 
-    expect(chainStub.builderCircuitBreaker.update).toHaveBeenCalledWith(SLOTS_PER_EPOCH - 2);
+    expect(chainStub.builderCircuitBreaker.update).toHaveBeenCalledWith(SLOTS_PER_EPOCH - 2, proposerHead);
     expect(updateBuilderStatus).not.toHaveBeenCalled();
   });
 });
