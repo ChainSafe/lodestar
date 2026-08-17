@@ -819,9 +819,8 @@ type BatchErrorMetadata = {
 export class BatchError extends LodestarError<BatchErrorType & BatchErrorMetadata> {}
 
 /**
- * Whether a processing failure is an execution-engine failure. INVALID and local ERROR share one
- * retry budget (executionErrorAttempts) — the remedy is the same, re-download from another peer —
- * so this only selects the bucket, not blame. Everything else is a plain processing failure.
+ * Whether a processing failure is an execution-engine failure. Pre-gloas, all EL errors stay in
+ * BlockErrorCode, post-gloas, they stay in PayloadErrorCode.
  */
 function isExecutionEngineFailure(code: BlockErrorCode | PayloadErrorCode | null): boolean {
   return (

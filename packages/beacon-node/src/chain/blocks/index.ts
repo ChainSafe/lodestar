@@ -174,7 +174,7 @@ export async function processBlocks(
     // TODO: De-duplicate with logic above
     // ChainEvent.errorBlock
     if (!(err instanceof BlockError) && !(err instanceof PayloadError)) {
-      this.logger.debug("Non BlockError received", {}, err);
+      this.logger.debug("Neither BlockError nor PayloadError received", {}, err);
     } else if (err instanceof PayloadError) {
       if (!opts.disableOnBlockError) {
         this.logger.debug(
@@ -218,8 +218,6 @@ function getBlockOrPayloadError(e: unknown, block: SignedBeaconBlock): BlockErro
     return e;
   }
 
-  // Pass PayloadError through UNWRAPPED instead of flattening into BEACON_CHAIN_ERROR, which would lose
-  // the INVALID/ERROR distinction and the correct slot. Range sync's routeProcessingFailure reads its code.
   if (e instanceof PayloadError) {
     return e;
   }
