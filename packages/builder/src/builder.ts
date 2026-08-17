@@ -49,7 +49,7 @@ export class Builder {
 
     this.executionFeeRecipient = opts.executionFeeRecipient;
 
-    this.clock.runEveryEpoch(() => this.builderStatusTracker.poll());
+    this.clock.runEveryEpoch((epoch) => this.builderStatusTracker.poll(epoch));
     this.clock.start(this.controller.signal);
 
     this.logger.info("Builder client initialized", {
@@ -75,9 +75,15 @@ export class Builder {
     await waitForNodeReady(api, logger, opts.abortController.signal);
     await logNodeVersion(api, logger);
 
-    const index = await resolveBuilderIdentity(api, logger, builderSigner.getPubkeyHex(), opts.abortController.signal);
-
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime), ...opts.clock});
+
+    const index = await resolveBuilderIdentity(
+      api,
+      logger,
+      builderSigner.getPubkeyHex(),
+      opts.abortController.signal,
+      clock
+    );
 
     const builderStatusTracker = new BuilderStatusTracker(api, logger, index);
 

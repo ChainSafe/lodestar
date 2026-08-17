@@ -806,6 +806,9 @@ importers:
       '@chainsafe/blst':
         specifier: ^2.2.0
         version: 2.2.0
+      '@lodestar/api':
+        specifier: workspace:^
+        version: link:../api
       '@lodestar/params':
         specifier: workspace:^
         version: link:../params
