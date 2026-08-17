@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas, isForkPostHeze} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -397,7 +397,40 @@ export class ForkChoice implements IForkChoice {
    * corresponding to the beacon block `blockRoot`.
    */
   shouldExtendPayload(blockRoot: RootHex): boolean {
+    // [New in Heze:EIP7805] do not extend a payload that did not satisfy the inclusion list
+    // constraints. Checked before the timeliness conditions to match the spec ordering; both
+    // are hard rejections so the outcome is the same either way.
+    const block = this.protoArray.getBlock(blockRoot, this.protoArray.getDefaultVariant(blockRoot) ?? 0);
+    if (
+      block !== undefined &&
+      isForkPostHeze(this.config.getForkName(block.slot)) &&
+      !this.isPayloadInclusionListSatisfied(blockRoot)
+    ) {
+      this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
+      this.logger?.verbose("Refusing to extend payload, inclusion list not satisfied", {blockRoot});
+      return false;
+    }
+
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
+  }
+
+  /**
+   * Record whether the execution payload for `blockRoot` satisfied its inclusion list
+   * constraints, as reported by the execution engine.
+   */
+  recordPayloadInclusionListSatisfaction(blockRoot: RootHex, satisfied: boolean): void {
+    this.fcStore.payloadInclusionListSatisfaction.set(blockRoot, satisfied);
+  }
+
+  /**
+   * A payload counts as satisfying its inclusion list constraints only once it has been locally
+   * delivered and verified, so an undelivered payload is never treated as satisfied.
+   */
+  isPayloadInclusionListSatisfied(blockRoot: RootHex): boolean {
+    if (!this.protoArray.hasPayload(blockRoot)) {
+      return false;
+    }
+    return this.fcStore.payloadInclusionListSatisfaction.get(blockRoot) === true;
   }
 
   /** Spec: should_build_on_full(store, head, slot) */
@@ -1272,6 +1305,9 @@ export class ForkChoice implements IForkChoice {
   prune(finalizedRoot: RootHex): ProtoBlock[] {
     const prunedNodes = this.protoArray.maybePrune(finalizedRoot);
     const prunedCount = prunedNodes.length;
+    for (const node of prunedNodes) {
+      this.fcStore.payloadInclusionListSatisfaction.delete(node.blockRoot);
+    }
     for (let i = 0; i < this.voteNextSlots.length; i++) {
       const currentIndex = this.voteCurrentIndices[i];
 

@@ -140,6 +140,7 @@ describe("Forkchoice / GetProposerHead", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array(Array(32).fill(150)),
     equivocatingIndices: new Set(),
+    payloadInclusionListSatisfaction: new Map(),
     confirmedRoot: genesisBlock.blockRoot,
     previousEpochObservedJustifiedCheckpoint: {
       epoch: genesisEpoch,

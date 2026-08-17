@@ -84,6 +84,7 @@ describe("Forkchoice", () => {
     },
     justifiedBalancesGetter: () => new Uint16Array([32]),
     equivocatingIndices: new Set(),
+    payloadInclusionListSatisfaction: new Map(),
     confirmedRoot: finalizedRoot,
     previousEpochObservedJustifiedCheckpoint: {
       epoch: genesisEpoch,

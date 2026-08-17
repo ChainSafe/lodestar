@@ -25,6 +25,17 @@ export const gloasConfig = createChainForkConfig({
   GLOAS_FORK_EPOCH: 0,
 });
 
+export const hezeConfig = createChainForkConfig({
+  ALTAIR_FORK_EPOCH: 0,
+  BELLATRIX_FORK_EPOCH: 0,
+  CAPELLA_FORK_EPOCH: 0,
+  DENEB_FORK_EPOCH: 0,
+  ELECTRA_FORK_EPOCH: 0,
+  FULU_FORK_EPOCH: 0,
+  GLOAS_FORK_EPOCH: 0,
+  HEZE_FORK_EPOCH: 0,
+});
+
 export const genesisSlot = 0;
 export const genesisEpoch = 0;
 export const parentSlot = genesisSlot + 1;
@@ -96,6 +107,7 @@ export function makeStore({
     currentSlot: headSlot + 1,
     justified: {checkpoint, balances, totalBalance: VALIDATOR_COUNT * BALANCE_INCREMENT},
     unrealizedJustified: {checkpoint, balances},
+    payloadInclusionListSatisfaction: new Map(),
     finalizedCheckpoint: checkpoint,
     unrealizedFinalizedCheckpoint: checkpoint,
     justifiedBalancesGetter: () => balances,

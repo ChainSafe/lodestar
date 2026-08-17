@@ -61,6 +61,7 @@ describe("fast confirmation pause/resume", () => {
       unrealizedFinalizedCheckpoint: checkpoint,
       justifiedBalancesGetter: () => new Uint16Array([32]),
       equivocatingIndices: new Set(),
+      payloadInclusionListSatisfaction: new Map(),
       confirmedRoot: finalizedRoot,
       previousEpochObservedJustifiedCheckpoint: checkpoint,
       currentEpochObservedJustifiedCheckpoint: checkpoint,

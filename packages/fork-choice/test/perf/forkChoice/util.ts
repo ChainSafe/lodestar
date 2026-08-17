@@ -93,6 +93,7 @@ export function initializeForkChoice(opts: Opts): ForkChoice {
     },
     justifiedBalancesGetter: () => balances,
     equivocatingIndices: new Set(Array.from({length: opts.initialEquivocatedCount}, (_, i) => i)),
+    payloadInclusionListSatisfaction: new Map(),
     confirmedRoot: confirmedBlockRoot,
     previousEpochObservedJustifiedCheckpoint: {
       epoch: genesisEpoch,
