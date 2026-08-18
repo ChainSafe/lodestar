@@ -311,6 +311,13 @@ export class ReqRespBeaconNode extends ReqResp {
       );
     }
 
+    if (ForkSeq[fork] >= ForkSeq.heze) {
+      protocolsAtFork.push([
+        protocols.InclusionListsByIndices(fork, this.config),
+        this.getHandler(ReqRespMethod.InclusionListsByIndices),
+      ]);
+    }
+
     return protocolsAtFork;
   }
 

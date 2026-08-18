@@ -910,7 +910,7 @@ export function getValidatorApi(
       // an inclusion list it has seen. Unlike bid gossip validation this uses the proposer's full
       // view including untimely lists (only_timely=False), so a bid accepted here also satisfies
       // the timely-only view every other validator enforces.
-      if (builderBid !== null) {
+      if (builderBid !== null && isForkPostHeze(fork)) {
         const headState = chain.getHeadState();
         if (isStatePostHeze(headState)) {
           const {inclusionListBits} = builderBid.message as heze.ExecutionPayloadBid;
