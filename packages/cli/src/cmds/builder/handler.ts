@@ -1,6 +1,7 @@
 import path from "node:path";
 import {getClient} from "@lodestar/api";
-import {Builder} from "@lodestar/builder";
+import {RegistryMetricCreator, collectNodeJSMetrics, getHttpMetricsServer} from "@lodestar/beacon-node";
+import {Builder, getMetrics} from "@lodestar/builder";
 import {getNodeLogger} from "@lodestar/logger/node";
 import {fromHex, toPrintableUrl} from "@lodestar/utils";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams.js";
@@ -9,7 +10,7 @@ import {getGlobalPaths} from "../../paths/global.js";
 import {cleanOldLogFiles, onGracefulShutdown, parseFeeRecipient, parseLoggerArgs} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {loadBuilderKeypair} from "./loadKeypair.js";
-import {IBuilderCliArgs} from "./options.js";
+import {IBuilderCliArgs, builderMetricsDefaultOptions} from "./options.js";
 
 const ZERO_ADDRESS = "0x" + "0".repeat(40);
 
@@ -49,6 +50,20 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
   const abortController = new AbortController();
   onGracefulShutdownCbs.push(async () => abortController.abort());
 
+  const register = args.metrics ? new RegistryMetricCreator() : null;
+  const metrics = register && getMetrics(register, {version, commit, network});
+
+  if (metrics) {
+    const closeMetrics = collectNodeJSMetrics(register);
+    onGracefulShutdownCbs.push(() => closeMetrics());
+
+    const port = args["metrics.port"] ?? builderMetricsDefaultOptions.port;
+    const address = args["metrics.address"] ?? builderMetricsDefaultOptions.address;
+    const metricsServer = await getHttpMetricsServer({port, address}, {register, logger});
+
+    onGracefulShutdownCbs.push(() => metricsServer.close());
+  }
+
   const api = getClient(
     {urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal, timeoutMs: args.requestTimeout}},
     {config, logger}
@@ -63,6 +78,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
     abortController,
     api,
     executionFeeRecipient: fromHex(executionFeeRecipient),
+    metrics,
   });
 
   onGracefulShutdownCbs.push(() => builder.close());
