@@ -29,7 +29,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       help: "Current builder status: pending=0, active=1, exited=2",
     }),
 
-    builderBalanceGwei: register.gauge({
+    builderBalance: register.gauge({
       name: "bc_balance_gwei",
       help: "Current builder balance in gwei",
     }),

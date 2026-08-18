@@ -38,7 +38,7 @@ export class BuilderStatusTracker {
         epoch: currentEpoch,
       });
       this.metrics?.builderStatus.set(builderStatusValue[builderStatus.status]);
-      this.metrics?.builderBalanceGwei.set(builderStatus.balance);
+      this.metrics?.builderBalance.set(builderStatus.balance);
     }
   }
 
