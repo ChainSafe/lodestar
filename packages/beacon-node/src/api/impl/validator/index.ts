@@ -951,7 +951,7 @@ export function getValidatorApi(
         boostFactor: bigint;
         url?: string;
       };
-      const bestCandidatePromise: Promise<BidCandidate | null> = (async () => {
+      const bestBidPromise: Promise<BidCandidate | null> = (async () => {
         const candidates: BidCandidate[] = [];
 
         const builderApiBids = await builderApiBidsPromise;
@@ -1059,7 +1059,7 @@ export function getValidatorApi(
         }
         return engineBlock;
       });
-      const bidPromise: ReturnType<typeof chain.produceBlock> = bestCandidatePromise.then((candidate) => {
+      const bidPromise: ReturnType<typeof chain.produceBlock> = bestBidPromise.then((candidate) => {
         if (candidate === null) {
           throw new Error(NO_BID_AVAILABLE);
         }
@@ -1078,7 +1078,7 @@ export function getValidatorApi(
       let source: ProducedBlockSource = ProducedBlockSource.engine;
 
       // Resolved instantly whenever the bid branch produced a block
-      const bestCandidate = bidResult.status === "fulfilled" ? await bestCandidatePromise : null;
+      const bestBid = bidResult.status === "fulfilled" ? await bestBidPromise : null;
 
       const logCtx = {
         slot,
@@ -1090,14 +1090,14 @@ export function getValidatorApi(
         strictFeeRecipientCheck,
         circuitBreakerActive,
         builderEntries: builderConfig.builders.length,
-        ...(bestCandidate !== null
+        ...(bestBid !== null
           ? {
-              bidSource: bestCandidate.url !== undefined ? toPrintableUrl(bestCandidate.url) : "p2p",
-              bidValue: bestCandidate.signedBid.message.value,
-              bidExecutionPayment: bestCandidate.signedBid.message.executionPayment,
-              bidBoostFactor: bestCandidate.boostFactor,
-              builderIndex: bestCandidate.signedBid.message.builderIndex,
-              bidBlockHash: toRootHex(bestCandidate.signedBid.message.blockHash),
+              bidSource: bestBid.url !== undefined ? toPrintableUrl(bestBid.url) : "p2p",
+              bidValue: bestBid.signedBid.message.value,
+              bidExecutionPayment: bestBid.signedBid.message.executionPayment,
+              bidBoostFactor: bestBid.boostFactor,
+              builderIndex: bestBid.signedBid.message.builderIndex,
+              bidBlockHash: toRootHex(bestBid.signedBid.message.blockHash),
             }
           : {}),
       };
@@ -1117,10 +1117,10 @@ export function getValidatorApi(
         logger.warn("Selected local block: censorship suspected in builder bid", logCtx);
       } else if (engineResult.status === "fulfilled" && bidResult.status === "fulfilled") {
         const result = selectBlockProductionSourceByBoostFactor({
-          builderBoostFactor: bestCandidate?.boostFactor ?? builderBoostFactor,
+          builderBoostFactor: bestBid?.boostFactor ?? builderBoostFactor,
           engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
           // The bid total payment is its value plus executionPayment, in Gwei
-          builderExecutionPayloadValue: (bestCandidate?.totalGwei ?? 0n) * GWEI_TO_WEI,
+          builderExecutionPayloadValue: (bestBid?.totalGwei ?? 0n) * GWEI_TO_WEI,
         });
         source = result.source;
         metrics?.blockProductionSelectionResults.inc(result);
@@ -1227,7 +1227,7 @@ export function getValidatorApi(
           consensusBlockValue,
           executionPayloadValue,
           executionPayloadIncluded: false,
-          builderUrl: source === ProducedBlockSource.builder ? bestCandidate?.url : undefined,
+          builderUrl: source === ProducedBlockSource.builder ? bestBid?.url : undefined,
         },
       };
     },
