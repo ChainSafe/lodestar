@@ -360,6 +360,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     worker.status = {code: WorkerStatusCode.running, workerApi};
     this.workersBusy++;
 
+    if (this.jobs.length > 0) {
+      callInNextEventLoop(this.runJob);
+    }
+
     try {
       let startedJobsDefault = 0;
       let startedJobsSameMessage = 0;
@@ -495,13 +499,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     let totalSigs = 0;
 
     while (totalSigs < MAX_SIGNATURE_SETS_PER_JOB) {
-      const job = this.jobs.shift();
+      const job = this.jobs.first();
       if (!job) {
         break;
       }
 
+      const jobSigSets = jobItemSigSets(job);
+      if (jobs.length > 0 && totalSigs + jobSigSets > MAX_SIGNATURE_SETS_PER_JOB) {
+        break;
+      }
+
+      this.jobs.shift();
       jobs.push(job);
-      totalSigs += jobItemSigSets(job);
+      totalSigs += jobSigSets;
     }
 
     return jobs;

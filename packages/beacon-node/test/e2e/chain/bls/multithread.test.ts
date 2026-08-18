@@ -1,10 +1,12 @@
-import {afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
+import type {Gauge} from "prom-client";
+import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {createMetricsTest} from "../../../unit/metrics/utils.js";
 
 describe("chain / bls / multithread queue", () => {
   const logger = testLogger();
@@ -130,4 +132,59 @@ describe("chain / bls / multithread queue", () => {
       await pool.close();
     });
   }
+
+  it("Should not retry batchable jobs that fit the native verifier bound", async () => {
+    const metrics = createMetricsTest();
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
+    afterEachCallbacks.push(() => pool.close());
+    await pool["waitTillInitialized"]();
+
+    const smallJob = pool.verifySignatureSets([sets[0], sets[1]], {batchable: true});
+    const largeJob = pool.verifySignatureSets(
+      Array.from({length: 255}, () => sets[2]),
+      {batchable: true}
+    );
+
+    await expect(Promise.all([smallJob, largeJob])).resolves.toEqual([true, true]);
+    const retries = await (metrics.blsThreadPool.batchRetries as unknown as Gauge).get();
+    expect(retries.values[0]?.value).toBe(0);
+  });
+
+  it("Should dispatch bounded packages to idle workers", async () => {
+    const pool = await initializePool();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    let startedWorkerCalls = 0;
+    let releaseWorkers!: () => void;
+    const workersReleased = new Promise<void>((resolve) => {
+      releaseWorkers = resolve;
+    });
+
+    for (const worker of pool["workers"]) {
+      if (!("workerApi" in worker.status)) {
+        throw Error("BLS worker did not initialize");
+      }
+
+      const verifyManySignatureSets = worker.status.workerApi.verifyManySignatureSets.bind(worker.status.workerApi);
+      worker.status.workerApi.verifyManySignatureSets = async (workReqs) => {
+        startedWorkerCalls++;
+        await workersReleased;
+        return verifyManySignatureSets(workReqs);
+      };
+    }
+
+    const smallJob = pool.verifySignatureSets([sets[0], sets[1]], {batchable: true});
+    const largeJob = pool.verifySignatureSets(
+      Array.from({length: 127}, () => sets[2]),
+      {batchable: true}
+    );
+
+    try {
+      await vi.waitFor(() => expect(startedWorkerCalls).toBe(2));
+    } finally {
+      releaseWorkers();
+    }
+
+    await expect(Promise.all([smallJob, largeJob])).resolves.toEqual([true, true]);
+  });
 });
