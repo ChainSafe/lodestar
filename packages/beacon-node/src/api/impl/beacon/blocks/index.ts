@@ -209,7 +209,7 @@ export function getBeaconBlockApi({
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
     if (chain.forkChoice.hasBlockHex(blockRoot)) {
-      // Block was already imported, e.g. published again by the validator client or received via gossip. Benign.
+      // Block was already imported, e.g. published again by the validator client or received via gossip
       chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
       return;
     }
@@ -394,7 +394,7 @@ export function getBeaconBlockApi({
             if (e instanceof BlockError) {
               switch (e.type.code) {
                 case BlockErrorCode.ALREADY_KNOWN:
-                  // Block was imported while publishing, e.g. received via gossip. Benign.
+                  // Block was imported while publishing, e.g. received via gossip
                   chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
                   return;
                 case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
