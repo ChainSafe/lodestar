@@ -941,25 +941,6 @@ export function getValidatorApi(
         p2pBid = null;
       }
 
-      const logCtx = {
-        slot,
-        parentSlot,
-        parentBlockRoot: parentBlockRootHex,
-        parentBlockHash: parentBlock.executionPayloadBlockHash,
-        fork,
-        builderBoostFactor,
-        strictFeeRecipientCheck,
-        circuitBreakerActive,
-        builderEntries: builderConfig.builders.length,
-        ...(p2pBid !== null
-          ? {
-              bidValue: p2pBid.message.value,
-              builderIndex: p2pBid.message.builderIndex,
-              bidBlockHash: toRootHex(p2pBid.message.blockHash),
-            }
-          : {}),
-      };
-
       // Candidates are ranked by their boosted total payment, the p2p bid is governed by the
       // top-level factors and each builder API bid by its own entry. Ties keep the earlier
       // candidate with builder API bids ranked first, so when the same bid arrives over both
@@ -1099,6 +1080,28 @@ export function getValidatorApi(
       // Resolved instantly whenever the bid branch produced a block
       const bestCandidate = bidResult.status === "fulfilled" ? await bestCandidatePromise : null;
 
+      const logCtx = {
+        slot,
+        parentSlot,
+        parentBlockRoot: parentBlockRootHex,
+        parentBlockHash: parentBlock.executionPayloadBlockHash,
+        fork,
+        builderBoostFactor,
+        strictFeeRecipientCheck,
+        circuitBreakerActive,
+        builderEntries: builderConfig.builders.length,
+        ...(bestCandidate !== null
+          ? {
+              bidSource: bestCandidate.url !== undefined ? toPrintableUrl(bestCandidate.url) : "p2p",
+              bidValue: bestCandidate.signedBid.message.value,
+              bidExecutionPayment: bestCandidate.signedBid.message.executionPayment,
+              bidBoostFactor: bestCandidate.boostFactor,
+              builderIndex: bestCandidate.signedBid.message.builderIndex,
+              bidBlockHash: toRootHex(bestCandidate.signedBid.message.blockHash),
+            }
+          : {}),
+      };
+
       // handle shouldOverrideBuilder separately
       if (
         engineResult.status === "fulfilled" &&
@@ -1165,10 +1168,6 @@ export function getValidatorApi(
       }
 
       const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
-
-      if (source === ProducedBlockSource.builder && bestCandidate?.url !== undefined) {
-        logger.debug("Builder API bid included in block", {slot, builder: toPrintableUrl(bestCandidate.url)});
-      }
 
       metrics?.blockProductionSuccess.inc({source});
       metrics?.blockProductionNumAggregated.observe({source}, block.body.attestations.length);
