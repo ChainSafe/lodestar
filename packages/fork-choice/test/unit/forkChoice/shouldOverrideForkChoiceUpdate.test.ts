@@ -186,11 +186,23 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       expectedNotReorgedReason: NotReorgedReason.HeadBlockIsTimely,
     },
     {
-      id: "No reorg when proposal slot is at epoch boundary",
-      parentBlock: {...baseParentHeadBlock},
-      headBlock: {...baseHeadBlock, slot: SLOTS_PER_EPOCH * 2 - 1}, // Proposal slot = block slot + 1
-      expectReorg: false,
-      expectedNotReorgedReason: NotReorgedReason.AtEpochBoundary,
+      id: "Reorg when proposal slot is at epoch boundary",
+      parentBlock: {
+        ...baseParentHeadBlock,
+        slot: SLOTS_PER_EPOCH * 2 - 2,
+        stateRoot: getStateRoot(SLOTS_PER_EPOCH * 2 - 2),
+        blockRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 2),
+        targetRoot: getBlockRoot(SLOTS_PER_EPOCH),
+      },
+      headBlock: {
+        ...baseHeadBlock,
+        slot: SLOTS_PER_EPOCH * 2 - 1,
+        stateRoot: getStateRoot(SLOTS_PER_EPOCH * 2 - 1),
+        parentRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 2),
+        blockRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 1),
+        targetRoot: getBlockRoot(SLOTS_PER_EPOCH),
+      },
+      expectReorg: true,
     },
     {
       id: "No reorg when the blocks are not ffg competitive",
