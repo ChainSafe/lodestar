@@ -381,7 +381,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                 ? sszTypesFor(forkName).SignedBlockContents.fromJson(body)
                 : {signedBlock: ssz[forkName].SignedBeaconBlock.fromJson(body)},
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
-            builderUrl: headers[MetaHeader.BuilderUrl],
+            builderUrl: fromHeaders(headers, MetaHeader.BuilderUrl, false),
           };
         },
         writeReqSsz: ({signedBlockContents, broadcastValidation, builderUrl}) => {
@@ -412,7 +412,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
                 ? sszTypesFor(forkName).SignedBlockContents.deserialize(body)
                 : {signedBlock: ssz[forkName].SignedBeaconBlock.deserialize(body)},
             broadcastValidation: query.broadcast_validation as BroadcastValidation,
-            builderUrl: headers[MetaHeader.BuilderUrl],
+            builderUrl: fromHeaders(headers, MetaHeader.BuilderUrl, false),
           };
         },
         schema: {
