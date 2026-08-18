@@ -5,7 +5,15 @@ import {
   verifySignatureSetsSameMessage,
 } from "@chainsafe/lodestar-z/bls-verifier";
 import {expose} from "@chainsafe/threads/worker";
-import {BlsWorkReq, BlsWorkResult, JobQueueItemType, WorkResult, WorkResultCode, WorkerData} from "./types.js";
+import {
+  BlsWorkReq,
+  BlsWorkResult,
+  JobQueueItemType,
+  NativeVerificationTime,
+  WorkResult,
+  WorkResultCode,
+  WorkerData,
+} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -31,6 +39,7 @@ expose({
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean[]>[] = [];
+  const nativeVerificationTimes: NativeVerificationTime[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
@@ -53,7 +62,10 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
       }
       case JobQueueItemType.sameMessage:
         try {
-          const result = verifySignatureSetsSameMessage(workReq.sets, workReq.message);
+          const result = timeNativeVerification(JobQueueItemType.sameMessage, nativeVerificationTimes, () =>
+verifySignatureSetsSameMessage
+            (workReq.sets, workReq.message)
+          );
           results[i] = {code: WorkResultCode.success, result};
         } catch (e) {
           results[i] = {code: WorkResultCode.error, error: e as Error};
@@ -76,7 +88,9 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = verifySignatureSets(allSets);
+        const isValid = timeNativeVerification(JobQueueItemType.default, nativeVerificationTimes, () =>
+          verifySignatureSets(allSets)
+        );
 
         if (isValid) {
           // The entire batch is valid, return success to all
@@ -101,7 +115,9 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
   for (const {idx, sets} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSets(sets);
+      const isValid = timeNativeVerification(JobQueueItemType.default, nativeVerificationTimes, () =>
+        verifySignatureSets(sets)
+      );
       results[idx] = {code: WorkResultCode.success, result: [isValid]};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};
@@ -114,8 +130,19 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerId,
     batchRetries,
     batchSigsSuccess,
+    nativeVerificationTimes,
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
+}
+
+function timeNativeVerification<T>(type: JobQueueItemType, times: NativeVerificationTime[], verify: () => T): T {
+  const startTime = process.hrtime();
+  try {
+    return verify();
+  } finally {
+    const [seconds, nanoseconds] = process.hrtime(startTime);
+    times.push({type, duration: seconds + nanoseconds / 1e9});
+  }
 }

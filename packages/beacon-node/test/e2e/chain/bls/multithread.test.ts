@@ -5,6 +5,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {createMetrics} from "../../../../src/metrics/index.js";
 
 describe("chain / bls / multithread queue", () => {
   const logger = testLogger();
@@ -108,6 +109,23 @@ describe("chain / bls / multithread queue", () => {
       await testManyValidSignatures({sleep: true}, {batchable: true, priority});
     });
   }
+
+  it("Should record native verification duration by job type", async () => {
+    const metrics = createMetrics({enabled: true, port: 0}, 0);
+    metrics.close();
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
+    afterEachCallbacks.push(() => pool.close());
+    await pool["waitTillInitialized"]();
+
+    await pool.verifySignatureSets(sets);
+    await pool.verifySignatureSetsSameMessage(sameMessageSets, sameMessage);
+
+    const metric = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_native_verification_time_seconds"
+    );
+    expect(metric).toContain('lodestar_bls_thread_pool_native_verification_time_seconds_count{type="default"} 1');
+    expect(metric).toContain('lodestar_bls_thread_pool_native_verification_time_seconds_count{type="same_message"} 1');
+  });
 
   for (const priority of [true, false]) {
     it(`Should verify multiple signatures batched, first is invalid priority=${priority}`, async () => {

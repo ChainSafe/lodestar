@@ -33,6 +33,12 @@ export enum WorkResultCode {
 export type WorkResultError = {code: WorkResultCode.error; error: Error};
 export type WorkResult<R> = {code: WorkResultCode.success; result: R} | WorkResultError;
 
+export type NativeVerificationTime = {
+  type: JobQueueItemType;
+  /** Duration of one native verification call in seconds */
+  duration: number;
+};
+
 export type BlsWorkResult = {
   /** Ascending integer identifying the worker for metrics */
   workerId: number;
@@ -40,6 +46,8 @@ export type BlsWorkResult = {
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */
   batchSigsSuccess: number;
+  /** Native verification call timings */
+  nativeVerificationTimes: NativeVerificationTime[];
   /** Time worker function starts - UNIX timestamp in seconds and nanoseconds */
   workerStartTime: [number, number];
   /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */

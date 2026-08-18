@@ -476,6 +476,12 @@ export function createLodestarMetrics(
         // Time per sig ~0.9ms on good machines
         buckets: [0.5e-3, 0.75e-3, 1e-3, 1.5e-3, 2e-3, 5e-3],
       }),
+      nativeVerificationTime: register.histogram<{type: JobQueueItemType}>({
+        name: "lodestar_bls_thread_pool_native_verification_time_seconds",
+        help: "Time spent in a native BLS verification call on a worker",
+        labelNames: ["type"],
+        buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.3, 0.5],
+      }),
       totalSigSets: register.gauge({
         name: "lodestar_bls_thread_pool_sig_sets_total",
         help: "Count of total signature sets",
