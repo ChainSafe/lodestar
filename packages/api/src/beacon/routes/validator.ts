@@ -25,7 +25,9 @@ import {
   UintBn64,
   ValidatorIndex,
   altair,
+  bellatrix,
   gloas,
+  heze,
   phase0,
   ssz,
   sszTypesFor,
@@ -263,7 +265,23 @@ export const SignedProposerPreferencesListType = ArrayOf(
   ssz.gloas.SignedProposerPreferences,
   (MIN_SEED_LOOKAHEAD + 1) * SLOTS_PER_EPOCH
 );
+export const InclusionListDutyType = new ContainerType(
+  {
+    /** The validator's public key, uniquely identifying them */
+    pubkey: ssz.BLSPubkey,
+    /** Index of validator in validator registry */
+    validatorIndex: ssz.ValidatorIndex,
+    /** The slot at which the validator must produce the inclusion list */
+    slot: ssz.Slot,
+    /** Root of the inclusion list committee the duty was derived from */
+    inclusionListCommitteeRoot: ssz.Root,
+  },
+  {jsonCase: "eth2"}
+);
+export const InclusionListDutyListType = ArrayOf(InclusionListDutyType);
 
+export type InclusionListDuty = ValueOf<typeof InclusionListDutyType>;
+export type InclusionListDutyList = ValueOf<typeof InclusionListDutyListType>;
 export type ValidatorIndices = ValueOf<typeof ValidatorIndicesType>;
 export type AttesterDuty = ValueOf<typeof AttesterDutyType>;
 export type AttesterDutyList = ValueOf<typeof AttesterDutyListType>;
@@ -689,6 +707,50 @@ export type Endpoints = {
   submitProposerPreferences: Endpoint<
     "POST",
     {signedProposerPreferences: SignedProposerPreferencesList},
+    {body: unknown; headers: {[MetaHeader.Version]: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
+
+  /**
+   * Get inclusion list committee duties
+   * Requests the beacon node to provide a set of inclusion list committee duties for a particular epoch.
+   */
+  getInclusionListCommitteeDuties: Endpoint<
+    "POST",
+    {
+      /** Should only be allowed 1 epoch ahead */
+      epoch: Epoch;
+      /** An array of the validator indices for which to obtain the duties */
+      indices: ValidatorIndices;
+    },
+    {params: {epoch: Epoch}; body: unknown},
+    InclusionListDutyList,
+    ExecutionOptimisticAndDependentRootMeta
+  >;
+
+  /**
+   * Produce an inclusion list
+   * Requests the beacon node to produce the transactions for an inclusion list at the given slot.
+   */
+  produceInclusionList: Endpoint<
+    "GET",
+    {
+      /** The slot for which an inclusion list should be created */
+      slot: Slot;
+    },
+    {query: {slot: number}},
+    bellatrix.Transactions,
+    VersionMeta
+  >;
+
+  /**
+   * Publish inclusion list
+   * Verifies the given inclusion list and publishes it on the `inclusion_list` gossipsub topic.
+   */
+  publishInclusionList: Endpoint<
+    "POST",
+    {signedInclusionList: heze.SignedInclusionList},
     {body: unknown; headers: {[MetaHeader.Version]: string}},
     EmptyResponseData,
     EmptyMeta
@@ -1290,6 +1352,60 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         },
         schema: {
           body: Schema.ObjectArray,
+          headers: {[MetaHeader.Version]: Schema.String},
+        },
+      },
+      resp: EmptyResponseCodec,
+    },
+    getInclusionListCommitteeDuties: {
+      url: "/eth/v1/validator/duties/inclusion_list/{epoch}",
+      method: "POST",
+      req: {
+        writeReqJson: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.toJson(indices)}),
+        parseReqJson: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.fromJson(body)}),
+        writeReqSsz: ({epoch, indices}) => ({params: {epoch}, body: ValidatorIndicesType.serialize(indices)}),
+        parseReqSsz: ({params, body}) => ({epoch: params.epoch, indices: ValidatorIndicesType.deserialize(body)}),
+        schema: {
+          params: {epoch: Schema.UintRequired},
+          body: Schema.StringArray,
+        },
+      },
+      resp: {
+        data: InclusionListDutyListType,
+        meta: ExecutionOptimisticAndDependentRootCodec,
+      },
+    },
+    produceInclusionList: {
+      url: "/eth/v1/validator/inclusion_list",
+      method: "GET",
+      req: {
+        writeReq: ({slot}) => ({query: {slot}}),
+        parseReq: ({query}) => ({slot: query.slot}),
+        schema: {
+          query: {slot: Schema.UintRequired},
+        },
+      },
+      resp: {
+        data: ssz.bellatrix.Transactions,
+        meta: VersionCodec,
+      },
+    },
+    publishInclusionList: {
+      url: "/eth/v1/validator/inclusion_list",
+      method: "POST",
+      req: {
+        writeReqJson: ({signedInclusionList}) => ({
+          body: ssz.heze.SignedInclusionList.toJson(signedInclusionList),
+          headers: {[MetaHeader.Version]: config.getForkName(signedInclusionList.message.slot)},
+        }),
+        parseReqJson: ({body}) => ({signedInclusionList: ssz.heze.SignedInclusionList.fromJson(body)}),
+        writeReqSsz: ({signedInclusionList}) => ({
+          body: ssz.heze.SignedInclusionList.serialize(signedInclusionList),
+          headers: {[MetaHeader.Version]: config.getForkName(signedInclusionList.message.slot)},
+        }),
+        parseReqSsz: ({body}) => ({signedInclusionList: ssz.heze.SignedInclusionList.deserialize(body)}),
+        schema: {
+          body: Schema.Object,
           headers: {[MetaHeader.Version]: Schema.String},
         },
       },

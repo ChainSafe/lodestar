@@ -163,4 +163,26 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {signedProposerPreferences: [ssz.gloas.SignedProposerPreferences.defaultValue()]},
     res: undefined,
   },
+  getInclusionListCommitteeDuties: {
+    args: {epoch: 1000, indices: [1, 2, 3]},
+    res: {
+      data: [
+        {
+          pubkey: new Uint8Array(48).fill(1),
+          validatorIndex: 2,
+          slot: 7,
+          inclusionListCommitteeRoot: new Uint8Array(32).fill(3),
+        },
+      ],
+      meta: {executionOptimistic: true, dependentRoot: ZERO_HASH_HEX},
+    },
+  },
+  produceInclusionList: {
+    args: {slot: 10},
+    res: {data: [new Uint8Array([1, 2, 3])], meta: {version: ForkName.heze}},
+  },
+  publishInclusionList: {
+    args: {signedInclusionList: ssz.heze.SignedInclusionList.defaultValue()},
+    res: undefined,
+  },
 };
