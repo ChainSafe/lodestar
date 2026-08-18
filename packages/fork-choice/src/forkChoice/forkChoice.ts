@@ -176,6 +176,23 @@ export class ForkChoice implements IForkChoice {
 
     this.voteNextSlots = new Array(validatorCount).fill(0);
 
+    // [New in Heze:EIP7805] should_extend_payload runs inside protoArray's variant selection,
+    // which has access to neither the store nor the fork schedule. Hand it a closure owning both.
+    this.protoArray.isPayloadInclusionListSatisfied = (blockRoot: RootHex): boolean => {
+      const variant = this.protoArray.getDefaultVariant(blockRoot);
+      const block = variant === undefined ? undefined : this.protoArray.getBlock(blockRoot, variant);
+      if (block === undefined || !isForkPostHeze(this.config.getForkName(block.slot))) {
+        return true;
+      }
+
+      const satisfied = this.isPayloadInclusionListSatisfied(blockRoot);
+      if (!satisfied) {
+        this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
+        this.logger?.verbose("Refusing to extend payload, inclusion list not satisfied", {blockRoot});
+      }
+      return satisfied;
+    };
+
     this.head = this.updateHead();
     this.balances = this.fcStore.justified.balances;
 
@@ -397,20 +414,8 @@ export class ForkChoice implements IForkChoice {
    * corresponding to the beacon block `blockRoot`.
    */
   shouldExtendPayload(blockRoot: RootHex): boolean {
-    // [New in Heze:EIP7805] do not extend a payload that did not satisfy the inclusion list
-    // constraints. Checked before the timeliness conditions to match the spec ordering; both
-    // are hard rejections so the outcome is the same either way.
-    const block = this.protoArray.getBlock(blockRoot, this.protoArray.getDefaultVariant(blockRoot) ?? 0);
-    if (
-      block !== undefined &&
-      isForkPostHeze(this.config.getForkName(block.slot)) &&
-      !this.isPayloadInclusionListSatisfied(blockRoot)
-    ) {
-      this.metrics?.forkChoice.unsatisfiedInclusionListBlocks.inc();
-      this.logger?.verbose("Refusing to extend payload, inclusion list not satisfied", {blockRoot});
-      return false;
-    }
-
+    // The heze inclusion list gate lives inside protoArray.shouldExtendPayload, which is the
+    // path variant selection actually takes; see the closure wired in the constructor.
     return this.protoArray.shouldExtendPayload(blockRoot, this.proposerBoostRoot);
   }
 

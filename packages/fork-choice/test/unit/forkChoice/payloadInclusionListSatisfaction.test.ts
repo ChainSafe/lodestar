@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
 import {RootHex} from "@lodestar/types";
-import {ExecutionStatus, ForkChoice} from "../../../src/index.js";
+import {ExecutionStatus, ForkChoice, ProtoArray} from "../../../src/index.js";
 import {getPayloadBlockHash, gloasConfig, headSlot, hezeConfig, setup} from "./proposerHeadTestUtils.js";
 
 /** Deliver the execution payload envelope for a block, creating its FULL variant. */
@@ -46,6 +46,31 @@ describe("ForkChoice payload inclusion list satisfaction", () => {
       forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
 
       expect(forkChoice.isPayloadInclusionListSatisfied(headRoot)).toBe(false);
+    });
+  });
+
+  describe("protoArray wiring", () => {
+    it("installs the gate on protoArray, which is the path variant selection takes", () => {
+      const {forkChoice, headRoot} = setup({isGloas: true, config: hezeConfig});
+      deliverPayload(forkChoice, headRoot);
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, false);
+
+      // Exercise protoArray directly: ForkChoice.shouldExtendPayload is not what production calls,
+      // getParentPayloadStatus reaches protoArray.shouldExtendPayload on its own.
+      const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
+      expect(protoArray.isPayloadInclusionListSatisfied).not.toBeNull();
+      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(false);
+
+      forkChoice.recordPayloadInclusionListSatisfaction(headRoot, true);
+      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(true);
+    });
+
+    it("leaves the gate open pre-heze", () => {
+      const {forkChoice, headRoot} = setup({isGloas: true, config: gloasConfig});
+      deliverPayload(forkChoice, headRoot);
+
+      const protoArray = (forkChoice as unknown as {protoArray: ProtoArray}).protoArray;
+      expect(protoArray.shouldExtendPayload(headRoot, null)).toBe(true);
     });
   });
 
