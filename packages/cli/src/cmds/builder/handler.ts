@@ -66,7 +66,7 @@ export async function builderHandler(args: IBuilderCliArgs & GlobalArgs): Promis
 
   const api = getClient(
     {urls: [args.beaconNodeUrl], globalInit: {signal: abortController.signal, timeoutMs: args.requestTimeout}},
-    {config, logger}
+    {config, logger, metrics: metrics?.restApiClient}
   );
 
   logger.info("Beacon node", {beaconNode: toPrintableUrl(args.beaconNodeUrl), timeoutMs: args.requestTimeout});

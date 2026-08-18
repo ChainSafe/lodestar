@@ -28,9 +28,48 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       name: "bc_status",
       help: "Current builder status: pending=0, active=1, exited=2",
     }),
+
     builderBalanceGwei: register.gauge({
       name: "bc_balance_gwei",
       help: "Current builder balance in gwei",
     }),
+
+    // REST API client
+
+    restApiClient: {
+      requestTime: register.histogram<{routeId: string}>({
+        name: "bc_rest_api_client_request_time_seconds",
+        help: "Histogram of REST API client request time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 2, 5],
+      }),
+
+      streamTime: register.histogram<{routeId: string}>({
+        name: "bc_rest_api_client_stream_time_seconds",
+        help: "Histogram of REST API client streaming time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 2, 5],
+      }),
+
+      requestErrors: register.gauge<{routeId: string; baseUrl: string}>({
+        name: "bc_rest_api_client_request_errors_total",
+        help: "Total count of errors on REST API client requests by routeId",
+        labelNames: ["routeId", "baseUrl"],
+      }),
+
+      requestToFallbacks: register.gauge<{routeId: string; baseUrl: string}>({
+        name: "bc_rest_api_client_request_to_fallbacks_total",
+        help: "Total count of requests to fallback URLs on REST API by routeId",
+        labelNames: ["routeId", "baseUrl"],
+      }),
+
+      urlsScore: register.gauge<{urlIndex: number; baseUrl: string}>({
+        name: "bc_rest_api_client_urls_score",
+        help: "Current score of REST API URLs by url index",
+        labelNames: ["urlIndex", "baseUrl"],
+      }),
+    },
   };
 }
