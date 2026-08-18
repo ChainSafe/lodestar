@@ -489,7 +489,7 @@ export type Endpoints = {
   >;
 
   /** Get the builder configuration in effect for a validator public key, with omitted values resolved */
-  getBuilders: Endpoint<
+  getBuilderConfig: Endpoint<
     // ⏎
     "GET",
     {pubkey: PubkeyHex},
@@ -498,7 +498,7 @@ export type Endpoints = {
     EmptyMeta
   >;
   /** Set the builder configuration for a validator public key, replacing any stored configuration in full */
-  setBuilders: Endpoint<
+  setBuilderConfig: Endpoint<
     "POST",
     {pubkey: PubkeyHex; builderConfig: BuilderConfigData},
     {params: {pubkey: string}; body: unknown},
@@ -506,7 +506,13 @@ export type Endpoints = {
     EmptyMeta
   >;
   /** Remove the builder configuration for a validator public key, it then follows the validator client again */
-  deleteBuilders: Endpoint<"DELETE", {pubkey: PubkeyHex}, {params: {pubkey: string}}, EmptyResponseData, EmptyMeta>;
+  deleteBuilderConfig: Endpoint<
+    "DELETE",
+    {pubkey: PubkeyHex},
+    {params: {pubkey: string}},
+    EmptyResponseData,
+    EmptyMeta
+  >;
 
   getProposerConfig: Endpoint<
     // ⏎
@@ -795,8 +801,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       },
       resp: EmptyResponseCodec,
     },
-    getBuilders: {
-      url: "/eth/v1/validator/{pubkey}/builders",
+    getBuilderConfig: {
+      url: "/eth/v1/validator/{pubkey}/builder_config",
       method: "GET",
       req: {
         writeReq: ({pubkey}) => ({params: {pubkey}}),
@@ -820,8 +826,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
         meta: EmptyMetaCodec,
       },
     },
-    setBuilders: {
-      url: "/eth/v1/validator/{pubkey}/builders",
+    setBuilderConfig: {
+      url: "/eth/v1/validator/{pubkey}/builder_config",
       method: "POST",
       req: JsonOnlyReq({
         writeReqJson: ({pubkey, builderConfig}) => ({params: {pubkey}, body: builderConfigDataToJson(builderConfig)}),
@@ -833,8 +839,8 @@ export function getDefinitions(_config: ChainForkConfig): RouteDefinitions<Endpo
       }),
       resp: EmptyResponseCodec,
     },
-    deleteBuilders: {
-      url: "/eth/v1/validator/{pubkey}/builders",
+    deleteBuilderConfig: {
+      url: "/eth/v1/validator/{pubkey}/builder_config",
       method: "DELETE",
       req: {
         writeReq: ({pubkey}) => ({params: {pubkey}}),

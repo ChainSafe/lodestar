@@ -20,9 +20,9 @@ const openApiFile: OpenApiFile = {
 
 const ignoredOperations = [
   // TODO: remove once a keymanager-APIs release includes the builders endpoints (keymanager-APIs#88)
-  "getBuilders",
-  "setBuilders",
-  "deleteBuilders",
+  "getBuilderConfig",
+  "setBuilderConfig",
+  "deleteBuilderConfig",
 ];
 
 const openApiJson = await fetchOpenApiSpec(openApiFile);

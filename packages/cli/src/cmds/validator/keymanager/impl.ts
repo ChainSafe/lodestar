@@ -381,18 +381,18 @@ export class KeymanagerApi implements Api {
     return {status: 204};
   }
 
-  async getBuilders({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getBuilders"]> {
+  async getBuilderConfig({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getBuilderConfig"]> {
     this.assertValidKnownPubkey(pubkey);
     return {data: this.validator.validatorStore.getBuilderConfig(pubkey)};
   }
 
-  async setBuilders({
+  async setBuilderConfig({
     pubkey,
     builderConfig,
   }: {
     pubkey: PubkeyHex;
     builderConfig: BuilderConfigData;
-  }): ReturnType<Api["setBuilders"]> {
+  }): ReturnType<Api["setBuilderConfig"]> {
     this.checkIfProposerWriteEnabled();
     this.assertValidKnownPubkey(pubkey);
 
@@ -415,7 +415,7 @@ export class KeymanagerApi implements Api {
     return {status: 202};
   }
 
-  async deleteBuilders({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteBuilders"]> {
+  async deleteBuilderConfig({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["deleteBuilderConfig"]> {
     this.checkIfProposerWriteEnabled();
     this.assertValidKnownPubkey(pubkey);
     this.validator.validatorStore.deleteBuilderConfig(pubkey);

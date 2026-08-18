@@ -112,7 +112,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     args: {pubkey: pubkeyRand},
     res: undefined,
   },
-  getBuilders: {
+  getBuilderConfig: {
     args: {pubkey: pubkeyRand},
     res: {
       data: {
@@ -131,7 +131,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
       },
     },
   },
-  setBuilders: {
+  setBuilderConfig: {
     args: {
       pubkey: pubkeyRand,
       builderConfig: {
@@ -141,7 +141,7 @@ export const testData: GenericServerTestCases<Endpoints> = {
     },
     res: undefined,
   },
-  deleteBuilders: {
+  deleteBuilderConfig: {
     args: {pubkey: pubkeyRand},
     res: undefined,
   },
