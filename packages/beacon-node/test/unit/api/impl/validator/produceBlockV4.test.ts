@@ -238,10 +238,6 @@ describe("api/validator - produceBlockV4", () => {
     // The bid block commits to the builder API bid since its boosted total (2) beats the p2p bid (1)
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);
-    expect(modules.chain.builderApiClient.recordBidSource).toHaveBeenCalledWith(slot, {
-      url: builderUrl,
-      bidBlockHash: expect.any(String),
-    });
   });
 
   it("prefers the builder API bid over an equally boosted p2p bid", async () => {
@@ -277,7 +273,6 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
     expect(block).toEqual(bidBlock);
-    expect(modules.chain.builderApiClient.recordBidSource).toHaveBeenCalledOnce();
   });
 
   it("prefers a max boost builder entry before comparing bid values", async () => {
@@ -313,7 +308,6 @@ describe("api/validator - produceBlockV4", () => {
     });
 
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: apiBid}));
-    expect(modules.chain.builderApiClient.recordBidSource).toHaveBeenCalledOnce();
   });
 
   it("falls back to the p2p bid when the builder API bid fails validation", async () => {
@@ -349,7 +343,6 @@ describe("api/validator - produceBlockV4", () => {
 
     expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid}));
     expect(block).toEqual(bidBlock);
-    expect(modules.chain.builderApiClient.recordBidSource).not.toHaveBeenCalled();
   });
 
   it("ignores a p2p bid below the configured min bid", async () => {

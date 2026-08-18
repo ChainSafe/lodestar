@@ -1609,7 +1609,6 @@ export class BeaconChain implements IBeaconChain {
     this.executionPayloadBidPool.prune(slot);
     this.seenExecutionPayloadBids.prune(slot);
     this.proposerPreferencesPool.prune(slot);
-    this.builderApiClient.prune(slot);
     this.seenAttestationDatas.onSlot(slot);
     this.reprocessController.onSlot(slot);
 

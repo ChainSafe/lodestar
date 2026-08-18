@@ -33,8 +33,6 @@ export type BuilderApiBid = {
   signedBid: gloas.SignedExecutionPayloadBid;
 };
 
-export type BidSource = {url: BuilderUrl; bidBlockHash: string};
-
 /**
  * External builder integration post-gloas (ePBS).
  *
@@ -43,8 +41,6 @@ export type BidSource = {url: BuilderUrl; bidBlockHash: string};
  */
 export class BuilderApiClient {
   private readonly clients = new Map<BuilderUrl, BuilderApi>();
-  /** Builder api bid included in a produced block, used to route the signed block back to the builder */
-  private readonly bidSourceBySlot = new Map<Slot, BidSource>();
 
   constructor(
     private readonly opts: BuilderApiClientOpts,
@@ -161,22 +157,6 @@ export class BuilderApiClient {
     } catch (e) {
       this.metrics?.builderApi.blockSubmissions.inc({status: "error"});
       throw e;
-    }
-  }
-
-  recordBidSource(slot: Slot, source: BidSource): void {
-    this.bidSourceBySlot.set(slot, source);
-  }
-
-  getBidSource(slot: Slot): BidSource | undefined {
-    return this.bidSourceBySlot.get(slot);
-  }
-
-  prune(clockSlot: Slot): void {
-    for (const slot of this.bidSourceBySlot.keys()) {
-      if (slot < clockSlot) {
-        this.bidSourceBySlot.delete(slot);
-      }
     }
   }
 

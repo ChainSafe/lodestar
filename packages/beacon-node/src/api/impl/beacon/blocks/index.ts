@@ -372,20 +372,16 @@ export function getBeaconBlockApi({
       //        import latency and hopefully bandwidth
       //
       () => network.publishBeaconBlock(signedBlock),
-      // Forward the signed block to the winning builder so it can release the payload without
-      // waiting for block gossip. Failures are non-fatal, the builder also sees the block on gossip.
+      // Forward the signed block to the winning builder echoed by the validator client so it can
+      // release the payload without waiting for block gossip. Failures are non-fatal, the builder
+      // also sees the block on gossip.
       async () => {
-        if (!isForkPostGloas(fork)) return;
+        if (builderUrl === undefined || !isForkPostGloas(fork)) return;
         const gloasBlock = signedBlock as SignedBeaconBlock<ForkPostGloas>;
-        const bid = gloasBlock.message.body.signedExecutionPayloadBid.message;
-        if (bid.builderIndex === BUILDER_INDEX_SELF_BUILD) return;
-        // Use the echoed builder url, or the locally recorded bid source if this node ran the auction
-        const bidSource = chain.builderApiClient.getBidSource(slot);
-        const forwardUrl =
-          builderUrl ?? (bidSource?.bidBlockHash === toRootHex(bid.blockHash) ? bidSource.url : undefined);
-        if (forwardUrl === undefined) return;
-        await chain.builderApiClient.submitSignedBeaconBlock(forwardUrl, {data: gloasBlock}).catch((e) => {
-          chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl: forwardUrl}, e);
+        if (gloasBlock.message.body.signedExecutionPayloadBid.message.builderIndex === BUILDER_INDEX_SELF_BUILD) return;
+        // Not awaited, publishing the block must not wait on the builder
+        chain.builderApiClient.submitSignedBeaconBlock(builderUrl, {data: gloasBlock}).catch((e) => {
+          chain.logger.warn("Failed to submit signed block to builder", {...valLogMeta, builderUrl}, e);
         });
       },
       ...dataColumnSidecars.map((dataColumnSidecar) => () => network.publishDataColumnSidecar(dataColumnSidecar)),

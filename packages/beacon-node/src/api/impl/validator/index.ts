@@ -1166,12 +1166,7 @@ export function getValidatorApi(
 
       const {block, executionPayloadValue, consensusBlockValue} = bestResult.value;
 
-      // Remember the winning builder API bid source to route the signed block back to the builder
       if (source === ProducedBlockSource.builder && bestCandidate?.url !== undefined) {
-        chain.builderApiClient.recordBidSource(slot, {
-          url: bestCandidate.url,
-          bidBlockHash: toRootHex(bestCandidate.signedBid.message.blockHash),
-        });
         logger.debug("Builder API bid included in block", {slot, builder: toPrintableUrl(bestCandidate.url)});
       }
 
