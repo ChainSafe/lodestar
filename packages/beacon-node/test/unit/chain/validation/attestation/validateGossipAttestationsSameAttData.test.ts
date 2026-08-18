@@ -61,7 +61,6 @@ describe("validateGossipAttestationsSameAttData", () => {
   for (let i = 0; i < 10; i++) {
     pubkeyCache.append(i, getKeypair(i).publicKey.toBytes());
   }
-  // Note: keypair 2023 is only used to produce invalid signatures, it is never added to the cache
 
   let chain: IBeaconChain;
   const signingRoot = Buffer.alloc(32, 1);
