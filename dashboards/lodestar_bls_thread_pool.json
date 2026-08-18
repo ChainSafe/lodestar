@@ -668,7 +668,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "p95 main-thread input preparation and worker message-transfer overhead. Native verification is shown separately.",
+      "description": "p95 main-thread input preparation and worker message-transfer overhead. Worker verification calls are shown separately.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -853,7 +853,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_sigs_success_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_native_verification_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_sigs_success_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
           "interval": "",
           "legendFormat": "fast path",
           "refId": "A"
@@ -863,7 +863,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_native_verification_signature_sets_total{operation=\"general_fallback\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_native_verification_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_fallback\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
           "interval": "",
           "legendFormat": "fallback",
           "refId": "B"
@@ -1148,13 +1148,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_native_verification_signature_sets_total[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_native_verification_duration_seconds_count[$rate_interval]))",
+          "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count[$rate_interval]))",
           "interval": "",
-          "legendFormat": "{{operation}} sets/native call",
+          "legendFormat": "{{operation}} sets/verification call",
           "refId": "B"
         }
       ],
-      "title": "BLS dispatch and native call width",
+      "title": "BLS dispatch and verification call width",
       "type": "timeseries"
     },
     {
@@ -1230,7 +1230,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_native_verification_duration_seconds_bucket[$rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_bucket[$rate_interval])))",
           "instant": false,
           "legendFormat": "p50 {{operation}}",
           "range": true,
@@ -1242,7 +1242,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_native_verification_duration_seconds_bucket[$rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_bucket[$rate_interval])))",
           "hide": false,
           "instant": false,
           "legendFormat": "p95 {{operation}}",
@@ -1255,7 +1255,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_native_verification_duration_seconds_bucket[$rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_bucket[$rate_interval])))",
           "hide": false,
           "instant": false,
           "legendFormat": "p99 {{operation}}",
@@ -1340,7 +1340,7 @@
           "disableTextWrap": false,
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (le) (rate(lodestar_bls_thread_pool_native_verification_duration_seconds_bucket[$rate_interval]))",
+          "expr": "sum by (le) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_bucket[$rate_interval]))",
           "format": "heatmap",
           "fullMetaSearch": false,
           "includeNullMetadata": true,

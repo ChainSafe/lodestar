@@ -34,7 +34,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 type BlsMetricBoolean = "true" | "false";
 type BlsJobOutcome = "valid" | "invalid" | "error";
 type BlsBufferFlushReason = "size" | "timeout";
-type BlsNativeVerificationOperation = "general_batch" | "general_direct" | "general_fallback" | "same_message";
+type BlsVerificationCallOperation = "general_batch" | "general_direct" | "general_fallback" | "same_message";
 
 /**
  * Extra Lodestar custom metrics
@@ -523,14 +523,14 @@ export function createLodestarMetrics(
           60,
         ],
       }),
-      nativeVerificationDuration: register.histogram<{operation: BlsNativeVerificationOperation}>({
-        name: "lodestar_bls_thread_pool_native_verification_duration_seconds",
+      verificationCallDuration: register.histogram<{operation: BlsVerificationCallOperation}>({
+        name: "lodestar_bls_thread_pool_verification_call_duration_seconds",
         help: "Duration of one worker-side lodestar-z verification binding call, including input conversion",
         labelNames: ["operation"],
         buckets: [0.00025, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
       }),
-      nativeVerificationSignatureSets: register.counter<{operation: BlsNativeVerificationOperation}>({
-        name: "lodestar_bls_thread_pool_native_verification_signature_sets_total",
+      verificationCallSignatureSets: register.counter<{operation: BlsVerificationCallOperation}>({
+        name: "lodestar_bls_thread_pool_verification_call_signature_sets_total",
         help: "Count of signature sets passed to worker-side lodestar-z verification binding calls",
         labelNames: ["operation"],
       }),

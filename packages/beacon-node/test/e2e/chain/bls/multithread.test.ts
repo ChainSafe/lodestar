@@ -94,7 +94,7 @@ describe("chain / bls / multithread queue", () => {
     });
   }
 
-  it("Should record BLS scheduler and native verification metrics", async () => {
+  it("Should record BLS scheduler and verification call metrics", async () => {
     const metrics = createMetricsTest();
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
     afterEachCallbacks.push(() => pool.close());
@@ -112,21 +112,21 @@ describe("chain / bls / multithread queue", () => {
     );
     expect(batchSuccess).toContain("lodestar_bls_thread_pool_batch_sigs_success_total 3");
 
-    const nativeDuration = await metrics.register.getSingleMetricAsString(
-      "lodestar_bls_thread_pool_native_verification_duration_seconds"
+    const verificationCallDuration = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_verification_call_duration_seconds"
     );
     for (const operation of ["general_batch", "general_direct", "general_fallback", "same_message"]) {
-      expect(nativeDuration).toContain(`operation="${operation}"`);
+      expect(verificationCallDuration).toContain(`operation="${operation}"`);
     }
 
-    const nativeSignatureSets = await metrics.register.getSingleMetricAsString(
-      "lodestar_bls_thread_pool_native_verification_signature_sets_total"
+    const verificationCallSignatureSets = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_verification_call_signature_sets_total"
     );
-    expect(nativeSignatureSets).toContain(
-      'lodestar_bls_thread_pool_native_verification_signature_sets_total{operation="general_batch"} 4'
+    expect(verificationCallSignatureSets).toContain(
+      'lodestar_bls_thread_pool_verification_call_signature_sets_total{operation="general_batch"} 4'
     );
-    expect(nativeSignatureSets).toContain(
-      'lodestar_bls_thread_pool_native_verification_signature_sets_total{operation="general_fallback"} 1'
+    expect(verificationCallSignatureSets).toContain(
+      'lodestar_bls_thread_pool_verification_call_signature_sets_total{operation="general_fallback"} 1'
     );
 
     const invalidInput: ISignatureSet = {...sets[0], type: SignatureSetType.aggregate, indices: [-1]};
@@ -185,7 +185,7 @@ describe("chain / bls / multithread queue", () => {
     });
   }
 
-  it("Should not retry batchable jobs that fit the native verifier bound", async () => {
+  it("Should not retry batchable jobs that fit the verifier bound", async () => {
     const metrics = createMetricsTest();
     const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
     afterEachCallbacks.push(() => pool.close());

@@ -439,15 +439,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const {
-        workerId,
-        batchRetries,
-        batchSigsSuccess,
-        nativeVerificationCalls,
-        workerStartTime,
-        workerEndTime,
-        results,
-      } = workResult;
+      const {workerId, batchRetries, batchSigsSuccess, verificationCalls, workerStartTime, workerEndTime, results} =
+        workResult;
 
       const [workerStartSec, workerStartNs] = workerStartTime;
       const [workerEndSec, workerEndNs] = workerEndTime;
@@ -482,9 +475,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
       this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
       this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
-      for (const {operation, duration, signatureSets} of nativeVerificationCalls) {
-        this.metrics?.blsThreadPool.nativeVerificationDuration.observe({operation}, duration);
-        this.metrics?.blsThreadPool.nativeVerificationSignatureSets.inc({operation}, signatureSets);
+      for (const {operation, duration, signatureSets} of verificationCalls) {
+        this.metrics?.blsThreadPool.verificationCallDuration.observe({operation}, duration);
+        this.metrics?.blsThreadPool.verificationCallSignatureSets.inc({operation}, signatureSets);
       }
     } catch (e) {
       // Worker communications should never reject

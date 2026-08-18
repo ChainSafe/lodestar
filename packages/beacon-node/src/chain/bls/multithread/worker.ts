@@ -9,8 +9,8 @@ import {
   BlsWorkReq,
   BlsWorkResult,
   JobQueueItemType,
-  NativeVerificationCall,
-  NativeVerificationOperation,
+  VerificationCall,
+  VerificationCallOperation,
   WorkResult,
   WorkResultCode,
   WorkerData,
@@ -40,7 +40,7 @@ expose({
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean[]>[] = [];
-  const nativeVerificationCalls: NativeVerificationCall[] = [];
+  const verificationCalls: VerificationCall[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
@@ -49,7 +49,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const nonBatchableSets: {
     idx: number;
     sets: BlsSignatureSet[];
-    operation: NativeVerificationOperation.generalDirect | NativeVerificationOperation.generalFallback;
+    operation: VerificationCallOperation.generalDirect | VerificationCallOperation.generalFallback;
   }[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
@@ -61,15 +61,15 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
         if (workReq.opts.batchable) {
           batchableSets.push({idx: i, sets});
         } else {
-          nonBatchableSets.push({idx: i, sets, operation: NativeVerificationOperation.generalDirect});
+          nonBatchableSets.push({idx: i, sets, operation: VerificationCallOperation.generalDirect});
         }
         break;
       }
       case JobQueueItemType.sameMessage:
         try {
-          const result = recordNativeVerification(
-            nativeVerificationCalls,
-            NativeVerificationOperation.sameMessage,
+          const result = recordVerificationCall(
+            verificationCalls,
+            VerificationCallOperation.sameMessage,
             workReq.sets.length,
             () => verifySignatureSetsSameMessage(workReq.sets, workReq.message)
           );
@@ -95,9 +95,9 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = recordNativeVerification(
-          nativeVerificationCalls,
-          NativeVerificationOperation.generalBatch,
+        const isValid = recordVerificationCall(
+          verificationCalls,
+          VerificationCallOperation.generalBatch,
           allSets.length,
           () => verifySignatureSets(allSets)
         );
@@ -115,7 +115,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
             ...batchableChunk.map(({idx, sets}) => ({
               idx,
               sets,
-              operation: NativeVerificationOperation.generalFallback as const,
+              operation: VerificationCallOperation.generalFallback as const,
             }))
           );
         }
@@ -128,7 +128,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
           ...batchableChunk.map(({idx, sets}) => ({
             idx,
             sets,
-            operation: NativeVerificationOperation.generalFallback as const,
+            operation: VerificationCallOperation.generalFallback as const,
           }))
         );
       }
@@ -137,7 +137,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
   for (const {idx, sets, operation} of nonBatchableSets) {
     try {
-      const isValid = recordNativeVerification(nativeVerificationCalls, operation, sets.length, () =>
+      const isValid = recordVerificationCall(verificationCalls, operation, sets.length, () =>
         verifySignatureSets(sets)
       );
       results[idx] = {code: WorkResultCode.success, result: [isValid]};
@@ -152,16 +152,16 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerId,
     batchRetries,
     batchSigsSuccess,
-    nativeVerificationCalls,
+    verificationCalls,
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
 }
 
-function recordNativeVerification<T>(
-  calls: NativeVerificationCall[],
-  operation: NativeVerificationOperation,
+function recordVerificationCall<T>(
+  calls: VerificationCall[],
+  operation: VerificationCallOperation,
   signatureSets: number,
   verify: () => T
 ): T {
