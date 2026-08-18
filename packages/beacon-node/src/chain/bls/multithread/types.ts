@@ -30,6 +30,19 @@ export enum WorkResultCode {
   error = "error",
 }
 
+export enum NativeVerificationOperation {
+  generalBatch = "general_batch",
+  generalDirect = "general_direct",
+  generalFallback = "general_fallback",
+  sameMessage = "same_message",
+}
+
+export type NativeVerificationCall = {
+  operation: NativeVerificationOperation;
+  duration: number;
+  signatureSets: number;
+};
+
 export type WorkResultError = {code: WorkResultCode.error; error: Error};
 export type WorkResult<R> = {code: WorkResultCode.success; result: R} | WorkResultError;
 
@@ -40,6 +53,8 @@ export type BlsWorkResult = {
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */
   batchSigsSuccess: number;
+  /** Every lodestar-z verification call made while processing this work group */
+  nativeVerificationCalls: NativeVerificationCall[];
   /** Time worker function starts - UNIX timestamp in seconds and nanoseconds */
   workerStartTime: [number, number];
   /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */

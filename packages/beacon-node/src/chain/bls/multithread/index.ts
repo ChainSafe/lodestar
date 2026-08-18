@@ -16,7 +16,15 @@ import {IBlsVerifier, SameMessageSignatureSet, VerifySignatureOpts} from "../int
 import {chunkSameMessageSignatureSets, getAggregatedPubkeysCount, verifySignatureSetsInBatches} from "../utils.js";
 import {JobQueueItem, jobItemSigSets, jobItemWorkReq} from "./jobItem.js";
 import {defaultPoolSize} from "./poolSize.js";
-import {BlsWorkReq, BlsWorkResult, JobQueueItemType, WorkResultCode, WorkResultError, WorkerData} from "./types.js";
+import {
+  BlsWorkReq,
+  BlsWorkResult,
+  JobQueueItemType,
+  WorkResult,
+  WorkResultCode,
+  WorkResultError,
+  WorkerData,
+} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 // Worker constructor consider the path relative to the current working directory
@@ -59,8 +67,8 @@ const MAX_BUFFERED_SIGS = 32;
  * efficiency, at the cost of delaying validation. Unless running in production shows otherwise, it's not critical
  * to hold attestations and aggregates for 100ms. Lodestar existing queues may hold those objects for much more anyway.
  *
- * There's no exact reasoning for the `100` milliseconds number. The metric `batchSigsSuccess` should indicate if this
- * value needs revision
+ * There's no exact reasoning for the `100` milliseconds number. Buffer flush size and reason metrics show whether the
+ * wait produces useful batches, while job-duration metrics expose its latency cost.
  */
 const MAX_BUFFER_WAIT_MS = 100;
 
@@ -92,6 +100,9 @@ type WorkerDescriptor = {
   worker: Worker;
   status: WorkerStatus;
 };
+
+type BufferFlushReason = "size" | "timeout";
+type BlsJobOutcome = "valid" | "invalid" | "error";
 
 /**
  * Wraps "threads" library thread pool queue system with the goals:
@@ -128,7 +139,9 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     if (metrics) {
       metrics.blsThreadPool.queueLength.addCollect(() => {
+        const bufferedJobs = (this.bufferedJobs?.jobs.length ?? 0) + (this.bufferedJobs?.prioritizedJobs.length ?? 0);
         metrics.blsThreadPool.queueLength.set(this.jobs.length);
+        metrics.blsThreadPool.bufferedQueueLength.set(bufferedJobs);
         metrics.blsThreadPool.workersBusy.set(this.workersBusy);
       });
     }
@@ -244,6 +257,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
     for (let i = 0; i < poolSize; i++) {
       const workerData: WorkerData = {workerId: i};
+      this.metrics?.blsThreadPool.jobsWorkerTime.inc({workerId: i}, 0);
       const worker = new Worker(path.join(workerDir, "worker.js"), {
         workerData,
       } as ConstructorParameters<typeof Worker>[1]);
@@ -307,7 +321,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           prioritizedJobs: new LinkedList(),
           sigCount: 0,
           firstPush: Date.now(),
-          timeout: setTimeout(this.runBufferedJobs, MAX_BUFFER_WAIT_MS),
+          timeout: setTimeout(() => this.runBufferedJobs("timeout"), MAX_BUFFER_WAIT_MS),
         };
       }
       const jobs = job.opts.priority ? this.bufferedJobs.prioritizedJobs : this.bufferedJobs.jobs;
@@ -315,7 +329,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.bufferedJobs.sigCount += jobItemSigSets(job);
       if (this.bufferedJobs.sigCount > MAX_BUFFERED_SIGS) {
         clearTimeout(this.bufferedJobs.timeout);
-        this.runBufferedJobs();
+        this.runBufferedJobs("size");
       }
     }
 
@@ -359,6 +373,8 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     const workerApi = worker.status.workerApi;
     worker.status = {code: WorkerStatusCode.running, workerApi};
     this.workersBusy++;
+    const jobsStarted: JobQueueItem[] = [];
+    let completedJobsCount = 0;
 
     if (this.jobs.length > 0) {
       callInNextEventLoop(this.runJob);
@@ -370,16 +386,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       let startedSetsDefault = 0;
       let startedSetsSameMessage = 0;
       const workReqs: BlsWorkReq[] = [];
-      const jobsStarted: JobQueueItem[] = [];
 
       for (const job of jobsInput) {
-        this.metrics?.blsThreadPool.jobWaitTime.observe((Date.now() - job.addedTimeMs) / 1000);
+        this.metrics?.blsThreadPool.jobWaitTime.observe(jobMetricLabels(job), (Date.now() - job.addedTimeMs) / 1000);
+      }
 
+      const preparationStartTime = process.hrtime();
+      for (const job of jobsInput) {
         let workReq: BlsWorkReq;
         try {
           workReq = jobItemWorkReq(job);
         } catch (e) {
           this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(jobItemSigSets(job));
+          this.observeJobCompletion(job, "error");
           job.reject(e as Error);
           continue;
         }
@@ -395,6 +414,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           startedSetsDefault += job.sets.length;
         }
       }
+      const [preparationSeconds, preparationNanoseconds] = process.hrtime(preparationStartTime);
+      this.metrics?.blsThreadPool.workRequestPreparationDuration.observe(
+        preparationSeconds + preparationNanoseconds / 1e9
+      );
 
       const startedSigSets = startedSetsDefault + startedSetsSameMessage;
       if (workReqs.length === 0) {
@@ -411,13 +434,20 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.totalSigSetsStarted.inc({type: JobQueueItemType.sameMessage}, startedSetsSameMessage);
 
       // Send work package to the worker
-      // If the job, metrics or any code below throws: the job will reject never going stale.
-      // Only downside is the job promise may be resolved twice, but that's not an issue
+      // If worker communication or result processing throws, all unresolved jobs are rejected.
 
       const [jobStartSec, jobStartNs] = process.hrtime();
       const workResult = await workerApi.verifyManySignatureSets(workReqs);
       const [jobEndSec, jobEndNs] = process.hrtime();
-      const {workerId, batchRetries, batchSigsSuccess, workerStartTime, workerEndTime, results} = workResult;
+      const {
+        workerId,
+        batchRetries,
+        batchSigsSuccess,
+        nativeVerificationCalls,
+        workerStartTime,
+        workerEndTime,
+        results,
+      } = workResult;
 
       const [workerStartSec, workerStartNs] = workerStartTime;
       const [workerEndSec, workerEndNs] = workerEndTime;
@@ -429,35 +459,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       for (let i = 0; i < jobsStarted.length; i++) {
         const job = jobsStarted[i];
         const jobResult = results[i];
-        const sigSetCount = jobItemSigSets(job);
-
-        // TODO: enable exhaustive switch case checks lint rule
-        switch (job.type) {
-          case JobQueueItemType.default:
-            if (!jobResult || jobResult.code !== WorkResultCode.success) {
-              job.reject(getJobResultError(jobResult, i));
-              errorCount += sigSetCount;
-            } else if (jobResult.result.length !== 1 || jobResult.result[0] === undefined) {
-              job.reject(getInvalidResultLengthError(i, 1, jobResult.result.length));
-              errorCount += sigSetCount;
-            } else {
-              job.resolve(jobResult.result[0]);
-              successCount += sigSetCount;
-            }
-            break;
-
-          case JobQueueItemType.sameMessage:
-            if (!jobResult || jobResult.code !== WorkResultCode.success) {
-              job.reject(getJobResultError(jobResult, i));
-              errorCount += sigSetCount;
-            } else if (jobResult.result.length !== sigSetCount) {
-              job.reject(getInvalidResultLengthError(i, sigSetCount, jobResult.result.length));
-              errorCount += sigSetCount;
-            } else {
-              job.resolve(jobResult.result);
-              successCount += sigSetCount;
-            }
-            break;
+        const signatureSets = jobItemSigSets(job);
+        const outcome = completeJob(job, jobResult, i, signatureSets);
+        completedJobsCount = i + 1;
+        this.observeJobCompletion(job, outcome);
+        if (outcome === "error") {
+          errorCount += signatureSets;
+        } else {
+          successCount += signatureSets;
         }
       }
 
@@ -473,15 +482,24 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorCount);
       this.metrics?.blsThreadPool.batchRetries.inc(batchRetries);
       this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
+      for (const {operation, duration, signatureSets} of nativeVerificationCalls) {
+        this.metrics?.blsThreadPool.nativeVerificationDuration.observe({operation}, duration);
+        this.metrics?.blsThreadPool.nativeVerificationSignatureSets.inc({operation}, signatureSets);
+      }
     } catch (e) {
       // Worker communications should never reject
       if (!this.closed) {
         this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
       }
-      // Reject all
-      for (const job of jobsInput) {
+      // Reject jobs that were not already completed
+      let errorSignatureSets = 0;
+      for (let i = completedJobsCount; i < jobsStarted.length; i++) {
+        const job = jobsStarted[i];
+        this.observeJobCompletion(job, "error");
+        errorSignatureSets += jobItemSigSets(job);
         job.reject(e as Error);
       }
+      this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(errorSignatureSets);
     }
 
     worker.status = {code: WorkerStatusCode.idle, workerApi};
@@ -520,8 +538,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   /**
    * Add all buffered jobs to the job queue and potentially run them immediately
    */
-  private runBufferedJobs = (): void => {
+  private runBufferedJobs = (reason: BufferFlushReason): void => {
     if (this.bufferedJobs) {
+      this.metrics?.blsThreadPool.bufferFlushes.inc({reason});
+      this.metrics?.blsThreadPool.bufferedSignatureSets.observe(this.bufferedJobs.sigCount);
       for (const job of this.bufferedJobs.jobs) {
         this.jobs.push(job);
       }
@@ -533,6 +553,11 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     }
   };
 
+  private observeJobCompletion(job: JobQueueItem, outcome: BlsJobOutcome): void {
+    this.metrics?.blsThreadPool.jobDuration.observe(jobMetricLabels(job), (Date.now() - job.addedTimeMs) / 1000);
+    this.metrics?.blsThreadPool.jobResults.inc({type: job.type, outcome});
+  }
+
   /** For testing */
   protected async waitTillInitialized(): Promise<void> {
     await Promise.all(
@@ -543,6 +568,52 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       })
     );
   }
+}
+
+function completeJob(
+  job: JobQueueItem,
+  jobResult: WorkResult<boolean[]> | undefined,
+  index: number,
+  signatureSets: number
+): BlsJobOutcome {
+  if (!jobResult || jobResult.code !== WorkResultCode.success) {
+    job.reject(getJobResultError(jobResult ?? null, index));
+    return "error";
+  }
+
+  switch (job.type) {
+    case JobQueueItemType.default: {
+      const [result] = jobResult.result;
+      if (jobResult.result.length !== 1 || result === undefined) {
+        job.reject(getInvalidResultLengthError(index, 1, jobResult.result.length));
+        return "error";
+      }
+
+      job.resolve(result);
+      return result ? "valid" : "invalid";
+    }
+
+    case JobQueueItemType.sameMessage:
+      if (jobResult.result.length !== signatureSets) {
+        job.reject(getInvalidResultLengthError(index, signatureSets, jobResult.result.length));
+        return "error";
+      }
+
+      job.resolve(jobResult.result);
+      return jobResult.result.every(Boolean) ? "valid" : "invalid";
+  }
+}
+
+function jobMetricLabels(job: JobQueueItem): {
+  type: JobQueueItemType;
+  priority: "true" | "false";
+  batchable: "true" | "false";
+} {
+  return {
+    type: job.type,
+    priority: job.opts.priority ? "true" : "false",
+    batchable: job.opts.batchable ? "true" : "false",
+  };
 }
 
 function getJobResultError(jobResult: WorkResultError | null, i: number): Error {

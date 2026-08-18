@@ -5,7 +5,16 @@ import {
   verifySignatureSetsSameMessage,
 } from "@chainsafe/lodestar-z/bls-verifier";
 import {expose} from "@chainsafe/threads/worker";
-import {BlsWorkReq, BlsWorkResult, JobQueueItemType, WorkResult, WorkResultCode, WorkerData} from "./types.js";
+import {
+  BlsWorkReq,
+  BlsWorkResult,
+  JobQueueItemType,
+  NativeVerificationCall,
+  NativeVerificationOperation,
+  WorkResult,
+  WorkResultCode,
+  WorkerData,
+} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -31,12 +40,17 @@ expose({
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean[]>[] = [];
+  const nativeVerificationCalls: NativeVerificationCall[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
   const batchableSets: {idx: number; sets: BlsSignatureSet[]}[] = [];
-  const nonBatchableSets: {idx: number; sets: BlsSignatureSet[]}[] = [];
+  const nonBatchableSets: {
+    idx: number;
+    sets: BlsSignatureSet[];
+    operation: NativeVerificationOperation.generalDirect | NativeVerificationOperation.generalFallback;
+  }[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
@@ -47,13 +61,18 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
         if (workReq.opts.batchable) {
           batchableSets.push({idx: i, sets});
         } else {
-          nonBatchableSets.push({idx: i, sets});
+          nonBatchableSets.push({idx: i, sets, operation: NativeVerificationOperation.generalDirect});
         }
         break;
       }
       case JobQueueItemType.sameMessage:
         try {
-          const result = verifySignatureSetsSameMessage(workReq.sets, workReq.message);
+          const result = recordNativeVerification(
+            nativeVerificationCalls,
+            NativeVerificationOperation.sameMessage,
+            workReq.sets.length,
+            () => verifySignatureSetsSameMessage(workReq.sets, workReq.message)
+          );
           results[i] = {code: WorkResultCode.success, result};
         } catch (e) {
           results[i] = {code: WorkResultCode.error, error: e as Error};
@@ -76,7 +95,12 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = verifySignatureSets(allSets);
+        const isValid = recordNativeVerification(
+          nativeVerificationCalls,
+          NativeVerificationOperation.generalBatch,
+          allSets.length,
+          () => verifySignatureSets(allSets)
+        );
 
         if (isValid) {
           // The entire batch is valid, return success to all
@@ -87,21 +111,35 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
         } else {
           batchRetries++;
           // Re-verify all sigs
-          nonBatchableSets.push(...batchableChunk);
+          nonBatchableSets.push(
+            ...batchableChunk.map(({idx, sets}) => ({
+              idx,
+              sets,
+              operation: NativeVerificationOperation.generalFallback as const,
+            }))
+          );
         }
       } catch (_e) {
         // TODO: Ignore this error expecting that the same error will happen when re-verifying the set individually
         //       It's not ideal but the BLS implementation may throw errors on some conditions
         batchRetries++;
         // Re-verify all sigs
-        nonBatchableSets.push(...batchableChunk);
+        nonBatchableSets.push(
+          ...batchableChunk.map(({idx, sets}) => ({
+            idx,
+            sets,
+            operation: NativeVerificationOperation.generalFallback as const,
+          }))
+        );
       }
     }
   }
 
-  for (const {idx, sets} of nonBatchableSets) {
+  for (const {idx, sets, operation} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSets(sets);
+      const isValid = recordNativeVerification(nativeVerificationCalls, operation, sets.length, () =>
+        verifySignatureSets(sets)
+      );
       results[idx] = {code: WorkResultCode.success, result: [isValid]};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};
@@ -114,8 +152,24 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerId,
     batchRetries,
     batchSigsSuccess,
+    nativeVerificationCalls,
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
+}
+
+function recordNativeVerification<T>(
+  calls: NativeVerificationCall[],
+  operation: NativeVerificationOperation,
+  signatureSets: number,
+  verify: () => T
+): T {
+  const startTime = process.hrtime();
+  try {
+    return verify();
+  } finally {
+    const [seconds, nanoseconds] = process.hrtime(startTime);
+    calls.push({operation, signatureSets, duration: seconds + nanoseconds / 1e9});
+  }
 }

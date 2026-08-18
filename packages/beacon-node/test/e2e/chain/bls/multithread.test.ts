@@ -1,4 +1,3 @@
-import type {Gauge} from "prom-client";
 import {afterEach, beforeAll, beforeEach, describe, expect, it, vi} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
@@ -95,6 +94,59 @@ describe("chain / bls / multithread queue", () => {
     });
   }
 
+  it("Should record BLS scheduler and native verification metrics", async () => {
+    const metrics = createMetricsTest();
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
+    afterEachCallbacks.push(() => pool.close());
+    await pool["waitTillInitialized"]();
+
+    await pool.verifySignatureSets(sets);
+    await pool.verifySignatureSetsSameMessage(sameMessageSets, sameMessage);
+    await pool.verifySignatureSets(sets, {batchable: true});
+
+    const invalidSet: ISignatureSet = {...sets[0], signingRoot: Buffer.alloc(32, 0xff)};
+    await pool.verifySignatureSets([invalidSet], {batchable: true});
+
+    const batchSuccess = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_batch_sigs_success_total"
+    );
+    expect(batchSuccess).toContain("lodestar_bls_thread_pool_batch_sigs_success_total 3");
+
+    const nativeDuration = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_native_verification_duration_seconds"
+    );
+    for (const operation of ["general_batch", "general_direct", "general_fallback", "same_message"]) {
+      expect(nativeDuration).toContain(`operation="${operation}"`);
+    }
+
+    const nativeSignatureSets = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_native_verification_signature_sets_total"
+    );
+    expect(nativeSignatureSets).toContain(
+      'lodestar_bls_thread_pool_native_verification_signature_sets_total{operation="general_batch"} 4'
+    );
+    expect(nativeSignatureSets).toContain(
+      'lodestar_bls_thread_pool_native_verification_signature_sets_total{operation="general_fallback"} 1'
+    );
+
+    const invalidInput: ISignatureSet = {...sets[0], type: SignatureSetType.aggregate, indices: [-1]};
+    await expect(pool.verifySignatureSets([invalidInput])).rejects.toThrow("Invalid validator index -1");
+
+    await Promise.all(Array.from({length: 11}, () => pool.verifySignatureSets(sets, {batchable: true})));
+
+    const jobResults = await metrics.register.getSingleMetricAsString("lodestar_bls_thread_pool_job_results_total");
+    expect(jobResults).toContain('type="default",outcome="valid"');
+    expect(jobResults).toContain('type="default",outcome="invalid"');
+    expect(jobResults).toContain('type="default",outcome="error"');
+    expect(jobResults).toContain('type="same_message",outcome="valid"');
+
+    const bufferFlushes = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_buffer_flushes_total"
+    );
+    expect(bufferFlushes).toContain('reason="timeout"');
+    expect(bufferFlushes).toContain('reason="size"');
+  });
+
   for (const priority of [true, false]) {
     it(`Should verify multiple signatures submitted asynchronously priority=${priority}`, async () => {
       // Because of the sleep, each sets submitted should be verified in a different job and worker
@@ -146,8 +198,8 @@ describe("chain / bls / multithread queue", () => {
     );
 
     await expect(Promise.all([smallJob, largeJob])).resolves.toEqual([true, true]);
-    const retries = await (metrics.blsThreadPool.batchRetries as unknown as Gauge).get();
-    expect(retries.values[0]?.value).toBe(0);
+    const retries = await metrics.register.getSingleMetricAsString("lodestar_bls_thread_pool_batch_retries_total");
+    expect(retries).toContain("lodestar_bls_thread_pool_batch_retries_total 0");
   });
 
   it("Should dispatch bounded packages to idle workers", async () => {
