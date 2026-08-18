@@ -20,6 +20,7 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker.js";
 import {DoppelgangerService} from "./services/doppelgangerService.js";
 import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ExternalSignerOptions, pollExternalSignerPubkeys} from "./services/externalSignerSync.js";
+import {InclusionListService} from "./services/inclusionList.js";
 import {IndicesService} from "./services/indices.js";
 import {pollBuilderValidatorRegistration, pollPrepareBeaconProposer} from "./services/prepareBeaconProposer.js";
 import {ProposerPreferencesService} from "./services/proposerPreferences.js";
@@ -39,6 +40,7 @@ export type ValidatorModules = {
   blockProposingService: BlockProposingService;
   attestationService: AttestationService;
   ptcService: PtcService;
+  inclusionListService: InclusionListService;
   syncCommitteeService: SyncCommitteeService;
   config: BeaconConfig;
   api: ApiClient;
@@ -95,6 +97,7 @@ export class Validator {
   private readonly blockProposingService: BlockProposingService;
   private readonly attestationService: AttestationService;
   private readonly ptcService: PtcService;
+  private readonly inclusionListService: InclusionListService;
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly config: BeaconConfig;
   private readonly api: ApiClient;
@@ -114,6 +117,7 @@ export class Validator {
     blockProposingService,
     attestationService,
     ptcService,
+    inclusionListService,
     syncCommitteeService,
     config,
     api,
@@ -131,6 +135,7 @@ export class Validator {
     this.blockProposingService = blockProposingService;
     this.attestationService = attestationService;
     this.ptcService = ptcService;
+    this.inclusionListService = inclusionListService;
     this.syncCommitteeService = syncCommitteeService;
     this.config = config;
     this.api = api;
@@ -296,6 +301,17 @@ export class Validator {
       metrics
     );
 
+    const inclusionListService = new InclusionListService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      chainHeaderTracker,
+      syncingStatusTracker,
+      emitter
+    );
+
     const syncCommitteeService = new SyncCommitteeService(
       config,
       loggerVc,
@@ -322,6 +338,7 @@ export class Validator {
       blockProposingService,
       attestationService,
       ptcService,
+      inclusionListService,
       syncCommitteeService,
       config,
       api,
@@ -389,6 +406,7 @@ export class Validator {
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.ptcService.removeDutiesForKey(pubkey);
+    this.inclusionListService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);
   }
 

@@ -961,9 +961,11 @@ function preparePayloadAttributes(
       throw new Error("Expected Heze state for Heze payload attributes");
     }
     // The payload built for prepareSlot must satisfy the inclusion lists observed for the
-    // preceding slot, restricted to those that arrived before the inclusion list deadline.
+    // preceding slot. Unlike validation, the proposer builds against its full view including
+    // untimely lists (only_timely=False in prepare_execution_payload), so the payload also
+    // satisfies the timely-only subset every validator enforces.
     (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
-      chain.inclusionListStore.getInclusionListTransactions(prepareState, prepareSlot - 1, true);
+      chain.inclusionListStore.getInclusionListTransactions(prepareState, prepareSlot - 1, false);
   }
 
   return payloadAttributes;

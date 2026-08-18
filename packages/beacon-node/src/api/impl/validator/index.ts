@@ -30,6 +30,7 @@ import {
   getInclusionListCommittee,
   isStatePostAltair,
   isStatePostGloas,
+  isStatePostHeze,
   proposerShufflingDecisionRoot,
 } from "@lodestar/state-transition";
 import {
@@ -48,6 +49,7 @@ import {
   bellatrix,
   getValidatorStatus,
   gloas,
+  heze,
   phase0,
   ssz,
 } from "@lodestar/types";
@@ -900,9 +902,27 @@ export function getValidatorApi(
       const bidParentBlockHash = isBuildingOnFull ? parentBlock.executionPayloadBlockHash : parentBlock.parentBlockHash;
       const circuitBreakerActive = chain.builderCircuitBreaker.isActive(slot, parentBlock);
       // Keep a builder bid as fallback unless the circuit breaker is active
-      const builderBid = circuitBreakerActive
+      let builderBid = circuitBreakerActive
         ? null
         : chain.executionPayloadBidPool.getBestBid(slot, bidParentBlockHash, parentBlockRootHex);
+
+      // [New in Heze:EIP7805] A proposer must not include a bid whose inclusion_list_bits misses
+      // an inclusion list it has seen. Unlike bid gossip validation this uses the proposer's full
+      // view including untimely lists (only_timely=False), so a bid accepted here also satisfies
+      // the timely-only view every other validator enforces.
+      if (builderBid !== null) {
+        const headState = chain.getHeadState();
+        if (isStatePostHeze(headState)) {
+          const {inclusionListBits} = builderBid.message as heze.ExecutionPayloadBid;
+          if (!chain.inclusionListStore.isInclusionListBitsInclusive(headState, slot - 1, inclusionListBits, false)) {
+            logger.verbose("Discarding builder bid with non-inclusive inclusion list bits", {
+              slot,
+              builderIndex: builderBid.message.builderIndex,
+            });
+            builderBid = null;
+          }
+        }
+      }
 
       const logCtx = {
         slot,
