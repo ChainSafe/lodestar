@@ -22,7 +22,6 @@ import {
   RootCache,
   computeEpochAtSlot,
   computeTimeAtSlot,
-  isStartSlotOfEpoch,
   isStatePostAltair,
   isStatePostBellatrix,
 } from "@lodestar/state-transition";
@@ -404,11 +403,7 @@ export async function importBlock(
         notOverrideFcuReason = NotReorgedReason.NotProposerOfNextSlot;
       }
     } catch (e) {
-      if (isStartSlotOfEpoch(proposalSlot)) {
-        notOverrideFcuReason = NotReorgedReason.AtEpochBoundary;
-      } else {
-        this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
-      }
+      this.logger.warn("Unable to get beacon proposer. Do not override fcu.", {proposalSlot}, e as Error);
     }
 
     if (shouldOverrideFcu) {
