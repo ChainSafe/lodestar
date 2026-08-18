@@ -95,8 +95,6 @@ export const defaultSkipOpts: SkipOpts = {
     // TODO GLOAS: enable this after gloas fork choice is ready
     /^gloas\/fork_choice_compliance\/.*/,
     /^heze\/fork_choice_compliance\/.*/,
-    // TODO-HEZE: re-enable after on_inclusion_list (FOCIL) fork choice is implemented.
-    /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [
     // TODO-GLOAS: re-enable after gloas light client is implemented
