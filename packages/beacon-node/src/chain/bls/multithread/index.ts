@@ -243,7 +243,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     const workers: WorkerDescriptor[] = [];
 
     for (let i = 0; i < poolSize; i++) {
-      const workerData: WorkerData = {workerId: i};
+      const workerData: WorkerData = {workerId: i, metricsEnabled: this.metrics !== null};
       const worker = new Worker(path.join(workerDir, "worker.js"), {
         workerData,
       } as ConstructorParameters<typeof Worker>[1]);
@@ -417,7 +417,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         workerId,
         batchRetries,
         batchSigsSuccess,
-        nativeVerificationTimes,
+        nativeVerificationTimes = [],
         workerStartTime,
         workerEndTime,
         results,

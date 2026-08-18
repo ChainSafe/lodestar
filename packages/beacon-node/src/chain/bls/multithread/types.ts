@@ -3,6 +3,7 @@ import {SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
 
 export type WorkerData = {
   workerId: number;
+  metricsEnabled: boolean;
 };
 
 export enum JobQueueItemType {
@@ -46,8 +47,8 @@ export type BlsWorkResult = {
   batchRetries: number;
   /** Total num of sigs that have been successfully verified with batching */
   batchSigsSuccess: number;
-  /** Native verification call timings */
-  nativeVerificationTimes: NativeVerificationTime[];
+  /** Native verification call timings, only present when metrics are enabled */
+  nativeVerificationTimes?: NativeVerificationTime[];
   /** Time worker function starts - UNIX timestamp in seconds and nanoseconds */
   workerStartTime: [number, number];
   /** Time worker function ends - UNIX timestamp in seconds and nanoseconds */

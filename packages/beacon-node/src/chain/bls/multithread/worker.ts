@@ -28,7 +28,7 @@ const BATCHABLE_MIN_PER_CHUNK = 16;
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
 if (!workerData) throw Error("workerData must be defined");
-const {workerId} = workerData || {};
+const {workerId, metricsEnabled} = workerData || {};
 
 expose({
   async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
@@ -39,7 +39,7 @@ expose({
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
   const results: WorkResult<boolean[]>[] = [];
-  const nativeVerificationTimes: NativeVerificationTime[] = [];
+  const nativeVerificationTimes: NativeVerificationTime[] | null = metricsEnabled ? [] : null;
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
@@ -126,18 +126,25 @@ verifySignatureSetsSameMessage
 
   const [workerEndSec, workerEndNs] = process.hrtime();
 
-  return {
+  const workResult: BlsWorkResult = {
     workerId,
     batchRetries,
     batchSigsSuccess,
-    nativeVerificationTimes,
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
+  if (nativeVerificationTimes !== null) {
+    workResult.nativeVerificationTimes = nativeVerificationTimes;
+  }
+  return workResult;
 }
 
-function timeNativeVerification<T>(type: JobQueueItemType, times: NativeVerificationTime[], verify: () => T): T {
+function timeNativeVerification<T>(type: JobQueueItemType, times: NativeVerificationTime[] | null, verify: () => T): T {
+  if (times === null) {
+    return verify();
+  }
+
   const startTime = process.hrtime();
   try {
     return verify();
