@@ -208,6 +208,12 @@ export function getBeaconBlockApi({
     const blockLocallyProduced = chain.blockProductionCache.has(blockRoot);
     const valLogMeta = {slot, blockRoot, bodyRoot, broadcastValidation, blockLocallyProduced};
 
+    if (chain.forkChoice.hasBlockHex(blockRoot)) {
+      // Block was already imported, e.g. published again by the validator client or received via gossip. Benign.
+      chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+      return;
+    }
+
     switch (broadcastValidation) {
       case routes.beacon.BroadcastValidation.gossip: {
         if (!blockLocallyProduced) {
@@ -389,16 +395,20 @@ export function getBeaconBlockApi({
         chain
           .processBlock(blockForImport, opts)
           .catch((e) => {
-            if (
-              e instanceof BlockError &&
-              (e.type.code === BlockErrorCode.PARENT_BLOCK_UNKNOWN ||
-                e.type.code === BlockErrorCode.PARENT_PAYLOAD_UNKNOWN)
-            ) {
-              chain.emitter.emit(ChainEvent.blockUnknownParent, {
-                blockInput: blockForImport,
-                peer: IDENTITY_PEER_ID,
-                source: BlockInputSource.api,
-              });
+            if (e instanceof BlockError) {
+              switch (e.type.code) {
+                case BlockErrorCode.ALREADY_KNOWN:
+                  // Block was imported while publishing, e.g. received via gossip. Benign.
+                  chain.logger.debug("Ignoring already-known block during publishing", valLogMeta);
+                  return;
+                case BlockErrorCode.PARENT_BLOCK_UNKNOWN:
+                case BlockErrorCode.PARENT_PAYLOAD_UNKNOWN:
+                  chain.emitter.emit(ChainEvent.blockUnknownParent, {
+                    blockInput: blockForImport,
+                    peer: IDENTITY_PEER_ID,
+                    source: BlockInputSource.api,
+                  });
+              }
             }
             throw e;
           }),
