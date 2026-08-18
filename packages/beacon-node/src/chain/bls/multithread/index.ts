@@ -360,6 +360,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     worker.status = {code: WorkerStatusCode.running, workerApi};
     this.workersBusy++;
 
+    if (this.jobs.length > 0) {
+      callInNextEventLoop(this.runJob);
+    }
+
     try {
       let startedJobsDefault = 0;
       let startedJobsSameMessage = 0;
