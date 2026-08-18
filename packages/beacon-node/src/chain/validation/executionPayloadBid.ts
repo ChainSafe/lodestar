@@ -9,8 +9,9 @@ import {
   isGasLimitTargetCompatible,
   isStartSlotOfEpoch,
   isStatePostGloas,
+  isStatePostHeze,
 } from "@lodestar/state-transition";
-import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
+import {RootHex, Slot, ValidatorIndex, gloas, heze} from "@lodestar/types";
 import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
@@ -368,6 +369,21 @@ async function validateExecutionPayloadBid(
       parentBlockRoot: bidParentBlockRoot,
       parentBlockHash: bidParentBlockHash,
     });
+  }
+
+  // [IGNORE] [New in Heze:EIP7805] bid.inclusionListBits covers our view of the inclusion lists
+  // for the slot preceding the bid, restricted to the ones that arrived before the deadline. A
+  // builder that saw fewer lists than we did cannot have built a payload satisfying ours.
+  const headState = chain.getHeadState();
+  if (isStatePostHeze(headState)) {
+    const {inclusionListBits} = bid as heze.ExecutionPayloadBid;
+    if (!chain.inclusionListStore.isInclusionListBitsInclusive(headState, bid.slot - 1, inclusionListBits, true)) {
+      throw new ExecutionPayloadBidError(GossipAction.IGNORE, {
+        code: ExecutionPayloadBidErrorCode.INCLUSION_LIST_BITS_NOT_INCLUSIVE,
+        builderIndex: bid.builderIndex,
+        slot: bid.slot,
+      });
+    }
   }
 
   // Valid

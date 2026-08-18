@@ -31,6 +31,7 @@ import {
   isStatePostBellatrix,
   isStatePostCapella,
   isStatePostGloas,
+  isStatePostHeze,
 } from "@lodestar/state-transition";
 import {
   BLSPubkey,
@@ -68,7 +69,7 @@ import {fromGraffitiBytes} from "../../util/graffiti.js";
 import {kzg} from "../../util/kzg.js";
 import type {BeaconChain} from "../chain.js";
 import {CommonBlockBody} from "../interface.js";
-import {ProposerPreferencesPool} from "../opPools/index.js";
+import {InclusionListStore, ProposerPreferencesPool} from "../opPools/index.js";
 import {validateBlobsAndKzgCommitments, validateCellsAndKzgCommitments} from "./validateBlobsAndKzgCommitments.js";
 
 // Time to provide the EL to generate a payload from new payload id
@@ -728,6 +729,7 @@ export async function prepareExecutionPayload(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   logger: Logger,
   fork: ForkPostBellatrix,
@@ -829,6 +831,7 @@ export function getPayloadAttributesForSSE(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
@@ -878,6 +881,7 @@ function preparePayloadAttributes(
     config: ChainForkConfig;
     forkChoice: IForkChoice;
     proposerPreferencesPool: ProposerPreferencesPool;
+    inclusionListStore: InclusionListStore;
   },
   {
     prepareState,
@@ -953,8 +957,13 @@ function preparePayloadAttributes(
   }
 
   if (ForkSeq[fork] >= ForkSeq.heze) {
-    // TODO HEZE: populate from inclusion list pool once IL aggregation is wired up.
-    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions = [];
+    if (!isStatePostHeze(prepareState)) {
+      throw new Error("Expected Heze state for Heze payload attributes");
+    }
+    // The payload built for prepareSlot must satisfy the inclusion lists observed for the
+    // preceding slot, restricted to those that arrived before the inclusion list deadline.
+    (payloadAttributes as heze.SSEPayloadAttributes["payloadAttributes"]).inclusionListTransactions =
+      chain.inclusionListStore.getInclusionListTransactions(prepareState, prepareSlot - 1, true);
   }
 
   return payloadAttributes;
