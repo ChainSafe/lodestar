@@ -118,7 +118,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.GENESIS_BLOCK}
   | {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
   | {code: BlockErrorCode.ALREADY_KNOWN; root: RootHex}
-  | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex}
+  | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex; root: RootHex}
   | {code: BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED}
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID; blockSlot: Slot}

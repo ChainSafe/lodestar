@@ -35,6 +35,10 @@ allowBuilds:
   ssh2: true
 
 overrides:
+  # Pin exactly while patches/@libp2p__tcp@11.0.13.patch is in place, the patch
+  # only applies to this version. Remove together with the patch once
+  # js-libp2p#3597 is released.
+  "@libp2p/tcp": "11.0.13"
   dns-over-http-resolver: "^2.1.1"
   elliptic: ">=6.6.1"
   loupe: "^2.3.6"
@@ -45,4 +49,5 @@ overrides:
   sigstore: "4.0.0"
 
 patchedDependencies:
+  "@libp2p/tcp@11.0.13": patches/@libp2p__tcp@11.0.13.patch
   sigstore@4.0.0: patches/sigstore@4.0.0.patch
