@@ -73,22 +73,20 @@ export function upgradeStateToGloas(
   );
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
-  const latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.defaultViewDU();
-  latestExecutionPayloadBid.parentBlockHash = stateFulu.latestExecutionPayloadHeader.parentHash;
-  latestExecutionPayloadBid.parentBlockRoot = stateFulu.latestBlockHeader.parentRoot;
-  latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
-  latestExecutionPayloadBid.prevRandao = stateFulu.latestExecutionPayloadHeader.prevRandao;
-  latestExecutionPayloadBid.feeRecipient = ssz.ExecutionAddress.defaultValue();
-  latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
-  latestExecutionPayloadBid.builderIndex = BUILDER_INDEX_SELF_BUILD;
-  latestExecutionPayloadBid.slot = stateFulu.latestBlockHeader.slot;
-  latestExecutionPayloadBid.value = 0;
-  latestExecutionPayloadBid.executionPayment = 0n;
-  latestExecutionPayloadBid.blobKzgCommitments = ssz.gloas.BlobKzgCommitments.defaultViewDU();
-  latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
+  stateGloasView.latestExecutionPayloadBid.parentBlockHash = stateFulu.latestExecutionPayloadHeader.parentHash;
+  stateGloasView.latestExecutionPayloadBid.parentBlockRoot = stateFulu.latestBlockHeader.parentRoot;
+  stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
+  stateGloasView.latestExecutionPayloadBid.prevRandao = stateFulu.latestExecutionPayloadHeader.prevRandao;
+  stateGloasView.latestExecutionPayloadBid.feeRecipient = ssz.ExecutionAddress.defaultValue();
+  stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
+  stateGloasView.latestExecutionPayloadBid.builderIndex = BUILDER_INDEX_SELF_BUILD;
+  stateGloasView.latestExecutionPayloadBid.slot = stateFulu.latestBlockHeader.slot;
+  stateGloasView.latestExecutionPayloadBid.value = 0;
+  stateGloasView.latestExecutionPayloadBid.executionPayment = 0n;
+  stateGloasView.latestExecutionPayloadBid.blobKzgCommitments = ssz.gloas.BlobKzgCommitments.defaultViewDU();
+  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
     ssz.gloas.ExecutionRequests.defaultValue()
   );
-  stateGloasView.latestExecutionPayloadBid = latestExecutionPayloadBid;
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
   stateGloasView.historicalSummaries = stateGloasCloned.historicalSummaries;
