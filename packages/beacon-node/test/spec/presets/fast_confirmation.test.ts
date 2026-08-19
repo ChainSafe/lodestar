@@ -720,15 +720,7 @@ const fastConfirmationTest =
           // processing, which Lodestar does not support. Unskip if upstream signs deposits for
           // real, or if full bls_setting=2 support is ever added.
           name.includes("is_one_confirmed_fails_recently_activated_validator_voting_in_empty_slot") ||
-          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state") ||
-          // These vectors run `on_fast_confirmation` twice in one slot (stale GU test) or skip an
-          // epoch-boundary run (consecutive slots test), so a client running the handler once per
-          // slot cannot reproduce the expected FCR-store variables. Fixed upstream, unskip when
-          // the next spec-tests release (> v1.7.0-alpha.13) is picked up:
-          // - https://github.com/ethereum/consensus-specs/pull/5499
-          // - https://github.com/ethereum/consensus-specs/pull/5498
-          name.includes("fcr_no_restart_if_head_gu_is_stale") ||
-          name.includes("is_one_confirmed_passes_with_empty_slot_and_attester_in_two_consecutive_slots_2"),
+          name.includes("is_one_confirmed_passes_with_new_validator_activated_in_head_state"),
       },
     };
   };
