@@ -2,7 +2,7 @@ import childProcess, {ChildProcess, ChildProcessWithoutNullStreams} from "node:c
 import fs from "node:fs";
 import path from "node:path";
 import stream from "node:stream";
-import {Logger, prettyMsToTime, retry, sleep} from "@lodestar/utils";
+import {Logger, prettyMsToTime, retry} from "@lodestar/utils";
 
 export type ChildProcessLogOptions = {
   /**
@@ -92,25 +92,55 @@ export function isPidRunning(pid: number): boolean {
 
 export const stopChildProcess = async (
   childProcess: childProcess.ChildProcess,
-  signal: NodeJS.Signals | number = "SIGTERM"
+  signal: NodeJS.Signals | number = "SIGTERM",
+  timeoutMs = 5000
 ): Promise<void> => {
-  if (childProcess.killed || childProcess.exitCode !== null || childProcess.signalCode !== null) {
+  if (childProcess.exitCode !== null || childProcess.signalCode !== null) {
     return;
   }
 
   const pid = childProcess.pid;
+  const waitForExit = async (): Promise<"exited" | "timeout"> => {
+    if (childProcess.exitCode !== null || childProcess.signalCode !== null) {
+      return "exited";
+    }
 
-  await new Promise((resolve, reject) => {
-    childProcess.once("error", reject);
-    // We use `exit` instead of `close` as multiple processes can share same `stdio`
-    childProcess.once("exit", resolve);
-    childProcess.kill(signal);
-  });
+    return new Promise((resolve, reject) => {
+      let timeout: NodeJS.Timeout | undefined;
+      const cleanup = (): void => {
+        if (timeout !== undefined) {
+          clearTimeout(timeout);
+        }
+        childProcess.off("error", onError);
+        childProcess.off("exit", onExit);
+      };
+      const onError = (error: Error): void => {
+        cleanup();
+        reject(error);
+      };
+      const onExit = (): void => {
+        cleanup();
+        resolve("exited");
+      };
 
-  if (pid != null && isPidRunning(pid)) {
-    // Wait for sometime and try to kill this time
-    await sleep(500);
-    await stopChildProcess(childProcess, "SIGKILL");
+      childProcess.once("error", onError);
+      // We use `exit` instead of `close` as multiple processes can share same `stdio`
+      childProcess.once("exit", onExit);
+      timeout = setTimeout(() => {
+        cleanup();
+        resolve("timeout");
+      }, timeoutMs);
+    });
+  };
+
+  childProcess.kill(signal);
+  if ((await waitForExit()) === "exited") {
+    return;
+  }
+
+  childProcess.kill("SIGKILL");
+  if ((await waitForExit()) === "timeout" && pid != null && isPidRunning(pid)) {
+    throw Error(`Failed to stop child process pid=${pid} with SIGKILL after ${timeoutMs}ms`);
   }
 };
 
@@ -125,23 +155,7 @@ export const gracefullyStopChildProcess = async (
   childProcess: childProcess.ChildProcess,
   timeoutMs = 3000
 ): Promise<void> => {
-  if (childProcess.killed || childProcess.exitCode !== null || childProcess.signalCode !== null) {
-    return;
-  }
-
-  // Send signal to child process to gracefully stop
-  childProcess.kill("SIGINT");
-
-  // Wait for process to exit or timeout
-  const result = await Promise.race([
-    new Promise((resolve) => childProcess.once("exit", resolve)).then(() => "exited"),
-    sleep(timeoutMs).then(() => "timeout"),
-  ]);
-
-  // If process is timeout kill it
-  if (result === "timeout") {
-    await stopChildProcess(childProcess, "SIGKILL");
-  }
+  await stopChildProcess(childProcess, "SIGINT", timeoutMs);
 };
 
 export enum ChildProcessResolve {
