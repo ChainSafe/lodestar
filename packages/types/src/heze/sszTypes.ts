@@ -13,14 +13,12 @@ export const InclusionListCommittee = new VectorBasicType(ValidatorIndex, INCLUS
 
 export const InclusionListBits = new BitVectorType(INCLUSION_LIST_COMMITTEE_SIZE);
 
-export const InclusionListTransactions = gloasSsz.Transactions;
-
 export const InclusionList = new ContainerType(
   {
     slot: Slot,
     validatorIndex: ValidatorIndex,
     dependentRoot: Root,
-    transactions: InclusionListTransactions,
+    transactions: gloasSsz.Transactions,
   },
   {typeName: "InclusionList", jsonCase: "eth2"}
 );
@@ -108,7 +106,7 @@ export const BlockContents = new ContainerType(
 export const PayloadAttributes = new ContainerType(
   {
     ...gloasSsz.PayloadAttributes.fields,
-    inclusionListTransactions: InclusionListTransactions, // [New in Heze:EIP7805]
+    inclusionListTransactions: gloasSsz.Transactions, // [New in Heze:EIP7805]
   },
   {typeName: "PayloadAttributes", jsonCase: "eth2"}
 );
