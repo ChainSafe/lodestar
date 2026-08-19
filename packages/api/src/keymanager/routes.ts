@@ -123,8 +123,8 @@ const UINT64_MAX = 2n ** 64n - 1n;
 
 function parseGweiAmount(value: unknown, field: string): bigint | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || !/^\d+$/.test(value)) {
-    throw Error(`${field} must be a string number without decimals`);
+  if (typeof value !== "string" || !/^(0|[1-9][0-9]{0,19})$/.test(value)) {
+    throw Error(`${field} must be an unsigned 64-bit integer encoded as a decimal string`);
   }
   const parsed = BigInt(value);
   if (parsed > UINT64_MAX) {
