@@ -25,7 +25,7 @@ import {
   WorkResultError,
   WorkerData,
 } from "./types.js";
-import {chunkifyMaximizeChunkSize} from "./utils.js";
+import {chunkifyMaxChunkSize} from "./utils.js";
 
 // Worker constructor consider the path relative to the current working directory
 const workerDir = process.env.NODE_ENV === "test" ? "../../../../lib/chain/bls/multithread" : "./";
@@ -177,7 +177,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     // Split large array of sets into smaller.
     // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
     const results = await Promise.all(
-      chunkifyMaximizeChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map(
+      chunkifyMaxChunkSize(sets, MAX_SIGNATURE_SETS_PER_JOB).map(
         (setsChunk) =>
           new Promise<boolean>((resolve, reject) => {
             return this.queueBlsWork({

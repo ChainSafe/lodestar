@@ -276,6 +276,26 @@ describe("chain / bls / multithread queue", () => {
     expect(retries).toContain("lodestar_bls_thread_pool_batch_retries_total 0");
   });
 
+  it("Should keep every dispatched job within the verifier bound", async () => {
+    const pool = await initializePool();
+    const dispatchedJobSizes: number[] = [];
+
+    for (const worker of pool["workers"]) {
+      if (!("workerApi" in worker.status)) {
+        throw Error("BLS worker did not initialize");
+      }
+
+      const verifyManySignatureSets = worker.status.workerApi.verifyManySignatureSets.bind(worker.status.workerApi);
+      worker.status.workerApi.verifyManySignatureSets = async (workReqs) => {
+        dispatchedJobSizes.push(...workReqs.map((workReq) => workReq.sets.length));
+        return verifyManySignatureSets(workReqs);
+      };
+    }
+
+    await expect(pool.verifySignatureSets(Array.from({length: 257}, () => sets[0]))).resolves.toBe(true);
+    expect(Math.max(...dispatchedJobSizes)).toBeLessThanOrEqual(256);
+  });
+
   it("Should dispatch bounded packages to idle workers", async () => {
     const pool = await initializePool();
     await new Promise((resolve) => setTimeout(resolve, 0));
