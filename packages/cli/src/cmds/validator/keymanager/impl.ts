@@ -39,7 +39,7 @@ export class KeymanagerApi implements Api {
 
   private checkIfProposerWriteEnabled(): void {
     if (this.proposerConfigWriteDisabled === true) {
-      throw Error("proposerSettingsFile option activated");
+      throw new ApiError(403, "proposerSettingsFile option activated");
     }
   }
 
