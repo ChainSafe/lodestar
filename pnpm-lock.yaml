@@ -767,11 +767,8 @@ importers:
   packages/state-transition:
     dependencies:
       '@chainsafe/as-sha256':
-        specifier: ^1.2.4
+        specifier: ^1.2.0
         version: 1.2.4
-      '@chainsafe/bls':
-        specifier: 8.2.0
-        version: 8.2.0
       '@chainsafe/lodestar-z':
         specifier: 'catalog:'
         version: https://codeload.github.com/chainsafe/lodestar-z/tar.gz/b82750f6c3ec3d57ed63fe31c2f968d4527ce0a5
@@ -1123,15 +1120,6 @@ packages:
 
   '@chainsafe/bls-keystore@3.1.0':
     resolution: {integrity: sha512-OR9hV9N53woNc6R2d08O3Oi3Ykx7uZARMx51W+WFP1fDaFSA/QaMraPGGA8tSx7livkb/Scwe3Basj9Pib67HA==}
-
-  '@chainsafe/bls@8.2.0':
-    resolution: {integrity: sha512-onCMG4K5GRWTHPf5T9DrOLsd5VoiOoL0NEpRoAigXVPqr+Gi2GyOncbvc9Vf4RjhmZGgtIJKKB4WJQbRV9Pddw==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      '@chainsafe/blst': ^1.0.0
-    peerDependenciesMeta:
-      '@chainsafe/blst':
-        optional: true
 
   '@chainsafe/caxa@3.0.6':
     resolution: {integrity: sha512-Q8Z2JdvLmZizhQr+bzsJHgYk16VQR4thZw6Z56NEKoiHjVKkC3LKcMntaXs9TII2Bb/OiNtaPyZP9BinY3v8Bw==}
@@ -3334,9 +3322,6 @@ packages:
 
   bl@5.1.0:
     resolution: {integrity: sha512-tv1ZJHLfTDnXE6tMHv73YgSJaWR2AFuPwMntBe7XL/GBFHnT0CLnsHMogfk5+GzCDC5ZWarSCYaIGATZt9dNsQ==}
-
-  bls-eth-wasm@1.5.0:
-    resolution: {integrity: sha512-7X5mj8d3/e5MGKpMye80gN6KCgatSEF7FNpl+yfUycIFw+vuw/y48RnuOV2urc0VqjFP13EY8FGZ19T+WzABvQ==}
 
   bn.js@4.12.0:
     resolution: {integrity: sha512-c98Bf3tPniI+scsdk237ku1Dc3ujXQTSgyiPUDEOe7tRkhrqridvh8klBv0HCEso1OLOYcHuCv/cS6DNxKH+ZA==}
@@ -6798,11 +6783,6 @@ snapshots:
       ethereum-cryptography: 2.2.1
       uuid: 9.0.1
 
-  '@chainsafe/bls@8.2.0':
-    dependencies:
-      '@chainsafe/bls-keygen': 0.4.0
-      bls-eth-wasm: 1.5.0
-
   '@chainsafe/caxa@3.0.6':
     dependencies:
       '@leafac/node': 0.0.1
@@ -9223,8 +9203,6 @@ snapshots:
       buffer: 6.0.3
       inherits: 2.0.4
       readable-stream: 3.6.2
-
-  bls-eth-wasm@1.5.0: {}
 
   bn.js@4.12.0: {}
 
