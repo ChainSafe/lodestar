@@ -5,6 +5,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType} from "@lodestar/state-transition";
 import {VerifySignatureOpts} from "../../../../src/chain/bls/interface.js";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
+import {WorkResultCode} from "../../../../src/chain/bls/multithread/types.js";
 import {createMetricsTest} from "../../../unit/metrics/utils.js";
 
 describe("chain / bls / multithread queue", () => {
@@ -137,14 +138,87 @@ describe("chain / bls / multithread queue", () => {
     const jobResults = await metrics.register.getSingleMetricAsString("lodestar_bls_thread_pool_job_results_total");
     expect(jobResults).toContain('type="default",outcome="valid"');
     expect(jobResults).toContain('type="default",outcome="invalid"');
-    expect(jobResults).toContain('type="default",outcome="error"');
+    expect(jobResults).toContain('type="default",outcome="prepError"');
     expect(jobResults).toContain('type="same_message",outcome="valid"');
+
+    const jobWaitTime = await metrics.register.getSingleMetricAsString(
+      "lodestar_bls_thread_pool_queue_job_wait_time_seconds"
+    );
+    expect(jobWaitTime).toContain('lodestar_bls_thread_pool_queue_job_wait_time_seconds_count{type="default"}');
+    expect(jobWaitTime).not.toContain("priority=");
+    expect(jobWaitTime).not.toContain("batchable=");
+
+    for (const metricName of [
+      "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
+      "lodestar_bls_thread_pool_job_duration_seconds",
+      "lodestar_bls_thread_pool_latency_to_worker",
+      "lodestar_bls_thread_pool_latency_from_worker",
+      "lodestar_bls_thread_pool_work_request_preparation_duration_seconds",
+      "lodestar_bls_thread_pool_verification_call_duration_seconds",
+    ]) {
+      const metric = await metrics.register.getSingleMetricAsString(metricName);
+      expect(metric).toContain('le="2"');
+      expect(metric).not.toContain('le="5"');
+    }
 
     const bufferFlushes = await metrics.register.getSingleMetricAsString(
       "lodestar_bls_thread_pool_buffer_flushes_total"
     );
     expect(bufferFlushes).toContain('reason="timeout"');
     expect(bufferFlushes).toContain('reason="size"');
+  });
+
+  it("Should distinguish verifier and worker result errors", async () => {
+    const metrics = createMetricsTest();
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics});
+    afterEachCallbacks.push(() => pool.close());
+    await pool["waitTillInitialized"]();
+
+    for (const worker of pool["workers"]) {
+      if (!("workerApi" in worker.status)) {
+        throw Error("BLS worker did not initialize");
+      }
+
+      worker.status.workerApi.verifyManySignatureSets = async () => {
+        const now = process.hrtime();
+        return {
+          workerId: 0,
+          batchRetries: 0,
+          batchSigsSuccess: 0,
+          verificationCalls: [],
+          workerStartTime: now,
+          workerEndTime: now,
+          results: [{code: WorkResultCode.error, error: Error("verification failed")}],
+        };
+      };
+    }
+
+    await expect(pool.verifySignatureSets([sets[0]])).rejects.toThrow("verification failed");
+
+    for (const worker of pool["workers"]) {
+      if (!("workerApi" in worker.status)) {
+        throw Error("BLS worker did not initialize");
+      }
+
+      worker.status.workerApi.verifyManySignatureSets = async () => {
+        const now = process.hrtime();
+        return {
+          workerId: 0,
+          batchRetries: 0,
+          batchSigsSuccess: 0,
+          verificationCalls: [],
+          workerStartTime: now,
+          workerEndTime: now,
+          results: [{code: WorkResultCode.success, result: []}],
+        };
+      };
+    }
+
+    await expect(pool.verifySignatureSets([sets[0]])).rejects.toThrow("Invalid BLS worker result length");
+
+    const jobResults = await metrics.register.getSingleMetricAsString("lodestar_bls_thread_pool_job_results_total");
+    expect(jobResults).toContain('type="default",outcome="verifyError"');
+    expect(jobResults).toContain('type="default",outcome="workerError"');
   });
 
   for (const priority of [true, false]) {
@@ -202,6 +276,26 @@ describe("chain / bls / multithread queue", () => {
     expect(retries).toContain("lodestar_bls_thread_pool_batch_retries_total 0");
   });
 
+  it("Should keep every dispatched job within the verifier bound", async () => {
+    const pool = await initializePool();
+    const dispatchedJobSizes: number[] = [];
+
+    for (const worker of pool["workers"]) {
+      if (!("workerApi" in worker.status)) {
+        throw Error("BLS worker did not initialize");
+      }
+
+      const verifyManySignatureSets = worker.status.workerApi.verifyManySignatureSets.bind(worker.status.workerApi);
+      worker.status.workerApi.verifyManySignatureSets = async (workReqs) => {
+        dispatchedJobSizes.push(...workReqs.map((workReq) => workReq.sets.length));
+        return verifyManySignatureSets(workReqs);
+      };
+    }
+
+    await expect(pool.verifySignatureSets(Array.from({length: 257}, () => sets[0]))).resolves.toBe(true);
+    expect(Math.max(...dispatchedJobSizes)).toBeLessThanOrEqual(256);
+  });
+
   it("Should dispatch bounded packages to idle workers", async () => {
     const pool = await initializePool();
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -225,18 +319,21 @@ describe("chain / bls / multithread queue", () => {
       };
     }
 
-    const smallJob = pool.verifySignatureSets([sets[0], sets[1]], {batchable: true});
-    const largeJob = pool.verifySignatureSets(
-      Array.from({length: 127}, () => sets[2]),
+    const firstJob = pool.verifySignatureSets(
+      Array.from({length: 128}, () => sets[0]),
+      {batchable: true}
+    );
+    const secondJob = pool.verifySignatureSets(
+      Array.from({length: 128}, () => sets[2]),
       {batchable: true}
     );
 
     try {
-      await vi.waitFor(() => expect(startedWorkerCalls).toBe(2));
+      await vi.waitFor(() => expect(startedWorkerCalls).toBe(1));
     } finally {
       releaseWorkers();
     }
 
-    await expect(Promise.all([smallJob, largeJob])).resolves.toEqual([true, true]);
+    await expect(Promise.all([firstJob, secondJob])).resolves.toEqual([true, true]);
   });
 });

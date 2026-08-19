@@ -644,9 +644,9 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.5, sum by (instance, le, type, priority, batchable) (rate(lodestar_bls_thread_pool_queue_job_wait_time_seconds_bucket[$rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (instance, le, type) (rate(lodestar_bls_thread_pool_queue_job_wait_time_seconds_bucket[$rate_interval])))",
           "interval": "",
-          "legendFormat": "p50 {{type}} priority={{priority}} batchable={{batchable}}",
+          "legendFormat": "p50 {{type}}",
           "refId": "A"
         },
         {
@@ -654,9 +654,9 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "histogram_quantile(0.95, sum by (instance, le, type, priority, batchable) (rate(lodestar_bls_thread_pool_queue_job_wait_time_seconds_bucket[$rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by (instance, le, type) (rate(lodestar_bls_thread_pool_queue_job_wait_time_seconds_bucket[$rate_interval])))",
           "interval": "",
-          "legendFormat": "p95 {{type}} priority={{priority}} batchable={{batchable}}",
+          "legendFormat": "p95 {{type}}",
           "refId": "B"
         }
       ],

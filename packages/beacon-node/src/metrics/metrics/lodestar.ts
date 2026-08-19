@@ -31,8 +31,7 @@ import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
-type BlsMetricBoolean = "true" | "false";
-type BlsJobOutcome = "valid" | "invalid" | "error";
+type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "workerError";
 type BlsBufferFlushReason = "size" | "timeout";
 type BlsVerificationCallOperation = "general_batch" | "general_direct" | "general_fallback" | "same_message";
 
@@ -421,25 +420,17 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_error_jobs_signature_sets_count",
         help: "Count of signature sets that ended in an input, binding, or worker error",
       }),
-      jobWaitTime: register.histogram<{
-        type: JobQueueItemType;
-        priority: BlsMetricBoolean;
-        batchable: BlsMetricBoolean;
-      }>({
+      jobWaitTime: register.histogram<{type: JobQueueItemType}>({
         name: "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
         help: "Time from adding a BLS job until it is selected for a worker dispatch group",
-        labelNames: ["type", "priority", "batchable"],
-        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60],
+        labelNames: ["type"],
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
-      jobDuration: register.histogram<{
-        type: JobQueueItemType;
-        priority: BlsMetricBoolean;
-        batchable: BlsMetricBoolean;
-      }>({
+      jobDuration: register.histogram<{type: JobQueueItemType}>({
         name: "lodestar_bls_thread_pool_job_duration_seconds",
         help: "End-to-end duration of a BLS job from submission through completion",
-        labelNames: ["type", "priority", "batchable"],
-        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60],
+        labelNames: ["type"],
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.2, 0.5, 1, 2],
       }),
       jobResults: register.counter<{type: JobQueueItemType; outcome: BlsJobOutcome}>({
         name: "lodestar_bls_thread_pool_job_results_total",
@@ -496,12 +487,12 @@ export function createLodestarMetrics(
       latencyToWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_to_worker",
         help: "Time from sending the job to the worker and the worker receiving it",
-        buckets: [0.001, 0.003, 0.01, 0.03, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
+        buckets: [0.001, 0.003, 0.01, 0.03, 0.1, 0.25, 0.5, 1, 2],
       }),
       latencyFromWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_from_worker",
         help: "Time from the worker sending the result and the main thread receiving it",
-        buckets: [0.001, 0.003, 0.01, 0.03, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
+        buckets: [0.001, 0.003, 0.01, 0.03, 0.1, 0.25, 0.5, 1, 2],
       }),
       mainThreadDurationInThreadPool: register.histogram({
         name: "lodestar_bls_thread_pool_main_thread_time_seconds",
@@ -518,16 +509,13 @@ export function createLodestarMetrics(
       workRequestPreparationDuration: register.histogram({
         name: "lodestar_bls_thread_pool_work_request_preparation_duration_seconds",
         help: "Main-thread time spent converting one worker dispatch group to binding inputs",
-        buckets: [
-          0.00005, 0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30,
-          60,
-        ],
+        buckets: [0.00005, 0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       }),
       verificationCallDuration: register.histogram<{operation: BlsVerificationCallOperation}>({
         name: "lodestar_bls_thread_pool_verification_call_duration_seconds",
         help: "Duration of one worker-side lodestar-z verification binding call, including input conversion",
         labelNames: ["operation"],
-        buckets: [0.00025, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60],
+        buckets: [0.00025, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
       }),
       verificationCallSignatureSets: register.counter<{operation: BlsVerificationCallOperation}>({
         name: "lodestar_bls_thread_pool_verification_call_signature_sets_total",
