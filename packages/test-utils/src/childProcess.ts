@@ -100,7 +100,7 @@ export const stopChildProcess = async (
   }
 
   const pid = childProcess.pid;
-  const waitForExit = async (): Promise<"exited" | "timeout"> => {
+  const killAndWaitForExit = async (killSignal: NodeJS.Signals | number): Promise<"exited" | "timeout"> => {
     if (childProcess.exitCode !== null || childProcess.signalCode !== null) {
       return "exited";
     }
@@ -130,16 +130,24 @@ export const stopChildProcess = async (
         cleanup();
         resolve("timeout");
       }, timeoutMs);
+
+      // Send the signal only after the `error`/`exit` listeners are armed. `kill()` can emit
+      // `error` synchronously (e.g. EPERM) or throw (e.g. EINVAL); arming afterwards would miss
+      // a synchronous `error` and leave the wait hanging until it times out.
+      try {
+        childProcess.kill(killSignal);
+      } catch (e) {
+        cleanup();
+        reject(e as Error);
+      }
     });
   };
 
-  childProcess.kill(signal);
-  if ((await waitForExit()) === "exited") {
+  if ((await killAndWaitForExit(signal)) === "exited") {
     return;
   }
 
-  childProcess.kill("SIGKILL");
-  if ((await waitForExit()) === "timeout" && pid != null && isPidRunning(pid)) {
+  if ((await killAndWaitForExit("SIGKILL")) === "timeout" && pid != null && isPidRunning(pid)) {
     throw Error(`Failed to stop child process pid=${pid} with SIGKILL after ${timeoutMs}ms`);
   }
 };
