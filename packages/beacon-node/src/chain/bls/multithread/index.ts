@@ -50,9 +50,9 @@ const blsPoolSize = Math.max(defaultPoolSize - 1, 1);
  * The biggest sets happen during sync, on mainnet batches of 64 blocks have around ~8000 signatures.
  * The latency cost of sending the job to and from the worker is approx a single sig verification.
  * If you split a big signature into 2, the extra time cost is `(2+2N)/(1+2N)`.
- * For 128, the extra time cost is about 0.3%. No specific reasoning for `128`, it's just good enough.
+ * For 256, the extra time cost is about 0.2% and matches the maximum supported by Lodestar-Z.
  */
-const MAX_SIGNATURE_SETS_PER_JOB = 128;
+const MAX_SIGNATURE_SETS_PER_JOB = 256;
 
 /**
  * If there are more than `MAX_BUFFERED_SIGS` buffered sigs, verify them immediately without waiting `MAX_BUFFER_WAIT_MS`.
@@ -102,7 +102,7 @@ type WorkerDescriptor = {
 };
 
 type BufferFlushReason = "size" | "timeout";
-type BlsJobOutcome = "valid" | "invalid" | "error";
+type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "workerError";
 
 /**
  * Wraps "threads" library thread pool queue system with the goals:
@@ -398,7 +398,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           workReq = jobItemWorkReq(job);
         } catch (e) {
           this.metrics?.blsThreadPool.errorJobsSignatureSetsCount.inc(jobItemSigSets(job));
-          this.observeJobCompletion(job, "error");
+          this.observeJobCompletion(job, "prepError");
           job.reject(e as Error);
           continue;
         }
@@ -456,7 +456,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
         const outcome = completeJob(job, jobResult, i, signatureSets);
         completedJobsCount = i + 1;
         this.observeJobCompletion(job, outcome);
-        if (outcome === "error") {
+        if (outcome === "prepError" || outcome === "verifyError" || outcome === "workerError") {
           errorCount += signatureSets;
         } else {
           successCount += signatureSets;
@@ -488,7 +488,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       let errorSignatureSets = 0;
       for (let i = completedJobsCount; i < jobsStarted.length; i++) {
         const job = jobsStarted[i];
-        this.observeJobCompletion(job, "error");
+        this.observeJobCompletion(job, "workerError");
         errorSignatureSets += jobItemSigSets(job);
         job.reject(e as Error);
       }
@@ -571,7 +571,7 @@ function completeJob(
 ): BlsJobOutcome {
   if (!jobResult || jobResult.code !== WorkResultCode.success) {
     job.reject(getJobResultError(jobResult ?? null, index));
-    return "error";
+    return "verifyError";
   }
 
   switch (job.type) {
@@ -579,7 +579,7 @@ function completeJob(
       const [result] = jobResult.result;
       if (jobResult.result.length !== 1 || result === undefined) {
         job.reject(getInvalidResultLengthError(index, 1, jobResult.result.length));
-        return "error";
+        return "workerError";
       }
 
       job.resolve(result);
@@ -589,7 +589,7 @@ function completeJob(
     case JobQueueItemType.sameMessage:
       if (jobResult.result.length !== signatureSets) {
         job.reject(getInvalidResultLengthError(index, signatureSets, jobResult.result.length));
-        return "error";
+        return "workerError";
       }
 
       job.resolve(jobResult.result);
@@ -597,16 +597,8 @@ function completeJob(
   }
 }
 
-function jobMetricLabels(job: JobQueueItem): {
-  type: JobQueueItemType;
-  priority: "true" | "false";
-  batchable: "true" | "false";
-} {
-  return {
-    type: job.type,
-    priority: job.opts.priority ? "true" : "false",
-    batchable: job.opts.batchable ? "true" : "false",
-  };
+function jobMetricLabels(job: JobQueueItem): {type: JobQueueItemType} {
+  return {type: job.type};
 }
 
 function getJobResultError(jobResult: WorkResultError | null, i: number): Error {
