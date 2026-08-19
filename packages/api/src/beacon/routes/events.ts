@@ -81,9 +81,9 @@ const blockGloas = new ContainerType(
   {
     slot: ssz.Slot,
     block: stringType,
-    executionOptimistic: ssz.Boolean,
     blockHash: stringType,
     builderIndex: ssz.BuilderIndex,
+    executionOptimistic: ssz.Boolean,
   },
   {jsonCase: "eth2"}
 );
@@ -203,9 +203,9 @@ export type EventData = {
   [EventType.block]: {
     slot: Slot;
     block: RootHex;
-    executionOptimistic: boolean;
     blockHash?: RootHex;
     builderIndex?: BuilderIndex;
+    executionOptimistic: boolean;
   };
   [EventType.blockGossip]: {
     slot: Slot;
