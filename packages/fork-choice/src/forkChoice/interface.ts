@@ -54,7 +54,7 @@ export enum NotReorgedReason {
   HeadBlockIsTimely = "headBlockIsTimely",
   ParentBlockNotAvailable = "parentBlockNotAvailable",
   ProposerBoostReorgDisabled = "proposerBoostReorgDisabled",
-  AtEpochBoundary = "atEpochBoundary",
+  NotShufflingStable = "notShufflingStable",
   NotFFGCompetitive = "notFFGCompetitive",
   ChainLongUnfinality = "chainLongUnfinality",
   ParentBlockDistanceMoreThanOneSlot = "parentBlockDistanceMoreThanOneSlot",

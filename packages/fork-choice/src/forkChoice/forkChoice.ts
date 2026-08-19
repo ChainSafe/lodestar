@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -2111,11 +2111,9 @@ export class ForkChoice implements IForkChoice {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.HeadBlockIsTimely};
     }
 
-    // No reorg if we are at an epoch boundary
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_not_epoch_boundary
-    const isAtEpochBoundary = slot % SLOTS_PER_EPOCH === 0;
-    if (isAtEpochBoundary) {
-      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.AtEpochBoundary};
+    const isShufflingStable = isForkPostFulu(this.config.getForkName(slot)) || slot % SLOTS_PER_EPOCH !== 0;
+    if (!isShufflingStable) {
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.NotShufflingStable};
     }
 
     // No reorg if headBlock and parentBlock are not ffg competitive

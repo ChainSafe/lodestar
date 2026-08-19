@@ -13,7 +13,7 @@ import {IBeaconChain} from "../index.js";
 
 /**
  * Validates a gossiped `SignedProposerPreferences` per
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/gloas/p2p-interface.md#new-proposer_preferences
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/p2p-interface.md#new-proposer_preferences
  */
 export async function validateGossipProposerPreferences(
   chain: IBeaconChain,

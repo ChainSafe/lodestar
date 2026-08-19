@@ -10,14 +10,14 @@ import {
   ProgressiveListCompositeType,
   ValueOf,
 } from "@chainsafe/ssz";
-import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
 import type {BeaconStateTransitionMetrics} from "../metrics.js";
 import {CachedBeaconStateFulu, CachedBeaconStateGloas} from "../types.js";
-import {addBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
+import {appendBuilderToRegistry, initializePtcWindow, isBuilderWithdrawalCredential} from "../util/gloas.js";
 import {isValidatorKnown} from "../util/index.js";
 import {PendingDepositsLookup} from "../util/pendingDepositsLookup.js";
 import {progressiveListRootNode} from "../util/ssz.js";
@@ -73,11 +73,21 @@ export function upgradeStateToGloas(
   );
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
-  stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
-  stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
-  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
-    ssz.gloas.ExecutionRequests.defaultValue()
-  );
+  const latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU({
+    parentBlockHash: stateFulu.latestExecutionPayloadHeader.parentHash,
+    parentBlockRoot: stateFulu.latestBlockHeader.parentRoot,
+    blockHash: stateFulu.latestExecutionPayloadHeader.blockHash,
+    prevRandao: stateFulu.latestExecutionPayloadHeader.prevRandao,
+    feeRecipient: ssz.ExecutionAddress.defaultValue(),
+    gasLimit: BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit),
+    builderIndex: BUILDER_INDEX_SELF_BUILD,
+    slot: stateFulu.latestBlockHeader.slot,
+    value: 0,
+    executionPayment: 0n,
+    blobKzgCommitments: ssz.gloas.BlobKzgCommitments.defaultValue(),
+    executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue()),
+  });
+  stateGloasView.latestExecutionPayloadBid = latestExecutionPayloadBid;
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
   stateGloasView.historicalSummaries = stateGloasCloned.historicalSummaries;
@@ -264,7 +274,7 @@ function onboardBuildersFromPendingDeposits(
       continue;
     }
 
-    addBuilderToRegistry(
+    appendBuilderToRegistry(
       state,
       deposit.pubkey,
       PAYLOAD_BUILDER_VERSION,

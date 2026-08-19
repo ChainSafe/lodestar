@@ -4,7 +4,7 @@ import {Epoch, Slot} from "@lodestar/types";
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export class ClockMock implements IClock {
-  readonly currentEpoch: number = 0;
+  currentEpoch = 0;
   readonly genesisTime: number = 0;
   readonly secondsPerSlot: number = 12;
 
@@ -18,7 +18,7 @@ export class ClockMock implements IClock {
   msFromSlot = (): number => 0;
   secFromSlot = (): number => 0;
   getCurrentSlot = (): number => 0;
-  getCurrentEpoch = (): number => 0;
+  getCurrentEpoch = (): number => this.currentEpoch;
 
   async tickSlotFns(slot: Slot, signal: AbortSignal): Promise<void> {
     for (const fn of this.everySlot) await fn(slot, signal);

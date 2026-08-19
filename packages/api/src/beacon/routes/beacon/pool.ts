@@ -1,13 +1,6 @@
 import {ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {
-  ForkName,
-  ForkPostElectra,
-  ForkPreElectra,
-  MAX_PAYLOAD_ATTESTATIONS,
-  PTC_SIZE,
-  isForkPostElectra,
-} from "@lodestar/params";
+import {ForkName, ForkPostElectra, ForkPreElectra, PTC_SIZE, isForkPostElectra} from "@lodestar/params";
 import {
   ArrayOf,
   AttesterSlashing,
@@ -44,7 +37,6 @@ const ProposerSlashingListType = ArrayOf(ssz.phase0.ProposerSlashing);
 const SignedVoluntaryExitListType = ArrayOf(ssz.phase0.SignedVoluntaryExit);
 const SignedBLSToExecutionChangeListType = ArrayOf(ssz.capella.SignedBLSToExecutionChange);
 const SyncCommitteeMessageListType = ArrayOf(ssz.altair.SyncCommitteeMessage);
-const PayloadAttestationListType = ArrayOf(ssz.gloas.PayloadAttestation, MAX_PAYLOAD_ATTESTATIONS);
 const PayloadAttestationMessageListType = ArrayOf(ssz.gloas.PayloadAttestationMessage, PTC_SIZE);
 
 type AttestationListPhase0 = ValueOf<typeof AttestationListTypePhase0>;
@@ -59,7 +51,7 @@ type ProposerSlashingList = ValueOf<typeof ProposerSlashingListType>;
 type SignedVoluntaryExitList = ValueOf<typeof SignedVoluntaryExitListType>;
 type SignedBLSToExecutionChangeList = ValueOf<typeof SignedBLSToExecutionChangeListType>;
 type SyncCommitteeMessageList = ValueOf<typeof SyncCommitteeMessageListType>;
-type PayloadAttestationList = ValueOf<typeof PayloadAttestationListType>;
+type PayloadAttestationList = ValueOf<typeof ssz.gloas.PayloadAttestations>;
 type PayloadAttestationMessageList = ValueOf<typeof PayloadAttestationMessageListType>;
 
 export type Endpoints = {
@@ -252,7 +244,7 @@ export function getDefinitions(config: ChainForkConfig): RouteDefinitions<Endpoi
         schema: {query: {slot: Schema.Uint}},
       },
       resp: {
-        data: PayloadAttestationListType,
+        data: ssz.gloas.PayloadAttestations,
         meta: VersionCodec,
       },
     },
