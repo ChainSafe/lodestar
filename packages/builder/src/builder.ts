@@ -5,6 +5,7 @@ import {BuilderIndex, ExecutionAddress} from "@lodestar/types";
 import {Logger, toHex, toRootHex} from "@lodestar/utils";
 import {waitForGenesis} from "./genesis.js";
 import {resolveBuilderIdentity} from "./identity.js";
+import {Metrics} from "./metrics.js";
 import {logNodeVersion, waitForNodeReady} from "./readiness.js";
 import {BuilderSigner, Keypair} from "./services/builderSigner.js";
 import {BuilderStatusTracker} from "./services/builderStatusTracker.js";
@@ -25,6 +26,7 @@ export type BuilderOptions = {
   api: ApiClient;
   clock?: ClockOptions;
   executionFeeRecipient: ExecutionAddress;
+  metrics: Metrics | null;
 };
 
 /**
@@ -86,7 +88,7 @@ export class Builder {
       config
     );
 
-    const builderStatusTracker = new BuilderStatusTracker(api, logger, index);
+    const builderStatusTracker = new BuilderStatusTracker(api, logger, index, opts.metrics);
 
     return new Builder({opts, builderSigner, builderStatusTracker, clock, index});
   }
