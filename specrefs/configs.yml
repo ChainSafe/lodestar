@@ -449,13 +449,13 @@
     MAX_BLOBS_PER_BLOCK_ELECTRA: Uint64 = 9
     </spec>
 
-- name: MAX_BYTES_PER_INCLUSION_LIST#heze
+- name: MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST#heze
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "MAX_BYTES_PER_INCLUSION_LIST:"
+      search: "MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST:"
   spec: |
-    <spec config_var="MAX_BYTES_PER_INCLUSION_LIST" fork="heze" hash="1d503ddc">
-    MAX_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
+    <spec config_var="MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST" fork="heze" hash="5e36c7cc">
+    MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
     </spec>
 
 - name: MAX_PAYLOAD_SIZE#phase0
