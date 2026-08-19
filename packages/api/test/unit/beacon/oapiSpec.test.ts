@@ -76,6 +76,8 @@ const ignoredTopics: string[] = [
   // TODO: unskip once the spec release adds `current_slot` to the fast_confirmation event
   // (tracked in https://github.com/ethereum/beacon-APIs/pull/598)
   "fast_confirmation",
+  // TODO: unskip once the spec release adds `builder_index` and `block_hash` to the block event
+  // (tracked in https://github.com/ethereum/beacon-APIs/issues/599)
   "block",
 ];
 

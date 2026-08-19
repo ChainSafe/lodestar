@@ -75,7 +75,7 @@ const blockBase = new ContainerType(
     block: stringType,
     executionOptimistic: ssz.Boolean,
   },
-  {jsonCase: "eth2"}
+  {typeName: "Block", jsonCase: "eth2"}
 );
 const blockGloas = new ContainerType(
   {
@@ -85,7 +85,7 @@ const blockGloas = new ContainerType(
     builderIndex: ssz.BuilderIndex,
     executionOptimistic: ssz.Boolean,
   },
-  {jsonCase: "eth2"}
+  {typeName: "BlockGloas", jsonCase: "eth2"}
 );
 type FuluDataColumnSidecarSSE = ValueOf<typeof fuluDataColumnSidecarSSE>;
 type GloasDataColumnSidecarSSE = ValueOf<typeof gloasDataColumnSidecarSSE>;
