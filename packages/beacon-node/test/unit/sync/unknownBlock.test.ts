@@ -3,10 +3,11 @@ import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {routes} from "@lodestar/api";
 import {createBeaconConfig} from "@lodestar/config";
 import {config as minimalConfig} from "@lodestar/config/default";
-import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
+import {CheckpointWithHex, IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
 import {testLogger} from "@lodestar/logger/test-utils";
 import {ForkName} from "@lodestar/params";
 import {RequestError, RequestErrorCode} from "@lodestar/reqresp";
+import {computeStartSlotAtEpoch} from "@lodestar/state-transition";
 import {SignedBeaconBlock, gloas, ssz} from "@lodestar/types";
 import {notNullish, sleep, toRootHex} from "@lodestar/utils";
 import {BlockInputNoData, BlockInputPreData} from "../../../src/chain/blocks/blockInput/blockInput.js";
@@ -24,7 +25,12 @@ import {ExecutionPayloadStatus} from "../../../src/execution/index.js";
 import {INetwork, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
 import {PeerSyncMeta} from "../../../src/network/peers/peersData.js";
 import {defaultSyncOptions} from "../../../src/sync/options.js";
-import {BlockInputSyncCacheItem, PendingBlockInputStatus} from "../../../src/sync/types.js";
+import {
+  BlockInputSyncCacheItem,
+  PayloadSyncCacheItem,
+  PendingBlockInputStatus,
+  PendingPayloadInputStatus,
+} from "../../../src/sync/types.js";
 import {BlockInputSync, UnknownBlockPeerBalancer} from "../../../src/sync/unknownBlock.js";
 import {CustodyConfig} from "../../../src/util/dataColumns.js";
 import {PeerIdStr} from "../../../src/util/peerId.js";
@@ -394,10 +400,16 @@ describe("sync by UnknownBlockSync", {timeout: 20_000}, () => {
       const forkChoiceKnownPayloadHashes = new Map([[blockRootHex0, toRootHex(blockHash0)]]);
       const forkChoice: Pick<
         IForkChoice,
-        "getBlockHexAndBlockHash" | "getFinalizedBlock" | "hasBlock" | "hasBlockHex" | "hasPayloadHexUnsafe"
+        | "getBlockHexAndBlockHash"
+        | "getBlockHexDefaultStatus"
+        | "getFinalizedBlock"
+        | "hasBlock"
+        | "hasBlockHex"
+        | "hasPayloadHexUnsafe"
       > = {
         hasBlock: (root) => forkChoiceKnownRoots.has(toRootHex(root)),
         hasBlockHex: (rootHex) => forkChoiceKnownRoots.has(rootHex),
+        getBlockHexDefaultStatus: (rootHex) => (forkChoiceKnownRoots.has(rootHex) ? ({slot: 0} as ProtoBlock) : null),
         hasPayloadHexUnsafe: (rootHex) => forkChoiceKnownPayloadHashes.has(rootHex),
         getBlockHexAndBlockHash: (rootHex, blockHashHex) =>
           forkChoiceKnownPayloadHashes.get(rootHex) === blockHashHex ? ({slot: 0} as ProtoBlock) : null,
@@ -685,6 +697,9 @@ describe("UnknownBlockSync", () => {
           clock: new ClockStopped(0),
           forkChoice: {
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
@@ -813,6 +828,7 @@ describe("UnknownBlockSync", () => {
         forkChoice: {
           hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
           hasBlockHex: vi.fn().mockReturnValue(false),
+          getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
           getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         } as unknown as IForkChoice,
         ...chainOverrides,
@@ -881,6 +897,9 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -952,6 +971,9 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -1038,6 +1060,9 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi
               .fn()
               .mockImplementation((root: string, hash: string) =>
@@ -1139,6 +1164,9 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi
               .fn()
               .mockImplementation((root: string, hash: string) =>
@@ -1234,6 +1262,9 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => knownRoots.has(root)),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (knownRoots.has(root) ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi
               .fn()
               .mockImplementation((root: string, hash: string) =>
@@ -1309,6 +1340,9 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -1402,6 +1436,11 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === payloadInput.blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) =>
+                root === payloadInput.blockRootHex ? ({slot: 0} as ProtoBlock) : null
+              ),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -1508,6 +1547,152 @@ describe("UnknownBlockSync", () => {
       );
     });
 
+    it("prunes pending payloads and blocks below the finalized block slot on ChainEvent.forkChoiceFinalized", () => {
+      const finalizedEpoch = 4;
+      // Simulate a skipped epoch boundary: the finalized block sits below computeStartSlotAtEpoch(epoch).
+      // The prune must use the actual finalized block slot, not the epoch boundary, otherwise it would
+      // wrongly drop the finalized block's own payload and payloads in the (finalizedBlockSlot, boundary) gap.
+      const epochBoundarySlot = computeStartSlotAtEpoch(finalizedEpoch);
+      const finalizedBlockSlot = epochBoundarySlot - 2;
+
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: finalizedBlockSlot} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+      });
+
+      const pendingPayloads = (service as unknown as {pendingPayloads: Map<string, PayloadSyncCacheItem>})
+        .pendingPayloads;
+      const pendingBlocks = (service as unknown as {pendingBlocks: Map<string, BlockInputSyncCacheItem>}).pendingBlocks;
+
+      // PendingPayloadRootHex just below the finalized block slot -> pruned
+      const rootHexBelow = toRootHex(Buffer.alloc(32, 0xa1));
+      pendingPayloads.set(rootHexBelow, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexBelow,
+        slot: finalizedBlockSlot - 1,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadRootHex at the finalized block slot -> retained (its payload may still be needed by a
+      // not-yet-imported successor; prune is strict `<`)
+      const rootHexAtFinalized = toRootHex(Buffer.alloc(32, 0xa2));
+      pendingPayloads.set(rootHexAtFinalized, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexAtFinalized,
+        slot: finalizedBlockSlot,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadRootHex in the (finalizedBlockSlot, epochBoundarySlot) gap -> retained. Regression guard:
+      // an epoch-boundary cutoff would wrongly prune this.
+      const rootHexBetween = toRootHex(Buffer.alloc(32, 0xa3));
+      pendingPayloads.set(rootHexBetween, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexBetween,
+        slot: finalizedBlockSlot + 1,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadInput below finality -> pruned (slot resolved from payloadInput.slot)
+      const {blockRootHex: inputRootHex, payloadInput} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: finalizedBlockSlot - 2,
+      });
+      pendingPayloads.set(inputRootHex, {
+        status: PendingPayloadInputStatus.pending,
+        payloadInput,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingPayloadEnvelope below finality -> pruned (slot resolved from envelope slotNumber)
+      const {blockRootHex: envelopeRootHex, envelope} = buildPayloadFixture({
+        blobCount: 0,
+        sampledColumns: [],
+        slot: finalizedBlockSlot - 3,
+      });
+      pendingPayloads.set(envelopeRootHex, {
+        status: PendingPayloadInputStatus.waitingForBlock,
+        envelope,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      expect(pendingPayloads.size).toBe(5);
+
+      // PendingBlockInput below finality -> pruned (slot resolved from blockInput.slot)
+      const blockBelow = ssz.gloas.SignedBeaconBlock.defaultValue();
+      blockBelow.message.slot = finalizedBlockSlot - 1;
+      const blockBelowRootHex = toRootHex(getGloasBlockRoot(blockBelow));
+      pendingBlocks.set(blockBelowRootHex, {
+        status: PendingBlockInputStatus.downloaded,
+        blockInput: createGloasBlockInput({
+          block: blockBelow,
+          blockRootHex: blockBelowRootHex,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+        }),
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingBlockInput at the finalized block slot -> retained
+      const blockAtFinalized = ssz.gloas.SignedBeaconBlock.defaultValue();
+      blockAtFinalized.message.slot = finalizedBlockSlot;
+      const blockAtFinalizedRootHex = toRootHex(getGloasBlockRoot(blockAtFinalized));
+      pendingBlocks.set(blockAtFinalizedRootHex, {
+        status: PendingBlockInputStatus.downloaded,
+        blockInput: createGloasBlockInput({
+          block: blockAtFinalized,
+          blockRootHex: blockAtFinalizedRootHex,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+        }),
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // PendingRootHex has no slot -> retained (cannot be compared to the finalized slot)
+      const rootOnlyHex = toRootHex(Buffer.alloc(32, 0xb1));
+      pendingBlocks.set(rootOnlyHex, {
+        status: PendingBlockInputStatus.pending,
+        rootHex: rootOnlyHex,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      expect(pendingBlocks.size).toBe(3);
+
+      const checkpoint: CheckpointWithHex = {
+        epoch: finalizedEpoch,
+        root: Buffer.alloc(32, 0xcc),
+        rootHex: toRootHex(Buffer.alloc(32, 0xcc)),
+      };
+      emitter.emit(ChainEvent.forkChoiceFinalized, checkpoint);
+
+      expect(pendingPayloads.has(rootHexBelow)).toBe(false);
+      expect(pendingPayloads.has(inputRootHex)).toBe(false);
+      expect(pendingPayloads.has(envelopeRootHex)).toBe(false);
+      expect(pendingPayloads.has(rootHexAtFinalized)).toBe(true);
+      expect(pendingPayloads.has(rootHexBetween)).toBe(true);
+      expect(pendingPayloads.size).toBe(2);
+
+      expect(pendingBlocks.has(blockBelowRootHex)).toBe(false);
+      expect(pendingBlocks.has(blockAtFinalizedRootHex)).toBe(true);
+      expect(pendingBlocks.has(rootOnlyHex)).toBe(true);
+      expect(pendingBlocks.size).toBe(2);
+    });
+
     it("drops a child block when its parent payload hash conflicts with the known parent block", async () => {
       const peer = await getRandPeerIdStr();
 
@@ -1558,6 +1743,9 @@ describe("UnknownBlockSync", () => {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockImplementation((root: string) => root === parentRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
             getBlockHexAndBlockHash: vi.fn().mockReturnValue(null),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
           } as unknown as IForkChoice,
@@ -1711,6 +1899,9 @@ describe("UnknownBlockSync", () => {
       forkChoice: {
         getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
         hasBlockHex: vi.fn().mockImplementation((rootHex: string) => rootHex === parentRootHex),
+        getBlockHexDefaultStatus: vi
+          .fn()
+          .mockImplementation((rootHex: string) => (rootHex === parentRootHex ? ({slot: 0} as ProtoBlock) : null)),
         getBlockHexAndBlockHash: vi
           .fn()
           .mockImplementation((rootHex: string, blockHashHex: string) =>

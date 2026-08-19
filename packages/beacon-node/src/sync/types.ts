@@ -77,8 +77,7 @@ export type PendingPayloadInput = {
 export type PendingPayloadRootHex = {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
-  // message slot hint, may be missing when resolving a parent payload
-  slot?: Slot;
+  slot: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
@@ -125,7 +124,7 @@ export function getPayloadSyncCacheItemRootHex(payload: PayloadSyncCacheItem): R
   return payload.rootHex;
 }
 
-export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot | string {
+export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot {
   if (isPendingPayloadInput(payload)) {
     return payload.payloadInput.slot;
   }
@@ -134,5 +133,5 @@ export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot
     return payload.envelope.message.payload.slotNumber;
   }
 
-  return payload.slot ?? "unknown";
+  return payload.slot;
 }
