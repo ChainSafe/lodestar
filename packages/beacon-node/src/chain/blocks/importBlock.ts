@@ -529,10 +529,17 @@ export async function importBlock(
     callInNextEventLoop(() => {
       // NOTE: Skip emitting if there are no listeners from the API
       if (this.emitter.listenerCount(routes.events.EventType.block)) {
+        const gloasFields = isGloasBeaconBlock(block.message)
+          ? {
+              blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+              builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
+            }
+          : {};
         this.emitter.emit(routes.events.EventType.block, {
           block: blockRootHex,
           slot: blockSlot,
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+          ...gloasFields,
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
