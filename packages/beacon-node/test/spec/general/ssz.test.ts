@@ -47,13 +47,19 @@ for (const testSuite of fs.readdirSync(fixturesDir)) {
           const serialized = fromHexString(testCase.rawBytes ?? testCase.serialized);
 
           if (testCase.rejectionReason !== undefined) {
-            expect(() => type.deserialize(serialized)).toThrow();
+            expect(
+              () => type.deserialize(serialized),
+              `${testId}: expected ${testCase.typeName} deserialization to reject`
+            ).toThrow();
             return;
           }
 
           const value = type.deserialize(serialized);
           const expectedValue = fromFixtureValue(type, testCase.value);
-          expect(type.equals(value, expectedValue)).toBe(true);
+          expect(
+            type.equals(value, expectedValue),
+            `${testId}: deserialized ${testCase.typeName} value does not match the fixture`
+          ).toBe(true);
           runValidSszTest(type, {
             root: testCase.root,
             serialized,
