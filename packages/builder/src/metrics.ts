@@ -4,7 +4,7 @@ import {MetricsRegisterExtra} from "@lodestar/utils";
 export type Metrics = ReturnType<typeof getMetrics>;
 
 export type LodestarGitData = {
-  /** "0.16.0 developer/feature-1 ac99f2b5" */
+  /** "0.16.0 developer/feature-1 4f816b16" */
   version: string;
   /** "4f816b16dfde718e2d74f95f2c8292596138c248" */
   commit: string;
@@ -30,7 +30,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
     }),
 
     builderBalance: register.gauge({
-      name: "bc_balance_gwei",
+      name: "bc_builder_balance_gwei",
       help: "Current builder balance in gwei",
     }),
 
