@@ -138,7 +138,6 @@ export const defaultSkipOpts: SkipOpts = {
  *       / config  / fork   / test runner      / test handler / test suite   / test case
  *
  * tests / general / phase0 / bls              / aggregate    / small        / aggregate_na_signatures/data.yaml
- * tests / general / phase0 / ssz_generic      / basic_vector / valid        / vec_bool_1_max/meta.yaml
  * tests / mainnet / altair / ssz_static       / Validator    / ssz_random   / case_0/roots.yaml
  * tests / mainnet / altair / fork             / fork         / pyspec_tests / altair_fork_random_0/meta.yaml
  * ```
