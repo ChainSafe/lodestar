@@ -1,4 +1,4 @@
-import {describe, expect, it, vi} from "vitest";
+import {describe, expect, it} from "vitest";
 import {createBeaconConfig} from "@lodestar/config";
 import {chainConfig as chainConfigDef} from "@lodestar/config/default";
 import {SYNC_COMMITTEE_SIZE} from "@lodestar/params";
@@ -12,10 +12,10 @@ import {BlockAltairOpts, getBlockAltair} from "../../perf/block/util.js";
 
 describe("chain / rewards / blockRewards", () => {
   const config = createBeaconConfig({...chainConfigDef, ALTAIR_FORK_EPOCH: 0}, Buffer.alloc(32, 0xaa));
-  const testCases: {id: string; timeout?: number; opts: BlockAltairOpts}[] = [
+  const validatorCount = 8192;
+  const testCases: {id: string; opts: BlockAltairOpts}[] = [
     {
       id: "Normal case",
-      timeout: 180_000,
       opts: {
         proposerSlashingLen: 1,
         attesterSlashingLen: 2,
@@ -76,13 +76,9 @@ describe("chain / rewards / blockRewards", () => {
     },
   ];
 
-  for (const {id, timeout, opts} of testCases) {
-    if (timeout) {
-      vi.setConfig({testTimeout: timeout, hookTimeout: timeout});
-    }
-
+  for (const {id, opts} of testCases) {
     it(`${id}`, async () => {
-      const state = generatePerfTestCachedStateAltair();
+      const state = generatePerfTestCachedStateAltair({vc: validatorCount, goBackOneSlot: false});
       const block = getBlockAltair(state, opts);
       // Populate permanent root caches of the block
       ssz.altair.BeaconBlock.hashTreeRoot(block.message);
@@ -132,7 +128,7 @@ describe("chain / rewards / blockRewards", () => {
 
   // Check if `computeBlockRewards` consults reward cache in the post state first
   it("Check reward cache", async () => {
-    const preState = generatePerfTestCachedStateAltair();
+    const preState = generatePerfTestCachedStateAltair({vc: validatorCount, goBackOneSlot: false});
     const {opts} = testCases[0]; // Use opts of `normal case`
     const block = getBlockAltair(preState, testCases[0].opts);
     // Populate permanent root caches of the block
