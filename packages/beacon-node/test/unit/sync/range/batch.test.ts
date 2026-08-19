@@ -742,6 +742,19 @@ describe("sync / range / batch", async () => {
         expect(batch.getFailedPeers()).toContain(peer);
       });
 
+      it("PER_BLOCK_PROCESSING_ERROR (invalid block) => failedProcessingAttempts, peer attributable", () => {
+        const batch = downloadedBatch();
+        batch.startProcessing();
+        batch.processingError(
+          blockError({code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR, blockRoot: "0x1234", error: new Error("bad op")})
+        );
+
+        // a block that fails per_slot/per_block processing is the peer's bad data
+        expect(batch.failedProcessingAttempts.length).toBe(1);
+        expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(true);
+        expect(batch.getFailedPeers()).toContain(peer);
+      });
+
       it("BEACON_CHAIN_ERROR (our internal fault) => failedProcessingAttempts, NOT peer attributable", () => {
         const batch = downloadedBatch();
         batch.startProcessing();

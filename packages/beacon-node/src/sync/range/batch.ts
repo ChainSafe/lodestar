@@ -842,8 +842,9 @@ function isPeerAttributableFailure(code: BlockErrorCode | PayloadErrorCode | nul
     // a block or envelope signature is invalid
     case BlockErrorCode.INVALID_SIGNATURE:
     case PayloadErrorCode.INVALID_SIGNATURE:
-    // the block's state transition produced an invalid state root
+    // the block's state transition produced an invalid state root, or failed per_slot/per_block processing
     case BlockErrorCode.INVALID_STATE_ROOT:
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
     // the segment this peer served is internally inconsistent (in-segment link breaks, see PR #9684)
     case BlockErrorCode.NON_LINEAR_SLOTS:
     case BlockErrorCode.NON_LINEAR_PARENT_ROOTS:

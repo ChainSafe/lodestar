@@ -136,7 +136,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}
   | {code: BlockErrorCode.ENVELOPE_BLOCK_ROOT_MISMATCH; envelopeBlockRoot: RootHex; blockRoot: RootHex}
-  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; error: Error}
+  | {code: BlockErrorCode.PER_BLOCK_PROCESSING_ERROR; blockRoot: RootHex; error: Error}
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
   | {code: BlockErrorCode.BLACKLISTED_BLOCK}
