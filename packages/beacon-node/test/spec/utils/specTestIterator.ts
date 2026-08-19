@@ -99,6 +99,9 @@ export const defaultSkipOpts: SkipOpts = {
     /^heze\/fork_choice\/on_inclusion_list\/.*$/,
   ],
   skippedTests: [
+    // Pre-Fulu epoch-boundary proposer reorgs are no longer supported. Fulu remains covered because
+    // proposer lookahead makes assignments stable across the boundary.
+    /^(altair|bellatrix|capella|deneb|electra)\/fork_choice\/get_proposer_head\/pyspec_tests\/epoch_boundary$/,
     // TODO-GLOAS: re-enable after gloas light client is implemented
     /\/gloas_fork$/,
     /\/heze_fork$/,
