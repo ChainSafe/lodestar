@@ -341,6 +341,16 @@
     FULU_FORK_VERSION: Version = '0x06000000'
     </spec>
 
+- name: GAS_LIMIT_SCHEDULE#gloas
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "GAS_LIMIT_SCHEDULE:"
+  spec: |
+    <spec config_var="GAS_LIMIT_SCHEDULE" fork="gloas" hash="28e945d9">
+    GAS_LIMIT_SCHEDULE: tuple[frozendict[str, Any], ...] = (
+    )
+    </spec>
+
 - name: GENESIS_DELAY#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
@@ -449,15 +459,6 @@
     MAX_BLOBS_PER_BLOCK_ELECTRA: Uint64 = 9
     </spec>
 
-- name: MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST#heze
-  sources:
-    - file: packages/config/src/chainConfig/configs/mainnet.ts
-      search: "MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST:"
-  spec: |
-    <spec config_var="MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST" fork="heze" hash="5e36c7cc">
-    MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
-    </spec>
-
 - name: MAX_PAYLOAD_SIZE#phase0
   sources:
     - file: packages/config/src/chainConfig/configs/mainnet.ts
@@ -528,6 +529,15 @@
   spec: |
     <spec config_var="MAX_REQUEST_PAYLOADS" fork="gloas" hash="cb92d98e">
     MAX_REQUEST_PAYLOADS: Uint64 = 128
+    </spec>
+
+- name: MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST#heze
+  sources:
+    - file: packages/config/src/chainConfig/configs/mainnet.ts
+      search: "MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST:"
+  spec: |
+    <spec config_var="MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST" fork="heze" hash="5e36c7cc">
+    MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: Uint64 = 8192
     </spec>
 
 - name: MESSAGE_DOMAIN_INVALID_SNAPPY#phase0
