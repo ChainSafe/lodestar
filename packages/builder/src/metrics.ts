@@ -25,7 +25,7 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
 
   return {
     builderStatus: register.gauge({
-      name: "bc_status",
+      name: "bc_builder_status",
       help: "Current builder status: pending=0, active=1, exited=2",
     }),
 
