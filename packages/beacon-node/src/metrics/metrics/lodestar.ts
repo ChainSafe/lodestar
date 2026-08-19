@@ -487,12 +487,13 @@ export function createLodestarMetrics(
       latencyToWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_to_worker",
         help: "Time from sending the job to the worker and the worker receiving it",
-        buckets: [0.001, 0.003, 0.01, 0.03, 0.1, 0.25, 0.5, 1, 2],
+        // The dashboard treats 20ms as slow; values above 100ms only need severe-stall classification.
+        buckets: [0.00025, 0.001, 0.005, 0.02, 0.1],
       }),
       latencyFromWorker: register.histogram({
         name: "lodestar_bls_thread_pool_latency_from_worker",
         help: "Time from the worker sending the result and the main thread receiving it",
-        buckets: [0.001, 0.003, 0.01, 0.03, 0.1, 0.25, 0.5, 1, 2],
+        buckets: [0.00025, 0.001, 0.005, 0.02, 0.1],
       }),
       mainThreadDurationInThreadPool: register.histogram({
         name: "lodestar_bls_thread_pool_main_thread_time_seconds",
@@ -509,13 +510,15 @@ export function createLodestarMetrics(
       workRequestPreparationDuration: register.histogram({
         name: "lodestar_bls_thread_pool_work_request_preparation_duration_seconds",
         help: "Main-thread time spent converting one worker dispatch group to binding inputs",
-        buckets: [0.00005, 0.0001, 0.00025, 0.0005, 0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+        // Normal requests take microseconds; the dashboard treats 1ms as a main-thread stall.
+        buckets: [0.000005, 0.000025, 0.0001, 0.0005, 0.001, 0.005, 0.025],
       }),
       verificationCallDuration: register.histogram<{operation: BlsVerificationCallOperation}>({
         name: "lodestar_bls_thread_pool_verification_call_duration_seconds",
         help: "Duration of one worker-side lodestar-z verification binding call, including input conversion",
         labelNames: ["operation"],
-        buckets: [0.00025, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2],
+        // Verification ranges from sub-millisecond calls to large batches; above 500ms is uniformly severe.
+        buckets: [0.00025, 0.001, 0.005, 0.02, 0.1, 0.5],
       }),
       verificationCallSignatureSets: register.counter<{operation: BlsVerificationCallOperation}>({
         name: "lodestar_bls_thread_pool_verification_call_signature_sets_total",

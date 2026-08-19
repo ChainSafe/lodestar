@@ -668,7 +668,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "p95 main-thread input preparation and worker message-transfer overhead. Worker verification calls are shown separately.",
+      "description": "Fraction of dispatch groups exceeding operational phase thresholds: 1ms for main-thread input preparation and 20ms for one-way worker transfer.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -695,8 +695,7 @@
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
-              "log": 2,
-              "type": "log"
+              "type": "linear"
             },
             "showPoints": "never",
             "spanNulls": false,
@@ -709,7 +708,8 @@
             }
           },
           "mappings": [],
-          "unit": "s"
+          "min": 0,
+          "unit": "percentunit"
         },
         "overrides": []
       },
@@ -741,9 +741,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "histogram_quantile(0.95, sum by (instance, le) (rate(lodestar_bls_thread_pool_latency_to_worker_bucket[$rate_interval])))",
+          "expr": "1 - sum by (instance) (rate(lodestar_bls_thread_pool_latency_to_worker_bucket{le=\"0.02\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_latency_to_worker_count[$rate_interval]))",
           "interval": "",
-          "legendFormat": "to worker",
+          "legendFormat": "to worker > 20ms",
           "refId": "to worker"
         },
         {
@@ -752,10 +752,10 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "histogram_quantile(0.95, sum by (instance, le) (rate(lodestar_bls_thread_pool_latency_from_worker_bucket[$rate_interval])))",
+          "expr": "1 - sum by (instance) (rate(lodestar_bls_thread_pool_latency_from_worker_bucket{le=\"0.02\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_latency_from_worker_count[$rate_interval]))",
           "hide": false,
           "interval": "",
-          "legendFormat": "from worker",
+          "legendFormat": "from worker > 20ms",
           "refId": "from worker"
         },
         {
@@ -764,14 +764,14 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "exemplar": false,
-          "expr": "histogram_quantile(0.95, sum by (instance, le) (rate(lodestar_bls_thread_pool_work_request_preparation_duration_seconds_bucket[$rate_interval])))",
+          "expr": "1 - sum by (instance) (rate(lodestar_bls_thread_pool_work_request_preparation_duration_seconds_bucket{le=\"0.001\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_work_request_preparation_duration_seconds_count[$rate_interval]))",
           "hide": false,
           "interval": "",
-          "legendFormat": "prepare inputs",
+          "legendFormat": "prepare inputs > 1ms",
           "refId": "prepare inputs"
         }
       ],
-      "title": "BLS dispatch overhead p95",
+      "title": "Slow BLS dispatch phases",
       "type": "timeseries"
     },
     {
@@ -1230,9 +1230,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_bucket[$rate_interval])))",
+          "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_sum[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count[$rate_interval]))",
           "instant": false,
-          "legendFormat": "p50 {{operation}}",
+          "legendFormat": "mean call {{operation}}",
           "range": true,
           "refId": "A"
         },
@@ -1242,29 +1242,16 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_bucket[$rate_interval])))",
+          "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_sum[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total[$rate_interval]))",
           "hide": false,
           "instant": false,
-          "legendFormat": "p95 {{operation}}",
+          "legendFormat": "per set {{operation}}",
           "range": true,
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (instance, le, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_bucket[$rate_interval])))",
-          "hide": false,
-          "instant": false,
-          "legendFormat": "p99 {{operation}}",
-          "range": true,
-          "refId": "C"
         }
       ],
-      "description": "Worker-side synchronous lodestar-z binding-call duration, including binding input conversion, grouped by verification path. Main-thread verification is not included.",
-      "title": "Worker lodestar-z verification call duration",
+      "description": "Mean duration per synchronous lodestar-z binding call and total binding-call time amortized per signature set, grouped by verification path.",
+      "title": "Worker lodestar-z verification cost",
       "type": "timeseries"
     },
     {
@@ -1272,6 +1259,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
+      "description": "Verification calls grouped into operational duration bands. Calls above 500ms remain visible in the +Inf bucket without retaining arbitrary upper-tail detail.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -1325,7 +1313,7 @@
         },
         "yAxis": {
           "axisPlacement": "left",
-          "decimals": 3,
+          "decimals": 6,
           "reverse": false,
           "unit": "s"
         }
@@ -1351,7 +1339,7 @@
           "useBackend": false
         }
       ],
-      "title": "Worker lodestar-z verification call distribution",
+      "title": "Worker lodestar-z verification duration bands",
       "type": "heatmap"
     },
     {

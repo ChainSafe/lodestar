@@ -148,17 +148,19 @@ describe("chain / bls / multithread queue", () => {
     expect(jobWaitTime).not.toContain("priority=");
     expect(jobWaitTime).not.toContain("batchable=");
 
-    for (const metricName of [
-      "lodestar_bls_thread_pool_queue_job_wait_time_seconds",
-      "lodestar_bls_thread_pool_job_duration_seconds",
-      "lodestar_bls_thread_pool_latency_to_worker",
-      "lodestar_bls_thread_pool_latency_from_worker",
-      "lodestar_bls_thread_pool_work_request_preparation_duration_seconds",
-      "lodestar_bls_thread_pool_verification_call_duration_seconds",
-    ]) {
+    for (const [metricName, expectedUpperBound] of [
+      ["lodestar_bls_thread_pool_queue_job_wait_time_seconds", 2],
+      ["lodestar_bls_thread_pool_job_duration_seconds", 2],
+      ["lodestar_bls_thread_pool_latency_to_worker", 0.1],
+      ["lodestar_bls_thread_pool_latency_from_worker", 0.1],
+      ["lodestar_bls_thread_pool_work_request_preparation_duration_seconds", 0.025],
+      ["lodestar_bls_thread_pool_verification_call_duration_seconds", 0.5],
+    ] as const) {
       const metric = await metrics.register.getSingleMetricAsString(metricName);
-      expect(metric).toContain('le="2"');
-      expect(metric).not.toContain('le="5"');
+      const finiteBounds = [...metric.matchAll(/le="([^"]+)"/g)]
+        .map((match) => Number(match[1]))
+        .filter(Number.isFinite);
+      expect(Math.max(...finiteBounds), `wrong upper bucket for ${metricName}`).toBe(expectedUpperBound);
     }
 
     const bufferFlushes = await metrics.register.getSingleMetricAsString(
