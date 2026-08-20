@@ -96,6 +96,8 @@ export enum EventType {
   block = "block",
   /** The node has received a block (from P2P or API) that passes validation rules of the `beacon_block` topic */
   blockGossip = "block_gossip",
+  /** The node has received a gloas block (from P2P or API) that includes an execution payload bid */
+  bidIncluded = "bid_included",
   /** The node has received a valid attestation (from P2P or API) */
   attestation = "attestation",
   /** The node has received a valid SingleAttestation (from P2P or API) */
@@ -145,6 +147,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.headV2]: EventType.headV2,
   [EventType.block]: EventType.block,
   [EventType.blockGossip]: EventType.blockGossip,
+  [EventType.bidIncluded]: EventType.bidIncluded,
   [EventType.attestation]: EventType.attestation,
   [EventType.singleAttestation]: EventType.singleAttestation,
   [EventType.voluntaryExit]: EventType.voluntaryExit,
@@ -190,6 +193,12 @@ export type EventData = {
   [EventType.blockGossip]: {
     slot: Slot;
     block: RootHex;
+  };
+  [EventType.bidIncluded]: {
+    slot: Slot;
+    block: RootHex;
+    blockHash: RootHex;
+    builderIndex: BuilderIndex;
   };
   [EventType.attestation]: Attestation;
   [EventType.singleAttestation]: electra.SingleAttestation;
@@ -342,6 +351,15 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       {
         slot: ssz.Slot,
         block: stringType,
+      },
+      {jsonCase: "eth2"}
+    ),
+    [EventType.bidIncluded]: new ContainerType(
+      {
+        slot: ssz.Slot,
+        block: stringType,
+        blockHash: stringType,
+        builderIndex: ssz.BuilderIndex,
       },
       {jsonCase: "eth2"}
     ),
