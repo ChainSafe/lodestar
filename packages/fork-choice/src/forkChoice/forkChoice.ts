@@ -1081,11 +1081,20 @@ export class ForkChoice implements IForkChoice {
     while (this.fcStore.currentSlot < currentSlot) {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
-      this.onTick(previousSlot + 1);
+      const didUpdateCheckpoints = this.onTick(previousSlot + 1);
       this.queuedAttestationsPreviousSlot = 0;
       // Process any attestations that might now be eligible before running FCR for this slot.
       this.processAttestationQueue();
-      this.runFastConfirmation();
+      const didRecomputeHead = this.runFastConfirmation();
+
+      // An epoch-boundary checkpoint pull-up can move the head's dependent root and stale the cached
+      // head before block 0 of the new epoch is imported, making isProposerBoostSameDependentRoot()
+      // wrong for that block. Recompute the head so it reflects the new checkpoint and the queued
+      // votes — unless fast confirmation already did, to avoid a redundant head calculation.
+      if (didUpdateCheckpoints && !didRecomputeHead) {
+        this.updateHead();
+      }
+
       this.validatedAttestationDatas = new Set();
     }
   }
@@ -2041,7 +2050,7 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_tick
    */
-  private onTick(time: Slot): void {
+  private onTick(time: Slot): boolean {
     const previousSlot = this.fcStore.currentSlot;
 
     if (time > previousSlot + 1) {
@@ -2062,21 +2071,16 @@ export class ForkChoice implements IForkChoice {
 
     // Not a new epoch, return.
     if (computeSlotsSinceEpochStart(time) !== 0) {
-      return;
+      return false;
     }
 
-    // If a new epoch, pull-up justification and finalization from previous epoch
-    const didUpdateCheckpoints = this.updateCheckpoints(
+    // If a new epoch, pull-up justification and finalization from previous epoch. Returns whether a
+    // checkpoint moved, so the caller can decide to recompute the head (see `updateTime`).
+    return this.updateCheckpoints(
       this.fcStore.unrealizedJustified.checkpoint,
       this.fcStore.unrealizedFinalizedCheckpoint,
       () => this.fcStore.unrealizedJustified.balances
     );
-
-    // recompute head if we pull-up checkpoints because the head's dependent root could be changed
-    // this is to make sure isProposerBoostSameDependentRoot() correct on block 0 of the next epoch
-    if (didUpdateCheckpoints) {
-      this.updateHead();
-    }
   }
 
   /**
@@ -2131,10 +2135,11 @@ export class ForkChoice implements IForkChoice {
     return {prelimProposerHead};
   }
 
-  private runFastConfirmation(): void {
+  /** Returns whether it recomputed the head, so the caller can avoid a redundant `updateHead()`. */
+  private runFastConfirmation(): boolean {
     const fastConfirmationRule = this.fastConfirmationRule;
     const fastConfirmationContext = this.fastConfirmationContext;
-    if (!fastConfirmationRule || !fastConfirmationContext) return;
+    if (!fastConfirmationRule || !fastConfirmationContext) return false;
 
     if (this.fastConfirmationPaused) {
       // Keep consumers on a safe, available root while the rule is paused
@@ -2145,7 +2150,7 @@ export class ForkChoice implements IForkChoice {
         // Runs outside the timed try/catch below; a throw would escape to the clock listener
         this.logger?.debug("Fast confirmation notify failed", {slot: this.fcStore.currentSlot}, err as Error);
       }
-      return;
+      return false;
     }
 
     withObservedDuration(this.metrics?.fastConfirmation.totalDuration.startTimer(), () => {
@@ -2168,6 +2173,8 @@ export class ForkChoice implements IForkChoice {
         );
       }
     });
+
+    return true;
   }
 
   private createFastConfirmationContext(): FastConfirmationContext {
