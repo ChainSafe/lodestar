@@ -539,8 +539,7 @@ export async function importBlock(
         this.emitter.emit(routes.events.EventType.bidIncluded, {
           slot: blockSlot,
           block: blockRootHex,
-          blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
-          builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
+          signedBid: block.message.body.signedExecutionPayloadBid,
         });
       }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {

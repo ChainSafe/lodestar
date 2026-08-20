@@ -21,6 +21,7 @@ import {
   ssz,
   sszTypesFor,
 } from "@lodestar/types";
+import {SignedExecutionPayloadBid} from "@lodestar/types/gloas";
 import {EmptyMeta, EmptyResponseCodec, EmptyResponseData} from "../../utils/codecs.js";
 import {getPostAltairForkTypes, getPostBellatrixForkTypes, getPostGloasForkTypes} from "../../utils/fork.js";
 import {Endpoint, RouteDefinitions, Schema} from "../../utils/index.js";
@@ -197,8 +198,7 @@ export type EventData = {
   [EventType.bidIncluded]: {
     slot: Slot;
     block: RootHex;
-    blockHash: RootHex;
-    builderIndex: BuilderIndex;
+    signedBid: SignedExecutionPayloadBid;
   };
   [EventType.attestation]: Attestation;
   [EventType.singleAttestation]: electra.SingleAttestation;
@@ -358,8 +358,7 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       {
         slot: ssz.Slot,
         block: stringType,
-        blockHash: stringType,
-        builderIndex: ssz.BuilderIndex,
+        signedBid: ssz.gloas.SignedExecutionPayloadBid,
       },
       {jsonCase: "eth2"}
     ),
