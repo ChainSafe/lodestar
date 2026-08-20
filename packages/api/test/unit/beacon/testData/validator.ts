@@ -87,7 +87,6 @@ export const testData: GenericServerTestCases<Endpoints> = {
       skipRandaoVerification: true,
       builderBoostFactor: 0n,
       feeRecipient,
-      builderSelection: BuilderSelection.ExecutionAlways,
       strictFeeRecipientCheck: true,
       includePayload: true,
     },

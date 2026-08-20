@@ -934,6 +934,22 @@ export function createLodestarMetrics(
         labelNames: ["error"],
       }),
     },
+    gossipExecutionPayloadBid: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_execution_payload_bid_elapsed_time_till_received_seconds",
+        help: "Time elapsed between the bid's slot start and the time the execution payload bid was received (negative = received before its slot, broadcast in the previous slot; positive = received during its own slot, late)",
+        labelNames: ["source"],
+        buckets: [-6, -3, -1, 0, 3],
+      }),
+    },
+    gossipPayloadAttestationMessage: {
+      elapsedTimeTillReceived: register.histogram<{source: OpSource}>({
+        name: "lodestar_gossip_payload_attestation_message_elapsed_time_till_received_seconds",
+        help: "Time elapsed between slot time and the time the payload attestation message was received",
+        labelNames: ["source"],
+        buckets: [3, 6, 9, 12],
+      }),
+    },
     // recovery in the case of specific blob rows required
     recoverBlobSidecars: {
       blobsReconstructed: register.counter({

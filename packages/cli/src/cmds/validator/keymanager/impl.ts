@@ -89,7 +89,7 @@ export class KeymanagerApi implements Api {
 
   async getGasLimit({pubkey}: {pubkey: PubkeyHex}): ReturnType<Api["getGasLimit"]> {
     this.assertValidKnownPubkey(pubkey);
-    const gasLimit = this.validator.validatorStore.getGasLimit(pubkey);
+    const gasLimit = this.validator.validatorStore.getGasLimit(pubkey, this.validator.clock.getCurrentSlot());
     return {data: {pubkey, gasLimit}};
   }
 
