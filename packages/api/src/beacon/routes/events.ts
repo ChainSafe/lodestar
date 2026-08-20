@@ -196,7 +196,6 @@ export type EventData = {
     block: RootHex;
   };
   [EventType.bidIncluded]: {
-    slot: Slot;
     block: RootHex;
     signedBid: SignedExecutionPayloadBid;
   };
@@ -356,7 +355,6 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
     ),
     [EventType.bidIncluded]: new ContainerType(
       {
-        slot: ssz.Slot,
         block: stringType,
         signedBid: ssz.gloas.SignedExecutionPayloadBid,
       },
