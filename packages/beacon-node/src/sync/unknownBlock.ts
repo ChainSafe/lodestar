@@ -1025,7 +1025,13 @@ export class BlockInputSync {
     const res = await wrapError(this.fetchPayloadInput(payload));
     if (!res.err) {
       const pendingPayload = res.result;
-      this.pendingPayloads.set(getPayloadSyncCacheItemRootHex(pendingPayload), pendingPayload);
+      const resultRootHex = getPayloadSyncCacheItemRootHex(pendingPayload);
+      // finalization may have deleted this entry while we were awaiting the network, do not resurrect it via the set below
+      if (!this.pendingPayloads.has(resultRootHex)) {
+        this.logger.verbose("Dropping downloaded payload, entry pruned during fetch", logCtx);
+        return;
+      }
+      this.pendingPayloads.set(resultRootHex, pendingPayload);
 
       if (isPendingPayloadEnvelope(pendingPayload)) {
         await this.reconcilePayloadEnvelope(pendingPayload);

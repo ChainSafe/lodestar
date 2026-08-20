@@ -932,6 +932,67 @@ describe("UnknownBlockSync", () => {
       expect(payloadInput.hasAllData()).toBe(true);
     });
 
+    it("does not resurrect a payload entry pruned while its download was in flight", async () => {
+      const peer = await getRandPeerIdStr();
+      const {blockRootHex, payloadInput, envelope, columnSidecars} = buildPayloadFixture({
+        blobCount: 1,
+        sampledColumns: [0],
+        slot: 1,
+      });
+
+      const processExecutionPayload = vi.fn().mockResolvedValue(undefined);
+
+      let pendingPayloads: Map<string, PayloadSyncCacheItem> | undefined;
+      // Simulate pruneFinalized deleting the entry while the network fetch is in flight.
+      const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockImplementation(async () => {
+        pendingPayloads?.delete(blockRootHex);
+        return [envelope];
+      });
+      const sendDataColumnSidecarsByRoot = vi.fn().mockResolvedValue(columnSidecars);
+
+      const {emitter} = setupPayloadSyncTest({
+        chainOverrides: {
+          processExecutionPayload,
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: vi.fn().mockImplementation((root: string) => (root === blockRootHex ? payloadInput : undefined)),
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockImplementation((root: string) => root === blockRootHex),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) => (root === blockRootHex ? ({slot: 0} as ProtoBlock) : null)),
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+        custodyConfig: {sampledColumns: [0], sampleGroups: [[0]]} as unknown as CustodyConfig,
+        networkOverrides: {
+          sendExecutionPayloadEnvelopesByRoot,
+          sendDataColumnSidecarsByRoot,
+        },
+        peers: [{peerId: peer, custodyColumns: [0]}],
+      });
+
+      pendingPayloads = (service as unknown as {pendingPayloads: Map<string, PayloadSyncCacheItem>}).pendingPayloads;
+
+      emitter.emit(ChainEvent.unknownEnvelopeBlockRoot, {
+        rootHex: blockRootHex,
+        slot: 0,
+        peer,
+        source: BlockInputSource.gossip,
+      });
+
+      await sleep(50);
+
+      expect(sendExecutionPayloadEnvelopesByRoot).toHaveBeenCalledTimes(1);
+      // Entry deleted mid-fetch must not be resurrected by the post-await set...
+      expect(pendingPayloads.has(blockRootHex)).toBe(false);
+      // ...and the pruned payload must not be processed.
+      expect(processExecutionPayload).not.toHaveBeenCalled();
+    });
+
     it("continues fetching sampled columns across peers until payload input is complete", async () => {
       const peerA = await getRandPeerIdStr();
       const peerB = await getRandPeerIdStr();
