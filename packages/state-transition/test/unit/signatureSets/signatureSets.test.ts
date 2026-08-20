@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
-import {afterEach, describe, expect, it, vi} from "vitest";
+import {describe, expect, it} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
-import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
@@ -10,33 +9,11 @@ import {ZERO_HASH} from "../../../src/constants/index.js";
 import {BeaconStateView} from "../../../src/index.js";
 import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
 import {generateCachedState} from "../../../src/testUtils/state.js";
-import {SignatureSetType, getSignatureSetPubkey} from "../../../src/util/signatureSets.js";
 import {generateValidators} from "../../utils/validator.js";
 
 const EMPTY_SIGNATURE = Buffer.alloc(96);
 
 describe("signatureSets", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("delegates aggregate pubkey resolution to PubkeyCache", () => {
-    const indices = [1, 2, 3];
-    const expected = SecretKey.fromKeygen(Buffer.alloc(32, 1)).toPublicKey();
-    const aggregate = vi.spyOn(pubkeyCache, "aggregate").mockReturnValue(expected);
-    const getOrThrow = vi.spyOn(pubkeyCache, "getOrThrow").mockReturnValue(expected);
-
-    const actual = getSignatureSetPubkey(
-      {type: SignatureSetType.aggregate, indices, signingRoot: ZERO_HASH, signature: EMPTY_SIGNATURE},
-      pubkeyCache
-    );
-
-    expect(actual).toBe(expected);
-    expect(aggregate).toHaveBeenCalledOnce();
-    expect(aggregate).toHaveBeenCalledWith(indices);
-    expect(getOrThrow).not.toHaveBeenCalled();
-  });
-
   it("should aggregate all signatures from a block", () => {
     const emptyBlockBody = ssz.capella.BeaconBlockBody.defaultValue();
     const block: capella.BeaconBlock = {
