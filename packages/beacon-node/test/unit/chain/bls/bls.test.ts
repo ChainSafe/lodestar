@@ -4,6 +4,7 @@ import {testLogger} from "@lodestar/logger/test-utils";
 import {ISignatureSet, SignatureSetType, createPubkeyCache} from "@lodestar/state-transition";
 import {BlsMultiThreadWorkerPool} from "../../../../src/chain/bls/multithread/index.js";
 import {BlsSingleThreadVerifier} from "../../../../src/chain/bls/singleThread.js";
+import {createMetricsTest} from "../../metrics/utils.js";
 
 describe("BlsVerifier ", () => {
   // take time for creating thread pool
@@ -88,4 +89,33 @@ describe("BlsVerifier ", () => {
       });
     });
   }
+
+  describe("BlsSingleThreadVerifier metrics", () => {
+    it("should record verification duration metrics", async () => {
+      const metrics = createMetricsTest();
+      const verifier = new BlsSingleThreadVerifier({metrics, pubkeyCache});
+      const sets = secretKeys.map((secretKey, i) => {
+        const signingRoot = Buffer.alloc(32, i);
+        return {
+          type: SignatureSetType.single,
+          pubkey: secretKey.toPublicKey(),
+          signingRoot,
+          signature: secretKey.sign(signingRoot).toBytes(),
+        };
+      });
+
+      await verifier.verifySignatureSets(sets);
+
+      const singleThreadTime = "lodestar_bls_single_thread_time_seconds";
+      const singleThreadTimePerSigSet = "lodestar_bls_single_thread_time_per_sigset_seconds";
+      await expect(metrics.register.getSingleMetricAsString(singleThreadTime)).resolves.toContain(
+        `${singleThreadTime}_count 1`
+      );
+      await expect(metrics.register.getSingleMetricAsString(singleThreadTimePerSigSet)).resolves.toContain(
+        `${singleThreadTimePerSigSet}_count 1`
+      );
+
+      metrics.close();
+    });
+  });
 });

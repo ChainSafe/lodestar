@@ -285,7 +285,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Average sync time to validate a single signature set. Note that the set may have been verified in batch. In most normal hardware this value should be ~1-2ms",
+      "description": "Average sync time to validate a single signature set. Note that the set may have been verified in batch. In most normal hardware this value should be ~1-2ms. worker_thread and single_thread show the same per-sigset average from the thread pool worker's own histogram and from the single-thread fallback path, respectively, so the fallback path is observable alongside the thread pool.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -363,6 +363,26 @@
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(lodestar_bls_worker_thread_time_per_sigset_seconds_sum[$rate_interval])/rate(lodestar_bls_worker_thread_time_per_sigset_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "worker_thread",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(lodestar_bls_single_thread_time_per_sigset_seconds_sum[$rate_interval])/rate(lodestar_bls_single_thread_time_per_sigset_seconds_count[$rate_interval])",
+          "interval": "",
+          "legendFormat": "single_thread",
+          "refId": "C"
         }
       ],
       "title": "BLS thread pool - sig set verification time / set",
@@ -373,7 +393,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Raw throughput of the thread pool. How many individual signature sets are successfully validated per second",
+      "description": "Raw throughput of the thread pool. How many individual signature sets are successfully validated per second. Also plots sig_sets_total (all signature sets entering the pool, before success/error split), prioritized_sig_sets and batchable_sig_sets (how the incoming sets were categorized before verification).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -451,6 +471,36 @@
           "interval": "",
           "legendFormat": "pool",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(lodestar_bls_thread_pool_sig_sets_total[$rate_interval])",
+          "interval": "",
+          "legendFormat": "sig_sets_total",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(lodestar_bls_thread_pool_prioritized_sig_sets_total[$rate_interval])",
+          "interval": "",
+          "legendFormat": "prioritized_sig_sets",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "expr": "rate(lodestar_bls_thread_pool_batchable_sig_sets_total[$rate_interval])",
+          "interval": "",
+          "legendFormat": "batchable_sig_sets",
+          "refId": "D"
         }
       ],
       "title": "BLS thread pool - sig sets / sec",
@@ -909,7 +959,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "How many individual signature sets are invalid vs (valid + invalid). We don't control this number since peers may send us invalid signatures. This number should be very low since we should ban bad peers. If it's too high the batch optimization may not be worth it.",
+      "description": "How many individual signature sets are invalid vs (valid + invalid). We don't control this number since peers may send us invalid signatures. This number should be very low since we should ban bad peers. If it's too high the batch optimization may not be worth it. aggregate_error_{{type}} counts errors while aggregating pubkeys or signatures for a job (distinct from the per-signature-set validation errors above), broken down by job type. This should also stay near zero; a sustained non-zero rate points to malformed input or a bug in the aggregation path rather than an adversarial peer.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1013,6 +1063,22 @@
                 "value": "right"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "aggregate_error_.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ops"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
           }
         ]
       },
@@ -1083,6 +1149,18 @@
           "interval": "",
           "legendFormat": "same_message_set_retries",
           "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "exemplar": false,
+          "expr": "rate(lodestar_bls_thread_pool_error_aggregate_signature_sets_count[$rate_interval])",
+          "hide": false,
+          "interval": "",
+          "legendFormat": "aggregate_error_{{type}}",
+          "refId": "E"
         }
       ],
       "title": "BLS thread pool - Error rates",
@@ -1264,10 +1342,24 @@
           "legendFormat": "pubkey_aggregation",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "rate(lodestar_bls_single_thread_time_seconds_sum[$rate_interval]) * 384",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "single_thread",
+          "range": true,
+          "refId": "C"
         }
       ],
       "title": "BLS jobItemWorkReq cpu time per epoch",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "CPU time per epoch spent on work normally offloaded to BLS worker threads, extrapolated from a per-second rate (* 384, the seconds in one epoch). aggregate_with_randomness and pubkey_aggregation run on the main thread by design. single_thread is different: it's the whole BLS thread pool falling back to verifying signatures on the main thread (e.g. on single-core machines), so it should stay at or near zero whenever the worker thread pool is available; a sustained non-zero value means the node is missing out on the thread pool's parallelism and verification is slower than expected."
     },
     {
       "datasource": {

@@ -25,11 +25,16 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
 
     // Count time after aggregating
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+    const singleThreadTimer = this.metrics?.blsSingleThread.singleThreadDuration.startTimer();
     const isValid = verifySignatureSetsMaybeBatch(setsAggregated);
 
     // Don't use a try/catch, only count run without exceptions
     if (timer) {
       timer();
+    }
+    const duration = singleThreadTimer?.();
+    if (duration !== undefined && sets.length > 0) {
+      this.metrics?.blsSingleThread.timePerSigSet.observe(duration / sets.length);
     }
 
     return isValid;
@@ -40,6 +45,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     message: Uint8Array
   ): Promise<boolean[]> {
     const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+    const singleThreadTimer = this.metrics?.blsSingleThread.singleThreadDuration.startTimer();
     const pubkey = aggregatePublicKeys(sets.map((set) => set.publicKey));
     let isAllValid = true;
     // validate signature = true
@@ -73,6 +79,10 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
 
     if (timer) {
       timer();
+    }
+    const duration = singleThreadTimer?.();
+    if (duration !== undefined && sets.length > 0) {
+      this.metrics?.blsSingleThread.timePerSigSet.observe(duration / sets.length);
     }
 
     return result;
