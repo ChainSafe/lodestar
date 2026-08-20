@@ -118,4 +118,29 @@ describe("BlsVerifier ", () => {
       metrics.close();
     });
   });
+
+  describe("BlsMultiThreadWorkerPool metrics", () => {
+    it("should count same-message signature sets in the incoming metrics", async () => {
+      const metrics = createMetricsTest();
+      const verifier = new BlsMultiThreadWorkerPool({}, {metrics, logger: testLogger(), pubkeyCache});
+      const signingRoot = Buffer.alloc(32, 100);
+      const sets = secretKeys.map((secretKey) => ({
+        publicKey: secretKey.toPublicKey(),
+        signature: secretKey.sign(signingRoot).toBytes(),
+      }));
+
+      await verifier.verifySignatureSetsSameMessage(sets, signingRoot, {priority: true, batchable: true});
+
+      for (const metricName of [
+        "lodestar_bls_thread_pool_sig_sets_total",
+        "lodestar_bls_thread_pool_prioritized_sig_sets_total",
+        "lodestar_bls_thread_pool_batchable_sig_sets_total",
+      ]) {
+        await expect(metrics.register.getSingleMetricAsString(metricName)).resolves.toContain(`${metricName} 3`);
+      }
+
+      await verifier.close();
+      metrics.close();
+    });
+  });
 });
