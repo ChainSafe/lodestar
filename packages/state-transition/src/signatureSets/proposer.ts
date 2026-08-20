@@ -1,4 +1,3 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER} from "@lodestar/params";
 import {SignedBeaconBlock, SignedBlindedBeaconBlock, Slot, isBlindedBeaconBlock, phase0, ssz} from "@lodestar/types";
@@ -7,7 +6,6 @@ import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signa
 
 export function verifyProposerSignature(
   config: BeaconConfig,
-  _pubkeyCache: PubkeyCache,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): boolean {
   const signatureSet = getBlockProposerSignatureSet(config, signedBlock);

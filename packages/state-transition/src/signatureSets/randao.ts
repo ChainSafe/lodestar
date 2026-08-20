@@ -1,4 +1,3 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {DOMAIN_RANDAO} from "@lodestar/params";
 import {BeaconBlock, ssz} from "@lodestar/types";
@@ -10,7 +9,7 @@ import {
   verifySignatureSet,
 } from "../util/index.js";
 
-export function verifyRandaoSignature(config: BeaconConfig, _pubkeyCache: PubkeyCache, block: BeaconBlock): boolean {
+export function verifyRandaoSignature(config: BeaconConfig, block: BeaconBlock): boolean {
   return verifySignatureSet(getRandaoRevealSignatureSet(config, block));
 }
 
