@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {createChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
-import {ErrorAborted, toHex} from "@lodestar/utils";
+import {ErrorAborted, FetchError, TimeoutError, toHex} from "@lodestar/utils";
 import {WAITING_FOR_BUILDER_POLL_MS, getBuilderStatus, resolveBuilderIdentity} from "../../src/identity.js";
 import {getApiClientStub, mockApiErrorResponse, mockApiResponse} from "./utils/apiStub.js";
 import {ClockMock} from "./utils/clock.js";
@@ -178,5 +178,50 @@ describe("Identity", () => {
     await expect(
       resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config)
     ).rejects.toThrow(/status 500/);
+  });
+
+  it("keeps polling on getStateBuilders request timeout", async () => {
+    vi.useFakeTimers();
+    api.beacon.getStateBuilders.mockRejectedValueOnce(new TimeoutError("getStateBuilders request"));
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
+    );
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
+    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    expect(await promise).toEqual(index);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps polling on fetch failure", async () => {
+    vi.useFakeTimers();
+    api.beacon.getStateBuilders.mockRejectedValueOnce(
+      new FetchError(
+        "http://127.0.0.1:9596",
+        new TypeError("fetch failed", {
+          cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:9596"), {code: "ECONNREFUSED"}),
+        })
+      )
+    );
+    api.beacon.getStateBuilders.mockResolvedValue(
+      mockGetStateBuildersResponse(index, {status, pubkey, balance, version})
+    );
+    const promise = resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config);
+    await vi.advanceTimersByTimeAsync(WAITING_FOR_BUILDER_POLL_MS);
+    expect(await promise).toEqual(index);
+    expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws on invalid beacon node url / invalid input", async () => {
+    api.beacon.getStateBuilders.mockRejectedValue(
+      new FetchError(
+        "invalid-url",
+        new TypeError("Failed to parse URL from invalid-url", {
+          cause: Object.assign(new Error("Invalid URL"), {input: "invalid-url", code: "ERR_INVALID_URL"}),
+        })
+      )
+    );
+    await expect(
+      resolveBuilderIdentity(api, logger, pubkeyString, abortController.signal, clock, config)
+    ).rejects.toThrow(/Failed to parse URL/);
   });
 });
