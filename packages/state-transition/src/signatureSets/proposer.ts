@@ -7,11 +7,11 @@ import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../util/signa
 
 export function verifyProposerSignature(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
+  _pubkeyCache: PubkeyCache,
   signedBlock: SignedBeaconBlock | SignedBlindedBeaconBlock
 ): boolean {
   const signatureSet = getBlockProposerSignatureSet(config, signedBlock);
-  return verifySignatureSet(signatureSet, pubkeyCache);
+  return verifySignatureSet(signatureSet);
 }
 
 export function getBlockProposerSignatureSet(

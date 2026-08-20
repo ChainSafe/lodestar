@@ -13,7 +13,14 @@ import {BLSPubkey, Bytes32, UintNum64, electra, phase0, ssz} from "@lodestar/typ
 import {verifyMerkleBranch} from "@lodestar/utils";
 import {ZERO_HASH} from "../constants/index.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStateElectra} from "../types.js";
-import {computeDomain, computeSigningRoot, getMaxEffectiveBalance, increaseBalance} from "../util/index.js";
+import {
+  computeDomain,
+  computeSigningRoot,
+  createSingleSignatureSetFromComponents,
+  getMaxEffectiveBalance,
+  increaseBalance,
+  verifySignatureSet,
+} from "../util/index.js";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -159,11 +166,7 @@ export function isValidDepositSignature(
   const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   try {
-    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
-    const publicKey = PublicKey.fromBytes(pubkey, true);
-    const signature = Signature.fromBytes(depositSignature, true);
-
-    return verify(signingRoot, publicKey, signature);
+    return verifySignatureSet(createSingleSignatureSetFromComponents(pubkey, signingRoot, depositSignature));
   } catch (_e) {
     return false; // Catch all BLS errors: failed key validation, failed signature validation, invalid signature
   }

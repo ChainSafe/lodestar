@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import {describe, expect, it} from "vitest";
 import {SecretKey} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@lodestar/params";
@@ -9,11 +10,52 @@ import {ZERO_HASH} from "../../../src/constants/index.js";
 import {BeaconStateView} from "../../../src/index.js";
 import {getBlockSignatureSets} from "../../../src/signatureSets/index.js";
 import {generateCachedState} from "../../../src/testUtils/state.js";
+import {SignatureSetType, toBlsSignatureSet, verifySignatureSet} from "../../../src/util/signatureSets.js";
 import {generateValidators} from "../../utils/validator.js";
 
 const EMPTY_SIGNATURE = Buffer.alloc(96);
 
 describe("signatureSets", () => {
+  it("converts aggregate indices to the Lodestar-Z verifier representation", () => {
+    const set = toBlsSignatureSet({
+      type: SignatureSetType.aggregate,
+      indices: [1, 2],
+      signingRoot: Buffer.alloc(32, 3),
+      signature: Buffer.alloc(96, 4),
+    });
+
+    expect(set).toMatchObject({indices: new Uint32Array([1, 2]), message: Buffer.alloc(32, 3)});
+  });
+
+  it("rejects aggregate validator indices outside uint32", () => {
+    for (const index of [-1, 0.5, 2 ** 32]) {
+      expect(() =>
+        toBlsSignatureSet({
+          type: SignatureSetType.aggregate,
+          indices: [index],
+          signingRoot: Buffer.alloc(32),
+          signature: Buffer.alloc(96),
+        })
+      ).toThrow(`Invalid validator index ${index}`);
+    }
+  });
+
+  it("verifies indexed sets through the shared Lodestar-Z cache", () => {
+    pubkeyCache.reset();
+    const secretKey = SecretKey.fromKeygen(Buffer.alloc(32, 42));
+    const signingRoot = Buffer.alloc(32, 7);
+    pubkeyCache.append(0, secretKey.toPublicKey().toBytes());
+
+    expect(
+      verifySignatureSet({
+        type: SignatureSetType.indexed,
+        index: 0,
+        signingRoot,
+        signature: secretKey.sign(signingRoot).toBytes(),
+      })
+    ).toBe(true);
+  });
+
   it("should aggregate all signatures from a block", () => {
     const emptyBlockBody = ssz.capella.BeaconBlockBody.defaultValue();
     const block: capella.BeaconBlock = {

@@ -15,11 +15,11 @@ import {
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
+  _pubkeyCache: PubkeyCache,
   state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), pubkeyCache);
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit));
 }
 
 /**

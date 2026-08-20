@@ -10,8 +10,8 @@ import {
   verifySignatureSet,
 } from "../util/index.js";
 
-export function verifyRandaoSignature(config: BeaconConfig, pubkeyCache: PubkeyCache, block: BeaconBlock): boolean {
-  return verifySignatureSet(getRandaoRevealSignatureSet(config, block), pubkeyCache);
+export function verifyRandaoSignature(config: BeaconConfig, _pubkeyCache: PubkeyCache, block: BeaconBlock): boolean {
+  return verifySignatureSet(getRandaoRevealSignatureSet(config, block));
 }
 
 /**

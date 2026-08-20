@@ -1,5 +1,4 @@
-import {PublicKey, Signature, fastAggregateVerify, verify} from "@chainsafe/lodestar-z/blst";
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
+import {BLS_VERIFIER_SET_TYPE, type BlsSignatureSet, verifySignatureSets} from "@chainsafe/lodestar-z/bls-verifier";
 import {Root} from "@lodestar/types";
 
 export enum SignatureSetType {
@@ -47,39 +46,48 @@ export type AggregatedSignatureSet = {
 
 export type ISignatureSet = SingleSignatureSet | IndexedSignatureSet | AggregatedSignatureSet;
 
-export function verifySignatureSet(signatureSet: SingleSignatureSet, pubkeyCache?: PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: IndexedSignatureSet, pubkeyCache: PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: AggregatedSignatureSet, pubkeyCache: PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: ISignatureSet, pubkeyCache: PubkeyCache): boolean;
-export function verifySignatureSet(signatureSet: ISignatureSet, pubkeyCache?: PubkeyCache): boolean {
-  // All signatures are not trusted and must be group checked (p2.subgroup_check)
-  const signature = Signature.fromBytes(signatureSet.signature, true);
-
+export function toBlsSignatureSet(signatureSet: ISignatureSet): BlsSignatureSet {
   switch (signatureSet.type) {
     case SignatureSetType.single:
-      return verify(signatureSet.signingRoot, PublicKey.fromBytes(signatureSet.pubkey, true), signature);
+      return {
+        type: BLS_VERIFIER_SET_TYPE.single,
+        pubkey: signatureSet.pubkey,
+        message: signatureSet.signingRoot,
+        signature: signatureSet.signature,
+      };
 
-    case SignatureSetType.indexed: {
-      if (!pubkeyCache) {
-        throw Error("pubkeyCache required for indexed signature set");
-      }
-      const pubkey = pubkeyCache.getOrThrow(signatureSet.index);
-      return verify(signatureSet.signingRoot, pubkey, signature);
-    }
+    case SignatureSetType.indexed:
+      return {
+        type: BLS_VERIFIER_SET_TYPE.indexed,
+        index: signatureSet.index,
+        message: signatureSet.signingRoot,
+        signature: signatureSet.signature,
+      };
 
     case SignatureSetType.aggregate: {
-      if (!pubkeyCache) {
-        throw Error("pubkeyCache required for aggregate signature set");
+      const indices = new Uint32Array(signatureSet.indices.length);
+      for (const [i, index] of signatureSet.indices.entries()) {
+        if (!Number.isInteger(index) || index < 0 || index > 0xffffffff) {
+          throw new RangeError(`Invalid validator index ${index}`);
+        }
+        indices[i] = index;
       }
-      const pubkeys = signatureSet.indices.map((i) => {
-        return pubkeyCache.getOrThrow(i);
-      });
-      return fastAggregateVerify(signatureSet.signingRoot, pubkeys, signature);
+
+      return {
+        type: BLS_VERIFIER_SET_TYPE.aggregate,
+        indices,
+        message: signatureSet.signingRoot,
+        signature: signatureSet.signature,
+      };
     }
 
     default:
       throw Error("Unknown signature set type");
   }
+}
+
+export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
+  return verifySignatureSets([toBlsSignatureSet(signatureSet)]);
 }
 
 export function createSingleSignatureSetFromComponents(

@@ -1,6 +1,5 @@
-import {ISignatureSet} from "@lodestar/state-transition";
+import {ISignatureSet, toBlsSignatureSet} from "@lodestar/state-transition";
 import {SameMessageSignatureSet, VerifySignatureOpts} from "../interface.js";
-import {toBlsSignatureSet} from "../utils.js";
 import {BlsWorkReq, JobQueueItemType} from "./types.js";
 
 export type JobQueueItem = JobQueueItemDefault | JobQueueItemSameMessage;
