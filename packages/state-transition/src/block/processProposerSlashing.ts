@@ -1,4 +1,3 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, SLOTS_PER_EPOCH} from "@lodestar/params";
 import {Slot, phase0, ssz} from "@lodestar/types";
@@ -22,14 +21,7 @@ export function processProposerSlashing(
   verifySignatures = true
 ): void {
   const proposer = state.validators.getReadonly(proposerSlashing.signedHeader1.message.proposerIndex);
-  assertValidProposerSlashing(
-    state.config,
-    state.epochCtx.pubkeyCache,
-    state.slot,
-    proposerSlashing,
-    proposer,
-    verifySignatures
-  );
+  assertValidProposerSlashing(state.config, state.slot, proposerSlashing, proposer, verifySignatures);
 
   if (fork >= ForkSeq.gloas) {
     // Remove the BuilderPendingPayment corresponding to this proposal if it is still in the
@@ -62,7 +54,6 @@ export function processProposerSlashing(
 
 export function assertValidProposerSlashing(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   proposerSlashing: phase0.ProposerSlashing,
   proposer: Validator,
@@ -99,7 +90,7 @@ export function assertValidProposerSlashing(
   if (verifySignatures) {
     const signatureSets = getProposerSlashingSignatureSets(config, stateSlot, proposerSlashing);
     for (let i = 0; i < signatureSets.length; i++) {
-      if (!verifySignatureSet(signatureSets[i], pubkeyCache)) {
+      if (!verifySignatureSet(signatureSets[i])) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     }

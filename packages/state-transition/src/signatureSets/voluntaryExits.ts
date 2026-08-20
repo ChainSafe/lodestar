@@ -1,4 +1,3 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
@@ -15,11 +14,10 @@ import {
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
   state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), pubkeyCache);
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit));
 }
 
 /**

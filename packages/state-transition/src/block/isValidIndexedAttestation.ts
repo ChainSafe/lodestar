@@ -1,4 +1,3 @@
-import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq, MAX_COMMITTEES_PER_SLOT, MAX_VALIDATORS_PER_COMMITTEE} from "@lodestar/params";
 import {IndexedAttestation, IndexedAttestationBigint, Slot} from "@lodestar/types";
@@ -10,7 +9,6 @@ import {verifySignatureSet} from "../util/index.js";
  */
 export function isValidIndexedAttestation(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   validatorsLen: number,
   indexedAttestation: IndexedAttestation,
@@ -21,14 +19,13 @@ export function isValidIndexedAttestation(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(getIndexedAttestationSignatureSet(config, stateSlot, indexedAttestation), pubkeyCache);
+    return verifySignatureSet(getIndexedAttestationSignatureSet(config, stateSlot, indexedAttestation));
   }
   return true;
 }
 
 export function isValidIndexedAttestationBigint(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
   stateSlot: Slot,
   validatorsLen: number,
   indexedAttestation: IndexedAttestationBigint,
@@ -39,10 +36,7 @@ export function isValidIndexedAttestationBigint(
   }
 
   if (verifySignature) {
-    return verifySignatureSet(
-      getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation),
-      pubkeyCache
-    );
+    return verifySignatureSet(getIndexedAttestationBigintSignatureSet(config, stateSlot, indexedAttestation));
   }
   return true;
 }
