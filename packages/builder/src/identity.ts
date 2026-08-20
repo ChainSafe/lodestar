@@ -3,7 +3,7 @@ import {ChainForkConfig} from "@lodestar/config";
 import {PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {IClock} from "@lodestar/state-transition";
 import {BuilderIndex, BuilderStatus} from "@lodestar/types";
-import {ErrorAborted, Logger, sleep, toHex} from "@lodestar/utils";
+import {ErrorAborted, Logger, TimeoutError, isFetchError, sleep, toHex} from "@lodestar/utils";
 
 export const WAITING_FOR_BUILDER_POLL_MS = 10 * 1000;
 
@@ -38,7 +38,7 @@ export async function getBuilderStatus(
   id: routes.beacon.BuilderId
 ): Promise<{status: BuilderStatus; balance: number} | null> {
   try {
-    const builderEntry = await fetchBuilder(api, id);
+    const builderEntry = await fetchBuilder(api, logger, id);
     if (builderEntry) {
       return {
         status: builderEntry.status,
@@ -77,7 +77,7 @@ async function waitForBuilder(
 
     let builder: routes.beacon.BuilderResponse | null = null;
     try {
-      builder = await fetchBuilder(api, id);
+      builder = await fetchBuilder(api, logger, id);
     } catch (e) {
       // At the fork boundary getStateBuilders("head") can still 400: it serves the head block's
       // post-state, which stays pre-gloas until a gloas-epoch block is head. Keep polling on the transient.
@@ -111,28 +111,37 @@ async function waitForBuilder(
 
 async function fetchBuilder(
   api: ApiClient,
+  logger: Logger,
   id: routes.beacon.BuilderId
 ): Promise<routes.beacon.BuilderResponse | null> {
-  const builderRes = await api.beacon.getStateBuilders({
-    stateId: "head",
-    builderIds: [id],
-  });
+  try {
+    const builderRes = await api.beacon.getStateBuilders({
+      stateId: "head",
+      builderIds: [id],
+    });
 
-  const builders = builderRes.value();
+    const builders = builderRes.value();
 
-  if (builders.length === 0) {
-    return null;
-  }
-
-  const builder = builders[0];
-
-  if (typeof id === "number") {
-    if (id !== builder.index) {
-      throw Error(`Index mismatch: got=${builder.index} expected=${id}`);
+    if (builders.length === 0) {
+      return null;
     }
-  } else if (id !== toHex(builder.builder.pubkey)) {
-    throw Error(`Pubkey mismatch: got=${toHex(builder.builder.pubkey)} expected=${id}`);
-  }
 
-  return builder;
+    const builder = builders[0];
+
+    if (typeof id === "number") {
+      if (id !== builder.index) {
+        throw Error(`Index mismatch: got=${builder.index} expected=${id}`);
+      }
+    } else if (id !== toHex(builder.builder.pubkey)) {
+      throw Error(`Pubkey mismatch: got=${toHex(builder.builder.pubkey)} expected=${id}`);
+    }
+
+    return builder;
+  } catch (e) {
+    if (e instanceof TimeoutError || (isFetchError(e) && e.type !== "input")) {
+      logger.warn("Failed to fetch builder", {message: e.message});
+      return null;
+    }
+    throw e;
+  }
 }
