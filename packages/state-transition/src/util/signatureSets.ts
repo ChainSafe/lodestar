@@ -47,28 +47,6 @@ export type AggregatedSignatureSet = {
 
 export type ISignatureSet = SingleSignatureSet | IndexedSignatureSet | AggregatedSignatureSet;
 
-/**
- * Get the pubkey for a signature set, performing aggregation if necessary.
- * Requires pubkeyCache for indexed and aggregate sets.
- */
-export function getSignatureSetPubkey(signatureSet: ISignatureSet, pubkeyCache: PubkeyCache): PublicKey {
-  switch (signatureSet.type) {
-    case SignatureSetType.single:
-      return PublicKey.fromBytes(signatureSet.pubkey, true);
-
-    case SignatureSetType.indexed: {
-      return pubkeyCache.getOrThrow(signatureSet.index);
-    }
-
-    case SignatureSetType.aggregate: {
-      return pubkeyCache.aggregate(signatureSet.indices);
-    }
-
-    default:
-      throw Error("Unknown signature set type");
-  }
-}
-
 export function verifySignatureSet(signatureSet: SingleSignatureSet, pubkeyCache?: PubkeyCache): boolean;
 export function verifySignatureSet(signatureSet: IndexedSignatureSet, pubkeyCache: PubkeyCache): boolean;
 export function verifySignatureSet(signatureSet: AggregatedSignatureSet, pubkeyCache: PubkeyCache): boolean;
