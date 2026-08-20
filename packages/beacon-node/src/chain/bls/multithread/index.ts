@@ -50,9 +50,9 @@ const blsPoolSize = Math.max(defaultPoolSize - 1, 1);
  * The biggest sets happen during sync, on mainnet batches of 64 blocks have around ~8000 signatures.
  * The latency cost of sending the job to and from the worker is approx a single sig verification.
  * If you split a big signature into 2, the extra time cost is `(2+2N)/(1+2N)`.
- * For 256, the extra time cost is about 0.2% and matches the maximum supported by Lodestar-Z.
+ * Keep the scheduler quantum below Lodestar-Z's 256-set verifier bound to limit per-dispatch latency.
  */
-const MAX_SIGNATURE_SETS_PER_JOB = 256;
+const MAX_SIGNATURE_SETS_PER_JOB = 128;
 
 /**
  * If there are more than `MAX_BUFFERED_SIGS` buffered sigs, verify them immediately without waiting `MAX_BUFFER_WAIT_MS`.
