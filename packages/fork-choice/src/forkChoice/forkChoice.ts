@@ -1737,18 +1737,24 @@ export class ForkChoice implements IForkChoice {
     justifiedCheckpoint: CheckpointWithHex,
     finalizedCheckpoint: CheckpointWithHex,
     getJustifiedBalances: () => JustifiedBalances
-  ): void {
+  ): boolean {
+    let updated = false;
+
     // Update justified checkpoint.
     if (justifiedCheckpoint.epoch > this.fcStore.justified.checkpoint.epoch) {
       this.fcStore.justified = {checkpoint: justifiedCheckpoint, balances: getJustifiedBalances()};
       this.justifiedProposerBoostScore = null;
+      updated = true;
     }
 
     // Update finalized checkpoint.
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint;
       this.justifiedProposerBoostScore = null;
+      updated = true;
     }
+
+    return updated;
   }
 
   /**
@@ -2060,11 +2066,17 @@ export class ForkChoice implements IForkChoice {
     }
 
     // If a new epoch, pull-up justification and finalization from previous epoch
-    this.updateCheckpoints(
+    const didUpdateCheckpoints = this.updateCheckpoints(
       this.fcStore.unrealizedJustified.checkpoint,
       this.fcStore.unrealizedFinalizedCheckpoint,
       () => this.fcStore.unrealizedJustified.balances
     );
+
+    // recompute head if we pull-up checkpoints because the head's dependent root could be changed
+    // this is to make sure isProposerBoostSameDependentRoot() correct on block 0 of the next epoch
+    if (didUpdateCheckpoints) {
+      this.updateHead();
+    }
   }
 
   /**
