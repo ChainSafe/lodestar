@@ -20,6 +20,14 @@ export const SCORE_HALFLIFE_MS = 10 * 60 * 1000;
 export const HALFLIFE_DECAY_MS = -Math.log(2) / SCORE_HALFLIFE_MS;
 /** The number of milliseconds we ban a peer for before their score begins to decay */
 export const COOL_DOWN_BEFORE_DECAY_MS = 30 * 60 * 1000;
+/**
+ * The minimum time between two penalties for the same action on the same peer.
+ *
+ * Repeated identical failures in a burst are one incident, not N. Without this a request loop
+ * retrying at a high rate compounds a single transient into a ban. 10s is short enough that a
+ * genuinely misbehaving peer still reaches MIN_SCORE_BEFORE_BAN within a minute.
+ */
+export const REPEAT_PENALTY_COOLDOWN_MS = 10 * 1000;
 /** Limit of entries in the scores map */
 export const MAX_ENTRIES = 1000;
 /** Const that gets returned when no cool-down is applied */
