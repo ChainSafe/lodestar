@@ -108,11 +108,9 @@ export async function processBlocks(
       throw segmentExecStatus.execAborted.execError;
     }
 
-    if (opts.skipVerifyBlockSignatures !== true) {
-      for (const blockInput of relevantBlocks) {
-        const block = blockInput.getBlock().message;
-        this.seenBlockProposers.add(block.slot, block.proposerIndex);
-      }
+    for (const blockInput of relevantBlocks) {
+      const block = blockInput.getBlock().message;
+      this.seenBlockProposers.add(block.slot, block.proposerIndex, blockInput.blockRootHex);
     }
 
     const {executionStatuses} = segmentExecStatus;

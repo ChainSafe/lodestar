@@ -1,5 +1,35 @@
 import {describe, expect, it} from "vitest";
-import {getExpectedGasLimit, isGasLimitTargetCompatible} from "../../../src/util/gloas.js";
+import {createBeaconConfig} from "@lodestar/config";
+import {getConfig} from "@lodestar/config/test-utils";
+import {FAR_FUTURE_EPOCH, ForkName, MIN_DEPOSIT_AMOUNT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
+import {ssz} from "@lodestar/types";
+import {createCachedBeaconState, createPubkeyCache} from "../../../src/index.js";
+import {CachedBeaconStateGloas} from "../../../src/types.js";
+import {
+  addBuilderToRegistry,
+  appendBuilderToRegistry,
+  getExpectedGasLimit,
+  isGasLimitTargetCompatible,
+} from "../../../src/util/gloas.js";
+
+function buildGloasState(slot = 0): CachedBeaconStateGloas {
+  const config = getConfig(ForkName.gloas);
+  const view = ssz.gloas.BeaconState.defaultViewDU();
+  view.slot = slot;
+  view.fork = ssz.phase0.Fork.toViewDU({
+    previousVersion: config.GENESIS_FORK_VERSION,
+    currentVersion: config.GLOAS_FORK_VERSION,
+    epoch: 0,
+  });
+  return createCachedBeaconState(
+    view,
+    {
+      config: createBeaconConfig(config, view.genesisValidatorsRoot),
+      pubkeyCache: createPubkeyCache(),
+    },
+    {skipSyncCommitteeCache: true}
+  ) as CachedBeaconStateGloas;
+}
 
 describe("util / gloas", () => {
   describe("getExpectedGasLimit", () => {
@@ -72,6 +102,35 @@ describe("util / gloas", () => {
 
       expect(isGasLimitTargetCompatible(parentGasLimit, expectedGasLimit, expectedGasLimit)).toBe(true);
       expect(isGasLimitTargetCompatible(parentGasLimit, roundedGasLimit, expectedGasLimit)).toBe(false);
+    });
+  });
+
+  describe("appendBuilderToRegistry", () => {
+    // At the fork transition the builders registry is append-only (no reusable slot exists), so the
+    // scan-free appendBuilderToRegistry must produce a byte-identical registry to the scan-based
+    // addBuilderToRegistry. addBuilderToRegistry is the oracle here.
+    it("matches addBuilderToRegistry for append-only onboarding", () => {
+      const slot = 0; // any slot; both paths compute depositEpoch identically
+      const scanState = buildGloasState(slot);
+      const appendState = buildGloasState(slot);
+
+      const n = 256;
+      for (let i = 0; i < n; i++) {
+        const pubkey = new Uint8Array(48).fill(i & 0xff);
+        const execAddr = new Uint8Array(20).fill(i & 0xff);
+        const amount = MIN_DEPOSIT_AMOUNT + i; // balance > 0, as for a fresh builder at the fork
+
+        addBuilderToRegistry(scanState, pubkey, PAYLOAD_BUILDER_VERSION, execAddr, amount, slot);
+        appendBuilderToRegistry(appendState, pubkey, PAYLOAD_BUILDER_VERSION, execAddr, amount, slot);
+
+        // byte-for-byte registry equivalence after every onboard
+        expect(appendState.builders.hashTreeRoot()).toEqual(scanState.builders.hashTreeRoot());
+      }
+
+      expect(appendState.builders.length).toBe(n);
+      const builder = appendState.builders.getReadonly(n - 1);
+      expect(builder.withdrawableEpoch).toBe(FAR_FUTURE_EPOCH);
+      expect(builder.version).toBe(PAYLOAD_BUILDER_VERSION);
     });
   });
 });

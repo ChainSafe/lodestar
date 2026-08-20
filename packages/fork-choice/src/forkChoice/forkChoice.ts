@@ -1,5 +1,5 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
+import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -49,7 +49,8 @@ import {
   FastConfirmationRule,
   FastConfirmationSteps,
   type IFastConfirmationRule,
-} from "./fastConfirmation/fastConfirmationRule.ts";
+  type IFastConfirmationSpecStore,
+} from "./fastConfirmation/fastConfirmationRule.js";
 import {
   AncestorResult,
   AncestorStatus,
@@ -226,6 +227,17 @@ export class ForkChoice implements IForkChoice {
 
   getConfirmedRoot(): RootHex {
     return this.fastConfirmationRule?.getConfirmedRoot() ?? this.fcStore.justified.checkpoint.rootHex;
+  }
+
+  getFastConfirmationStore(): IFastConfirmationSpecStore {
+    return {
+      confirmedRoot: this.getConfirmedRoot(),
+      previousEpochObservedJustifiedCheckpoint: this.fcStore.previousEpochObservedJustifiedCheckpoint,
+      currentEpochObservedJustifiedCheckpoint: this.fcStore.currentEpochObservedJustifiedCheckpoint,
+      previousEpochGreatestUnrealizedCheckpoint: this.fcStore.previousEpochGreatestUnrealizedCheckpoint,
+      previousSlotHead: this.fcStore.previousSlotHead,
+      currentSlotHead: this.fcStore.currentSlotHead,
+    };
   }
 
   getConfirmedBlock(): ProtoBlock | null {
@@ -614,8 +626,8 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.slot > windowStart).length;
   }
 
-  getPayloadRevealCounts(fromSlot: Slot, toSlot: Slot): {blocksPresent: number; payloadsRevealed: number} {
-    return this.protoArray.getPayloadRevealCounts(fromSlot, toSlot);
+  getCanonicalPayloadCounts(fromSlot: Slot, toSlot: Slot, head: ProtoBlock): {full: number; empty: number} {
+    return this.protoArray.getCanonicalPayloadCounts(fromSlot, toSlot, head.blockRoot, head.payloadStatus);
   }
 
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
@@ -2074,11 +2086,9 @@ export class ForkChoice implements IForkChoice {
       return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.HeadBlockIsTimely};
     }
 
-    // No reorg if we are at an epoch boundary
-    // https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.12/specs/phase0/fork-choice.md#is_not_epoch_boundary
-    const isAtEpochBoundary = slot % SLOTS_PER_EPOCH === 0;
-    if (isAtEpochBoundary) {
-      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.AtEpochBoundary};
+    const isShufflingStable = isForkPostFulu(this.config.getForkName(slot)) || slot % SLOTS_PER_EPOCH !== 0;
+    if (!isShufflingStable) {
+      return {prelimProposerHead, prelimNotReorgedReason: NotReorgedReason.NotShufflingStable};
     }
 
     // No reorg if headBlock and parentBlock are not ffg competitive
