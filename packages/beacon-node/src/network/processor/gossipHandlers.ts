@@ -1282,8 +1282,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
         payloadAttestationMessage.data.blobDataAvailable
       );
 
+      // The event version must match the fork the message was deserialized with, which is the
+      // fork of the topic. It can be ahead of the fork of the message slot as the Gloas topics
+      // are subscribed one epoch before the fork.
       chain.emitter.emit(routes.events.EventType.payloadAttestationMessage, {
-        version: config.getForkName(payloadAttestationMessage.data.slot),
+        version: topic.boundary.fork,
         data: payloadAttestationMessage,
       });
     },
@@ -1310,8 +1313,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
 
       chain.validatorMonitor?.registerExecutionPayloadBid(OpSource.gossip, proposerIndex, executionPayloadBid.message);
 
+      // The event version must match the fork the message was deserialized with, which is the
+      // fork of the topic. It can be ahead of the fork of the message slot as the Gloas topics
+      // are subscribed one epoch before the fork.
       chain.emitter.emit(routes.events.EventType.executionPayloadBid, {
-        version: config.getForkName(executionPayloadBid.message.slot),
+        version: topic.boundary.fork,
         data: executionPayloadBid,
       });
     },
@@ -1323,8 +1329,11 @@ function getSequentialHandlers(modules: ValidatorFnsModules, options: GossipHand
       const signedProposerPreferences = sszDeserialize(topic, serializedData);
       await validateGossipProposerPreferences(chain, signedProposerPreferences);
 
+      // The event version must match the fork the message was deserialized with, which is the
+      // fork of the topic. It can be ahead of the fork of the message slot as the Gloas topics
+      // are subscribed one epoch before the fork.
       chain.emitter.emit(routes.events.EventType.proposerPreferences, {
-        version: config.getForkName(signedProposerPreferences.message.proposalSlot),
+        version: topic.boundary.fork,
         data: signedProposerPreferences,
       });
     },

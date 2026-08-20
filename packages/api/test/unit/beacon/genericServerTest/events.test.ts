@@ -1,6 +1,7 @@
 import {FastifyInstance} from "fastify";
 import {afterAll, afterEach, beforeAll, beforeEach, describe, expect, it} from "vitest";
 import {config} from "@lodestar/config/default";
+import {ForkName} from "@lodestar/params";
 import {sleep} from "@lodestar/utils";
 import {getClient} from "../../../../src/beacon/client/events.js";
 import {BeaconEvent, Endpoints, EventType, getDefinitions} from "../../../../src/beacon/routes/events.js";
@@ -77,5 +78,44 @@ describe("beacon / events", () => {
     });
 
     expect(eventsReceived).toEqual(eventsToSend);
+  });
+
+  it("Keep the stream alive if an event can not be serialized", async () => {
+    // `version` does not match the Gloas-only type of the event, as observed on a devnet where a
+    // peer gossiped proposer preferences for a proposal slot that was still pre-Gloas
+    const invalidEvent = {
+      type: EventType.proposerPreferences,
+      message: {...eventTestData[EventType.proposerPreferences], version: ForkName.fulu},
+    } as BeaconEvent;
+    const eventHead: BeaconEvent = {
+      type: EventType.head,
+      message: eventTestData[EventType.head],
+    };
+    const eventsReceived: BeaconEvent[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      mockApi.eventstream.mockImplementation(async ({onEvent}) => {
+        try {
+          // The error is surfaced to the caller instead of tearing down the connection
+          expect(() => onEvent(invalidEvent)).toThrow();
+          await sleep(5);
+          onEvent(eventHead);
+        } catch (e) {
+          reject(e);
+        }
+      });
+
+      const client = getClient(config, baseUrl);
+      void client.eventstream({
+        topics: [EventType.head, EventType.proposerPreferences],
+        signal: controller.signal,
+        onEvent: (event) => {
+          eventsReceived.push(event);
+          resolve();
+        },
+      });
+    });
+
+    expect(eventsReceived).toEqual([eventHead]);
   });
 });

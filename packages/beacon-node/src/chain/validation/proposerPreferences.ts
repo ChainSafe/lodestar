@@ -1,5 +1,5 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -23,6 +23,21 @@ export async function validateGossipProposerPreferences(
   const {proposalSlot, validatorIndex, dependentRoot} = preferences;
   const dependentRootHex = toRootHex(dependentRoot);
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
+
+  // [IGNORE] `preferences.proposal_slot` is in a Gloas or later fork.
+  //
+  // Not a spec condition. The Gloas topics are subscribed one epoch ahead of the fork, so for that
+  // epoch the lookahead check below accepts a `proposal_slot` that is still pre-Gloas. Preferences
+  // for such a slot are meaningless as there is no bid auction before Gloas, and consumers that
+  // derive the fork from `proposal_slot` cannot represent them with a Gloas-only type.
+  const proposalFork = chain.config.getForkName(proposalSlot);
+  if (!isForkPostGloas(proposalFork)) {
+    throw new ProposerPreferencesError(GossipAction.IGNORE, {
+      code: ProposerPreferencesErrorCode.PRE_GLOAS_PROPOSAL_SLOT,
+      proposalSlot,
+      proposalFork,
+    });
+  }
 
   // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.
