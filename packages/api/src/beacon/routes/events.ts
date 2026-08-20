@@ -132,6 +132,8 @@ export enum EventType {
   executionPayloadAvailable = "execution_payload_available",
   /** The node has received a `SignedExecutionPayloadBid` (from P2P or API) that passes gossip validation on the `execution_payload_bid` topic */
   executionPayloadBid = "execution_payload_bid",
+  /** The node has received a gloas block (from P2P or API) that includes `execution_payload_bid` */
+  includedExecutionPayloadBid = "included_execution_payload_bid",
   /** The node has received a `SignedProposerPreferences` (from P2P or API) that passes gossip validation on the `proposer_preferences` topic */
   proposerPreferences = "proposer_preferences",
   /** The node has received a `PayloadAttestationMessage` (from P2P or API) that passes validation rules of the `payload_attestation_message` topic */
@@ -163,6 +165,7 @@ export const eventTypes: {[K in EventType]: K} = {
   [EventType.executionPayloadGossip]: EventType.executionPayloadGossip,
   [EventType.executionPayloadAvailable]: EventType.executionPayloadAvailable,
   [EventType.executionPayloadBid]: EventType.executionPayloadBid,
+  [EventType.includedExecutionPayloadBid]: EventType.includedExecutionPayloadBid,
   [EventType.proposerPreferences]: EventType.proposerPreferences,
   [EventType.payloadAttestationMessage]: EventType.payloadAttestationMessage,
   [EventType.fastConfirmation]: EventType.fastConfirmation,
@@ -237,6 +240,7 @@ export type EventData = {
     blockRoot: RootHex;
   };
   [EventType.executionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
+  [EventType.includedExecutionPayloadBid]: {version: ForkName; data: gloas.SignedExecutionPayloadBid};
   [EventType.proposerPreferences]: {version: ForkName; data: gloas.SignedProposerPreferences};
   [EventType.payloadAttestationMessage]: {version: ForkName; data: gloas.PayloadAttestationMessage};
   [EventType.fastConfirmation]: {
@@ -441,6 +445,9 @@ export function getTypeByEvent(config: ChainForkConfig): {[K in EventType]: Type
       {jsonCase: "eth2"}
     ),
     [EventType.executionPayloadBid]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid),
+    [EventType.includedExecutionPayloadBid]: WithVersion(
+      (fork) => getPostGloasForkTypes(fork).SignedExecutionPayloadBid
+    ),
     [EventType.proposerPreferences]: WithVersion((fork) => getPostGloasForkTypes(fork).SignedProposerPreferences),
     [EventType.payloadAttestationMessage]: WithVersion((fork) => getPostGloasForkTypes(fork).PayloadAttestationMessage),
     [EventType.fastConfirmation]: new ContainerType(

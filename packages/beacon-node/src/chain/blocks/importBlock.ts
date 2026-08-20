@@ -560,6 +560,15 @@ export async function importBlock(
           this.emitter.emit(routes.events.EventType.proposerSlashing, proposerSlashing);
         }
       }
+      if (
+        this.emitter.listenerCount(routes.events.EventType.includedExecutionPayloadBid) &&
+        isGloasBeaconBlock(block.message)
+      ) {
+        this.emitter.emit(routes.events.EventType.includedExecutionPayloadBid, {
+          version: this.config.getForkName(block.message.slot),
+          data: block.message.body.signedExecutionPayloadBid,
+        });
+      }
     });
   }
 
