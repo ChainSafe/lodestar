@@ -211,7 +211,7 @@ describe("Identity", () => {
     expect(api.beacon.getStateBuilders).toHaveBeenCalledTimes(2);
   });
 
-  it("throws on invalid beacon node url", async () => {
+  it("throws on invalid beacon node url / invalid input", async () => {
     api.beacon.getStateBuilders.mockRejectedValue(
       new FetchError(
         "invalid-url",
