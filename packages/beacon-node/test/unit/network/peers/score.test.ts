@@ -1,6 +1,9 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {MapDef} from "@lodestar/utils";
-import {REPEAT_PENALTY_COOLDOWN_MS} from "../../../../src/network/peers/score/constants.js";
+import {
+  MAX_PENALTY_ACTIONS_PER_PEER,
+  REPEAT_PENALTY_COOLDOWN_MS,
+} from "../../../../src/network/peers/score/constants.js";
 import {
   PeerAction,
   PeerRpcScoreStore,
@@ -120,6 +123,16 @@ describe("peer score penalty rate limiting", () => {
     }
 
     expect(scoreStore.getScoreState(peer)).toBe(ScoreState.Banned);
+  });
+
+  it("Should bound tracked action names per peer", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    for (let i = 0; i < MAX_PENALTY_ACTIONS_PER_PEER * 2; i++) {
+      scoreStore.applyAction(peer, PeerAction.HighToleranceError, `action-${i}`);
+    }
+    const lastPenalties = (scoreStore["lastPenaltyMs"] as MapDef<string, Map<string, number>>).get(peer.toString());
+
+    expect(lastPenalties?.size).toBe(MAX_PENALTY_ACTIONS_PER_PEER);
   });
 
   it("Should never suppress Fatal", () => {

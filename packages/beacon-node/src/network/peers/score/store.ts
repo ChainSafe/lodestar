@@ -7,6 +7,7 @@ import {prettyPrintPeerId} from "../../util.js";
 import {
   DEFAULT_SCORE,
   MAX_ENTRIES,
+  MAX_PENALTY_ACTIONS_PER_PEER,
   MAX_SCORE,
   MIN_SCORE,
   REPEAT_PENALTY_COOLDOWN_MS,
@@ -81,6 +82,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
         return;
       }
       lastPenalties.set(actionName, nowMs);
+      pruneSetToMax(lastPenalties, MAX_PENALTY_ACTIONS_PER_PEER);
     }
 
     const peerScore = this.scores.getOrDefault(peerIdStr);
