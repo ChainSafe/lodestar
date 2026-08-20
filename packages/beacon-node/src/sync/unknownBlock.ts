@@ -1153,9 +1153,11 @@ export class BlockInputSync {
           );
         }
 
-        throw Error(
-          `Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: cannot find peer with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`
-        );
+        const reason =
+          pendingColumns.size > 0
+            ? `cannot find peer with needed columns=${prettyPrintIndices(Array.from(pendingColumns))}`
+            : "no peer available to download pending payload";
+        throw Error(`Error fetching payload by root slot=${slot} root=${rootHex} after ${i}: ${reason}`);
       }
 
       const {peerId, client: peerClient} = peerMeta;
