@@ -9,11 +9,12 @@ describe("BuilderStatusTracker", () => {
   const api = getApiClientStub();
   const builderIndex = 1;
   const epoch = 1;
+  const metrics = null;
 
   let builderStatusTracker: BuilderStatusTracker;
 
   beforeEach(() => {
-    builderStatusTracker = new BuilderStatusTracker(api, logger, builderIndex);
+    builderStatusTracker = new BuilderStatusTracker(api, logger, builderIndex, metrics);
     api.beacon.getStateBuilders.mockResolvedValue(mockGetStateBuildersResponse(builderIndex));
   });
 
