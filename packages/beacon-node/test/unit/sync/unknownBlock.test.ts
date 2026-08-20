@@ -1608,6 +1608,59 @@ describe("UnknownBlockSync", () => {
       );
     });
 
+    it("resolvePayloadSlot prefers pending block (S2), then fork choice (S3), then seen cache (S4)", () => {
+      const getBlockHexDefaultStatus = vi.fn().mockReturnValue(null);
+      const seenGet = vi.fn().mockReturnValue(undefined);
+      setupPayloadSyncTest({
+        chainOverrides: {
+          seenPayloadEnvelopeInputCache: {
+            add: vi.fn(),
+            get: seenGet,
+            prune: vi.fn(),
+          } as unknown as IBeaconChain["seenPayloadEnvelopeInputCache"],
+          forkChoice: {
+            hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
+            hasBlockHex: vi.fn().mockReturnValue(false),
+            getBlockHexDefaultStatus,
+            getFinalizedBlock: vi.fn().mockReturnValue({slot: 0} as ProtoBlock),
+          } as unknown as IForkChoice,
+        },
+      });
+
+      const svc = service as unknown as {
+        resolvePayloadSlot: (rootHex: string) => number | undefined;
+        pendingBlocks: Map<string, BlockInputSyncCacheItem>;
+      };
+      const rootHex = toRootHex(Buffer.alloc(32, 0xe1));
+
+      // no trusted source -> undefined
+      expect(svc.resolvePayloadSlot(rootHex)).toBeUndefined();
+
+      // S4: seen payload envelope cache
+      seenGet.mockReturnValue({slot: 50});
+      expect(svc.resolvePayloadSlot(rootHex)).toBe(50);
+
+      // S3: fork choice overrides S4
+      getBlockHexDefaultStatus.mockReturnValue({slot: 40} as ProtoBlock);
+      expect(svc.resolvePayloadSlot(rootHex)).toBe(40);
+
+      // S2: a pending block of the same root overrides S3
+      const block = ssz.gloas.SignedBeaconBlock.defaultValue();
+      block.message.slot = 30;
+      svc.pendingBlocks.set(rootHex, {
+        status: PendingBlockInputStatus.downloaded,
+        blockInput: createGloasBlockInput({
+          block,
+          blockRootHex: rootHex,
+          seenTimestampSec: 0,
+          source: BlockInputSource.gossip,
+        }),
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+      expect(svc.resolvePayloadSlot(rootHex)).toBe(30);
+    });
+
     it("prunes pending payloads and blocks below the finalized block slot on ChainEvent.forkChoiceFinalized", () => {
       const finalizedEpoch = 4;
       // Simulate a skipped epoch boundary: the finalized block sits below computeStartSlotAtEpoch(epoch).
@@ -1616,12 +1669,20 @@ describe("UnknownBlockSync", () => {
       const epochBoundarySlot = computeStartSlotAtEpoch(finalizedEpoch);
       const finalizedBlockSlot = epochBoundarySlot - 2;
 
+      // A slot-less payload whose block is in fork choice (S3) below finality -> resolved + pruned.
+      const rootHexResolvable = toRootHex(Buffer.alloc(32, 0xa5));
+      const resolvableSlot = finalizedBlockSlot - 4;
+
       const {emitter} = setupPayloadSyncTest({
         chainOverrides: {
           forkChoice: {
             hasPayloadHexUnsafe: vi.fn().mockReturnValue(false),
             hasBlockHex: vi.fn().mockReturnValue(false),
-            getBlockHexDefaultStatus: vi.fn().mockReturnValue(null),
+            getBlockHexDefaultStatus: vi
+              .fn()
+              .mockImplementation((root: string) =>
+                root === rootHexResolvable ? ({slot: resolvableSlot} as ProtoBlock) : null
+              ),
             getFinalizedBlock: vi.fn().mockReturnValue({slot: finalizedBlockSlot} as ProtoBlock),
           } as unknown as IForkChoice,
         },
@@ -1689,7 +1750,24 @@ describe("UnknownBlockSync", () => {
         peerIdStrings: new Set(),
       });
 
-      expect(pendingPayloads.size).toBe(5);
+      // slot-less PendingPayloadRootHex, resolved from fork choice (S3) at prune time -> pruned
+      pendingPayloads.set(rootHexResolvable, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexResolvable,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      // slot-less PendingPayloadRootHex with no trusted source -> unresolved, retained (logged)
+      const rootHexUnresolvable = toRootHex(Buffer.alloc(32, 0xa6));
+      pendingPayloads.set(rootHexUnresolvable, {
+        status: PendingPayloadInputStatus.pending,
+        rootHex: rootHexUnresolvable,
+        timeAddedSec: 0,
+        peerIdStrings: new Set(),
+      });
+
+      expect(pendingPayloads.size).toBe(7);
 
       // PendingBlockInput below finality -> pruned (slot resolved from blockInput.slot)
       const blockBelow = ssz.gloas.SignedBeaconBlock.defaultValue();
@@ -1744,9 +1822,11 @@ describe("UnknownBlockSync", () => {
       expect(pendingPayloads.has(rootHexBelow)).toBe(false);
       expect(pendingPayloads.has(inputRootHex)).toBe(false);
       expect(pendingPayloads.has(envelopeRootHex)).toBe(false);
+      expect(pendingPayloads.has(rootHexResolvable)).toBe(false);
       expect(pendingPayloads.has(rootHexAtFinalized)).toBe(true);
       expect(pendingPayloads.has(rootHexBetween)).toBe(true);
-      expect(pendingPayloads.size).toBe(2);
+      expect(pendingPayloads.has(rootHexUnresolvable)).toBe(true);
+      expect(pendingPayloads.size).toBe(3);
 
       expect(pendingBlocks.has(blockBelowRootHex)).toBe(false);
       expect(pendingBlocks.has(blockAtFinalizedRootHex)).toBe(true);

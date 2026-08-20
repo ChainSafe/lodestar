@@ -218,7 +218,7 @@ export class BlockInputSync {
 
   private onUnknownEnvelopeBlockRoot = (data: ChainEventData[ChainEvent.unknownEnvelopeBlockRoot]): void => {
     try {
-      this.addByPayloadRootHex(data.rootHex, data.slot, data.peer);
+      this.addByPayloadRootHex(data.rootHex, data.peer, this.resolvePayloadSlot(data.rootHex));
       this.triggerUnknownBlockSearch();
       this.metrics?.blockInputSync.requests.inc({type: PendingBlockType.UNKNOWN_PAYLOAD_BLOCK_ROOT});
       this.metrics?.blockInputSync.payloadSource.inc({source: data.source});
@@ -261,7 +261,7 @@ export class BlockInputSync {
       }
 
       if (missingDependency.kind === "parentPayload") {
-        this.addByPayloadRootHex(missingDependency.rootHex, missingDependency.slot, data.peer);
+        this.addByPayloadRootHex(missingDependency.rootHex, data.peer, missingDependency.slot);
       } else if (missingDependency.kind === "parentBlock") {
         this.addByRootHex(missingDependency.rootHex, data.peer);
       }
@@ -297,8 +297,24 @@ export class BlockInputSync {
     const finalizedSlot = this.chain.forkChoice.getFinalizedBlock().slot;
 
     let deletedPayloads = 0;
+    let unresolvedSlotPayloads = 0;
     for (const [rootHex, payload] of this.pendingPayloads) {
-      if (getPayloadSyncCacheItemSlot(payload) < finalizedSlot) {
+      // Last-effort resolve for a slot-less PendingPayloadRootHex, and store it back for later passes.
+      if (!isPendingPayloadInput(payload) && !isPendingPayloadEnvelope(payload) && payload.slot === undefined) {
+        payload.slot = this.resolvePayloadSlot(rootHex);
+      }
+
+      const slot = getPayloadSyncCacheItemSlot(payload);
+      if (typeof slot !== "number") {
+        unresolvedSlotPayloads++;
+        this.logger.debug("BlockInputSync.pruneFinalized: pending payload with unresolved slot", {
+          root: rootHex,
+          finalizedSlot,
+        });
+        continue;
+      }
+
+      if (slot < finalizedSlot) {
         this.pendingPayloads.delete(rootHex);
         deletedPayloads++;
       }
@@ -315,13 +331,15 @@ export class BlockInputSync {
 
     if (deletedPayloads > 0 || deletedBlocks > 0) {
       this.metrics?.blockInputSync.removedBlocks.inc(deletedPayloads + deletedBlocks);
-      this.logger.debug("BlockInputSync.pruneFinalized dropped pre-finalized pending items", {
-        finalizedSlot,
-        finalizedRoot: checkpoint.rootHex,
-        deletedPayloads,
-        deletedBlocks,
-      });
     }
+
+    this.logger.debug("BlockInputSync.pruneFinalized dropped pre-finalized pending items", {
+      finalizedSlot,
+      finalizedRoot: checkpoint.rootHex,
+      deletedPayloads,
+      deletedBlocks,
+      unresolvedSlotPayloads,
+    });
   };
 
   private addByRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr): boolean => {
@@ -389,7 +407,7 @@ export class BlockInputSync {
     }
   };
 
-  private addByPayloadRootHex = (rootHex: RootHex, slot: Slot, peerIdStr?: PeerIdStr): boolean => {
+  private addByPayloadRootHex = (rootHex: RootHex, peerIdStr?: PeerIdStr, slot?: Slot): boolean => {
     let pendingPayload = this.pendingPayloads.get(rootHex);
     let added = false;
     if (!pendingPayload) {
@@ -404,8 +422,8 @@ export class BlockInputSync {
       added = true;
 
       this.logger.verbose("Added new payload rootHex to BlockInputSync.pendingPayloads", {
-        slot,
-        delaySec: this.chain.clock.secFromSlot(slot),
+        slot: slot ?? "unknown",
+        delaySec: slot != null ? this.chain.clock.secFromSlot(slot) : "unknown",
         root: rootHex,
         peerIdStr: peerIdStr ?? "unknown peer",
       });
@@ -421,6 +439,29 @@ export class BlockInputSync {
     }
     return added;
   };
+
+  /**
+   * Resolve the block slot for a payload root.
+   */
+  private resolvePayloadSlot(rootHex: RootHex): Slot | undefined {
+    // a pending block of the same root
+    const pendingBlock = this.pendingBlocks.get(rootHex);
+    if (pendingBlock) {
+      const pendingBlockSlot = getBlockInputSyncCacheItemSlot(pendingBlock);
+      if (typeof pendingBlockSlot === "number") {
+        return pendingBlockSlot;
+      }
+    }
+
+    // the block is in fork choice
+    const forkChoiceSlot = this.chain.forkChoice.getBlockHexDefaultStatus(rootHex)?.slot;
+    if (forkChoiceSlot !== undefined) {
+      return forkChoiceSlot;
+    }
+
+    // a seen payload envelope input
+    return this.chain.seenPayloadEnvelopeInputCache.get(rootHex)?.slot;
+  }
 
   private addByPayloadInput = (
     payloadInput: PayloadEnvelopeInput,
@@ -535,9 +576,9 @@ export class BlockInputSync {
       }
 
       case "parentPayload": {
-        let added = this.addByPayloadRootHex(missingDependency.rootHex, missingDependency.slot);
+        let added = this.addByPayloadRootHex(missingDependency.rootHex, undefined, missingDependency.slot);
         for (const peerIdStr of pendingBlock.peerIdStrings) {
-          added = this.addByPayloadRootHex(missingDependency.rootHex, missingDependency.slot, peerIdStr) || added;
+          added = this.addByPayloadRootHex(missingDependency.rootHex, peerIdStr, missingDependency.slot) || added;
         }
         return added ? "queued_parent_payload" : "blocked";
       }
@@ -1008,6 +1049,10 @@ export class BlockInputSync {
 
     if (payload.status !== PendingPayloadInputStatus.pending) {
       return;
+    }
+
+    if (!isPendingPayloadInput(payload) && payload.slot === undefined) {
+      payload.slot = this.resolvePayloadSlot(rootHex);
     }
 
     const payloadSlot = getPayloadSyncCacheItemSlot(payload);

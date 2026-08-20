@@ -77,7 +77,10 @@ export type PendingPayloadInput = {
 export type PendingPayloadRootHex = {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
-  slot: Slot;
+  // Trusted slot only (fork choice / validated data), may be missing until resolved. NOT the gossip
+  // message slot from ChainEvent.unknownEnvelopeBlockRoot, which is untrusted and not necessarily the
+  // payload/block slot. See BlockInputSync.resolvePayloadSlot.
+  slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;
   peerIdStrings: Set<string>;
@@ -124,7 +127,7 @@ export function getPayloadSyncCacheItemRootHex(payload: PayloadSyncCacheItem): R
   return payload.rootHex;
 }
 
-export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot {
+export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot | string {
   if (isPendingPayloadInput(payload)) {
     return payload.payloadInput.slot;
   }
@@ -133,5 +136,5 @@ export function getPayloadSyncCacheItemSlot(payload: PayloadSyncCacheItem): Slot
     return payload.envelope.message.payload.slotNumber;
   }
 
-  return payload.slot;
+  return payload.slot ?? "unknown";
 }
