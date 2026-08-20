@@ -29,7 +29,7 @@ export const COOL_DOWN_BEFORE_DECAY_MS = 30 * 60 * 1000;
  */
 export const REPEAT_PENALTY_COOLDOWN_MS = 10 * 1000;
 /**
- * Limit of action names tracked per peer for the repeat penalty cooldown.
+ * Limit of action + action name pairs tracked per peer for the repeat penalty cooldown.
  *
  * Action names are usually a bounded set of error codes, but `LodestarError` allows a custom
  * message, so the set is not guaranteed bounded. Pruning is fail-open, a dropped entry only means

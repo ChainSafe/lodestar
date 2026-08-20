@@ -32,7 +32,7 @@ const peerActionScore: Record<PeerAction, number> = {
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly scores: MapDef<PeerIdStr, IPeerScore>;
-  /** Time the last penalty was applied per peer, per action name, to rate limit repeats */
+  /** Time the last penalty was applied per peer, per action + action name, to rate limit repeats */
   private readonly lastPenaltyMs: MapDef<PeerIdStr, Map<string, number>>;
   private readonly metrics: NetworkCoreMetrics | null;
   private readonly logger: Logger | null;
@@ -76,12 +76,16 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     if (action !== PeerAction.Fatal) {
       const nowMs = Date.now();
       const lastPenalties = this.lastPenaltyMs.getOrDefault(peerIdStr);
-      const lastMs = lastPenalties.get(actionName);
+      // Key on the action too, not just its name. The same error code maps to different severities
+      // depending on method (e.g. RESP_TIMEOUT is Mid for block methods but Low for ping/status), so
+      // keying on the name alone would let whichever arrived first mask a stronger penalty.
+      const penaltyKey = `${action}:${actionName}`;
+      const lastMs = lastPenalties.get(penaltyKey);
       if (lastMs !== undefined && nowMs - lastMs < REPEAT_PENALTY_COOLDOWN_MS) {
         this.metrics?.peerManager.penaltiesSuppressed.inc({reason: actionName});
         return;
       }
-      lastPenalties.set(actionName, nowMs);
+      lastPenalties.set(penaltyKey, nowMs);
       pruneSetToMax(lastPenalties, MAX_PENALTY_ACTIONS_PER_PEER);
     }
 

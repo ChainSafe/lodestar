@@ -135,6 +135,15 @@ describe("peer score penalty rate limiting", () => {
     expect(lastPenalties?.size).toBe(MAX_PENALTY_ACTIONS_PER_PEER);
   });
 
+  it("Should not let a weaker action mask a stronger one with the same name", () => {
+    const scoreStore = new PeerRpcScoreStore();
+    // same actionName, different severity: RESP_TIMEOUT is Mid for block methods, Low for ping
+    scoreStore.applyAction(peer, PeerAction.MidToleranceError, "REQUEST_ERROR_RESP_TIMEOUT");
+    scoreStore.applyAction(peer, PeerAction.LowToleranceError, "REQUEST_ERROR_RESP_TIMEOUT");
+
+    expect(scoreStore.getScore(peer)).toBe(-15);
+  });
+
   it("Should never suppress Fatal", () => {
     const scoreStore = new PeerRpcScoreStore();
     scoreStore.applyAction(peer, PeerAction.LowToleranceError, actionName);
