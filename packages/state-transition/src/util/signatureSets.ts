@@ -1,4 +1,4 @@
-import {PublicKey, Signature, aggregatePublicKeys, fastAggregateVerify, verify} from "@chainsafe/lodestar-z/blst";
+import {PublicKey, Signature, fastAggregateVerify, verify} from "@chainsafe/lodestar-z/blst";
 import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Root} from "@lodestar/types";
 
@@ -61,10 +61,7 @@ export function getSignatureSetPubkey(signatureSet: ISignatureSet, pubkeyCache: 
     }
 
     case SignatureSetType.aggregate: {
-      const pubkeys = signatureSet.indices.map((i) => {
-        return pubkeyCache.getOrThrow(i);
-      });
-      return aggregatePublicKeys(pubkeys);
+      return pubkeyCache.aggregate(signatureSet.indices);
     }
 
     default:
