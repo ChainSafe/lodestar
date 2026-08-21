@@ -879,7 +879,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Signature sets carried by each semantic job and each intentional batching-buffer flush.",
+      "description": "Average signature sets per BLS job, grouped by job type.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -954,19 +954,9 @@
           "interval": "",
           "legendFormat": "{{type}} sets/job",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_buffered_signature_sets_sum[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_buffered_signature_sets_count[$rate_interval]))",
-          "interval": "",
-          "legendFormat": "sets/buffer flush",
-          "refId": "B"
         }
       ],
-      "title": "BLS batching width",
+      "title": "Signature sets per BLS job",
       "type": "timeseries"
     },
     {
