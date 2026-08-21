@@ -26,11 +26,16 @@ describe("verifyDepositSignatures", () => {
     expect(verifyDepositSignatures(config, [a, invalidB, c])).toEqual([true, false, true]);
   });
 
-  // BLS KeyValidate edge cases from consensus-specs#5541. Those spec tests exercise
-  // process_deposit / apply_pending_deposit / process_builder_deposit_request, which all route
-  // through isValidDepositSignature() — the single-deposit path that parses with validation.
-  // verifyDepositSignatures() is a separate batch helper (used by the pre-Gloas scanner) that
-  // parses without validation, so the spec tests never reach it. Cover it here.
+  // Malformed pubkeys from consensus-specs#5541. Those spec tests exercise process_deposit /
+  // apply_pending_deposit / process_builder_deposit_request, which all route through
+  // isValidDepositSignature() — the single-deposit path. verifyDepositSignatures() is a separate
+  // batch helper (used by the pre-Gloas scanner) that the spec tests never reach, so the property
+  // asserted here is the batch one: a malformed entry fails on its own and leaves its neighbours'
+  // results intact, rather than invalidating the whole chunk.
+  //
+  // These do not prove KeyValidate is applied. blst rejects infinity and non-subgroup pubkeys
+  // whether or not the validation flags are passed, and each case also carries a signature over a
+  // different DepositMessage, so it would fail for any substituted pubkey.
   const keyValidatePubkeys = {
     "outside the prime-order subgroup": "0x80" + "00".repeat(46) + "04",
     "the point at infinity": "0xc0" + "00".repeat(47),
