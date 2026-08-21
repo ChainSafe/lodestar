@@ -10,8 +10,8 @@ import {
   ProgressiveListCompositeType,
   ValueOf,
 } from "@chainsafe/ssz";
-import {PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
-import {ssz} from "@lodestar/types";
+import {BUILDER_INDEX_SELF_BUILD, PAYLOAD_BUILDER_VERSION, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
+import {BuilderIndex, ssz} from "@lodestar/types";
 import {toPubkeyHex} from "@lodestar/utils";
 import {isValidDepositSignature} from "../block/processDeposit.js";
 import {getCachedBeaconState} from "../cache/stateCache.js";
@@ -73,11 +73,21 @@ export function upgradeStateToGloas(
   );
   stateGloasView.currentSyncCommittee = stateGloasCloned.currentSyncCommittee;
   stateGloasView.nextSyncCommittee = stateGloasCloned.nextSyncCommittee;
-  stateGloasView.latestExecutionPayloadBid.blockHash = stateFulu.latestExecutionPayloadHeader.blockHash;
-  stateGloasView.latestExecutionPayloadBid.gasLimit = BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit);
-  stateGloasView.latestExecutionPayloadBid.executionRequestsRoot = ssz.gloas.ExecutionRequests.hashTreeRoot(
-    ssz.gloas.ExecutionRequests.defaultValue()
-  );
+  const latestExecutionPayloadBid = ssz.gloas.ExecutionPayloadBid.toViewDU({
+    parentBlockHash: stateFulu.latestExecutionPayloadHeader.parentHash,
+    parentBlockRoot: stateFulu.latestBlockHeader.parentRoot,
+    blockHash: stateFulu.latestExecutionPayloadHeader.blockHash,
+    prevRandao: stateFulu.latestExecutionPayloadHeader.prevRandao,
+    feeRecipient: ssz.ExecutionAddress.defaultValue(),
+    gasLimit: BigInt(stateFulu.latestExecutionPayloadHeader.gasLimit),
+    builderIndex: BUILDER_INDEX_SELF_BUILD,
+    slot: stateFulu.latestBlockHeader.slot,
+    value: 0,
+    executionPayment: 0n,
+    blobKzgCommitments: ssz.gloas.BlobKzgCommitments.defaultValue(),
+    executionRequestsRoot: ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue()),
+  });
+  stateGloasView.latestExecutionPayloadBid = latestExecutionPayloadBid;
   stateGloasView.nextWithdrawalIndex = stateGloasCloned.nextWithdrawalIndex;
   stateGloasView.nextWithdrawalValidatorIndex = stateGloasCloned.nextWithdrawalValidatorIndex;
   stateGloasView.historicalSummaries = stateGloasCloned.historicalSummaries;
@@ -187,9 +197,10 @@ function onboardBuildersFromPendingDeposits(
   let sigFromCache = 0;
   let sigVerified = 0;
 
-  // Track pubkeys of new builders added when applying deposits. `state.builders` starts empty
-  // at the fork, so every builder pubkey here is one added in an earlier iteration.
-  const builderPubkeys = new Set<string>();
+  // Track pubkeys of new builders added when applying deposits, mapped to their registry
+  // index. `state.builders` starts empty at the fork and this loop only ever appends, so the
+  // index is stable and a top-up can go straight to it instead of scanning.
+  const builderIndexByPubkey = new Map<string, BuilderIndex>();
 
   const pendingDeposits = ssz.gloas.PendingDeposits.defaultViewDU();
   const pendingDepositsLookup = PendingDepositsLookup.buildEmpty();
@@ -208,15 +219,10 @@ function onboardBuildersFromPendingDeposits(
       continue;
     }
 
-    if (builderPubkeys.has(pubkeyHex)) {
+    const builderIndex = builderIndexByPubkey.get(pubkeyHex);
+    if (builderIndex !== undefined) {
       // Top up an already-onboarded builder
-      // TODO GLOAS: linear search; consider builder pubkey cache when we drop the upgrade-time set
-      for (let j = 0; j < state.builders.length; j++) {
-        if (toPubkeyHex(state.builders.getReadonly(j).pubkey) === pubkeyHex) {
-          state.builders.get(j).balance += deposit.amount;
-          break;
-        }
-      }
+      state.builders.get(builderIndex).balance += deposit.amount;
       topups++;
       continue;
     }
@@ -272,7 +278,8 @@ function onboardBuildersFromPendingDeposits(
       deposit.amount,
       deposit.slot
     );
-    builderPubkeys.add(pubkeyHex);
+    // appendBuilderToRegistry() pushes, so the new builder is the last entry
+    builderIndexByPubkey.set(pubkeyHex, state.builders.length - 1);
     onboarded++;
   }
 

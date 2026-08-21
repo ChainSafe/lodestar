@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config as chainConfig} from "@lodestar/config/default";
-import {FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
+import {BUILDER_INDEX_SELF_BUILD, FAR_FUTURE_EPOCH, ForkName} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
 import {CachedBeaconStateFulu, createCachedBeaconState} from "../../src/cache/stateCache.js";
 import {upgradeStateToDeneb} from "../../src/slot/upgradeStateToDeneb.js";
@@ -40,13 +40,26 @@ describe("upgradeState", () => {
     expect(() => newState.toValue()).not.toThrow();
   });
 
-  it("upgradeStateToGloas reuses composite-list nodes with identical merkle roots", () => {
+  it("upgradeStateToGloas reuses list nodes and initializes the latest bid", () => {
     // Enough validators to span multiple progressive subtrees (capacities 1, 4, 16, 64, ...) and to
     // populate every slot's committee for the gloas PTC window computed during the upgrade.
     // Not a multiple of itemsPerChunk (4 for uint64, 32 for uint8) so basic-list migration covers
     // a zero-padded partial final chunk.
     const numValidators = 130;
     const fuluStateView = ssz.fulu.BeaconState.defaultViewDU();
+    const latestBlockSlot = 5;
+    const latestBlockParentRoot = new Uint8Array(32).fill(0x11);
+    const latestPayloadParentHash = new Uint8Array(32).fill(0x22);
+    const latestPayloadBlockHash = new Uint8Array(32).fill(0x33);
+    const latestPayloadPrevRandao = new Uint8Array(32).fill(0x44);
+    const latestPayloadGasLimit = 42_000_000;
+    fuluStateView.slot = latestBlockSlot + 3;
+    fuluStateView.latestBlockHeader.slot = latestBlockSlot;
+    fuluStateView.latestBlockHeader.parentRoot = latestBlockParentRoot;
+    fuluStateView.latestExecutionPayloadHeader.parentHash = latestPayloadParentHash;
+    fuluStateView.latestExecutionPayloadHeader.blockHash = latestPayloadBlockHash;
+    fuluStateView.latestExecutionPayloadHeader.prevRandao = latestPayloadPrevRandao;
+    fuluStateView.latestExecutionPayloadHeader.gasLimit = latestPayloadGasLimit;
     for (let i = 0; i < numValidators; i++) {
       const validator = ssz.phase0.Validator.defaultValue();
       // Distinct pubkey/withdrawalCredentials so each validator has a distinct subtree root
@@ -128,6 +141,22 @@ describe("upgradeState", () => {
     expect(gloasState.previousEpochParticipation.hashTreeRoot()).toEqual(expectedPreviousEpochParticipationRoot);
     expect(gloasState.currentEpochParticipation.hashTreeRoot()).toEqual(expectedCurrentEpochParticipationRoot);
     expect(gloasState.inactivityScores.hashTreeRoot()).toEqual(expectedInactivityScoresRoot);
+    const latestBid = gloasState.latestExecutionPayloadBid;
+    expect(latestBid.parentBlockHash).toEqual(latestPayloadParentHash);
+    expect(latestBid.parentBlockRoot).toEqual(latestBlockParentRoot);
+    expect(latestBid.blockHash).toEqual(latestPayloadBlockHash);
+    expect(latestBid.prevRandao).toEqual(latestPayloadPrevRandao);
+    expect(latestBid.feeRecipient).toEqual(ssz.ExecutionAddress.defaultValue());
+    expect(latestBid.gasLimit).toBe(BigInt(latestPayloadGasLimit));
+    expect(latestBid.builderIndex).toBe(BUILDER_INDEX_SELF_BUILD);
+    // Preserve the actual pre-fork block slot when slots were missed before the fork.
+    expect(latestBid.slot).toBe(latestBlockSlot);
+    expect(latestBid.value).toBe(0);
+    expect(latestBid.executionPayment).toBe(0n);
+    expect(latestBid.blobKzgCommitments.length).toBe(0);
+    expect(latestBid.executionRequestsRoot).toEqual(
+      ssz.gloas.ExecutionRequests.hashTreeRoot(ssz.gloas.ExecutionRequests.defaultValue())
+    );
     // Full state still merkleizes and round-trips
     expect(() => gloasState.hashTreeRoot()).not.toThrow();
     expect(() => gloasState.toValue()).not.toThrow();
