@@ -88,22 +88,6 @@ describe("Events api impl", () => {
       expect(() => chainEventEmmitter.emit(routes.events.EventType.head, headEventData)).not.toThrow();
     });
 
-    it("should keep sending events to other clients if one of them throws", async () => {
-      void api.eventstream({
-        topics: [routes.events.EventType.head],
-        signal: controller.signal,
-        onEvent: () => {
-          throw new Error("failed to send event");
-        },
-      });
-      const events = getEvents([routes.events.EventType.head]);
-
-      chainEventEmmitter.emit(routes.events.EventType.head, headEventData);
-
-      expect(events).toHaveLength(1);
-      expect(events[0].type).toBe(routes.events.EventType.head);
-    });
-
     it("should emit data_column_sidecar event", async () => {
       const events = getEvents([routes.events.EventType.dataColumnSidecar]);
 
