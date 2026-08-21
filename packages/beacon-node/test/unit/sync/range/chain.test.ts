@@ -517,7 +517,7 @@ describe("sync / range / chain", () => {
       expect(new Set(reportedPeers).size).toBe(reportedPeers.length);
       expect(reportedPeers.length).toBeLessThan(6);
       for (const call of reportPeerSpy.mock.calls) {
-        expect(call[2]).toBe("SyncChainMaxExecutionEngineInvalid");
+        expect(call[2]).toBe("SyncChainMaxExecutionEngineErrorAttempts");
       }
     });
 

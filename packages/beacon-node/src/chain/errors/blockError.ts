@@ -184,10 +184,16 @@ export function isBlockErrorAborted(e: unknown): e is BlockError {
 export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {
   switch (type.code) {
     case BlockErrorCode.PRESTATE_MISSING:
-    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
     case BlockErrorCode.BEACON_CHAIN_ERROR:
       return {
         code: type.code,
+        error: type.error.message,
+      };
+
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
+      return {
+        code: type.code,
+        blockRoot: type.blockRoot,
         error: type.error.message,
       };
 

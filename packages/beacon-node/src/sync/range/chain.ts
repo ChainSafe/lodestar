@@ -771,6 +771,9 @@ export class SyncChain {
         const attemptOk = batch.validationSuccess();
         for (const attempt of batch.getPeerAttributableAttempts()) {
           if (attempt.hash !== attemptOk.hash) {
+            // attempt.peers contains block/column/envelope peers.
+            // And if there is one bad envelope we will downscore block and column peers to
+            // TODO: resolve this
             for (const badAttemptPeer of attempt.peers) {
               if (attemptOk.peers.find((goodPeer) => goodPeer === badAttemptPeer)) {
                 // The same peer corrected its previous attempt
@@ -839,15 +842,18 @@ export function shouldReportPeerOnBatchError(
     // only the peers that served a peer-attributable failed attempt.
     case BatchErrorCode.MAX_PROCESSING_ATTEMPTS:
     case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS: {
-      const peers = [...new Set(batch?.getPeerAttributableAttempts().flatMap((attempt) => attempt.peers) ?? [])];
-      if (peers.length === 0) {
+      // penalize both the processing-error and execution-error peers
+      const attributablePeers = [
+        ...new Set(batch?.getPeerAttributableAttempts().flatMap((attempt) => attempt.peers) ?? []),
+      ];
+      if (attributablePeers.length === 0) {
         return null;
       }
       const reason =
         code === BatchErrorCode.MAX_PROCESSING_ATTEMPTS
           ? "SyncChainMaxProcessingAttempts"
-          : "SyncChainMaxExecutionEngineInvalid";
-      return {action: PeerAction.LowToleranceError, reason, peers};
+          : "SyncChainMaxExecutionEngineErrorAttempts";
+      return {action: PeerAction.LowToleranceError, reason, peers: attributablePeers};
     }
 
     // TODO: Should peers be reported for MAX_DOWNLOAD_ATTEMPTS?
