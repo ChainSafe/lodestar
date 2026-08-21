@@ -779,7 +779,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Outcome of signature sets submitted to combined general-verification calls. Fast-path sets complete in the combined call; fallback sets are reverified at their original request boundary.",
+      "description": "Percentage of combined batch checks that failed and percentage of signature sets checked again after those failures.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -819,6 +819,8 @@
             }
           },
           "mappings": [],
+          "max": 1,
+          "min": 0,
           "unit": "percentunit"
         },
         "overrides": []
@@ -853,9 +855,9 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_sigs_success_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_retries_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count{operation=\"general_batch\"}[$rate_interval]))",
           "interval": "",
-          "legendFormat": "fast path",
+          "legendFormat": "failed batches",
           "refId": "A"
         },
         {
@@ -865,11 +867,11 @@
           },
           "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_fallback\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
           "interval": "",
-          "legendFormat": "fallback",
+          "legendFormat": "signature sets checked again",
           "refId": "B"
         }
       ],
-      "title": "Combined batch outcomes",
+      "title": "Batch verification fallback",
       "type": "timeseries"
     },
     {
