@@ -779,7 +779,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Outcome of signature sets submitted to combined general-verification calls. Fast-path sets complete in the combined call; fallback sets are reverified at their original request boundary.",
+      "description": "Percentage of combined batch checks that failed and percentage of signature sets checked again after those failures.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -819,6 +819,8 @@
             }
           },
           "mappings": [],
+          "max": 1,
+          "min": 0,
           "unit": "percentunit"
         },
         "overrides": []
@@ -853,9 +855,9 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_sigs_success_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_retries_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count{operation=\"batch\"}[$rate_interval]))",
           "interval": "",
-          "legendFormat": "fast path",
+          "legendFormat": "failed batches",
           "refId": "A"
         },
         {
@@ -863,13 +865,13 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_fallback\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"fallback\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"batch\"}[$rate_interval]))",
           "interval": "",
-          "legendFormat": "fallback",
+          "legendFormat": "signature sets checked again",
           "refId": "B"
         }
       ],
-      "title": "Combined batch outcomes",
+      "title": "Batch verification fallback",
       "type": "timeseries"
     },
     {
@@ -877,7 +879,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Signature sets carried by each semantic job and each intentional batching-buffer flush.",
+      "description": "Average signature sets per BLS job, grouped by job type.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -952,19 +954,9 @@
           "interval": "",
           "legendFormat": "{{type}} sets/job",
           "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
-          },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_buffered_signature_sets_sum[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_buffered_signature_sets_count[$rate_interval]))",
-          "interval": "",
-          "legendFormat": "sets/buffer flush",
-          "refId": "B"
         }
       ],
-      "title": "BLS batching width",
+      "title": "Signature sets per BLS job",
       "type": "timeseries"
     },
     {
@@ -1150,7 +1142,7 @@
           },
           "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count[$rate_interval]))",
           "interval": "",
-          "legendFormat": "{{operation}} sets/verification call",
+          "legendFormat": "sets/call: {{operation}}",
           "refId": "B"
         }
       ],
@@ -1232,7 +1224,7 @@
           "editorMode": "code",
           "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_sum[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count[$rate_interval]))",
           "instant": false,
-          "legendFormat": "mean call {{operation}}",
+          "legendFormat": "mean call: {{operation}}",
           "range": true,
           "refId": "A"
         },
@@ -1245,7 +1237,7 @@
           "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_sum[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total[$rate_interval]))",
           "hide": false,
           "instant": false,
-          "legendFormat": "per set {{operation}}",
+          "legendFormat": "per set: {{operation}}",
           "range": true,
           "refId": "B"
         }

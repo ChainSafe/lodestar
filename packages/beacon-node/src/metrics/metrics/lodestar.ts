@@ -33,7 +33,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
 type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "workerError";
 type BlsBufferFlushReason = "size" | "timeout";
-type BlsVerificationCallOperation = "general_batch" | "general_direct" | "general_fallback" | "same_message";
+type BlsVerificationCallOperation = "batch" | "single" | "fallback" | "same_message";
 
 /**
  * Extra Lodestar custom metrics
@@ -489,7 +489,7 @@ export function createLodestarMetrics(
       bufferedSignatureSets: register.histogram({
         name: "lodestar_bls_thread_pool_buffered_signature_sets",
         help: "Count of signature sets included in each batching-buffer flush",
-        buckets: [1, 2, 4, 8, 16, 24, 32, 48, 64, 128],
+        buckets: [1, 8, 16, 24, 28, 32, 36, 40, 44, 48, 64, 128],
       }),
       // To measure the time cost of main thread <-> worker message passing
       latencyToWorker: register.histogram({

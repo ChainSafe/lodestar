@@ -49,7 +49,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const nonBatchableSets: {
     idx: number;
     sets: BlsSignatureSet[];
-    operation: VerificationCallOperation.generalDirect | VerificationCallOperation.generalFallback;
+    operation: VerificationCallOperation.single | VerificationCallOperation.fallback;
   }[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
@@ -61,7 +61,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
         if (workReq.opts.batchable) {
           batchableSets.push({idx: i, sets});
         } else {
-          nonBatchableSets.push({idx: i, sets, operation: VerificationCallOperation.generalDirect});
+          nonBatchableSets.push({idx: i, sets, operation: VerificationCallOperation.single});
         }
         break;
       }
@@ -95,11 +95,8 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = recordVerificationCall(
-          verificationCalls,
-          VerificationCallOperation.generalBatch,
-          allSets.length,
-          () => verifySignatureSets(allSets)
+        const isValid = recordVerificationCall(verificationCalls, VerificationCallOperation.batch, allSets.length, () =>
+          verifySignatureSets(allSets)
         );
 
         if (isValid) {
@@ -115,7 +112,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
             ...batchableChunk.map(({idx, sets}) => ({
               idx,
               sets,
-              operation: VerificationCallOperation.generalFallback as const,
+              operation: VerificationCallOperation.fallback as const,
             }))
           );
         }
@@ -128,7 +125,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
           ...batchableChunk.map(({idx, sets}) => ({
             idx,
             sets,
-            operation: VerificationCallOperation.generalFallback as const,
+            operation: VerificationCallOperation.fallback as const,
           }))
         );
       }
