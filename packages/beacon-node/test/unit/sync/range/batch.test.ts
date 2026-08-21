@@ -135,6 +135,8 @@ describe("sync / range / batch", async () => {
   const custodyConfig = new CustodyConfig({config, nodeId});
   const peer = validPeerIdStr;
   const peerSyncMeta = {peerId: peer, client: "lodestar", custodyColumns: custodyConfig.sampledColumns};
+  // Minimal PayloadError context; these tests only read err.type, not the payloadInput.
+  const payloadInput = {slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput;
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -704,7 +706,7 @@ describe("sync / range / batch", async () => {
         const batch = downloadedBatch();
         batch.startProcessing();
         batch.processingError(
-          new PayloadError({
+          new PayloadError(payloadInput, {
             code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
             execStatus: ExecutionPayloadStatus.ELERROR,
             errorMessage: "el is down",
@@ -720,7 +722,7 @@ describe("sync / range / batch", async () => {
         const batch = downloadedBatch();
         batch.startProcessing();
         batch.processingError(
-          new PayloadError({
+          new PayloadError(payloadInput, {
             code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
             execStatus: ExecutionPayloadStatus.INVALID,
             errorMessage: "bal is empty",
@@ -785,7 +787,7 @@ describe("sync / range / batch", async () => {
         const batch = downloadedBatch();
         batch.startProcessing();
         batch.processingError(
-          new PayloadError({code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE, blockRootHex: "0x1234"})
+          new PayloadError(payloadInput, {code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE, blockRootHex: "0x1234"})
         );
 
         expect(batch.failedProcessingAttempts.length).toBe(1);
@@ -797,7 +799,9 @@ describe("sync / range / batch", async () => {
       it("PayloadError MISS_BLOCK_STATE (local precondition) => failedProcessingAttempts, NOT peer attributable", () => {
         const batch = downloadedBatch();
         batch.startProcessing();
-        batch.processingError(new PayloadError({code: PayloadErrorCode.MISS_BLOCK_STATE, blockRootHex: "0x1234"}));
+        batch.processingError(
+          new PayloadError(payloadInput, {code: PayloadErrorCode.MISS_BLOCK_STATE, blockRootHex: "0x1234"})
+        );
 
         expect(batch.failedProcessingAttempts.length).toBe(1);
         expect(batch.failedProcessingAttempts[0].peerAttributable).toBe(false);
@@ -878,7 +882,7 @@ describe("sync / range / batch", async () => {
       it("PayloadError EXECUTION_ENGINE_ERROR => executionErrorAttempts, not peer attributable", () => {
         const batch = batchAwaitingValidation();
         batch.validationError(
-          new PayloadError({
+          new PayloadError(payloadInput, {
             code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
             execStatus: ExecutionPayloadStatus.UNAVAILABLE,
             errorMessage: "el is down",
@@ -922,7 +926,7 @@ describe("sync / range / batch", async () => {
       const batch = downloadedBatch();
       batch.startProcessing();
       batch.processingError(
-        new PayloadError({
+        new PayloadError(payloadInput, {
           code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
           execStatus: ExecutionPayloadStatus.INVALID,
           errorMessage: "bal is empty",

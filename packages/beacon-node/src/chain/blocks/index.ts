@@ -64,8 +64,6 @@ export async function processBlocks(
     return; // TODO: or throw?
   }
 
-  let importingPayload: PayloadEnvelopeInput | undefined;
-
   try {
     const {relevantBlocks, parentSlots, parentBlock} = verifyBlocksSanityChecks(this, blocks, payloadEnvelopes, opts);
 
@@ -156,9 +154,7 @@ export async function processBlocks(
         if (payloadDA === undefined) {
           throw new Error(`Missing payload DA status for slot ${slot}`);
         }
-        importingPayload = payloadInput;
         await importExecutionPayload.call(this, payloadInput, payloadDA, {validSignature: false});
-        importingPayload = undefined;
       }
 
       await nextEventLoop();
@@ -179,7 +175,7 @@ export async function processBlocks(
       if (!opts.disableOnBlockError) {
         this.logger.debug(
           "Payload error",
-          {slot: importingPayload?.slot ?? null, blockRoot: importingPayload?.blockRootHex ?? null},
+          {slot: err.payloadInput.slot, blockRoot: err.payloadInput.blockRootHex},
           err
         );
       }

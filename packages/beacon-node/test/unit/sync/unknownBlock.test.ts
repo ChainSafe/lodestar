@@ -1193,7 +1193,7 @@ describe("UnknownBlockSync", () => {
       const processExecutionPayload = vi
         .fn()
         .mockRejectedValueOnce(
-          new PayloadError({
+          new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
             code: PayloadErrorCode.BLOCK_NOT_IN_FORK_CHOICE,
             blockRootHex,
           })
@@ -1290,7 +1290,7 @@ describe("UnknownBlockSync", () => {
       const processExecutionPayload = vi
         .fn()
         .mockRejectedValueOnce(
-          new PayloadError({
+          new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
             code: PayloadErrorCode.EXECUTION_ENGINE_ERROR,
             execStatus: ExecutionPayloadStatus.ELERROR,
             errorMessage: "execution engine offline",
@@ -1609,9 +1609,11 @@ describe("UnknownBlockSync", () => {
       });
 
       const sendExecutionPayloadEnvelopesByRoot = vi.fn().mockResolvedValue([envelope]);
-      const processExecutionPayload = vi
-        .fn()
-        .mockRejectedValue(new PayloadError({code: PayloadErrorCode.INVALID_SIGNATURE}));
+      const processExecutionPayload = vi.fn().mockRejectedValue(
+        new PayloadError({slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput, {
+          code: PayloadErrorCode.INVALID_SIGNATURE,
+        })
+      );
       const processBlock = vi.fn().mockResolvedValue(undefined);
       const seenPayloadPrune = vi.fn();
       const {emitter} = setupPayloadSyncTest({

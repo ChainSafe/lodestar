@@ -9,6 +9,7 @@ import {toRootHex} from "@lodestar/utils";
 import {importBlock} from "../../../../src/chain/blocks/importBlock.js";
 import {PayloadError, PayloadErrorCode} from "../../../../src/chain/blocks/importExecutionPayload.js";
 import {processBlocks} from "../../../../src/chain/blocks/index.js";
+import {PayloadEnvelopeInput} from "../../../../src/chain/blocks/payloadEnvelopeInput/payloadEnvelopeInput.js";
 import {assertLinearChainSegment} from "../../../../src/chain/blocks/utils/chainSegment.js";
 import {verifyBlocksInEpoch} from "../../../../src/chain/blocks/verifyBlock.js";
 import {verifyBlocksSanityChecks} from "../../../../src/chain/blocks/verifyBlocksSanityChecks.js";
@@ -125,7 +126,8 @@ describe("chain / blocks / processBlocks", () => {
   // through, not flatten it into a generic BEACON_CHAIN_ERROR. (The origin is mocked here; what matters
   // is that a PayloadError raised anywhere in the pipeline is re-thrown unwrapped.)
   it("re-throws a PayloadError unwrapped, without flattening it into BEACON_CHAIN_ERROR", async () => {
-    const payloadError = new PayloadError({
+    const payloadInput = {slot: 1, blockRootHex: "0x1234"} as unknown as PayloadEnvelopeInput;
+    const payloadError = new PayloadError(payloadInput, {
       code: PayloadErrorCode.EXECUTION_ENGINE_INVALID,
       execStatus: ExecutionPayloadStatus.INVALID,
       errorMessage: "bad payload",
