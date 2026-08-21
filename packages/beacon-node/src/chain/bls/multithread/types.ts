@@ -31,9 +31,9 @@ export enum WorkResultCode {
 }
 
 export enum VerificationCallOperation {
-  generalBatch = "general_batch",
-  generalSingle = "general_single",
-  generalFallback = "general_fallback",
+  batch = "batch",
+  single = "single",
+  fallback = "fallback",
   sameMessage = "same_message",
 }
 

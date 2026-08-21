@@ -116,7 +116,7 @@ describe("chain / bls / multithread queue", () => {
     const verificationCallDuration = await metrics.register.getSingleMetricAsString(
       "lodestar_bls_thread_pool_verification_call_duration_seconds"
     );
-    for (const operation of ["general_batch", "general_single", "general_fallback", "same_message"]) {
+    for (const operation of ["batch", "single", "fallback", "same_message"]) {
       expect(verificationCallDuration).toContain(`operation="${operation}"`);
     }
 
@@ -124,10 +124,10 @@ describe("chain / bls / multithread queue", () => {
       "lodestar_bls_thread_pool_verification_call_signature_sets_total"
     );
     expect(verificationCallSignatureSets).toContain(
-      'lodestar_bls_thread_pool_verification_call_signature_sets_total{operation="general_batch"} 4'
+      'lodestar_bls_thread_pool_verification_call_signature_sets_total{operation="batch"} 4'
     );
     expect(verificationCallSignatureSets).toContain(
-      'lodestar_bls_thread_pool_verification_call_signature_sets_total{operation="general_fallback"} 1'
+      'lodestar_bls_thread_pool_verification_call_signature_sets_total{operation="fallback"} 1'
     );
 
     const invalidInput: ISignatureSet = {...sets[0], type: SignatureSetType.aggregate, indices: [-1]};

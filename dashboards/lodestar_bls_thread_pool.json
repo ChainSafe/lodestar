@@ -855,7 +855,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_retries_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count{operation=\"general_batch\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_batch_retries_total[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count{operation=\"batch\"}[$rate_interval]))",
           "interval": "",
           "legendFormat": "failed batches",
           "refId": "A"
@@ -865,7 +865,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_fallback\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"general_batch\"}[$rate_interval]))",
+          "expr": "sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"fallback\"}[$rate_interval])) / sum by (instance) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total{operation=\"batch\"}[$rate_interval]))",
           "interval": "",
           "legendFormat": "signature sets checked again",
           "refId": "B"
@@ -1157,36 +1157,6 @@
         }
       ],
       "title": "BLS dispatch and verification call width",
-      "transformations": [
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "general_batch",
-            "renamePattern": "combined standard jobs"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "general_single",
-            "renamePattern": "single job"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "general_fallback",
-            "renamePattern": "jobs retried after batch failure"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "same_message",
-            "renamePattern": "shared-message jobs"
-          }
-        }
-      ],
       "type": "timeseries"
     },
     {
@@ -1284,36 +1254,6 @@
       ],
       "description": "Mean duration per synchronous lodestar-z binding call and total binding-call time amortized per signature set, grouped by verification path.",
       "title": "Worker lodestar-z verification cost",
-      "transformations": [
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "general_batch",
-            "renamePattern": "combined standard jobs"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "general_single",
-            "renamePattern": "single job"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "general_fallback",
-            "renamePattern": "jobs retried after batch failure"
-          }
-        },
-        {
-          "id": "renameByRegex",
-          "options": {
-            "regex": "same_message",
-            "renamePattern": "shared-message jobs"
-          }
-        }
-      ],
       "type": "timeseries"
     },
     {
