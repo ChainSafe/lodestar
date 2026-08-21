@@ -33,9 +33,12 @@ describe("verifyDepositSignatures", () => {
   // asserted here is the batch one: a malformed entry fails on its own and leaves its neighbours'
   // results intact, rather than invalidating the whole chunk.
   //
-  // These do not prove KeyValidate is applied. blst rejects infinity and non-subgroup pubkeys
-  // whether or not the validation flags are passed, and each case also carries a signature over a
-  // different DepositMessage, so it would fail for any substituted pubkey.
+  // Note what these four do and don't isolate: each carries a signature over a different
+  // DepositMessage (the pubkey is part of the signed message), so it would fail for any substituted
+  // pubkey, malformed or not. Only the not-on-curve and failed-decompression vectors are rejected by
+  // deserialization itself; subgroup and infinity are accepted by PublicKey.fromBytes() unless it is
+  // asked to validate. The deposit path doesn't call that API directly — it hands raw bytes to
+  // verifySignatureSets() — so the case that actually pins infinity checking is the one below.
   const keyValidatePubkeys = {
     "outside the prime-order subgroup": "0x80" + "00".repeat(46) + "04",
     "the point at infinity": "0xc0" + "00".repeat(47),
