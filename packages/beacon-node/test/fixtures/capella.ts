@@ -10,11 +10,11 @@ export function generateBlsToExecutionChanges(
   const result: capella.SignedBLSToExecutionChange[] = [];
 
   for (const validatorIndex of state.epochCtx.proposers) {
-    const pubkey = pubkeyCache.getOrThrow(validatorIndex);
+    const pubkey = pubkeyCache.getPubkeyBytesOrThrow(validatorIndex);
 
     result.push({
       message: {
-        fromBlsPubkey: pubkey.toBytes(),
+        fromBlsPubkey: pubkey,
         toExecutionAddress: Buffer.alloc(20),
         validatorIndex,
       },

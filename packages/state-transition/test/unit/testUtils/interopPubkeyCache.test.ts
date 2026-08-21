@@ -20,7 +20,7 @@ function rmSnapshot(): void {
 
 function expectInteropKeyAt(index: number): void {
   const expected = interopSecretKey(index).toPublicKey().toBytes();
-  expect(Buffer.from(pubkeyCache.getOrThrow(index).toBytes())).toEqual(Buffer.from(expected));
+  expect(Buffer.from(pubkeyCache.getPubkeyBytesOrThrow(index))).toEqual(Buffer.from(expected));
 }
 
 describe("ensureInteropPubkeyCache", () => {

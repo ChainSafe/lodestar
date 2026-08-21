@@ -83,7 +83,7 @@ export function getPubkeys(vc = numValidators) {
         break;
       }
     }
-    pubkeys ??= Array.from({length: vc}, (_, i) => pubkeyCache.getOrThrow(i).toBytes());
+    pubkeys ??= Array.from({length: vc}, (_, i) => pubkeyCache.getPubkeyBytesOrThrow(i));
     pubkeysByCount.set(vc, pubkeys);
   }
   const pubkeysMod = pubkeys;
