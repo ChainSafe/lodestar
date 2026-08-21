@@ -1,6 +1,6 @@
 import {type FileHandle, open} from "node:fs/promises";
 import {basename} from "node:path";
-import {PublicKey, Signature, verify} from "@chainsafe/blst";
+import {PublicKey, Signature, verify} from "@chainsafe/lodestar-z/blst";
 import {ChainForkConfig, createCachedGenesis} from "@lodestar/config";
 import {DOMAIN_BEACON_PROPOSER, GENESIS_SLOT, SLOTS_PER_HISTORICAL_ROOT} from "@lodestar/params";
 import {BeaconState, SignedBeaconBlock, Slot, ssz} from "@lodestar/types";

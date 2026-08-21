@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/blst";
+import {SecretKey} from "@chainsafe/lodestar-z/blst";
 import {Tree, toGindex} from "@chainsafe/persistent-merkle-tree";
 import {BitArray} from "@chainsafe/ssz";
 import {config} from "@lodestar/config/default";
@@ -42,7 +42,7 @@ export function getBlockPhase0(
 
   // Space out exited indexes through the max available range to force expensive tree navigation
   const minActiveIndex = 0;
-  const maxActiveIndex = 200_000;
+  const maxActiveIndex = Math.min(200_000, preState.validators.length - 1);
   const totalExits = proposerSlashingLen + attesterSlashingLen * bitsLen + voluntaryExitLen;
   const exitedIndexStep = Math.floor((maxActiveIndex - minActiveIndex) / totalExits);
   const proposerSlashingStartIndex = minActiveIndex;

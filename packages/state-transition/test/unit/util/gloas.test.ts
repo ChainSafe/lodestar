@@ -1,9 +1,10 @@
 import {describe, expect, it} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
 import {FAR_FUTURE_EPOCH, ForkName, MIN_DEPOSIT_AMOUNT, PAYLOAD_BUILDER_VERSION} from "@lodestar/params";
 import {ssz} from "@lodestar/types";
-import {createCachedBeaconState, createPubkeyCache} from "../../../src/index.js";
+import {createCachedBeaconState} from "../../../src/index.js";
 import {CachedBeaconStateGloas} from "../../../src/types.js";
 import {
   addBuilderToRegistry,
@@ -25,7 +26,7 @@ function buildGloasState(slot = 0): CachedBeaconStateGloas {
     view,
     {
       config: createBeaconConfig(config, view.genesisValidatorsRoot),
-      pubkeyCache: createPubkeyCache(),
+      pubkeyCache,
     },
     {skipSyncCommitteeCache: true}
   ) as CachedBeaconStateGloas;

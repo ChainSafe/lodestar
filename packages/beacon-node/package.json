@@ -101,7 +101,7 @@
   },
   "dependencies": {
     "@chainsafe/as-sha256": "^1.2.4",
-    "@chainsafe/blst": "^2.2.0",
+    "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/discv5": "^12.0.2",
     "@chainsafe/enr": "^6.0.2",
     "@chainsafe/libp2p-noise": "^17.0.0",

@@ -1,6 +1,7 @@
 import path from "node:path";
 import {generateKeyPair} from "@libp2p/crypto/keys";
 import {expect} from "vitest";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {toHexString} from "@chainsafe/ssz";
 import {createBeaconConfig} from "@lodestar/config";
 import {getConfig} from "@lodestar/config/test-utils";
@@ -24,11 +25,9 @@ import {
   IBeaconStateViewGloas,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   isExecutionStateType,
   isGloasStateType,
   signedBlockToSignedHeader,
-  syncPubkeys,
 } from "@lodestar/state-transition";
 import {
   Attestation,
@@ -114,8 +113,7 @@ const fastConfirmationTest =
         });
 
         const beaconConfig = createBeaconConfig(config, anchorState.genesisValidatorsRoot);
-        const pubkeyCache = createPubkeyCache();
-        syncPubkeys(pubkeyCache, anchorState.validators.getAllReadonlyValues());
+        pubkeyCache.syncPubkeys(anchorState.validators.getAllReadonlyValues());
         const cachedState = createCachedBeaconState(
           anchorState,
           {
@@ -441,7 +439,6 @@ const fastConfirmationTest =
                   const sigValid = await verifyExecutionPayloadEnvelopeSignature(
                     beaconConfig,
                     blockState as IBeaconStateViewGloas,
-                    pubkeyCache,
                     envelope,
                     blockState.latestBlockHeader.proposerIndex,
                     chain.bls
