@@ -30,7 +30,7 @@ const sidebars: SidebarsConfig = {
             "run/beacon-management/networking",
             "run/beacon-management/mev-and-builder-integration",
             "run/beacon-management/syncing",
-            "run/beacon-management/historical-fork-compatibility",
+            "run/beacon-management/historical-fork-support",
           ],
         },
         {
