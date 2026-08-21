@@ -48,6 +48,13 @@ export const eventTestData: EventData = {
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
     executionOptimistic: false,
   },
+  [EventType.blockV2]: {
+    slot: 10,
+    block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",
+    builderIndex: 42,
+    blockHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+    executionOptimistic: false,
+  },
   [EventType.blockGossip]: {
     slot: 10,
     block: "0x9a2fefd2fdb57f74993c7780ea5b9030d2897b615b89f808011ca5aebed54eaf",

@@ -535,6 +535,15 @@ export async function importBlock(
           executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
         });
       }
+      if (this.emitter.listenerCount(routes.events.EventType.blockV2) && isGloasBeaconBlock(block.message)) {
+        this.emitter.emit(routes.events.EventType.blockV2, {
+          block: blockRootHex,
+          slot: blockSlot,
+          blockHash: toRootHex(block.message.body.signedExecutionPayloadBid.message.blockHash),
+          builderIndex: block.message.body.signedExecutionPayloadBid.message.builderIndex,
+          executionOptimistic: blockSummary != null && isOptimisticBlock(blockSummary),
+        });
+      }
       if (this.emitter.listenerCount(routes.events.EventType.voluntaryExit)) {
         for (const voluntaryExit of block.message.body.voluntaryExits) {
           this.emitter.emit(routes.events.EventType.voluntaryExit, voluntaryExit);
