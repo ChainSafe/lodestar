@@ -1,7 +1,7 @@
 import {bench, describe} from "@chainsafe/benchmark";
 import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {createCachedBeaconState} from "../../../../src/cache/stateCache.js";
-import {generatePerfTestCachedStateAltair, getPubkeys} from "../../../../src/testUtils/util.js";
+import {generatePerfTestCachedStateAltair} from "../../../../src/testUtils/util.js";
 import {loadState} from "../../../../src/util/loadState/loadState.js";
 
 /**
@@ -20,7 +20,9 @@ describe("loadState", () => {
       id: `migrate state ${seedValidators} validators, ${numModifiedValidators} modified, ${numNewValidators} new`,
       before: () => {
         const seedState = generatePerfTestCachedStateAltair({vc: seedValidators, goBackOneSlot: false});
-        const {pubkeys} = getPubkeys(seedValidators + numNewValidators);
+        const newValidatorPubkeys = Array.from({length: numNewValidators}, (_, i) =>
+          pubkeyCache.getPubkeyBytesOrThrow(seedValidators + i)
+        );
         // cache all HashObjects
         seedState.hashTreeRoot();
         const newState = seedState.clone();
@@ -34,7 +36,7 @@ describe("loadState", () => {
         for (let i = 0; i < numNewValidators; i++) {
           // New validators must have distinct pubkeys for lodestar-z's process-wide pubkey cache.
           const validator = seedState.validators.get(0).clone();
-          validator.pubkey = pubkeys[seedValidators + i];
+          validator.pubkey = newValidatorPubkeys[i];
           newState.validators.push(validator);
           newState.inactivityScores.push(seedState.inactivityScores.get(0));
           newState.balances.push(seedState.balances.get(0));
