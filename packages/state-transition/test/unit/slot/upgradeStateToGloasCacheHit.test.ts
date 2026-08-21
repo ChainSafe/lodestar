@@ -128,7 +128,7 @@ describe("upgradeStateToGloas - builder-deposit signature cache", () => {
 
     const fuluState = createCachedBeaconState(
       stateView,
-      {config, pubkeyCache: createPubkeyCache()},
+      {config, pubkeyCache},
       {skipSyncCommitteeCache: true, skipSyncPubkeys: true}
     ) as CachedBeaconStateFulu;
 
