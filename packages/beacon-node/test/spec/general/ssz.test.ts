@@ -12,7 +12,7 @@ import {
   Type,
   fromHexString,
 } from "@chainsafe/ssz";
-import {ethereumSszSpecsTests} from "../specTestVersioning.js";
+import {sszSpecTests} from "../specTestVersioning.js";
 import {runValidSszTest} from "../utils/runValidSszTest.js";
 import {getSszSpecTestType} from "./ssz_types.js";
 
@@ -25,7 +25,7 @@ type SszFixture = {
   rejectionReason?: string;
 };
 
-const fixturesDir = path.join(ethereumSszSpecsTests.outputDir, "fixtures", "ssz", "ssz");
+const fixturesDir = path.join(sszSpecTests.outputDir, "fixtures", "ssz", "ssz");
 
 for (const testSuite of fs.readdirSync(fixturesDir)) {
   const testSuiteDir = path.join(fixturesDir, testSuite);

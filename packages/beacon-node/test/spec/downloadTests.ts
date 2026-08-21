@@ -2,10 +2,10 @@ import path from "node:path";
 import {config} from "dotenv";
 import {downloadNightlyTests} from "@lodestar/spec-test-util/downloadNightlyTests";
 import {downloadTests} from "@lodestar/spec-test-util/downloadTests";
-import {blsSpecTests, ethereumConsensusSpecsTests, ethereumSszSpecsTests} from "./specTestVersioning.js";
+import {blsSpecTests, ethereumConsensusSpecsTests, sszSpecTests} from "./specTestVersioning.js";
 
 const [date, repo, branch] = process.argv.slice(2);
-const downloads = [downloadTests(blsSpecTests, console.log), downloadTests(ethereumSszSpecsTests, console.log)];
+const downloads = [downloadTests(blsSpecTests, console.log), downloadTests(sszSpecTests, console.log)];
 
 if (date) {
   config({path: path.join(import.meta.dirname, "../../../../.env")});
