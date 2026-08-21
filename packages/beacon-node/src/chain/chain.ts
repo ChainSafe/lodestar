@@ -1090,7 +1090,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.getBeaconProposer(slot);
-    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+    const proposerPubKey = this.pubkeyCache.getPubkeyBytesOrThrow(proposerIndex);
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,

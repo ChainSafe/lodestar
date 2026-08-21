@@ -1,4 +1,9 @@
-import {PublicKey, Signature, verify, verifyMultipleAggregateSignatures} from "@chainsafe/lodestar-z/blst";
+import {
+  BLS_VERIFIER_MAX_BATCH_SIZE,
+  BLS_VERIFIER_SET_TYPE,
+  type BlsSignatureSet,
+  verifySignatureSets,
+} from "@chainsafe/lodestar-z/bls-verifier";
 import {BeaconConfig} from "@lodestar/config";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
@@ -187,54 +192,34 @@ export function verifyDepositSignatures(config: BeaconConfig, deposits: electra.
   // fork-agnostic domain since deposits are valid across forks, matching isValidDepositSignature
   const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
 
-  const signatureSets: {pk: PublicKey; msg: Uint8Array; sig: Signature}[] = [];
-  const signatureSetDepositIndices: number[] = [];
-  for (let i = 0; i < deposits.length; i++) {
-    const {pubkey, withdrawalCredentials, amount, signature} = deposits[i];
-    let pk: PublicKey;
-    let sig: Signature;
+  const signatureSets: BlsSignatureSet[] = deposits.map(({pubkey, withdrawalCredentials, amount, signature}) => ({
+    type: BLS_VERIFIER_SET_TYPE.single,
+    pubkey,
+    message: computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain),
+    signature,
+  }));
+
+  for (let chunkStart = 0; chunkStart < signatureSets.length; chunkStart += BLS_VERIFIER_MAX_BATCH_SIZE) {
+    const chunk = signatureSets.slice(chunkStart, chunkStart + BLS_VERIFIER_MAX_BATCH_SIZE);
+    let chunkValid: boolean;
     try {
-      // Parse without group/infinity checks; deferred to the verify call below so it can be
-      // batched across all sets.
-      pk = PublicKey.fromBytes(pubkey);
-      sig = Signature.fromBytes(signature);
+      chunkValid = verifySignatureSets(chunk);
     } catch (_) {
-      // Malformed pubkey or signature bytes - invalid deposit, results[i] stays false
+      chunkValid = false;
+    }
+
+    if (chunkValid) {
+      results.fill(true, chunkStart, chunkStart + chunk.length);
       continue;
     }
-    const msg = computeSigningRoot(ssz.phase0.DepositMessage, {pubkey, withdrawalCredentials, amount}, domain);
-    signatureSets.push({pk, msg, sig});
-    signatureSetDepositIndices.push(i);
-  }
 
-  if (signatureSets.length === 0) {
-    return results;
-  }
-
-  // Deposit pubkeys and signatures are untrusted, so group + infinity checks are required.
-  // The trailing (true, true) args delegate those checks to blst, amortized across the batch.
-  let batchValid: boolean;
-  try {
-    batchValid =
-      signatureSets.length >= 2
-        ? verifyMultipleAggregateSignatures(signatureSets, true, true)
-        : verify(signatureSets[0].msg, signatureSets[0].pk, signatureSets[0].sig, true, true);
-  } catch (_) {
-    batchValid = false;
-  }
-
-  if (batchValid) {
-    for (const depositIndex of signatureSetDepositIndices) {
-      results[depositIndex] = true;
-    }
-  } else {
-    for (let s = 0; s < signatureSets.length; s++) {
+    for (let i = 0; i < chunk.length; i++) {
       try {
-        if (verify(signatureSets[s].msg, signatureSets[s].pk, signatureSets[s].sig, true, true)) {
-          results[signatureSetDepositIndices[s]] = true;
+        if (verifySignatureSets([chunk[i]])) {
+          results[chunkStart + i] = true;
         }
       } catch (_) {
-        // invalid point / malformed → invalid signature, results[i] stays false
+        // Invalid point or malformed bytes leave this deposit false.
       }
     }
   }
