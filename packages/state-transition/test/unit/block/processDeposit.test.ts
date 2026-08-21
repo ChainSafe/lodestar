@@ -42,7 +42,7 @@ describe("verifyDepositSignatures", () => {
     it(`marks a pubkey ${what} invalid without affecting valid deposits`, () => {
       const [a, b] = generateBuilderPendingDeposits(config, 2, 4000);
       const malformed: electra.PendingDeposit = {...b, pubkey: fromHex(pubkey)};
-      expect(verifyDepositSignatures(config, [a, malformed])).toEqual([true, false]);
+      expect(verifyDepositSignatures(config, [a, malformed]), `pubkey ${what}`).toEqual([true, false]);
     });
   }
 
