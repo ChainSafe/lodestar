@@ -19,7 +19,7 @@ export function getEventsApi({
             // `chain.emitter` emits synchronously, a throwing listener would propagate the error to
             // whoever emitted the event, e.g. a gossip handler, and skip the remaining listeners.
             // A single misbehaving event or client must not affect the node or other subscribers.
-            logger.error("Error sending event to client", {topic}, e as Error);
+            logger.warn("Error sending event to client", {topic}, e as Error);
           }
         };
 
