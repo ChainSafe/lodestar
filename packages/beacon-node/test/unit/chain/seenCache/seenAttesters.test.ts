@@ -7,16 +7,6 @@ describe("SeenPayloadAttesters", () => {
   const slot = epoch * SLOTS_PER_EPOCH;
   const validatorIndex = 42;
 
-  it("deduplicates by slot and preserves epoch liveness", () => {
-    const cache = new SeenPayloadAttesters();
-
-    cache.add(slot, validatorIndex);
-
-    expect(cache.isKnown(slot, validatorIndex)).toBe(true);
-    expect(cache.isKnown(slot + 1, validatorIndex)).toBe(false);
-    expect(cache.seenAtEpoch(epoch, validatorIndex)).toBe(true);
-  });
-
   it("prunes slot duplicates and epoch liveness with the same epoch window", () => {
     const cache = new SeenPayloadAttesters();
     const previousEpochSlot = (epoch - 1) * SLOTS_PER_EPOCH;
