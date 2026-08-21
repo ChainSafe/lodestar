@@ -5,14 +5,14 @@ import {getPubkeysForIndices} from "../../../../../src/api/impl/validator/utils.
 import {linspace} from "../../../../../src/util/numpy.js";
 
 // Using state.validators.persistent is the fastest way of retrieving pubkeys by far
-// Benchmark data from Wed Jun 30 2021 - Intel(R) Core(TM) i5-8250U CPU @ 1.60GHz
+// Benchmark data from Fri Aug 21 2026 - 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
 //
-// ✓ getPubkeys - native cache - req 1 vs - 200000 vc                    836120.4 ops/s    1.196000 us/op        -    1224786 runs   2.07 s
-// ✓ getPubkeys - native cache - req 100 vs - 200000 vc                  10347.15 ops/s    96.64500 us/op        -      20602 runs   2.00 s
-// ✓ getPubkeys - native cache - req 1000 vs - 200000 vc                 1248.985 ops/s    800.6500 us/op        -       2518 runs   2.02 s
-// ✓ getPubkeys - validatorsArr - req 1 vs - 200000 vc                   1109878 ops/s    901.0000 ns/op        -    1714328 runs   2.09 s
-// ✓ getPubkeys - validatorsArr - req 100 vs - 200000 vc                19937.00 ops/s    50.15800 us/op        -      39548 runs   2.00 s
-// ✓ getPubkeys - validatorsArr - req 1000 vs - 200000 vc               2475.542 ops/s    403.9520 us/op        -       4947 runs   2.00 s
+// ✓ getPubkeys - native cache - req 1 vs - 250000 vc                    1831502 ops/s    546.0000 ns/op        -     280009 runs  0.386 s
+// ✓ getPubkeys - native cache - req 100 vs - 250000 vc                  28639.34 ops/s    34.91700 us/op        -      10880 runs  0.581 s
+// ✓ getPubkeys - native cache - req 1000 vs - 250000 vc                 1638.520 ops/s    610.3070 us/op        -        495 runs  0.769 s
+// ✓ getPubkeys - validatorsArr - req 1 vs - 250000 vc                    4464286 ops/s    224.0000 ns/op        -     944505 runs  0.983 s
+// ✓ getPubkeys - validatorsArr - req 100 vs - 250000 vc                 218436.0 ops/s    4.578000 us/op        -      56100 runs  0.317 s
+// ✓ getPubkeys - validatorsArr - req 1000 vs - 250000 vc                22047.80 ops/s    45.35600 us/op        -       5503 runs  0.304 s
 // ((DEPRECATED)) ========================================================
 // ✓ getPubkeys - persistent - req 1 vs - 200000 vc                       1579779 ops/s    633.0000 ns/op        -    2278954 runs   2.11 s
 // ✓ getPubkeys - persistent - req 100 vs - 200000 vc                    395100.8 ops/s    2.531000 us/op        -     714562 runs   2.05 s
