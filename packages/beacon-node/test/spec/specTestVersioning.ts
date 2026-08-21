@@ -9,9 +9,9 @@ export const ethereumConsensusSpecsTests = {
   outputDir: path.join(__dirname, "../../", specTestVersions.ethereumConsensusSpecsTests.outputDirBase),
 };
 
-export const ethereumSszSpecsTests = {
-  ...specTestVersions.ethereumSszSpecsTests,
-  outputDir: path.join(__dirname, "../../", specTestVersions.ethereumSszSpecsTests.outputDirBase),
+export const sszSpecTests = {
+  ...specTestVersions.sszSpecTests,
+  outputDir: path.join(__dirname, "../../", specTestVersions.sszSpecTests.outputDirBase),
 };
 
 export const blsSpecTests = {
