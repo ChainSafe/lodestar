@@ -404,6 +404,14 @@ export function createLodestarMetrics(
         name: "lodestar_bls_aggregated_pubkeys_total",
         help: "Total validator public keys used as inputs to aggregate signature sets",
       }),
+      pubkeyCacheSize: register.gauge({
+        name: "lodestar_bls_pubkey_cache_size",
+        help: "Current number of validator public keys in the native cache",
+      }),
+      pubkeyCacheCapacity: register.gauge({
+        name: "lodestar_bls_pubkey_cache_capacity",
+        help: "Number of validator public keys the native cache can hold without growing",
+      }),
     },
 
     blsThreadPool: {

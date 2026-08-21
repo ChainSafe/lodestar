@@ -1577,6 +1577,8 @@ export class BeaconChain implements IBeaconChain {
     // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
+    metrics.bls.pubkeyCacheSize.set(this.pubkeyCache.size);
+    metrics.bls.pubkeyCacheCapacity.set(this.pubkeyCache.capacity);
 
     const headState = this.getHeadState();
     if (isStatePostElectra(headState)) {
