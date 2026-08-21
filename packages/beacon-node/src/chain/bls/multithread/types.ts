@@ -32,7 +32,7 @@ export enum WorkResultCode {
 
 export enum VerificationCallOperation {
   generalBatch = "general_batch",
-  generalDirect = "general_direct",
+  generalSingle = "general_single",
   generalFallback = "general_fallback",
   sameMessage = "same_message",
 }

@@ -49,7 +49,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const nonBatchableSets: {
     idx: number;
     sets: BlsSignatureSet[];
-    operation: VerificationCallOperation.generalDirect | VerificationCallOperation.generalFallback;
+    operation: VerificationCallOperation.generalSingle | VerificationCallOperation.generalFallback;
   }[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
@@ -61,7 +61,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
         if (workReq.opts.batchable) {
           batchableSets.push({idx: i, sets});
         } else {
-          nonBatchableSets.push({idx: i, sets, operation: VerificationCallOperation.generalDirect});
+          nonBatchableSets.push({idx: i, sets, operation: VerificationCallOperation.generalSingle});
         }
         break;
       }

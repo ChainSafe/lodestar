@@ -116,7 +116,7 @@ describe("chain / bls / multithread queue", () => {
     const verificationCallDuration = await metrics.register.getSingleMetricAsString(
       "lodestar_bls_thread_pool_verification_call_duration_seconds"
     );
-    for (const operation of ["general_batch", "general_direct", "general_fallback", "same_message"]) {
+    for (const operation of ["general_batch", "general_single", "general_fallback", "same_message"]) {
       expect(verificationCallDuration).toContain(`operation="${operation}"`);
     }
 

@@ -1152,11 +1152,41 @@
           },
           "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count[$rate_interval]))",
           "interval": "",
-          "legendFormat": "{{operation}} sets/verification call",
+          "legendFormat": "sets/call: {{operation}}",
           "refId": "B"
         }
       ],
       "title": "BLS dispatch and verification call width",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "general_batch",
+            "renamePattern": "combined standard jobs"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "general_single",
+            "renamePattern": "single job"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "general_fallback",
+            "renamePattern": "jobs retried after batch failure"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "same_message",
+            "renamePattern": "shared-message jobs"
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {
@@ -1234,7 +1264,7 @@
           "editorMode": "code",
           "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_sum[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_count[$rate_interval]))",
           "instant": false,
-          "legendFormat": "mean call {{operation}}",
+          "legendFormat": "mean call: {{operation}}",
           "range": true,
           "refId": "A"
         },
@@ -1247,13 +1277,43 @@
           "expr": "sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_duration_seconds_sum[$rate_interval])) / sum by (instance, operation) (rate(lodestar_bls_thread_pool_verification_call_signature_sets_total[$rate_interval]))",
           "hide": false,
           "instant": false,
-          "legendFormat": "per set {{operation}}",
+          "legendFormat": "per set: {{operation}}",
           "range": true,
           "refId": "B"
         }
       ],
       "description": "Mean duration per synchronous lodestar-z binding call and total binding-call time amortized per signature set, grouped by verification path.",
       "title": "Worker lodestar-z verification cost",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "general_batch",
+            "renamePattern": "combined standard jobs"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "general_single",
+            "renamePattern": "single job"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "general_fallback",
+            "renamePattern": "jobs retried after batch failure"
+          }
+        },
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "same_message",
+            "renamePattern": "shared-message jobs"
+          }
+        }
+      ],
       "type": "timeseries"
     },
     {

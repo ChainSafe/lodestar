@@ -33,7 +33,7 @@ export type LodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
 type BlsJobOutcome = "valid" | "invalid" | "prepError" | "verifyError" | "workerError";
 type BlsBufferFlushReason = "size" | "timeout";
-type BlsVerificationCallOperation = "general_batch" | "general_direct" | "general_fallback" | "same_message";
+type BlsVerificationCallOperation = "general_batch" | "general_single" | "general_fallback" | "same_message";
 
 /**
  * Extra Lodestar custom metrics
