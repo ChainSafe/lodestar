@@ -1,8 +1,20 @@
 import worker from "node:worker_threads";
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {
+  type BlsSignatureSet,
+  verifySignatureSets,
+  verifySignatureSetsSameMessage,
+} from "@chainsafe/lodestar-z/bls-verifier";
 import {expose} from "@chainsafe/threads/worker";
-import {SignatureSetDeserialized, verifySignatureSetsMaybeBatch} from "../maybeBatch.js";
-import {BlsWorkReq, BlsWorkResult, SerializedSet, WorkResult, WorkResultCode, WorkerData} from "./types.js";
+import {
+  BlsWorkReq,
+  BlsWorkResult,
+  JobQueueItemType,
+  VerificationCall,
+  VerificationCallOperation,
+  WorkResult,
+  WorkResultCode,
+  WorkerData,
+} from "./types.js";
 import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
@@ -27,23 +39,45 @@ expose({
 
 function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
   const [startSec, startNs] = process.hrtime();
-  const results: WorkResult<boolean>[] = [];
+  const results: WorkResult<boolean[]>[] = [];
+  const verificationCalls: VerificationCall[] = [];
   let batchRetries = 0;
   let batchSigsSuccess = 0;
 
   // If there are multiple batchable sets attempt batch verification with them
-  const batchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
-  const nonBatchableSets: {idx: number; sets: SignatureSetDeserialized[]}[] = [];
+  const batchableSets: {idx: number; sets: BlsSignatureSet[]}[] = [];
+  const nonBatchableSets: {
+    idx: number;
+    sets: BlsSignatureSet[];
+    operation: VerificationCallOperation.single | VerificationCallOperation.fallback;
+  }[] = [];
 
   // Split sets between batchable and non-batchable preserving their original index in the req array
   for (let i = 0; i < workReqArr.length; i++) {
     const workReq = workReqArr[i];
-    const sets = workReq.sets.map(deserializeSet);
-
-    if (workReq.opts.batchable) {
-      batchableSets.push({idx: i, sets});
-    } else {
-      nonBatchableSets.push({idx: i, sets});
+    switch (workReq.type) {
+      case JobQueueItemType.default: {
+        const {sets} = workReq;
+        if (workReq.opts.batchable) {
+          batchableSets.push({idx: i, sets});
+        } else {
+          nonBatchableSets.push({idx: i, sets, operation: VerificationCallOperation.single});
+        }
+        break;
+      }
+      case JobQueueItemType.sameMessage:
+        try {
+          const result = recordVerificationCall(
+            verificationCalls,
+            VerificationCallOperation.sameMessage,
+            workReq.sets.length,
+            () => verifySignatureSetsSameMessage(workReq.sets, workReq.message)
+          );
+          results[i] = {code: WorkResultCode.success, result};
+        } catch (e) {
+          results[i] = {code: WorkResultCode.error, error: e as Error};
+        }
+        break;
     }
   }
 
@@ -52,7 +86,7 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     const batchableChunks = chunkifyMaximizeChunkSize(batchableSets, BATCHABLE_MIN_PER_CHUNK);
 
     for (const batchableChunk of batchableChunks) {
-      const allSets: SignatureSetDeserialized[] = [];
+      const allSets: BlsSignatureSet[] = [];
       for (const {sets} of batchableChunk) {
         for (const set of sets) {
           allSets.push(set);
@@ -61,33 +95,49 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
 
       try {
         // Attempt to verify multiple sets at once
-        const isValid = verifySignatureSetsMaybeBatch(allSets);
+        const isValid = recordVerificationCall(verificationCalls, VerificationCallOperation.batch, allSets.length, () =>
+          verifySignatureSets(allSets)
+        );
 
         if (isValid) {
           // The entire batch is valid, return success to all
           for (const {idx, sets} of batchableChunk) {
             batchSigsSuccess += sets.length;
-            results[idx] = {code: WorkResultCode.success, result: isValid};
+            results[idx] = {code: WorkResultCode.success, result: [isValid]};
           }
         } else {
           batchRetries++;
           // Re-verify all sigs
-          nonBatchableSets.push(...batchableChunk);
+          nonBatchableSets.push(
+            ...batchableChunk.map(({idx, sets}) => ({
+              idx,
+              sets,
+              operation: VerificationCallOperation.fallback as const,
+            }))
+          );
         }
       } catch (_e) {
         // TODO: Ignore this error expecting that the same error will happen when re-verifying the set individually
         //       It's not ideal but the BLS implementation may throw errors on some conditions
         batchRetries++;
         // Re-verify all sigs
-        nonBatchableSets.push(...batchableChunk);
+        nonBatchableSets.push(
+          ...batchableChunk.map(({idx, sets}) => ({
+            idx,
+            sets,
+            operation: VerificationCallOperation.fallback as const,
+          }))
+        );
       }
     }
   }
 
-  for (const {idx, sets} of nonBatchableSets) {
+  for (const {idx, sets, operation} of nonBatchableSets) {
     try {
-      const isValid = verifySignatureSetsMaybeBatch(sets);
-      results[idx] = {code: WorkResultCode.success, result: isValid};
+      const isValid = recordVerificationCall(verificationCalls, operation, sets.length, () =>
+        verifySignatureSets(sets)
+      );
+      results[idx] = {code: WorkResultCode.success, result: [isValid]};
     } catch (e) {
       results[idx] = {code: WorkResultCode.error, error: e as Error};
     }
@@ -99,16 +149,24 @@ function verifyManySignatureSets(workReqArr: BlsWorkReq[]): BlsWorkResult {
     workerId,
     batchRetries,
     batchSigsSuccess,
+    verificationCalls,
     workerStartTime: [startSec, startNs],
     workerEndTime: [workerEndSec, workerEndNs],
     results,
   };
 }
 
-function deserializeSet(set: SerializedSet): SignatureSetDeserialized {
-  return {
-    publicKey: PublicKey.fromBytes(set.publicKey),
-    message: set.message,
-    signature: set.signature,
-  };
+function recordVerificationCall<T>(
+  calls: VerificationCall[],
+  operation: VerificationCallOperation,
+  signatureSets: number,
+  verify: () => T
+): T {
+  const startTime = process.hrtime();
+  try {
+    return verify();
+  } finally {
+    const [seconds, nanoseconds] = process.hrtime(startTime);
+    calls.push({operation, signatureSets, duration: seconds + nanoseconds / 1e9});
+  }
 }

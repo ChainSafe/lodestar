@@ -1,5 +1,6 @@
 import path from "node:path";
 import {PrivateKey} from "@libp2p/interface";
+import {type PubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {Type} from "@chainsafe/ssz";
 import {routes} from "@lodestar/api";
 import {BeaconConfig} from "@lodestar/config";
@@ -25,7 +26,6 @@ import {
   EffectiveBalanceIncrements,
   EpochShuffling,
   IBeaconStateView,
-  PubkeyCache,
   computeEndSlotAtEpoch,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -307,8 +307,8 @@ export class BeaconChain implements IBeaconChain {
     const emitter = new ChainEventEmitter();
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
-      ? new BlsSingleThreadVerifier({metrics, pubkeyCache})
-      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, pubkeyCache});
+      ? new BlsSingleThreadVerifier({metrics})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics});
 
     if (!clock) clock = new Clock({config, genesisTime: this.genesisTime, signal});
 
@@ -1090,7 +1090,7 @@ export class BeaconChain implements IBeaconChain {
       RegenCaller.produceBlock
     );
     const proposerIndex = state.getBeaconProposer(slot);
-    const proposerPubKey = this.pubkeyCache.getOrThrow(proposerIndex).toBytes();
+    const proposerPubKey = this.pubkeyCache.getPubkeyBytesOrThrow(proposerIndex);
 
     const {body, produceResult, executionPayloadValue, shouldOverrideBuilder} = await produceBlockBody.call(
       this,
@@ -1577,6 +1577,8 @@ export class BeaconChain implements IBeaconChain {
     // syncContributionAndProofPool tracks metrics on its own
     metrics.opPool.blsToExecutionChangePoolSize.set(this.opPool.blsToExecutionChangeSize);
     metrics.chain.blacklistedBlocks.set(this.blacklistedBlocks.size);
+    metrics.bls.pubkeyCacheSize.set(this.pubkeyCache.size);
+    metrics.bls.pubkeyCacheCapacity.set(this.pubkeyCache.capacity);
 
     const headState = this.getHeadState();
     if (isStatePostElectra(headState)) {

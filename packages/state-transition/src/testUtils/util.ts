@@ -1,4 +1,5 @@
 import {PublicKey, SecretKey} from "@chainsafe/lodestar-z/blst";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {BeaconConfig, createBeaconConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
@@ -22,7 +23,6 @@ import {
   computeCommitteeCount,
   computeEpochAtSlot,
   createCachedBeaconState,
-  createPubkeyCache,
   newFilledArray,
   processSlots,
 } from "../index.js";
@@ -40,7 +40,7 @@ import {interopSecretKey} from "../util/interop.js";
 import {computeSigningRoot} from "../util/signingRoot.js";
 import {getNextSyncCommittee} from "../util/syncCommittee.js";
 import {getActiveValidatorIndices} from "../util/validator.js";
-import {interopPubkeysCached} from "./interop.js";
+import {ensureInteropPubkeyCache} from "./interopPubkeyCache.js";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -69,47 +69,45 @@ export const perfStateId = `${numValidators} vs - 7PWei`;
 
 /** Cache interop secret keys */
 const secretKeyByModIndex = new Map<number, SecretKey>();
+const pubkeysByCount = new Map<number, Uint8Array[]>();
 const epoch = 23638;
 export const perfStateEpoch = epoch;
 
 export function getPubkeys(vc = numValidators) {
-  const pubkeysMod = interopPubkeysCached(keypairsMod);
-  const pubkeysModObj = pubkeysMod.map((pk) => PublicKey.fromBytes(pk));
-  const pubkeys = Array.from({length: vc}, (_, i) => pubkeysMod[i % keypairsMod]);
+  ensureInteropPubkeyCache(vc);
+  let pubkeys = pubkeysByCount.get(vc);
+  if (!pubkeys) {
+    for (const [count, cached] of pubkeysByCount) {
+      if (count >= vc) {
+        pubkeys = cached.slice(0, vc);
+        break;
+      }
+    }
+    pubkeys ??= Array.from({length: vc}, (_, i) => pubkeyCache.getPubkeyBytesOrThrow(i));
+    pubkeysByCount.set(vc, pubkeys);
+  }
+  const pubkeysMod = pubkeys;
+  const pubkeysModObj = pubkeys.slice(0, keypairsMod).map((pk) => PublicKey.fromBytes(pk));
   return {pubkeysMod, pubkeysModObj, pubkeys};
 }
 
 /** Get secret key of a validatorIndex, if the pubkeys are generated with `getPubkeys()` */
 export function getSecretKeyFromIndex(validatorIndex: number): SecretKey {
-  return interopSecretKey(validatorIndex % keypairsMod);
+  return interopSecretKey(validatorIndex);
 }
 
 /** Get secret key of a validatorIndex, if the pubkeys are generated with `getPubkeys()` */
 export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
-  const keyIndex = validatorIndex % keypairsMod;
-  let sk = secretKeyByModIndex.get(keyIndex);
+  let sk = secretKeyByModIndex.get(validatorIndex);
   if (!sk) {
-    sk = interopSecretKey(keyIndex);
-    secretKeyByModIndex.set(keyIndex, sk);
+    sk = interopSecretKey(validatorIndex);
+    secretKeyByModIndex.set(validatorIndex, sk);
   }
   return sk;
 }
 
-function getPubkeyCaches({pubkeysMod}: ReturnType<typeof getPubkeys>, vc = numValidators) {
-  // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkeyCache = createPubkeyCache();
-  for (let i = 0; i < vc; i++) {
-    const pubkey = pubkeysMod[i % keypairsMod];
-    pubkeyCache.set(i, pubkey);
-  }
-
-  return {pubkeyCache};
-}
-
 export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean}): CachedBeaconStatePhase0 {
-  // Generate only some publicKeys
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj});
+  const {pubkeys} = getPubkeys();
 
   if (!phase0State) {
     const state = buildPerformanceStatePhase0();
@@ -218,8 +216,7 @@ export function generatePerfTestCachedStateAltair(opts?: {
   vc?: number;
 }): CachedBeaconStateAltair {
   const vc = opts?.vc ?? numValidators;
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj}, vc);
+  const {pubkeys} = getPubkeys(vc);
 
   const altairConfig = createChainForkConfig({ALTAIR_FORK_EPOCH: 0});
 
@@ -259,8 +256,7 @@ export function generatePerfTestCachedStateElectra(opts?: {
   vc?: number;
 }): CachedBeaconStateElectra {
   const vc = opts?.vc ?? numValidators;
-  const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
-  const {pubkeyCache} = getPubkeyCaches({pubkeys, pubkeysMod, pubkeysModObj}, vc);
+  const {pubkeys} = getPubkeys(vc);
 
   const electraConfig = createChainForkConfig({
     ALTAIR_FORK_EPOCH: 0,
@@ -495,15 +491,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   vc: number;
   slot: Slot;
 }): CachedBeaconStateAllForks {
-  // Generate only some publicKeys
-  const {pubkeys, pubkeysMod} = getPubkeys(vc);
-
-  // Manually sync pubkeys to prevent doing BLS opts 110_000 times
-  const pubkeyCache = createPubkeyCache();
-  for (let i = 0; i < vc; i++) {
-    const pubkey = pubkeysMod[i % keypairsMod];
-    pubkeyCache.set(i, pubkey);
-  }
+  const {pubkeys} = getPubkeys(vc);
 
   const state = ssz.phase0.BeaconState.defaultViewDU();
   state.slot = slot;

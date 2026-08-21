@@ -1,7 +1,8 @@
 import {generateKeyPair} from "@libp2p/crypto/keys";
+import {pubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {ChainForkConfig, createBeaconConfig} from "@lodestar/config";
 import {testLogger} from "@lodestar/logger/test-utils";
-import {BeaconStateView, createCachedBeaconState, createPubkeyCache, syncPubkeys} from "@lodestar/state-transition";
+import {BeaconStateView, createCachedBeaconState} from "@lodestar/state-transition";
 import {ssz} from "@lodestar/types";
 import {sleep} from "@lodestar/utils";
 import {BeaconChain} from "../../src/chain/chain.js";
@@ -38,12 +39,12 @@ export async function getNetworkForTest(
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block.message),
       },
     },
-    config
+    config,
+    true
   );
 
   const beaconConfig = createBeaconConfig(config, state.genesisValidatorsRoot);
-  const pubkeyCache = createPubkeyCache();
-  syncPubkeys(pubkeyCache, state.validators.getAllReadonlyValues());
+  pubkeyCache.syncPubkeys(state.validators.getAllReadonlyValues());
   const cachedState = createCachedBeaconState(
     state,
     {

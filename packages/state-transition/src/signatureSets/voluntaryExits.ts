@@ -1,8 +1,6 @@
-import {PublicKey} from "@chainsafe/lodestar-z/blst";
 import {BeaconConfig} from "@lodestar/config";
 import {ForkSeq} from "@lodestar/params";
 import {SignedBeaconBlock, Slot, phase0, ssz} from "@lodestar/types";
-import {PubkeyCache} from "../cache/pubkeyCache.js";
 import {IBeaconStateView, IBeaconStateViewGloas, isStatePostGloas} from "../stateView/interface.js";
 import {
   ISignatureSet,
@@ -16,11 +14,10 @@ import {
 
 export function verifyVoluntaryExitSignature(
   config: BeaconConfig,
-  pubkeyCache: PubkeyCache,
   state: IBeaconStateView,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
-  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit), pubkeyCache);
+  return verifySignatureSet(getVoluntaryExitSignatureSet(config, state, signedVoluntaryExit));
 }
 
 /**
@@ -81,7 +78,7 @@ export function getBuilderVoluntaryExitSignatureSet(
 
   return {
     type: SignatureSetType.single,
-    pubkey: PublicKey.fromBytes(builder.pubkey),
+    pubkey: builder.pubkey,
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
     signature: signedVoluntaryExit.signature,
   };

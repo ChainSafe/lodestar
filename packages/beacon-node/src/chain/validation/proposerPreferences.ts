@@ -3,7 +3,7 @@ import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  createSingleSignatureSetFromComponents,
+  createIndexedSignatureSetFromComponents,
   getProposerPreferencesSigningRoot,
 } from "@lodestar/state-transition";
 import {Epoch, Slot, ValidatorIndex, gloas} from "@lodestar/types";
@@ -129,8 +129,8 @@ export async function validateGossipProposerPreferences(
   }
 
   // [REJECT] `signed_proposer_preferences.signature` is valid with respect to the validator's public key.
-  const signatureSet = createSingleSignatureSetFromComponents(
-    chain.pubkeyCache.getOrThrow(validatorIndex),
+  const signatureSet = createIndexedSignatureSetFromComponents(
+    validatorIndex,
     getProposerPreferencesSigningRoot(chain.config, preferences),
     signedProposerPreferences.signature
   );

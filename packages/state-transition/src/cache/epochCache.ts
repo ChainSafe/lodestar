@@ -1,4 +1,5 @@
 import {PublicKey} from "@chainsafe/lodestar-z/blst";
+import {type PubkeyCache, pubkeyCache as defaultPubkeyCache} from "@chainsafe/lodestar-z/pubkeys";
 import {BeaconConfig, ChainConfig, createBeaconConfig} from "@lodestar/config";
 import {
   ATTESTATION_SUBNET_COUNT,
@@ -56,7 +57,6 @@ import {sumTargetUnslashedBalanceIncrements} from "../util/targetUnslashedBalanc
 import {BuilderDepositSignatureCache} from "./builderDepositSignatureCache.js";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements.js";
 import {EpochTransitionCache} from "./epochTransitionCache.js";
-import {PubkeyCache, createPubkeyCache, syncPubkeys} from "./pubkeyCache.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateFulu, CachedBeaconStateGloas} from "./stateCache.js";
 import {
   SyncCommitteeCache,
@@ -344,7 +344,7 @@ export class EpochCache {
     // syncPubkeys here to ensure EpochCacheImmutableData is populated before computing the rest of caches
     // - computeSyncCommitteeCache() needs a fully populated pubkeyCache
     if (!opts?.skipSyncPubkeys) {
-      syncPubkeys(pubkeyCache, validators);
+      pubkeyCache.syncPubkeys(validators);
     }
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -908,7 +908,7 @@ export class EpochCache {
   }
 
   addPubkey(index: ValidatorIndex, pubkey: Uint8Array): void {
-    this.pubkeyCache.set(index, pubkey);
+    this.pubkeyCache.append(index, pubkey);
   }
 
   getShufflingAtSlot(slot: Slot): EpochShuffling {
@@ -1123,7 +1123,6 @@ export function createEmptyEpochCacheImmutableData(
 ): EpochCacheImmutableData {
   return {
     config: createBeaconConfig(chainConfig, state.genesisValidatorsRoot),
-    // This is a test state, there's no need to have a global shared cache of keys
-    pubkeyCache: createPubkeyCache(),
+    pubkeyCache: defaultPubkeyCache,
   };
 }
