@@ -1,4 +1,5 @@
-import {Epoch, ValidatorIndex} from "@lodestar/types";
+import {computeEpochAtSlot} from "@lodestar/state-transition";
+import {Epoch, Slot, ValidatorIndex} from "@lodestar/types";
 import {MapDef} from "@lodestar/utils";
 
 // How many *non future* epochs we intend to keep for SeenAttesters.
@@ -57,7 +58,32 @@ export class SeenAttesters {
  */
 export class SeenAggregators extends SeenAttesters {}
 
-/**
- * Keeps a cache to filter payload attestations from the same attesters in the same epoch
- */
-export class SeenPayloadAttesters extends SeenAttesters {}
+/** Keeps a cache to filter payload attestations from the same validator in the same slot. */
+export class SeenPayloadAttesters {
+  private readonly validatorIndexesBySlot = new MapDef<Slot, Set<ValidatorIndex>>(() => new Set<ValidatorIndex>());
+  private readonly validatorIndexesByEpoch = new SeenAttesters();
+
+  isKnown(slot: Slot, validatorIndex: ValidatorIndex): boolean {
+    return this.validatorIndexesBySlot.get(slot)?.has(validatorIndex) === true;
+  }
+
+  add(slot: Slot, validatorIndex: ValidatorIndex): void {
+    const epoch = computeEpochAtSlot(slot);
+    this.validatorIndexesByEpoch.add(epoch, validatorIndex);
+    this.validatorIndexesBySlot.getOrDefault(slot).add(validatorIndex);
+  }
+
+  seenAtEpoch(epoch: Epoch, validatorIndex: ValidatorIndex): boolean {
+    return this.validatorIndexesByEpoch.isKnown(epoch, validatorIndex);
+  }
+
+  prune(currentEpoch: Epoch): void {
+    const lowestPermissibleEpoch = Math.max(currentEpoch - EPOCH_LOOKBACK_LIMIT, 0);
+    for (const slot of this.validatorIndexesBySlot.keys()) {
+      if (computeEpochAtSlot(slot) < lowestPermissibleEpoch) {
+        this.validatorIndexesBySlot.delete(slot);
+      }
+    }
+    this.validatorIndexesByEpoch.prune(currentEpoch);
+  }
+}

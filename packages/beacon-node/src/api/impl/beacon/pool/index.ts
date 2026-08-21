@@ -100,7 +100,9 @@ export function getBeaconPoolApi({
             const {indexedAttestation, subnet, attDataRootHex, committeeIndex, validatorCommitteeIndex, committeeSize} =
               await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
-            if (network.shouldAggregate(subnet, slot)) {
+            try {
+              // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
+              // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
               const insertOutcome = chain.attestationPool.add(
                 committeeIndex,
                 attestation,
@@ -110,6 +112,10 @@ export function getBeaconPoolApi({
                 priority
               );
               metrics?.opPool.attestationPool.apiInsertOutcome.inc({insertOutcome});
+            } catch (e) {
+              // The pool is a local optimization, failing to insert must not stop us from publishing a
+              // validated attestation, which the route requires us to do. Same handling as the gossip path
+              logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
             if (isForkPostElectra(fork)) {

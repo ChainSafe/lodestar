@@ -1345,8 +1345,8 @@ describe("Gloas Fork Choice", () => {
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
 
       // Both nodes should have accumulated their weights
-      expect(emptyNode?.weight).toBe(200);
-      expect(fullNode?.weight).toBe(100);
+      expect(emptyNode?.weight).toBe(200_000_000_000n);
+      expect(fullNode?.weight).toBe(100_000_000_000n);
 
       // But when comparing for bestChild, the tiebreaker should be used
       // (this is implicitly tested by the comparison logic, weights are ignored)
@@ -1386,8 +1386,8 @@ describe("Gloas Fork Choice", () => {
       const emptyBNode = getNodeByPayloadStatus(protoArray, "0x03", PayloadStatus.EMPTY);
 
       // Different blocks should use weight comparison, not tiebreaker
-      expect(emptyANode?.weight).toBe(200);
-      expect(emptyBNode?.weight).toBe(100);
+      expect(emptyANode?.weight).toBe(200_000_000_000n);
+      expect(emptyBNode?.weight).toBe(100_000_000_000n);
       // Block A should be preferred due to higher weight
     });
 
@@ -1430,8 +1430,8 @@ describe("Gloas Fork Choice", () => {
       const fullNode = getNodeByPayloadStatus(protoArray, "0x02", PayloadStatus.FULL);
 
       // Older blocks use weight comparison, not tiebreaker
-      expect(emptyNode?.weight).toBe(100);
-      expect(fullNode?.weight).toBe(200);
+      expect(emptyNode?.weight).toBe(100_000_000_000n);
+      expect(fullNode?.weight).toBe(200_000_000_000n);
       // FULL should be preferred due to higher weight
     });
   });

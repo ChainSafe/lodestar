@@ -114,6 +114,7 @@ VM
 Vitalik
 Vitest
 Wagyu
+Zig
 addons
 api
 args

@@ -486,7 +486,7 @@
 - name: calculate_committee_fraction#phase0
   sources:
     - file: packages/fork-choice/src/forkChoice/forkChoice.ts
-      search: export function getCommitteeFraction(
+      search: function getCommitteeFraction(
   spec: |
     <spec fn="calculate_committee_fraction" fork="phase0" hash="9c7034ee">
     def calculate_committee_fraction(state: BeaconState, committee_percent: Uint64) -> Gwei:

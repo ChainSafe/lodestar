@@ -1,5 +1,11 @@
 import {ChainForkConfig} from "@lodestar/config";
-import {MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostFulu, isForkPostGloas} from "@lodestar/params";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  MIN_SEED_LOOKAHEAD,
+  SLOTS_PER_EPOCH,
+  isForkPostFulu,
+  isForkPostGloas,
+} from "@lodestar/params";
 import {
   DataAvailabilityStatus,
   EffectiveBalanceIncrements,
@@ -67,6 +73,8 @@ export type ForkChoiceOpts = {
   computeUnrealized?: boolean;
   fastConfirmation?: boolean;
 };
+
+const EFFECTIVE_BALANCE_INCREMENT_BIGINT = BigInt(EFFECTIVE_BALANCE_INCREMENT);
 
 export enum UpdateHeadOpt {
   GetCanonicalHead = "getCanonicalHead", // Skip getProposerHead
@@ -147,7 +155,7 @@ export class ForkChoice implements IForkChoice {
   /** Boost the entire branch with this proposer root as the leaf */
   private proposerBoostRoot: RootHex | null = null;
   /** Score to use in proposer boost, evaluated lazily from justified balances */
-  private justifiedProposerBoostScore: number | null = null;
+  private justifiedProposerBoostScore: bigint | null = null;
   /** The current effective balances */
   private balances: EffectiveBalanceIncrements;
   /** Optional fast confirmation rule implementation */
@@ -587,7 +595,7 @@ export class ForkChoice implements IForkChoice {
      * The structure in line with deltas to propagate boost up the branch
      * starting from the proposerIndex
      */
-    let proposerBoost: {root: RootHex; score: number} | null = null;
+    let proposerBoost: {root: RootHex; score: bigint} | null = null;
     if (this.opts?.proposerBoost && this.proposerBoostRoot) {
       const proposerBoostScore =
         this.justifiedProposerBoostScore ??
@@ -635,20 +643,9 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
   }
 
-  /**
-   * weight is in EFFECTIVE_BALANCE_INCREMENTS not gwei.
-   * For compliance test use only
-   */
-  getViableHeads(): {root: RootHex; payloadStatus: PayloadStatus; weight: number}[] {
+  /** Returns exact Gwei weights for the compliance test. */
+  getViableHeads(): {root: RootHex; payloadStatus: PayloadStatus; weight: bigint}[] {
     return this.protoArray.getViableHeads(this.fcStore.currentSlot);
-  }
-
-  /**
-   * The cached justified total active balance, in EFFECTIVE_BALANCE_INCREMENT units.
-   * For compliance test use only
-   */
-  getJustifiedTotalActiveBalanceByIncrement(): number {
-    return this.fcStore.justified.totalBalance;
   }
 
   /** This is for the debug API only */
@@ -1636,7 +1633,7 @@ export class ForkChoice implements IForkChoice {
               // the justified state) - fall back to the head state's effective balance
               balance = state.effectiveBalanceIncrements[validatorIndex];
             }
-            headWeight += balance;
+            headWeight += BigInt(balance) * EFFECTIVE_BALANCE_INCREMENT_BIGINT;
           }
         }
       }
@@ -1666,7 +1663,6 @@ export class ForkChoice implements IForkChoice {
 
     // pre-gloas uses get_weight() (boost-inclusive), gloas uses get_attestation_score() (boost-excluded)
     const parentWeight = isForkPostGloas(this.config.getForkName(node.slot)) ? node.attestationScore : node.weight;
-
     return parentWeight > parentThreshold;
   }
 
@@ -2207,12 +2203,14 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-// Approximate https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#calculate_committee_fraction
+// https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/phase0/fork-choice.md#calculate_committee_fraction
 // Calculates proposer boost score when committeePercent = config.PROPOSER_SCORE_BOOST
-export function getCommitteeFraction(
+function getCommitteeFraction(
   justifiedTotalActiveBalanceByIncrement: number,
   config: {slotsPerEpoch: number; committeePercent: number}
-): number {
-  const committeeWeight = Math.floor(justifiedTotalActiveBalanceByIncrement / config.slotsPerEpoch);
-  return Math.floor((committeeWeight * config.committeePercent) / 100);
+): bigint {
+  const committeeWeightGwei =
+    (BigInt(justifiedTotalActiveBalanceByIncrement) * EFFECTIVE_BALANCE_INCREMENT_BIGINT) /
+    BigInt(config.slotsPerEpoch);
+  return (committeeWeightGwei * BigInt(config.committeePercent)) / 100n;
 }

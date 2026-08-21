@@ -14,12 +14,14 @@ minimumReleaseAgeExclude:
 nodeLinker: isolated
 
 catalog:
+  "@chainsafe/lodestar-z": "^1.0.0"
   "@vitest/browser": "^4.0.7"
   "@vitest/browser-playwright": "^4.0.7"
   "@vitest/coverage-v8": "^4.0.7"
   vitest: "^4.0.7"
 
 allowBuilds:
+  "@chainsafe/lodestar-z": true
   "@parcel/watcher": true
   "@swc/core": true
   aws-sdk: true
