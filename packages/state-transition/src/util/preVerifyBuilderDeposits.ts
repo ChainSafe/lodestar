@@ -10,8 +10,15 @@ export const BUILDER_DEPOSIT_BATCH_SIZE = 32;
 
 /**
  * Per-tick cap on builder deposits the prepareForNextSlot scanner will verify.
- * ~2.7s for 10_000 BLS verifications on a typical server — fits within the slot budget while the
- * pre-window (see GLOAS_PREVERIFY_WINDOW_EPOCHS) covers up to ~620k deposits over its duration.
+ *
+ * Note this cap is not what actually bounds a tick: the caller also passes a duration budget of
+ * BUILDER_PREVERIFY_LIMIT_BPS (20% of a slot, ~2.4s at 12s slots), and 10_000 verifications do not
+ * fit in it. Measured at the glamsterdam-devnet-8 gloas fork, the scanner cleared 16_306 deposits
+ * in 12.43s across 62 ticks — ~1_300/s, so ~3_000 per tick and on the order of 200k over the
+ * GLOAS_PREVERIFY_WINDOW_EPOCHS window, not the ~620k this count implies.
+ *
+ * Anything not cached in time is verified inline during the fork transition, so treat ~200k as the
+ * practical ceiling until the budget is raised.
  */
 export const MAX_BUILDER_DEPOSITS_PER_SLOT = 10_000;
 
