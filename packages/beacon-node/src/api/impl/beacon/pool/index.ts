@@ -101,12 +101,8 @@ export function getBeaconPoolApi({
               await validateGossipFnRetryUnknownRoot(validateFn, network, chain, slot, beaconBlockRoot);
 
             try {
-              // Always add api attestations to the pool, regardless of whether an aggregator duty is registered
-              // for this (subnet, slot). The `is_aggregator` flag of `prepareBeaconCommitteeSubnet` only governs
-              // whether we announce the subnet subscription and aggregate attestations *received on that subnet*
-              // via gossip, it does not apply to attestations handed to us directly by an attached validator client.
-              // Gating on it means we cannot serve `getAggregatedAttestation` for our own validators if the VC
-              // does not set the flag, see https://github.com/ChainSafe/lodestar/issues/7548
+              // `is_aggregator` only covers aggregating what we receive on the subnet via gossip, not what
+              // a validator client hands us directly, see https://github.com/ChainSafe/lodestar/issues/7548
               const insertOutcome = chain.attestationPool.add(
                 committeeIndex,
                 attestation,
