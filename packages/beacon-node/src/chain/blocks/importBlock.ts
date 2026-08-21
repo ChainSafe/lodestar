@@ -537,7 +537,6 @@ export async function importBlock(
       }
       if (this.emitter.listenerCount(routes.events.EventType.bidIncluded) && isGloasBeaconBlock(block.message)) {
         this.emitter.emit(routes.events.EventType.bidIncluded, {
-          slot: blockSlot,
           block: blockRootHex,
           signedBid: block.message.body.signedExecutionPayloadBid,
         });
