@@ -14,7 +14,7 @@ export function getEventsApi({
         // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
         const handler = (data: any): void => {
           try {
-            onEvent({type: topic, message: data});
+            onEvent({type: topic, message: data} as routes.events.BeaconEvent);
           } catch (e) {
             // `chain.emitter` emits synchronously, a throwing listener would propagate the error to
             // whoever emitted the event, e.g. a gossip handler, and skip the remaining listeners.
