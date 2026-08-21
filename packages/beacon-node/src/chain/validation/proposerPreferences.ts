@@ -24,12 +24,7 @@ export async function validateGossipProposerPreferences(
   const dependentRootHex = toRootHex(dependentRoot);
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
 
-  // [IGNORE] `preferences.proposal_slot` is in a Gloas or later fork.
-  //
-  // Not a spec condition. The Gloas topics are subscribed one epoch ahead of the fork, so for that
-  // epoch the lookahead check below accepts a `proposal_slot` that is still pre-Gloas. Preferences
-  // for such a slot are meaningless as there is no bid auction before Gloas, and consumers that
-  // derive the fork from `proposal_slot` cannot represent them with a Gloas-only type.
+  // [IGNORE] The proposal epoch is after the Gloas upgrade
   const proposalFork = chain.config.getForkName(proposalSlot);
   if (!isForkPostGloas(proposalFork)) {
     throw new ProposerPreferencesError(GossipAction.IGNORE, {
