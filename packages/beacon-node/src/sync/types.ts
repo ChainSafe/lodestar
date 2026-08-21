@@ -96,7 +96,9 @@ export type PendingPayloadInput = PayloadRetryMeta & {
 export type PendingPayloadRootHex = PayloadRetryMeta & {
   status: PendingPayloadInputStatus.pending | PendingPayloadInputStatus.fetching;
   rootHex: RootHex;
-  // message slot hint, may be missing when resolving a parent payload
+  // Trusted slot only (fork choice / validated data), may be missing until resolved. NOT the gossip
+  // message slot from ChainEvent.unknownEnvelopeBlockRoot, which is untrusted and not necessarily the
+  // payload/block slot. See BlockInputSync.resolvePayloadSlot.
   slot?: Slot;
   timeAddedSec: number;
   timeSyncedSec?: number;

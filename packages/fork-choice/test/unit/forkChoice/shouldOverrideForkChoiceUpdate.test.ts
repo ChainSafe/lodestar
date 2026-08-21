@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, it} from "vitest";
 import {fromHexString} from "@chainsafe/ssz";
+import {ChainForkConfig, createChainForkConfig} from "@lodestar/config";
 import {config} from "@lodestar/config/default";
 import {SLOTS_PER_EPOCH} from "@lodestar/params";
 import {DataAvailabilityStatus} from "@lodestar/state-transition";
@@ -26,6 +27,14 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
   const parentSlot = genesisSlot + 1;
   const headSlot = genesisSlot + 2;
   const validatorCount = 100;
+  const fuluConfig = createChainForkConfig({
+    ALTAIR_FORK_EPOCH: 0,
+    BELLATRIX_FORK_EPOCH: 0,
+    CAPELLA_FORK_EPOCH: 0,
+    DENEB_FORK_EPOCH: 0,
+    ELECTRA_FORK_EPOCH: 0,
+    FULU_FORK_EPOCH: 0,
+  });
 
   let protoArr: ProtoArray;
 
@@ -109,6 +118,22 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     payloadStatus: PayloadStatus.FULL,
   };
 
+  const epochBoundaryParentBlock = {
+    ...baseParentHeadBlock,
+    slot: SLOTS_PER_EPOCH * 2 - 2,
+    stateRoot: getStateRoot(SLOTS_PER_EPOCH * 2 - 2),
+    blockRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 2),
+    targetRoot: getBlockRoot(SLOTS_PER_EPOCH),
+  };
+  const epochBoundaryHeadBlock = {
+    ...baseHeadBlock,
+    slot: SLOTS_PER_EPOCH * 2 - 1,
+    stateRoot: getStateRoot(SLOTS_PER_EPOCH * 2 - 1),
+    parentRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 2),
+    blockRoot: getBlockRoot(SLOTS_PER_EPOCH * 2 - 1),
+    targetRoot: getBlockRoot(SLOTS_PER_EPOCH),
+  };
+
   const fcStore: IForkChoiceStore = {
     currentSlot: genesisSlot + 1,
     justified: {
@@ -171,6 +196,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     expectReorg: boolean;
     currentSlot?: Slot;
     expectedNotReorgedReason?: NotReorgedReason;
+    config?: ChainForkConfig;
   }[] = [
     {
       id: "Case that meets all conditions to be re-orged",
@@ -186,11 +212,18 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
       expectedNotReorgedReason: NotReorgedReason.HeadBlockIsTimely,
     },
     {
-      id: "No reorg when proposal slot is at epoch boundary",
-      parentBlock: {...baseParentHeadBlock},
-      headBlock: {...baseHeadBlock, slot: SLOTS_PER_EPOCH * 2 - 1}, // Proposal slot = block slot + 1
+      id: "No reorg when proposer shuffling is not stable",
+      parentBlock: epochBoundaryParentBlock,
+      headBlock: epochBoundaryHeadBlock,
       expectReorg: false,
-      expectedNotReorgedReason: NotReorgedReason.AtEpochBoundary,
+      expectedNotReorgedReason: NotReorgedReason.NotShufflingStable,
+    },
+    {
+      id: "Reorg when proposal slot is at a post-Fulu epoch boundary",
+      parentBlock: epochBoundaryParentBlock,
+      headBlock: epochBoundaryHeadBlock,
+      expectReorg: true,
+      config: fuluConfig,
     },
     {
       id: "No reorg when the blocks are not ffg competitive",
@@ -234,6 +267,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
     expectReorg,
     currentSlot: blockSeenSlot,
     expectedNotReorgedReason,
+    config: forkChoiceConfig,
   } of testCases) {
     it(id, async () => {
       protoArr.onBlock(parentBlock, parentBlock.slot, null);
@@ -241,7 +275,7 @@ describe("Forkchoice / shouldOverrideForkChoiceUpdate", () => {
 
       const secFromSlot = 0;
       const currentSlot = blockSeenSlot ?? headBlock.slot;
-      const forkChoice = new ForkChoice(config, fcStore, protoArr, validatorCount, null, {
+      const forkChoice = new ForkChoice(forkChoiceConfig ?? config, fcStore, protoArr, validatorCount, null, {
         proposerBoost: true,
         proposerBoostReorg: true,
       });

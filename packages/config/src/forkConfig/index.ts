@@ -103,6 +103,7 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
   const forksDescendingEpochOrder = Object.values(forks).reverse();
 
   const blobScheduleDescendingEpochOrder = [...config.BLOB_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
+  const gasLimitScheduleDescendingEpochOrder = [...config.GAS_LIMIT_SCHEDULE].sort((a, b) => b.EPOCH - a.EPOCH);
 
   const forkBoundariesAscendingEpochOrder: ForkBoundary[] = [
     // Normal hard-forks (phase0, altair, etc.)
@@ -208,6 +209,20 @@ export function createForkConfig(config: ChainConfig): ForkConfig {
       }
 
       return {epoch: config.ELECTRA_FORK_EPOCH, maxBlobsPerBlock: config.MAX_BLOBS_PER_BLOCK_ELECTRA};
+    },
+    getScheduledGasLimit(epoch: Epoch): number | undefined {
+      if (epoch < config.GLOAS_FORK_EPOCH) {
+        return undefined;
+      }
+
+      // Find the latest applicable value from gas limit schedule
+      for (const entry of gasLimitScheduleDescendingEpochOrder) {
+        if (epoch >= entry.EPOCH) {
+          return entry.GAS_LIMIT;
+        }
+      }
+
+      return undefined;
     },
     getAttestationDueMs(fork: ForkName): number {
       if (isForkPostGloas(fork)) {

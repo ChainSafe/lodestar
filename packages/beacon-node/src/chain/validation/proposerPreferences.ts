@@ -1,5 +1,5 @@
 import {IForkChoice, ProtoBlock} from "@lodestar/fork-choice";
-import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH} from "@lodestar/params";
+import {GENESIS_EPOCH, GENESIS_SLOT, MIN_SEED_LOOKAHEAD, SLOTS_PER_EPOCH, isForkPostGloas} from "@lodestar/params";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
@@ -13,7 +13,7 @@ import {IBeaconChain} from "../index.js";
 
 /**
  * Validates a gossiped `SignedProposerPreferences` per
- * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.13/specs/gloas/p2p-interface.md#new-proposer_preferences
+ * https://github.com/ethereum/consensus-specs/blob/v1.7.0-alpha.14/specs/gloas/p2p-interface.md#new-proposer_preferences
  */
 export async function validateGossipProposerPreferences(
   chain: IBeaconChain,
@@ -23,6 +23,16 @@ export async function validateGossipProposerPreferences(
   const {proposalSlot, validatorIndex, dependentRoot} = preferences;
   const dependentRootHex = toRootHex(dependentRoot);
   const proposalEpoch = computeEpochAtSlot(proposalSlot);
+
+  // [IGNORE] The proposal epoch is after the Gloas upgrade
+  const proposalFork = chain.config.getForkName(proposalSlot);
+  if (!isForkPostGloas(proposalFork)) {
+    throw new ProposerPreferencesError(GossipAction.IGNORE, {
+      code: ProposerPreferencesErrorCode.PRE_GLOAS_PROPOSAL_SLOT,
+      proposalSlot,
+      proposalFork,
+    });
+  }
 
   // [IGNORE] `preferences.proposal_slot` is within the proposer lookahead,
   // allowing for `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.

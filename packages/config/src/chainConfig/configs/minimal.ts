@@ -198,13 +198,17 @@ export const chainConfig: ChainConfig = {
   // ---------------------------------------------------------------
   BLOB_SCHEDULE: [],
 
+  // Gas Limit Scheduling
+  // ---------------------------------------------------------------
+  GAS_LIMIT_SCHEDULE: [],
+
   // HEZE
   // 2**4 (= 16)
   MAX_REQUEST_INCLUSION_LIST: 16,
   // 1 slots
   MIN_SLOTS_FOR_INCLUSION_LISTS_REQUESTS: 1,
   // 2**13 (=8192)
-  MAX_BYTES_PER_INCLUSION_LIST: 8192,
+  MAX_TRANSACTIONS_BYTES_PER_INCLUSION_LIST: 8192,
 
   // Fast Confirmation Rule
   // ---------------------------------------------------------------

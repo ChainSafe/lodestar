@@ -59,24 +59,39 @@ export function selectBlockProductionSource({
       return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
 
     case routes.validator.BuilderSelection.Default:
-    case routes.validator.BuilderSelection.MaxProfit: {
-      if (builderBoostFactor === BigInt(0)) {
-        return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
-      }
-
-      if (builderBoostFactor === MAX_BUILDER_BOOST_FACTOR) {
-        return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
-      }
-
-      if (engineExecutionPayloadValue >= (builderExecutionPayloadValue * builderBoostFactor) / BigInt(100)) {
-        return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.BlockValue};
-      }
-
-      return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BlockValue};
-    }
+    case routes.validator.BuilderSelection.MaxProfit:
+      return selectBlockProductionSourceByBoostFactor({
+        engineExecutionPayloadValue,
+        builderExecutionPayloadValue,
+        builderBoostFactor,
+      });
 
     case routes.validator.BuilderSelection.BuilderAlways:
     case routes.validator.BuilderSelection.BuilderOnly:
       return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
   }
+}
+
+export function selectBlockProductionSourceByBoostFactor({
+  engineExecutionPayloadValue,
+  builderExecutionPayloadValue,
+  builderBoostFactor,
+}: {
+  engineExecutionPayloadValue: bigint;
+  builderExecutionPayloadValue: bigint;
+  builderBoostFactor: bigint;
+}): BlockSelectionResult {
+  if (builderBoostFactor === BigInt(0)) {
+    return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.EnginePreferred};
+  }
+
+  if (builderBoostFactor === MAX_BUILDER_BOOST_FACTOR) {
+    return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BuilderPreferred};
+  }
+
+  if (engineExecutionPayloadValue >= (builderExecutionPayloadValue * builderBoostFactor) / BigInt(100)) {
+    return {source: ProducedBlockSource.engine, reason: EngineBlockSelectionReason.BlockValue};
+  }
+
+  return {source: ProducedBlockSource.builder, reason: BuilderBlockSelectionReason.BlockValue};
 }

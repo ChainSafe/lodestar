@@ -169,7 +169,7 @@ export class PrepareNextSlotScheduler {
           }
 
           if (isForkPostGloas(fork)) {
-            this.chain.builderCircuitBreaker.update(clockSlot);
+            this.chain.builderCircuitBreaker.update(clockSlot, updatedHead);
           } else {
             // Update the builder status, if enabled shoot an api call to check status
             this.chain.updateBuilderStatus(clockSlot);
@@ -224,7 +224,7 @@ export class PrepareNextSlotScheduler {
           this.metrics?.blockPayload.payloadAdvancePrepTime.observe(preparationTime);
 
           const safeBlockHash = getSafeExecutionBlockHash(this.chain.forkChoice, this.logger);
-          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice, this.logger);
+          const finalizedBlockHash = getFinalizedExecutionBlockHash(this.chain.forkChoice);
 
           // awaiting here instead of throwing an async call because there is no other task
           // left for scheduler and this gives nice semantics to catch and log errors in the

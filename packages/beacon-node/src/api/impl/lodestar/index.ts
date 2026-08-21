@@ -280,7 +280,7 @@ export function getLodestarApi({
     },
 
     async getFastConfirmationInfo() {
-      const confirmedRoot = chain.forkChoice.getConfirmedRoot();
+      const fcrStore = chain.forkChoice.getFastConfirmationStore();
       const confirmedBlock = chain.forkChoice.getConfirmedBlock();
       const justifiedCheckpoint = chain.forkChoice.getJustifiedCheckpoint();
       const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
@@ -290,21 +290,20 @@ export function getLodestarApi({
       return {
         data: {
           confirmed: {
-            rootHex: confirmedRoot,
-            slot: confirmedBlock?.slot ?? null,
+            root: fromHex(fcrStore.confirmedRoot),
+            slot: confirmedBlock?.slot ?? 0,
           },
           head: {
-            rootHex: headRoot,
+            root: fromHex(headRoot),
             slot: head.slot,
           },
-          justifiedCheckpoint: {
-            rootHex: justifiedCheckpoint.rootHex,
-            epoch: justifiedCheckpoint.epoch,
-          },
-          finalizedCheckpoint: {
-            rootHex: finalizedCheckpoint.rootHex,
-            epoch: finalizedCheckpoint.epoch,
-          },
+          justifiedCheckpoint,
+          finalizedCheckpoint,
+          previousEpochObservedJustifiedCheckpoint: fcrStore.previousEpochObservedJustifiedCheckpoint,
+          currentEpochObservedJustifiedCheckpoint: fcrStore.currentEpochObservedJustifiedCheckpoint,
+          previousEpochGreatestUnrealizedCheckpoint: fcrStore.previousEpochGreatestUnrealizedCheckpoint,
+          previousSlotHead: fromHex(fcrStore.previousSlotHead),
+          currentSlotHead: fromHex(fcrStore.currentSlotHead),
         },
       };
     },
