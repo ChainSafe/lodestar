@@ -423,15 +423,16 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
  * validator client. That is the right default: a message that reached nobody is a failed broadcast, and a
  * VC configured with several beacon nodes can fall back to another one.
  *
- * Only topics that have a concrete reason to tolerate it opt out here. Note this is applied per publish,
- * a topic set to `false` still honors the global `--network.allowPublishToZeroPeers` flag.
+ * Only topics that have a concrete reason to tolerate it opt out here, ie. are set to `true`, and the
+ * reason is named on the entry. Everything else is `false` and keeps raising. Note this is applied per
+ * publish, a topic set to `false` still honors the global `--network.allowPublishToZeroPeers` flag.
  */
 export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
   [GossipType.beacon_block]: false,
   [GossipType.blob_sidecar]: false,
-  // We ensure having all topic peers via prioritizePeers(). Even with 0 peers on the topic the overall
-  // publish can still succeed, because a supernode rebuilds and publishes the missing columns for us,
-  // so track sent peers as 0 instead of raising
+  // data_column_sidecar: we ensure having all topic peers via prioritizePeers(). Even with 0 peers on the
+  // topic the overall publish can still succeed, because a supernode rebuilds and publishes the missing
+  // columns for us, so track sent peers as 0 instead of raising
   [GossipType.data_column_sidecar]: true,
   [GossipType.beacon_aggregate_and_proof]: false,
   [GossipType.beacon_attestation]: false,
@@ -440,7 +441,9 @@ export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
   [GossipType.attester_slashing]: false,
   [GossipType.sync_committee_contribution_and_proof]: false,
   [GossipType.sync_committee]: false,
-  // Non-mandatory route on most of the network, there may be no peer subscribed to it at all
+  // light_client_finality_update and light_client_optimistic_update: non-mandatory route on most of the
+  // network as of Oct 2022, there may be no peer subscribed to the topic at all. Reason carried over from
+  // the handlers in network.ts, which used to swallow the error instead
   [GossipType.light_client_finality_update]: true,
   [GossipType.light_client_optimistic_update]: true,
   [GossipType.bls_to_execution_change]: false,
