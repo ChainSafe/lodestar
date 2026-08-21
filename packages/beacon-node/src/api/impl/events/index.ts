@@ -14,6 +14,8 @@ export function getEventsApi({
         // biome-ignore lint/suspicious/noExplicitAny: We need to use `any` type here
         const handler = (data: any): void => {
           try {
+            // TS only relates `{type, message}` to the `BeaconEvent` discriminated union while
+            // `EventType` stays within its ~25-member cap; without the cast, adding events trips TS2345.
             onEvent({type: topic, message: data} as routes.events.BeaconEvent);
           } catch (e) {
             // `chain.emitter` emits synchronously, a throwing listener would propagate the error to
