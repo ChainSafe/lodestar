@@ -118,6 +118,16 @@ export function getBeaconPoolApi({
               logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
+            try {
+              // An attestation submitted by an attached validator client is a vote like any other, our own
+              // fork choice should count it. Not doing so leaves the vote out of our store until a block or
+              // someone else's aggregate carries it back, `emitSelf` is off so what we publish does not
+              // loop back to us
+              chain.forkChoice.onAttestation(indexedAttestation, attDataRootHex);
+            } catch (e) {
+              logger.debug("Error adding api unaggregated attestation to forkchoice", {subnet}, e as Error);
+            }
+
             if (isForkPostElectra(fork)) {
               chain.emitter.emit(
                 routes.events.EventType.singleAttestation,

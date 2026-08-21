@@ -28,6 +28,7 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
   let modules: ApiTestModules;
   let api: ReturnType<typeof getBeaconPoolApi>;
   let attestationPool: {add: ReturnType<typeof vi.fn>};
+  let validationResult: AttestationValidationResult;
 
   beforeEach(() => {
     modules = getApiTestModules({config});
@@ -38,7 +39,7 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     // `is_aggregator: true` in `prepareBeaconCommitteeSubnet`
     modules.network.shouldAggregate = vi.fn().mockReturnValue(false);
 
-    const validationResult: AttestationValidationResult = {
+    validationResult = {
       attestation: ssz.electra.SingleAttestation.defaultValue(),
       indexedAttestation: ssz.electra.IndexedAttestation.defaultValue(),
       subnet,
@@ -66,6 +67,25 @@ describe("api - beacon - submitPoolAttestationsV2", () => {
     const attestation = ssz.electra.SingleAttestation.defaultValue();
     attestationPool.add.mockImplementation(() => {
       throw new OpPoolError({code: OpPoolErrorCode.REACHED_MAX_PER_SLOT});
+    });
+
+    await expect(api.submitPoolAttestationsV2({signedAttestations: [attestation]})).resolves.not.toThrow();
+
+    expect(modules.network.publishBeaconAttestation).toHaveBeenCalledWith(attestation, subnet);
+  });
+
+  it("adds the attestation to fork choice", async () => {
+    const attestation = ssz.electra.SingleAttestation.defaultValue();
+
+    await api.submitPoolAttestationsV2({signedAttestations: [attestation]});
+
+    expect(modules.forkChoice.onAttestation).toHaveBeenCalledWith(validationResult.indexedAttestation, "0x00");
+  });
+
+  it("still publishes the attestation if fork choice rejects it", async () => {
+    const attestation = ssz.electra.SingleAttestation.defaultValue();
+    modules.forkChoice.onAttestation.mockImplementation(() => {
+      throw new Error("Unknown target root");
     });
 
     await expect(api.submitPoolAttestationsV2({signedAttestations: [attestation]})).resolves.not.toThrow();
