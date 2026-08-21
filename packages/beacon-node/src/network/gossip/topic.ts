@@ -414,3 +414,38 @@ export const gossipTopicIgnoreDuplicatePublishError: Record<GossipType, boolean>
   [GossipType.execution_payload_bid]: true,
   [GossipType.proposer_preferences]: true,
 };
+
+/**
+ * Whether a publish that reached zero subscribed peers is an acceptable outcome for a topic.
+ *
+ * Publishing to a topic with no subscribed peers throws `PublishError.NoPeersSubscribedToTopic`, which
+ * propagates to the caller and, for messages submitted through the beacon API, is surfaced to the
+ * validator client. That is the right default: a message that reached nobody is a failed broadcast, and a
+ * VC configured with several beacon nodes can fall back to another one.
+ *
+ * Only topics that have a concrete reason to tolerate it opt out here. Note this is applied per publish,
+ * a topic set to `false` still honors the global `--network.allowPublishToZeroPeers` flag.
+ */
+export const gossipTopicAllowPublishToZeroPeers: Record<GossipType, boolean> = {
+  [GossipType.beacon_block]: false,
+  [GossipType.blob_sidecar]: false,
+  // We ensure having all topic peers via prioritizePeers(). Even with 0 peers on the topic the overall
+  // publish can still succeed, because a supernode rebuilds and publishes the missing columns for us,
+  // so track sent peers as 0 instead of raising
+  [GossipType.data_column_sidecar]: true,
+  [GossipType.beacon_aggregate_and_proof]: false,
+  [GossipType.beacon_attestation]: false,
+  [GossipType.voluntary_exit]: false,
+  [GossipType.proposer_slashing]: false,
+  [GossipType.attester_slashing]: false,
+  [GossipType.sync_committee_contribution_and_proof]: false,
+  [GossipType.sync_committee]: false,
+  // Non-mandatory route on most of the network, there may be no peer subscribed to it at all
+  [GossipType.light_client_finality_update]: true,
+  [GossipType.light_client_optimistic_update]: true,
+  [GossipType.bls_to_execution_change]: false,
+  [GossipType.execution_payload]: false,
+  [GossipType.payload_attestation_message]: false,
+  [GossipType.execution_payload_bid]: false,
+  [GossipType.proposer_preferences]: false,
+};
