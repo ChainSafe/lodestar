@@ -115,7 +115,7 @@ export function getBeaconPoolApi({
             } catch (e) {
               // The pool is a local optimization, failing to insert must not stop us from publishing a
               // validated attestation, which the route requires us to do. Same handling as the gossip path
-              logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
+              logger.debug("Error adding unaggregated attestation to pool", {subnet}, e as Error);
             }
 
             if (isForkPostElectra(fork)) {
