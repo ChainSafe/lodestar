@@ -1,6 +1,6 @@
 # Lodestar Builder: Design
 
-Status: proposal
+Status: implemented (phases 1 and 2), verified end to end on a kurtosis devnet
 
 This document describes how `@lodestar/builder` evolves from the current startup skeleton (identity resolution, readiness gating, signer, status tracker) into a builder that submits bids and reveals payloads built by local execution clients.
 
@@ -212,7 +212,11 @@ All of these are implemented alongside the builder. They improve any external bu
 - **Competitor-aware pricing** (skip or shade against the best bid seen locally). Can only lose slots under one-shot bidding with a partial view. Possible as a policy plugin, not the baseline.
 - **Beacon node caches payloads, stateful reveal** (as self-build does today). Fewer bytes over HTTP but ties the reveal to one beacon node's cache.
 
-## 14. Open questions
+## 14. End to end verification
+
+Verified on a two node minimal preset kurtosis devnet (gloas at genesis, 6s slots, geth) with the builder running as a host process against node 1, config in `~/debug/kurtosis/config/builder-p2p-bids.yaml`. The builder must be onboarded with an EIP-8282 deposit first, `builder_count` only funds the key. Observed: two bids per slot (empty and full parent variants), the full variant selected by node 2's proposers (`Selected builder block reason=builder_preferred`), envelopes revealed about 1s into the slot including blobs and data columns, `head_v2` flipping empty to full every slot, 100% of slots won while the builder was the only bidder, and the builder balance decreasing by the bid value per won slot as payments settle.
+
+## 15. Open questions
 
 - **Two writers to EL fork choice.** The beacon node issues `forkchoiceUpdated` for sync, the builder for builds. Per the Engine API a build is identified by `payloadId` and a later `forkchoiceUpdated` without attributes does not cancel it, but this needs verification per EL on a devnet.
 - **EMPTY-variant builds move the EL head back one payload** until the next `forkchoiceUpdated`. This is inherent to dual-variant building in ePBS and happens with self-build today. Mitigation: issue the FULL build as soon as the envelope arrives and restore the head after `getPayload`.
