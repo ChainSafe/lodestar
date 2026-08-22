@@ -1,6 +1,6 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {MAX_BUILDER_URL_SIZE} from "@lodestar/params";
+import {MAX_BUILDER_AUTH_DATA_SIZE, MAX_BUILDER_URL_SIZE} from "@lodestar/params";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
 import {
   EmptyArgs,
@@ -117,7 +117,7 @@ export type BuilderConfigData = {
   builders?: BuilderEntryConfig[];
 };
 
-const AUTH_DATA_PATTERN = /^0x(?:[a-fA-F0-9]{2}){1,4096}$/;
+const BUILDER_AUTH_DATA_PATTERN = new RegExp(`^0x(?:[a-fA-F0-9]{2}){1,${MAX_BUILDER_AUTH_DATA_SIZE}}$`);
 const PUBKEY_PATTERN = /^0x[a-fA-F0-9]{96}$/;
 const UINT64_MAX = 2n ** 64n - 1n;
 
@@ -181,8 +181,10 @@ export function builderConfigDataFromJson(json: unknown): BuilderConfigData {
       if (new TextEncoder().encode(url).length > MAX_BUILDER_URL_SIZE) {
         throw Error(`builders[${i}].url must not exceed ${MAX_BUILDER_URL_SIZE} bytes`);
       }
-      if (auth_data !== undefined && (typeof auth_data !== "string" || !AUTH_DATA_PATTERN.test(auth_data))) {
-        throw Error(`builders[${i}].auth_data must be a non-empty hex string of at most 4096 bytes`);
+      if (auth_data !== undefined && (typeof auth_data !== "string" || !BUILDER_AUTH_DATA_PATTERN.test(auth_data))) {
+        throw Error(
+          `builders[${i}].auth_data must be a non-empty hex string of at most ${MAX_BUILDER_AUTH_DATA_SIZE} bytes`
+        );
       }
       let builderPubkeys: string[] | undefined;
       if (builder_pubkeys !== undefined) {

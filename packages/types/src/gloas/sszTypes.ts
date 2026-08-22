@@ -18,7 +18,7 @@ import {
   EXECUTION_BLOCK_HASH_DEPTH_GLOAS,
   FINALIZED_ROOT_DEPTH_GLOAS,
   HISTORICAL_ROOTS_LIMIT,
-  MAX_DATA_SIZE,
+  MAX_BUILDER_AUTH_DATA_SIZE,
   MIN_SEED_LOOKAHEAD,
   NEXT_SYNC_COMMITTEE_DEPTH_GLOAS,
   NUMBER_OF_COLUMNS,
@@ -363,7 +363,7 @@ export const SignedExecutionPayloadBid = new ContainerType(
 
 export const BuilderRequestAuth = new ContainerType(
   {
-    data: new ByteListType(MAX_DATA_SIZE),
+    data: new ByteListType(MAX_BUILDER_AUTH_DATA_SIZE),
     slot: Slot,
   },
   {typeName: "BuilderRequestAuth", jsonCase: "eth2"}

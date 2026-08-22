@@ -375,7 +375,7 @@ export const BUILDER_DEPOSIT_REQUEST_TYPE = 0x03;
 export const BUILDER_EXIT_REQUEST_TYPE = 0x04;
 
 // Gloas builder specs
-export const MAX_DATA_SIZE = 4096;
+export const MAX_BUILDER_AUTH_DATA_SIZE = 4096;
 export const MAX_BUILDER_ENTRIES = 64;
 export const MAX_BUILDER_URL_SIZE = 2048;
 export const MAX_BUILDER_PUBKEYS = 64;

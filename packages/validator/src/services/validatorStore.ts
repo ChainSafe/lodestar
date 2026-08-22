@@ -18,7 +18,7 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
   ForkSeq,
-  MAX_DATA_SIZE,
+  MAX_BUILDER_AUTH_DATA_SIZE,
 } from "@lodestar/params";
 import {
   ZERO_HASH,
@@ -1046,9 +1046,9 @@ export class ValidatorStore {
     data: Uint8Array,
     proposalSlot: Slot
   ): Promise<gloas.SignedBuilderRequestAuth> {
-    if (data.length === 0 || data.length > MAX_DATA_SIZE) {
+    if (data.length === 0 || data.length > MAX_BUILDER_AUTH_DATA_SIZE) {
       throw Error(
-        `Invalid builder request auth data length=${data.length}, must be within 1 and ${MAX_DATA_SIZE} bytes`
+        `Invalid builder request auth data length=${data.length}, must be within 1 and ${MAX_BUILDER_AUTH_DATA_SIZE} bytes`
       );
     }
 

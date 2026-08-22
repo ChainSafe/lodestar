@@ -2,14 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import {routes} from "@lodestar/api";
 import {BuilderEntryConfig, builderConfigDataFromJson} from "@lodestar/api/keymanager";
-import {MAX_BUILDER_ENTRIES, MAX_BUILDER_URL_SIZE, MAX_DATA_SIZE} from "@lodestar/params";
+import {MAX_BUILDER_AUTH_DATA_SIZE, MAX_BUILDER_ENTRIES, MAX_BUILDER_URL_SIZE} from "@lodestar/params";
 import {fromHex, toHex} from "@lodestar/utils";
 import {ValidatorProposerConfig} from "@lodestar/validator";
 import {parseFeeRecipient} from "./feeRecipient.js";
 import {readFile} from "./file.js";
 
 const UINT64_MAX = 2n ** 64n - 1n;
-const AUTH_DATA_PATTERN = new RegExp(`^0x(?:[a-fA-F0-9]{2}){1,${MAX_DATA_SIZE}}$`);
+const BUILDER_AUTH_DATA_PATTERN = new RegExp(`^0x(?:[a-fA-F0-9]{2}){1,${MAX_BUILDER_AUTH_DATA_SIZE}}$`);
 
 type ProposerConfig = ValidatorProposerConfig["defaultConfig"];
 
@@ -260,9 +260,9 @@ export function parseBuilderUrls(urls?: string[]): BuilderEntryConfig[] | undefi
     if (Buffer.byteLength(url, "utf8") > MAX_BUILDER_URL_SIZE) {
       throw Error(`Invalid builder url, must not exceed ${MAX_BUILDER_URL_SIZE} bytes: ${url}`);
     }
-    if (authData !== undefined && !AUTH_DATA_PATTERN.test(authData)) {
+    if (authData !== undefined && !BUILDER_AUTH_DATA_PATTERN.test(authData)) {
       throw Error(
-        `Invalid builder url auth data, must be a 0x-prefixed hex string of 1 to ${MAX_DATA_SIZE} bytes: ${url}`
+        `Invalid builder url auth data, must be a 0x-prefixed hex string of 1 to ${MAX_BUILDER_AUTH_DATA_SIZE} bytes: ${url}`
       );
     }
     const entryKey = `${url}|${authData !== undefined ? toHex(fromHex(authData)) : toHex(Buffer.from(url))}`;
