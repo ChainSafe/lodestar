@@ -434,7 +434,15 @@ export class KeymanagerApi implements Api {
         ? {
             ...config.builder,
             // Default JSON serialization can't handle BigInt
-            boostFactor: config.builder.boostFactor ? config.builder.boostFactor.toString() : undefined,
+            boostFactor: config.builder.boostFactor?.toString(),
+            minBid: config.builder.minBid?.toString(),
+            maxExecutionPayment: config.builder.maxExecutionPayment?.toString(),
+            builders: config.builder.builders?.map((entry) => ({
+              ...entry,
+              maxExecutionPayment: entry.maxExecutionPayment?.toString(),
+              minBid: entry.minBid?.toString(),
+              builderBoostFactor: entry.builderBoostFactor?.toString(),
+            })),
           }
         : undefined,
     };

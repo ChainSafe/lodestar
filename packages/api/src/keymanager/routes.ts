@@ -238,7 +238,19 @@ export type ProposerConfigResponse = {
     gasLimit?: number;
     selection?: string;
     boostFactor?: string;
+    minBid?: string;
+    maxExecutionPayment?: string;
+    builders?: BuilderEntryConfigResponse[];
   };
+};
+
+export type BuilderEntryConfigResponse = {
+  url: string;
+  authData?: string;
+  builderPubkeys?: string[];
+  maxExecutionPayment?: string;
+  minBid?: string;
+  builderBoostFactor?: string;
 };
 
 /**
