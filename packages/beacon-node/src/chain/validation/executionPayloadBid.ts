@@ -11,7 +11,7 @@ import {
   isStatePostGloas,
 } from "@lodestar/state-transition";
 import {RootHex, Slot, ValidatorIndex, gloas} from "@lodestar/types";
-import {byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
+import {bigIntMin, byteArrayEquals, toHex, toRootHex} from "@lodestar/utils";
 import {getShufflingDependentRoot} from "../../util/dependentRoot.js";
 import {ExecutionPayloadBidError, ExecutionPayloadBidErrorCode, GossipAction} from "../errors/index.js";
 import {IBeaconChain} from "../index.js";
@@ -89,8 +89,8 @@ export async function validateApiExecutionPayloadBid(
 /**
  * Validate a bid received from a builder over the builder API in response to a bid request
  * made during block production. Unlike gossip validation, the bid must match the requested
- * slot and parent exactly, may carry a non-zero `executionPayment` bounded by the entry's
- * `maxExecutionPayment`, and is not subject to gossip anti-spam rules.
+ * slot and parent exactly, may carry a non-zero `executionPayment` which is counted at most at
+ * the entry's `maxExecutionPayment`, and is not subject to gossip anti-spam rules.
  *
  * Throws with a description of the failure, the caller drops the bid.
  */
@@ -121,13 +121,8 @@ export async function validateBuilderApiExecutionPayloadBid(
     );
   }
 
-  if (bid.executionPayment > entry.maxExecutionPayment) {
-    throw Error(
-      `Bid executionPayment=${bid.executionPayment} exceeds maxExecutionPayment=${entry.maxExecutionPayment}`
-    );
-  }
-
-  const totalPayment = BigInt(bid.value) + bid.executionPayment;
+  // Execution payment above the entry's cap adds nothing to the bid
+  const totalPayment = BigInt(bid.value) + bigIntMin(bid.executionPayment, entry.maxExecutionPayment);
   if (totalPayment < entry.minBid) {
     throw Error(`Bid total payment=${totalPayment} is below minBid=${entry.minBid}`);
   }

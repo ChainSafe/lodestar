@@ -52,6 +52,7 @@ import {
 import {
   GWEI_TO_WEI,
   TimeoutError,
+  bigIntMin,
   defer,
   formatWeiToEth,
   fromHex,
@@ -967,7 +968,10 @@ export function getValidatorApi(
               });
               candidates.push({
                 signedBid,
-                totalGwei: BigInt(signedBid.message.value) + signedBid.message.executionPayment,
+                // Execution payment above the entry's cap adds nothing to the bid
+                totalGwei:
+                  BigInt(signedBid.message.value) +
+                  bigIntMin(signedBid.message.executionPayment, entry.maxExecutionPayment),
                 boostFactor: entry.builderBoostFactor,
                 url,
               });
@@ -1119,7 +1123,7 @@ export function getValidatorApi(
         const result = selectBlockProductionSourceByBoostFactor({
           builderBoostFactor: bestBid?.boostFactor ?? builderBoostFactor,
           engineExecutionPayloadValue: engineResult.value.executionPayloadValue,
-          // The bid total payment is its value plus executionPayment, in Gwei
+          // The bid total payment is its value plus its counted executionPayment, in Gwei
           builderExecutionPayloadValue: (bestBid?.totalGwei ?? 0n) * GWEI_TO_WEI,
         });
         source = result.source;

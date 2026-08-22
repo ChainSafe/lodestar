@@ -240,6 +240,46 @@ describe("api/validator - produceBlockV4", () => {
     expect(block).toEqual(bidBlock);
   });
 
+  it("counts a builder API bid's execution payment only up to its entry cap", async () => {
+    const builderUrl = "https://builder.example.com";
+    const entry = {
+      url: new TextEncoder().encode(builderUrl),
+      auth: ssz.gloas.SignedBuilderRequestAuth.defaultValue(),
+      builderPubkeys: [],
+      maxExecutionPayment: 1n,
+      minBid: 0n,
+      builderBoostFactor: 100n,
+    };
+    const apiBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    apiBid.message.value = 1;
+    apiBid.message.executionPayment = 5n;
+    apiBid.message.builderIndex = 7;
+    const p2pBid = ssz.gloas.SignedExecutionPayloadBid.defaultValue();
+    p2pBid.message.value = 3;
+    p2pBid.message.builderIndex = 42;
+
+    modules.chain.builderCircuitBreaker.isActive.mockReturnValue(false);
+    modules.chain.executionPayloadBidPool.getBestBid.mockReturnValue(p2pBid);
+    modules.chain.getHeadState.mockReturnValue({getBeaconProposer: () => 1} as never);
+    vi.spyOn(modules.chain.pubkeyCache, "getOrThrow").mockReturnValue({toBytes: () => new Uint8Array(48)} as never);
+    modules.chain.builderApiClient.getExecutionPayloadBids.mockResolvedValue([
+      {url: builderUrl, entry, signedBid: apiBid},
+    ]);
+
+    const {data: block} = await api.produceBlockV4({
+      slot,
+      randaoReveal,
+      graffiti,
+      feeRecipient,
+      includePayload: false,
+      builderConfig: {minBid: 0n, builderBoostFactor: 100n, builders: [entry]},
+    });
+
+    // The builder API bid counts as 1 + min(5, 1) = 2, so the p2p bid (3) wins
+    expect(modules.chain.produceBlock).toHaveBeenCalledWith(expect.objectContaining({builderBid: p2pBid}));
+    expect(block).toEqual(bidBlock);
+  });
+
   it("prefers the builder API bid over an equally boosted p2p bid", async () => {
     const builderUrl = "https://builder.example.com";
     const entry = {
