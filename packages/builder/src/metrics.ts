@@ -34,6 +34,65 @@ export function getMetrics(register: MetricsRegisterExtra, gitData: LodestarGitD
       help: "Current builder balance in gwei",
     }),
 
+    builds: {
+      prepareTime: register.histogram<{source: string}>({
+        name: "bc_builder_payload_prepare_time_seconds",
+        help: "Time from payload attributes until the execution client accepted the build request",
+        labelNames: ["source"],
+        buckets: [0.05, 0.1, 0.5, 1, 2, 4, 8],
+      }),
+      prepareFailed: register.counter<{source: string}>({
+        name: "bc_builder_payload_prepare_failed_total",
+        help: "Count of payload builds that could not be started before the bid deadline",
+        labelNames: ["source"],
+      }),
+      getPayloadTime: register.histogram<{source: string}>({
+        name: "bc_builder_get_payload_time_seconds",
+        help: "Time to fetch a built payload from the execution client",
+        labelNames: ["source"],
+        buckets: [0.01, 0.05, 0.1, 0.5, 1, 2],
+      }),
+    },
+
+    bids: {
+      submitted: register.counter<{result: string}>({
+        name: "bc_builder_bids_submitted_total",
+        help: "Count of bid submission attempts by result",
+        labelNames: ["result"],
+      }),
+      won: register.counter({
+        name: "bc_builder_bids_won_total",
+        help: "Count of blocks that committed to one of our bids",
+      }),
+      value: register.gauge({
+        name: "bc_builder_bid_value_gwei",
+        help: "Value of the last published bid in gwei",
+      }),
+      payloadValue: register.gauge<{source: string}>({
+        name: "bc_builder_payload_value_gwei",
+        help: "Value of the last built payload in gwei by source",
+        labelNames: ["source"],
+      }),
+      submitTime: register.histogram({
+        name: "bc_builder_bid_submit_time_seconds",
+        help: "Time into the slot before the target slot at which the bid was published",
+        buckets: [2, 4, 6, 8, 9, 10, 11, 12],
+      }),
+    },
+
+    reveals: {
+      total: register.counter<{result: string}>({
+        name: "bc_builder_reveals_total",
+        help: "Count of payload reveal attempts by result",
+        labelNames: ["result"],
+      }),
+      time: register.histogram({
+        name: "bc_builder_reveal_time_seconds",
+        help: "Time into the slot at which the payload envelope was published",
+        buckets: [0.25, 0.5, 1, 2, 3, 4, 6],
+      }),
+    },
+
     // REST API client
 
     restApiClient: {

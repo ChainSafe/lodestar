@@ -4,7 +4,12 @@ import {Epoch, Slot} from "@lodestar/types";
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export class ClockMock implements IClock {
+  currentSlot = 0;
   currentEpoch = 0;
+  /** Value returned by msToSlot for any slot */
+  msToSlotValue = 0;
+  /** Value returned by msFromSlot for any slot */
+  msFromSlotValue = 0;
   readonly genesisTime: number = 0;
   readonly secondsPerSlot: number = 12;
 
@@ -14,10 +19,10 @@ export class ClockMock implements IClock {
   start = (): void => {};
   runEverySlot = (fn: RunEveryFn): number => this.everySlot.push(fn);
   runEveryEpoch = (fn: RunEveryFn): number => this.everyEpoch.push(fn);
-  msToSlot = (_slot: number): number => 0;
-  msFromSlot = (): number => 0;
-  secFromSlot = (): number => 0;
-  getCurrentSlot = (): number => 0;
+  msToSlot = (_slot: number): number => this.msToSlotValue;
+  msFromSlot = (): number => this.msFromSlotValue;
+  secFromSlot = (): number => this.msFromSlotValue / 1000;
+  getCurrentSlot = (): number => this.currentSlot;
   getCurrentEpoch = (): number => this.currentEpoch;
 
   async tickSlotFns(slot: Slot, signal: AbortSignal): Promise<void> {

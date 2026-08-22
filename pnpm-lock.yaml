@@ -398,6 +398,9 @@ importers:
       '@lodestar/api':
         specifier: workspace:^
         version: link:../api
+      '@lodestar/beacon-node':
+        specifier: workspace:^
+        version: link:../beacon-node
       '@lodestar/config':
         specifier: workspace:^
         version: link:../config

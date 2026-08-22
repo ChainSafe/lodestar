@@ -49,6 +49,7 @@
     "@chainsafe/lodestar-z": "catalog:",
     "@chainsafe/ssz": "^1.6.3",
     "@lodestar/api": "workspace:^",
+    "@lodestar/beacon-node": "workspace:^",
     "@lodestar/config": "workspace:^",
     "@lodestar/params": "workspace:^",
     "@lodestar/state-transition": "workspace:^",
