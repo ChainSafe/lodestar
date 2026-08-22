@@ -1,6 +1,11 @@
 import {ContainerType, ValueOf} from "@chainsafe/ssz";
 import {ChainForkConfig} from "@lodestar/config";
-import {MAX_BUILDER_AUTH_DATA_SIZE, MAX_BUILDER_URL_SIZE} from "@lodestar/params";
+import {
+  MAX_BUILDER_AUTH_DATA_SIZE,
+  MAX_BUILDER_ENTRIES,
+  MAX_BUILDER_PUBKEYS,
+  MAX_BUILDER_URL_SIZE,
+} from "@lodestar/params";
 import {Epoch, phase0, ssz, stringType} from "@lodestar/types";
 import {
   EmptyArgs,
@@ -167,8 +172,8 @@ export function builderConfigDataFromJson(json: unknown): BuilderConfigData {
     if (!Array.isArray(builders)) {
       throw Error("builders must be an array");
     }
-    if (builders.length > 64) {
-      throw Error(`builders must not contain more than 64 entries, got ${builders.length}`);
+    if (builders.length > MAX_BUILDER_ENTRIES) {
+      throw Error(`builders must not contain more than ${MAX_BUILDER_ENTRIES} entries, got ${builders.length}`);
     }
     parsedBuilders = builders.map((entry, i): BuilderEntryConfig => {
       if (typeof entry !== "object" || entry === null) {
@@ -188,8 +193,8 @@ export function builderConfigDataFromJson(json: unknown): BuilderConfigData {
       }
       let builderPubkeys: string[] | undefined;
       if (builder_pubkeys !== undefined) {
-        if (!Array.isArray(builder_pubkeys) || builder_pubkeys.length > 64) {
-          throw Error(`builders[${i}].builder_pubkeys must be an array of at most 64 pubkeys`);
+        if (!Array.isArray(builder_pubkeys) || builder_pubkeys.length > MAX_BUILDER_PUBKEYS) {
+          throw Error(`builders[${i}].builder_pubkeys must be an array of at most ${MAX_BUILDER_PUBKEYS} pubkeys`);
         }
         builderPubkeys = builder_pubkeys.map((pubkey) => {
           if (typeof pubkey !== "string" || !PUBKEY_PATTERN.test(pubkey)) {
